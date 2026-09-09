@@ -301,6 +301,15 @@ export const RARITY_TO_STARS: Record<CardRarityType, number> = {
     rarity_birthday: 4,
 };
 
+// Max levels by rarity (normal untrained, and trained if trainable)
+export const CARD_RARITY_MAX_LEVELS: Record<CardRarityType, { normal: number; trained?: number }> = {
+    rarity_1: { normal: 20 },
+    rarity_2: { normal: 30 },
+    rarity_3: { normal: 40, trained: 50 },
+    rarity_4: { normal: 50, trained: 60 },
+    rarity_birthday: { normal: 60 },
+};
+
 // Rarity display config with colors
 export const RARITY_DISPLAY: Record<number, { label: string; color: string }> = {
     1: { label: "1★", color: "#888888" },
