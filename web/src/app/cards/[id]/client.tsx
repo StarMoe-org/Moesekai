@@ -18,6 +18,7 @@ import {
     getRarityNumber,
     CardAttribute,
     SUPPORT_UNIT_LABEL_KEYS,
+    CARD_RARITY_MAX_LEVELS,
 } from "@/types/types";
 import { getCardFullUrl, getCardThumbnailUrl, getEventBannerUrl, getGachaLogoUrl, getCardGachaVoiceUrl, getCostumeThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
 import { useRef } from "react";
@@ -33,13 +34,7 @@ import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { ICostumeInfo, IMoeCostumeData, PART_TYPE_LABEL_KEYS } from "@/types/costume";
 
 // Max levels by rarity
-const MAX_LEVELS: Record<string, { normal: number; trained?: number }> = {
-    rarity_1: { normal: 20 },
-    rarity_2: { normal: 30 },
-    rarity_3: { normal: 50, trained: 60 },
-    rarity_4: { normal: 50, trained: 60 },
-    rarity_birthday: { normal: 50, trained: 60 },
-};
+const MAX_LEVELS = CARD_RARITY_MAX_LEVELS;
 
 interface CardSupplyInfo {
     id: number;
@@ -451,7 +446,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                     Array.from({ length: rarityNum }).map((_, i) => (
                                         <Image
                                             key={i}
-                                            src={showTrained && cardLevel > normalMaxLevel ? "/data/icon/star_trained.webp" : "/data/icon/star.webp"}
+                                            src={effectiveShowTrained && cardLevel > normalMaxLevel ? "/data/icon/star_trained.webp" : "/data/icon/star.webp"}
                                             alt="Star"
                                             width={18}
                                             height={18}

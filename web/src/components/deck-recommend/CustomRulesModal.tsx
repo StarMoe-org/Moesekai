@@ -6,7 +6,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import Modal from "@/components/common/Modal";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
-import type { ICardInfo } from "@/types/types";
+import { type ICardInfo, CARD_RARITY_MAX_LEVELS } from "@/types/types";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import DataOverridePanel, { type OverrideCatalogItem } from "./DataOverridePanel";
 import type {
@@ -117,14 +117,8 @@ function SingleCardOverrideRow({
 }) {
     const maxLevel = useMemo(() => {
         if (!master) return 60;
-        switch (master.cardRarityType) {
-            case "rarity_1": return 20;
-            case "rarity_2": return 30;
-            case "rarity_3": return 50;
-            case "rarity_4": return 60;
-            case "rarity_birthday": return 60;
-            default: return 60;
-        }
+        const config = CARD_RARITY_MAX_LEVELS[master.cardRarityType];
+        return config ? (config.trained ?? config.normal) : 60;
     }, [master]);
 
     return (
