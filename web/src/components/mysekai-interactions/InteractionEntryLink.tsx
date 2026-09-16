@@ -15,7 +15,7 @@ export default function InteractionEntryLink({ region, fixtureId }: { region: Se
             <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M7 4.5h10A2.5 2.5 0 0 1 19.5 7v10a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 17V7A2.5 2.5 0 0 1 7 4.5Z"/><path d="m10 8 6 4-6 4V8Z"/></svg>
         </span>
         <span className="min-w-0 flex-1"><strong className="block text-sm leading-relaxed">{t(`page.mysekaiInteractions.${fixtureId ? "fixtureEntry" : "title"}`)}</strong>
-            <span className="mt-1 block text-xs leading-relaxed text-[var(--text-body)]">{t(`page.mysekaiInteractions.${fixtureId ? "fixtureEntryHint" : "subtitle"}`)}</span></span>
+            <span className="mt-1 block text-xs leading-relaxed text-[var(--text-body)]">{t("page.mysekaiInteractions.r4b.entryDownloadNotice")}</span></span>
         <span aria-hidden="true" className="shrink-0 text-lg">→</span>
     </Link>;
 }

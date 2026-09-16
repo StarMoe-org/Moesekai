@@ -6,6 +6,7 @@ export type MolyTheme = 'light' | 'dark' | {mode:'light'|'dark'; accent?:string}
 export interface MolyCharacter {id:number; name:string; originalName?:string; group?:string|null; color?:string|null;}
 export interface MolyFixture {id:number; name:string; image:string|null;}
 export interface MolyEntry {
+  preview?:{available:boolean; tweetId?:number; text?:string; unit?:number; reason?:string};
   key:MolyKey; title:string; subtitle:string; image:string|null; characters:MolyCharacter[];
   kind:string; available:boolean; reason?:string|null; reasonCode?:'source_unavailable'|'scene_unavailable'|null;
   fixtureIds:number[]; unitIds:number[];
@@ -15,6 +16,7 @@ export interface MolyEntry {
   variant?:{index:number; count:number};
 }
 export interface MolyStatus {
+  preview?:boolean;
   phase:'idle'|'preparing'|'playing'|'restoring'|'error'; label:string; error:string|null;
   activeKey:MolyKey|null; activeTitle:string|null; canStop:boolean;
 }
@@ -33,6 +35,7 @@ export interface MolyBoot {
 }
 export interface MolyError {code:string; key?:MolyKey;}
 export interface MountOptions {
+  onPlayerData?(value: MolyPlayerDataState): void;
   view?:'shell'|'stage'; src:string; assets?:string; region?:MolyRegion; version?:string; snapshot?:string;
   locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; preload?:boolean;
   fixture?:number; tab?:MolyTab; content?:MolyKey; filters?:MolyFilters;
@@ -41,11 +44,16 @@ export interface MountOptions {
   onBoot?:(boot:MolyBoot)=>void; onError?:(error:MolyError)=>void;
 }
 export interface MolyMount {
+  playerData(value: MolyPlayerDataCommand): void;
   readonly frame:HTMLIFrameElement; readonly disposed:boolean; readonly snapshot:MolySnapshot|null;
   setTheme(theme:MolyTheme):void; setLocale(locale:MolyLocale):void; browse(filters:MolyFilters):void;
-  select(key:MolyKey):void; play(key:MolyKey):void; stop():void; restore():void;
+  select(key:MolyKey):void; play(key:MolyKey):void; preview(key:MolyKey):void; stop():void; restore():void;
   /** true only when the owner acknowledged restoration (or was already idle). */
   close():Promise<boolean>; dispose():void;
 }
 export function mountMoly(container:HTMLElement, options:MountOptions & {view:'stage'; assets:string; region:MolyRegion; version:string}):MolyMount;
 export function mountMoly(container:HTMLElement, options:MountOptions):Pick<MolyMount,'frame'|'setTheme'|'stop'|'dispose'>;
+
+export interface MolyPlayerDataCommand { operation: "preview" | "explore" | "restore" | "cancel"; region: MolyRegion; json?: string; }
+export interface MolyPlayerDataState { schemaVersion: 1; region: MolyRegion; busy: boolean; error: boolean; status: string;
+  canExplore: boolean; exploring: boolean; summary: { rank: number; sites: number; fixtures: number } | null; }

@@ -10,11 +10,13 @@ import { localizePathForBrowser, replaceCurrentUrlSearchParams } from "@/lib/loc
 import { INITIAL_BROWSE, filterCatalog, furnitureHref, interactionHref, parseBrowse, supportedRegion, validContentKey, type BrowseState } from "@/lib/moly/catalog";
 import { useContentCatalog, useContentDetail, useRuntimeManifest } from "@/lib/moly/useResources";
 import type { MolyBoot, MolyError, MolyKey, MolySnapshot, MolyTab } from "@/lib/moly/contract";
+import PlayerDataPanel from "@/components/mysekai-interactions/PlayerDataPanel";
+import type { MolyPlayerDataState } from "@/lib/moly/contract";
 import RuntimeStage, { type PlayerSession, type RuntimeStageHandle } from "@/components/mysekai-interactions/RuntimeStage";
 import ContentBrowser from "@/components/mysekai-interactions/ContentBrowser";
 import ContentDetail from "@/components/mysekai-interactions/ContentDetail";
 import ContentArtwork from "@/components/mysekai-interactions/ContentArtwork";
-import ResourceCachePanel from "@/components/mysekai-interactions/ResourceCachePanel";
+import { useStagePresentation } from "@/components/mysekai-interactions/useStagePresentation";
 import "./interactions.css";
 import "@/components/mysekai-interactions/participants.css";
 import { getLocaleRouteConfig, uiLocaleToRouteLocale } from "@/lib/locale-routing";
@@ -53,7 +55,11 @@ function InteractionsContent() {
     const [closing, setClosing] = useState(false);
     const player = useRef<RuntimeStageHandle>(null);
     const stage = useRef<HTMLDivElement>(null);
+    const [playerData, setPlayerData] = useState<MolyPlayerDataState | null>(null);
+    const [importOpen, setImportOpen] = useState(false);
     const sessionSequence = useRef(0);
+    const automaticallyPrepared = useRef<string | null>(null);
+    const presentation = useStagePresentation(stage);
     const pendingScroll = useRef<{ x: number; y: number; anchor: HTMLElement | null; top: number } | null>(null);
     const retainViewport = () => {
         const anchor = Array.from(document.querySelectorAll<HTMLElement>(".interaction-card"))
@@ -86,9 +92,11 @@ function InteractionsContent() {
     const ownerBusy = Boolean(live?.status.canStop);
     const currentAdmission = live?.selected?.key === nav.content && live.mode === "current" ? live.selected : null;
     // Only consume the Rust projection. There are no cast/furniture eligibility rules here.
-    const canPlay = Boolean(selected && (mode === "independent" ? selected.available : currentAdmission?.available));
+    const preparing = Boolean(session && !live?.ready && boot?.phase !== "awaiting-gesture" && !runtimeError);
+    const canPlay = !preparing && Boolean(selected && (mode === "independent" ? selected.available : currentAdmission?.available));
     const reason = mode === "current" ? currentAdmission?.reasonCode ?? null : selected?.reasonCode ?? null;
     const phase = closing ? "restoring" : live?.status.phase ?? (session ? "preparing" : "idle");
+    const displayPhase = phase === "playing" && activeKey && entries.get(activeKey)?.presentation.primaryAction === "inspect" ? "viewing" : phase;
     const loading = !manifestFailed && (!sourceReady || !manifest || Boolean(snapshot && !catalog && !catalogFailed));
     const blocked = manifestFailed ? "noDeployment" : expired ? "snapshotExpired"
         : manifest && sourceReady && (!region || !published?.available) ? "regionUnavailable"
@@ -108,6 +116,15 @@ function InteractionsContent() {
         // through both layouts instead of clearing the restore after the first.
         if (!detailLoading) pendingScroll.current = null;
     }, [nav, detail, session, detailLoading]);
+
+    useEffect(() => {
+        if (!snapshot || !manifest || closing || automaticallyPrepared.current === snapshot.id) return;
+        automaticallyPrepared.current = snapshot.id;
+        // This route is the explicit feature entry. Ordinary database pages never
+        // import the runtime. Closing it deliberately does not auto-open it again.
+        setSession({ id: ++sessionSequence.current, snapshot, release: manifest.release,
+            initial: { ...nav.browse, mode }, content: nav.content, play: null });
+    }, [snapshot, manifest, closing, nav.browse, nav.content, mode]);
 
     useEffect(() => {
         if (!catalog || !snapshot || (nav.region && nav.snapshot)) return;
@@ -186,13 +203,23 @@ function InteractionsContent() {
         change({ fixture, tab, query: "", character: null });
     };
     const showStage = () => stage.current?.scrollIntoView({ block: "start", behavior: "auto" });
-    const start = (key: MolyKey | null) => {
+    const start = (key: MolyKey | null, preview = false) => {
         retainViewport();
         if (!snapshot || !manifest || closing) return;
         setRuntimeError(null); setNotice(null);
-        if (session) { if (key) player.current?.play(key); }
+        if (session) { if (key) { if (preview) player.current?.preview(key); else player.current?.play(key); } }
         else setSession({ id: ++sessionSequence.current, snapshot, release: manifest.release,
-            initial: { ...nav.browse, mode }, content: nav.content, play: key });
+            initial: { ...nav.browse, mode }, content: nav.content, play: key, preview });
+    };
+    const retryPlayer = async () => {
+        if (!snapshot || !manifest || closing) return;
+        const retryKey = canPlay ? nav.content : null;
+        await closePlayer();
+        // A failed source fetch may be cached by the asset server for this
+        // realm. Explicit Retry starts a fresh realm after awaited teardown,
+        // preserving exact source/selection rather than faking resource readiness.
+        setSession({ id: ++sessionSequence.current, snapshot, release: manifest.release,
+            initial: { ...nav.browse, mode }, content: nav.content, play: retryKey });
     };
     const switchSource = async (next: string) => {
         if (closing || next === source) return;
@@ -210,11 +237,16 @@ function InteractionsContent() {
 
     return <div className="mysekai-interactions">
         <header className="interaction-page-heading">
-            <div><p className="interaction-eyebrow">MYSEKAI</p><h1>{t("page.mysekaiInteractions.title")}</h1><p>{t("page.mysekaiInteractions.subtitle")}</p></div>
-            <nav aria-label={t("page.mysekaiInteractions.related")}><Link href={`/mysekai/?region=${encodeURIComponent(source)}`}>{t("page.mysekaiInteractions.furnitureDatabase")}</Link><Link href="/mysekai-preview/scene/">{t("page.mysekaiInteractions.scenePreview")}</Link></nav>
+            <div><p className="interaction-eyebrow">MYSEKAI</p><h1>{t("page.mysekaiInteractions.title")}</h1></div>
+            <nav aria-label={t("page.mysekaiInteractions.related")}><Link href={`/mysekai/interactions/resources/?${new URLSearchParams({ region: source, ...(snapshot ? { snapshot: snapshot.id } : {}) })}`}>{t("page.mysekaiInteractions.r4b.manageResources")}</Link><Link href={`/mysekai/?region=${encodeURIComponent(source)}`}>{t("page.mysekaiInteractions.furnitureDatabase")}</Link><button className="interaction-inline-action" aria-expanded={importOpen} onClick={() => setImportOpen(value => !value)}>{t("page.mysekaiInteractions.r4b.importPlayer")}</button></nav>
         </header>
+        {importOpen && snapshot && <PlayerDataPanel key={snapshot.id} region={snapshot.region} ready={Boolean(live?.ready && live.scene?.ready)}
+            blocked={Boolean(live?.status.activeKey || closing || phase === "restoring" || phase === "preparing")} value={playerData}
+            send={value => { if (!player.current) throw new Error("Stage not ready"); player.current.playerData(value); }}
+            onExplore={() => { setMode("current"); player.current?.browse({ mode: "current" }); }} />}
+        {snapshot?.provenance?.resourceProvider && <span className="interaction-resource-provider">{t(`page.mysekaiInteractions.r4b.source_${snapshot.provenance.resourceProvider}`)}</span>}
         <div className="interaction-source-bar">
-            <div><span className="interaction-eyebrow">{t("page.mysekaiInteractions.source")}</span> <strong>{source.toUpperCase()}</strong>{snapshot && <span>{snapshot.version}</span>}</div>
+            <div><span className="interaction-eyebrow">{t("page.mysekaiInteractions.source")}</span> <strong>{source.toUpperCase()}</strong>{snapshot && <span>{snapshot.version}</span>}<span className="interaction-source-cache-hint" role="status">{t("page.mysekaiInteractions.r4b.autoLoadNotice")}</span></div>
             <div className="interaction-source-options">{manifest?.snapshots.map(item => <button key={item.id} className="interaction-chip" aria-pressed={source === item.region} disabled={closing || !item.available} onClick={() => void switchSource(item.region)}>{item.region.toUpperCase()}</button>)}</div>
         </div>
         <p className="interaction-source-note">{t("page.mysekaiInteractions.sourceHint")}{nav.region !== null && <> {t("page.mysekaiInteractions.pinnedRegion", { region: source.toUpperCase() })}</>}</p>
@@ -231,19 +263,24 @@ function InteractionsContent() {
         </section>}
         {loading && <div className="interaction-loading" role="status">{t("page.mysekaiInteractions.loading")}</div>}
         {(snapshot || session) && Boolean(nav.content || session) && <div className="interaction-experience">
-            <section className="interaction-stage-column" ref={stage} aria-label={t("page.mysekaiInteractions.nowPlaying")}>
+            <section className={`interaction-stage-column${presentation.immersive ? " interaction-immersive" : ""}`} ref={stage} tabIndex={-1} aria-label={t("page.mysekaiInteractions.nowPlaying")}>
+                <div className="interaction-presentation-controls">
+                    <button className="interaction-button" aria-pressed={presentation.immersive} onClick={presentation.immersive ? presentation.leave : presentation.enter}>{t(`page.mysekaiInteractions.r4b.${presentation.immersive ? "exitFullscreen" : "webFullscreen"}`)}</button>
+                    <button className="interaction-button" aria-pressed={presentation.fullscreen} onClick={() => void presentation.browserFullscreen()}>{t("page.mysekaiInteractions.r4b.browserFullscreen")}</button>
+                    {presentation.failed && <span role="status">{t("page.mysekaiInteractions.r4b.fullscreenUnavailable")}</span>}
+                </div>
                 <div className="interaction-stage-surface">
-                    {session ? <RuntimeStage ref={player} session={session} onSnapshot={setLive} onBoot={setBoot} onError={setRuntimeError} />
+                    {session ? <RuntimeStage ref={player} session={session} onSnapshot={setLive} onBoot={setBoot} onError={setRuntimeError} onPlayerData={setPlayerData} />
                         : <div className="interaction-stage-placeholder">
                             {visibleEntry && snapshot && <ContentArtwork entry={visibleEntry} snapshot={snapshot} large />}
                             <span className="interaction-eyebrow">{t("page.mysekaiInteractions.catalogOnly")}</span>
                             <h2>{t("page.mysekaiInteractions.loadPlayer")}</h2><p>{t("page.mysekaiInteractions.loadHint")}</p>
-                            {manifest && <small>{t("page.mysekaiInteractions.downloadSize", { size: Math.ceil(Math.max(manifest.release.engines.webgpu.downloadBytes, manifest.release.engines.webgl2.downloadBytes) / 1048576) })}</small>}
+                            {manifest && <small>{t(`page.mysekaiInteractions.${snapshot?.base.downloadBytes ? "baseDownloadSize" : "downloadSize"}`, { size: Math.ceil((Math.max(manifest.release.engines.webgpu.downloadBytes, manifest.release.engines.webgl2.downloadBytes) + (snapshot?.base.downloadBytes ?? 0)) / 1048576) })}</small>}
                             <button className="interaction-button interaction-primary" onClick={() => start(null)}>{t("page.mysekaiInteractions.loadPlayer")}</button>
                         </div>}
                 </div>
                 <div className="interaction-transport" data-runtime-phase={phase}>
-                    <div aria-live="polite"><span className={`interaction-phase interaction-phase-${phase}`}>{t(`page.mysekaiInteractions.phase.${phase}`)}</span>
+                    <div aria-live="polite"><span className={`interaction-phase interaction-phase-${phase}`}>{boot?.phase === "awaiting-gesture" && !live?.ready ? t("page.mysekaiInteractions.r5.ready") : live?.status.preview ? t("page.mysekaiInteractions.r4b.previewBubble") : t(`page.mysekaiInteractions.phase.${displayPhase}`)}</span>
                         {live?.status.activeTitle && <strong>{live.status.activeTitle}</strong>}
                         {boot?.backend && <span className="interaction-backend">{boot.backend === "webgpu" ? "WebGPU" : "WebGL 2"}</span>}
                     </div>
@@ -251,18 +288,19 @@ function InteractionsContent() {
                 </div>
                 <div className="interaction-mode"><label>{t(`page.mysekaiInteractions.mode.${mode}`)} <select aria-label={t(`page.mysekaiInteractions.mode.${mode}`)} disabled={ownerBusy || closing} value={mode} onChange={event => setMode(event.target.value as "independent" | "current")}>
                     <option value="independent">{t("page.mysekaiInteractions.mode.independent")}</option><option value="current">{t("page.mysekaiInteractions.mode.current")}</option></select></label><p>{t(`page.mysekaiInteractions.${mode === "independent" ? "modeHint" : "currentHint"}`)}</p></div>
-                <ResourceCachePanel playerOpen={Boolean(session)} />
-                {runtimeFailure && <div className="interaction-notice" role="alert"><p>{t(`page.mysekaiInteractions.${runtimeError?.code === "source_mismatch" ? "sourceMismatch" : "runtimeFailed"}`)}</p><button className="interaction-button" onClick={() => void closePlayer()}>{t("page.mysekaiInteractions.closePlayer")}</button></div>}
+
+                {runtimeFailure && <div className="interaction-notice" role="alert"><p>{t(`page.mysekaiInteractions.${runtimeError?.code === "source_mismatch" ? "sourceMismatch" : "runtimeFailed"}`)}</p><button className="interaction-button interaction-primary" disabled={closing} onClick={() => void retryPlayer()}>{t("page.mysekaiInteractions.retry")}</button><button className="interaction-button" onClick={() => void closePlayer()}>{t("page.mysekaiInteractions.closePlayer")}</button></div>}
             </section>
-            {visibleEntry && snapshot ? <ContentDetail entry={visibleEntry} snapshot={snapshot} detailLoading={detailLoading} detailFailed={detailFailed} canPlay={canPlay}
+            {visibleEntry && snapshot ? <ContentDetail entry={visibleEntry} snapshot={snapshot} detailLoading={detailLoading} detailFailed={detailFailed} canPlay={canPlay} preparing={preparing}
                 reason={reason} playing={activeKey === nav.content} replacing={Boolean(activeKey && activeKey !== nav.content)} restoring={closing || phase === "restoring"}
+                preview={() => start(visibleEntry.key, true)} previewing={Boolean(live?.status.preview && activeKey === visibleEntry.key)}
                 play={() => start(visibleEntry.key)} share={() => void share()} retry={() => setDetailRetry(value => value + 1)} related={related} character={id => change({ character: id })} />
                 : <section className="interaction-detail interaction-empty"><h2>{t("page.mysekaiInteractions.choose")}</h2><p>{t("page.mysekaiInteractions.chooseHint")}</p></section>}
         </div>}
         {notice && <p className="interaction-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
         {catalog && snapshot && <ContentBrowser catalog={catalog} snapshot={snapshot} browse={nav.browse} results={results} selected={nav.content}
             active={phase === "playing" ? activeKey : null} page={page} pageSize={pageSize} change={change} select={select} onPage={goToPage} />}
-        {ownerBusy && <div className="interaction-mini-transport"><button onClick={showStage}><span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${phase}`)}</span><strong>{live?.status.activeTitle}</strong></button><button onClick={() => player.current?.stop()}>{t("page.mysekaiInteractions.stop")}</button></div>}
+        {ownerBusy && <div className="interaction-mini-transport"><button onClick={showStage}><span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${displayPhase}`)}</span><strong>{live?.status.activeTitle}</strong></button><button onClick={() => player.current?.stop()}>{t("page.mysekaiInteractions.stop")}</button></div>}
     </div>;
 }
 

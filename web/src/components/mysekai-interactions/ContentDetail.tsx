@@ -13,21 +13,24 @@ interface Props {
     detailLoading: boolean;
     detailFailed: boolean;
     canPlay: boolean;
+    preparing: boolean;
     reason: "source_unavailable" | "scene_unavailable" | null;
     playing: boolean;
     replacing: boolean;
     restoring: boolean;
     play(): void;
+    preview(): void;
+    previewing: boolean;
     share(): void;
     retry(): void;
     related(fixture: number, tab: MolyTab): void;
     character(id: number): void;
 }
 
-export default function ContentDetail({ entry, snapshot, detailLoading, detailFailed, canPlay, reason, playing, replacing, restoring, play, share, retry, related, character }: Props) {
+export default function ContentDetail({ entry, snapshot, detailLoading, detailFailed, canPlay, preparing, reason, playing, replacing, restoring, play, preview, previewing, share, retry, related, character }: Props) {
     const { t } = useI18n();
     const headingId = useId();
-    const action = playing ? "replay" : replacing ? "replace" : entry.presentation.primaryAction;
+    const action = entry.presentation.primaryAction === "inspect" ? "inspect" : playing ? "replay" : replacing ? "replace" : entry.presentation.primaryAction;
     const silent = entry.presentation.textMode === "none" && entry.presentation.category !== "furniture";
     const bubble = entry.presentation.textMode === "bubble";
     return <section className="interaction-detail" aria-labelledby={headingId} data-selected-content={entry.key}>
@@ -53,10 +56,16 @@ export default function ContentDetail({ entry, snapshot, detailLoading, detailFa
         {entry.description && <p className="interaction-description">{entry.description}</p>}
         <div className="interaction-detail-actions">
             <button className="interaction-button interaction-primary" disabled={!canPlay || restoring} onClick={play} data-action="play-selected">
-                {t(`page.mysekaiInteractions.${action}`)}
+                {preparing ? t("page.mysekaiInteractions.r5.preparing") : previewing ? t("page.mysekaiInteractions.r4b.engage") : t(`page.mysekaiInteractions.${action}`)}
             </button>
+            {entry.preview?.available && <button className="interaction-button" disabled={!canPlay || restoring || previewing} onClick={preview} data-action="preview-bubble">{t("page.mysekaiInteractions.r4b.previewBubble")}</button>}
             <button className="interaction-button" onClick={share}>{t("page.mysekaiInteractions.share")}</button>
         </div>
+        {entry.preview && <details className="interaction-transcript interaction-source-preview">
+            <summary>{t("page.mysekaiInteractions.r4b.previewSource")}</summary>
+            {entry.preview.available ? <p className="interaction-source-tweet">{entry.preview.text}</p>
+                : <p>{t("page.mysekaiInteractions.r4b.previewUnavailable")}</p>}
+        </details>}
         {reason && <p className="interaction-unavailable" role="status">{t(`page.mysekaiInteractions.${reason === "scene_unavailable" ? "sceneUnavailable" : "unavailable"}`)}</p>}
         {detailLoading && <p className="interaction-muted" role="status">{t("page.mysekaiInteractions.loading")}</p>}
         {detailFailed && <p className="interaction-unavailable">{t("page.mysekaiInteractions.detailFailed")} <button className="interaction-text-button" onClick={retry}>{t("page.mysekaiInteractions.retry")}</button></p>}

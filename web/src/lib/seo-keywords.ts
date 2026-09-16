@@ -670,6 +670,16 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["譜面画像", "譜面プレビュー", "SUS"],
     },
   ),
+  mysekai_interaction_resources: definePage(
+    "/mysekai/interactions/resources",
+    { "zh-CN": "MYSEKAI 互动资源管理", "en-US": "MYSEKAI Interaction Resources", "ja-JP": "MYSEKAI ふれあいリソース管理" },
+    {
+      "zh-CN": "查看、删除并重新加载 MYSEKAI 对话与互动的本地缓存资源。",
+      "en-US": "Inspect, remove and reload locally cached MYSEKAI interaction resources.",
+      "ja-JP": "MYSEKAI の会話とふれあいに必要なローカルリソースを確認・削除・再読み込みできます。",
+    },
+    { "zh-CN": ["MYSEKAI", "资源管理"], "en-US": ["MYSEKAI", "resources"], "ja-JP": ["MYSEKAI", "リソース管理"] },
+  ),
   mysekai_preview: definePage(
     "/mysekai-preview",
     { "zh-CN": "烤森百景", "en-US": "MySekai Housing Competition", "ja-JP": "MySekaiハウジングコンテスト" },
