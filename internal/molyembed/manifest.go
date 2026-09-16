@@ -13,6 +13,8 @@ import (
 type EngineSize struct {
 	DownloadBytes int64 `json:"downloadBytes"`
 	DecodedBytes  int64 `json:"decodedBytes"`
+	BrotliBytes   int64 `json:"brotliBytes,omitempty"`
+	GzipBytes     int64 `json:"gzipBytes,omitempty"`
 }
 type Release struct {
 	ID              string                `json:"id"`
@@ -86,10 +88,42 @@ func (h *Handler) loadManifest() ([]byte, error) {
 	}
 	for _, backend := range []string{"webgpu", "webgl2"} {
 		size, ok := m.Release.Engines[backend]
-		if !ok || size.DownloadBytes <= 0 || size.DecodedBytes <= 0 || size.DownloadBytes > 1<<30 || size.DecodedBytes > 1<<30 {
+		if !ok || size.DownloadBytes <= 0 || size.DecodedBytes <= 0 || size.DownloadBytes > 1<<30 || size.DecodedBytes > 1<<30 || size.BrotliBytes < 0 || size.GzipBytes < 0 {
 			return nil, errors.New("invalid engine size")
 		}
-		f, err := h.open("releases/" + m.Release.ID + "/pkg/" + backend + "/moly-app.js")
+		root := "releases/" + m.Release.ID + "/pkg/" + backend + "/"
+		wasm, err := h.open(root + "moly-app_bg.wasm")
+		if err != nil {
+			return nil, err
+		}
+		wasmInfo, err := wasm.Stat()
+		wasm.Close()
+		if err != nil || wasmInfo.Size() != size.DecodedBytes {
+			return nil, errors.New("engine decoded size mismatch")
+		}
+		if size.BrotliBytes > 0 {
+			br, err := h.open(root + "moly-app_bg.wasm.br")
+			if err != nil {
+				return nil, err
+			}
+			brInfo, statErr := br.Stat()
+			br.Close()
+			if statErr != nil || brInfo.Size() != size.BrotliBytes || size.DownloadBytes != size.BrotliBytes {
+				return nil, errors.New("engine Brotli size mismatch")
+			}
+		}
+		if size.GzipBytes > 0 {
+			gz, err := h.open(root + "moly-app_bg.wasm.gz")
+			if err != nil {
+				return nil, err
+			}
+			gzInfo, statErr := gz.Stat()
+			gz.Close()
+			if statErr != nil || gzInfo.Size() != size.GzipBytes {
+				return nil, errors.New("engine gzip size mismatch")
+			}
+		}
+		f, err := h.open(root + "moly-app.js")
 		if err != nil {
 			return nil, err
 		}

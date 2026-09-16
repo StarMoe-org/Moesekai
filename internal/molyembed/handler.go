@@ -94,17 +94,35 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	file := original
-	encoded := false
-	if acceptsGzip(r.Header.Get("Accept-Encoding")) {
-		if gz, err := h.open(rel + ".gz"); err == nil {
-			if gzInfo, statErr := gz.Stat(); statErr == nil && gzInfo.Mode().IsRegular() {
-				file = gz
-				defer gz.Close()
-				encoded = true
-			} else {
-				gz.Close()
-			}
+	encoding := ""
+	selected := false
+	representationInfo := info
+	for _, candidate := range preferredEncodings(r.Header.Get("Accept-Encoding")) {
+		if candidate == "identity" {
+			selected = true
+			break
 		}
+		extension := ".gz"
+		if candidate == "br" {
+			extension = ".br"
+		}
+		encodedFile, openErr := h.open(rel + extension)
+		if openErr != nil {
+			continue
+		}
+		encodedInfo, statErr := encodedFile.Stat()
+		if statErr != nil || !encodedInfo.Mode().IsRegular() {
+			encodedFile.Close()
+			continue
+		}
+		file, representationInfo, encoding, selected = encodedFile, encodedInfo, candidate, true
+		defer encodedFile.Close()
+		w.Header().Set("Content-Length", strconv.FormatInt(encodedInfo.Size(), 10))
+		break
+	}
+	if !selected {
+		problem(w, r, http.StatusNotAcceptable, "encoding_unavailable")
+		return
 	}
 	w.Header().Set("Content-Type", contentType)
 	w.Header().Set("Vary", "Accept-Encoding")
@@ -121,14 +139,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "frame-ancestors 'self'; base-uri 'self'; object-src 'none'")
 		w.Header().Set("X-Robots-Tag", "noindex, nofollow")
 	}
-	if encoded {
-		w.Header().Set("Content-Encoding", "gzip")
+	if encoding != "" {
+		w.Header().Set("Content-Encoding", encoding)
 	}
 	variant := "identity"
-	if encoded {
-		variant = "gzip"
+	if encoding != "" {
+		variant = encoding
 	}
-	w.Header().Set("ETag", fmt.Sprintf(`"%s-%x-%x-%s"`, segments[0], info.Size(), info.ModTime().UnixNano(), variant))
+	w.Header().Set("ETag", fmt.Sprintf(`"%s-%x-%x-%s"`, segments[0], representationInfo.Size(), representationInfo.ModTime().UnixNano(), variant))
 	// Keep the normal 30 s server limit, renewed only by progressing writes.
 	// This permits large transfers, but does not let stalled clients linger.
 	out := &progressWriter{ResponseWriter: w}

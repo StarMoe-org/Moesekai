@@ -8,7 +8,7 @@ export interface MolyRelease {
     module: string;
     stage: string;
     contractVersion: 2;
-    engines: Record<"webgpu" | "webgl2", { downloadBytes: number; decodedBytes: number }>;
+    engines: Record<"webgpu" | "webgl2", { downloadBytes: number; decodedBytes: number; brotliBytes?: number; gzipBytes?: number }>;
 }
 export interface ResourceSnapshot {
     id: string;

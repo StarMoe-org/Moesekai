@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -36,7 +37,7 @@ func fixture(t *testing.T) (string, Manifest) {
 	put("snapshots/cn-test/assets/mysekai-fixtures.json", []byte(`{"region":"cn","gameVersion":"6.0.0"}`))
 	put("snapshots/cn-test/catalog/index.json", []byte(`{"schemaVersion":1,"snapshotId":"cn-test","region":"cn","version":"6.0.0","entries":[]}`))
 	put("cache-worker.mjs", []byte("self.addEventListener('fetch',()=>{});"))
-	manifest := Manifest{SchemaVersion: 2, Release: Release{ID: "stage-test", Module: "/moly/releases/stage-test/embed.mjs", Stage: "/moly/releases/stage-test/stage.html", ContractVersion: 2, Engines: map[string]EngineSize{"webgpu": {8, 8}, "webgl2": {8, 8}}}, Snapshots: []Snapshot{{ID: "cn-test", Region: "cn", Version: "6.0.0", Assets: "/moly/snapshots/cn-test/assets/", Catalog: "/moly/snapshots/cn-test/catalog/index.json"}}}
+	manifest := Manifest{SchemaVersion: 2, Release: Release{ID: "stage-test", Module: "/moly/releases/stage-test/embed.mjs", Stage: "/moly/releases/stage-test/stage.html", ContractVersion: 2, Engines: map[string]EngineSize{"webgpu": {DownloadBytes: 8, DecodedBytes: 8}, "webgl2": {DownloadBytes: 8, DecodedBytes: 8}}}, Snapshots: []Snapshot{{ID: "cn-test", Region: "cn", Version: "6.0.0", Assets: "/moly/snapshots/cn-test/assets/", Catalog: "/moly/snapshots/cn-test/catalog/index.json"}}}
 	saveManifest(t, root, manifest)
 	return root, manifest
 }
@@ -114,6 +115,18 @@ func TestPrecompressedWasm(t *testing.T) {
 	decoded, _ := io.ReadAll(decoder)
 	if !bytes.Equal(raw, decoded) {
 		t.Fatal("changed WASM")
+	}
+	head := request(h, "HEAD", "/moly/releases/stage-test/pkg/webgpu/moly-app_bg.wasm", map[string]string{"Accept-Encoding": "gzip"})
+	if head.Code != 200 || head.Header().Get("Content-Length") != strconv.Itoa(encoded.Len()) || head.Body.Len() != 0 {
+		t.Fatal("compressed HEAD must report the encoded representation length", head.Code, head.Header())
+	}
+	cached := request(h, "HEAD", "/moly/releases/stage-test/pkg/webgpu/moly-app_bg.wasm", map[string]string{"Accept-Encoding": "gzip", "If-None-Match": head.Header().Get("ETag")})
+	if cached.Code != 304 || cached.Header().Get("Content-Length") != "" {
+		t.Fatal("invalid compressed 304 headers", cached.Header())
+	}
+	partial := request(h, "GET", "/moly/releases/stage-test/pkg/webgpu/moly-app_bg.wasm", map[string]string{"Accept-Encoding": "gzip", "Range": "bytes=0-3"})
+	if partial.Code != 206 || partial.Body.Len() != 4 || partial.Header().Get("Content-Length") != "4" {
+		t.Fatal("compressed range length", partial.Header())
 	}
 	plain := request(h, "GET", "/moly/releases/stage-test/pkg/webgpu/moly-app_bg.wasm", map[string]string{"Accept-Encoding": "gzip;q=0"})
 	if plain.Header().Get("Content-Encoding") != "" || plain.Header().Get("ETag") == w.Header().Get("ETag") {
