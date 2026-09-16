@@ -71,6 +71,10 @@ const nextConfig: NextConfig = {
         : [],
       afterFiles: [
         {
+          source: "/moly/:path*",
+          destination: `${(process.env.MOLY_DEV_ORIGIN || internalApiBase).replace(/\/$/, "")}/moly/:path*`,
+        },
+        {
           source: "/api/:path*",
           destination: `${internalApiBase}/api/:path*`,
         },

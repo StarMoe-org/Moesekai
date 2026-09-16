@@ -13,6 +13,7 @@
   { "path": "/comic/", "pageKey": "comic", "priority": 0.7, "changefreq": "weekly", "indexable": true },
   { "path": "/live/", "pageKey": "live", "priority": 0.7, "changefreq": "weekly", "indexable": true },
   { "path": "/character/", "pageKey": "character", "priority": 0.8, "changefreq": "weekly", "indexable": true },
+  { "path": "/mysekai/interactions/", "pageKey": "mysekai_interactions", "priority": 0.7, "changefreq": "weekly", "indexable": true },
   { "path": "/mysekai/", "pageKey": "mysekai", "priority": 0.7, "changefreq": "weekly", "indexable": true },
   { "path": "/materials/", "pageKey": "materials", "priority": 0.7, "changefreq": "weekly", "indexable": true },
   { "path": "/exchanges/", "pageKey": "exchanges", "priority": 0.7, "changefreq": "weekly", "indexable": true },

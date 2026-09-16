@@ -173,6 +173,15 @@ const navigationGroups: NavGroup[] = [
                 ),
             },
             {
+                id: "mysekai-interactions",
+                href: "/mysekai/interactions",
+                icon: (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M8 4.5h8A3.5 3.5 0 0 1 19.5 8v6a3.5 3.5 0 0 1-3.5 3.5h-4l-4.5 3v-3A3 3 0 0 1 4.5 14V8A3.5 3.5 0 0 1 8 4.5Z M10 8l5 3-5 3V8Z" />
+                    </svg>
+                ),
+            },
+            {
                 id: "materials",
                 href: "/materials",
                 icon: (

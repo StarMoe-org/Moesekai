@@ -22,7 +22,7 @@ const INTERNAL_NEXT_ORIGIN = process.env.INTERNAL_NEXT_ORIGIN
 const QUERY_PAGE_ROBOTS_POLICY = "noindex, follow";
 const QUERY_PAGE_CACHE_POLICY = "private, no-store";
 
-const BYPASS_PATHS = ["/_next", "/internal-healthz", "/api", "/data", "/robots.txt", "/sitemap.xml", "/sitemap-main.xml", "/sitemap-details.xml", "/.well-known"];
+const BYPASS_PATHS = ["/_next", "/internal-healthz", "/api", "/data", "/moly", "/robots.txt", "/sitemap.xml", "/sitemap-main.xml", "/sitemap-details.xml", "/.well-known"];
 const FILE_PATH_PATTERN = /\.[a-z0-9]+$/i;
 
 function shouldBypass(pathname: string): boolean {

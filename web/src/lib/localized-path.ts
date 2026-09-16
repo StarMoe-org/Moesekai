@@ -1,6 +1,6 @@
 import { DEFAULT_ROUTE_LOCALE, isRouteLocale, type RouteLocale } from "@/lib/locale-routing";
 
-const UNLOCALIZED_PATH_PREFIXES = ["/api/", "/_next/", "/data/", "/robots.txt", "/sitemap"];
+const UNLOCALIZED_PATH_PREFIXES = ["/api/", "/_next/", "/data/", "/moly/", "/robots.txt", "/sitemap"];
 
 export function getRouteLocaleFromPathname(pathname: string | null | undefined): RouteLocale | null {
     const firstSegment = pathname?.split("/").filter(Boolean)[0]?.toLowerCase();

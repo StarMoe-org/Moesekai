@@ -7,7 +7,10 @@ import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
+import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
+import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
+
 import { getMysekaiFixtureThumbnailUrl } from "@/lib/assets";
 import {
     IMysekaiFixtureInfo,
@@ -15,7 +18,7 @@ import {
     IMysekaiFixtureSubGenre,
     IMysekaiFixtureTag
 } from "@/types/mysekai";
-import { fetchMasterData } from "@/lib/fetch";
+import { fetchMasterDataForServer } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
@@ -25,7 +28,10 @@ import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/myse
 
 function MysekaiContent() {
     const searchParams = useSearchParams();
-    const { assetSource } = useTheme();
+    const { assetSource: preferredAssetSource, serverSource } = useTheme();
+    const sourceRegion = mysekaiSource(searchParams.get("region"), serverSource);
+    const assetSource = replaceAssetSourceRegion(preferredAssetSource, sourceRegion ?? serverSource);
+    const [dataSource, setDataSource] = useState<ServerSourceType | null>(null);
     const { t } = useI18n();
 
     const [fixtures, setFixtures] = useState<IMysekaiFixtureInfo[]>([]);
@@ -130,6 +136,8 @@ function MysekaiContent() {
 
         // Update URL
         const params = new URLSearchParams();
+        const pinnedRegion = new URLSearchParams(window.location.search).get("region");
+        if (pinnedRegion !== null) params.set("region", pinnedRegion);
         if (selectedGenre !== null) params.set("genre", String(selectedGenre));
         if (selectedSubGenre !== null) params.set("subGenre", String(selectedSubGenre));
         if (selectedTag !== null) params.set("tag", String(selectedTag));
@@ -142,18 +150,23 @@ function MysekaiContent() {
     }, [selectedGenre, selectedSubGenre, selectedTag, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, filtersInitialized]);
 
     useEffect(() => {
+        let cancelled = false;
         async function fetchData() {
             try {
                 setIsLoading(true);
+                setError(null);
+                setFixtures([]);
+                if (!sourceRegion) throw new Error(t("page.mysekaiInteractions.sourceMismatch"));
 
                 const [fixturesData, genresData, subGenresData, tagsData, translationsData] = await Promise.all([
-                    fetchMasterData<IMysekaiFixtureInfo[]>("mysekaiFixtures.json"),
-                    fetchMasterData<IMysekaiFixtureGenre[]>("mysekaiFixtureMainGenres.json"),
-                    fetchMasterData<IMysekaiFixtureSubGenre[]>("mysekaiFixtureSubGenres.json"),
-                    fetchMasterData<IMysekaiFixtureTag[]>("mysekaiFixtureTags.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureInfo[]>(sourceRegion, "mysekaiFixtures.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureGenre[]>(sourceRegion, "mysekaiFixtureMainGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureSubGenre[]>(sourceRegion, "mysekaiFixtureSubGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureTag[]>(sourceRegion, "mysekaiFixtureTags.json"),
                     loadTranslations(),
                 ]);
 
+                if (cancelled) return;
                 setFixtures(fixturesData);
                 setGenres(genresData);
                 setSubGenres(subGenresData);
@@ -161,14 +174,19 @@ function MysekaiContent() {
                 setTranslations(translationsData);
                 setError(null);
             } catch (err) {
+                if (cancelled) return;
                 console.error("Error fetching mysekai data:", err);
                 setError(err instanceof Error ? err.message : t("page.mysekai.unknownError"));
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setDataSource(sourceRegion);
+                    setIsLoading(false);
+                }
             }
         }
         fetchData();
-    }, [t]);
+        return () => { cancelled = true; };
+    }, [sourceRegion, t]);
 
     // Separate tags by type and exclude tags matching fixture names
     const { characterTags, unitTags: _unitTags, generalTags } = useMemo(() => {
@@ -394,6 +412,8 @@ function MysekaiContent() {
                 </p>
             </div>
 
+            {sourceRegion && <div className="mb-6"><InteractionEntryLink region={sourceRegion} /></div>}
+
             {/* Error State */}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
@@ -405,7 +425,7 @@ function MysekaiContent() {
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                {isLoading ? (
+                {isLoading || dataSource !== sourceRegion ? (
                     <div className="flex items-center justify-center min-h-[40vh]">
                         <div className="loading-spinner loading-spinner-sm" />
                     </div>
@@ -414,7 +434,7 @@ function MysekaiContent() {
                         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedFixtures.map(fixture => (
                                 <Link
-                                    href={`/mysekai/${fixture.id}`}
+                                    href={mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id)}
                                     key={fixture.id}
                                     data-shortcut-item="true"
                                     className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-3 flex flex-col h-full group"
