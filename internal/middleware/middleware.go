@@ -23,7 +23,9 @@ func (w gzipResponseWriter) Write(b []byte) (int, error) {
 // Skips compression if the upstream (e.g., Next.js proxy) already compressed the response
 func Gzip(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+		// Moly serves precompressed immutable artifacts and owns range/HEAD/ETag
+		// semantics. Recompressing them here breaks streaming and wastes CPU.
+		if strings.HasPrefix(r.URL.Path, "/moly/") || r.Header.Get("Upgrade") != "" || !strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 			next.ServeHTTP(w, r)
 			return
 		}
