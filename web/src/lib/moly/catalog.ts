@@ -71,9 +71,10 @@ export function parseBrowse(params: Pick<URLSearchParams, "get">): BrowseState {
     };
 }
 
-export function interactionHref(options: { region: string; fixture?: number | null; content?: MolyKey | null; tab?: MolyTab; snapshot?: string }): string {
+export function interactionHref(options: { region: string; fixture?: number | null; character?: number | null; content?: MolyKey | null; tab?: MolyTab; snapshot?: string }): string {
     const query = new URLSearchParams({ region: options.region });
     if (options.fixture && Number.isSafeInteger(options.fixture) && options.fixture > 0) query.set("fixture", String(options.fixture));
+    if (options.character && Number.isSafeInteger(options.character) && options.character > 0) query.set("character", String(options.character));
     if (options.tab) query.set("tab", options.tab);
     if (options.content) {
         if (!validContentKey(options.content)) throw new Error("Invalid content identity");

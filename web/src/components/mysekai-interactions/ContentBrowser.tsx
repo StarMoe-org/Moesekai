@@ -6,6 +6,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import type { MolyKey } from "@/lib/moly/contract";
 import { MOLY_TABS, type BrowseState, type CatalogEntry, type ContentCatalog, type ResourceSnapshot } from "@/lib/moly/catalog";
 import ContentArtwork from "./ContentArtwork";
+import CatalogPagination from "./CatalogPagination";
 
 interface Props {
     catalog: ContentCatalog;
@@ -14,13 +15,14 @@ interface Props {
     results: CatalogEntry[];
     selected: MolyKey | null;
     active: MolyKey | null;
-    displayCount: number;
+    page: number;
+    pageSize: number;
     change(value: Partial<BrowseState>): void;
     select(key: MolyKey): void;
-    more(): void;
+    onPage(page: number): void;
 }
 
-export default function ContentBrowser({ catalog, snapshot, browse, results, selected, active, displayCount, change, select, more }: Props) {
+export default function ContentBrowser({ catalog, snapshot, browse, results, selected, active, page, pageSize, change, select, onPage }: Props) {
     const { t } = useI18n();
     const labelId = useId();
     const characterId = useId();
@@ -55,7 +57,7 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
             <h3>{t("page.mysekaiInteractions.noResults")}</h3>
             <button className="interaction-button" onClick={() => change({ query: "", character: null, availability: "all" })}>{t("page.mysekaiInteractions.reset")}</button>
         </div> : <div className={`interaction-grid interaction-grid-${browse.tab}`}>
-            {results.slice(0, displayCount).map(entry => <button type="button" className="interaction-card" key={entry.key}
+            {results.slice((page - 1) * pageSize, page * pageSize).map(entry => <button type="button" className="interaction-card" key={entry.key}
                 aria-pressed={selected === entry.key} onClick={() => select(entry.key)} data-content-key={entry.key}>
                 <ContentArtwork entry={entry} snapshot={snapshot} />
                 <span className="interaction-card-copy">
@@ -65,14 +67,12 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
                     <span className="interaction-card-foot">
                         <span>{entry.presentation.textMode === "bubble" ? t("page.mysekaiInteractions.bubble")
                             : t(`page.mysekaiInteractions.behavior.${entry.presentation.behavior}`)}</span>
-                        {active === entry.key ? <span className="interaction-live-dot">{t("page.mysekaiInteractions.phase.playing")}</span>
+                        {active === entry.key ? <span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${entry.presentation.primaryAction === "inspect" ? "viewing" : "playing"}`)}</span>
                             : !entry.available ? <span>{t("page.mysekaiInteractions.unavailable")}</span> : null}
                     </span>
                 </span>
             </button>)}
         </div>}
-        {results.length > displayCount && <div className="interaction-load-more">
-            <button className="interaction-button" onClick={more}>{t("page.mysekaiInteractions.loadMore")}</button>
-        </div>}
+        <CatalogPagination page={page} pages={Math.max(1, Math.ceil(results.length / pageSize))} total={results.length} pageSize={pageSize} onPage={onPage} />
     </section>;
 }

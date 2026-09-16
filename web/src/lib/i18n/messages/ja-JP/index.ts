@@ -873,6 +873,8 @@ export const jaJPMessages = {
   },
   page: {
     mysekaiInteractions: {
+            r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},
+            r4b: { "characterEntry": "このキャラクターの家具会話を見る", },
         navTitle: "マイセカイの会話とふれあい",
         "title": "会話とインタラクション",
         "subtitle": "家具やキャラクターから、MYSEKAI の日常を見つけよう。",
@@ -961,6 +963,7 @@ export const jaJPMessages = {
         "modeHint": "必要なキャラクターと家具を準備し、停止・終了後に元のシーンへ戻します。",
         "currentHint": "現在のシーンにいるキャラクターと家具のみを使い、プレイヤーが条件を確認します。",
         "phase": {
+            "viewing": "表示中",
             "idle": "待機中",
             "preparing": "コンテンツを準備中",
             "playing": "再生中",

@@ -871,6 +871,8 @@ export const koKRMessages = {
     },
     page: {
         mysekaiInteractions: {
+            r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
+            r4b: { "characterEntry": "이 캐릭터의 가구 대화 보기", },
             "navTitle": "MYSEKAI 대화와 상호작용",
             "title": "대화와 상호작용",
             "subtitle": "가구와 캐릭터를 따라 MYSEKAI의 일상 속 장면을 만나보세요.",
@@ -959,6 +961,7 @@ export const koKRMessages = {
             "modeHint": "필요한 캐릭터와 가구를 준비하며, 중지하거나 종료하면 원래 장면을 복원합니다.",
             "currentHint": "장면에 이미 있는 캐릭터와 가구만 사용하며, 플레이어가 조건을 확인합니다.",
             "phase": {
+            "viewing": "감상 중",
                 "idle": "준비됨",
                 "preparing": "콘텐츠 준비 중",
                 "playing": "재생 중",

@@ -874,6 +874,8 @@ export const enUSMessages = {
     },
     page: {
         mysekaiInteractions: {
+            r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
+            r4b: { "characterEntry": "Browse this character’s furniture conversations", },
         navTitle: "MYSEKAI conversations & interactions",
         "title": "Conversations & interactions",
         "subtitle": "Discover everyday MYSEKAI moments, one character and one piece of furniture at a time.",
@@ -962,6 +964,7 @@ export const enUSMessages = {
         "modeHint": "Prepares the required cast and furniture, then restores the original scene when stopped or finished.",
         "currentHint": "Uses only the cast and furniture already in the scene. The player checks the conditions.",
         "phase": {
+            "viewing": "Viewing",
             "idle": "Ready",
             "preparing": "Preparing content",
             "playing": "Playing",

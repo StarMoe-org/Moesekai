@@ -32,7 +32,7 @@ export default function ContentDetail({ entry, snapshot, detailLoading, detailFa
     const bubble = entry.presentation.textMode === "bubble";
     return <section className="interaction-detail" aria-labelledby={headingId} data-selected-content={entry.key}>
         <div className="interaction-detail-heading">
-            <ContentArtwork entry={entry} snapshot={snapshot} />
+            <ContentArtwork entry={entry} snapshot={snapshot} large />
             <div>
                 <span className="interaction-eyebrow">{t(`page.mysekaiInteractions.category.${entry.presentation.category}`)}</span>
                 <h2 id={headingId}>{entry.title}</h2>

@@ -873,6 +873,8 @@ export const zhCNMessages = {
     },
     page: {
         mysekaiInteractions: {
+            r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},
+            r4b: { "characterEntry": "查看这位角色的家具对话", },
             navTitle: "MYSEKAI 对话与互动",
             "title": "对话与互动",
             "subtitle": "从一件家具、一位角色，发现 MYSEKAI 的日常。",
@@ -961,6 +963,7 @@ export const zhCNMessages = {
             "modeHint": "自动准备需要的角色与家具；停止或结束后恢复原场景。",
             "currentHint": "只使用当前场景已有的角色和家具；条件由播放器判断。",
             "phase": {
+            "viewing": "查看中",
                 "idle": "就绪",
                 "preparing": "准备内容中",
                 "playing": "播放中",

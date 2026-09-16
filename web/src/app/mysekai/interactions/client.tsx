@@ -1,12 +1,11 @@
 "use client";
 
-import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { localizePathForBrowser, replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import { INITIAL_BROWSE, filterCatalog, furnitureHref, interactionHref, parseBrowse, supportedRegion, validContentKey, type BrowseState } from "@/lib/moly/catalog";
 import { useContentCatalog, useContentDetail, useRuntimeManifest } from "@/lib/moly/useResources";
@@ -17,13 +16,14 @@ import ContentDetail from "@/components/mysekai-interactions/ContentDetail";
 import ContentArtwork from "@/components/mysekai-interactions/ContentArtwork";
 import ResourceCachePanel from "@/components/mysekai-interactions/ResourceCachePanel";
 import "./interactions.css";
+import "@/components/mysekai-interactions/participants.css";
 import { getLocaleRouteConfig, uiLocaleToRouteLocale } from "@/lib/locale-routing";
 
 const subscribeHydration = () => () => {};
 const hydratedSnapshot = () => true;
 const serverHydrationSnapshot = () => false;
 
-interface NavigationState { region: string | null; snapshot: string | null; browse: BrowseState; content: MolyKey | null; invalidContent: boolean; }
+interface NavigationState { page: number; region: string | null; snapshot: string | null; browse: BrowseState; content: MolyKey | null; invalidContent: boolean; }
 function fromParams(params: URLSearchParams): NavigationState {
     const content = params.get("content");
     const browse = parseBrowse(params);
@@ -31,7 +31,7 @@ function fromParams(params: URLSearchParams): NavigationState {
         if (content?.startsWith("fixture:") || (!content && browse.fixture)) browse.tab = "furniture";
         else if (content?.startsWith("activity:")) browse.tab = "activities";
     }
-    return { region: params.get("region"), snapshot: params.get("snapshot"), browse,
+    return { page: Math.min(100000, Math.max(1, Number.parseInt(params.get("page") || "1", 10) || 1)), region: params.get("region"), snapshot: params.get("snapshot"), browse,
         content: validContentKey(content) ? content : !content && browse.fixture ? `fixture:${browse.fixture}` : null,
         invalidContent: Boolean(content && !validContentKey(content)) };
 }
@@ -54,6 +54,12 @@ function InteractionsContent() {
     const player = useRef<RuntimeStageHandle>(null);
     const stage = useRef<HTMLDivElement>(null);
     const sessionSequence = useRef(0);
+    const pendingScroll = useRef<{ x: number; y: number; anchor: HTMLElement | null; top: number } | null>(null);
+    const retainViewport = () => {
+        const anchor = Array.from(document.querySelectorAll<HTMLElement>(".interaction-card"))
+            .find(element => { const rect = element.getBoundingClientRect(); return rect.bottom > 0 && rect.top < innerHeight; }) ?? null;
+        pendingScroll.current = { x: scrollX, y: scrollY, anchor, top: anchor?.getBoundingClientRect().top ?? 0 };
+    };
     // A Suspense subtree may hydrate after the parent restored preferences.
     // Its initial render still needs the same locale default as SSR. Defer
     // catalogue binding until the one existing settings owner is ready.
@@ -71,7 +77,9 @@ function InteractionsContent() {
     const visibleEntry = detail ?? selected;
     const deferredBrowse = useDeferredValue(nav.browse);
     const results = useMemo(() => catalog ? filterCatalog(catalog, deferredBrowse) : [], [catalog, deferredBrowse]);
-    const { displayCount, loadMore, resetDisplayCount } = useScrollRestore({ storageKey: "mysekai-interactions", defaultDisplayCount: 24, increment: 24, maxRestoredDisplayCount: 240, isReady: Boolean(catalog) });
+    const pageSize = 24;
+    const pageCount = Math.max(1, Math.ceil(results.length / pageSize));
+    const page = Math.min(nav.page, pageCount);
     const contextFixture = nav.browse.fixture ? entries.get(`fixture:${nav.browse.fixture}`) : undefined;
     const missing = nav.invalidContent || Boolean(nav.content && catalog && !selected);
     const activeKey = live?.status.activeKey ?? null;
@@ -86,6 +94,21 @@ function InteractionsContent() {
         : manifest && sourceReady && (!region || !published?.available) ? "regionUnavailable"
             : catalogFailed ? "catalogFailed" : missing ? "contentMissing" : null;
 
+    useLayoutEffect(() => {
+        const previous = pendingScroll.current;
+        if (!previous) return;
+        if (previous.anchor?.isConnected) {
+            const delta = previous.anchor.getBoundingClientRect().top - previous.top;
+            if (Math.abs(delta) > 0.5) window.scrollTo({ left: previous.x, top: window.scrollY + delta, behavior: "instant" });
+        } else {
+            window.scrollTo({ left: previous.x, top: previous.y, behavior: "instant" });
+        }
+        // Selecting a catalogue row changes twice: first the lightweight index
+        // row, then the source detail payload. Keep the same visible card pinned
+        // through both layouts instead of clearing the restore after the first.
+        if (!detailLoading) pendingScroll.current = null;
+    }, [nav, detail, session, detailLoading]);
+
     useEffect(() => {
         if (!catalog || !snapshot || (nav.region && nav.snapshot)) return;
         // Pin identity once discovery completes, not on every theme/server change.
@@ -96,10 +119,11 @@ function InteractionsContent() {
     useEffect(() => {
         if (!nav.region) return;
         const query = new URLSearchParams(window.location.search);
-        for (const key of ["region", "snapshot", "tab", "q", "character", "fixture", "availability", "content"]) query.delete(key);
+        for (const key of ["region", "snapshot", "tab", "q", "character", "fixture", "availability", "content", "page"]) query.delete(key);
         query.set("region", nav.region);
         if (nav.snapshot) query.set("snapshot", nav.snapshot);
         query.set("tab", nav.browse.tab);
+        if (nav.page > 1) query.set("page", String(nav.page));
         if (nav.browse.query) query.set("q", nav.browse.query);
         if (nav.browse.character) query.set("character", String(nav.browse.character));
         if (nav.browse.fixture) query.set("fixture", String(nav.browse.fixture));
@@ -133,38 +157,48 @@ function InteractionsContent() {
     }, [session, closePlayer]);
 
     const change = (value: Partial<BrowseState>) => {
+        retainViewport();
         setNav(current => {
             const browse = { ...current.browse, ...value };
             const entry = current.content ? entries.get(current.content) : undefined;
             // A filtered-out detail must not keep offering an invalid Play
             // intent. This affects selection only, never the active player.
             const visible = entry && catalog && filterCatalog({ ...catalog, entries: [entry] }, browse).length > 0;
-            return { ...current, browse, content: visible ? current.content : null };
+            return { ...current, page: 1, browse, content: visible ? current.content : null };
         });
-        resetDisplayCount();
+    };
+    const goToPage = (next: number) => {
+        const target = Math.max(1, Math.min(pageCount, next));
+        if (target === page) return;
+        const query = new URLSearchParams(window.location.search);
+        if (target === 1) query.delete("page"); else query.set("page", String(target));
+        window.history.pushState(window.history.state, "", window.location.pathname + "?" + query.toString());
+        pendingScroll.current = null;
+        setNav(current => ({ ...current, page: target }));
+        requestAnimationFrame(() => document.querySelector(".interaction-browser")?.scrollIntoView({ block: "start", behavior: "instant" }));
     };
     const select = (content: MolyKey) => {
+        retainViewport();
         setNav(current => ({ ...current, content, invalidContent: false }));
         setNotice(null);
-        requestAnimationFrame(() => stage.current?.scrollIntoView({ block: "start", behavior: "auto" }));
     };
     const related = (fixture: number, tab: MolyTab) => {
         change({ fixture, tab, query: "", character: null });
     };
     const showStage = () => stage.current?.scrollIntoView({ block: "start", behavior: "auto" });
     const start = (key: MolyKey | null) => {
+        retainViewport();
         if (!snapshot || !manifest || closing) return;
         setRuntimeError(null); setNotice(null);
         if (session) { if (key) player.current?.play(key); }
         else setSession({ id: ++sessionSequence.current, snapshot, release: manifest.release,
             initial: { ...nav.browse, mode }, content: nav.content, play: key });
-        showStage();
     };
     const switchSource = async (next: string) => {
         if (closing || next === source) return;
         if (session) await closePlayer();
-        setNav({ region: next, snapshot: null, browse: { ...INITIAL_BROWSE }, content: null, invalidContent: false });
-        setMode("independent"); setNotice(null); resetDisplayCount();
+        setNav({ page: 1, region: next, snapshot: null, browse: { ...INITIAL_BROWSE }, content: null, invalidContent: false });
+        setMode("independent"); setNotice(null);
     };
     const share = async () => {
         if (!snapshot || !nav.content) return;
@@ -193,7 +227,7 @@ function InteractionsContent() {
             {(blocked === "noDeployment" || blocked === "regionUnavailable") && <p>{t(`page.mysekaiInteractions.${blocked}Hint`)}</p>}
             {(blocked === "regionUnavailable" || blocked === "snapshotExpired") && <p>{t("page.mysekaiInteractions.switchHint")}</p>}
             <button className="interaction-button" onClick={() => setRetry(value => value + 1)}>{t("page.mysekaiInteractions.retry")}</button>
-            {blocked === "snapshotExpired" && <button className="interaction-button" onClick={() => { void closePlayer().then(() => { setNav({ region: source, snapshot: null, browse: { ...INITIAL_BROWSE }, content: null, invalidContent: false }); }); }}>{t("page.mysekaiInteractions.switchRegion", { region: source.toUpperCase() })}</button>}
+            {blocked === "snapshotExpired" && <button className="interaction-button" onClick={() => { void closePlayer().then(() => { setNav({ page: 1, region: source, snapshot: null, browse: { ...INITIAL_BROWSE }, content: null, invalidContent: false }); }); }}>{t("page.mysekaiInteractions.switchRegion", { region: source.toUpperCase() })}</button>}
         </section>}
         {loading && <div className="interaction-loading" role="status">{t("page.mysekaiInteractions.loading")}</div>}
         {(snapshot || session) && Boolean(nav.content || session) && <div className="interaction-experience">
@@ -227,7 +261,7 @@ function InteractionsContent() {
         </div>}
         {notice && <p className="interaction-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
         {catalog && snapshot && <ContentBrowser catalog={catalog} snapshot={snapshot} browse={nav.browse} results={results} selected={nav.content}
-            active={phase === "playing" ? activeKey : null} displayCount={displayCount} change={change} select={select} more={loadMore} />}
+            active={phase === "playing" ? activeKey : null} page={page} pageSize={pageSize} change={change} select={select} onPage={goToPage} />}
         {ownerBusy && <div className="interaction-mini-transport"><button onClick={showStage}><span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${phase}`)}</span><strong>{live?.status.activeTitle}</strong></button><button onClick={() => player.current?.stop()}>{t("page.mysekaiInteractions.stop")}</button></div>}
     </div>;
 }

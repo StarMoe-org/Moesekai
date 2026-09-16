@@ -106,7 +106,6 @@
 .interaction-grid-furniture .interaction-card{flex-direction:column;gap:10px}
 .interaction-grid-furniture .interaction-card>.interaction-art{width:100%;height:auto;aspect-ratio:4/3;flex:auto}
 .interaction-grid-furniture .interaction-card .interaction-card-cast:empty{display:none}
-.interaction-load-more{text-align:center;padding:26px 0}
 .interaction-empty{min-height:200px;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:15px;padding:24px}
 .interaction-empty p{font-size:.87rem;line-height:1.8;color:var(--text-muted)}
 .interaction-notice{border:1px solid var(--border-strong);border-inline-start:3px solid var(--text-muted);padding:20px;border-radius:14px;background:var(--surface-base);margin:14px 0;line-height:1.75}

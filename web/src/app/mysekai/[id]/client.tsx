@@ -7,11 +7,11 @@ import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import MainLayout from "@/components/MainLayout";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
+import FixtureCharacterEntries from "@/components/mysekai-interactions/FixtureCharacterEntries";
 import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
 import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
 
-import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
-import { getCharacterName } from "@/lib/i18n";
+import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
 import {
     IMysekaiFixtureInfo,
     IMysekaiFixtureGenre,
@@ -29,23 +29,6 @@ import { fetchMasterDataForServer } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
-
-// Map virtual singer unit-specific character IDs to base character IDs
-// 27-31: Miku (L/n, MMJ, VBS, WxS, 25-ji versions) -> 21
-// 32-36: Rin (L/n, MMJ, VBS, WxS, 25-ji versions) -> 22
-// 37-41: Len (L/n, MMJ, VBS, WxS, 25-ji versions) -> 23
-// 42-46: Luka (L/n, MMJ, VBS, WxS, 25-ji versions) -> 24
-// 47-51: MEIKO (L/n, MMJ, VBS, WxS, 25-ji versions) -> 25
-// 52-56: KAITO (L/n, MMJ, VBS, WxS, 25-ji versions) -> 26
-function mapCharacterIdToBase(charId: number): number {
-    if (charId >= 27 && charId <= 31) return 21; // Miku
-    if (charId >= 32 && charId <= 36) return 22; // Rin
-    if (charId >= 37 && charId <= 41) return 23; // Len
-    if (charId >= 42 && charId <= 46) return 24; // Luka
-    if (charId >= 47 && charId <= 51) return 25; // MEIKO
-    if (charId >= 52 && charId <= 56) return 26; // KAITO
-    return charId; // Return as-is for regular characters (1-26)
-}
 
 function MysekaiFixtureDetailContent() {
     const params = useParams();
@@ -222,7 +205,7 @@ function MysekaiFixtureDetailContent() {
                 if (group) {
                     [group.gameCharacterUnitId1, group.gameCharacterUnitId2, group.gameCharacterUnitId3,
                     group.gameCharacterUnitId4, group.gameCharacterUnitId5].forEach(id => {
-                        if (id) characterIds.push(mapCharacterIdToBase(id));
+                        if (id) characterIds.push(id);
                     });
                 }
             }
@@ -462,31 +445,7 @@ function MysekaiFixtureDetailContent() {
                                     </h2>
                                 </div>
                                 <div className="p-5">
-                                    <div className="flex flex-wrap gap-2">
-                                        {fixtureCharacterTalks.map((talk) => (
-                                            <div
-                                                key={talk.id}
-                                                className="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-full"
-                                            >
-                                                {talk.characterIds.map((charId) => (
-                                                    <div
-                                                        key={charId}
-                                                        className="w-8 h-8 rounded-full overflow-hidden bg-white ring-1 ring-slate-200"
-                                                        title={getCharacterName(t, charId)}
-                                                    >
-                                                        <Image
-                                                            src={getCharacterIconUrl(charId)}
-                                                            alt={getCharacterName(t, charId)}
-                                                            width={32}
-                                                            height={32}
-                                                            className="w-full h-full object-cover"
-                                                            unoptimized
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <FixtureCharacterEntries region={dataSource!} fixture={fixture.id} fixtureName={fixture.name} fixtureImage={thumbnailUrl} groups={fixtureCharacterTalks} />
                                 </div>
                             </div>
                         )}

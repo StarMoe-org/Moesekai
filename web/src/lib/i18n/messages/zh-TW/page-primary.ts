@@ -1,5 +1,7 @@
 export const zhTWPagePrimary = {
     mysekaiInteractions: {
+            r5: {"pagination":"內容分頁","previous":"上一頁","next":"下一頁","page":"第 {page} 頁，共 {pages} 頁","range":"{start}–{end} / {total}","preparing":"正在準備資源…","ready":"準備就緒，點擊播放"},
+            r4b: { "characterEntry": "查看這位角色的家具對話", },
         "navTitle": "MYSEKAI 對話與互動",
         "title": "對話與互動",
         "subtitle": "從家具與角色出發，探索 MYSEKAI 的日常片段。",
@@ -88,6 +90,7 @@ export const zhTWPagePrimary = {
         "modeHint": "自動準備所需角色與家具，停止或結束後還原原始場景。",
         "currentHint": "僅使用場景中已有的角色與家具，由播放器檢查條件。",
         "phase": {
+            "viewing": "檢視中",
             "idle": "待播放",
             "preparing": "準備內容中",
             "playing": "播放中",
