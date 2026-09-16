@@ -17,6 +17,7 @@ coverage.out
 # Node / Next.js
 node_modules/
 .next/
+.next-*/
 out/
 build/
 dist/

@@ -31,6 +31,8 @@ function getAllowedDevOrigins(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  // Keep QA builds separate from a running standalone server on Windows.
+  distDir: process.env.MOE_NEXT_DIST_DIR || ".next",
   output: "standalone",
   cacheMaxMemorySize: 50 * 1024 * 1024,
   trailingSlash: true,

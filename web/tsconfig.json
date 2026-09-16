@@ -41,6 +41,7 @@
     "../refer/re_sekai-calculator/src/**/*"
   ],
   "exclude": [
-    "node_modules"
+    "node_modules",
+    ".next-*"
   ]
 }
