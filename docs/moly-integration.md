@@ -101,7 +101,7 @@ node web/release-artifact.mjs --config /private/publication.json
 
 发布器生成独立目录索引/详情、双后端 release、压缩 sidecar 和原子 manifest；`developmentLinks=false` 时不会复制大体积游戏资源，操作者需完成只读 assets 挂载。它只移除 WASM 调试名称/调试段，并核对标准模块仍可编译且 import/export ABI 不变。
 
-浏览器构建使用 `wasm-size` profile（`opt-level=s`、fat LTO、单 codegen unit），双后端共享源指纹。Go 按 `Accept-Encoding` 的 quality 协商 Brotli、gzip、identity，尊重显式 `q=0`，所有可用表示均被禁止时返回 406。表示拥有独立 ETag，并支持正确的 HEAD、304 和 Range 长度。manifest 保留 `downloadBytes`、`decodedBytes`、`brotliBytes`、`gzipBytes`，服务启动读取时核对实际文件长度；Brotli 发布的 `downloadBytes` 必须等于 `brotliBytes`。浏览器缓存统计使用解码字节，不能与 Brotli 网络流量直接比较。
+浏览器构建使用 `wasm-size` profile（`opt-level=s`、fat LTO、单 codegen unit），双后端共享源指纹。显式 Bevy feature 集移除未使用的 gizmos 与 picking 组；音频、UI、Sprite、glTF 与 animation 保留，post-process/AA 也保留，未将有兼容性问题的 wasm-opt 实验产物接入发布。Go 按 `Accept-Encoding` 的 quality 协商 Brotli、gzip、identity，尊重显式 `q=0`，所有可用表示均被禁止时返回 406。表示拥有独立 ETag，并支持正确的 HEAD、304 和 Range 长度。manifest 保留 `downloadBytes`、`decodedBytes`、`brotliBytes`、`gzipBytes`，读取 manifest 时核对实际文件长度；Brotli 发布的 `downloadBytes` 必须等于 `brotliBytes`。浏览器缓存统计使用解码字节，不能与 Brotli 网络流量直接比较。
 
 快照 ID 包含目录、家具 master、控制器索引及来源描述的摘要，**不是每个游戏二进制的全量 Merkle 校验**。生产必须保持 assets 内容不可变；资源变化应生成新快照，而不是覆盖原 ID 下的文件。
 
@@ -115,7 +115,7 @@ node web/release-artifact.mjs --config /private/publication.json
 
 离线保证针对已完整准备且未被驱逐的必要包和已访问对话资源，不包括整个游戏资源库、全站导航或 Haruki 网络请求。离线验收应使用新浏览器 profile，等待缓存完成后断网，逐项 fetch 必要资源并实际播放已准备的对话；随后联网去资源管理页清理至零字节、重新加载并复测。浏览器仍可能回收站点存储。
 
-## 验证与当前进度
+## 验证与交付记录
 
 宿主校验命令：
 
@@ -133,9 +133,8 @@ bun run build:next
 
 Windows 同时运行多个 QA 服务时设置 `MOE_NEXT_DIST_DIR=.next-r5-closeout` 创建独立产物，避免覆盖运行中的 standalone。`.next-*` 不提交，也不被 ESLint、TypeScript 源检查或 Tailwind 的自动源扫描使用。默认生产构建仍使用 `.next`。
 
-本机当前实施记录在 Moly 工程：
-- `pm/2026-09-16-moesekai-todo.md`：T01–T09 的实际完成状态与剩余验收。
-- `pm/2026-09-16-moesekai-integration.md`：每轮修改、问题定位和证据。
+本机当前交付记录在 Moly 工程：
+- `pm/2026-09-16-r5-closeout.md`：本轮最终完成范围、发布身份、测试矩阵与真实限制；旧轮次 todo/integration 只作为历史记录。
 - 工程外 `_work/round5/`：双后端真实播放、参与者、分页/历史、滚动/全屏、临时导入、62 张大头照与 WASM 尺寸证据。
 - 工程外 `_work/round5-closeout/`：最终离线缓存矩阵、最新源码 production build、Go/TS/ESLint/i18n 日志与收口证据。
 
@@ -143,17 +142,26 @@ Windows 同时运行多个 QA 服务时设置 `MOE_NEXT_DIST_DIR=.next-r5-closeo
 
 最新宿主源码通过独立 Next production build（80 路由）、TypeScript、Go `./...`、ESLint、i18n 与 i18n usage。i18n 为 5 locales / 3,848 keys，插值结构一致。ESLint 没有错误；manga 页面与 SettingsPanel 的 4 条既有导航警告保留，本功能没有新增 lint 警告。产物 `.next-r5-closeout-final` 由 QA 端口 3052 提供，8082 的最新 Go 后端代理到它；8080、8081 与旧 3050 服务不受影响。
 
-CN 与 JP 在各自新浏览器 profile 下均通过自动缓存 → 断网逐资源 SHA-256 校验 → 新 runtime 播放已准备对话 → 清理到零 → 重新加载 → 再次断网校验。两轮均没有 HTTP 失败，用户 localStorage 和无关缓存保持原样：
+最终发布为 `stage-85a6f76ccc10d0ffe25b`，来源快照为 CN `cn-6.0.0-a374d605e52c088f202c`、JP `jp-6.8.1-6749fb58d4973887bd93`。发布根仍为 `_work/round5/publication`，新增 immutable release/snapshot 后原子更新 manifest。以下为该发布的字节数，raw 指发布器剥离调试名称前的 WASM，decoded 指实际发布后浏览器解码得到的 WASM：
+
+| 后端 | raw | decoded | gzip | Brotli |
+| --- | ---: | ---: | ---: | ---: |
+| WebGPU | 52,712,781 | 41,306,822 | 11,884,955 | 8,928,672 |
+| WebGL2 | 52,509,170 | 41,226,927 | 11,863,137 | 8,933,047 |
+
+CN 与 JP 在各自新浏览器 profile 下均通过自动缓存 → 断网逐资源 SHA-256 校验 → 在线完整准备对话 → 新 runtime 离线播放至自然结束 → 清理到零 → 重新加载 → 再次断网校验。CN 离线覆盖 2 行、JP 覆盖 1 行；禁用保留后的网络读取保持缓存零字节。两轮均没有 HTTP 失败，用户 localStorage 和无关缓存保持原样：
 
 | 来源 | 必要资源数 | 解码资源字节 | 离线新 runtime 对话 |
 | --- | ---: | ---: | --- |
 | CN 6.0.0 | 285 | 128,194,624 | `talk:fixture:1374` |
 | JP 6.8.1 | 301 | 147,752,009 | `talk:general:3912` |
 
-证据为 `_work/round5-closeout/qa/cache-cn.json`、`cache-jp.json`。真实 HTTP 的双后端 Brotli/gzip/identity 及全部禁用返回 406 已复核于 `host/http-encoding.json`；HEAD 长度与发布 manifest 一致。
+最终证据为 `_work/round5-closeout/qa-final/cache-cn.json`、`cache-jp.json`，均为 `passed: true`。资源管理往返继续保留 region/snapshot，包含中文 UI 浏览 JP 的情况。最终真实 HTTP 双后端 Brotli/gzip/identity、HEAD、206 Range、304 重验证见 `serving-final.log`，长度与上述 manifest 一致；全部编码禁用返回 406 的宿主协议检查见 `host/http-encoding.json`。
 
-最新宿主浏览器回归另确认：CN 桌面/移动端深色模式外层预览与完整播放、JP 桌面完整对话、`talk:fixture:5502` 的双头像与家具、家具 157 入口精确链接且零 WASM/GLB 下载、24 项分页前进后退、选择时 scroll delta 为 0、网页及浏览器全屏保持 iframe realm。中文 UI 的 JP 资源往返/重新加载后仍为 JP 原快照，见 `qa/region-resources.json`。这些检查的日志为 `_work/round5-closeout/qa-host-*.log`，总览为 `qa/host-production-summary.json`，10 张截图经过人工检查。移动端点击详情按钮后使用已有“返回舞台”控件检查实际对话画面，见 `qa/cn-mobile-stage-playing.png` 与 `qa/cn-mobile-stage-viewport.png`。
+最终发布的宿主浏览器回归另确认：CN 桌面/移动端深色模式外层预览与完整播放、JP 桌面完整对话、`talk:fixture:5502` 的双头像与家具、家具 157 入口精确链接且零 WASM/GLB 下载、24 项分页前进后退、选择时 scroll delta 为 0、网页及浏览器全屏保持 iframe realm。总览为 `_work/round5-closeout/qa-final/host-summary.json`，9 张最终截图经过人工检查，已发布的 CN/JP 共 62 张 PNG SHA-256 与生产化 head exporter 输出逐张一致。移动端点击详情按钮后使用已有“返回舞台”控件检查实际对话画面，见 `qa-final/cn-mobile-stage-playing.png` 与 `qa-final/cn-mobile-stage-viewport.png`。早期宿主矩阵保留在 `qa/host-production-summary.json` 供问题追溯。
 
 一轮 JP 并行测试在引擎初始化阶段超过脚本默认 30 秒，保留失败日志；在原超时配置不变的情况下单独重跑通过，未通过提高 timeout 掩盖。CN → JP 切换实际播放与恢复确认、未发布区服明确拒绝、减少动态/透明度/提高对比度下无页面溢出也通过，见 `qa/host-sources.json`。
 
-这些记录是进度事实；本说明不是“所有验收已经完成”的声明。尤其不能把 `Playing` 状态当作摩托车已骑乘或气泡已显示的视觉证明。
+最终发布的 WebGL2 CN 与 JP 移动端回归分别见 `qa-final/final-cn-webgl2.json`、`final-jp-webgl2-mobile.json`，均为 `failed: false`；逐行核对源 speaker/text、可见 transcript、自然结束与严格场景恢复，并确认只有一个 running 音频上下文且输出非零 PCM。WebGPU、宿主外层按钮、双区服、分页、全屏、参与者与 62 张真源纯头部头像也已完成本轮回归。临时玩家导入 `import-final.log` 为 `passed: true`，rank 100、1 site、1 fixture，探索 fixture 157 后恢复且 localStorage 未改。Rust 为 631 个常规测试与 6 个带真实资源补跑的测试通过，共 637 个。
+
+本轮交付完成上述已列明的功能与回归范围；没有穷尽每一条目录对白，也不承诺全站或整个游戏资源库离线可用。移动端保留原作 canvas 对话框时文字较小，可使用全屏阅读。原生客户端交互本轮未实测；浏览器存储仍可能被系统回收。
