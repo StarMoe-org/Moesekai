@@ -118,7 +118,7 @@ export async function fetchContentCatalog(snapshot: Pick<ResourceSnapshot, "id" 
     return catalog;
 }
 export async function fetchContentDetail(snapshot: Pick<ResourceSnapshot, "id" | "catalog">, entry: Pick<CatalogEntry, "key" | "detail">, signal?: AbortSignal): Promise<MolyEntry> {
-    const value = await readJson<{ schemaVersion: 1; snapshotId: string; entry: MolyEntry }>(`${snapshot.catalog.slice(0, -"index.json".length)}${entry.detail}`, signal, 2 * 1048576);
+    const value = await readJson<{ schemaVersion: 1; snapshotId: string; entry: MolyEntry }>(`${snapshot.catalog.slice(0, -"index.json".length)}${entry.detail}`, signal, 2 * 1048576, true);
     if (value?.schemaVersion !== 1 || value.snapshotId !== snapshot.id || value.entry?.key !== entry.key) throw new Error("moly_detail_mismatch");
     return value.entry;
 }

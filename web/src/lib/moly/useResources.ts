@@ -39,14 +39,28 @@ export function useContentCatalog(snapshot: ResourceSnapshot | undefined, retry:
 
 export function useContentDetail(snapshot: ResourceSnapshot | undefined, entry: CatalogEntry | undefined, retry: number) {
     const [result, setResult] = useState<{ key: string; value?: MolyEntry; failed?: boolean } | null>(null);
+    // One reading-page visit only. Leaving or reloading the page drops these
+    // on-demand dialogue details; the measured base pack keeps its own cache.
+    const [visited, setVisited] = useState(() => new Map<string, MolyEntry>());
     const id = snapshot?.id, catalog = snapshot?.catalog, content = entry?.key, path = entry?.detail;
-    const key = id && content ? `${id}:${content}:${retry}` : "";
+    const key = id && catalog && content && path ? `${id}:${catalog}:${content}:${path}:${retry}` : "";
+    const cached = key ? visited.get(key) : undefined;
     useEffect(() => {
         if (!id || !catalog || !content || !path) return;
+        if (visited.has(key)) return;
         const abort = new AbortController();
-        fetchContentDetail({ id, catalog }, { key: content, detail: path }, abort.signal).then(value => { if (!abort.signal.aborted) setResult({ key, value }); })
+        fetchContentDetail({ id, catalog }, { key: content, detail: path }, abort.signal).then(value => {
+            if (abort.signal.aborted) return;
+            setVisited(previous => {
+                const next = new Map(previous);
+                next.set(key, value);
+                if (next.size > 64) next.delete(next.keys().next().value!);
+                return next;
+            });
+            setResult({ key, value });
+        })
             .catch(() => { if (!abort.signal.aborted) setResult({ key, failed: true }); });
         return () => abort.abort();
-    }, [id, catalog, content, path, key]);
-    return { detail: result?.key === key ? result.value : undefined, loading: Boolean(key) && result?.key !== key, failed: result?.key === key && Boolean(result.failed) };
+    }, [id, catalog, content, path, key, visited]);
+    return { detail: cached ?? (result?.key === key ? result.value : undefined), loading: Boolean(key) && !cached && result?.key !== key, failed: !cached && result?.key === key && Boolean(result.failed) };
 }

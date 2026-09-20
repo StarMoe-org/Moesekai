@@ -88,7 +88,7 @@ export function useWorkspaceNavigation(initialSearch: string, defaultTab: MolyTa
         const position = pending.current;
         const frame = requestAnimationFrame(() => {
             if (pending.current !== position) return;
-            const mobile = window.matchMedia("(max-width: 900px)").matches;
+            const mobile = (document.querySelector<HTMLElement>(".workspace-body")?.clientWidth ?? innerWidth) <= 900;
             if (typeof position === "string") {
                 const target = position === "catalog" ? document.querySelector<HTMLElement>("[data-mysekai-catalog]")
                     : position === "detail" && mobile ? document.querySelector<HTMLElement>(".workspace-body") : null;

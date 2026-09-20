@@ -6,7 +6,6 @@ import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
-import { localizePathForBrowser } from "@/lib/localized-path";
 import { INITIAL_BROWSE, filterCatalog, supportedRegion, type BrowseState, type CatalogEntry } from "@/lib/moly/catalog";
 import { INITIAL_FURNITURE, workspaceQuery } from "@/lib/moly/workspaceNavigation";
 import { useWorkspaceNavigation } from "@/lib/moly/useWorkspaceNavigation";
@@ -58,6 +57,21 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const closeInFlight = useRef<Promise<void> | null>(null);
     const sourceIntent = useRef(0);
     const searchEditing = useRef(false);
+    const workspace = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const element = workspace.current;
+        if (!element) return;
+        const measure = () => {
+            const style = getComputedStyle(element);
+            const contentWidth = element.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+            element.dataset.workspaceNarrow = String(contentWidth <= 900);
+        };
+        const observer = new ResizeObserver(measure);
+        observer.observe(element);
+        measure();
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         try {
@@ -214,14 +228,16 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         setMode("independent"); setNotice(null); setImportOpen(false);
     };
     const share = async () => {
-        const query = workspaceQuery(nav);
-        const href = localizePathForBrowser(`/mysekai/interactions/?${query}`);
-        try { await navigator.clipboard.writeText(new URL(href, location.origin).href); setNotice("copied"); }
+        // The current browser URL supplies the deployed host and locale path.
+        const url = new URL(window.location.href);
+        url.search = workspaceQuery(nav).toString();
+        url.hash = "";
+        try { await navigator.clipboard.writeText(url.href); setNotice("copied"); }
         catch { setNotice("copyFailed"); }
     };
     const catalogProblem = expired ? "snapshotExpired" : manifestFailed ? "noDeployment" : !region || (manifest && !published) ? "regionUnavailable" : catalogFailed ? "catalogFailed" : null;
 
-    return <div className="mysekai-interactions mysekai-workspace" data-workspace-region={source}
+    return <div ref={workspace} className="mysekai-interactions mysekai-workspace" data-workspace-region={source}
         onBlurCapture={event => { if (event.target instanceof HTMLInputElement) searchEditing.current = false; }}>
         <header className="workspace-heading">
             <div className="workspace-heading-title">
@@ -279,9 +295,6 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                 send={value => { if (!player.current) throw new Error("Stage not ready"); player.current.playerData(value); }}
                 onExplore={() => { setMode("current"); player.current?.browse({ mode: "current" }); showStage(true); }} />}
         </section>}
-        <WorkspaceStage session={session} player={player} live={live} boot={boot} error={runtimeError} expanded={stageExpanded} closing={closing} mode={mode}
-            setMode={setMode} expand={showStage} close={() => void closePlayer()} retry={() => void retryPlayer()}
-            onSnapshot={setLive} onBoot={setBoot} onError={setRuntimeError} onPlayerData={setPlayerData} />
         <nav className="workspace-tabs" aria-label={t("page.mysekaiInteractions.browse")}>
             {(["conversations", "activities"] as const).map(tab => <button key={tab} data-tab={tab}
                 aria-pressed={nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances")}
@@ -294,6 +307,9 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         </div>}
         {notice && <p className="workspace-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
         <div className={`workspace-body${nav.content || nav.invalidContent ? " workspace-has-detail" : ""}`}>
+            <WorkspaceStage session={session} player={player} live={live} boot={boot} error={runtimeError} expanded={stageExpanded} closing={closing} mode={mode}
+                setMode={setMode} expand={showStage} close={() => void closePlayer()} retry={() => void retryPlayer()}
+                onSnapshot={setLive} onBoot={setBoot} onError={setRuntimeError} onPlayerData={setPlayerData} />
             <div className="workspace-catalog-column">
                 {catalogProblem && <section className="workspace-inline-notice" role="status">
                     <h2>{t(`page.mysekaiInteractions.${catalogProblem}`, { region: source.toUpperCase() })}</h2>

@@ -158,13 +158,13 @@ node web/release-artifact.mjs --config /private/publication.json
 
 ## 缓存与数据隔离
 
-`GET /moly/cache-worker.mjs` 返回 JavaScript 与 `Service-Worker-Allowed: /moly/`。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 origin 缓存不可变 release/snapshot 与 asset-store 请求；CDN 缓存项使用真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留，并下载 `browser-base.json` 中的必要资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。存储被浏览器拒绝时仍允许在线播放。
+`GET /moly/cache-worker.mjs` 返回 JavaScript 与 `Service-Worker-Allowed: /moly/`。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 origin 读取不可变 release/snapshot 与 asset-store 请求；CDN 资源保留真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留，并持久缓存 release 与 `browser-base.json` 声明的基础资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。按需演出的语音、模型等资源只在 worker 内存中复用，最多 64 MiB、单项最多 32 MiB，worker 结束后不保留。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入浏览器长期缓存。旧版 worker 留下的非基础资源在新版激活时清理。存储被浏览器拒绝时仍允许在线播放。
 
 删除只位于 `/mysekai/interactions/resources/` 资源管理页；离开互动页时先让 runtime 恢复并关闭世界，再清理。清理只删除 `moly-resource-v1-*`，不删除站点设置、用户账户、已有布局或其他 CacheStorage。必要资源重新加载会重新填充对应快照的基础包。缓存统计为实际保留的解码字节，并非网络传输字节。
 
 互动页、资源页、返回及重新加载链接保留 `region` 和 `snapshot`，因此中文界面浏览 JP 后不会在重新加载时隐式换成 CN。过期快照依旧显示来源失效，交由用户显式切换到当前快照。
 
-离线保证针对已完整准备且未被驱逐的必要包和已访问对话资源，不包括整个游戏资源库、全站导航或 Haruki 网络请求。离线验收应使用新浏览器 profile，等待缓存完成后断网，逐项 fetch 必要资源并实际播放已准备的对话；随后联网去资源管理页清理至零字节、重新加载并复测。浏览器仍可能回收站点存储。
+离线保证只针对已完整准备且未被驱逐的基础包；按需演出资源只保证当前 worker 存活期间的尽力复用，不能承诺跨访问离线播放。离线验收应使用新浏览器 profile，等待缓存完成后断网逐项 fetch 必要资源；随后联网去资源管理页清理至零字节、重新加载并复测。浏览器仍可能回收站点存储。
 
 ## 验证与交付记录
 
