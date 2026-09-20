@@ -886,7 +886,7 @@ export const zhCNMessages = {
                 "fullscreenUnavailable": "浏览器未允许全屏，已使用网页全屏。",
                 "cacheAutomatic": "必要资源会自动缓存，无需手动启用。",
                 "reloadResources": "重新加载必要资源",
-                "backToInteractions": "返回对话与互动",
+                "backToInteractions": "返回烤森对话",
                 "previewBubble": "预览头顶气泡",
                 "engage": "进入对话",
                 "previewSource": "前置气泡原文",
@@ -921,10 +921,10 @@ export const zhCNMessages = {
                 "source_moesekai-asset": "Moesekai 资源镜像",
                 "source_remote": "已校验远端快照"
             },
-            navTitle: "MYSEKAI 剧情",
+            navTitle: "烤森对话",
             "weather": "天气",
-            "title": "MYSEKAI 剧情",
-            "subtitle": "浏览 MYSEKAI 对话、家具相关剧情与角色互动。",
+            "title": "烤森对话",
+            "subtitle": "浏览烤森对话、家具演出与角色互动。",
             "catalogOnly": "先浏览，再进入场景",
             "loadPlayer": "加载互动播放器",
             "loadHint": "浏览不需要下载游戏。进入后加载共用资源，再按需准备所选角色、家具和声音。",
@@ -946,7 +946,7 @@ export const zhCNMessages = {
             "tabs": {
                 "conversations": "对话",
                 "furniture": "家具",
-                "performances": "家具故事与演出",
+                "performances": "家具对话与演出",
                 "activities": "角色动作"
             },
             "category": {

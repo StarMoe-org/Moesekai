@@ -7,6 +7,7 @@ import type { MolyKey, MolyStatus } from "@/lib/moly/contract";
 import { type BrowseState, type CatalogEntry, type ContentCatalog, type ResourceSnapshot } from "@/lib/moly/catalog";
 import ContentArtwork from "./ContentArtwork";
 import CatalogPagination from "./CatalogPagination";
+import PerformanceBadge from "./PerformanceBadge";
 
 interface Props {
     catalog: ContentCatalog;
@@ -42,6 +43,11 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
                 hasActiveFilters={Boolean(browse.query || browse.character || browse.availability !== "all")}
                 onReset={() => change({ query: "", character: null, availability: "all" })}>
                 <FilterSection label={t("page.mysekaiInteractions.characters")}>
+                    <select className="workspace-character-select" aria-label={t("page.mysekaiInteractions.characters")}
+                        value={browse.character ?? ""} onChange={event => change({ character: Number(event.target.value) || null })}>
+                        <option value="">{t("page.mysekaiInteractions.allCharacters")}</option>
+                        {catalog.characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
+                    </select>
                     <div className="workspace-character-filter" role="group" aria-label={t("page.mysekaiInteractions.characters")}>
                         <FilterButton selected={browse.character === null} onClick={() => change({ character: null })} className="px-3 py-2 text-xs">
                             {t("page.mysekaiInteractions.allCharacters")}
@@ -62,7 +68,8 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
                 aria-pressed={selected === entry.key} onClick={() => select(entry.key)} data-content-key={entry.key}>
                 <ContentArtwork entry={entry} snapshot={snapshot} />
                 <span className="interaction-card-copy">
-                    <span className="interaction-eyebrow">{t(`page.mysekaiInteractions.category.${entry.presentation.category}`)}</span>
+                    {entry.presentation.category === "fixture_performance" ? <PerformanceBadge />
+                        : <span className="interaction-eyebrow">{t(`page.mysekaiInteractions.category.${entry.presentation.category}`)}</span>}
                     <strong>{entry.title}</strong>
                     <span className="interaction-card-cast">{entry.characters.map(character => character.name).join(" · ")}</span>
                     <span className="interaction-card-foot">

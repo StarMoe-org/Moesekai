@@ -562,9 +562,9 @@ export const SEO_PAGE_METADATA = {
   ),
   mysekai_interactions: definePage(
     "/mysekai/interactions",
-    { "zh-CN": "MYSEKAI 对话与互动", "en-US": "MYSEKAI Conversations & Interactions", "ja-JP": "マイセカイの会話とふれあい" },
+    { "zh-CN": "烤森对话", "en-US": "MYSEKAI Conversations & Interactions", "ja-JP": "マイセカイの会話とふれあい" },
     {
-      "zh-CN": "按家具和角色浏览 MYSEKAI 对话、家具演出与无对白互动，在独立场景中查看和播放。国服与日服资源独立标注。",
+      "zh-CN": "按家具和角色浏览烤森对话、家具演出与无对白互动，在独立场景中查看和播放。国服与日服资源独立标注。",
       "en-US": "Explore MYSEKAI conversations, furniture performances and character activities by furniture or character. Inspect and play them in an independent scene with explicitly separated CN and JP resources.",
       "ja-JP": "家具やキャラクターからマイセカイの会話、家具の演出、セリフのないふれあいを探し、独立したシーンで鑑賞できます。中国版と日本版のリソースを明確に区別しています。",
     },

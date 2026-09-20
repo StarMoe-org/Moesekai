@@ -34,30 +34,31 @@ export default function WorkspaceStage({ session, player, live, boot, error, exp
     const [expiredWeatherKey, setExpiredWeatherKey] = useState<string | null>(null);
     const weatherKey = session ? `${session.epoch}:${session.snapshot.id}` : null;
     const hasWeather = Boolean(live?.weather);
-    const hasWeatherReceipt = Boolean(session?.snapshot.provenance?.weatherProducerIndexSha256);
     const sceneReady = Boolean(live?.ready);
     useEffect(() => {
-        if (!weatherKey || !sceneReady || hasWeather || !hasWeatherReceipt) return;
+        if (!weatherKey || !sceneReady || hasWeather) return;
         const timer = window.setTimeout(() => setExpiredWeatherKey(weatherKey), 30_000);
         return () => window.clearTimeout(timer);
-    }, [weatherKey, sceneReady, hasWeather, hasWeatherReceipt]);
+    }, [weatherKey, sceneReady, hasWeather]);
     const presentation = useStagePresentation(root, Boolean(session));
     if (!session) return null;
     const phase = closing ? "restoring" : live?.status.phase ?? "preparing";
     const busy = Boolean(live?.status.canStop);
     const show = expanded || presentation.immersive;
-    const weatherUnavailable = sceneReady && (!hasWeatherReceipt || expiredWeatherKey === weatherKey);
+    const weatherUnavailable = sceneReady && expiredWeatherKey === weatherKey;
     return <section ref={root} tabIndex={-1} className={`workspace-stage interaction-stage-column${show ? "" : " workspace-stage-folded"}${presentation.immersive ? " interaction-immersive" : ""}`}
         data-runtime-phase={phase} role={presentation.immersive ? "dialog" : undefined} aria-modal={presentation.immersive || undefined}
         aria-label={t("page.mysekaiWorkspace.scene")}>
         <header className="workspace-stage-heading">
             <button className="workspace-stage-title" onClick={() => { if (show) presentation.leave(); expand(!show); }} aria-expanded={show} aria-controls="workspace-runtime-body">
-                <span className={`interaction-phase interaction-phase-${phase}`}>{t(`page.mysekaiInteractions.phase.${phase}`)}</span>
-                <strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong><span aria-hidden="true">{show ? "⌃" : "⌄"}</span>
+                <span className="workspace-stage-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4" width="18" height="13" rx="3" /><path d="M8 21h8M12 17v4m-2-13 5 2.5-5 2.5z" /></svg></span>
+                <span className="workspace-stage-copy"><strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong>
+                    <span className={`interaction-phase interaction-phase-${phase}`}>{t(`page.mysekaiInteractions.phase.${phase}`)}</span></span>
+                <span className="workspace-stage-disclosure">{t(`page.mysekaiWorkspace.${show ? "collapseScene" : "expandScene"}`)}
+                    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg></span>
             </button>
             <div className="workspace-stage-actions">
                 {busy && <button className="interaction-text-button" disabled={closing} onClick={() => player.current?.stop()}>{t(`page.mysekaiInteractions.${phase === "completed" ? "returnScene" : "stop"}`)}</button>}
-                {show && <button className="interaction-text-button" onClick={() => { presentation.leave(); expand(false); }}>{t("page.mysekaiWorkspace.returnToReading")}</button>}
                 <button className="interaction-text-button" disabled={closing} onClick={close}>{t("page.mysekaiInteractions.closePlayer")}</button>
             </div>
         </header>
@@ -65,6 +66,11 @@ export default function WorkspaceStage({ session, player, live, boot, error, exp
             <div className="interaction-stage-surface">
                 <RuntimeStage ref={player} session={session} onSnapshot={onSnapshot} onBoot={onBoot} onError={onError} onPlayerData={onPlayerData} />
             </div>
+            <ul className="workspace-stage-hints" aria-label={t("page.mysekaiWorkspace.sceneControls")}>
+                <li><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="M5 6.5a6 6 0 1 1-1 5M5 3v3.5H1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>{t("page.mysekaiWorkspace.rotateCamera")}</li>
+                <li className="workspace-stage-mouse-hint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="5" y="2" width="10" height="16" rx="5" /><path d="M10 5v4" strokeLinecap="round" /></svg>{t("page.mysekaiWorkspace.zoomCamera")}</li>
+                <li className="workspace-stage-mobile-hint"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><rect x="5" y="2" width="10" height="16" rx="2" /><path d="M9 15h2" strokeLinecap="round" /></svg>{t("page.mysekaiWorkspace.mobileMovementUnavailable")}</li>
+            </ul>
             <div className="workspace-stage-tools">
                 {live?.weather ? <WeatherControl weather={live.weather} disabled={closing} choose={id => player.current?.setWeather(id)} /> : <span className="workspace-inline-note" role="status">{t(`page.mysekaiWorkspace.${weatherUnavailable ? "weatherUnavailable" : "preparing"}`)}</span>}
                 <div className="workspace-scene-mode" role="group" aria-label={t("page.mysekaiWorkspace.sceneMode")}>

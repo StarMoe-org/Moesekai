@@ -5,6 +5,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import type { MolyEntry, MolyTab } from "@/lib/moly/contract";
 import type { ResourceSnapshot } from "@/lib/moly/catalog";
 import ContentArtwork from "./ContentArtwork";
+import PerformanceBadge from "./PerformanceBadge";
 
 interface Props {
     entry: MolyEntry;
@@ -37,8 +38,11 @@ export default function ContentDetail({ entry, snapshot, detailLoading, detailFa
     const action = playing ? "replay" : replacing ? "replace" : entry.presentation.primaryAction === "inspect" ? "inspectScene" : "playScene";
     return <section className="interaction-detail workspace-content-detail" aria-labelledby={headingId} data-selected-content={entry.key}>
         <div className="workspace-detail-heading">
-            <span className="workspace-overline">{t(`page.mysekaiInteractions.category.${entry.presentation.category}`)}
-                {entry.variant && entry.variant.count > 1 && <> · {t("page.mysekaiInteractions.variant", entry.variant)}</>}</span>
+            <div className="workspace-detail-meta">
+                {entry.presentation.category === "fixture_performance" ? <PerformanceBadge />
+                    : <span className="workspace-overline">{t(`page.mysekaiInteractions.category.${entry.presentation.category}`)}</span>}
+                {entry.variant && entry.variant.count > 1 && <span className="workspace-overline">{t("page.mysekaiInteractions.variant", entry.variant)}</span>}
+            </div>
             <h2 id={headingId}>{entry.title}</h2>
         </div>
         <ContentArtwork entry={entry} snapshot={snapshot} large character={character} fixture={fixture} />
@@ -54,18 +58,19 @@ export default function ContentDetail({ entry, snapshot, detailLoading, detailFa
         {!reason && !playing && !preparing && <p className="workspace-inline-note">{t("page.mysekaiWorkspace.explicitDownload")}</p>}
         {detailLoading && <div className="workspace-transcript-skeleton" role="status"><span>{t("common.state.loading")}</span><i /><i /><i /></div>}
         {detailFailed && <div className="workspace-inline-notice" role="alert">{t("page.mysekaiInteractions.detailFailed")} <button className="interaction-text-button" onClick={retry}>{t("common.action.retry")}</button></div>}
-        {!detailLoading && Boolean(entry.lines?.length) && <section className={`workspace-transcript${bubble ? " workspace-transcript-bubble" : ""}`} aria-label={t(`page.mysekaiInteractions.${bubble ? "bubble" : "transcript"}`)}>
-            <div className="workspace-section-title"><h3>{t(`page.mysekaiInteractions.${bubble ? "bubble" : "transcript"}`)}</h3><span>{entry.lines?.length}</span></div>
+        {!detailLoading && Boolean(entry.lines?.length) && <details key={entry.key} className={`workspace-transcript${bubble ? " workspace-transcript-bubble" : ""}`} aria-label={t(`page.mysekaiInteractions.${bubble ? "bubble" : "transcript"}`)}>
+            <summary className="workspace-section-title"><strong>{t(`page.mysekaiInteractions.${bubble ? "bubble" : "transcript"}`)}</strong><span>{entry.lines?.length}</span>
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="m5 7.5 5 5 5-5" /></svg></summary>
             {entry.lines?.map((line, index) => <div className="workspace-transcript-line" key={index}>
                 <span className="workspace-line-number" aria-hidden="true">{String(index + 1).padStart(2, "0")}</span>
                 <div><strong>{line.speaker}</strong><p>{line.text}</p></div>
             </div>)}
-        </section>}
+        </details>}
         {silent && !detailLoading && <div className="workspace-silent-activity"><h3>{t("page.mysekaiInteractions.noDialogue")}</h3>
             <p>{entry.description || t("page.mysekaiWorkspace.silentActivity")}</p>
             <span>{t(`page.mysekaiInteractions.behavior.${entry.presentation.behavior}`)}</span></div>}
         {entry.description && !silent && entry.description !== entry.title && <p className="workspace-flavor">{entry.description}</p>}
-        {entry.preview && <details className="workspace-source-record workspace-source-preview">
+        {entry.preview && <details key={`preview:${entry.key}`} open className="workspace-source-record workspace-source-preview">
             <summary>{t("page.mysekaiInteractions.r4b.previewSource")}</summary>
             {entry.preview.available ? <><p className="workspace-source-tweet">{entry.preview.text}</p>
                 <button className="interaction-button" disabled={!canPlay || restoring || previewing} onClick={preview} data-action="preview-bubble">{t("page.mysekaiInteractions.r4b.previewBubble")}</button></>

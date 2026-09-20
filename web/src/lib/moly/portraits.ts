@@ -10,7 +10,7 @@ export function sourcePortraits(snapshot: ResourceSnapshot): Promise<Map<number,
     if (previous) return previous;
     const base = snapshot.catalog.slice(0, -"index.json".length) + "portraits/";
     const work = (async () => {
-        const response = await fetch(base + "manifest.json", { cache: "force-cache", credentials: "same-origin" });
+        const response = await fetch(base + "manifest.json", { cache: "force-cache", credentials: "omit", redirect: "error" });
         if (!response.ok || Number(response.headers.get("content-length")) > 131072) throw new Error("portrait_unavailable");
         const text = await response.text();
         if (text.length > 131072) throw new Error("portrait_index_invalid");

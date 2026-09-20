@@ -1,4 +1,5 @@
 import { mysekaiDatabaseHref } from "../mysekai-source";
+import { molyResourceOrigin, molyResourceUrl } from "./resourceOrigin";
 import type { MolyEntry, MolyKey, MolyRegion, MolyTab, MolyCharacter } from "./contract";
 
 export const MOLY_CONTRACT_VERSION = 2;
@@ -7,6 +8,7 @@ export interface MolyRelease {
     module: string;
     stage: string;
     contractVersion: 2;
+    resourceOrigin?: string;
     engines: Record<"webgpu" | "webgl2", { downloadBytes: number; decodedBytes: number; brotliBytes?: number; gzipBytes?: number }>;
 }
 export interface ResourceSnapshot {
@@ -61,7 +63,7 @@ export function furnitureHref(region: MolyRegion, fixture: number): string {
 }
 
 async function readJson<T>(url: string, signal: AbortSignal | undefined, maxBytes: number, noStore = false): Promise<T> {
-    const response = await fetch(url, { signal, credentials: "same-origin", cache: noStore ? "no-store" : "force-cache" });
+    const response = await fetch(url, { signal, credentials: "omit", redirect: "error", cache: noStore ? "no-store" : "force-cache" });
     if (!response.ok || !response.headers.get("content-type")?.includes("application/json")) throw new Error(`moly_http_${response.status}`);
     const length = Number(response.headers.get("content-length"));
     if (length > maxBytes) throw new Error("moly_response_too_large");
@@ -93,9 +95,16 @@ export async function fetchRuntimeManifest(signal?: AbortSignal, pin?: { snapsho
         regions.add(snapshot.region);
         snapshot.releaseModule = value.release.module;
     }
+    // Validate logical publication identities before applying the host's exact,
+    // trusted resource origin. The SDK and iframe remain on the site origin.
+    value.release.resourceOrigin = molyResourceOrigin() || undefined;
+    for (const snapshot of value.snapshots) {
+        snapshot.assets = molyResourceUrl(snapshot.assets);
+        snapshot.catalog = molyResourceUrl(snapshot.catalog);
+    }
     return value;
 }
-export async function fetchContentCatalog(snapshot: ResourceSnapshot, signal?: AbortSignal): Promise<ContentCatalog> {
+export async function fetchContentCatalog(snapshot: Pick<ResourceSnapshot, "id" | "catalog" | "region" | "version">, signal?: AbortSignal): Promise<ContentCatalog> {
     const catalog = await readJson<ContentCatalog>(snapshot.catalog, signal, 32 * 1048576);
     if (catalog?.schemaVersion !== 1 || catalog.region !== snapshot.region || catalog.version !== snapshot.version || catalog.snapshotId !== snapshot.id
         || !Array.isArray(catalog.entries) || catalog.entries.length > 100000 || !Array.isArray(catalog.characters)) throw new Error("moly_catalog_mismatch");
@@ -108,7 +117,7 @@ export async function fetchContentCatalog(snapshot: ResourceSnapshot, signal?: A
     }
     return catalog;
 }
-export async function fetchContentDetail(snapshot: ResourceSnapshot, entry: CatalogEntry, signal?: AbortSignal): Promise<MolyEntry> {
+export async function fetchContentDetail(snapshot: Pick<ResourceSnapshot, "id" | "catalog">, entry: Pick<CatalogEntry, "key" | "detail">, signal?: AbortSignal): Promise<MolyEntry> {
     const value = await readJson<{ schemaVersion: 1; snapshotId: string; entry: MolyEntry }>(`${snapshot.catalog.slice(0, -"index.json".length)}${entry.detail}`, signal, 2 * 1048576);
     if (value?.schemaVersion !== 1 || value.snapshotId !== snapshot.id || value.entry?.key !== entry.key) throw new Error("moly_detail_mismatch");
     return value.entry;
@@ -126,6 +135,11 @@ export function resourceImage(snapshot: ResourceSnapshot, image: string | null |
 // playback always goes back through the real runtime's current admission gate.
 export function filterCatalog(catalog: ContentCatalog, state: BrowseState): CatalogEntry[] {
     const tokens = state.query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
+    // Search the same furniture relationships used by the furniture detail page.
+    // Authored conversation titles usually contain the cast, not the furniture.
+    const furnitureNames = new Map(catalog.entries
+        .filter(entry => entry.key.startsWith("fixture:"))
+        .map(entry => [Number(entry.key.slice("fixture:".length)), `${entry.title} ${entry.subtitle}`]));
     return catalog.entries.filter(entry => {
         const category = entry.presentation.category;
         const inTab = state.tab === "furniture" ? category === "furniture"
@@ -135,7 +149,7 @@ export function filterCatalog(catalog: ContentCatalog, state: BrowseState): Cata
         if (!inTab || (state.fixture !== null && !entry.fixtureIds.includes(state.fixture))
             || (state.character !== null && !entry.unitIds.includes(state.character))
             || (state.availability === "ready" && !entry.available)) return false;
-        const search = `${entry.title} ${entry.subtitle} ${entry.key} ${entry.fixtureIds.join(" ")} ${entry.characters.map(c => `${c.name} ${c.originalName || ""}`).join(" ")}`.toLocaleLowerCase();
+        const search = `${entry.title} ${entry.subtitle} ${entry.key} ${entry.fixtureIds.map(id => `${id} ${furnitureNames.get(id) ?? ""}`).join(" ")} ${entry.characters.map(c => `${c.name} ${c.originalName || ""}`).join(" ")}`.toLocaleLowerCase();
         return tokens.every(token => search.includes(token.replace(/^#/, "")));
     });
 }

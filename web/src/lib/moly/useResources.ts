@@ -23,26 +23,30 @@ export function useRuntimeManifest(retry: number, snapshot?: string | null, regi
 
 export function useContentCatalog(snapshot: ResourceSnapshot | undefined, retry: number) {
     const [result, setResult] = useState<{ key: string; value?: ContentCatalog; failed?: boolean } | null>(null);
-    const key = snapshot ? `${snapshot.id}:${retry}` : "";
+    const id = snapshot?.id, catalog = snapshot?.catalog, region = snapshot?.region, version = snapshot?.version;
+    const key = id ? `${id}:${retry}` : "";
     useEffect(() => {
-        if (!snapshot) return;
+        if (!id || !catalog || !region || !version) return;
         const abort = new AbortController();
-        fetchContentCatalog(snapshot, abort.signal).then(value => { if (!abort.signal.aborted) setResult({ key, value }); })
+        fetchContentCatalog({ id, catalog, region, version }, abort.signal).then(value => { if (!abort.signal.aborted) setResult({ key, value }); })
             .catch(() => { if (!abort.signal.aborted) setResult({ key, failed: true }); });
         return () => abort.abort();
-    }, [snapshot, key]);
+        // Pinning or revalidating the manifest creates new objects, but does
+        // not change this immutable catalog's request identity.
+    }, [id, catalog, region, version, key]);
     return { catalog: result?.key === key ? result.value : undefined, failed: result?.key === key && Boolean(result.failed) };
 }
 
 export function useContentDetail(snapshot: ResourceSnapshot | undefined, entry: CatalogEntry | undefined, retry: number) {
     const [result, setResult] = useState<{ key: string; value?: MolyEntry; failed?: boolean } | null>(null);
-    const key = snapshot && entry ? `${snapshot.id}:${entry.key}:${retry}` : "";
+    const id = snapshot?.id, catalog = snapshot?.catalog, content = entry?.key, path = entry?.detail;
+    const key = id && content ? `${id}:${content}:${retry}` : "";
     useEffect(() => {
-        if (!snapshot || !entry) return;
+        if (!id || !catalog || !content || !path) return;
         const abort = new AbortController();
-        fetchContentDetail(snapshot, entry, abort.signal).then(value => { if (!abort.signal.aborted) setResult({ key, value }); })
+        fetchContentDetail({ id, catalog }, { key: content, detail: path }, abort.signal).then(value => { if (!abort.signal.aborted) setResult({ key, value }); })
             .catch(() => { if (!abort.signal.aborted) setResult({ key, failed: true }); });
         return () => abort.abort();
-    }, [snapshot, entry, key]);
+    }, [id, catalog, content, path, key]);
     return { detail: result?.key === key ? result.value : undefined, loading: Boolean(key) && result?.key !== key, failed: result?.key === key && Boolean(result.failed) };
 }

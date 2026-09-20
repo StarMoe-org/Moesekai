@@ -224,7 +224,10 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     return <div className="mysekai-interactions mysekai-workspace" data-workspace-region={source}
         onBlurCapture={event => { if (event.target instanceof HTMLInputElement) searchEditing.current = false; }}>
         <header className="workspace-heading">
-            <h1>{t("page.mysekaiInteractions.title")}</h1>
+            <div className="workspace-heading-title">
+                <h1>{t("page.mysekaiInteractions.title")}</h1>
+                <span className="workspace-alpha-badge">{t("page.mysekaiWorkspace.alphaLabel")}</span>
+            </div>
             <div className="workspace-heading-actions">
                 <label className="workspace-source-select"><span className="sr-only">{t("page.mysekaiInteractions.source")}</span>
                     <select aria-label={t("page.mysekaiInteractions.source")} value={source} disabled={closing} onChange={event => void switchSource(event.target.value)}>
@@ -240,6 +243,12 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
             </div>
         </header>
         <div className="workspace-subbar">
+            <p className="workspace-alpha-notice" role="note">
+                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                    <circle cx="10" cy="10" r="7.25" /><path d="M10 9v4.5" strokeLinecap="round" /><circle cx="10" cy="6.25" r=".75" fill="currentColor" stroke="none" />
+                </svg>
+                <span>{t("page.mysekaiWorkspace.alphaNotice")}</span>
+            </p>
             <details className="workspace-source-menu"><summary>{t("page.mysekaiInteractions.source")}{snapshot && <> · {snapshot.region.toUpperCase()} {snapshot.version}</>}</summary>
                 <div><p>{t("page.mysekaiWorkspace.databaseSource", { region: source.toUpperCase() })}</p>
                     {snapshot && <p>{t("page.mysekaiWorkspace.authoredSource", { region: snapshot.region.toUpperCase(), version: snapshot.version })}</p>}
@@ -308,7 +317,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         </div>
         {session && !stageExpanded && <div className="workspace-mini-transport"><button onClick={() => showStage(true)}><span className={`interaction-phase interaction-phase-${phase}`}>{t(`page.mysekaiInteractions.phase.${phase}`)}</span>
             <strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong><span>{t("page.mysekaiWorkspace.openScene")} ↑</span></button>
-            <button className="interaction-text-button" disabled={!live?.status.canStop || closing} onClick={() => player.current?.stop()}>{t(`page.mysekaiInteractions.${phase === "completed" ? "returnScene" : "stop"}`)}</button></div>}
+            {live?.status.canStop && <button className="interaction-text-button" disabled={closing} onClick={() => player.current?.stop()}>{t(`page.mysekaiInteractions.${phase === "completed" ? "returnScene" : "stop"}`)}</button>}</div>}
     </div>;
 }
 

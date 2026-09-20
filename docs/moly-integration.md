@@ -2,7 +2,7 @@
 
 ## 功能边界
 
-正式入口为 `/mysekai/interactions/`，沿用网站 locale 路由（例如 `/zh-cn/mysekai/interactions/`）。家具目录、家具详情、侧栏和命令导航均可进入。普通家具数据库只读取目录与静态头像，不下载 Moly WASM 或 GLB。进入互动功能后自动准备必要资源；用户点击宿主的播放/预览按钮时，同步激活同源 iframe 中已经准备好的场景，保留这一次真实用户手势供音频使用，不需要再点击 iframe 内按钮。
+正式入口为 `/mysekai/interactions/`，沿用网站 locale 路由（例如 `/zh-cn/mysekai/interactions/`）。家具目录、家具详情、侧栏和命令导航均可进入。普通家具数据库只读取目录与静态头像，不下载 Moly WASM 或 GLB。互动页的阅读状态同样只读取目录、所选详情与静态图片。用户点击进入场景或播放/预览后，才创建同源 iframe 并准备引擎和必要资源；宿主将激活请求交给场景，保留真实用户手势供音频使用，不需要再点击 iframe 内按钮。
 
 React 管理检索、详情、选择、URL 与宿主 UI。iframe 内的原 Rust runtime 仍是对话、角色动作、家具控制器、音频、临时布景和恢复的唯一执行方。`available` 来自 runtime 导出的目录投影，宿主不重写角色/家具准入规则；实际播放再次通过 runtime 的动态准入。
 
@@ -18,14 +18,31 @@ React 管理检索、详情、选择、URL 与宿主 UI。iframe 内的原 Rust 
 
 ## 资源与发布目录
 
-应用镜像不包含游戏资源。Go 使用可选的 `MOLY_ROOT` 只读挂载：
+应用镜像不包含游戏资源。生产部署将同源控制文件和游戏资源分开：Go 使用 `MOLY_ROOT` 只读挂载本地控制目录，公开的不可变资源由浏览器直连 CDN。`NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN` 是部署时指定的 HTTPS origin，例如 `https://assets.example.com`；留空时保留全量资源同源模式。
+
+`/moly/` 是宿主、SDK、runtime 与缓存 worker 约定的固定协议路由，不是 OSS 目录的配置入口。无需新增 `BASE_PATH`：存储前缀在 ESA/CDN 中映射。例如公开请求 `/moly/snapshots/<id>/assets/...` 可回源到 OSS 的 `<自选前缀>/snapshots/<id>/assets/...`，不把 bucket、账号或真实部署域名写进源码。runtime 版本必须支持与宿主相同的可配置 origin。
+
+| 请求 | 提供方 |
+| --- | --- |
+| `/moly/manifest.json`，含旧快照查找与可用性校验 | 同源 Go 控制面 |
+| release 的 embed SDK、完整 iframe stage shell 及其相对导入、样式 | 同源 Go |
+| `/moly/cache-worker.mjs` | 同源 Go，scope 固定为 `/moly/` |
+| 目录索引、所选详情、头像与家具图片 | `NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN` |
+| 引擎 JS 胶水、WASM、场景模型、贴图、音频等不可变资源 | `NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN` |
+
+iframe 必须保持同源，宿主才能在用户点击时同步转交音频激活手势。仅设置 `MOLY_DEV_ORIGIN` 会走 Next 反向代理，不会让浏览器直连 CDN，也不能代替资源 origin 变量。Next 的 `/moly` rewrite 用于直接访问开发服务器；生产由 Go 优先处理同源 `/moly/`。
+
+本地控制目录必须包含**完整的 release shell**，不能只复制 Go 清单校验触及的少数文件：
 
 ```text
-/moly-root/
+/moly-control-plane/
   manifest.json                         # 可原子替换的发布发现描述
   cache-worker.mjs                      # 窄作用域可选缓存 worker
   releases/<release-id>/
-    embed.mjs / stage.html / ...
+    embed.mjs / embed-stage.mjs / embed-contract.mjs / ...
+    stage.html / stage.mjs / stage.css / boot.mjs / ...
+    asset-pack-client.mjs / base-resources.mjs / ...
+    weather-*.mjs / stage-*.mjs / ...    # 递归保留 shell 的全部相对依赖
     pkg/webgpu/moly-app.js
     pkg/webgpu/moly-app_bg.wasm
     pkg/webgpu/moly-app_bg.wasm.br / .gz
@@ -34,28 +51,62 @@ React 管理检索、详情、选择、URL 与宿主 UI。iframe 内的原 Rust 
     pkg/webgl2/moly-app_bg.wasm.br / .gz
     integrity.json
   snapshots/<snapshot-id>/
-    catalog/index.json
-    catalog/entries/*.json
-    provenance.json
-    assets/                             # 此快照的只读原始/派生资源挂载
+    snapshot.json                       # 保留历史快照以支持固定链接
+    catalog/index.json                  # Go 校验来源与快照身份
+    assets/mysekai-fixtures.json         # Go 校验区域与版本
 ```
 
-浏览器只访问同源 `/moly/...`，由 Go 单入口直接提供；不依赖 Next 公共目录存放 WASM。Next 的 `/moly` rewrite 用于直接访问开发服务器时转发到 Go；正常部署由 Go 优先处理，不绕回 Next。
+稳妥的 Alpha 做法是保留完整 `releases/<release-id>/`，包含 `.mjs`、`.css`、`.html`、压缩副本与完整性文件。Go 当前仍会检查本地双后端 JS/WASM 及压缩文件尺寸，所以即使浏览器从 CDN 下载它们，也要将这些校验文件留在控制目录。只含校验文件的精简清单并不构成可播放的同源 shell。资源包模式还需保留 Go 校验所需的 content-addressed catalog。
 
-生产运行示意（将路径和镜像名替换成自己的构建产物）：
+CDN/OSS 则保存完整的版本化 release、snapshot（目录、详情、图片和全部被引用的场景资源）或 content-addressed asset-store。已发布 ID 下的字节不可覆盖；`manifest.json` 的生效版本仍由同源 Go 负责，而不是直接读取 OSS 上的静态清单。
+
+构建与运行示意（将域名、路径和镜像名替换成部署配置）：
 
 ```sh
+export NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN=https://assets.example.com
+docker build \
+  --build-arg NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN="$NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN" \
+  -t moesekai:local .
+
 docker run --rm -p 8080:8080 \
   -e MOLY_ROOT=/moly-root \
-  -v /srv/moly-publication:/moly-root:ro \
+  -v /srv/moly-control-plane:/moly-root:ro \
   moesekai:local
 ```
 
-资源目录可预先复制进 snapshot 的 assets 目录，或再用单独只读 bind mount 挂到该目录。运行账户必须具有读取和目录遍历权限。不要挂载整个工作目录作为生产公开资源根，也不要把凭据或源工程放进 assets。未提供 `MOLY_ROOT` 时，普通网站/API 继续运行，互动入口显示资源未部署。
+`NEXT_PUBLIC_*` 由 Next.js 在构建时内联，改变域名需要重建前端/镜像；只在 `docker run -e` 添加该变量不会更新已有客户端。直接构建 Next 时在 `bun run --cwd web build:next` 之前设置同名变量。开发 compose 会读取根目录 `.env`（参见 `.env.example`）；直接 Next 开发可用 `web/.env.local`。仓库当前没有应用镜像构建 workflow，外部 CI 必须将同名变量显式传给 Docker `build-args`，不能仅给部署容器设置环境变量。
+
+CDN 必须允许公开资源 GET/HEAD 跨域读取，支持 packed 模式所需的 OPTIONS / `X-Moly-Required`，并暴露 `Content-Encoding`、`ETag`、`Content-Length` 和 `X-Moly-Decoded-Bytes` 或 `x-oss-meta-moly-decoded-bytes`。压缩体仍使用原始逻辑 URL，同时设置正确的 `Content-Type` / `Content-Encoding`。版本资源使用长缓存与 `immutable`；真实响应与二次命中需在上线前验证。配置私有 OSS 回源时保持 bucket 私有，ESA 仅发布此功能的资源前缀。
+
+本地运行账户必须具有控制目录的读取和遍历权限。不要把凭据或源工程放进发布目录。未提供 `MOLY_ROOT` 时，普通网站/API 继续运行，互动入口显示资源未部署。若资源 origin 留空，必须将完整资源树也复制或只读挂载到本地；精简控制目录不支持全量同源回退。
 
 `MOLY_DEVELOPMENT=1` 仅供本地测试：允许开发资源 junction，资源 HTTP 响应为 `no-cache`，可变源文件不会进入持久资源缓存。不得用此模式宣称生产的 immutable 快照验证通过。
 
 ## 从 Moly 工程发布
+
+### Alpha 阶段：手动触发，版本化交付
+
+Alpha 先采用现有脚本构建、人工验收和手动切换版本。互动页标题显示主题色 Alpha 标记，并常驻说明场景还原及部分演出仍在完善。已知表现差异按项记录，不以模拟器全量完善作为上线前提。
+
+首次部署按上一节将同源控制目录挂载到 `/moly-root`，把完整不可变资源发布到 OSS/ESA，并在构建前设置资源 origin。资源与应用镜像分开保存；Alpha 由人工运行发布工具与切换清单，不需要先建设资源管理后台。开发 junction 不是可直接上传的生产资源目录；生产发布使用 `developmentLinks=false`，将真实源资源同步至 OSS，不启用 `MOLY_DEVELOPMENT`。
+
+| 改动 | 更新内容 |
+| --- | --- |
+| 页面、样式、文案（例如 Alpha 提示） | 按网站现有流程发布 Moesekai 前端 |
+| Rust / WASM 引擎 | 构建 WebGPU 与 WebGL2，发布完整 `releases/<新 ID>/`；JS 胶水、WASM、压缩副本和完整性文件属于同一次构建 |
+| 资源、对白、演出分类或目录投影 | 重新导出受影响区域的目录/资源，发布新的 `snapshots/<新 ID>/`；需要新引擎时一并更新 release |
+
+每次手动发布按以下顺序：
+
+1. 在构建机产出并验证新版本。WASM 用 `node web/build-wasm.mjs --renderer both`；再运行本节的 `release-artifact.mjs --config ...`，不要单独覆盖正在使用的 `.wasm` 文件。
+2. 先将新增 release、snapshot 及所引用资源上传至 OSS/CDN，校验内容、MIME、压缩表示与缓存头；同时准备同源完整 release shell 与 Go 校验文件。已有相同 ID 的文件保持不可变，只更新引擎时无需重传未变的游戏资源。
+3. 用固定的新版本路径通过真实 CDN 验证目录、WASM 和场景资源，确认浏览器直连配置的资源域名、播放与音频正常。保留当前 `manifest.json` 作为回滚入口；缓存 worker 独立同步并验证。不要把仅通过 Go 校验的精简目录当成完整 shell 验收。
+4. 最后将新 manifest 以临时文件上传，再在服务器同一文件系统原子替换 `/srv/moly-control-plane/manifest.json`。Go 在后续请求中根据文件时间/大小重新读取清单，通常无需为引擎更新重建应用镜像或重启；首次配置挂载需重启，资源 origin 变化必须重建前端。
+5. 新打开或刷新的页面读取新 release；正在播放的页面继续持有原版本，不中途替换引擎。遇到回归时恢复上一份 manifest，保留其引用文件；旧目录在确认无人依赖前不清理。
+
+发布器提供 `reuseSnapshots: true`，适用于资产契约、目录投影和基础资源需求均未改变的纯引擎更新。此模式不填写 `sources`，输出目录必须已有经过验证的完整发布；它复用快照而重新生成 release。改动家具演出分类时不能使用此捷径，必须重新导出目录。
+
+上述是通用 Alpha 运维流程；某个版本是否已经公网发布，以该次部署记录和实际验证结果为准。后续可以自动化构建、上传和验收。
 
 先保持同一次构建的源文件稳定，再构建双后端：
 
@@ -99,15 +150,15 @@ node web/split-gimmicks.mjs --assets /private/runtime-jp
 node web/release-artifact.mjs --config /private/publication.json
 ```
 
-发布器生成独立目录索引/详情、双后端 release、压缩 sidecar 和原子 manifest；`developmentLinks=false` 时不会复制大体积游戏资源，操作者需完成只读 assets 挂载。它只移除 WASM 调试名称/调试段，并核对标准模块仍可编译且 import/export ABI 不变。
+发布器生成独立目录索引/详情、双后端 release、压缩 sidecar 和原子 manifest；`developmentLinks=false` 时不会复制大体积游戏资源，操作者需从真实源资源完成 OSS/CDN 同步，或在全同源模式完成只读 assets 挂载。它只移除 WASM 调试名称/调试段，并核对标准模块仍可编译且 import/export ABI 不变。
 
-浏览器构建使用 `wasm-size` profile（`opt-level=s`、fat LTO、单 codegen unit），双后端共享源指纹。显式 Bevy feature 集移除未使用的 gizmos 与 picking 组；音频、UI、Sprite、glTF 与 animation 保留，post-process/AA 也保留，未将有兼容性问题的 wasm-opt 实验产物接入发布。Go 按 `Accept-Encoding` 的 quality 协商 Brotli、gzip、identity，尊重显式 `q=0`，所有可用表示均被禁止时返回 406。表示拥有独立 ETag，并支持正确的 HEAD、304 和 Range 长度。manifest 保留 `downloadBytes`、`decodedBytes`、`brotliBytes`、`gzipBytes`，读取 manifest 时核对实际文件长度；Brotli 发布的 `downloadBytes` 必须等于 `brotliBytes`。浏览器缓存统计使用解码字节，不能与 Brotli 网络流量直接比较。
+浏览器构建使用 `wasm-size` profile（`opt-level=s`、thin LTO、单 codegen unit），双后端共享源指纹。显式 Bevy feature 集移除未使用的 gizmos 与 picking 组；音频、UI、Sprite、glTF 与 animation 保留，post-process/AA 也保留，未将有兼容性问题的 wasm-opt 实验产物接入发布。Go 按 `Accept-Encoding` 的 quality 协商 Brotli、gzip、identity，尊重显式 `q=0`，所有可用表示均被禁止时返回 406。表示拥有独立 ETag，并支持正确的 HEAD、304 和 Range 长度。manifest 保留 `downloadBytes`、`decodedBytes`、`brotliBytes`、`gzipBytes`，读取 manifest 时核对实际文件长度；Brotli 发布的 `downloadBytes` 必须等于 `brotliBytes`。浏览器缓存统计使用解码字节，不能与 Brotli 网络流量直接比较。
 
 快照 ID 包含目录、家具 master、控制器索引及来源描述的摘要，**不是每个游戏二进制的全量 Merkle 校验**。生产必须保持 assets 内容不可变；资源变化应生成新快照，而不是覆盖原 ID 下的文件。
 
 ## 缓存与数据隔离
 
-`GET /moly/cache-worker.mjs` 返回 JavaScript 与 `Service-Worker-Allowed: /moly/`。worker 只控制 `/moly/`，缓存只面向版本化 release/snapshot 资源。互动入口在 iframe 开始请求前自动开启保留，并下载 `browser-base.json` 中的必要资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。存储被浏览器拒绝时仍允许在线播放。
+`GET /moly/cache-worker.mjs` 返回 JavaScript 与 `Service-Worker-Allowed: /moly/`。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 origin 缓存不可变 release/snapshot 与 asset-store 请求；CDN 缓存项使用真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留，并下载 `browser-base.json` 中的必要资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。存储被浏览器拒绝时仍允许在线播放。
 
 删除只位于 `/mysekai/interactions/resources/` 资源管理页；离开互动页时先让 runtime 恢复并关闭世界，再清理。清理只删除 `moly-resource-v1-*`，不删除站点设置、用户账户、已有布局或其他 CacheStorage。必要资源重新加载会重新填充对应快照的基础包。缓存统计为实际保留的解码字节，并非网络传输字节。
 
@@ -126,6 +177,7 @@ bunx tsc --noEmit
 bun run lint
 bun run lint:i18n
 bun run lint:i18n-usage
+bun run test:moly-resource-origin
 bun run build:next
 ```
 

@@ -166,3 +166,8 @@
 
 
 .interaction-resource-provider{display:inline-block;font-size:.7rem;line-height:1.6;color:var(--text-muted);margin-bottom:6px}
+@media(max-width:700px){
+ .interaction-resource-cache summary{font-size:.9rem;min-height:44px}
+ .interaction-resource-cache p{font-size:.875rem;overflow-wrap:anywhere}
+ .interaction-resource-cache .interaction-button{display:flex;width:100%;min-height:44px;font-size:.875rem;white-space:normal;text-align:center}
+}

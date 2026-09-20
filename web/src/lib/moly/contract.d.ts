@@ -37,7 +37,7 @@ export interface MolyWeatherOption {
   label?: string;
   /** Relative source artifact path; never interpreted as a weather kind. */
   icon?: string | null;
-  /** Stage-resolved same-origin URL. Missing art stays absent. */
+  /** Stage-verified artwork URL. Missing art stays absent. */
   iconUrl?: string | null;
   metadata?: {
     id: number; name: string; englishName?: string | null;
@@ -71,7 +71,7 @@ export interface MolyBoot {
 export interface MolyError {code:string; key?:MolyKey;}
 export interface MountOptions {
   onPlayerData?(value: MolyPlayerDataState): void;
-  view?:'shell'|'stage'; src:string; assets?:string; region?:MolyRegion; version?:string; snapshot?:string;
+  view?:'shell'|'stage'; src:string; assets?:string; resourceOrigin?:string; region?:MolyRegion; version?:string; snapshot?:string;
   assetCatalog?:string; packs?:boolean;
   locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; preload?:boolean; sound?:boolean;
   fixture?:number; tab?:MolyTab; content?:MolyKey; filters?:MolyFilters;
