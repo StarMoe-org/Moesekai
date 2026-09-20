@@ -56,7 +56,7 @@ export const mysekaiWorkspaceMessages = {
     "soundMute": "Keep muted",
     "soundRemember": "This choice is remembered in this browser and can be changed here at any time.",
     "weatherIncomplete": "Weather effects are in development. Phenomena, environments and audio are not fully restored; preview only.",
-    "weatherUnavailable": "Weather is unavailable for this snapshot. You can still use the scene.",
+    "weatherUnavailable": "The weather system is in development; its effects are not yet complete.",
     "weatherNotApplied": "Not applied",
     "weatherApplied": "Applied",
     "weatherWaiting": "Waiting for environment",

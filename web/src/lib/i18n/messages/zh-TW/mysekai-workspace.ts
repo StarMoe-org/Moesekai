@@ -56,7 +56,7 @@ export const mysekaiWorkspaceMessages = {
     "soundMute": "保持靜音",
     "soundRemember": "瀏覽器會記住這個選擇，你可以隨時在這裡修改。",
     "weatherIncomplete": "天氣效果仍在開發中；現象、環境與聲音尚未完整還原，僅供預覽。",
-    "weatherUnavailable": "目前快照的天氣暫不可用；場景仍可使用。",
+    "weatherUnavailable": "天氣系統正在開發中，目前效果尚不完整。",
     "weatherNotApplied": "尚未生效",
     "weatherApplied": "已生效",
     "weatherWaiting": "等待環境",

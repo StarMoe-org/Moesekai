@@ -56,7 +56,7 @@ export const mysekaiWorkspaceMessages = {
     "soundMute": "음소거 유지",
     "soundRemember": "이 브라우저에 선택이 저장되며 언제든 여기에서 바꿀 수 있습니다.",
     "weatherIncomplete": "날씨 효과는 개발 중입니다. 현상, 환경, 소리는 아직 완전히 복원되지 않았으며 미리 보기용입니다.",
-    "weatherUnavailable": "이 스냅샷에서는 날씨를 사용할 수 없습니다. 장면은 계속 이용할 수 있습니다.",
+    "weatherUnavailable": "날씨 시스템은 개발 중이며, 현재 효과는 아직 완성되지 않았습니다.",
     "weatherNotApplied": "적용 전",
     "weatherApplied": "적용됨",
     "weatherWaiting": "환경 대기 중",
