@@ -38,24 +38,9 @@
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
     "**/*.mts",
-    "../refer/re_sekai-calculator/src/**/*",
-    ".next-v2-review/types/**/*.ts",
-    ".next-v2-review/dev/types/**/*.ts",
-    ".next-v2-review2/types/**/*.ts",
-    ".next-v2-review2/dev/types/**/*.ts",
-    ".next-product-review/types/**/*.ts",
-    ".next-product-review/dev/types/**/*.ts",
-    ".next-product-review2/types/**/*.ts",
-    ".next-product-review2/dev/types/**/*.ts",
-    ".next-asset-v2/types/**/*.ts",
-    ".next-asset-v2/dev/types/**/*.ts",
-    ".next-moly-review-dev/types/**/*.ts",
-    ".next-moly-review-dev/dev/types/**/*.ts",
-    ".next-weather-preview/types/**/*.ts",
-    ".next-weather-preview/dev/types/**/*.ts"
+    "../refer/re_sekai-calculator/src/**/*"
   ],
   "exclude": [
-    "node_modules",
-    ".next-*"
+    "node_modules"
   ]
 }

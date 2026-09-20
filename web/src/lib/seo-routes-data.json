@@ -1,502 +1,71 @@
 [
-  {
-    "path": "/",
-    "priority": 1.0,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/about/",
-    "pageKey": "about",
-    "priority": 0.8,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/cards/",
-    "pageKey": "cards",
-    "priority": 0.9,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/music/",
-    "pageKey": "music",
-    "priority": 0.9,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/lyrics/",
-    "pageKey": "lyrics",
-    "priority": 0.8,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/music/meta/",
-    "pageKey": "music_meta",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/soundtrack/",
-    "pageKey": "soundtrack",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/events/",
-    "pageKey": "events",
-    "priority": 0.9,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/information/",
-    "pageKey": "information",
-    "priority": 0.7,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/gacha/",
-    "pageKey": "gacha",
-    "priority": 0.8,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/sticker/",
-    "pageKey": "sticker",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/comic/",
-    "pageKey": "comic",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/live/",
-    "pageKey": "live",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/character/",
-    "pageKey": "character",
-    "priority": 0.8,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/mysekai/interactions/",
-    "pageKey": "mysekai_interactions",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/mysekai/",
-    "pageKey": "mysekai",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/materials/",
-    "pageKey": "materials",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/exchanges/",
-    "pageKey": "exchanges",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/costumes/",
-    "pageKey": "costumes",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/manga/",
-    "pageKey": "manga",
-    "priority": 0.6,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/honors/",
-    "pageKey": "honors",
-    "priority": 0.6,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/prediction/",
-    "pageKey": "prediction",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "Redirects to /prediction-next/"
-  },
-  {
-    "path": "/prediction-next/",
-    "pageKey": "prediction_next",
-    "priority": 0.6,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/realtime-ranking/",
-    "pageKey": "realtime_ranking",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "Redirects to /realtime-ranking-next/"
-  },
-  {
-    "path": "/realtime-ranking-next/",
-    "pageKey": "realtime_ranking_next",
-    "priority": 0.6,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/story/",
-    "pageKey": "story",
-    "priority": 0.8,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/story/unit/",
-    "pageKey": "story_unit",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/story/event/",
-    "pageKey": "story_event",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/story/card/",
-    "pageKey": "story_card",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/story/area/",
-    "pageKey": "story_area",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/story/self/",
-    "pageKey": "story_self",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/story/special/",
-    "pageKey": "story_special",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/guides/",
-    "pageKey": "guides",
-    "priority": 0.7,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/deck-recommend/",
-    "pageKey": "deck_recommend",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/deck-comparator/",
-    "pageKey": "deck_comparator",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/score-control/",
-    "pageKey": "score_control",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/sticker-maker/",
-    "pageKey": "sticker_maker",
-    "priority": 0.5,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/goods-gacha/",
-    "pageKey": "goods_gacha",
-    "priority": 0.5,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/guess-who/",
-    "pageKey": "guess_who",
-    "priority": 0.5,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/guess-who/multiplayer/",
-    "pageKey": "guess_who_multiplayer",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state"
-  },
-  {
-    "path": "/guess-jacket/",
-    "pageKey": "guess_jacket",
-    "priority": 0.5,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/guess-jacket/multiplayer/",
-    "pageKey": "guess_jacket_multiplayer",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state"
-  },
-  {
-    "path": "/chart-preview/",
-    "pageKey": "chart_preview",
-    "priority": 0.6,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/chart-image/",
-    "pageKey": "chart_image",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "Parameter-driven chart image renderer; content depends entirely on query string"
-  },
-  {
-    "path": "/mysekai-preview/",
-    "pageKey": "mysekai_preview",
-    "priority": 0.6,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/mysekai-preview/ranking/",
-    "pageKey": "mysekai_preview_ranking",
-    "priority": 0.5,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/mysekai-preview/scene/",
-    "pageKey": "mysekai_preview_scene",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/profile/",
-    "pageKey": "profile",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Account-specific profile and authorization management page"
-  },
-  {
-    "path": "/my-cards/",
-    "pageKey": "my_cards",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Personal card collection data varies by signed-in user"
-  },
-  {
-    "path": "/my-musics/",
-    "pageKey": "my_musics",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Personal music progress data varies by signed-in user"
-  },
-  {
-    "path": "/my-materials/",
-    "pageKey": "my_materials",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Personal inventory data varies by signed-in user"
-  },
-  {
-    "path": "/patreon/",
-    "pageKey": "patreon",
-    "priority": 0.4,
-    "changefreq": "monthly",
-    "indexable": true
-  },
-  {
-    "path": "/privacy/",
-    "pageKey": "privacy",
-    "priority": 0.3,
-    "changefreq": "yearly",
-    "indexable": true
-  },
-  {
-    "path": "/terms/",
-    "pageKey": "terms",
-    "priority": 0.3,
-    "changefreq": "yearly",
-    "indexable": true
-  },
-  {
-    "path": "/breadcrumb-database/",
-    "pageKey": "breadcrumb_database",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-activity/",
-    "pageKey": "breadcrumb_activity",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-story/",
-    "pageKey": "breadcrumb_story",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-community/",
-    "pageKey": "breadcrumb_community",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-games/",
-    "pageKey": "breadcrumb_games",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-tools/",
-    "pageKey": "breadcrumb_tools",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/breadcrumb-personal/",
-    "pageKey": "breadcrumb_personal",
-    "priority": 0.3,
-    "changefreq": "monthly",
-    "indexable": false,
-    "excludeReason": "Navigation-only shortcut page with no unique searchable content"
-  },
-  {
-    "path": "/asset-viewer/",
-    "pageKey": "asset_viewer",
-    "priority": 0.6,
-    "changefreq": "weekly",
-    "indexable": true
-  },
-  {
-    "path": "/asset-versions/",
-    "pageKey": "asset_versions",
-    "priority": 0.6,
-    "changefreq": "daily",
-    "indexable": true
-  },
-  {
-    "path": "/blank/",
-    "pageKey": "blank",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "Decorative blank asset page"
-  },
-  {
-    "path": "/design-system/",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "Development-only design system route"
-  },
-  {
-    "path": "/leave/",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "External-link interstitial route"
-  },
-  {
-    "path": "/oauth2/connect/",
-    "pageKey": "oauth2_connect",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "OAuth connection flow route"
-  },
-  {
-    "path": "/oauth2/callback/code/",
-    "pageKey": "oauth2_callback",
-    "priority": 0.0,
-    "changefreq": "never",
-    "indexable": false,
-    "excludeReason": "OAuth callback route"
-  },
-  {
-    "path": "/mysekai/interactions/resources/",
-    "pageKey": "mysekai_interaction_resources",
-    "indexable": false,
-    "excludeReason": "Local-only interaction resource management, no indexable public content."
-  }
+  { "path": "/", "priority": 1.0, "changefreq": "daily", "indexable": true },
+  { "path": "/about/", "pageKey": "about", "priority": 0.8, "changefreq": "monthly", "indexable": true },
+  { "path": "/cards/", "pageKey": "cards", "priority": 0.9, "changefreq": "daily", "indexable": true },
+  { "path": "/music/", "pageKey": "music", "priority": 0.9, "changefreq": "daily", "indexable": true },
+  { "path": "/lyrics/", "pageKey": "lyrics", "priority": 0.8, "changefreq": "daily", "indexable": true },
+  { "path": "/music/meta/", "pageKey": "music_meta", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/soundtrack/", "pageKey": "soundtrack", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/events/", "pageKey": "events", "priority": 0.9, "changefreq": "daily", "indexable": true },
+  { "path": "/information/", "pageKey": "information", "priority": 0.7, "changefreq": "daily", "indexable": true },
+  { "path": "/gacha/", "pageKey": "gacha", "priority": 0.8, "changefreq": "daily", "indexable": true },
+  { "path": "/sticker/", "pageKey": "sticker", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/comic/", "pageKey": "comic", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/live/", "pageKey": "live", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/character/", "pageKey": "character", "priority": 0.8, "changefreq": "weekly", "indexable": true },
+  { "path": "/mysekai/interactions/", "pageKey": "mysekai_interactions", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/mysekai/interactions/resources/", "pageKey": "mysekai_interaction_resources", "indexable": false, "excludeReason": "Local-only interaction resource management, no indexable public content." },
+  { "path": "/mysekai/", "pageKey": "mysekai", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/materials/", "pageKey": "materials", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/exchanges/", "pageKey": "exchanges", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/costumes/", "pageKey": "costumes", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/manga/", "pageKey": "manga", "priority": 0.6, "changefreq": "weekly", "indexable": true },
+  { "path": "/honors/", "pageKey": "honors", "priority": 0.6, "changefreq": "weekly", "indexable": true },
+  { "path": "/prediction/", "pageKey": "prediction", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Redirects to /prediction-next/" },
+  { "path": "/prediction-next/", "pageKey": "prediction_next", "priority": 0.6, "changefreq": "daily", "indexable": true },
+  { "path": "/realtime-ranking/", "pageKey": "realtime_ranking", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Redirects to /realtime-ranking-next/" },
+  { "path": "/realtime-ranking-next/", "pageKey": "realtime_ranking_next", "priority": 0.6, "changefreq": "daily", "indexable": true },
+  { "path": "/story/", "pageKey": "story", "priority": 0.8, "changefreq": "weekly", "indexable": true },
+  { "path": "/story/unit/", "pageKey": "story_unit", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/story/event/", "pageKey": "story_event", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/story/card/", "pageKey": "story_card", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/story/area/", "pageKey": "story_area", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/story/self/", "pageKey": "story_self", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/story/special/", "pageKey": "story_special", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/guides/", "pageKey": "guides", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/deck-recommend/", "pageKey": "deck_recommend", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/deck-comparator/", "pageKey": "deck_comparator", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/score-control/", "pageKey": "score_control", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/sticker-maker/", "pageKey": "sticker_maker", "priority": 0.5, "changefreq": "monthly", "indexable": true },
+  { "path": "/goods-gacha/", "pageKey": "goods_gacha", "priority": 0.5, "changefreq": "monthly", "indexable": true },
+  { "path": "/guess-who/", "pageKey": "guess_who", "priority": 0.5, "changefreq": "monthly", "indexable": true },
+  { "path": "/guess-who/multiplayer/", "pageKey": "guess_who_multiplayer", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state" },
+  { "path": "/guess-jacket/", "pageKey": "guess_jacket", "priority": 0.5, "changefreq": "monthly", "indexable": true },
+  { "path": "/guess-jacket/multiplayer/", "pageKey": "guess_jacket_multiplayer", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state" },
+  { "path": "/chart-preview/", "pageKey": "chart_preview", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/chart-image/", "pageKey": "chart_image", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Parameter-driven chart image renderer; content depends entirely on query string" },
+  { "path": "/mysekai-preview/", "pageKey": "mysekai_preview", "priority": 0.6, "changefreq": "daily", "indexable": true },
+  { "path": "/mysekai-preview/ranking/", "pageKey": "mysekai_preview_ranking", "priority": 0.5, "changefreq": "daily", "indexable": true },
+  { "path": "/mysekai-preview/scene/", "pageKey": "mysekai_preview_scene", "priority": 0.4, "changefreq": "monthly", "indexable": true },
+  { "path": "/profile/", "pageKey": "profile", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Account-specific profile and authorization management page" },
+  { "path": "/my-cards/", "pageKey": "my_cards", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Personal card collection data varies by signed-in user" },
+  { "path": "/my-musics/", "pageKey": "my_musics", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Personal music progress data varies by signed-in user" },
+  { "path": "/my-materials/", "pageKey": "my_materials", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Personal inventory data varies by signed-in user" },
+  { "path": "/patreon/", "pageKey": "patreon", "priority": 0.4, "changefreq": "monthly", "indexable": true },
+  { "path": "/privacy/", "pageKey": "privacy", "priority": 0.3, "changefreq": "yearly", "indexable": true },
+  { "path": "/terms/", "pageKey": "terms", "priority": 0.3, "changefreq": "yearly", "indexable": true },
+  { "path": "/breadcrumb-database/", "pageKey": "breadcrumb_database", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-activity/", "pageKey": "breadcrumb_activity", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-story/", "pageKey": "breadcrumb_story", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-community/", "pageKey": "breadcrumb_community", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-games/", "pageKey": "breadcrumb_games", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-tools/", "pageKey": "breadcrumb_tools", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/breadcrumb-personal/", "pageKey": "breadcrumb_personal", "priority": 0.3, "changefreq": "monthly", "indexable": false, "excludeReason": "Navigation-only shortcut page with no unique searchable content" },
+  { "path": "/asset-viewer/", "pageKey": "asset_viewer", "priority": 0.6, "changefreq": "weekly", "indexable": true },
+  { "path": "/asset-versions/", "pageKey": "asset_versions", "priority": 0.6, "changefreq": "daily", "indexable": true },
+  { "path": "/blank/", "pageKey": "blank", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Decorative blank asset page" },
+  { "path": "/design-system/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Development-only design system route" },
+  { "path": "/leave/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "External-link interstitial route" },
+  { "path": "/oauth2/connect/", "pageKey": "oauth2_connect", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth connection flow route" },
+  { "path": "/oauth2/callback/code/", "pageKey": "oauth2_callback", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth callback route" }
 ]
