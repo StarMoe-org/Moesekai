@@ -115,7 +115,7 @@ export function filterFurniture(data: FurnitureData, browse: BrowseState, filter
     const characterTagIds = new Set(data.tags.filter(tag => tag.mysekaiFixtureTagType === "game_character" && characters.has(tag.externalId ?? 0)).map(tag => tag.id));
     return data.fixtures.filter(fixture => {
         if (browse.fixture !== null && fixture.id !== browse.fixture) return false;
-        if (browse.character !== null && !relations.get(fixture.id)?.characters.some(character => character.id === browse.character)) return false;
+        if (!browse.characters.every(id => relations.get(fixture.id)?.characters.some(character => character.id === id))) return false;
         if (browse.availability === "ready" && !runtimeEntries.get(`fixture:${fixture.id}`)?.available) return false;
         if (filters.genre !== null && fixture.mysekaiFixtureMainGenreId !== filters.genre) return false;
         if (filters.subGenre !== null && fixture.mysekaiFixtureSubGenreId !== filters.subGenre) return false;

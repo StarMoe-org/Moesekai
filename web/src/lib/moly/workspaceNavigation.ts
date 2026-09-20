@@ -4,11 +4,11 @@ export const MOLY_TABS = ["conversations", "furniture", "performances", "activit
 export interface BrowseState {
     tab: MolyTab;
     query: string;
-    character: number | null;
+    characters: number[];
     fixture: number | null;
     availability: "all" | "ready";
 }
-export const INITIAL_BROWSE: BrowseState = { tab: "conversations", query: "", character: null, fixture: null, availability: "all" };
+export const INITIAL_BROWSE: BrowseState = { tab: "conversations", query: "", characters: [], fixture: null, availability: "all" };
 export interface FurnitureFilters {
     genre: number | null;
     subGenre: number | null;
@@ -51,7 +51,10 @@ export function parseBrowse(params: Pick<URLSearchParams, "get">): BrowseState {
     return {
         tab: MOLY_TABS.includes(tab as MolyTab) ? tab as MolyTab : INITIAL_BROWSE.tab,
         query: Array.from(params.get("q") ?? params.get("search") ?? "").slice(0, 200).join(""),
-        character: positiveId(params.get("character")), fixture: positiveId(params.get("fixture")),
+        // Keep existing ?character=14 links, with comma-separated IDs for multi-select.
+        // `characters` already belongs to the furniture-theme filter.
+        characters: [...new Set((params.get("character") ?? "").split(",").map(positiveId).filter((id): id is number => id !== null))].slice(0, 64),
+        fixture: positiveId(params.get("fixture")),
         availability: params.get("availability") === "ready" ? "ready" : "all",
     };
 }
@@ -96,7 +99,7 @@ export function workspaceQuery(value: WorkspaceNavigation, existing = new URLSea
     query.set("tab", value.browse.tab);
     if (value.page > 1) query.set("page", String(value.page));
     if (value.browse.query) query.set("q", value.browse.query);
-    if (value.browse.character) query.set("character", String(value.browse.character));
+    if (value.browse.characters.length) query.set("character", value.browse.characters.join(","));
     if (value.browse.fixture) query.set("fixture", String(value.browse.fixture));
     if (value.browse.availability !== "all") query.set("availability", value.browse.availability);
     if (value.content || value.browse.fixture) query.set("content", value.content ?? "");

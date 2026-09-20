@@ -40,20 +40,17 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
             <BaseFilters compact variant="plain" filteredCount={results.length} totalCount={catalog.entries.length}
                 searchQuery={browse.query} onSearchChange={query => change({ query })}
                 searchPlaceholder={t("page.mysekaiInteractions.search")}
-                hasActiveFilters={Boolean(browse.query || browse.character || browse.availability !== "all")}
-                onReset={() => change({ query: "", character: null, availability: "all" })}>
+                hasActiveFilters={Boolean(browse.query || browse.characters.length || browse.availability !== "all")}
+                onReset={() => change({ query: "", characters: [], availability: "all" })}>
                 <FilterSection label={t("page.mysekaiInteractions.characters")}>
-                    <select className="workspace-character-select" aria-label={t("page.mysekaiInteractions.characters")}
-                        value={browse.character ?? ""} onChange={event => change({ character: Number(event.target.value) || null })}>
-                        <option value="">{t("page.mysekaiInteractions.allCharacters")}</option>
-                        {catalog.characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
-                    </select>
                     <div className="workspace-character-filter" role="group" aria-label={t("page.mysekaiInteractions.characters")}>
-                        <FilterButton selected={browse.character === null} onClick={() => change({ character: null })} className="px-3 py-2 text-xs">
+                        <FilterButton selected={browse.characters.length === 0} onClick={() => change({ characters: [] })} className="px-3 py-2 text-xs">
                             {t("page.mysekaiInteractions.allCharacters")}
                         </FilterButton>
-                        {catalog.characters.map(character => <FilterButton key={character.id} selected={browse.character === character.id}
-                            onClick={() => change({ character: character.id })} className="px-3 py-2 text-xs">{character.name}</FilterButton>)}
+                        {catalog.characters.map(character => <FilterButton key={character.id} selected={browse.characters.includes(character.id)}
+                            onClick={() => change({ characters: browse.characters.includes(character.id)
+                                ? browse.characters.filter(id => id !== character.id) : [...browse.characters, character.id] })}
+                            className="px-3 py-2 text-xs">{character.name}</FilterButton>)}
                     </div>
                 </FilterSection>
                 <FilterToggle label={t("page.mysekaiWorkspace.sceneAvailable")} selected={browse.availability === "ready"}
@@ -62,7 +59,7 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
         </div>
         {results.length === 0 ? <div className="interaction-empty">
             <h3>{t("page.mysekaiInteractions.noResults")}</h3>
-            <button className="interaction-button" onClick={() => change({ query: "", character: null, availability: "all" })}>{t("page.mysekaiInteractions.reset")}</button>
+            <button className="interaction-button" onClick={() => change({ query: "", characters: [], availability: "all" })}>{t("page.mysekaiInteractions.reset")}</button>
         </div> : <div className={`interaction-grid interaction-grid-${browse.tab}`}>
             {results.slice((page - 1) * pageSize, page * pageSize).map(entry => <button type="button" className="interaction-card" key={entry.key}
                 aria-pressed={selected === entry.key} onClick={() => select(entry.key)} data-content-key={entry.key}>

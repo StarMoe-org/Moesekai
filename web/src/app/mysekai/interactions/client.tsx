@@ -159,7 +159,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const character = (id: number) => {
         searchEditing.current = false;
         commit(current => ({ ...current, page: 1, content: null, invalidContent: false,
-            browse: { ...INITIAL_BROWSE, tab: current.browse.tab === "activities" ? "activities" : "conversations", fixture: current.browse.fixture ?? (selected?.fixtureIds.length === 1 ? selected.fixtureIds[0] : null), character: id } }), { scroll: "catalog" });
+            browse: { ...INITIAL_BROWSE, tab: current.browse.tab === "activities" ? "activities" : "conversations", fixture: current.browse.fixture ?? (selected?.fixtureIds.length === 1 ? selected.fixtureIds[0] : null), characters: [id] } }), { scroll: "catalog" });
     };
     const showStage = (expanded: boolean) => {
         setStageExpanded(expanded);
@@ -287,10 +287,10 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                 aria-pressed={nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances")}
                 onClick={() => change({ tab })}>{t(`page.mysekaiWorkspace.${tab}`)}<span>{counts[tab]?.toLocaleString() ?? "—"}</span></button>)}
         </nav>
-        {(nav.browse.fixture || nav.browse.character) && <div className="workspace-context" role="status">
+        {(nav.browse.fixture || nav.browse.characters.length > 0) && <div className="workspace-context" role="status">
             {nav.browse.fixture && <button onClick={() => change({ tab: "performances" })}>{contextFixture ?? `#${nav.browse.fixture}`}</button>}
-            {nav.browse.character && <span>{catalog?.characters.find(person => person.id === nav.browse.character)?.name ?? `#${nav.browse.character}`}</span>}
-            <button className="interaction-text-button" onClick={() => change({ fixture: null, character: null })}>{t("page.mysekaiInteractions.clearContext")} ×</button>
+            {nav.browse.characters.map(id => <span key={id}>{catalog?.characters.find(person => person.id === id)?.name ?? `#${id}`}</span>)}
+            <button className="interaction-text-button" onClick={() => change({ fixture: null, characters: [] })}>{t("page.mysekaiInteractions.clearContext")} ×</button>
         </div>}
         {notice && <p className="workspace-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
         <div className={`workspace-body${nav.content || nav.invalidContent ? " workspace-has-detail" : ""}`}>

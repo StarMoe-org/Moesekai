@@ -49,7 +49,7 @@ export default function FurnitureBrowser({ data, snapshot, results, relations, r
             <BaseFilters compact variant="plain" filteredCount={results.length} totalCount={data.fixtures.length}
                 searchQuery={browse.query} onSearchChange={query => change({ query })}
                 searchPlaceholder={t("page.mysekaiWorkspace.searchFurniture")}
-                hasActiveFilters={refined || Boolean(browse.query || browse.character || browse.fixture || browse.availability !== "all")}
+                hasActiveFilters={refined || Boolean(browse.query || browse.characters.length || browse.fixture || browse.availability !== "all")}
                 onReset={reset}>
                 <div className="workspace-filter-row">
                     <FilterSection label={t("page.mysekai.detail.fields.mainGenre")}>

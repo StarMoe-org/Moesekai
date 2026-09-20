@@ -63,8 +63,18 @@ check('search has a codepoint limit and URL escaping cannot create parameters', 
 check('source pins, paging, both character meanings and sorting survive roundtrip', () => {
     const value = state('region=cn&snapshot=cn-test&tab=performances&page=5&q=%E6%A1%8C&character=14&fixture=534&genre=2&subGenre=3&tag=4&characters=14,15&units=piapro,light_sound&sortBy=name&sortOrder=asc&availability=ready&content=talk:fixture:6117');
     assert.deepEqual(plain(state(serialize(value).toString())), plain(value));
-    assert.equal(value.browse.character, 14);
+    assert.deepEqual(plain(value.browse.characters), [14]);
     assert.deepEqual(plain(value.furniture.characters), [14, 15]);
+});
+check('conversation character intersection keeps legacy links and resets independently', () => {
+    const value = state('character=1,2,1,-1,NaN,0,03&characters=14,15');
+    assert.deepEqual(plain(value.browse.characters), [1, 2]);
+    assert.deepEqual(plain(state(serialize(value).toString()).browse.characters), [1, 2]);
+    value.browse.characters = [];
+    const query = serialize(value);
+    assert.equal(query.has('character'), false);
+    assert.equal(query.get('characters'), '14,15');
+    assert.deepEqual(plain(state('character=14').browse.characters), [14]);
 });
 check('owned state replaces stale values while unrelated campaign parameters survive', () => {
     const query = serialize(state('region=jp&tab=activities'), new URLSearchParams('region=cn&page=9&search=old&genre=99&content=fixture:1&utm_source=friend'));

@@ -147,7 +147,7 @@ export function filterCatalog(catalog: ContentCatalog, state: BrowseState): Cata
                 : state.tab === "performances" ? category === "fixture_story" || category === "fixture_performance"
                     : entry.key.startsWith("talk:");
         if (!inTab || (state.fixture !== null && !entry.fixtureIds.includes(state.fixture))
-            || (state.character !== null && !entry.unitIds.includes(state.character))
+            || !state.characters.every(character => entry.unitIds.includes(character))
             || (state.availability === "ready" && !entry.available)) return false;
         const search = `${entry.title} ${entry.subtitle} ${entry.key} ${entry.fixtureIds.map(id => `${id} ${furnitureNames.get(id) ?? ""}`).join(" ")} ${entry.characters.map(c => `${c.name} ${c.originalName || ""}`).join(" ")}`.toLocaleLowerCase();
         return tokens.every(token => search.includes(token.replace(/^#/, "")));

@@ -430,6 +430,8 @@ interface FilterButtonProps {
 export function FilterButton({ selected, onClick, children, className = "", style }: FilterButtonProps) {
     return (
         <button
+            type="button"
+            aria-pressed={selected}
             onClick={onClick}
             className={`pressable ${getFilterChipStateClasses(selected)} ${className}`}
             style={style}
