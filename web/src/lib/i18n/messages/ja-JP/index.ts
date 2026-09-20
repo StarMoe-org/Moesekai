@@ -1,3 +1,4 @@
+import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
 export const jaJPMessages = {
@@ -872,6 +873,7 @@ export const jaJPMessages = {
     }
   },
   page: {
+      mysekaiWorkspace: mysekaiWorkspaceMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},
         r4b: {
@@ -903,6 +905,14 @@ export const jaJPMessages = {
             "playerLoadFailed": "読み込めませんでした。参照元・権限・ファイル形式を確認してください。",
             "playerChecking": "データを読み込んで照合しています…",
             "playerSummary": "ランク {rank} · {sites} エリア · 家具 {fixtures} 点",
+            "playerNoticeTitle": "取り込みが完了しました。以下は今回のシーンに含まれません：",
+            "notice": {
+                "specialFurnitureRetained": "カスタム家具 {count} 件は記録のみ保持し、まだ描画しません。",
+                "surfaceAppearanceRetained": "床・壁の見た目 {count} 件は記録のみ保持し、シーンは付属のテクスチャを使います。",
+                "fixtureModelMissing": "家具 {count} 件は書き出しモデルがないためスキップしました：{fixtures}",
+                "fixtureTextureMissing": "家具 {count} 件はこのマスターバージョンにテクスチャがないためスキップしました：{fixtures}",
+                "fixtureColorMissing": "家具 {count} 件は書き出しカラーテクスチャがないためスキップしました：{fixtures}"
+            },
             "playerExplore": "このページで探索",
             "playerRestore": "探索を終了して元に戻す",
             "characterEntry": "このキャラクターの家具会話を見る",
@@ -911,8 +921,9 @@ export const jaJPMessages = {
             "source_moesekai-asset": "Moesekai リソースミラー",
             "source_remote": "検証済みリモートスナップショット"
         },
-        navTitle: "マイセカイの会話とふれあい",
-        "title": "会話とインタラクション",
+            navTitle: "MYSEKAI ストーリー",
+            "weather": "天気",
+        "title": "MYSEKAI ストーリー",
         "subtitle": "家具やキャラクターから、MYSEKAI の日常を見つけよう。",
         "catalogOnly": "まず探して、気になるシーンへ",
         "loadPlayer": "プレイヤーを読み込む",
@@ -927,6 +938,7 @@ export const jaJPMessages = {
         "replay": "もう一度再生",
         "replace": "選択した内容を再生",
         "stop": "停止してシーンを復元",
+        "returnScene": "元のシーンに戻る",
         "closePlayer": "プレイヤーを閉じる",
         "showStage": "再生画面へ戻る",
         "choose": "コンテンツを選んでください",
@@ -997,13 +1009,14 @@ export const jaJPMessages = {
             "independent": "独立したシーン",
             "current": "現在のシーン"
         },
-        "modeHint": "必要なキャラクターと家具を準備し、停止・終了後に元のシーンへ戻します。",
+        "modeHint": "必要なキャラクターと家具を準備します。再生終了後も、戻るか次のコンテンツを再生するまでシーンを保持します。",
         "currentHint": "現在のシーンにいるキャラクターと家具のみを使い、プレイヤーが条件を確認します。",
         "phase": {
             "viewing": "表示中",
             "idle": "待機中",
             "preparing": "コンテンツを準備中",
             "playing": "再生中",
+            "completed": "再生終了",
             "restoring": "シーンを復元中",
             "error": "再生エラー"
         },

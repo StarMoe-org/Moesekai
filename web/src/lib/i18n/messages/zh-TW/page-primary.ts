@@ -30,6 +30,14 @@ export const zhTWPagePrimary = {
             "playerLoadFailed": "資料讀取失敗，請檢查來源、權限或檔案格式。",
             "playerChecking": "正在讀取並核對玩家資料…",
             "playerSummary": "等級 {rank} · {sites} 個場地 · {fixtures} 件家具",
+            "playerNoticeTitle": "匯入完成。以下內容不在本次場景中：",
+            "notice": {
+                "specialFurnitureRetained": "{count} 件自訂家具僅保留記錄，暫不渲染。",
+                "surfaceAppearanceRetained": "{count} 件地板與牆面外觀僅保留記錄，場景使用自帶貼圖。",
+                "fixtureModelMissing": "{count} 件家具缺少匯出模型，已略過：{fixtures}",
+                "fixtureTextureMissing": "{count} 件家具的貼圖不在這個主表版本中，已略過：{fixtures}",
+                "fixtureColorMissing": "{count} 件家具缺少匯出的顏色貼圖，已略過：{fixtures}"
+            },
             "playerExplore": "在目前頁面探索",
             "playerRestore": "退出探索並還原場景",
             "characterEntry": "查看這位角色的家具對話",
@@ -38,8 +46,9 @@ export const zhTWPagePrimary = {
             "source_moesekai-asset": "Moesekai 資源鏡像",
             "source_remote": "已校驗遠端快照"
         },
-        "navTitle": "MYSEKAI 對話與互動",
-        "title": "對話與互動",
+        "navTitle": "MYSEKAI 劇情",
+        "weather": "天氣",
+        "title": "MYSEKAI 劇情",
         "subtitle": "從家具與角色出發，探索 MYSEKAI 的日常片段。",
         "catalogOnly": "先瀏覽，再進入場景",
         "loadPlayer": "載入互動播放器",
@@ -54,6 +63,7 @@ export const zhTWPagePrimary = {
         "replay": "重新播放",
         "replace": "改播此內容",
         "stop": "停止並還原場景",
+        "returnScene": "返回原場景",
         "closePlayer": "關閉播放器",
         "showStage": "回到場景",
         "choose": "選擇一段日常",
@@ -124,13 +134,14 @@ export const zhTWPagePrimary = {
             "independent": "獨立場景",
             "current": "目前場景"
         },
-        "modeHint": "自動準備所需角色與家具，停止或結束後還原原始場景。",
+        "modeHint": "自動準備所需角色與家具；播放完畢後保留場景，直到你主動返回或播放下一項。",
         "currentHint": "僅使用場景中已有的角色與家具，由播放器檢查條件。",
         "phase": {
             "viewing": "檢視中",
             "idle": "待播放",
             "preparing": "準備內容中",
             "playing": "播放中",
+            "completed": "播放完畢",
             "restoring": "還原場景中",
             "error": "播放異常"
         },

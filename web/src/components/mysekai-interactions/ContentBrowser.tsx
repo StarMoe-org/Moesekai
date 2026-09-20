@@ -1,10 +1,10 @@
 "use client";
 
 import { useId } from "react";
-import BaseFilters, { FilterSection, FilterToggle } from "@/components/common/BaseFilters";
+import BaseFilters, { FilterButton, FilterSection, FilterToggle } from "@/components/common/BaseFilters";
 import { useI18n } from "@/contexts/I18nContext";
-import type { MolyKey } from "@/lib/moly/contract";
-import { MOLY_TABS, type BrowseState, type CatalogEntry, type ContentCatalog, type ResourceSnapshot } from "@/lib/moly/catalog";
+import type { MolyKey, MolyStatus } from "@/lib/moly/contract";
+import { type BrowseState, type CatalogEntry, type ContentCatalog, type ResourceSnapshot } from "@/lib/moly/catalog";
 import ContentArtwork from "./ContentArtwork";
 import CatalogPagination from "./CatalogPagination";
 
@@ -15,6 +15,7 @@ interface Props {
     results: CatalogEntry[];
     selected: MolyKey | null;
     active: MolyKey | null;
+    phase: MolyStatus["phase"];
     page: number;
     pageSize: number;
     change(value: Partial<BrowseState>): void;
@@ -22,34 +23,34 @@ interface Props {
     onPage(page: number): void;
 }
 
-export default function ContentBrowser({ catalog, snapshot, browse, results, selected, active, page, pageSize, change, select, onPage }: Props) {
+export default function ContentBrowser({ catalog, snapshot, browse, results, selected, active, phase, page, pageSize, change, select, onPage }: Props) {
     const { t } = useI18n();
     const labelId = useId();
-    const characterId = useId();
-    return <section className="interaction-browser" aria-labelledby={labelId}>
+    return <section className="interaction-browser workspace-content-browser" data-mysekai-catalog aria-labelledby={labelId}>
         <div className="interaction-section-heading">
-            <h2 id={labelId}>{t("page.mysekaiInteractions.browse")}</h2>
+            <h2 id={labelId}>{t(`page.mysekaiWorkspace.${browse.tab === "activities" ? "activities" : browse.tab === "performances" ? "furnitureTalks" : "conversations"}`)}</h2>
             <span aria-live="polite">{t("page.mysekaiInteractions.results", { count: results.length })}</span>
         </div>
-        <div className="interaction-tabs" aria-label={t("page.mysekaiInteractions.browse")}>
-            {MOLY_TABS.map(tab => <button key={tab} type="button" aria-pressed={browse.tab === tab} onClick={() => change({ tab })} data-tab={tab}>
-                {t(`page.mysekaiInteractions.tabs.${tab}`)}
-            </button>)}
-        </div>
+        {(browse.tab === "conversations" || browse.tab === "performances") && <div className="workspace-conversation-scope" aria-label={t("page.mysekaiWorkspace.conversations")}>
+            <button data-tab="all-conversations" aria-pressed={browse.tab === "conversations"} onClick={() => change({ tab: "conversations" })}>{t("page.mysekaiWorkspace.allConversations")}</button>
+            <button data-tab="performances" aria-pressed={browse.tab === "performances"} onClick={() => change({ tab: "performances" })}>{t("page.mysekaiWorkspace.furnitureTalks")}</button>
+        </div>}
         <div className="interaction-filters">
-            <BaseFilters variant="plain" filteredCount={results.length} totalCount={catalog.entries.length}
+            <BaseFilters compact variant="plain" filteredCount={results.length} totalCount={catalog.entries.length}
                 searchQuery={browse.query} onSearchChange={query => change({ query })}
                 searchPlaceholder={t("page.mysekaiInteractions.search")}
                 hasActiveFilters={Boolean(browse.query || browse.character || browse.availability !== "all")}
                 onReset={() => change({ query: "", character: null, availability: "all" })}>
                 <FilterSection label={t("page.mysekaiInteractions.characters")}>
-                    <select id={characterId} aria-label={t("page.mysekaiInteractions.characters")} value={browse.character ?? ""}
-                        onChange={event => change({ character: event.target.value ? Number(event.target.value) : null })}>
-                        <option value="">{t("page.mysekaiInteractions.allCharacters")}</option>
-                        {catalog.characters.map(character => <option key={character.id} value={character.id}>{character.name}</option>)}
-                    </select>
+                    <div className="workspace-character-filter" role="group" aria-label={t("page.mysekaiInteractions.characters")}>
+                        <FilterButton selected={browse.character === null} onClick={() => change({ character: null })} className="px-3 py-2 text-xs">
+                            {t("page.mysekaiInteractions.allCharacters")}
+                        </FilterButton>
+                        {catalog.characters.map(character => <FilterButton key={character.id} selected={browse.character === character.id}
+                            onClick={() => change({ character: character.id })} className="px-3 py-2 text-xs">{character.name}</FilterButton>)}
+                    </div>
                 </FilterSection>
-                <FilterToggle label={t("page.mysekaiInteractions.availableOnly")} selected={browse.availability === "ready"}
+                <FilterToggle label={t("page.mysekaiWorkspace.sceneAvailable")} selected={browse.availability === "ready"}
                     onClick={() => change({ availability: browse.availability === "ready" ? "all" : "ready" })} />
             </BaseFilters>
         </div>
@@ -67,7 +68,7 @@ export default function ContentBrowser({ catalog, snapshot, browse, results, sel
                     <span className="interaction-card-foot">
                         <span>{entry.presentation.textMode === "bubble" ? t("page.mysekaiInteractions.bubble")
                             : t(`page.mysekaiInteractions.behavior.${entry.presentation.behavior}`)}</span>
-                        {active === entry.key ? <span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${entry.presentation.primaryAction === "inspect" ? "viewing" : "playing"}`)}</span>
+                        {active === entry.key ? <span className="interaction-live-dot">{t(`page.mysekaiInteractions.phase.${phase === "completed" ? "completed" : entry.presentation.primaryAction === "inspect" ? "viewing" : "playing"}`)}</span>
                             : !entry.available ? <span>{t("page.mysekaiInteractions.unavailable")}</span> : null}
                     </span>
                 </span>

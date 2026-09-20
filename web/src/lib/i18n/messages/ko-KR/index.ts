@@ -1,3 +1,4 @@
+import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
     common: {
         action: {
@@ -870,6 +871,7 @@ export const koKRMessages = {
         }
     },
     page: {
+        mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
             r4b: {
@@ -901,6 +903,14 @@ export const koKRMessages = {
                 "playerLoadFailed": "데이터를 읽지 못했습니다. 출처, 권한 및 파일 형식을 확인하세요.",
                 "playerChecking": "데이터를 읽고 검증하는 중…",
                 "playerSummary": "랭크 {rank} · 장소 {sites}개 · 가구 {fixtures}개",
+                "playerNoticeTitle": "가져오기가 끝났습니다. 아래 항목은 이번 장면에 없습니다:",
+                "notice": {
+                    "specialFurnitureRetained": "커스텀 가구 {count}개는 기록만 보관하고 아직 렌더링하지 않습니다.",
+                    "surfaceAppearanceRetained": "바닥·벽 외형 {count}개는 기록만 보관하고 장면은 자체 텍스처를 사용합니다.",
+                    "fixtureModelMissing": "가구 {count}개는 내보낸 모델이 없어 건너뛰었습니다: {fixtures}",
+                    "fixtureTextureMissing": "가구 {count}개는 이 마스터 버전에 텍스처가 없어 건너뛰었습니다: {fixtures}",
+                    "fixtureColorMissing": "가구 {count}개는 내보낸 색상 텍스처가 없어 건너뛰었습니다: {fixtures}"
+                },
                 "playerExplore": "현재 페이지에서 탐색",
                 "playerRestore": "탐색 종료 및 원래 장면 복원",
                 "characterEntry": "이 캐릭터의 가구 대화 보기",
@@ -909,8 +919,9 @@ export const koKRMessages = {
                 "source_moesekai-asset": "Moesekai 리소스 미러",
                 "source_remote": "검증된 원격 스냅샷"
             },
-            "navTitle": "MYSEKAI 대화와 상호작용",
-            "title": "대화와 상호작용",
+            "navTitle": "MYSEKAI 스토리",
+            "weather": "날씨",
+            "title": "MYSEKAI 스토리",
             "subtitle": "가구와 캐릭터를 따라 MYSEKAI의 일상 속 장면을 만나보세요.",
             "catalogOnly": "먼저 둘러보고, 준비되면 장면으로",
             "loadPlayer": "상호작용 플레이어 불러오기",
@@ -925,6 +936,7 @@ export const koKRMessages = {
             "replay": "다시 재생",
             "replace": "이 콘텐츠로 바꾸기",
             "stop": "중지하고 장면 복원",
+            "returnScene": "원래 장면으로 돌아가기",
             "closePlayer": "플레이어 닫기",
             "showStage": "장면으로 돌아가기",
             "choose": "장면 선택",
@@ -995,13 +1007,14 @@ export const koKRMessages = {
                 "independent": "독립 장면",
                 "current": "현재 장면"
             },
-            "modeHint": "필요한 캐릭터와 가구를 준비하며, 중지하거나 종료하면 원래 장면을 복원합니다.",
+            "modeHint": "필요한 캐릭터와 가구를 준비합니다. 재생이 끝나도 직접 돌아가거나 다음 콘텐츠를 재생할 때까지 장면을 유지합니다.",
             "currentHint": "장면에 이미 있는 캐릭터와 가구만 사용하며, 플레이어가 조건을 확인합니다.",
             "phase": {
                 "viewing": "감상 중",
                 "idle": "준비됨",
                 "preparing": "콘텐츠 준비 중",
                 "playing": "재생 중",
+                "completed": "재생 완료",
                 "restoring": "장면 복원 중",
                 "error": "재생 오류"
             },

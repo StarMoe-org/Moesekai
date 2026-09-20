@@ -1,3 +1,4 @@
+import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
 export const zhCNMessages = {
@@ -872,6 +873,7 @@ export const zhCNMessages = {
         },
     },
     page: {
+        mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
             r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},
             r4b: {
@@ -903,6 +905,14 @@ export const zhCNMessages = {
                 "playerLoadFailed": "数据读取失败，请检查来源、权限或文件格式后重试。",
                 "playerChecking": "正在读取并核对玩家数据…",
                 "playerSummary": "等级 {rank} · {sites} 个场地 · {fixtures} 件家具",
+                "playerNoticeTitle": "导入完成。以下内容不在本次场景中：",
+                "notice": {
+                    "specialFurnitureRetained": "{count} 件自定义家具只保留记录，暂不渲染。",
+                    "surfaceAppearanceRetained": "{count} 件地板与墙面外观只保留记录，场景使用自带贴图。",
+                    "fixtureModelMissing": "{count} 件家具缺少导出模型，已跳过：{fixtures}",
+                    "fixtureTextureMissing": "{count} 件家具的贴图不在这个主表版本里，已跳过：{fixtures}",
+                    "fixtureColorMissing": "{count} 件家具缺少导出的颜色贴图，已跳过：{fixtures}"
+                },
                 "playerExplore": "在当前页面探索",
                 "playerRestore": "退出探索并恢复原场景",
                 "characterEntry": "查看这位角色的家具对话",
@@ -911,9 +921,10 @@ export const zhCNMessages = {
                 "source_moesekai-asset": "Moesekai 资源镜像",
                 "source_remote": "已校验远端快照"
             },
-            navTitle: "MYSEKAI 对话与互动",
-            "title": "对话与互动",
-            "subtitle": "从一件家具、一位角色，发现 MYSEKAI 的日常。",
+            navTitle: "MYSEKAI 剧情",
+            "weather": "天气",
+            "title": "MYSEKAI 剧情",
+            "subtitle": "浏览 MYSEKAI 对话、家具相关剧情与角色互动。",
             "catalogOnly": "先浏览，再进入场景",
             "loadPlayer": "加载互动播放器",
             "loadHint": "浏览不需要下载游戏。进入后加载共用资源，再按需准备所选角色、家具和声音。",
@@ -927,6 +938,7 @@ export const zhCNMessages = {
             "replay": "重新播放",
             "replace": "播放所选内容",
             "stop": "停止并恢复场景",
+            "returnScene": "返回原场景",
             "closePlayer": "关闭播放器",
             "showStage": "回到播放画面",
             "choose": "选择一段内容",
@@ -997,13 +1009,14 @@ export const zhCNMessages = {
                 "independent": "独立体验",
                 "current": "当前场景"
             },
-            "modeHint": "自动准备需要的角色与家具；停止或结束后恢复原场景。",
+            "modeHint": "自动准备需要的角色与家具；播放完毕后保留场景，直到你主动返回或播放下一项。",
             "currentHint": "只使用当前场景已有的角色和家具；条件由播放器判断。",
             "phase": {
                 "viewing": "查看中",
                 "idle": "就绪",
                 "preparing": "准备内容中",
                 "playing": "播放中",
+                "completed": "播放完毕",
                 "restoring": "恢复场景中",
                 "error": "播放遇到问题"
             },

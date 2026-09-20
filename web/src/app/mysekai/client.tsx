@@ -5,7 +5,7 @@ import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
-import BaseFilters, { FilterSection } from "@/components/common/BaseFilters";
+import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
 import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
@@ -327,56 +327,44 @@ function MysekaiContent() {
             />
 
             <FilterSection label={t("page.mysekai.sectionLabel.mainGenre")}>
-                <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                    value={selectedGenre || ""}
-                    onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : null;
-                        setSelectedGenre(val);
-                        if (val !== selectedSubGenre) setSelectedSubGenre(null);
-                    }}
-                >
-                    <option value="">{t("page.mysekai.allOption")}</option>
-                    {availableGenres.map(g => (
-                        <option key={g.id} value={g.id}>{getMysekaiGenreDisplayName(g.name, t)}</option>
-                    ))}
-                </select>
+                <div className="flex flex-wrap gap-2">
+                    <FilterButton selected={selectedGenre === null} onClick={() => { setSelectedGenre(null); setSelectedSubGenre(null); }} className="px-3 py-2 text-xs">
+                        {t("page.mysekai.allOption")}
+                    </FilterButton>
+                    {availableGenres.map(g => <FilterButton key={g.id} selected={selectedGenre === g.id}
+                        onClick={() => { setSelectedGenre(g.id); setSelectedSubGenre(null); }} className="px-3 py-2 text-xs">
+                        {getMysekaiGenreDisplayName(g.name, t)}
+                    </FilterButton>)}
+                </div>
             </FilterSection>
 
             {selectedGenre && (
                 <FilterSection label={t("page.mysekai.sectionLabel.subGenre")}>
-                    <select
-                        className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                        value={selectedSubGenre || ""}
-                        onChange={(e) => setSelectedSubGenre(e.target.value ? Number(e.target.value) : null)}
-                    >
-                        <option value="">{t("page.mysekai.allOption")}</option>
-                        {subGenres
-                            .filter(sg => sg.mysekaiFixtureMainGenreId === selectedGenre)
-                            .map(sg => (
-                                <option key={sg.id} value={sg.id}>{sg.name}</option>
-                            ))
-                        }
-                    </select>
+                    <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
+                        <FilterButton selected={selectedSubGenre === null} onClick={() => setSelectedSubGenre(null)} className="px-3 py-2 text-xs">
+                            {t("page.mysekai.allOption")}
+                        </FilterButton>
+                        {subGenres.filter(sg => sg.mysekaiFixtureMainGenreId === selectedGenre).map(sg => (
+                            <FilterButton key={sg.id} selected={selectedSubGenre === sg.id} onClick={() => setSelectedSubGenre(sg.id)} className="px-3 py-2 text-xs">
+                                {getMysekaiGenreDisplayName(sg.name, t)}
+                            </FilterButton>
+                        ))}
+                    </div>
                 </FilterSection>
             )}
 
             <FilterSection label={t("page.mysekai.sectionLabel.tag")}>
-                <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                    value={selectedTag || ""}
-                    onChange={(e) => setSelectedTag(e.target.value ? Number(e.target.value) : null)}
-                >
-                    <option value="">{t("page.mysekai.allOption")}</option>
+                <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto pr-1">
+                    <FilterButton selected={selectedTag === null} onClick={() => setSelectedTag(null)} className="px-3 py-2 text-xs">
+                        {t("page.mysekai.allOption")}
+                    </FilterButton>
                     {generalTags.map(tag => {
                         const tagLabel = getMysekaiTagDisplayName(tag.name, t);
-                        return (
-                            <option key={tag.id} value={tag.id}>
-                                {tagLabel} {tagLabel !== tag.name ? `(${tag.name})` : ""}
-                            </option>
-                        );
+                        return <FilterButton key={tag.id} selected={selectedTag === tag.id} onClick={() => setSelectedTag(tag.id)} className="px-3 py-2 text-xs">
+                            {tagLabel}
+                        </FilterButton>;
                     })}
-                </select>
+                </div>
             </FilterSection>
 
 

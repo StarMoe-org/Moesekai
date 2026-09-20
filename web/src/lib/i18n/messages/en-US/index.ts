@@ -1,3 +1,4 @@
+import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
 export const enUSMessages = {
@@ -873,6 +874,7 @@ export const enUSMessages = {
         },
     },
     page: {
+        mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
             r4b: {
@@ -904,6 +906,14 @@ export const enUSMessages = {
                 "playerLoadFailed": "Could not read data. Check the source, access permission and file format.",
                 "playerChecking": "Reading and validating player data…",
                 "playerSummary": "Rank {rank} · {sites} sites · {fixtures} fixtures",
+                "playerNoticeTitle": "Import finished. These items are not in this scene:",
+                "notice": {
+                    "specialFurnitureRetained": "{count} custom furniture records are kept but not rendered yet.",
+                    "surfaceAppearanceRetained": "{count} floor and wall skin records are kept; the scene keeps its own textures.",
+                    "fixtureModelMissing": "{count} furniture instances were skipped: no exported model for {fixtures}",
+                    "fixtureTextureMissing": "{count} furniture instances were skipped: the texture is missing from this master version for {fixtures}",
+                    "fixtureColorMissing": "{count} furniture instances were skipped: no exported color texture for {fixtures}"
+                },
                 "playerExplore": "Explore in this page",
                 "playerRestore": "Exit and restore original scene",
                 "characterEntry": "Browse this character’s furniture conversations",
@@ -912,9 +922,10 @@ export const enUSMessages = {
                 "source_moesekai-asset": "Moesekai asset mirror",
                 "source_remote": "Verified remote snapshot"
             },
-        navTitle: "MYSEKAI conversations & interactions",
-        "title": "Conversations & interactions",
-        "subtitle": "Discover everyday MYSEKAI moments, one character and one piece of furniture at a time.",
+            navTitle: "MYSEKAI stories",
+            "weather": "Weather",
+        "title": "MYSEKAI stories",
+        "subtitle": "Browse MYSEKAI conversations, furniture-related stories, and character interactions.",
         "catalogOnly": "Browse first. Enter when ready.",
         "loadPlayer": "Load interactive player",
         "loadHint": "Browsing does not download the game. Entering loads shared resources, then the characters, furniture and sounds you choose.",
@@ -928,6 +939,7 @@ export const enUSMessages = {
         "replay": "Replay",
         "replace": "Play this instead",
         "stop": "Stop and restore scene",
+        "returnScene": "Return to original scene",
         "closePlayer": "Close player",
         "showStage": "Back to the scene",
         "choose": "Choose a moment",
@@ -998,13 +1010,14 @@ export const enUSMessages = {
             "independent": "Independent scene",
             "current": "Current scene"
         },
-        "modeHint": "Prepares the required cast and furniture, then restores the original scene when stopped or finished.",
+        "modeHint": "Prepares the required cast and furniture. The scene stays after playback until you return or play another item.",
         "currentHint": "Uses only the cast and furniture already in the scene. The player checks the conditions.",
         "phase": {
             "viewing": "Viewing",
             "idle": "Ready",
             "preparing": "Preparing content",
             "playing": "Playing",
+            "completed": "Playback finished",
             "restoring": "Restoring scene",
             "error": "Playback issue"
         },

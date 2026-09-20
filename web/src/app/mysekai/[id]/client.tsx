@@ -445,7 +445,7 @@ function MysekaiFixtureDetailContent() {
                                     </h2>
                                 </div>
                                 <div className="p-5">
-                                    <FixtureCharacterEntries region={dataSource!} fixture={fixture.id} fixtureName={fixture.name} fixtureImage={thumbnailUrl} groups={fixtureCharacterTalks} />
+                                    <FixtureCharacterEntries region={dataSource!} fixture={fixture.id} groups={fixtureCharacterTalks} />
                                 </div>
                             </div>
                         )}

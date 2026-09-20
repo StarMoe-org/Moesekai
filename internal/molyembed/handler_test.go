@@ -92,6 +92,29 @@ func TestVersionedServing(t *testing.T) {
 		t.Fatal(worker.Header())
 	}
 }
+func TestSourceWeatherDependenciesAreServed(t *testing.T) {
+	root, _ := fixture(t)
+	h := New(root)
+	for _, tc := range []struct{ ext, mime string }{
+		{".glsl", "text/plain; charset=utf-8"},
+		{".wgsl", "text/plain; charset=utf-8"},
+		{".rgba8", "application/octet-stream"},
+		{".acb", "application/octet-stream"},
+	} {
+		name := "snapshots/cn-test/assets/phenomena/source" + tc.ext
+		file := filepath.Join(root, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(file), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(file, []byte("source"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		w := request(h, "GET", "/moly/"+name, nil)
+		if w.Code != 200 || w.Header().Get("Content-Type") != tc.mime || w.Body.String() != "source" {
+			t.Fatalf("%s: status=%d type=%q body=%q", name, w.Code, w.Header().Get("Content-Type"), w.Body.String())
+		}
+	}
+}
 func TestPrecompressedWasm(t *testing.T) {
 	root, _ := fixture(t)
 	file := filepath.Join(root, "releases/stage-test/pkg/webgpu/moly-app_bg.wasm")
@@ -181,7 +204,7 @@ func TestSnapshotProvenance(t *testing.T) {
 		{"missing backend", func(root string, m *Manifest) { delete(m.Release.Engines, "webgl2") }, 503, ""},
 		{"fake size", func(root string, m *Manifest) { m.Release.Engines["webgpu"] = EngineSize{} }, 503, ""},
 		{"development masquerades as immutable", func(root string, m *Manifest) {
-			m.Snapshots[0].Provenance = map[string]string{"assetPolicy": "development-mount"}
+			m.Snapshots[0].Provenance = map[string]any{"assetPolicy": "development-mount"}
 		}, 503, ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

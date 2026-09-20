@@ -172,15 +172,7 @@ const navigationGroups: NavGroup[] = [
                     </svg>
                 ),
             },
-            {
-                id: "mysekai-interactions",
-                href: "/mysekai/interactions",
-                icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M8 4.5h8A3.5 3.5 0 0 1 19.5 8v6a3.5 3.5 0 0 1-3.5 3.5h-4l-4.5 3v-3A3 3 0 0 1 4.5 14V8A3.5 3.5 0 0 1 8 4.5Z M10 8l5 3-5 3V8Z" />
-                    </svg>
-                ),
-            },
+
             {
                 id: "materials",
                 href: "/materials",
@@ -308,6 +300,15 @@ const navigationGroups: NavGroup[] = [
                 icon: (
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    </svg>
+                ),
+            },
+            {
+                id: "mysekai-interactions",
+                href: "/mysekai/interactions",
+                icon: (
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.7} d="M8 4.5h8A3.5 3.5 0 0 1 19.5 8v6a3.5 3.5 0 0 1-3.5 3.5h-4l-4.5 3v-3A3 3 0 0 1 4.5 14V8A3.5 3.5 0 0 1 8 4.5Z M10 8l5 3-5 3V8Z" />
                     </svg>
                 ),
             },

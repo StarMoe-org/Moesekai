@@ -61,6 +61,13 @@ export default function PlayerDataPanel({ region, ready, blocked, value, send, o
         {value?.error && <p role="alert">{value.status}</p>}
         {busy || value?.busy ? <p role="status">{t("page.mysekaiInteractions.r4b.playerChecking")}</p> : null}
         {value?.summary && !value.error && <p>{t("page.mysekaiInteractions.r4b.playerSummary", value.summary)}</p>}
+        {value?.notices?.length ? <div className="interaction-player-notices" role="status">
+            <p>{t("page.mysekaiInteractions.r4b.playerNoticeTitle")}</p>
+            <ul>{value.notices.map((notice, index) => <li key={`${notice.code}-${index}`}>{t(`page.mysekaiInteractions.r4b.notice.${notice.code}`, {
+                count: notice.count,
+                fixtures: "fixtures" in notice ? notice.fixtures.join(", ") : ""
+            })}</li>)}</ul>
+        </div> : null}
         <div className="interaction-import-row">
             {value?.canExplore && !value.error && <button className="interaction-button primary" disabled={locked} onClick={() => command("explore")}>{t("page.mysekaiInteractions.r4b.playerExplore")}</button>}
             {value?.exploring && <button className="interaction-button" disabled={locked} onClick={() => command("restore")}>{t("page.mysekaiInteractions.r4b.playerRestore")}</button>}

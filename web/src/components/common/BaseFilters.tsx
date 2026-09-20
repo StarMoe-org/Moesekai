@@ -24,6 +24,9 @@ export interface BaseFiltersProps {
     /** Unit name for count display (e.g., cards, songs, items) */
     countUnit?: string;
 
+    /** Compact inline layout: one reset action and visually hidden search label. */
+    compact?: boolean;
+
     // Search
     /** Search query value */
     searchQuery?: string;
@@ -167,6 +170,7 @@ export const FilterDrawerContext = React.createContext<boolean>(false);
 
 export default function BaseFilters({
     variant,
+    compact = false,
     title,
     filteredCount,
     totalCount,
@@ -224,7 +228,7 @@ export default function BaseFilters({
 
     // Shared filter inner content (Search, Sort, Custom sections, Reset)
     const filterControls = (
-        <div className="space-y-4">
+        <div className={compact ? "space-y-3 workspace-compact-filters" : "space-y-4"}>
             {/* Filter item count summary if provided */}
             {totalCount > 0 && (
                 <div className="flex items-center justify-between text-xs type-caption text-slate-500 dark:text-slate-400 px-0.5">
@@ -248,7 +252,7 @@ export default function BaseFilters({
             {/* Search */}
             {showSearch && onSearchChange && (
                 <div>
-                    <label className="block text-xs font-bold type-caption text-slate-600 dark:text-slate-350 uppercase tracking-wider mb-1.5">
+                    <label className={compact ? "sr-only" : "block text-xs font-bold type-caption text-slate-600 dark:text-slate-350 uppercase tracking-wider mb-1.5"}>
                         {t("common.filter.search")}
                     </label>
                     <div className="relative">
@@ -313,7 +317,7 @@ export default function BaseFilters({
             {children}
 
             {/* Reset Button */}
-            {hasActiveFilters && onReset && (
+            {!compact && hasActiveFilters && onReset && (
                 <button
                     type="button"
                     onClick={onReset}

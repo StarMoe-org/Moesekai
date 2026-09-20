@@ -51,6 +51,12 @@
 .interaction-mode{padding:14px 2px 0}
 .interaction-mode label{font-size:.79rem;font-weight:650;display:flex;align-items:center;gap:12px;justify-content:space-between}
 .interaction-mode p{margin-top:8px;font-size:.73rem;line-height:1.7;color:var(--text-muted)}
+.interaction-weather{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.interaction-weather .interaction-eyebrow{margin:0}
+.interaction-weather select{font:inherit;font-size:.79rem;font-weight:650;padding:7px 10px;border-radius:9px;border:1px solid var(--border-soft);background:var(--surface-base);color:var(--text-body)}
+.interaction-player-notices{margin:10px 0 0;font-size:.79rem;line-height:1.7;color:var(--text-body)}
+.interaction-player-notices p{margin:0}
+.interaction-player-notices ul{margin:6px 0 0;padding-left:18px;color:var(--text-muted)}
 .mysekai-interactions select{background:var(--surface-base);border:1px solid var(--border-strong);border-radius:10px;color:var(--text-body);padding:9px 12px;font:inherit;font-size:.81rem;max-width:100%;min-height:40px}
 .interaction-detail{min-width:0;border:1px solid var(--border-soft);border-radius:var(--interaction-radius);padding:22px;background:var(--surface-base)}
 .interaction-detail-heading{display:flex;gap:15px;align-items:center}

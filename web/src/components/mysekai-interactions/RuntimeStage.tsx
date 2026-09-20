@@ -9,19 +9,30 @@ import type { MolyRelease, ResourceSnapshot } from "@/lib/moly/catalog";
 import { resourceCacheCommand } from "@/lib/moly/resourceCache";
 
 export interface PlayerSession {
+    /** Unique per request; drives React identity and debugging only. */
     id: number;
+    /**
+     * Realm identity. The stage mounts one runtime realm per epoch and every
+     * content switch inside that epoch goes through the live mount handle, so
+     * switching conversations never resets the renderer, the audio graph or
+     * the loaded world. Only an explicit Close/Retry/region change raises it.
+     */
+    epoch: number;
     snapshot: ResourceSnapshot;
     release: MolyRelease;
     initial: MolyFilters;
     content: MolyKey | null;
     play: MolyKey | null;
     preview?: boolean;
+    soundEnabled: boolean;
 }
 export interface RuntimeStageHandle {
     playerData(value: MolyPlayerDataCommand): void;
     play(key: MolyKey): void;
     preview(key: MolyKey): void;
     browse(filters: MolyFilters): void;
+    setWeather(phenomenon: number): void;
+    setSoundEnabled(enabled: boolean): void;
     select(key: MolyKey): void;
     stop(): void;
     close(): Promise<boolean>;
@@ -95,6 +106,13 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             play: key => send(player => player.play(key)),
             preview: key => send(player => player.preview(key)),
             browse: filters => send(player => player.browse(filters)),
+            setWeather: phenomenon => send(player => player.setWeather(phenomenon)),
+            // Runtime publications are independently versioned. Feature-detect the
+            // sound gate so a host hot-update cannot crash while an older cached
+            // release is still mounted; current releases implement this method.
+            setSoundEnabled: enabled => send(player => {
+                if (typeof player.setSoundEnabled === "function") player.setSoundEnabled(enabled);
+            }),
             select: key => send(player => player.select(key)),
             stop: () => send(player => player.stop()),
             async close() {
@@ -104,7 +122,17 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
         };
     }, []);
 
+    // One realm per `session.epoch`. Content switching reuses the live world
+    // through the mount handle instead of tearing the renderer, the audio
+    // graph and the caches down and building them again: only an explicit
+    // close, retry, or region change asks for a new epoch.
+    const epoch = session?.epoch ?? null;
+    const launch = useRef(session);
+    useEffect(() => { launch.current = session; });
+
     useEffect(() => {
+        const request = launch.current;
+        if (epoch === null || !request) return;
         let cancelled = false;
         let owned: MolyMount | null = null;
         const host = container.current;
@@ -112,8 +140,8 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
         state.current.onPlayerData(null);
         const initialize = async () => {
             try {
-                const moduleUrl = new URL(session.release.module, location.origin);
-                if (moduleUrl.origin !== location.origin || moduleUrl.pathname !== `/moly/releases/${session.release.id}/embed.mjs`) throw new Error("Invalid runtime module URL");
+                const moduleUrl = new URL(request.release.module, location.origin);
+                if (moduleUrl.origin !== location.origin || moduleUrl.pathname !== `/moly/releases/${request.release.id}/embed.mjs`) throw new Error("Invalid runtime module URL");
                 // Keep the separately versioned runtime out of every Next.js
                 // bundle. Its source and protocol are validated at discovery.
                 // Enable required-resource retention before the iframe starts fetching.
@@ -126,10 +154,11 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                 if (typeof sdk.mountMoly !== "function") throw new Error("Runtime adapter is unavailable");
                 const current = state.current;
                 owned = sdk.mountMoly(host, {
-                    view: "stage", src: session.release.stage, assets: session.snapshot.assets,
-                    region: session.snapshot.region, version: session.snapshot.version, snapshot: session.snapshot.id,
+                    view: "stage", src: request.release.stage, assets: request.snapshot.assets,
+                    region: request.snapshot.region, version: request.snapshot.version, snapshot: request.snapshot.id,
+                    packs: request.snapshot.packs, assetCatalog: request.snapshot.assetCatalog,
                     theme: { mode: current.resolvedColorScheme, accent: current.themeColor }, locale: current.locale,
-                    filters: session.initial, content: session.content ?? undefined, preload: true,
+                    filters: request.initial, content: request.content ?? undefined, preload: true, sound: request.soundEnabled,
                     onPlayerData: value => { if (!cancelled) state.current.onPlayerData(value); },
                     onSnapshot: value => { if (!cancelled) state.current.onSnapshot(value); },
                     onBoot: value => {
@@ -144,7 +173,7 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                     onError: value => { if (!cancelled) state.current.onError(value); },
                 });
                 mount.current = owned;
-                if (session.play) { if (session.preview) owned.preview(session.play); else owned.play(session.play); }
+                if (request.play) { if (request.preview) owned.preview(request.play); else owned.play(request.play); }
                 for (const action of queued.current.splice(0)) action(owned);
             } catch (error) {
                 if (!cancelled) {
@@ -160,9 +189,10 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             if (mount.current === owned) mount.current = null;
             queued.current = [];
         };
-        // A session is created only by explicit load/source/retry actions.
-        // Theme, locale, filters and React rerenders never recreate the iframe.
-    }, [session]);
+        // A new epoch is created only by explicit load/source/retry actions.
+        // Theme, locale, filters, catalogue selection and content switches
+        // never recreate the iframe or its realm.
+    }, [epoch]);
 
     return <div ref={container} className="interaction-runtime" data-moly-session={session.id} />;
 });

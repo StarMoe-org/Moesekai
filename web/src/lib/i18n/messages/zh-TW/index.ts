@@ -1,3 +1,4 @@
+import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 import { zhTWCommon } from "./common";
 import { zhTWPagePrimary } from "./page-primary";
@@ -17,6 +18,7 @@ export const zhTWMessages = {
     settings: zhTWSettings,
     shortcuts: zhTWShortcuts,
     page: {
+        mysekaiWorkspace: mysekaiWorkspaceMessages,
         ...zhTWPagePrimary,
         ...zhTWPageSecondaryA,
         ...zhTWPageSecondaryB,

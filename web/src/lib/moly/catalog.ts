@@ -2,7 +2,6 @@ import { mysekaiDatabaseHref } from "../mysekai-source";
 import type { MolyEntry, MolyKey, MolyRegion, MolyTab, MolyCharacter } from "./contract";
 
 export const MOLY_CONTRACT_VERSION = 2;
-export const MOLY_TABS = ["conversations", "furniture", "performances", "activities"] as const;
 export interface MolyRelease {
     id: string;
     module: string;
@@ -15,10 +14,15 @@ export interface ResourceSnapshot {
     region: MolyRegion;
     version: string;
     assets: string;
+    packs?: boolean;
+    assetCatalog?: string;
+    assetReleaseVersion?: string;
+    /** Validated current release module, used only to load its static pack reader. */
+    releaseModule?: string;
     catalog: string;
     available: boolean;
     unavailableReason?: string;
-    provenance?: Record<string, string>;
+    provenance?: Record<string, string | number>;
     base: { downloadBytes: number; decodedBytes: number };
 }
 export interface RuntimeManifest {
@@ -35,41 +39,10 @@ export interface ContentCatalog {
     characters: MolyCharacter[];
     entries: CatalogEntry[];
 }
-export interface BrowseState {
-    tab: MolyTab;
-    query: string;
-    character: number | null;
-    fixture: number | null;
-    availability: "all" | "ready";
-}
-export const INITIAL_BROWSE: BrowseState = { tab: "conversations", query: "", character: null, fixture: null, availability: "all" };
-
+export { MOLY_TABS, INITIAL_BROWSE, parseBrowse, positiveId, supportedRegion, validContentKey } from "./workspaceNavigation";
+export type { BrowseState } from "./workspaceNavigation";
+import { supportedRegion, validContentKey, type BrowseState } from "./workspaceNavigation";
 const identity = /^[a-z0-9][a-z0-9._-]{0,95}$/;
-export function supportedRegion(value: string | null | undefined): MolyRegion | null {
-    return value === "cn" || value === "jp" ? value : null;
-}
-export function validContentKey(value: unknown): value is MolyKey {
-    if (typeof value !== "string" || value.length > 160) return false;
-    const parts = value.split(":");
-    const numbers = parts[0] === "talk" && ["general", "fixture"].includes(parts[1]) && parts.length === 3 ? parts.slice(2)
-        : parts[0] === "fixture" && parts.length === 2 ? parts.slice(1)
-        : parts[0] === "activity" && ["notalk", "preaction"].includes(parts[1]) && parts.length === 4 ? parts.slice(2) : [];
-    return numbers.length > 0 && numbers.every(n => /^[1-9]\d*$/.test(n) && Number(n) <= 2147483647);
-}
-export function positiveId(value: string | null): number | null {
-    if (!value || !/^[1-9]\d*$/.test(value) || Number(value) > 2147483647) return null;
-    return Number(value);
-}
-export function parseBrowse(params: Pick<URLSearchParams, "get">): BrowseState {
-    const tab = params.get("tab");
-    return {
-        tab: MOLY_TABS.includes(tab as MolyTab) ? tab as MolyTab : INITIAL_BROWSE.tab,
-        query: Array.from(params.get("q") || "").slice(0, 200).join(""),
-        character: positiveId(params.get("character")),
-        fixture: positiveId(params.get("fixture")),
-        availability: params.get("availability") === "ready" ? "ready" : "all",
-    };
-}
 
 export function interactionHref(options: { region: string; fixture?: number | null; character?: number | null; content?: MolyKey | null; tab?: MolyTab; snapshot?: string }): string {
     const query = new URLSearchParams({ region: options.region });
@@ -96,8 +69,15 @@ async function readJson<T>(url: string, signal: AbortSignal | undefined, maxByte
     if (text.length > maxBytes) throw new Error("moly_response_too_large");
     return JSON.parse(text) as T;
 }
-export async function fetchRuntimeManifest(signal?: AbortSignal): Promise<RuntimeManifest> {
-    const value = await readJson<RuntimeManifest>("/moly/manifest.json", signal, 1048576, true);
+export async function fetchRuntimeManifest(signal?: AbortSignal, pin?: { snapshot: string; region?: string | null }): Promise<RuntimeManifest> {
+    if (pin && (!identity.test(pin.snapshot) || (pin.region && !supportedRegion(pin.region)))) throw new Error("moly_snapshot_invalid");
+    const query = pin ? new URLSearchParams({ snapshot: pin.snapshot, ...(pin.region ? { region: pin.region } : {}) }) : null;
+    const value = await readJson<RuntimeManifest>(`/moly/manifest.json${query ? `?${query}` : ""}`, signal, 1048576, true).catch(error => {
+        // Keep the pinned URL so the page reports snapshotExpired rather than
+        // silently selecting a different source when a history entry is absent.
+        if (pin && error instanceof Error && error.message === "moly_http_404") return readJson<RuntimeManifest>("/moly/manifest.json", signal, 1048576, true);
+        throw error;
+    });
     if (value?.schemaVersion !== MOLY_CONTRACT_VERSION || value.release?.contractVersion !== MOLY_CONTRACT_VERSION || !identity.test(value.release.id)
         || value.release.module !== `/moly/releases/${value.release.id}/embed.mjs`
         || value.release.stage !== `/moly/releases/${value.release.id}/stage.html`
@@ -105,10 +85,13 @@ export async function fetchRuntimeManifest(signal?: AbortSignal): Promise<Runtim
     const regions = new Set<string>();
     for (const snapshot of value.snapshots) {
         if (!identity.test(snapshot.id) || !supportedRegion(snapshot.region) || regions.has(snapshot.region)
-            || snapshot.assets !== `/moly/snapshots/${snapshot.id}/assets/`
+            || (snapshot.packs !== undefined && typeof snapshot.packs !== "boolean")
+            || (snapshot.packs === true ? snapshot.assets !== "/moly/asset-store/" || !/^[a-f0-9]{64}$/.test(snapshot.assetCatalog ?? "") || typeof snapshot.assetReleaseVersion !== "string" || !snapshot.assetReleaseVersion
+                : snapshot.assets !== `/moly/snapshots/${snapshot.id}/assets/` || snapshot.assetCatalog !== undefined || snapshot.assetReleaseVersion !== undefined)
             || snapshot.catalog !== `/moly/snapshots/${snapshot.id}/catalog/index.json`
             || typeof snapshot.available !== "boolean") throw new Error("moly_manifest_invalid");
         regions.add(snapshot.region);
+        snapshot.releaseModule = value.release.module;
     }
     return value;
 }
@@ -131,6 +114,7 @@ export async function fetchContentDetail(snapshot: ResourceSnapshot, entry: Cata
     return value.entry;
 }
 export function resourceImage(snapshot: ResourceSnapshot, image: string | null | undefined): string | undefined {
+    if (snapshot.packs) return undefined;
     if (!image) return undefined;
     const path = image.replace(/^moly:\/\//, "");
     if (path.startsWith("/") || path.includes(":") || path.includes("\\") || path.split("/").some(part => !part || part === ".." || part === ".")) return undefined;

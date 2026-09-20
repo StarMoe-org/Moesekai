@@ -23,10 +23,15 @@ const ContractVersion = 2
 
 var identifier = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]{0,95}$`)
 var gameVersion = regexp.MustCompile(`^\d+\.\d+\.\d+$`)
+var contentHash = regexp.MustCompile(`^[a-f0-9]{64}$`)
+var storeDocument = regexp.MustCompile(`^asset-store/(catalogs|packages)/[a-f0-9]{64}\.json$`)
+var storeBlob = regexp.MustCompile(`^asset-store/blobs/([a-f0-9]{2})/([a-f0-9]{64})\.(bin|gzz)$`)
 
 type Handler struct {
 	root        string
 	rootErr     error
+	storeRoot   string
+	storeErr    error
 	development bool
 	mu          sync.Mutex
 	stamp       string
@@ -44,6 +49,12 @@ func New(root string) *Handler {
 	h.root, h.rootErr = filepath.Abs(root)
 	if h.rootErr == nil {
 		h.root, h.rootErr = filepath.EvalSymlinks(h.root)
+	}
+	if store := strings.TrimSpace(os.Getenv("MOLY_ASSET_STORE_ROOT")); store != "" {
+		h.storeRoot, h.storeErr = filepath.Abs(store)
+		if h.storeErr == nil {
+			h.storeRoot, h.storeErr = filepath.EvalSymlinks(h.storeRoot)
+		}
 	}
 	return h
 }
@@ -73,7 +84,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	segments := strings.Split(rel, "/")
 	mutable := rel == "cache-worker.mjs"
-	if !mutable && (len(segments) < 3 || (segments[0] != "releases" && segments[0] != "snapshots") || !identifier.MatchString(segments[1])) {
+	cas := immutableStorePath(rel)
+	if !mutable && !cas && (len(segments) < 3 || (segments[0] != "releases" && segments[0] != "snapshots") || !identifier.MatchString(segments[1])) {
 		problem(w, r, http.StatusNotFound, "not_found")
 		return
 	}
@@ -101,6 +113,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if candidate == "identity" {
 			selected = true
 			break
+		}
+		// CAS blobs contain their declared representation; gzip is decoded by
+		// the pack reader after checksum validation, never by HTTP negotiation.
+		if cas {
+			continue
 		}
 		extension := ".gz"
 		if candidate == "br" {
@@ -154,6 +171,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	http.ServeContent(out, r, filepath.Base(rel), info.ModTime(), file)
 }
 
+func immutableStorePath(rel string) bool {
+	if storeDocument.MatchString(rel) {
+		return true
+	}
+	match := storeBlob.FindStringSubmatch(rel)
+	return len(match) == 4 && strings.HasPrefix(match[2], match[1])
+}
+
 type progressWriter struct{ http.ResponseWriter }
 
 func (w *progressWriter) Unwrap() http.ResponseWriter { return w.ResponseWriter }
@@ -179,12 +204,19 @@ func safeRelative(u *url.URL) (string, bool) {
 	return rel, true
 }
 func (h *Handler) open(rel string) (*os.File, error) {
-	path := filepath.Join(h.root, filepath.FromSlash(rel))
+	root := h.root
+	if strings.HasPrefix(rel, "asset-store/") && h.storeRoot != "" {
+		if !immutableStorePath(rel) || h.storeErr != nil {
+			return nil, errors.New("invalid configured asset store")
+		}
+		root, rel = h.storeRoot, strings.TrimPrefix(rel, "asset-store/")
+	}
+	path := filepath.Join(root, filepath.FromSlash(rel))
 	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		return nil, err
 	}
-	within, err := filepath.Rel(h.root, resolved)
+	within, err := filepath.Rel(root, resolved)
 	if err != nil || within == ".." || strings.HasPrefix(within, ".."+string(filepath.Separator)) || filepath.IsAbs(within) {
 		return nil, errors.New("outside runtime mount")
 	}
@@ -249,7 +281,10 @@ func acceptsGzip(header string) bool {
 	return false
 }
 func mimeType(ext string) (string, bool) {
-	types := map[string]string{".html": "text/html; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".wasm": "application/wasm", ".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".bin": "application/octet-stream", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".ktx2": "image/ktx2", ".ogg": "audio/ogg", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".woff2": "font/woff2", ".ttf": "font/ttf"}
+	if ext == ".gzz" {
+		return "application/octet-stream", true
+	}
+	types := map[string]string{".html": "text/html; charset=utf-8", ".mjs": "text/javascript; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json; charset=utf-8", ".wasm": "application/wasm", ".glb": "model/gltf-binary", ".gltf": "model/gltf+json", ".bin": "application/octet-stream", ".rgba8": "application/octet-stream", ".acb": "application/octet-stream", ".wgsl": "text/plain; charset=utf-8", ".glsl": "text/plain; charset=utf-8", ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp", ".svg": "image/svg+xml", ".ktx2": "image/ktx2", ".ogg": "audio/ogg", ".wav": "audio/wav", ".mp3": "audio/mpeg", ".woff2": "font/woff2", ".ttf": "font/ttf"}
 	value, ok := types[strings.ToLower(ext)]
 	return value, ok
 }
