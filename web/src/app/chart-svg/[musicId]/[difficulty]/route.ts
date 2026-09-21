@@ -41,7 +41,7 @@ const SVG_RESPONSE_HEADERS = {
  *    (e.g. 141600-unit-wide) viewport, pushing it outside the clip window so every note
  *    renders as two bare end caps.
  */
-export function normalizeChartSvg(rawSvg: string): string {
+function normalizeChartSvg(rawSvg: string): string {
     let svg = rawSvg;
 
     // Fix relative notes_new paths

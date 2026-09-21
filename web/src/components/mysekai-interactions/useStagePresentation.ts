@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
+import { rememberStageAspect } from "@/lib/moly/stageViewport";
 
 interface PresentationReturn {
     x: number;
@@ -8,6 +9,7 @@ interface PresentationReturn {
     overflow: string;
     focus: HTMLElement | null;
     background: { element: HTMLElement; inert: boolean }[];
+    restoreAspect: () => void;
 }
 
 /** Presentation changes keep the stage element and renderer realm in place. */
@@ -20,9 +22,10 @@ export function useStagePresentation(stage: RefObject<HTMLElement | null>, avail
         if (!saved.current) saved.current = {
             x: window.scrollX, y: window.scrollY, overflow: document.body.style.overflow,
             focus: document.activeElement instanceof HTMLElement ? document.activeElement : null, background: [],
+            restoreAspect: stage.current ? rememberStageAspect(stage.current) : () => {},
         };
         return saved.current;
-    }, []);
+    }, [stage]);
     const leave = useCallback(() => {
         const element = stage.current;
         if (element && document.fullscreenElement === element) void document.exitFullscreen().catch(() => {});
@@ -33,6 +36,7 @@ export function useStagePresentation(stage: RefObject<HTMLElement | null>, avail
         const previous = saved.current;
         if (previous) {
             saved.current = null;
+            previous.restoreAspect();
             for (const { element: sibling, inert } of previous.background) sibling.inert = inert;
             document.body.style.overflow = previous.overflow;
             if (previous.focus?.isConnected) previous.focus.focus({ preventScroll: true });
