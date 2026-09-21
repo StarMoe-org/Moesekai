@@ -438,6 +438,9 @@
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-content-detail { max-width:640px;margin:0 auto;padding:0 23px 25px; }
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-fixture-detail { padding:0 23px 25px; }
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-body>.workspace-stage:not(.interaction-immersive):not(:fullscreen) .interaction-stage-surface { min-height:240px;aspect-ratio:16/9;max-height:60dvh; }
+/* The normal stage's height cap can shrink its aspect-ratio box below the
+   full-width heading/tools. Share that spare width equally, not on the right. */
+.mysekai-workspace .workspace-stage:not(.interaction-immersive):not(:fullscreen) .interaction-stage-surface { max-width:100%;margin-inline:auto; }
 /* Fullscreen uses the viewport, not the sidebar/grid's former content box.
    The surface owns the available space; the existing iframe is fitted into it
    without stretching, reparenting or restarting its renderer/audio realm. */

@@ -38,6 +38,11 @@ assert.equal(styled.style.getPropertyValue("--moly-stage-aspect"), "1.5");
 assert.equal(styled.style.getPropertyPriority("--moly-stage-aspect"), "important");
 
 const css = await readFile(new URL("../src/app/mysekai/interactions/workspace.css", import.meta.url), "utf8");
+const normalRule = css.match(/\.mysekai-workspace \.workspace-stage:not\(\.interaction-immersive\):not\(:fullscreen\) \.interaction-stage-surface \{([^}]+)\}/)?.[1];
+assert.ok(normalRule, "height-capped normal stages have their own centering rule");
+assert.match(normalRule, /max-width:100%;margin-inline:auto/);
+assert.doesNotMatch(normalRule, /(?:^|;)\s*(?:width|height|aspect-ratio|grid-template-columns):/, "normal centering preserves dimensions and side/detail column layout");
+assert.match(css, /\.workspace-body\.workspace-has-detail \{ grid-template-columns:minmax\(0,1fr\) minmax\(330px,40%\); \}/);
 const fitRule = css.match(/\.workspace-stage:is\(\.interaction-immersive,:fullscreen\) \.interaction-runtime \{([^}]+)\}/)?.[1];
 assert.ok(fitRule, "web and browser fullscreen share one contain/centering rule");
 assert.match(fitRule, /inset:0;margin:auto/);
