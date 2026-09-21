@@ -1,14 +1,17 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
-import { useParams } from "next/navigation";
+import { useState, useEffect, useMemo, Suspense } from "react";
+import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import MainLayout from "@/components/MainLayout";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
-import { useTheme } from "@/contexts/ThemeContext";
-import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
-import { getCharacterName } from "@/lib/i18n";
+import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
+import FixtureCharacterEntries from "@/components/mysekai-interactions/FixtureCharacterEntries";
+import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
+import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
+
+import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
 import {
     IMysekaiFixtureInfo,
     IMysekaiFixtureGenre,
@@ -22,32 +25,19 @@ import {
     IMysekaiCharacterTalk,
     IMysekaiGameCharacterUnitGroup,
 } from "@/types/mysekai";
-import { fetchMasterData } from "@/lib/fetch";
+import { fetchMasterDataForServer } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
 
-// Map virtual singer unit-specific character IDs to base character IDs
-// 27-31: Miku (L/n, MMJ, VBS, WxS, 25-ji versions) -> 21
-// 32-36: Rin (L/n, MMJ, VBS, WxS, 25-ji versions) -> 22
-// 37-41: Len (L/n, MMJ, VBS, WxS, 25-ji versions) -> 23
-// 42-46: Luka (L/n, MMJ, VBS, WxS, 25-ji versions) -> 24
-// 47-51: MEIKO (L/n, MMJ, VBS, WxS, 25-ji versions) -> 25
-// 52-56: KAITO (L/n, MMJ, VBS, WxS, 25-ji versions) -> 26
-function mapCharacterIdToBase(charId: number): number {
-    if (charId >= 27 && charId <= 31) return 21; // Miku
-    if (charId >= 32 && charId <= 36) return 22; // Rin
-    if (charId >= 37 && charId <= 41) return 23; // Len
-    if (charId >= 42 && charId <= 46) return 24; // Luka
-    if (charId >= 47 && charId <= 51) return 25; // MEIKO
-    if (charId >= 52 && charId <= 56) return 26; // KAITO
-    return charId; // Return as-is for regular characters (1-26)
-}
-
-export default function MysekaiFixtureDetailClient() {
+function MysekaiFixtureDetailContent() {
     const params = useParams();
+    const searchParams = useSearchParams();
     const fixtureId = Number(params.id);
-    const { assetSource } = useTheme();
+    const { assetSource: preferredAssetSource, serverSource } = useTheme();
+    const sourceRegion = mysekaiSource(searchParams.get("region"), serverSource);
+    const assetSource = replaceAssetSourceRegion(preferredAssetSource, sourceRegion ?? serverSource);
+    const [dataSource, setDataSource] = useState<ServerSourceType | null>(null);
     const { setDetailName } = useBreadcrumb();
     const { t } = useI18n();
 
@@ -67,28 +57,33 @@ export default function MysekaiFixtureDetailClient() {
 
     // Fetch data
     useEffect(() => {
+        let cancelled = false;
         async function fetchData() {
             try {
                 setIsLoading(true);
+                setError(null);
+                setFixture(null);
+                if (!sourceRegion) throw new Error(t("page.mysekaiInteractions.sourceMismatch"));
 
                 const [
                     fixturesData, genresData, subGenresData, tagsData,
                     blueprintsData, materialCostsData, materialsData,
                     talkConditionsData, talkConditionGroupsData, talksData, characterGroupsData
                 ] = await Promise.all([
-                    fetchMasterData<IMysekaiFixtureInfo[]>("mysekaiFixtures.json"),
-                    fetchMasterData<IMysekaiFixtureGenre[]>("mysekaiFixtureMainGenres.json"),
-                    fetchMasterData<IMysekaiFixtureSubGenre[]>("mysekaiFixtureSubGenres.json"),
-                    fetchMasterData<IMysekaiFixtureTag[]>("mysekaiFixtureTags.json"),
-                    fetchMasterData<IMysekaiBlueprint[]>("mysekaiBlueprints.json"),
-                    fetchMasterData<IMysekaiBlueprintMaterialCost[]>("mysekaiBlueprintMysekaiMaterialCosts.json"),
-                    fetchMasterData<IMysekaiMaterial[]>("mysekaiMaterials.json"),
-                    fetchMasterData<IMysekaiCharacterTalkCondition[]>("mysekaiCharacterTalkConditions.json"),
-                    fetchMasterData<IMysekaiCharacterTalkConditionGroup[]>("mysekaiCharacterTalkConditionGroups.json"),
-                    fetchMasterData<IMysekaiCharacterTalk[]>("mysekaiCharacterTalks.json"),
-                    fetchMasterData<IMysekaiGameCharacterUnitGroup[]>("mysekaiGameCharacterUnitGroups.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureInfo[]>(sourceRegion, "mysekaiFixtures.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureGenre[]>(sourceRegion, "mysekaiFixtureMainGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureSubGenre[]>(sourceRegion, "mysekaiFixtureSubGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureTag[]>(sourceRegion, "mysekaiFixtureTags.json"),
+                    fetchMasterDataForServer<IMysekaiBlueprint[]>(sourceRegion, "mysekaiBlueprints.json"),
+                    fetchMasterDataForServer<IMysekaiBlueprintMaterialCost[]>(sourceRegion, "mysekaiBlueprintMysekaiMaterialCosts.json"),
+                    fetchMasterDataForServer<IMysekaiMaterial[]>(sourceRegion, "mysekaiMaterials.json"),
+                    fetchMasterDataForServer<IMysekaiCharacterTalkCondition[]>(sourceRegion, "mysekaiCharacterTalkConditions.json"),
+                    fetchMasterDataForServer<IMysekaiCharacterTalkConditionGroup[]>(sourceRegion, "mysekaiCharacterTalkConditionGroups.json"),
+                    fetchMasterDataForServer<IMysekaiCharacterTalk[]>(sourceRegion, "mysekaiCharacterTalks.json"),
+                    fetchMasterDataForServer<IMysekaiGameCharacterUnitGroup[]>(sourceRegion, "mysekaiGameCharacterUnitGroups.json"),
                 ]);
 
+                if (cancelled) return;
                 const foundFixture = fixturesData.find(f => f.id === fixtureId);
                 if (!foundFixture) {
                     throw new Error(`Fixture ${fixtureId} not found`);
@@ -108,10 +103,14 @@ export default function MysekaiFixtureDetailClient() {
                 setCharacterGroups(characterGroupsData);
                 setError(null);
             } catch (err) {
+                if (cancelled) return;
                 console.error("Error fetching fixture:", err);
                 setError(err instanceof Error ? err.message : t("page.mysekai.unknownError"));
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setDataSource(sourceRegion);
+                    setIsLoading(false);
+                }
             }
         }
         if (Number.isFinite(fixtureId)) {
@@ -119,7 +118,8 @@ export default function MysekaiFixtureDetailClient() {
         } else {
             setIsLoading(false);
         }
-    }, [fixtureId, t]);
+        return () => { cancelled = true; };
+    }, [fixtureId, sourceRegion, t]);
 
     // Set breadcrumb detail name
     useEffect(() => {
@@ -205,7 +205,7 @@ export default function MysekaiFixtureDetailClient() {
                 if (group) {
                     [group.gameCharacterUnitId1, group.gameCharacterUnitId2, group.gameCharacterUnitId3,
                     group.gameCharacterUnitId4, group.gameCharacterUnitId5].forEach(id => {
-                        if (id) characterIds.push(mapCharacterIdToBase(id));
+                        if (id) characterIds.push(id);
                     });
                 }
             }
@@ -224,7 +224,7 @@ export default function MysekaiFixtureDetailClient() {
         });
     }, [fixture, talkConditions, talkConditionGroups, talks, characterGroups]);
 
-    if (isLoading) {
+    if (isLoading || dataSource !== sourceRegion) {
         return (
             <MainLayout>
                 <div className="container mx-auto px-4 py-16">
@@ -250,7 +250,7 @@ export default function MysekaiFixtureDetailClient() {
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.mysekai.notFoundTitle", { id: fixtureId })}</h2>
                         <p className="text-slate-500 mb-6">{t("page.mysekai.notFoundDesc")}</p>
                         <Link
-                            href="/mysekai"
+                            href={mysekaiDatabaseHref(sourceRegion ?? serverSource, undefined, serverSource)}
                             className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -318,6 +318,7 @@ export default function MysekaiFixtureDetailClient() {
 
                     {/* RIGHT Column: Info Cards */}
                     <div className="space-y-6">
+                        {dataSource && <InteractionEntryLink region={dataSource} fixtureId={fixture.id} />}
                         {/* Basic Info Card */}
                         <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
                             <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
@@ -444,31 +445,7 @@ export default function MysekaiFixtureDetailClient() {
                                     </h2>
                                 </div>
                                 <div className="p-5">
-                                    <div className="flex flex-wrap gap-2">
-                                        {fixtureCharacterTalks.map((talk) => (
-                                            <div
-                                                key={talk.id}
-                                                className="flex items-center gap-1 px-2 py-1 bg-slate-50 rounded-full"
-                                            >
-                                                {talk.characterIds.map((charId) => (
-                                                    <div
-                                                        key={charId}
-                                                        className="w-8 h-8 rounded-full overflow-hidden bg-white ring-1 ring-slate-200"
-                                                        title={getCharacterName(t, charId)}
-                                                    >
-                                                        <Image
-                                                            src={getCharacterIconUrl(charId)}
-                                                            alt={getCharacterName(t, charId)}
-                                                            width={32}
-                                                            height={32}
-                                                            className="w-full h-full object-cover"
-                                                            unoptimized
-                                                        />
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <FixtureCharacterEntries region={dataSource!} fixture={fixture.id} groups={fixtureCharacterTalks} />
                                 </div>
                             </div>
                         )}
@@ -525,7 +502,7 @@ export default function MysekaiFixtureDetailClient() {
                 {/* Back Button */}
                 <div className="mt-12 text-center">
                     <Link
-                        href="/mysekai"
+                        href={mysekaiDatabaseHref(sourceRegion ?? serverSource, undefined, serverSource)}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -537,6 +514,11 @@ export default function MysekaiFixtureDetailClient() {
             </div>
         </MainLayout>
     );
+}
+
+export default function MysekaiFixtureDetailClient() {
+    const { t } = useI18n();
+    return <Suspense fallback={<MainLayout><div className="flex min-h-[50vh] items-center justify-center" role="status">{t("common.state.loading")}</div></MainLayout>}><MysekaiFixtureDetailContent /></Suspense>;
 }
 
 // Info Row Component

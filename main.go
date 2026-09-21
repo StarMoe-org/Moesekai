@@ -21,6 +21,7 @@ import (
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/mcp"
 	"snowy_viewer/internal/middleware"
+	"snowy_viewer/internal/molyembed"
 )
 
 const (
@@ -48,6 +49,8 @@ func main() {
 
 	// Create router and register handlers
 	mux := http.NewServeMux()
+	// Same-origin, read-only runtime artifacts are independent of site/API data.
+	mux.Handle(molyembed.Prefix, molyembed.New(os.Getenv("MOLY_ROOT")))
 	handler := handlers.New(store)
 	handler.RegisterRoutes(mux)
 

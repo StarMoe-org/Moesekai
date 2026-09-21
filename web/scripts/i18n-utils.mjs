@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import ts from "typescript";
 
 export const WEB_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const SRC_ROOT = path.join(WEB_ROOT, "src");
@@ -22,17 +23,6 @@ export const MESSAGE_EXPORTS = {
 };
 
 export const SOURCE_EXTENSIONS = new Set([".ts", ".tsx", ".js", ".jsx"]);
-
-const ZH_TW_MESSAGE_MODULES = {
-    common: ["common.ts", "zhTWCommon"],
-    layout: ["shell.ts", "zhTWLayout"],
-    search: ["shell.ts", "zhTWSearch"],
-    settings: ["shell.ts", "zhTWSettings"],
-    shortcuts: ["shell.ts", "zhTWShortcuts"],
-    pagePrimary: ["page-primary.ts", "zhTWPagePrimary"],
-    pageSecondaryA: ["page-secondary-a.ts", "zhTWPageSecondaryA"],
-    pageSecondaryB: ["page-secondary-b.ts", "zhTWPageSecondaryB"],
-};
 
 export function toPosixPath(filePath) {
     return filePath.split(path.sep).join("/");
@@ -77,57 +67,50 @@ export function flattenMessageKeys(value, prefix = "") {
     });
 }
 
-function stripTypeOnlySyntax(source) {
-    return source
-        .replace(/import\s+type\s+[^;]+;\s*/g, "")
-        .replace(/\s+as\s+const\s+satisfies\s+MessageTree\s*;?\s*$/m, ";")
-        .replace(/\s+satisfies\s+MessageTree/g, "")
-        .replace(/\s+as\s+const/g, "");
+// Resolve the same module composition used by the application. In particular,
+// adding a small message module must not silently disappear from lint/SEO tools.
+// These are trusted local data modules; external imports and root escapes are
+// rejected rather than exposing Node's general-purpose require inside the VM.
+function loadMessageModule(filePath, cache = new Map()) {
+    const absolute = path.resolve(filePath);
+    const messageRoot = path.join(SRC_ROOT, "lib/i18n/messages");
+    const relative = path.relative(messageRoot, absolute);
+    if (relative.startsWith("..") || path.isAbsolute(relative) || path.extname(absolute) !== ".ts") {
+        throw new Error(`Message import must stay inside the message tree: ${filePath}`);
+    }
+    if (cache.has(absolute)) return cache.get(absolute).exports;
+    const messageModule = { exports: {} };
+    cache.set(absolute, messageModule);
+    const { outputText } = ts.transpileModule(fs.readFileSync(absolute, "utf8"), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 },
+        fileName: absolute,
+    });
+    const localRequire = specifier => {
+        if (typeof specifier !== "string" || !specifier.startsWith(".")) {
+            throw new Error(`External message import is not allowed: ${specifier}`);
+        }
+        const candidate = path.resolve(path.dirname(absolute), specifier);
+        const target = path.extname(candidate) ? candidate : `${candidate}.ts`;
+        return loadMessageModule(target, cache);
+    };
+    vm.runInNewContext(outputText, { module: messageModule, exports: messageModule.exports, require: localRequire }, {
+        filename: absolute, timeout: 5000,
+    });
+    return messageModule.exports;
 }
 
 export function loadMessageObject(filePath, exportName) {
-    const raw = fs.readFileSync(filePath, "utf8");
-    const executable = stripTypeOnlySyntax(raw)
-        .replace(/export\s+const\s+/g, "const ")
-        .replace(new RegExp(`const\\s+${exportName}\\s*=`), `globalThis.__messages =`);
-
-    const context = vm.createContext({ globalThis: {} });
-    vm.runInContext(executable, context, { filename: filePath });
-    return context.globalThis.__messages;
+    const messages = loadMessageModule(filePath)[exportName];
+    if (!messages || typeof messages !== "object") {
+        throw new Error(`Missing message export ${exportName} in ${filePath}`);
+    }
+    return messages;
 }
 
 export function loadAllMessages() {
-    return Object.fromEntries(
-        Object.entries(MESSAGE_FILES).map(([locale, filePath]) => [
-            locale,
-            locale === "zh-TW"
-                ? loadZhTWMessages()
-                : loadMessageObject(filePath, MESSAGE_EXPORTS[locale]),
-        ])
-    );
-}
-
-function loadZhTWMessages() {
-    const messageRoot = path.join(SRC_ROOT, "lib/i18n/messages/zh-TW");
-    const loaded = Object.fromEntries(
-        Object.entries(ZH_TW_MESSAGE_MODULES).map(([key, [fileName, exportName]]) => [
-            key,
-            loadMessageObject(path.join(messageRoot, fileName), exportName),
-        ])
-    );
-
-    return {
-        common: loaded.common,
-        layout: loaded.layout,
-        search: loaded.search,
-        settings: loaded.settings,
-        shortcuts: loaded.shortcuts,
-        page: {
-            ...loaded.pagePrimary,
-            ...loaded.pageSecondaryA,
-            ...loaded.pageSecondaryB,
-        },
-    };
+    return Object.fromEntries(Object.entries(MESSAGE_FILES).map(([locale, filePath]) => [
+        locale, loadMessageObject(filePath, MESSAGE_EXPORTS[locale]),
+    ]));
 }
 
 export function formatLine(filePath, lineNumber, message) {

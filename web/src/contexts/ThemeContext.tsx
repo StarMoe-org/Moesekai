@@ -137,6 +137,7 @@ interface ThemeContextType {
     customCursorEnabled: boolean;
     setCustomCursorEnabled: (enabled: boolean) => void;
     serverSource: ServerSourceType;
+    hasHydratedThemeSettings: boolean;
     setServerSource: (source: ServerSourceType) => void;
 }
 
@@ -523,7 +524,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     return (
-        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, serverSource: serverSourceState, setServerSource }}>
+        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
             {children}
         </ThemeContext.Provider>
     );

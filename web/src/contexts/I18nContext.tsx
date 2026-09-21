@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState, useRef } from "react";
 import {
     DEFAULT_UI_LOCALE,
     UI_LOCALE_STORAGE_KEY,
@@ -19,6 +19,8 @@ interface I18nContextType {
     locale: UiLocale;
     routeLocale: RouteLocale;
     setLocale: React.Dispatch<React.SetStateAction<UiLocale>>;
+    /** A live feature can opt into router navigation instead of destroying its realm. */
+    registerLocaleNavigation: (navigate: (url: string) => void) => () => void;
     t: (key: string, values?: MessageInterpolationValues) => string;
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
     formatDate: (value: Date | number | string, options?: Intl.DateTimeFormatOptions) => string;
@@ -66,9 +68,14 @@ export function I18nProvider({ children, initialLocale = DEFAULT_UI_LOCALE, rout
     const explicitLocale = routeLocale ? routeLocaleToUiLocale(routeLocale) : undefined;
     const [locale, setLocaleState] = useState<UiLocale>(explicitLocale ?? initialLocale);
     const [hydrated, setHydrated] = useState(false);
+    const localeNavigation = useRef<((url: string) => void) | null>(null);
+    const registerLocaleNavigation = useCallback((navigate: (url: string) => void) => {
+        localeNavigation.current = navigate;
+        return () => { if (localeNavigation.current === navigate) localeNavigation.current = null; };
+    }, []);
     const resolvedRouteLocale = useMemo(
-        () => routeLocale ?? uiLocaleToRouteLocale(locale),
-        [locale, routeLocale],
+        () => uiLocaleToRouteLocale(locale),
+        [locale],
     );
 
     useEffect(() => {
@@ -113,7 +120,8 @@ export function I18nProvider({ children, initialLocale = DEFAULT_UI_LOCALE, rout
                 nextRouteLocale,
             );
             if (nextUrl !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
-                window.location.assign(nextUrl);
+                if (localeNavigation.current) localeNavigation.current(nextUrl);
+                else window.location.assign(nextUrl);
             }
         }
     }, [locale]);
@@ -141,6 +149,7 @@ export function I18nProvider({ children, initialLocale = DEFAULT_UI_LOCALE, rout
             locale,
             routeLocale: resolvedRouteLocale,
             setLocale,
+            registerLocaleNavigation,
             t,
             formatNumber,
             formatDate,

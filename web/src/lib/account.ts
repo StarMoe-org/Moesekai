@@ -1046,3 +1046,45 @@ export async function disconnectOAuthAccount(accountId: string): Promise<void> {
         authError: null,
     });
 }
+
+/** Raw MYSEKAI JSON for the isolated renderer. No cache or local data write.
+ * Haruki source: public.go RegisterPublicRoutes at be8bf2d8b8ea09745dc8d465ecc71aab227bb563.
+ * MYSEKAI and suite public permissions are independent. A denied OAuth read
+ * must not fall back silently to a differently authorized dataset.
+ */
+export async function fetchAccountMysekaiText(server: "cn" | "jp", gameId: string, signal?: AbortSignal): Promise<string> {
+    if (!/^[1-9]\d{0,19}$/.test(gameId)) throw new Error("INVALID_UID");
+    const account = findAccountByGameId(server, gameId);
+    let url = `${getHarukiPublicApiBase()}/${server}/mysekai/${gameId}`;
+    const headers: Record<string, string> = { Accept: "application/json" };
+    if (account?.authSource === "oauth2") {
+        const token = await getRefreshedOAuthToken(account);
+        const { getOAuthConfig } = await import("./oauth");
+        url = `${getOAuthConfig().baseUrl}/game-data/${server}/mysekai/${gameId}`;
+        headers.Authorization = `Bearer ${token.accessToken}`;
+    }
+    const response = await fetch(url, { headers, signal, cache: "no-store", credentials: "omit", redirect: "error" });
+    if (response.status === 401) throw new Error("OAUTH_REAUTH_REQUIRED");
+    if (response.status === 403 || response.status === 404) throw new Error("MYSEKAI_NOT_ACCESSIBLE");
+    if (!response.ok) throw new Error("NETWORK_ERROR");
+    if (!response.headers.get("content-type")?.includes("json")) throw new Error("INVALID_PLAYER_DATA");
+    const limit = 32 * 1024 * 1024;
+    if (Number(response.headers.get("content-length")) > limit) throw new Error("PLAYER_DATA_TOO_LARGE");
+    const reader = response.body?.getReader();
+    if (!reader) throw new Error("INVALID_PLAYER_DATA");
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    const chunks: string[] = [];
+    let bytes = 0;
+    try {
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            bytes += value.byteLength;
+            if (bytes > limit) throw new Error("PLAYER_DATA_TOO_LARGE");
+            chunks.push(decoder.decode(value, { stream: true }));
+        }
+        chunks.push(decoder.decode());
+        return chunks.join("");
+    } catch (error) { await reader.cancel().catch(() => {}); throw error; }
+    finally { reader.releaseLock(); }
+}

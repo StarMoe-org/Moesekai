@@ -17,6 +17,9 @@ coverage.out
 # Node / Next.js
 node_modules/
 .next/
+.next-*/
+web/AGENTS.md
+web/CLAUDE.md
 out/
 build/
 dist/
@@ -109,6 +112,7 @@ local-dist/
 *.code-workspace
 coverage/
 refer/re_sekai-calculator/coverage/
+data/html_cache/
 
 # 组卡 wasm 引擎产物：构建期由 web/scripts/copy-wasm-artifacts.mjs
 # 从 @empty-sekai/allium-deck-wasm（或 ALLIUM_DECK_WASM_DIR 本地构建）拷贝，

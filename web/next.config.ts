@@ -31,6 +31,8 @@ function getAllowedDevOrigins(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  // Keep QA builds separate from a running standalone server on Windows.
+  distDir: process.env.MOE_NEXT_DIST_DIR || ".next",
   output: "standalone",
   cacheMaxMemorySize: 50 * 1024 * 1024,
   trailingSlash: true,
@@ -70,6 +72,10 @@ const nextConfig: NextConfig = {
           ]
         : [],
       afterFiles: [
+        {
+          source: "/moly/:path*",
+          destination: `${(process.env.MOLY_DEV_ORIGIN || internalApiBase).replace(/\/$/, "")}/moly/:path*`,
+        },
         {
           source: "/api/:path*",
           destination: `${internalApiBase}/api/:path*`,

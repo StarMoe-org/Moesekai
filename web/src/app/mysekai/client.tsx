@@ -5,9 +5,12 @@ import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
-import BaseFilters, { FilterSection } from "@/components/common/BaseFilters";
+import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
+import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
+import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
+
 import { getMysekaiFixtureThumbnailUrl } from "@/lib/assets";
 import {
     IMysekaiFixtureInfo,
@@ -15,7 +18,7 @@ import {
     IMysekaiFixtureSubGenre,
     IMysekaiFixtureTag
 } from "@/types/mysekai";
-import { fetchMasterData } from "@/lib/fetch";
+import { fetchMasterDataForServer } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
@@ -25,7 +28,10 @@ import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/myse
 
 function MysekaiContent() {
     const searchParams = useSearchParams();
-    const { assetSource } = useTheme();
+    const { assetSource: preferredAssetSource, serverSource } = useTheme();
+    const sourceRegion = mysekaiSource(searchParams.get("region"), serverSource);
+    const assetSource = replaceAssetSourceRegion(preferredAssetSource, sourceRegion ?? serverSource);
+    const [dataSource, setDataSource] = useState<ServerSourceType | null>(null);
     const { t } = useI18n();
 
     const [fixtures, setFixtures] = useState<IMysekaiFixtureInfo[]>([]);
@@ -130,6 +136,8 @@ function MysekaiContent() {
 
         // Update URL
         const params = new URLSearchParams();
+        const pinnedRegion = new URLSearchParams(window.location.search).get("region");
+        if (pinnedRegion !== null) params.set("region", pinnedRegion);
         if (selectedGenre !== null) params.set("genre", String(selectedGenre));
         if (selectedSubGenre !== null) params.set("subGenre", String(selectedSubGenre));
         if (selectedTag !== null) params.set("tag", String(selectedTag));
@@ -142,18 +150,23 @@ function MysekaiContent() {
     }, [selectedGenre, selectedSubGenre, selectedTag, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, filtersInitialized]);
 
     useEffect(() => {
+        let cancelled = false;
         async function fetchData() {
             try {
                 setIsLoading(true);
+                setError(null);
+                setFixtures([]);
+                if (!sourceRegion) throw new Error(t("page.mysekaiInteractions.sourceMismatch"));
 
                 const [fixturesData, genresData, subGenresData, tagsData, translationsData] = await Promise.all([
-                    fetchMasterData<IMysekaiFixtureInfo[]>("mysekaiFixtures.json"),
-                    fetchMasterData<IMysekaiFixtureGenre[]>("mysekaiFixtureMainGenres.json"),
-                    fetchMasterData<IMysekaiFixtureSubGenre[]>("mysekaiFixtureSubGenres.json"),
-                    fetchMasterData<IMysekaiFixtureTag[]>("mysekaiFixtureTags.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureInfo[]>(sourceRegion, "mysekaiFixtures.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureGenre[]>(sourceRegion, "mysekaiFixtureMainGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureSubGenre[]>(sourceRegion, "mysekaiFixtureSubGenres.json"),
+                    fetchMasterDataForServer<IMysekaiFixtureTag[]>(sourceRegion, "mysekaiFixtureTags.json"),
                     loadTranslations(),
                 ]);
 
+                if (cancelled) return;
                 setFixtures(fixturesData);
                 setGenres(genresData);
                 setSubGenres(subGenresData);
@@ -161,14 +174,19 @@ function MysekaiContent() {
                 setTranslations(translationsData);
                 setError(null);
             } catch (err) {
+                if (cancelled) return;
                 console.error("Error fetching mysekai data:", err);
                 setError(err instanceof Error ? err.message : t("page.mysekai.unknownError"));
             } finally {
-                setIsLoading(false);
+                if (!cancelled) {
+                    setDataSource(sourceRegion);
+                    setIsLoading(false);
+                }
             }
         }
         fetchData();
-    }, [t]);
+        return () => { cancelled = true; };
+    }, [sourceRegion, t]);
 
     // Separate tags by type and exclude tags matching fixture names
     const { characterTags, unitTags: _unitTags, generalTags } = useMemo(() => {
@@ -309,56 +327,44 @@ function MysekaiContent() {
             />
 
             <FilterSection label={t("page.mysekai.sectionLabel.mainGenre")}>
-                <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                    value={selectedGenre || ""}
-                    onChange={(e) => {
-                        const val = e.target.value ? Number(e.target.value) : null;
-                        setSelectedGenre(val);
-                        if (val !== selectedSubGenre) setSelectedSubGenre(null);
-                    }}
-                >
-                    <option value="">{t("page.mysekai.allOption")}</option>
-                    {availableGenres.map(g => (
-                        <option key={g.id} value={g.id}>{getMysekaiGenreDisplayName(g.name, t)}</option>
-                    ))}
-                </select>
+                <div className="flex flex-wrap gap-2">
+                    <FilterButton selected={selectedGenre === null} onClick={() => { setSelectedGenre(null); setSelectedSubGenre(null); }} className="px-3 py-2 text-xs">
+                        {t("page.mysekai.allOption")}
+                    </FilterButton>
+                    {availableGenres.map(g => <FilterButton key={g.id} selected={selectedGenre === g.id}
+                        onClick={() => { setSelectedGenre(g.id); setSelectedSubGenre(null); }} className="px-3 py-2 text-xs">
+                        {getMysekaiGenreDisplayName(g.name, t)}
+                    </FilterButton>)}
+                </div>
             </FilterSection>
 
             {selectedGenre && (
                 <FilterSection label={t("page.mysekai.sectionLabel.subGenre")}>
-                    <select
-                        className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                        value={selectedSubGenre || ""}
-                        onChange={(e) => setSelectedSubGenre(e.target.value ? Number(e.target.value) : null)}
-                    >
-                        <option value="">{t("page.mysekai.allOption")}</option>
-                        {subGenres
-                            .filter(sg => sg.mysekaiFixtureMainGenreId === selectedGenre)
-                            .map(sg => (
-                                <option key={sg.id} value={sg.id}>{sg.name}</option>
-                            ))
-                        }
-                    </select>
+                    <div className="flex max-h-40 flex-wrap gap-2 overflow-y-auto pr-1">
+                        <FilterButton selected={selectedSubGenre === null} onClick={() => setSelectedSubGenre(null)} className="px-3 py-2 text-xs">
+                            {t("page.mysekai.allOption")}
+                        </FilterButton>
+                        {subGenres.filter(sg => sg.mysekaiFixtureMainGenreId === selectedGenre).map(sg => (
+                            <FilterButton key={sg.id} selected={selectedSubGenre === sg.id} onClick={() => setSelectedSubGenre(sg.id)} className="px-3 py-2 text-xs">
+                                {getMysekaiGenreDisplayName(sg.name, t)}
+                            </FilterButton>
+                        ))}
+                    </div>
                 </FilterSection>
             )}
 
             <FilterSection label={t("page.mysekai.sectionLabel.tag")}>
-                <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
-                    value={selectedTag || ""}
-                    onChange={(e) => setSelectedTag(e.target.value ? Number(e.target.value) : null)}
-                >
-                    <option value="">{t("page.mysekai.allOption")}</option>
+                <div className="flex max-h-48 flex-wrap gap-2 overflow-y-auto pr-1">
+                    <FilterButton selected={selectedTag === null} onClick={() => setSelectedTag(null)} className="px-3 py-2 text-xs">
+                        {t("page.mysekai.allOption")}
+                    </FilterButton>
                     {generalTags.map(tag => {
                         const tagLabel = getMysekaiTagDisplayName(tag.name, t);
-                        return (
-                            <option key={tag.id} value={tag.id}>
-                                {tagLabel} {tagLabel !== tag.name ? `(${tag.name})` : ""}
-                            </option>
-                        );
+                        return <FilterButton key={tag.id} selected={selectedTag === tag.id} onClick={() => setSelectedTag(tag.id)} className="px-3 py-2 text-xs">
+                            {tagLabel}
+                        </FilterButton>;
                     })}
-                </select>
+                </div>
             </FilterSection>
 
 
@@ -394,6 +400,8 @@ function MysekaiContent() {
                 </p>
             </div>
 
+            {sourceRegion && <div className="mb-6"><InteractionEntryLink region={sourceRegion} /></div>}
+
             {/* Error State */}
             {error && (
                 <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
@@ -405,7 +413,7 @@ function MysekaiContent() {
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                {isLoading ? (
+                {isLoading || dataSource !== sourceRegion ? (
                     <div className="flex items-center justify-center min-h-[40vh]">
                         <div className="loading-spinner loading-spinner-sm" />
                     </div>
@@ -414,7 +422,7 @@ function MysekaiContent() {
                         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedFixtures.map(fixture => (
                                 <Link
-                                    href={`/mysekai/${fixture.id}`}
+                                    href={mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id, serverSource)}
                                     key={fixture.id}
                                     data-shortcut-item="true"
                                     className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-3 flex flex-col h-full group"

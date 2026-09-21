@@ -51,6 +51,7 @@ const allNavigationGroups: NavGroupData[] = [
             { href: "/story/event" },
             { href: "/story/card" },
             { href: "/story/area" },
+            { href: "/mysekai/interactions" },
             { href: "/story/self" },
             { href: "/story/special" },
         ],
@@ -156,7 +157,7 @@ export function findGroupMatch(pathname: string): NavGroupData | null {
     return null;
 }
 
-export type SearchableNavGroup = "navigation" | "database" | "activity" | "games" | "tools" | "personal";
+export type SearchableNavGroup = "navigation" | "database" | "activity" | "story" | "games" | "tools" | "personal";
 
 export interface SearchableNavItem {
     href: string;
@@ -178,7 +179,7 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/sticker", group: "database", keywords: ["sticker", "stickers", "stamp"] },
     { href: "/comic", group: "database", keywords: ["comic", "comics", "manga"] },
     { href: "/manga", group: "database", keywords: ["four koma", "4koma", "official manga"] },
-    { href: "/mysekai", group: "database", keywords: ["furniture", "mysekai", "home"] },
+    { href: "/mysekai", group: "database", keywords: ["furniture", "mysekai", "home", "database"] },
     { href: "/materials", group: "database", keywords: ["materials", "items", "holding", "holdings", "material"] },
     { href: "/exchanges", group: "database", keywords: ["exchange", "exchanges", "material exchange", "shop"] },
 
@@ -190,6 +191,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/prediction-next", group: "activity", keywords: ["prediction next", "prediction", "ranking", "forecast", "akiyome", "goal planner"] },
     { href: "/realtime-ranking-next", group: "activity", keywords: ["realtime ranking", "realtime ranking next", "live ranking", "live ranking next", "player detail", "rank", "ranking"] },
     { href: "/mysekai-preview", group: "activity", keywords: ["baijing", "housing competition", "mysekai", "top"] },
+
+    { href: "/mysekai/interactions", group: "story", keywords: ["mysekai story", "mysekai stories", "conversation", "interaction", "furniture story", "character activity", "scene", "moly", "weather"] },
 
     { href: "/goods-gacha", group: "games", keywords: ["goods gacha", "goods", "blind box"] },
     { href: "/guess-who", group: "games", keywords: ["guess who", "quiz", "game"] },
@@ -239,6 +242,7 @@ export const SEARCH_STATIC_GROUP_LABEL_KEYS: Record<SearchableNavGroup, string> 
     navigation: "layout.nav.groups.navigation",
     database: "layout.nav.groups.database",
     activity: "layout.nav.groups.activity",
+    story: "layout.nav.groups.story",
     games: "layout.nav.groups.games",
     tools: "layout.nav.groups.tools",
     personal: "layout.nav.groups.personal",
@@ -268,6 +272,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/comic": "layout.nav.items.comic",
     "/manga": "layout.nav.items.manga",
     "/mysekai": "layout.nav.items.mysekai",
+    "/mysekai/interactions": "page.mysekaiInteractions.navTitle",
     "/materials": "layout.nav.items.materials",
     "/exchanges": "layout.nav.items.exchanges",
     "/events": "layout.nav.items.events",
@@ -318,6 +323,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/comic": "layout.groupPages.comic",
     "/manga": "layout.groupPages.manga",
     "/mysekai": "layout.groupPages.mysekai",
+    "/mysekai/interactions": "page.mysekaiInteractions.subtitle",
     "/materials": "layout.groupPages.materials",
     "/exchanges": "layout.groupPages.exchanges",
     "/events": "layout.groupPages.events",

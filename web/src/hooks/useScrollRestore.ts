@@ -5,6 +5,7 @@ interface UseScrollRestoreOptions {
     storageKey: string;           // Storage key prefix
     defaultDisplayCount: number;  // Default display count
     increment: number;            // Increment amount for load more
+    scrollOnReset?: boolean;      // In-place explorers retain their viewport.
     isReady?: boolean;            // Whether content is ready to restore scroll (optional, default true)
     maxRestoredDisplayCount?: number; // Upper bound for the count restored from sessionStorage (optional)
 }
@@ -43,6 +44,7 @@ export function useScrollRestore({
     increment,
     isReady = true, // Default to true for backward compatibility
     maxRestoredDisplayCount,
+    scrollOnReset = true,
 }: UseScrollRestoreOptions): UseScrollRestoreReturn {
     const SCROLL_KEY = `${storageKey}_scroll`;
     const COUNT_KEY = `${storageKey}_displayCount`;
@@ -227,11 +229,11 @@ export function useScrollRestore({
         restoreGeneration.current++;
         pendingScrollY.current = null;
         hasRestoredScroll.current = true;
-        lastScrollY.current = 0;
+        lastScrollY.current = scrollOnReset ? 0 : window.scrollY;
         setIsRestoring(false);
         // Scroll to top on reset
-        window.scrollTo({ top: 0, behavior: "instant" });
-    }, [defaultDisplayCount, SCROLL_KEY, COUNT_KEY]);
+        if (scrollOnReset) window.scrollTo({ top: 0, behavior: "instant" });
+    }, [defaultDisplayCount, SCROLL_KEY, COUNT_KEY, scrollOnReset]);
 
     return {
         displayCount,

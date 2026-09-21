@@ -560,6 +560,16 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["スタンプ", "エモート", "ステッカー"],
     },
   ),
+  mysekai_interactions: definePage(
+    "/mysekai/interactions",
+    { "zh-CN": "烤森对话", "en-US": "MYSEKAI Conversations & Interactions", "ja-JP": "マイセカイの会話とふれあい" },
+    {
+      "zh-CN": "按家具和角色浏览烤森对话、家具演出与无对白互动，在独立场景中查看和播放。国服与日服资源独立标注。",
+      "en-US": "Explore MYSEKAI conversations, furniture performances and character activities by furniture or character. Inspect and play them in an independent scene with explicitly separated CN and JP resources.",
+      "ja-JP": "家具やキャラクターからマイセカイの会話、家具の演出、セリフのないふれあいを探し、独立したシーンで鑑賞できます。中国版と日本版のリソースを明確に区別しています。",
+    },
+    { "zh-CN": ["MYSEKAI", "家具互动", "角色动作", "对话"], "en-US": ["MYSEKAI", "furniture interactions", "character activities", "conversations"], "ja-JP": ["マイセカイ", "家具", "会話", "ふれあい"] },
+  ),
   mysekai: definePage(
     "/mysekai",
     { "zh-CN": "MySekai 家具数据库", "en-US": "Furniture Database", "ja-JP": "MySekai家具DB" },
@@ -659,6 +669,16 @@ export const SEO_PAGE_METADATA = {
       "en-US": ["chart image", "chart preview", "SUS"],
       "ja-JP": ["譜面画像", "譜面プレビュー", "SUS"],
     },
+  ),
+  mysekai_interaction_resources: definePage(
+    "/mysekai/interactions/resources",
+    { "zh-CN": "MYSEKAI 互动资源管理", "en-US": "MYSEKAI Interaction Resources", "ja-JP": "MYSEKAI ふれあいリソース管理" },
+    {
+      "zh-CN": "查看、删除并重新加载 MYSEKAI 对话与互动的本地缓存资源。",
+      "en-US": "Inspect, remove and reload locally cached MYSEKAI interaction resources.",
+      "ja-JP": "MYSEKAI の会話とふれあいに必要なローカルリソースを確認・削除・再読み込みできます。",
+    },
+    { "zh-CN": ["MYSEKAI", "资源管理"], "en-US": ["MYSEKAI", "resources"], "ja-JP": ["MYSEKAI", "リソース管理"] },
   ),
   mysekai_preview: definePage(
     "/mysekai-preview",
