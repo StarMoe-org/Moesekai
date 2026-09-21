@@ -256,13 +256,22 @@ func TestDevelopmentAssetsDoNotBecomeImmutable(t *testing.T) {
 		t.Fatal(w.Header())
 	}
 }
+
+// Exercises the negotiation the handler actually serves from, so a malformed or
+// prohibited quality cannot select a representation the client refused.
 func TestEncodingQuality(t *testing.T) {
 	for _, tc := range []struct {
 		value  string
 		accept bool
 	}{{"gzip", true}, {"br,gzip;q=0.5", true}, {"gzip;q=0", false}, {"gzip;q=bad", false}, {"gzip;q=1.1", false}, {"gzip;q=-1", false}, {"br", false}} {
-		if acceptsGzip(tc.value) != tc.accept {
-			t.Error(tc.value)
+		accepted := false
+		for _, coding := range preferredEncodings(tc.value) {
+			if coding == "gzip" {
+				accepted = true
+			}
+		}
+		if accepted != tc.accept {
+			t.Error(tc.value, preferredEncodings(tc.value))
 		}
 	}
 }

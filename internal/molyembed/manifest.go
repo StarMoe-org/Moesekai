@@ -62,6 +62,7 @@ func (h *Handler) serveManifest(w http.ResponseWriter, r *http.Request) {
 	if stamp != h.stamp {
 		h.stamp = stamp
 		h.manifest, h.manifestErr = h.loadManifest()
+		h.pins = nil
 	}
 	if h.manifestErr != nil {
 		problem(w, r, http.StatusServiceUnavailable, "manifest_invalid")
@@ -79,6 +80,11 @@ func (h *Handler) serveManifest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		var pinned Snapshot
+		// loadManifest validated every published snapshot against the current
+		// manifest stamp and marshalled the result, so a pin that is still
+		// published needs no further reads. Revalidating here would parse the
+		// whole catalogue under mu on every request, for the pin this page puts
+		// in its own URL.
 		for _, current := range manifest.Snapshots {
 			if current.ID == requested {
 				pinned = current
@@ -86,13 +92,25 @@ func (h *Handler) serveManifest(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if pinned.ID == "" {
-			if err := h.readJSON("snapshots/"+requested+"/snapshot.json", 1<<20, &pinned); err != nil {
-				problem(w, r, http.StatusNotFound, "snapshot_missing")
-				return
+			cached, known := h.pins[requested]
+			if !known {
+				if err := h.readJSON("snapshots/"+requested+"/snapshot.json", 1<<20, &cached); err != nil {
+					problem(w, r, http.StatusNotFound, "snapshot_missing")
+					return
+				}
+				if cached.ID != requested || h.validateSnapshot(&cached) != nil {
+					problem(w, r, http.StatusBadRequest, "snapshot_invalid")
+					return
+				}
+				if h.pins == nil || len(h.pins) >= maxCachedPins {
+					h.pins = map[string]Snapshot{}
+				}
+				h.pins[requested] = cached
 			}
+			pinned = cached
 		}
 		region := r.URL.Query().Get("region")
-		if pinned.ID != requested || (region != "" && region != pinned.Region) || h.validateSnapshot(&pinned) != nil {
+		if pinned.ID != requested || (region != "" && region != pinned.Region) {
 			problem(w, r, http.StatusBadRequest, "snapshot_invalid")
 			return
 		}

@@ -37,7 +37,15 @@ type Handler struct {
 	stamp       string
 	manifest    []byte
 	manifestErr error
+	// Historical pins validated against the current manifest stamp. Validation
+	// reads the whole catalogue, so an uncached pin would repeat that work on
+	// every request while holding mu.
+	pins map[string]Snapshot
 }
+
+// Bounds the pin cache. A miss still requires a published snapshot.json on
+// disk, so this only caps memory against an unusually long publication history.
+const maxCachedPins = 256
 
 // An absent mount affects discovery only, not ordinary Moesekai pages.
 func New(root string) *Handler {
@@ -258,27 +266,6 @@ func problem(w http.ResponseWriter, r *http.Request, status int, code string) {
 	if r.Method != http.MethodHead {
 		_ = json.NewEncoder(w).Encode(map[string]any{"schemaVersion": ContractVersion, "code": code})
 	}
-}
-func acceptsGzip(header string) bool {
-	for _, entry := range strings.Split(header, ",") {
-		parts := strings.Split(strings.TrimSpace(entry), ";")
-		if !strings.EqualFold(strings.TrimSpace(parts[0]), "gzip") {
-			continue
-		}
-		quality := 1.0
-		for _, parameter := range parts[1:] {
-			p := strings.SplitN(strings.TrimSpace(parameter), "=", 2)
-			if len(p) == 2 && strings.EqualFold(p[0], "q") {
-				if n, err := strconv.ParseFloat(p[1], 64); err == nil {
-					quality = n
-				} else {
-					quality = 0
-				}
-			}
-		}
-		return quality > 0 && quality <= 1
-	}
-	return false
 }
 func mimeType(ext string) (string, bool) {
 	if ext == ".gzz" {
