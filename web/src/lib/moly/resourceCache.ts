@@ -1,6 +1,6 @@
 "use client";
 
-export interface ResourceCacheState { enabled: boolean; bytes: number; entries: number; }
+export interface ResourceCacheState { enabled: boolean; bytes: number; entries: number; limitBytes?: number; }
 let registrationPromise: Promise<ServiceWorkerRegistration> | null = null;
 
 function activatedWorker(registration: ServiceWorkerRegistration): Promise<ServiceWorker> {
@@ -86,7 +86,8 @@ export async function resourceCacheCommand(type: "query" | "clear" | "retain", e
                 || !Number.isSafeInteger(value.bytes) || value.bytes < 0 || !Number.isSafeInteger(value.entries) || value.entries < 0) {
                 reject(new Error("Invalid cache response")); return;
             }
-            resolve({ enabled: value.enabled, bytes: value.bytes, entries: value.entries });
+            resolve({ enabled: value.enabled, bytes: value.bytes, entries: value.entries,
+                ...(Number.isSafeInteger(value.limitBytes) && value.limitBytes > 0 ? { limitBytes: value.limitBytes } : {}) });
         };
         try {
             worker.postMessage({ source: "moly-cache-host", schemaVersion: 1, type, ...(type === "retain" ? { enabled: enabled === true } : {}) }, [channel.port2]);

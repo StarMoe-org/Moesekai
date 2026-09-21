@@ -11,6 +11,7 @@
     "test:deck-payload": "node --experimental-strip-types scripts/test-deck-payload.mjs",
     "test:moly-resource-origin": "node --experimental-strip-types scripts/test-moly-resource-origin.mjs",
     "test:moly-resource-cache": "node --experimental-strip-types scripts/test-moly-resource-cache.mjs",
+    "test:moly-resource-panel": "node --experimental-strip-types scripts/test-moly-resource-panel.mjs",
     "test:moly-publication-contract": "node --experimental-strip-types scripts/test-moly-publication-contract.mjs",
     "test:moly-stage-viewport": "node --experimental-strip-types scripts/test-moly-stage-viewport.mjs",
     "test:mysekai-workspace": "node --experimental-strip-types scripts/test-mysekai-workspace.mjs",

@@ -255,6 +255,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                     {t(`page.mysekaiWorkspace.${soundEnabled === true ? "soundOn" : soundEnabled === false ? "soundOff" : "soundSetting"}`)}
                 </button>
                 <button className="interaction-button" aria-expanded={importOpen} aria-controls="workspace-player-data" onClick={() => setImportOpen(value => !value)}>{t("page.mysekaiWorkspace.myWorld")}</button>
+                <Link className="interaction-button workspace-resource-link" href={`/mysekai/interactions/resources/?${new URLSearchParams({ region: source, ...(snapshot ? { snapshot: snapshot.id } : {}) })}`}>{t("page.mysekaiInteractions.r4b.manageResources")}</Link>
                 <button className="interaction-button workspace-enter-scene" disabled={!soundReady || !snapshot?.available || closing} onClick={() => start(null)}>{t(`page.mysekaiWorkspace.${session ? "openScene" : "enterScene"}`)}</button>
             </div>
         </header>
@@ -269,7 +270,6 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                 <div><p>{t("page.mysekaiWorkspace.databaseSource", { region: source.toUpperCase() })}</p>
                     {snapshot && <p>{t("page.mysekaiWorkspace.authoredSource", { region: snapshot.region.toUpperCase(), version: snapshot.version })}</p>}
                     <p>{t("page.mysekaiWorkspace.sourceSeparation")}</p>
-                    <Link href={`/mysekai/interactions/resources/?${new URLSearchParams({ region: source, ...(snapshot ? { snapshot: snapshot.id } : {}) })}`}>{t("page.mysekaiInteractions.r4b.manageResources")}</Link>
                 </div>
             </details>
         </div>

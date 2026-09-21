@@ -22,7 +22,7 @@ export const mysekaiWorkspaceMessages = {
     "inspectScene": "View in scene",
     "playScene": "Play performance",
     "readingAvailable": "This furniture is not yet supported in the scene. You can still read its information.",
-    "explicitDownload": "Performance resources load as needed and are reused only during this visit.",
+    "explicitDownload": "Performance resources load on demand and reuse a size-limited disk cache. Clear it in Resources.",
     "participants": "Participants",
     "seeAll": "View all",
     "noRecipe": "No crafting recipe is recorded for this region.",

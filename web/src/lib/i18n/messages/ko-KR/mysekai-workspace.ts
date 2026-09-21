@@ -22,7 +22,7 @@ export const mysekaiWorkspaceMessages = {
     "inspectScene": "장면에서 보기",
     "playScene": "연출 재생",
     "readingAvailable": "현재 장면에서는 이 가구를 아직 지원하지 않습니다. 가구 정보는 볼 수 있습니다.",
-    "explicitDownload": "연출 리소스는 필요할 때 불러오며 이번 방문 중에만 재사용합니다.",
+    "explicitDownload": "연출 리소스는 필요할 때 불러오며 용량 제한이 있는 디스크 캐시를 재사용합니다. 리소스 관리에서 삭제할 수 있습니다.",
     "participants": "참여 캐릭터",
     "seeAll": "모두 보기",
     "noRecipe": "이 서버 자료에는 제작법이 없습니다.",

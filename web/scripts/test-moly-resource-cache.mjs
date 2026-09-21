@@ -171,6 +171,10 @@ async function setup(registration, previous = registration) {
     };
     assert.deepEqual(await api.resourceCacheCommand("retain", true), { enabled: true, bytes: 1, entries: 1 });
     assert.equal(api.registrations(), 2);
+    registration.active.postMessage = () => channels.at(-1).port1.onmessage({ data: { source: "moly-cache", schemaVersion: 1, ok: true, enabled: true, bytes: 1, entries: 1, limitBytes: 536870912 } });
+    assert.equal((await api.resourceCacheCommand("query")).limitBytes, 536870912);
+    registration.active.postMessage = () => channels.at(-1).port1.onmessage({ data: { source: "moly-cache", schemaVersion: 1, ok: true, enabled: true, bytes: 1, entries: 1, limitBytes: -1 } });
+    assert.equal((await api.resourceCacheCommand("query")).limitBytes, undefined, "optional invalid budget cannot break an otherwise valid legacy response");
     registration.active.postMessage = () => channels.at(-1).port1.onmessage({ data: { source: "wrong" } });
     await assert.rejects(api.resourceCacheCommand("query"), /Invalid cache response/);
     assert.equal(channels.at(-1).port1.closed, true); assert.equal(channels.at(-1).port2.closed, true);

@@ -70,7 +70,7 @@ try {
     assert.equal(local.snapshots[0].assets, "/moly/snapshots/cn-6.0.0-example/assets/");
     assert.equal(local.snapshots[0].catalog, "/moly/snapshots/cn-6.0.0-example/catalog/index.json");
     const cachePanel = await readFile(new URL("../src/components/mysekai-interactions/ResourceCachePanel.tsx", import.meta.url), "utf8");
-    assert.ok(cachePanel.includes("useRuntimeManifest(0)"), "resource management must discover same-origin publications");
+    assert.ok(cachePanel.includes("useRuntimeManifest(retry)"), "resource management discovers publications and can retry failed discovery");
     assert.ok(!cachePanel.includes("molyResourceOrigin"), "CDN configuration is not deployment status");
     process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = "https://resources.example.test";
 
