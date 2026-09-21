@@ -173,6 +173,17 @@
       "assetStatus": "official-crop-added",
       "assetPath": "web/public/images/lyrics-performers/akane.webp",
       "processing": "crop-and-resize-only"
+    },
+    {
+      "sourceId": "外部歌唱者-28",
+      "numericId": 1028,
+      "name": "IA",
+      "rightsHolder": "1st PLACE Co., Ltd.",
+      "officialSourceUrl": "https://ia-aria.com/",
+      "officialAssetUrl": "https://ia-aria.com/common/img/ogp.jpg",
+      "assetStatus": "official-crop-added",
+      "assetPath": "web/public/images/lyrics-performers/ia.webp",
+      "processing": "crop-and-resize-only"
     }
   ]
 }
