@@ -2,6 +2,33 @@ import type { NextConfig } from "next";
 import os from "node:os";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
+
+// Moly publishes its control surface and its immutable resources to one
+// configured origin. The runtime document has to stay same-origin with the
+// page that hands it the audio activation gesture, so the small shell is
+// proxied from here; the engine, catalogue and scene assets are fetched
+// straight from that origin by the runtime itself and never pass through.
+const molyResourceOrigin = (() => {
+  const raw = (process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN || "").trim();
+  if (!raw) return "";
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    throw new Error("NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN must be a bare https origin");
+  }
+  if (
+    parsed.protocol !== "https:" ||
+    !parsed.hostname ||
+    parsed.username ||
+    parsed.password ||
+    parsed.pathname !== "/" ||
+    parsed.search ||
+    parsed.hash
+  )
+    throw new Error("NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN must be a bare https origin");
+  return parsed.origin;
+})();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
 
 function getAllowedDevOrigins(): string[] {
@@ -73,13 +100,17 @@ const nextConfig: NextConfig = {
         : [],
       afterFiles: [
         {
-          source: "/moly/:path*",
-          destination: `${(process.env.MOLY_DEV_ORIGIN || internalApiBase).replace(/\/$/, "")}/moly/:path*`,
-        },
-        {
           source: "/api/:path*",
           destination: `${internalApiBase}/api/:path*`,
         },
+        ...(molyResourceOrigin
+          ? [
+              {
+                source: "/moly/:path*",
+                destination: `${molyResourceOrigin}/moly/:path*`,
+              },
+            ]
+          : []),
       ],
     };
   },
