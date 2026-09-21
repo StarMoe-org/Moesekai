@@ -422,7 +422,7 @@ function MysekaiContent() {
                         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedFixtures.map(fixture => (
                                 <Link
-                                    href={mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id)}
+                                    href={mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id, serverSource)}
                                     key={fixture.id}
                                     data-shortcut-item="true"
                                     className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-3 flex flex-col h-full group"

@@ -6,7 +6,7 @@
 
 React 管理检索、详情、选择、URL 与宿主 UI。iframe 内的原 Rust runtime 仍是对话、角色动作、家具控制器、音频、临时布景和恢复的唯一执行方。`available` 来自 runtime 导出的目录投影，宿主不重写角色/家具准入规则；实际播放再次通过 runtime 的动态准入。
 
-区服和快照属于内容身份，不属于界面语言。家具链接保留 `region`，互动链接保留 `region`、`snapshot`、`content` 和筛选条件。未部署、来源不一致、旧快照或不存在的内容应显示明确状态，不能用另一个区服的同号 ID 代替。
+区服和快照属于内容身份，不属于界面语言。家具链接只在区服与访问者默认区服不同时才带 `region`：带查询串的页面在 `proxy.ts` 里是 `noindex` 且 `private, no-store`，冗余的 pin 会让家具页丢掉可缓存、可索引的干净 URL。互动链接保留 `region`、`snapshot`、`content` 和筛选条件。未部署、来源不一致、旧快照或不存在的内容应显示明确状态，不能用另一个区服的同号 ID 代替。
 
 目录固定每页 24 项，`page` 写入 URL 与浏览历史；切页替换当前项，不无限追加。普通选中内容通过可见卡片锚点累计补偿异步详情布局变化，不主动滚动到播放器。网页沉浸与浏览器全屏只改变同一个 stage 的呈现，不 portal、不移动或重新挂载 iframe，保留运行世界与音频。
 
@@ -178,6 +178,9 @@ bun run lint
 bun run lint:i18n
 bun run lint:i18n-usage
 bun run test:moly-resource-origin
+bun run test:mysekai-workspace
+bun run test:mysekai-character-filter
+bun run test:mysekai-runtime-selection
 bun run build:next
 ```
 

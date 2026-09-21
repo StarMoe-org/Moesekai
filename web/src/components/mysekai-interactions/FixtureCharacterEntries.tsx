@@ -9,7 +9,9 @@ import { getCharacterName } from "@/lib/i18n";
 import { useI18n } from "@/contexts/I18nContext";
 import SdPortrait from "./SdPortrait";
 
-function baseCharacter(unit: number): number { return unit <= 26 ? unit : 21 + Math.floor((unit - 27) / 5); }
+// Unit-specific virtual singer IDs 27-56 fold onto base characters 21-26.
+// Anything outside that published range is passed through unchanged.
+function baseCharacter(unit: number): number { return unit < 27 || unit > 56 ? unit : 21 + Math.floor((unit - 27) / 5); }
 
 /**
  * Compact cast-combination picker for one furniture detail page.

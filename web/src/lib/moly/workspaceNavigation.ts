@@ -31,6 +31,12 @@ export interface WorkspaceNavigation {
     invalidContent: boolean;
 }
 
+// Anything region-shaped is carried through so an unrecognised value still
+// reports regionUnavailable instead of silently falling back. This only bounds
+// what the source picker can be made to echo.
+function regionShaped(value: string | null): string | null {
+    return value !== null && /^[A-Za-z0-9_-]{1,16}$/.test(value) ? value : null;
+}
 export function supportedRegion(value: string | null | undefined): MolyRegion | null {
     return value === "cn" || value === "jp" ? value : null;
 }
@@ -78,7 +84,7 @@ export function parseWorkspaceNavigation(params: URLSearchParams, defaultTab: Mo
     const units = [...new Set((params.get("units") ?? "").split(",").filter(unit => /^[a-z0-9_-]{1,32}$/.test(unit)))].slice(0, 10);
     return {
         page: Math.min(100000, positiveId(params.get("page")) ?? 1),
-        region: params.get("region"), snapshot: params.get("snapshot"), browse,
+        region: regionShaped(params.get("region")), snapshot: params.get("snapshot"), browse,
         furniture: {
             genre: positiveId(params.get("genre")), subGenre: positiveId(params.get("subGenre")), tag: positiveId(params.get("tag")),
             characters, units, sortBy: params.get("sortBy") === "name" ? "name" : "id", sortOrder: params.get("sortOrder") === "asc" ? "asc" : "desc",

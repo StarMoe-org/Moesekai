@@ -83,11 +83,15 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             event.stopPropagation();
             if (navigating) return;
             navigating = true;
+            const destination = target.pathname + target.search + target.hash;
             void (mount.current?.close() ?? Promise.resolve(true))
                 .catch(() => false)
-                .then(() => {
-                    if (!cancelled) router.push(target.pathname + target.search + target.hash);
-                });
+                .then(() => { if (!cancelled) router.push(destination); })
+                // The click was already swallowed above. If the hand-off fails,
+                // fall back to a real navigation rather than leaving the page
+                // with every internal link silently dead.
+                .catch(() => { if (!cancelled) window.location.assign(target.href); })
+                .finally(() => { navigating = false; });
         };
         document.addEventListener("click", leave, true);
         return () => { cancelled = true; document.removeEventListener("click", leave, true); };

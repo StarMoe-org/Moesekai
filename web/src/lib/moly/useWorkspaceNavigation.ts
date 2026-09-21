@@ -21,9 +21,14 @@ function historyEntry(): HistoryEntry | undefined {
 }
 function saveScroll() {
     const current = historyEntry();
-    window.history.replaceState({ ...window.history.state, [stateKey]: {
-        owner: "mysekai-workspace-v1", parent: current?.parent ?? null, scroll: captureScroll(),
-    } satisfies HistoryEntry }, "", window.location.href);
+    try {
+        window.history.replaceState({ ...window.history.state, [stateKey]: {
+            owner: "mysekai-workspace-v1", parent: current?.parent ?? null, scroll: captureScroll(),
+        } satisfies HistoryEntry }, "", window.location.href);
+    } catch {
+        // Safari throttles replaceState (~100 calls / 30 s) and throws once the
+        // budget is gone. A lost scroll sample must not break scrolling itself.
+    }
 }
 
 /** History belongs to the workspace, never to the canvas/realm lifecycle. */
@@ -57,7 +62,9 @@ export function useWorkspaceNavigation(initialSearch: string, defaultTab: MolyTa
         let timer: ReturnType<typeof setTimeout> | undefined;
         const persist = () => {
             if (timer !== undefined || pending.current) return;
-            timer = setTimeout(() => { timer = undefined; if (!pending.current) saveScroll(); }, 100);
+            // Stay well inside Safari's replaceState budget; commit() and
+            // pagehide still capture the final position exactly.
+            timer = setTimeout(() => { timer = undefined; if (!pending.current) saveScroll(); }, 400);
         };
         const pop = () => {
             if (timer !== undefined) { clearTimeout(timer); timer = undefined; }

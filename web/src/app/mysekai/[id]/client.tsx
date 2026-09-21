@@ -250,7 +250,7 @@ function MysekaiFixtureDetailContent() {
                         <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.mysekai.notFoundTitle", { id: fixtureId })}</h2>
                         <p className="text-slate-500 mb-6">{t("page.mysekai.notFoundDesc")}</p>
                         <Link
-                            href={mysekaiDatabaseHref(sourceRegion ?? serverSource)}
+                            href={mysekaiDatabaseHref(sourceRegion ?? serverSource, undefined, serverSource)}
                             className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
                         >
                             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -502,7 +502,7 @@ function MysekaiFixtureDetailContent() {
                 {/* Back Button */}
                 <div className="mt-12 text-center">
                     <Link
-                        href={mysekaiDatabaseHref(sourceRegion ?? serverSource)}
+                        href={mysekaiDatabaseHref(sourceRegion ?? serverSource, undefined, serverSource)}
                         className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
                     >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
