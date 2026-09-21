@@ -1,5 +1,6 @@
 import type { NextConfig } from "next";
 import os from "node:os";
+import { molyResourceOrigin } from "./src/lib/moly/resourceOrigin";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -8,26 +9,14 @@ const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:
 // page that hands it the audio activation gesture, so the small shell is
 // proxied from here; the engine, catalogue and scene assets are fetched
 // straight from that origin by the runtime itself and never pass through.
-const molyResourceOrigin = (() => {
-  const raw = (process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN || "").trim();
-  if (!raw) return "";
-  let parsed: URL;
+// The proxy destination and the URLs the client builds must come from the
+// same validator, or the two would disagree about what is same-origin.
+const molyProxyOrigin = (() => {
   try {
-    parsed = new URL(raw);
+    return molyResourceOrigin();
   } catch {
     throw new Error("NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN must be a bare https origin");
   }
-  if (
-    parsed.protocol !== "https:" ||
-    !parsed.hostname ||
-    parsed.username ||
-    parsed.password ||
-    parsed.pathname !== "/" ||
-    parsed.search ||
-    parsed.hash
-  )
-    throw new Error("NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN must be a bare https origin");
-  return parsed.origin;
 })();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
 
@@ -103,11 +92,11 @@ const nextConfig: NextConfig = {
           source: "/api/:path*",
           destination: `${internalApiBase}/api/:path*`,
         },
-        ...(molyResourceOrigin
+        ...(molyProxyOrigin
           ? [
               {
                 source: "/moly/:path*",
-                destination: `${molyResourceOrigin}/moly/:path*`,
+                destination: `${molyProxyOrigin}/moly/:path*`,
               },
             ]
           : []),

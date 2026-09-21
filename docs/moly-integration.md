@@ -38,12 +38,16 @@ iframe 必须与宿主页面同源，宿主才能在用户点击时同步转交�
 
 ```sh
 export NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN=https://assets.example.com
-docker build   --build-arg NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN="$NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN"   -t moesekai:local .
+docker build \
+  --build-arg NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN="$NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN" \
+  -t moesekai:local .
 
 docker run --rm -p 8080:8080 moesekai:local
 ```
 
 `NEXT_PUBLIC_*` 由 Next.js 在构建时内联，改变域名需要重建前端/镜像；只在 `docker run -e` 添加该变量不会更新已有客户端。直接构建 Next 时在 `bun run --cwd web build:next` 之前设置同名变量。开发 compose 会读取根目录 `.env`（参见 `.env.example`）；直接 Next 开发可用 `web/.env.local`。仓库当前没有应用镜像构建 workflow，外部 CI 必须将同名变量显式传给 Docker `build-args`，不能仅给部署容器设置环境变量。
+
+资源 origin 只接受不带路径、查询、片段与凭据的 HTTPS origin，`http://` 与 `https://host/path` 在读取 `next.config.ts` 时即报错、服务不会启动。本地要联调 `/moly/` 时指向一个可用的 HTTPS 发布地址；用自签证书的本地服务需要额外给 Next 进程设置 `NODE_EXTRA_CA_CERTS`，否则代理握手失败并返回 500。
 
 CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES module 方式跨域加载，需要 CORS 响应头——并支持 packed 模式所需的 OPTIONS / `X-Moly-Required`，暴露 `Content-Encoding`、`ETag`、`Content-Length` 和 `X-Moly-Decoded-Bytes` 或 `x-oss-meta-moly-decoded-bytes`。压缩体使用原始逻辑 URL，同时设置正确的 `Content-Type` / `Content-Encoding`；按 `Accept-Encoding` 协商表示由 CDN 负责。版本化资源使用长缓存与 `immutable`，`manifest.json` 不可长缓存。真实响应与二次命中需在上线前验证。配置私有存储回源时保持 bucket 私有，CDN 仅发布此功能的资源前缀。
 
