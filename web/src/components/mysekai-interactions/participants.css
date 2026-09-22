@@ -1,57 +1,100 @@
-/* Source-backed cast and furniture share one composition. No body-image cropping. */
-.mysekai-interactions .interaction-card{flex-direction:column;gap:14px;padding:14px;contain-intrinsic-size:auto 260px;content-visibility:visible;border-radius:20px}
-.mysekai-interactions .interaction-card>.interaction-participants{width:100%;height:auto;min-height:106px;flex:0 0 auto;border-radius:14px}
-.mysekai-interactions .interaction-participants{--portrait-size:64px;display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:10px;padding:12px;background:var(--surface-soft);overflow:visible}
-.interaction-participant-cast,.interaction-participant-furniture{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px;min-width:0}
-.interaction-participant-person{display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
-.interaction-participant-medallion{display:grid;place-items:center;border-radius:50%;background:var(--surface-base);box-shadow:0 0 0 1px var(--border-soft);padding:2px;overflow:hidden}
-.mysekai-interactions .interaction-participants .moly-sd-portrait{width:var(--portrait-size)!important;height:var(--portrait-size)!important;overflow:visible}
-.mysekai-interactions .interaction-participants .moly-sd-portrait img{width:100%;height:100%;padding:0;object-fit:contain;filter:none}
-.interaction-participant-join{color:var(--text-muted);font-size:14px;font-weight:500;flex:0 0 auto;opacity:.6}
-.interaction-participant-fixture{display:flex;align-items:center;flex-direction:column;gap:4px;width:72px;min-width:0}
-.mysekai-interactions .interaction-participant-fixture>img{width:64px;height:64px;object-fit:contain;padding:3px;filter:drop-shadow(0 3px 3px #00000010)}
-.interaction-participant-caption{font-size:.65rem;line-height:1.4;text-align:center;max-width:100px;color:var(--text-muted);overflow-wrap:anywhere}
-.interaction-card .interaction-participant-person>.interaction-participant-caption{display:none}
-.interaction-art-unavailable{display:grid;place-items:center;width:64px;min-height:64px;border:1px dashed var(--border-strong);border-radius:12px;font-size:.7rem;color:var(--text-muted)}
-.mysekai-interactions .interaction-card-copy{width:100%;gap:7px}
-.mysekai-interactions .interaction-card-copy>strong{font-size:.9rem;line-height:1.65;min-height:2.95em}
-.mysekai-interactions .interaction-card-foot{flex-direction:row;align-items:center;justify-content:space-between;border-top:1px solid var(--border-soft);padding-top:9px;margin-top:7px}
-.mysekai-interactions .interaction-card[aria-pressed=true] .interaction-participants{background:var(--surface-base)}
-.mysekai-interactions .interaction-detail-heading{display:block}
-.mysekai-interactions .interaction-detail-heading>.interaction-participants{width:100%;height:auto;min-height:136px;margin-bottom:18px;border-radius:16px;--portrait-size:76px}
-.mysekai-interactions .interaction-detail-heading .interaction-participant-fixture{width:84px}
-.mysekai-interactions .interaction-detail-heading .interaction-participant-fixture>img{width:76px;height:76px}
-.mysekai-interactions .interaction-detail-heading .interaction-participant-caption{font-size:.69rem}
-.mysekai-interactions .interaction-grid-furniture .interaction-participants{min-height:142px;aspect-ratio:auto}
-.mysekai-interactions .interaction-grid-furniture .interaction-participant-fixture{width:100%}
-.mysekai-interactions .interaction-grid-furniture .interaction-participant-fixture>img{width:116px;height:116px}
-.interaction-grid-furniture .interaction-participant-caption{display:none}
-.interaction-browser{scroll-margin-top:96px}
-.interaction-pagination{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:24px;padding-top:18px;border-top:1px solid var(--border-soft)}
-.interaction-page-range{font-size:.76rem;font-variant-numeric:tabular-nums;color:var(--text-muted)}
-.interaction-page-controls,.interaction-page-slot{display:flex;align-items:center;gap:5px}
-.interaction-page-controls button{display:grid;place-items:center;min-width:42px;min-height:44px;padding:8px;border:1px solid transparent;border-radius:12px;color:var(--text-body);font-size:.81rem;background:transparent;font-variant-numeric:tabular-nums}
-.interaction-page-controls button:hover:not(:disabled){background:var(--surface-soft);border-color:var(--border-soft)}
-.interaction-page-controls button[aria-current=page]{background:var(--accent-soft);border-color:var(--color-miku);font-weight:750;color:var(--text-strong)}
-.interaction-page-controls button:disabled{opacity:.3}
-.interaction-page-ellipsis{display:grid;place-items:center;min-width:16px;color:var(--text-muted)}
-@media(max-width:600px){
- .mysekai-interactions .interaction-card{flex-direction:row;gap:13px;padding:12px;border-radius:17px;contain-intrinsic-size:auto 172px}
- .mysekai-interactions .interaction-card>.interaction-participants{--portrait-size:52px;flex:0 0 104px;width:104px;min-height:116px;gap:5px;padding:7px;border-radius:12px;align-content:center}
- .interaction-card .interaction-participant-cast{gap:3px}
- .interaction-card .interaction-participant-cast:has(>.interaction-participant-person:nth-child(2)){--portrait-size:40px}
- .interaction-card .interaction-participant-join{display:none}
- .interaction-card .interaction-participant-furniture{width:100%}
- .mysekai-interactions .interaction-card .interaction-participant-fixture>img{width:48px;height:48px;padding:1px}
- .mysekai-interactions .interaction-card-copy>strong{font-size:.85rem}
- .mysekai-interactions .interaction-card-foot{flex-direction:column;align-items:flex-start;gap:4px}
- .mysekai-interactions .interaction-grid-furniture .interaction-card{flex-direction:column}
- .mysekai-interactions .interaction-grid-furniture .interaction-card>.interaction-participants{width:100%;flex-basis:auto;min-height:120px}
- .mysekai-interactions .interaction-grid-furniture .interaction-participant-fixture>img{width:100px;height:100px}
- .interaction-pagination{justify-content:center;gap:10px}
- .interaction-page-range{width:100%;text-align:center}
- .interaction-page-controls,.interaction-page-slot{gap:2px}
- .interaction-page-controls button{min-width:38px;padding:7px}
- .interaction-page-ellipsis{min-width:12px}
+/* Cleaned participants & pagination styles for MYSEKAI interactions */
+.interaction-browser {
+    scroll-margin-top: 96px;
 }
-@media(forced-colors:active){.interaction-participant-medallion,.interaction-page-controls button{border:1px solid CanvasText}.interaction-page-controls button[aria-current=page]{outline:2px solid Highlight}}
+
+.interaction-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid var(--border-soft);
+}
+
+.interaction-page-range {
+    font-size: 0.76rem;
+    font-variant-numeric: tabular-nums;
+    color: var(--text-muted);
+}
+
+.interaction-page-controls,
+.interaction-page-slot {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.interaction-page-controls button {
+    display: grid;
+    place-items: center;
+    min-width: 40px;
+    min-height: 40px;
+    padding: 8px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: var(--text-body);
+    font-size: 0.81rem;
+    background: transparent;
+    font-variant-numeric: tabular-nums;
+    cursor: pointer;
+    transition: background-color 0.15s, border-color 0.15s;
+}
+
+.interaction-page-controls button:hover:not(:disabled) {
+    background: var(--surface-soft);
+    border-color: var(--border-soft);
+}
+
+.interaction-page-controls button[aria-current="page"] {
+    background: var(--accent-soft);
+    border-color: var(--color-miku);
+    font-weight: 750;
+    color: var(--text-strong);
+}
+
+.interaction-page-controls button:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.interaction-page-ellipsis {
+    display: grid;
+    place-items: center;
+    min-width: 16px;
+    color: var(--text-muted);
+}
+
+@media (max-width: 600px) {
+    .interaction-pagination {
+        justify-content: center;
+        gap: 10px;
+    }
+    .interaction-page-range {
+        width: 100%;
+        text-align: center;
+    }
+    .interaction-page-controls,
+    .interaction-page-slot {
+        gap: 2px;
+    }
+    .interaction-page-controls button {
+        min-width: 36px;
+        min-height: 36px;
+        padding: 6px;
+    }
+    .interaction-page-ellipsis {
+        min-width: 12px;
+    }
+}
+
+@media (forced-colors: active) {
+    .interaction-page-controls button {
+        border: 1px solid CanvasText;
+    }
+    .interaction-page-controls button[aria-current="page"] {
+        outline: 2px solid Highlight;
+    }
+}

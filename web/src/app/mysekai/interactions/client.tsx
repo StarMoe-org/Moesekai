@@ -2,7 +2,6 @@
 
 import { Suspense, useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
@@ -12,11 +11,14 @@ import { useWorkspaceNavigation } from "@/lib/moly/useWorkspaceNavigation";
 import { runtimeSelectionFilters } from "@/lib/moly/runtimeSelection";
 import { useContentCatalog, useContentDetail, useRuntimeManifest } from "@/lib/moly/useResources";
 import type { MolyBoot, MolyError, MolyKey, MolySnapshot, MolyTab, MolyPlayerDataState } from "@/lib/moly/contract";
-import PlayerDataPanel from "@/components/mysekai-interactions/PlayerDataPanel";
 import type { PlayerSession, RuntimeStageHandle } from "@/components/mysekai-interactions/RuntimeStage";
 import WorkspaceStage from "@/components/mysekai-interactions/WorkspaceStage";
 import ContentBrowser from "@/components/mysekai-interactions/ContentBrowser";
 import ContentDetail from "@/components/mysekai-interactions/ContentDetail";
+import InteractionsFilters from "@/components/mysekai-interactions/InteractionsFilters";
+import InteractionsSettingsModal from "@/components/mysekai-interactions/InteractionsSettingsModal";
+import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { UNIT_DATA } from "@/types/types";
 import { getLocaleRouteConfig, uiLocaleToRouteLocale } from "@/lib/locale-routing";
 import "./interactions.css";
 import "@/components/mysekai-interactions/participants.css";
@@ -28,7 +30,6 @@ const serverHydrationSnapshot = () => false;
 const servers: ServerSourceType[] = ["cn", "jp", "en", "tw", "kr"];
 const pageSize = 24;
 const soundStorageKey = "mysekai:sound-enabled";
-type PendingStart = { key: MolyKey | null; preview: boolean };
 
 function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const params = useSearchParams();
@@ -47,11 +48,9 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const [closing, setClosing] = useState(false);
     const [stageExpanded, setStageExpanded] = useState(true);
     const [playerData, setPlayerData] = useState<MolyPlayerDataState | null>(null);
-    const [importOpen, setImportOpen] = useState(false);
-    const [soundEnabled, setSoundEnabled] = useState<boolean | null>(null);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [soundEnabled, setSoundEnabled] = useState<boolean>(true);
     const [soundReady, setSoundReady] = useState(false);
-    const [soundDialogOpen, setSoundDialogOpen] = useState(false);
-    const [pendingStart, setPendingStart] = useState<PendingStart | null>(null);
     const player = useRef<RuntimeStageHandle>(null);
     const realmSequence = useRef(0);
     const closeInFlight = useRef<Promise<void> | null>(null);
@@ -76,9 +75,9 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     useEffect(() => {
         try {
             const saved = localStorage.getItem(soundStorageKey);
-            setSoundEnabled(saved === "1" ? true : saved === "0" ? false : null);
+            setSoundEnabled(saved === "0" ? false : true);
         } catch {
-            setSoundEnabled(null);
+            setSoundEnabled(true);
         } finally {
             setSoundReady(true);
         }
@@ -90,7 +89,6 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const { manifest, failed: manifestFailed } = useRuntimeManifest(retry, nav.snapshot, region);
     const published = manifest?.snapshots.find(item => item.region === region);
     const expired = Boolean(nav.snapshot && published && nav.snapshot !== published.id);
-    // A missing engine/CAS deployment is not a reason to hide a readable static catalog.
     const snapshot = sourceReady && !expired ? published : undefined;
     const { catalog, failed: catalogFailed } = useContentCatalog(snapshot, retry);
     const entries = useMemo(() => new Map<string, CatalogEntry>(catalog?.entries.map(entry => [entry.key, entry]) ?? []), [catalog]);
@@ -154,12 +152,12 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         if (nav.content) player.current?.select(nav.content);
     }, [session, nav.browse, nav.content, mode]);
 
-    const change = (value: Partial<BrowseState>) => {
+    const change = useCallback((value: Partial<BrowseState>) => {
         const searchOnly = Object.keys(value).length === 1 && value.query !== undefined;
         const replace = searchOnly && searchEditing.current;
         searchEditing.current = searchOnly;
         commit(current => ({ ...current, page: 1, browse: { ...current.browse, ...value }, content: null, invalidContent: false }), { replace, scroll: "preserve" });
-    };
+    }, [commit]);
     const select = (content: MolyKey) => {
         searchEditing.current = false;
         commit(current => ({ ...current, content, invalidContent: false }), { scroll: "detail" });
@@ -172,14 +170,73 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     };
     const character = (id: number) => {
         searchEditing.current = false;
+        setSelectedUnitIds(UNIT_DATA.filter(unit => unit.charIds.includes(id)).map(u => u.id));
         commit(current => ({ ...current, page: 1, content: null, invalidContent: false,
             browse: { ...INITIAL_BROWSE, tab: current.browse.tab === "activities" ? "activities" : "conversations", fixture: current.browse.fixture ?? (selected?.fixtureIds.length === 1 ? selected.fixtureIds[0] : null), characters: [id] } }), { scroll: "catalog" });
     };
+
+    const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>(() => {
+        return UNIT_DATA.filter(unit =>
+            unit.charIds.length > 0 && unit.charIds.some(id => nav.browse.characters.includes(id))
+        ).map(u => u.id);
+    });
+
+    const handleCharacterChange = useCallback((chars: number[]) => {
+        change({ characters: chars });
+    }, [change]);
+
+    const handleResetFilters = useCallback(() => {
+        setSelectedUnitIds([]);
+        change({ query: "", characters: [], availability: "all", fixture: null });
+    }, [change]);
+
+    const hasActiveFilters = Boolean(
+        nav.browse.query ||
+        nav.browse.characters.length > 0 ||
+        nav.browse.availability !== "all" ||
+        nav.browse.fixture !== null
+    );
+
+    const quickFilterContent = useMemo(() => (
+        <InteractionsFilters
+            searchQuery={nav.browse.query}
+            onSearchChange={query => change({ query })}
+            tab={nav.browse.tab}
+            onTabChange={tab => change({ tab })}
+            selectedCharacters={nav.browse.characters}
+            onCharacterChange={handleCharacterChange}
+            selectedUnitIds={selectedUnitIds}
+            onUnitIdsChange={setSelectedUnitIds}
+            availability={nav.browse.availability}
+            onAvailabilityChange={availability => change({ availability })}
+            totalCount={catalog?.entries.length ?? 0}
+            filteredCount={contentResults.length}
+            hasActiveFilters={hasActiveFilters}
+            onReset={handleResetFilters}
+        />
+    ), [
+        nav.browse.query,
+        nav.browse.tab,
+        nav.browse.characters,
+        selectedUnitIds,
+        nav.browse.availability,
+        catalog?.entries.length,
+        contentResults.length,
+        hasActiveFilters,
+        change,
+        handleCharacterChange,
+        handleResetFilters,
+    ]);
+
+    useQuickFilter(t("page.mysekaiInteractions.filterTitle"), quickFilterContent, [
+        quickFilterContent,
+        t,
+    ]);
     const showStage = (expanded: boolean) => {
         setStageExpanded(expanded);
         requestAnimationFrame(() => document.querySelector(expanded ? ".workspace-stage" : ".workspace-body")?.scrollIntoView({ block: "start", behavior: "instant" }));
     };
-    const launch = (key: MolyKey | null, preview = false, sound = soundEnabled ?? false) => {
+    const launch = (key: MolyKey | null, preview = false, sound = soundEnabled) => {
         if (!snapshot?.available || !manifest || closeInFlight.current) return;
         setRuntimeError(null); setNotice(null);
         if (session) {
@@ -192,32 +249,34 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         }
         showStage(true);
     };
+
+    /** Immediate preview/play start without blocking prompts */
     const start = (key: MolyKey | null, preview = false) => {
-        if (!soundReady) return;
-        if (soundEnabled === null) {
-            setPendingStart({ key, preview });
-            setSoundDialogOpen(true);
-            return;
-        }
         launch(key, preview, soundEnabled);
     };
-    const chooseSound = (enabled: boolean) => {
+
+    const toggleSound = () => {
+        const next = !soundEnabled;
+        setSoundEnabled(next);
+        try { localStorage.setItem(soundStorageKey, next ? "1" : "0"); } catch {}
+        player.current?.setSoundEnabled(next);
+    };
+
+    const changeSound = (enabled: boolean) => {
         setSoundEnabled(enabled);
         try { localStorage.setItem(soundStorageKey, enabled ? "1" : "0"); } catch {}
         player.current?.setSoundEnabled(enabled);
-        const pending = pendingStart;
-        setPendingStart(null);
-        setSoundDialogOpen(false);
-        if (pending) launch(pending.key, pending.preview, enabled);
     };
+
     const retryPlayer = async () => {
         if (!snapshot?.available || !manifest || closing) return;
         const key = selected?.available ? nav.content : null;
         await closePlayer();
         const identity = ++realmSequence.current;
-        setSession({ id: identity, epoch: identity, snapshot, release: manifest.release, initial: runtimeSelectionFilters(nav.content, mode, nav.browse.tab), content: nav.content, play: key, soundEnabled: soundEnabled ?? false });
+        setSession({ id: identity, epoch: identity, snapshot, release: manifest.release, initial: runtimeSelectionFilters(nav.content, mode, nav.browse.tab), content: nav.content, play: key, soundEnabled });
         showStage(true);
     };
+
     const switchSource = async (next: string) => {
         if (next === source || closing || !servers.includes(next as ServerSourceType)) return;
         const intent = ++sourceIntent.current;
@@ -225,118 +284,299 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         if (intent !== sourceIntent.current) return;
         commit(current => ({ ...current, page: 1, region: next, snapshot: null, browse: { ...INITIAL_BROWSE, tab: current.browse.tab },
             furniture: { ...INITIAL_FURNITURE }, content: null, invalidContent: false }), { scroll: "top" });
-        setMode("independent"); setNotice(null); setImportOpen(false);
+        setMode("independent"); setNotice(null);
     };
+
     const share = async () => {
-        // The current browser URL supplies the deployed host and locale path.
         const url = new URL(window.location.href);
         url.search = workspaceQuery(nav).toString();
         url.hash = "";
         try { await navigator.clipboard.writeText(url.href); setNotice("copied"); }
         catch { setNotice("copyFailed"); }
     };
+
     const catalogProblem = expired ? "snapshotExpired" : manifestFailed ? "noDeployment" : !region || (manifest && !published) ? "regionUnavailable" : catalogFailed ? "catalogFailed" : null;
 
-    return <div ref={workspace} className="mysekai-interactions mysekai-workspace" data-workspace-region={source}
-        onBlurCapture={event => { if (event.target instanceof HTMLInputElement) searchEditing.current = false; }}>
-        <header className="workspace-heading">
-            <div className="workspace-heading-title">
-                <h1>{t("page.mysekaiInteractions.title")}</h1>
-                <span className="workspace-alpha-badge">{t("page.mysekaiWorkspace.alphaLabel")}</span>
-            </div>
-            <div className="workspace-heading-actions">
-                <label className="workspace-source-select"><span className="sr-only">{t("page.mysekaiInteractions.source")}</span>
-                    <select aria-label={t("page.mysekaiInteractions.source")} value={source} disabled={closing} onChange={event => void switchSource(event.target.value)}>
-                        {!servers.includes(source as ServerSourceType) && <option value={source}>{source}</option>}
-                        {servers.map(server => <option key={server} value={server}>{t(`common.server.${server}`)}</option>)}
-                    </select>
-                </label>
-                <button className="interaction-button" aria-haspopup="dialog" aria-expanded={soundDialogOpen} onClick={() => { setPendingStart(null); setSoundDialogOpen(true); }}>
-                    {t(`page.mysekaiWorkspace.${soundEnabled === true ? "soundOn" : soundEnabled === false ? "soundOff" : "soundSetting"}`)}
-                </button>
-                <button className="interaction-button" aria-expanded={importOpen} aria-controls="workspace-player-data" onClick={() => setImportOpen(value => !value)}>{t("page.mysekaiWorkspace.myWorld")}</button>
-                <Link className="interaction-button workspace-resource-link" href={`/mysekai/interactions/resources/?${new URLSearchParams({ region: source, ...(snapshot ? { snapshot: snapshot.id } : {}) })}`}>{t("page.mysekaiInteractions.r4b.manageResources")}</Link>
-                <button className="interaction-button workspace-enter-scene" disabled={!soundReady || !snapshot?.available || closing} onClick={() => start(null)}>{t(`page.mysekaiWorkspace.${session ? "openScene" : "enterScene"}`)}</button>
-            </div>
-        </header>
-        <div className="workspace-subbar">
-            <p className="workspace-alpha-notice" role="note">
-                <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
-                    <circle cx="10" cy="10" r="7.25" /><path d="M10 9v4.5" strokeLinecap="round" /><circle cx="10" cy="6.25" r=".75" fill="currentColor" stroke="none" />
-                </svg>
-                <span>{t("page.mysekaiWorkspace.alphaNotice")}</span>
-            </p>
-            <details className="workspace-source-menu"><summary>{t("page.mysekaiInteractions.source")}{snapshot && <> · {snapshot.region.toUpperCase()} {snapshot.version}</>}</summary>
-                <div><p>{t("page.mysekaiWorkspace.databaseSource", { region: source.toUpperCase() })}</p>
-                    {snapshot && <p>{t("page.mysekaiWorkspace.authoredSource", { region: snapshot.region.toUpperCase(), version: snapshot.version })}</p>}
-                    <p>{t("page.mysekaiWorkspace.sourceSeparation")}</p>
+    return (
+        <div
+            ref={workspace}
+            className="mysekai-interactions mysekai-workspace container mx-auto px-4 sm:px-6 py-6"
+            data-workspace-region={source}
+            onBlurCapture={event => { if (event.target instanceof HTMLInputElement) searchEditing.current = false; }}
+        >
+            {/* Page Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                <div>
+                    <div className="flex items-center gap-2.5 mb-1.5">
+                        <h1 className="text-2xl sm:text-3xl font-black text-primary-text tracking-tight">
+                            {t("page.mysekaiInteractions.title")}
+                        </h1>
+                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-miku/10 text-miku border border-miku/30">
+                            {t("page.mysekaiWorkspace.alphaLabel")}
+                        </span>
+                    </div>
+                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                        {t("page.mysekaiInteractions.subtitle")}
+                    </p>
                 </div>
-            </details>
-        </div>
-        {soundDialogOpen && <section className="workspace-sound-choice" role="dialog" aria-modal="false" aria-label={t("page.mysekaiWorkspace.soundTitle")}>
-            <div className="workspace-section-title"><h2>{t("page.mysekaiWorkspace.soundTitle")}</h2>
-                <button className="interaction-text-button" onClick={() => { setPendingStart(null); setSoundDialogOpen(false); }}>{t("common.action.close")}</button></div>
-            <p>{t("page.mysekaiWorkspace.soundPrompt")}</p>
-            <div className="workspace-sound-actions">
-                <button className="interaction-button interaction-primary" aria-pressed={soundEnabled === true} onClick={() => chooseSound(true)}>{t("page.mysekaiWorkspace.soundEnable")}</button>
-                <button className="interaction-button" aria-pressed={soundEnabled === false} onClick={() => chooseSound(false)}>{t("page.mysekaiWorkspace.soundMute")}</button>
+
+                <div className="flex items-center gap-2.5 shrink-0">
+                    {/* Enter / Open Scene button */}
+                    <button
+                        type="button"
+                        className="px-4 py-2 rounded-xl bg-miku hover:bg-miku/90 text-white font-bold text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                        disabled={!soundReady || !snapshot?.available || closing}
+                        onClick={() => start(null)}
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
+                        </svg>
+                        <span>{t(`page.mysekaiWorkspace.${session ? "openScene" : "enterScene"}`)}</span>
+                    </button>
+
+                    {/* Settings Modal Trigger */}
+                    <button
+                        type="button"
+                        onClick={() => setSettingsOpen(true)}
+                        className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                    >
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        <span className="hidden sm:inline">{t("page.mysekaiWorkspace.settingsModalTitle")}</span>
+                    </button>
+                </div>
             </div>
-            <small>{t("page.mysekaiWorkspace.soundRemember")}</small>
-        </section>}
-        {importOpen && <section className="workspace-import" id="workspace-player-data">
-            <div className="workspace-section-title"><h2>{t("page.mysekaiWorkspace.myWorld")}</h2><button className="interaction-text-button" onClick={() => setImportOpen(false)}>{t("common.action.close")}</button></div>
-            {!session && <div className="workspace-import-activation"><p>{t("page.mysekaiWorkspace.importNeedsScene")}</p>
-                {snapshot?.available && manifest ? <><p>{t("page.mysekaiInteractions.baseDownloadSize", { size: Math.ceil((Math.max(manifest.release.engines.webgpu.downloadBytes, manifest.release.engines.webgl2.downloadBytes) + snapshot.base.downloadBytes) / 1048576) })}</p>
-                    <button className="interaction-button interaction-primary" onClick={() => start(null)}>{t("page.mysekaiWorkspace.enterScene")}</button></>
-                    : <p>{t("page.mysekaiInteractions.regionUnavailable", { region: source.toUpperCase() })}</p>}
-            </div>}
-            {snapshot && <PlayerDataPanel key={snapshot.id} region={snapshot.region} ready={Boolean(live?.ready && live.scene?.ready)}
-                blocked={Boolean(live?.status.activeKey || closing || phase === "restoring" || phase === "preparing")} value={playerData}
-                send={value => { if (!player.current) throw new Error("Stage not ready"); player.current.playerData(value); }}
-                onExplore={() => { setMode("current"); player.current?.browse({ mode: "current" }); showStage(true); }} />}
-        </section>}
-        <nav className="workspace-tabs" aria-label={t("page.mysekaiInteractions.browse")}>
-            {(["conversations", "activities"] as const).map(tab => <button key={tab} data-tab={tab}
-                aria-pressed={nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances")}
-                onClick={() => change({ tab })}>{t(`page.mysekaiWorkspace.${tab}`)}<span>{counts[tab]?.toLocaleString() ?? "—"}</span></button>)}
-        </nav>
-        {(nav.browse.fixture || nav.browse.characters.length > 0) && <div className="workspace-context" role="status">
-            {nav.browse.fixture && <button onClick={() => change({ tab: "performances" })}>{contextFixture ?? `#${nav.browse.fixture}`}</button>}
-            {nav.browse.characters.map(id => <span key={id}>{catalog?.characters.find(person => person.id === id)?.name ?? `#${id}`}</span>)}
-            <button className="interaction-text-button" onClick={() => change({ fixture: null, characters: [] })}>{t("page.mysekaiInteractions.clearContext")} ×</button>
-        </div>}
-        {notice && <p className="workspace-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
-        <div className={`workspace-body${nav.content || nav.invalidContent ? " workspace-has-detail" : ""}`}>
-            <WorkspaceStage session={session} player={player} live={live} boot={boot} error={runtimeError} expanded={stageExpanded} closing={closing} mode={mode}
-                setMode={setMode} expand={showStage} close={() => void closePlayer()} retry={() => void retryPlayer()}
-                onSnapshot={setLive} onBoot={setBoot} onError={setRuntimeError} onPlayerData={setPlayerData} />
-            <div className="workspace-catalog-column">
-                {catalogProblem && <section className="workspace-inline-notice" role="status">
-                    <h2>{t(`page.mysekaiInteractions.${catalogProblem}`, { region: source.toUpperCase() })}</h2>
-                    <button className="interaction-button" onClick={() => setRetry(value => value + 1)}>{t("common.action.retry")}</button>
-                    {expired && <button className="interaction-button" onClick={() => commit(current => ({ ...current, snapshot: null, content: null, invalidContent: false }))}>{t("page.mysekaiWorkspace.latestSource")}</button>}
-                </section>}
-                {catalog && snapshot ? <ContentBrowser catalog={catalog} snapshot={snapshot} browse={nav.browse} results={contentResults} selected={nav.content}
-                    active={activeKey} phase={phase} page={page} pageSize={pageSize} change={change} select={select} onPage={next => commit(current => ({ ...current, page: next }), { scroll: "catalog" })} />
-                    : catalogLoading || !sourceReady ? <div className="workspace-loading" role="status"><span>{t("common.state.loading")}</span><div /><div /><div /></div> : null}
+
+            {/* Global Settings Modal */}
+            <InteractionsSettingsModal
+                isOpen={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                source={source}
+                onSourceChange={switchSource}
+                servers={servers}
+                soundEnabled={soundEnabled}
+                onSoundChange={changeSound}
+                mode={mode}
+                onModeChange={setMode}
+                snapshot={snapshot}
+                live={live}
+                sessionActive={Boolean(session)}
+                closing={closing}
+                onSetWeather={id => player.current?.setWeather(id)}
+                playerData={playerData}
+                onSendPlayerData={value => {
+                    if (!player.current) throw new Error("Stage not ready");
+                    player.current.playerData(value);
+                }}
+                onExplorePlayerData={() => {
+                    setMode("current");
+                    player.current?.browse({ mode: "current" });
+                    showStage(true);
+                }}
+            />
+
+            {/* Navigation Tabs */}
+            <nav className="flex gap-6 border-b border-slate-200 dark:border-slate-800 mb-6" aria-label={t("page.mysekaiInteractions.browse")}>
+                {(["conversations", "activities"] as const).map(tab => (
+                    <button
+                        key={tab}
+                        data-tab={tab}
+                        className={`pb-3 text-sm sm:text-base font-bold transition-all border-b-2 -mb-px flex items-center gap-2 cursor-pointer ${
+                            nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances")
+                                ? "border-miku text-miku font-black"
+                                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
+                        }`}
+                        onClick={() => change({ tab })}
+                    >
+                        <span>{t(`page.mysekaiWorkspace.${tab}`)}</span>
+                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
+                            {counts[tab]?.toLocaleString() ?? "—"}
+                        </span>
+                    </button>
+                ))}
+            </nav>
+
+            {/* Active Context Chip Bar */}
+            {(nav.browse.fixture || nav.browse.characters.length > 0) && (
+                <div className="flex items-center flex-wrap gap-2 p-2.5 px-4 mb-4 rounded-xl bg-miku/10 border border-miku/20 text-xs" role="status">
+                    <span className="text-slate-500 dark:text-slate-400 font-medium">{t("page.mysekaiInteractions.filterScope")}:</span>
+                    {nav.browse.fixture && (
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                            {contextFixture ?? `#${nav.browse.fixture}`}
+                        </span>
+                    )}
+                    {nav.browse.characters.map(id => (
+                        <span key={id} className="font-bold text-miku bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-miku/30">
+                            {catalog?.characters.find(person => person.id === id)?.name ?? `#${id}`}
+                        </span>
+                    ))}
+                    <button
+                        type="button"
+                        className="ml-auto text-xs text-slate-500 hover:text-red-500 transition-colors font-semibold cursor-pointer"
+                        onClick={() => {
+                            setSelectedUnitIds([]);
+                            change({ fixture: null, characters: [] });
+                        }}
+                    >
+                        {t("page.mysekaiInteractions.clearContext")} ×
+                    </button>
+                </div>
+            )}
+
+            {notice && <p className="workspace-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
+
+            {/* Main Stage & Content Area */}
+            <div className={`workspace-body${nav.content || nav.invalidContent ? " workspace-has-detail" : ""}`}>
+                <WorkspaceStage
+                    session={session}
+                    player={player}
+                    live={live}
+                    boot={boot}
+                    error={runtimeError}
+                    expanded={stageExpanded}
+                    closing={closing}
+                    mode={mode}
+                    soundEnabled={soundEnabled}
+                    onToggleSound={toggleSound}
+                    onOpenSettings={() => setSettingsOpen(true)}
+                    setMode={setMode}
+                    expand={showStage}
+                    close={() => void closePlayer()}
+                    retry={() => void retryPlayer()}
+                    onSnapshot={setLive}
+                    onBoot={setBoot}
+                    onError={setRuntimeError}
+                    onPlayerData={setPlayerData}
+                />
+
+                <div className="workspace-catalog-column">
+                    {catalogProblem && (
+                        <section className="workspace-inline-notice" role="status">
+                            <h2>{t(`page.mysekaiInteractions.${catalogProblem}`, { region: source.toUpperCase() })}</h2>
+                            <button className="interaction-button" onClick={() => setRetry(value => value + 1)}>{t("common.action.retry")}</button>
+                            {expired && (
+                                <button className="interaction-button" onClick={() => commit(current => ({ ...current, snapshot: null, content: null, invalidContent: false }))}>
+                                    {t("page.mysekaiWorkspace.latestSource")}
+                                </button>
+                            )}
+                        </section>
+                    )}
+
+                    {catalog && snapshot ? (
+                        <ContentBrowser
+                            catalog={catalog}
+                            snapshot={snapshot}
+                            browse={nav.browse}
+                            results={contentResults}
+                            selected={nav.content}
+                            active={activeKey}
+                            phase={phase}
+                            page={page}
+                            pageSize={pageSize}
+                            change={change}
+                            select={select}
+                            onPage={next => commit(current => ({ ...current, page: next }), { scroll: "catalog" })}
+                        />
+                    ) : catalogLoading || !sourceReady ? (
+                        <div className="flex items-center justify-center min-h-[300px]" role="status">
+                            <div className="loading-spinner loading-spinner-sm" />
+                        </div>
+                    ) : null}
+                </div>
+
+                {/* Selected Content Detail Aside */}
+                {(nav.content || nav.invalidContent) && (
+                    <aside
+                        className="workspace-detail-pane ios-glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+                        data-mysekai-detail
+                        tabIndex={-1}
+                        aria-label={t("page.mysekaiWorkspace.detail")}
+                    >
+                        <div className="workspace-detail-toolbar flex items-center justify-between p-3 px-4 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
+                            <button className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-miku transition-colors cursor-pointer" onClick={back}>
+                                ← {t("page.mysekaiWorkspace.backToResults")}
+                            </button>
+                            <button
+                                className="w-7 h-7 rounded-full grid place-items-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                                aria-label={t("common.action.close")}
+                                onClick={() => commit(current => ({ ...current, content: null, invalidContent: false }), { scroll: "catalog" })}
+                            >
+                                ×
+                            </button>
+                        </div>
+
+                        {visibleEntry && snapshot ? (
+                            <ContentDetail
+                                entry={visibleEntry}
+                                snapshot={snapshot}
+                                detailLoading={detailLoading}
+                                detailFailed={detailFailed}
+                                canPlay={canPlay}
+                                preparing={preparing}
+                                reason={reason}
+                                playing={activeKey === nav.content}
+                                replacing={Boolean(activeKey && activeKey !== nav.content)}
+                                restoring={closing || phase === "restoring"}
+                                preview={() => start(visibleEntry.key, true)}
+                                previewing={Boolean(live?.status.preview && activeKey === visibleEntry.key)}
+                                play={() => start(visibleEntry.key)}
+                                share={() => void share()}
+                                retry={() => setDetailRetry(value => value + 1)}
+                                related={related}
+                                character={character}
+                                fixture={id => related(id, "performances")}
+                            />
+                        ) : (
+                            <div className="p-12 text-center text-xs text-slate-400" role="status">
+                                <p>{t(`page.mysekaiInteractions.${missing ? "contentMissing" : "loading"}`)}</p>
+                                {missing && (
+                                    <button
+                                        type="button"
+                                        className="mt-3 px-3 py-1.5 rounded-lg bg-miku text-white font-semibold"
+                                        onClick={back}
+                                    >
+                                        {t("page.mysekaiWorkspace.backToResults")}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </aside>
+                )}
             </div>
-            {(nav.content || nav.invalidContent) && <aside className="workspace-detail-pane" data-mysekai-detail tabIndex={-1} aria-label={t("page.mysekaiWorkspace.detail")}>
-                <div className="workspace-detail-toolbar"><button className="interaction-text-button" onClick={back}>← {t("page.mysekaiWorkspace.backToResults")}</button>
-                    <button className="workspace-icon-button" aria-label={t("common.action.close")} onClick={() => commit(current => ({ ...current, content: null, invalidContent: false }), { scroll: "catalog" })}>×</button></div>
-                {visibleEntry && snapshot ? <ContentDetail entry={visibleEntry} snapshot={snapshot} detailLoading={detailLoading} detailFailed={detailFailed} canPlay={canPlay} preparing={preparing}
-                        reason={reason} playing={activeKey === nav.content} replacing={Boolean(activeKey && activeKey !== nav.content)} restoring={closing || phase === "restoring"}
-                        preview={() => start(visibleEntry.key, true)} previewing={Boolean(live?.status.preview && activeKey === visibleEntry.key)} play={() => start(visibleEntry.key)}
-                        share={() => void share()} retry={() => setDetailRetry(value => value + 1)} related={related} character={character} fixture={id => related(id, "performances")} />
-                        : <div className="interaction-empty" role="status"><p>{t(`page.mysekaiInteractions.${missing ? "contentMissing" : "loading"}`)}</p>
-                            {missing && <button className="interaction-button" onClick={back}>{t("page.mysekaiWorkspace.backToResults")}</button>}</div>}
-            </aside>}
+
+            {/* Collapsed mini transport floating bottom */}
+            {session && !stageExpanded && (
+                <div className="workspace-mini-transport">
+                    <button onClick={() => showStage(true)}>
+                        <span className={`interaction-phase interaction-phase-${phase}`}>
+                            {t(`page.mysekaiInteractions.phase.${phase}`)}
+                        </span>
+                        <strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong>
+                        <span>{t("page.mysekaiWorkspace.openScene")} ↑</span>
+                    </button>
+                    {live?.status.canStop && (
+                        <button
+                            className="interaction-text-button"
+                            disabled={closing}
+                            onClick={() => player.current?.stop()}
+                        >
+                            {t(`page.mysekaiInteractions.${phase === "completed" ? "returnScene" : "stop"}`)}
+                        </button>
+                    )}
+                </div>
+            )}
         </div>
-        {session && !stageExpanded && <div className="workspace-mini-transport"><button onClick={() => showStage(true)}><span className={`interaction-phase interaction-phase-${phase}`}>{t(`page.mysekaiInteractions.phase.${phase}`)}</span>
-            <strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong><span>{t("page.mysekaiWorkspace.openScene")} ↑</span></button>
-            {live?.status.canStop && <button className="interaction-text-button" disabled={closing} onClick={() => player.current?.stop()}>{t(`page.mysekaiInteractions.${phase === "completed" ? "returnScene" : "stop"}`)}</button>}</div>}
-    </div>;
+    );
 }
 
 export default function InteractionsClient({ defaultTab = "conversations" }: { defaultTab?: MolyTab }) {
-    return <MainLayout><Suspense><WorkspaceContent defaultTab={defaultTab} /></Suspense></MainLayout>;
+    return (
+        <MainLayout>
+            <Suspense>
+                <WorkspaceContent defaultTab={defaultTab} />
+            </Suspense>
+        </MainLayout>
+    );
 }

@@ -63,7 +63,6 @@ export default function ResourceCachePanel({ playerOpen, reloadHref = "/mysekai/
                 <div className="interaction-resource-cache-grid">
                     <div className="interaction-resource-cache-card">
                         <h2>{t("page.mysekaiInteractions.cache.diskTitle")}</h2>
-                        <p>{t("page.mysekaiInteractions.cache.diskHint")}</p>
                         {state ? <>
                             <p className="interaction-resource-cache-total" data-moly-cache-bytes={state.bytes} data-moly-cache-entries={state.entries}>{t("page.mysekaiInteractions.cache.storageUsage", { size: mib(state.bytes), bytes: integer.format(state.bytes), entries: integer.format(state.entries) })}</p>
                             <p>{t(`page.mysekaiInteractions.cache.${state.enabled ? "retentionEnabled" : "retentionDisabled"}`)}</p>
@@ -93,7 +92,6 @@ export default function ResourceCachePanel({ playerOpen, reloadHref = "/mysekai/
                     <p>{t("page.mysekaiInteractions.cache.clearHint")}</p>
                     <div className="interaction-resource-cache-actions"><button className="interaction-button interaction-button-danger" disabled={playerOpen || Boolean(busy)} onClick={() => void run("clear")}>{t("common.action.confirm")}</button><button className="interaction-button" disabled={Boolean(busy)} onClick={() => setConfirmClear(false)}>{t("common.action.cancel")}</button></div>
                 </div>}
-                <p>{t("page.mysekaiInteractions.cache.clearHint")}</p>
                 <div aria-live="polite" aria-atomic="true" className="interaction-resource-cache-status">
                     {busy ? <p role="status">{t(`page.mysekaiInteractions.cache.${busy === "clear" ? "clearing" : "refreshing"}`)}</p>
                         : notice && <p role={notice === "failed" ? "alert" : "status"}>{t(`page.mysekaiInteractions.cache.${notice}`)}</p>}

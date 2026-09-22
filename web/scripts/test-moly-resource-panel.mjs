@@ -72,9 +72,8 @@ await render({ playerOpen: true });
 assert.equal(button(prefix + "clear").disabled, true, "live player blocks destructive action");
 await React.act(async () => { root.unmount(); });
 
-const client = await readFile(new URL("../src/app/mysekai/interactions/client.tsx", import.meta.url), "utf8");
-assert.match(client, /className="interaction-button workspace-resource-link"/);
-assert.ok(client.indexOf("workspace-resource-link") < client.indexOf('<details className="workspace-source-menu"'), "management entry is outside collapsed source menu");
+const modal = await readFile(new URL("../src/components/mysekai-interactions/InteractionsSettingsModal.tsx", import.meta.url), "utf8");
+assert.match(modal, /\/mysekai\/interactions\/resources\//, "management entry is accessible in settings modal");
 const runtime = await readFile(new URL("../src/components/mysekai-interactions/RuntimeStage.tsx", import.meta.url), "utf8");
 assert.match(runtime, /mount\.current\?\.close\(\)/, "navigation retains close-before-leave ownership");
 console.log("Moly resource panel: legacy budget, quota, explicit entry, confirmation/cancel/retry/clear, and live-player guard passed.");

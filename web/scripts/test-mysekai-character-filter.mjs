@@ -26,8 +26,10 @@ const catalog = { entries: [entry(1, [1]), entry(2, [2]), entry(3, [1, 2]), entr
 const keys = characters => Array.from(filterCatalog(catalog, { ...INITIAL_BROWSE, characters }), row => row.key);
 assert.deepEqual(keys([]), ['talk:fixture:1', 'talk:fixture:2', 'talk:fixture:3', 'talk:fixture:4']);
 assert.deepEqual(keys([1]), ['talk:fixture:1', 'talk:fixture:3', 'talk:fixture:4']);
-assert.deepEqual(keys([1, 2]), ['talk:fixture:3', 'talk:fixture:4']);
+assert.deepEqual(keys([1, 2]), ['talk:fixture:1', 'talk:fixture:2', 'talk:fixture:3', 'talk:fixture:4']);
 assert.deepEqual(keys([2, 1]), keys([1, 2]));
-assert.deepEqual(keys([1, 2, 3]), ['talk:fixture:4']);
-assert.deepEqual(keys([1, 99]), []);
-console.log('Conversation multi-select requires every selected participant; clear restores all results.');
+assert.deepEqual(keys([1, 2, 3]), ['talk:fixture:1', 'talk:fixture:2', 'talk:fixture:3', 'talk:fixture:4']);
+assert.deepEqual(keys([3]), ['talk:fixture:4']);
+assert.deepEqual(keys([1, 99]), ['talk:fixture:1', 'talk:fixture:3', 'talk:fixture:4']);
+assert.deepEqual(keys([99]), []);
+console.log('Conversation multi-select uses union of selected participants; clear restores all results.');
