@@ -297,7 +297,7 @@ export default function MusicDetailPage() {
                 try {
                     const bpmMap = await fetchMusicBpmMap();
                     const entry = getMusicBpm(musicId, bpmMap);
-                    if (entry) {
+                    if (entry && entry.bpm != null) {
                         setBpmEntry(entry);
                         // Only offer the expandable list when the song actually has BPM changes
                         setBpmListOpen(false);
@@ -570,12 +570,12 @@ export default function MusicDetailPage() {
                                     />
                                 )}
                                 {/* BPM */}
-                                {bpmEntry && (
+                                {bpmEntry && bpmEntry.bpm != null && (
                                     <>
                                         <InfoRow
                                             label={t("page.music.fields.bpm")}
                                             value={
-                                                bpmEntry.bpm_segments.length > 1 ? (
+                                                (bpmEntry.bpm_segments?.length ?? 0) > 1 ? (
                                                     <button
                                                         type="button"
                                                         onClick={() => setBpmListOpen(v => !v)}
@@ -596,10 +596,10 @@ export default function MusicDetailPage() {
                                                 )
                                             }
                                         />
-                                        {bpmListOpen && bpmEntry.bpm_segments.length > 1 && (
+                                        {bpmListOpen && (bpmEntry.bpm_segments?.length ?? 0) > 1 && (
                                             <div className="px-5 py-3 border-t border-slate-100">
                                                 <div className="bg-slate-50 rounded-xl px-3 py-1 max-h-56 overflow-y-auto custom-scrollbar">
-                                                    {bpmEntry.bpm_segments.map((segment, index) => (
+                                                    {bpmEntry.bpm_segments?.map((segment, index) => (
                                                         <div
                                                             key={index}
                                                             className="flex items-center justify-between py-1.5 text-xs border-b border-slate-100 last:border-0"
@@ -735,7 +735,7 @@ export default function MusicDetailPage() {
                                             className="text-[10px] font-bold uppercase"
                                             style={{ color: DIFFICULTY_COLORS[diff.musicDifficulty] }}
                                         >
-                                            {DIFFICULTY_NAMES[diff.musicDifficulty].slice(0, 3)}
+                                            {DIFFICULTY_NAMES[diff.musicDifficulty]?.slice(0, 3) ?? diff.musicDifficulty}
                                         </span>
                                         <span
                                             className="text-lg font-black"

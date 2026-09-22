@@ -168,6 +168,11 @@ export async function fetchMasterData<T>(
     server?: ServerSourceType
 ): Promise<T> {
     const activeServer = server || getCurrentServer();
+    // musicCategories.json is only present on JP server; other servers store categories inline in musics.json.
+    // Short-circuit to avoid unnecessary requests that 404 and trigger browser CORS warnings.
+    if ((path === "musicCategories.json" || path.endsWith("/musicCategories.json")) && activeServer !== "jp") {
+        return [] as unknown as T;
+    }
     const isCustomServer = Boolean(server && server !== getCurrentServer());
     // Auto-detect if we need to bypass cache (after version sync refresh)
     const shouldNoCache = noCache || shouldBypassCache();
@@ -338,6 +343,11 @@ export const MASTERDATA_VERSION_KEY = "masterdata-version";
  * independent of the global version, so the version-keyed cache would be incorrect.
  */
 export async function fetchMasterDataForServer<T>(server: "cn" | "jp" | "tw" | "kr" | "en", path: string): Promise<T> {
+    // musicCategories.json is only present on JP server; other servers store categories inline in musics.json.
+    if ((path === "musicCategories.json" || path.endsWith("/musicCategories.json")) && server !== "jp") {
+        return [] as unknown as T;
+    }
+
     // Add version param to avoid stale browser/CDN cache
     const localVersion = getLocalVersion();
     const query = localVersion ? `?v=${encodeURIComponent(localVersion)}` : "";
