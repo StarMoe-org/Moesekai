@@ -26,12 +26,13 @@ export interface MusicBpmEntry {
     music_id: number;
     title: string;
     source: string;
+    prefix?: string;
     /** Main / representative BPM */
-    bpm: number;
+    bpm?: number;
     /** All BPM values appearing in the song (may contain duplicates) */
-    bpms: number[];
-    bpm_count: number;
-    bpm_segments: MusicBpmSegment[];
+    bpms?: number[];
+    bpm_count?: number;
+    bpm_segments?: MusicBpmSegment[];
 }
 
 /**
@@ -88,13 +89,18 @@ export async function fetchMusicBpmMap(): Promise<Map<number, MusicBpmEntry>> {
  * Returns null if not found
  */
 export function getMusicBpm(musicId: number, bpmMap: Map<number, MusicBpmEntry>): MusicBpmEntry | null {
-    return bpmMap.get(musicId) ?? null;
+    const entry = bpmMap.get(musicId);
+    if (!entry || entry.bpm == null || !Number.isFinite(entry.bpm)) {
+        return null;
+    }
+    return entry;
 }
 
 /**
  * Format a BPM value for display (integers without decimals, floats with 1 decimal)
  */
-export function formatBpmValue(bpm: number): string {
+export function formatBpmValue(bpm?: number | null): string {
+    if (bpm == null || !Number.isFinite(bpm)) return "";
     return Number.isInteger(bpm) ? String(bpm) : bpm.toFixed(1);
 }
 
@@ -102,7 +108,8 @@ export function formatBpmValue(bpm: number): string {
  * Format a bar number (start_bar / end_bar) for display.
  * Integers are shown as-is; floats are trimmed to at most 2 decimals.
  */
-export function formatBarValue(bar: number): string {
+export function formatBarValue(bar?: number | null): string {
+    if (bar == null || !Number.isFinite(bar)) return "";
     if (Number.isInteger(bar)) return String(bar);
     return bar.toFixed(2).replace(/\.?0+$/, "");
 }
