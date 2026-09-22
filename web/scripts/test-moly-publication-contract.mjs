@@ -38,6 +38,7 @@ const manifest = () => ({
 });
 const originalFetch = globalThis.fetch;
 const originalOrigin = process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
+const originalBase = process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
 const requests = [];
 let replies = [];
 globalThis.fetch = async (url, options) => {
@@ -49,11 +50,13 @@ globalThis.fetch = async (url, options) => {
 async function serve(value, run) { requests.length = 0; replies = [{ body: value }]; return await run(); }
 
 try {
+    delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
     process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = "https://resources.example.test";
     const parsed = await serve(manifest(), () => fetchRuntimeManifest());
     assert.equal(parsed.release.module, "/moly/releases/stage-new/embed.mjs", "SDK remains same-origin");
     assert.equal(parsed.release.stage, "/moly/releases/stage-new/stage.html", "iframe remains same-origin");
     assert.equal(parsed.release.resourceOrigin, "https://resources.example.test");
+    assert.equal(parsed.release.resourceBase, undefined);
     assert.equal(parsed.snapshots[1].assets, "https://resources.example.test/moly/snapshots/jp-6.0.0-example/assets/");
     assert.equal(parsed.snapshots[1].region, "jp");
     assert.equal(parsed.snapshots[1].version, "6.0.0");
@@ -87,6 +90,24 @@ try {
     assert.equal(packedParsed.snapshots[0].assets, "https://resources.example.test/moly/asset-store/");
     assert.equal(packedParsed.snapshots[0].assetCatalog, "c".repeat(64));
     assert.equal(packedParsed.snapshots[0].releaseModule, packedParsed.release.module);
+
+    delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
+    process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE = "https://assets.pjsk.moe/sekai-extra-assets/";
+    const formal = await serve(manifest(), () => fetchRuntimeManifest());
+    assert.equal(formal.release.resourceOrigin, "https://assets.pjsk.moe");
+    assert.equal(formal.release.resourceBase, "https://assets.pjsk.moe/sekai-extra-assets/");
+    assert.equal(formal.snapshots[0].assets, "https://assets.pjsk.moe/sekai-extra-assets/snapshots/cn-6.0.0-example/assets/");
+    assert.equal(formal.snapshots[0].catalog, "https://assets.pjsk.moe/sekai-extra-assets/snapshots/cn-6.0.0-example/catalog/index.json");
+    assert.equal(await readFile(new URL("../src/components/mysekai-interactions/RuntimeStage.tsx", import.meta.url), "utf8").then(source => source.includes("resourceBase: request.release.resourceBase")), true);
+    const nextConfigURL = await moduleURL("../next.config.ts", {
+        "./src/lib/moly/resourceOrigin": resourceOrigin,
+    });
+    const nextConfig = (await import(nextConfigURL)).default;
+    const routes = await nextConfig.rewrites();
+    assert.equal(routes.afterFiles.find(route => route.source === "/moly/:path*")?.destination,
+        "https://assets.pjsk.moe/sekai-extra-assets/:path*");
+    delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
+    process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = "https://resources.example.test";
 
     for (const mutate of [
         value => { value.release.module = "https://elsewhere.test/embed.mjs"; },
@@ -124,4 +145,6 @@ try {
     globalThis.fetch = originalFetch;
     if (originalOrigin === undefined) delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
     else process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = originalOrigin;
+    if (originalBase === undefined) delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
+    else process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE = originalBase;
 }

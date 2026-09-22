@@ -1,5 +1,5 @@
 import { mysekaiDatabaseHref } from "../mysekai-source";
-import { molyResourceOrigin, molyResourceUrl } from "./resourceOrigin";
+import { molyResourceBase, molyResourceOrigin, molyResourceUrl } from "./resourceOrigin";
 import type { MolyEntry, MolyKey, MolyRegion, MolyTab, MolyCharacter } from "./contract";
 
 export const MOLY_CONTRACT_VERSION = 2;
@@ -9,6 +9,7 @@ export interface MolyRelease {
     stage: string;
     contractVersion: 2;
     resourceOrigin?: string;
+    resourceBase?: string;
     engines: Record<"webgpu" | "webgl2", { downloadBytes: number; decodedBytes: number; brotliBytes?: number; gzipBytes?: number }>;
 }
 export interface ResourceSnapshot {
@@ -98,6 +99,7 @@ export async function fetchRuntimeManifest(signal?: AbortSignal, pin?: { snapsho
     // Validate logical publication identities before applying the host's exact,
     // trusted resource origin. The SDK and iframe remain on the site origin.
     value.release.resourceOrigin = molyResourceOrigin() || undefined;
+    value.release.resourceBase = molyResourceBase() || undefined;
     for (const snapshot of value.snapshots) {
         snapshot.assets = molyResourceUrl(snapshot.assets);
         snapshot.catalog = molyResourceUrl(snapshot.catalog);

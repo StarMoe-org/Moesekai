@@ -90,7 +90,7 @@ AGPL-3.0
 ### 前端配置 (Next.js Web - standalone 部署)
 
 - **NEXT_PUBLIC_API_URL**: 关联活动/卡池等 API 的后端基准地址；使用当前 standalone + 内置反向代理部署时通常无需配置，前后端分离部署时可设为例如 `https://api.pjsk.moe`。
-- **NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN**: 烤森对话的可选资源 CDN origin，例如 `https://assets.example.com`；只接受不含路径、凭据、query 或 fragment 的 HTTPS origin，留空时使用同源资源。Next.js 在构建时写入客户端代码：Docker 用 `--build-arg NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN="$NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN"`，直接 Next 构建在构建前设置，开发 compose 从根目录 `.env` 透传。运行已有生产镜像时设置 `docker run -e` 不会改变它。`/moly/` 是固定协议路由，OSS 存储前缀由 CDN/ESA 映射；manifest、SDK、iframe shell 和 cache worker 继续同源。完整部署要求见 [Moly 接入文档](docs/moly-integration.md)。
+- **NEXT_PUBLIC_MOLY_RESOURCE_BASE**: Moly 公开资源目录，正式 S3 使用 `https://assets.pjsk.moe/sekai-extra-assets/`。Next.js 构建时写入客户端代码：Docker 用 `--build-arg NEXT_PUBLIC_MOLY_RESOURCE_BASE="$NEXT_PUBLIC_MOLY_RESOURCE_BASE"`，开发 compose 从根目录 `.env` 透传；仅在运行已有镜像时设置环境变量不会生效。`/moly/` 仍是同源控制路由，代理会把它映射到 BASE 下的逻辑路径。旧的 **NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN** 仅供已经把 `/moly/` 映射好的 CDN 使用。完整部署要求见 [Moly 接入文档](docs/moly-integration.md)。
 - **NEXT_PUBLIC_LYRICS_BASE_URL**: 可选覆盖。未设置时，页面、sitemap 与生产镜像都使用编码里的已发布歌词目录 `https://translation.exmeaning.com/files/translation/lyrics`（与 `Dockerfile` ARG 默认值相同）。生产运行与构建只接受不含凭据、query 或 fragment 的 HTTPS URL；开发环境还允许显式配置本机回环 HTTP URL。页面与 sitemap 都从该目录读取同一份 `index.json`，避免发布视图分叉。显式配置无效时会直接失败，不会改去其他源。CI 和明确隔离的非生产环境可通过 `--build-arg NEXT_PUBLIC_LYRICS_BASE_URL="$NEXT_PUBLIC_LYRICS_BASE_URL"` 覆盖，`docker-compose.dev.yml` 继续只透传开发变量。Required PR CI 使用仅在 job 生命周期内存在的一首 strict Public Lyrics v3 Full-only synthetic HTTPS index/detail fixture 验证生产 Docker/Next build contract，临时 CA 通过 BuildKit secret 只挂载到构建步骤且不会进入镜像；这不证明真实生产源可达。不要把令牌或个人配置提交到仓库。
 
 ## Docker 部署

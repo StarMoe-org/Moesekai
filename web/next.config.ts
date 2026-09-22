@@ -1,21 +1,23 @@
 import type { NextConfig } from "next";
 import os from "node:os";
-import { molyResourceOrigin } from "./src/lib/moly/resourceOrigin";
+import { molyResourceBase, molyResourceOrigin } from "./src/lib/moly/resourceOrigin";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
-// Moly publishes its control surface and its immutable resources to one
-// configured origin. The runtime document has to stay same-origin with the
+// Moly publishes its control surface and its immutable resources below one
+// configured directory. The runtime document has to stay same-origin with the
 // page that hands it the audio activation gesture, so the small shell is
 // proxied from here; the engine, catalogue and scene assets are fetched
-// straight from that origin by the runtime itself and never pass through.
+// straight from that directory by the runtime itself and never pass through.
 // The proxy destination and the URLs the client builds must come from the
 // same validator, or the two would disagree about what is same-origin.
-const molyProxyOrigin = (() => {
+const molyProxyBase = (() => {
   try {
-    return molyResourceOrigin();
+    const base = molyResourceBase();
+    const origin = molyResourceOrigin();
+    return base || (origin ? `${origin}/moly/` : "");
   } catch {
-    throw new Error("NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN must be a bare https origin");
+    throw new Error("Moly resource base/origin configuration is invalid");
   }
 })();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
@@ -92,11 +94,11 @@ const nextConfig: NextConfig = {
           source: "/api/:path*",
           destination: `${internalApiBase}/api/:path*`,
         },
-        ...(molyProxyOrigin
+        ...(molyProxyBase
           ? [
               {
                 source: "/moly/:path*",
-                destination: `${molyProxyOrigin}/moly/:path*`,
+                destination: `${molyProxyBase}:path*`,
               },
             ]
           : []),

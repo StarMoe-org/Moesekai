@@ -18,36 +18,36 @@ React 管理检索、详情、选择、URL 与宿主 UI。iframe 内的原 Rust 
 
 ## 资源与部署
 
-应用镜像不包含游戏资源与运行时产物。部署只有一个配置项：`NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN`，指向发布运行时产物的 HTTPS origin，例如 `https://assets.example.com`。留空时网站其余部分照常运行，互动入口显示资源未部署。
+应用镜像不包含游戏资源与运行时产物。正式 S3 部署使用 `NEXT_PUBLIC_MOLY_RESOURCE_BASE=https://assets.pjsk.moe/sekai-extra-assets/`。这是完整的公开目录，必须包含 bucket 路径并以 `/` 结尾。留空时网站其余部分照常运行，互动入口显示资源未部署。旧的 `NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN` 只用于已经把 `/moly/` 映射到存储目录的 CDN；两项同时设置时 origin 必须相同。
 
-`/moly/` 是宿主、SDK、runtime 与缓存 worker 约定的固定协议路由，不是存储目录的配置入口。存储前缀在 CDN 中映射：公开请求 `/moly/snapshots/<id>/assets/...` 可回源到 `<自选前缀>/snapshots/<id>/assets/...`，不把 bucket、账号或真实部署域名写进源码。
+`/moly/` 是宿主、SDK、runtime 与缓存 worker 约定的同源控制路由。配置 BASE 后，浏览器把逻辑 `/moly/snapshots/<id>/assets/...` 请求映射到 `BASE/snapshots/<id>/assets/...`；Next 也把同源的 manifest、SDK、stage 和 cache worker 代理到同一个 BASE。无需在 CDN 另设 `/moly/` 路径映射。
 
-iframe 必须与宿主页面同源，宿主才能在用户点击时同步转交音频激活手势；缓存 worker 的 scope 同样限定在同源 `/moly/`。因此配置资源 origin 后，Next 只把这一小块同源控制面反向代理过去，其余字节浏览器直连：
+iframe 必须与宿主页面同源，宿主才能在用户点击时同步转交音频激活手势；缓存 worker 的 scope 同样限定在同源 `/moly/`。因此配置资源 BASE 后，Next 只把这一小块同源控制面反向代理过去，其余字节浏览器直连：
 
 | 请求 | 提供方 |
 | --- | --- |
-| `/moly/manifest.json`、release 的 embed SDK 与 stage shell、`/moly/cache-worker.mjs` | Next 反向代理到资源 origin（约 0.15 MB，35 个文件） |
-| 引擎 JS 胶水与 WASM（`releases/<id>/pkg/`） | 浏览器直连资源 origin |
-| 目录索引、详情、头像、家具图片、场景模型、贴图、音频 | 浏览器直连资源 origin |
+| `/moly/manifest.json`、release 的 embed SDK 与 stage shell、`/moly/cache-worker.mjs` | Next 反向代理到资源 BASE |
+| 引擎 JS 胶水与 WASM（`releases/<id>/pkg/`） | 浏览器直连资源 BASE |
+| 目录索引、详情、头像、家具图片、场景模型、贴图、音频 | 浏览器直连资源 BASE |
 
-宿主把校验过的资源 origin 交给 stage，runtime 据此解析引擎与资源地址，大体积字节不经过应用服务器。未配置资源 origin 时不建立该代理，`/moly/` 没有提供方。
+宿主把校验过的资源 BASE 与其 origin 交给 stage，runtime 据此解析引擎与资源地址，大体积字节不经过应用服务器。两项资源配置都留空时不建立该代理，`/moly/` 没有提供方。
 
-资源 origin 下保存完整的版本化 release 与 snapshot（目录、详情、图片与全部被引用的场景资源），或 content-addressed asset-store；`manifest.json` 是当前发布的发现入口。已发布 ID 下的字节不可覆盖。
+资源 BASE 下保存完整的版本化 release 与 snapshot（目录、详情、图片与全部被引用的场景资源），或 content-addressed asset-store；`manifest.json` 是当前发布的发现入口。已发布 ID 下的字节不可覆盖。
 
 构建与运行示意（替换成部署配置）：
 
 ```sh
-export NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN=https://assets.example.com
+export NEXT_PUBLIC_MOLY_RESOURCE_BASE=https://assets.pjsk.moe/sekai-extra-assets/
 docker build \
-  --build-arg NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN="$NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN" \
+  --build-arg NEXT_PUBLIC_MOLY_RESOURCE_BASE="$NEXT_PUBLIC_MOLY_RESOURCE_BASE" \
   -t moesekai:local .
 
 docker run --rm -p 8080:8080 moesekai:local
 ```
 
-`NEXT_PUBLIC_*` 由 Next.js 在构建时内联，改变域名需要重建前端/镜像；只在 `docker run -e` 添加该变量不会更新已有客户端。直接构建 Next 时在 `bun run --cwd web build:next` 之前设置同名变量。开发 compose 会读取根目录 `.env`（参见 `.env.example`）；直接 Next 开发可用 `web/.env.local`。仓库当前没有应用镜像构建 workflow，外部 CI 必须将同名变量显式传给 Docker `build-args`，不能仅给部署容器设置环境变量。
+`NEXT_PUBLIC_*` 由 Next.js 在构建时内联，改变公开目录需要重建前端/镜像；只在 `docker run -e` 添加该变量不会更新已有客户端。直接构建 Next 时在 `bun run --cwd web build:next` 之前设置同名变量。开发 compose 会读取根目录 `.env`（参见 `.env.example`）；直接 Next 开发可用 `web/.env.local`。仓库当前没有应用镜像构建 workflow，外部 CI 必须将 BASE 显式传给 Docker `build-args`，不能仅给部署容器设置环境变量。
 
-资源 origin 只接受不带路径、查询、片段与凭据的 HTTPS origin，`http://` 与 `https://host/path` 在读取 `next.config.ts` 时即报错、服务不会启动。本地要联调 `/moly/` 时指向一个可用的 HTTPS 发布地址；用自签证书的本地服务需要额外给 Next 进程设置 `NODE_EXTRA_CA_CERTS`，否则代理握手失败并返回 500。
+资源 BASE 只接受规范的 HTTPS 目录，不接受凭据、查询、片段或编码分隔符，且必须以 `/` 结尾；无效值在读取 `next.config.ts` 时即报错。本地要联调 `/moly/` 时指向一个可用的 HTTPS 发布地址；用自签证书的本地服务需要额外给 Next 进程设置 `NODE_EXTRA_CA_CERTS`，否则代理握手失败并返回 500。
 
 CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES module 方式跨域加载，需要 CORS 响应头——并支持 packed 模式所需的 OPTIONS / `X-Moly-Required`，暴露 `Content-Encoding`、`ETag`、`Content-Length` 和 `X-Moly-Decoded-Bytes` 或 `x-oss-meta-moly-decoded-bytes`。压缩体使用原始逻辑 URL，同时设置正确的 `Content-Type` / `Content-Encoding`；按 `Accept-Encoding` 协商表示由 CDN 负责。版本化资源使用长缓存与 `immutable`，`manifest.json` 不可长缓存。真实响应与二次命中需在上线前验证。配置私有存储回源时保持 bucket 私有，CDN 仅发布此功能的资源前缀。
 
@@ -57,7 +57,7 @@ CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES modul
 
 发布分三类，互不耦合：页面、样式与文案走网站现有发布流程；引擎更新发布完整的 `releases/<新 ID>/`（JS 胶水、WASM、压缩副本与完整性文件属于同一次构建）；资源、对白或目录投影变化发布新的 `snapshots/<新 ID>/`。
 
-切换版本的顺序是：先把新的 release、snapshot 及其引用资源放到资源 origin 并校验内容、MIME、压缩表示与缓存头，最后原子替换该 origin 上的 `manifest.json`。宿主读取清单时不使用缓存，引擎更新无需重建镜像或重启；资源 origin 变化必须重建前端。
+切换版本的顺序是：先把新的 release、snapshot 及其引用资源放到资源 BASE 并校验内容、MIME、压缩表示与缓存头，最后原子替换 BASE 下的 `manifest.json`。宿主读取清单时不使用缓存，引擎更新无需重建镜像或重启；资源 BASE 变化必须重建前端。
 
 已发布 ID 下的字节不可覆盖：资源变化应生成新快照，而不是覆盖原 ID 下的文件。新打开或刷新的页面读取新 release，正在播放的页面继续持有原版本。遇到回归时恢复上一份 manifest 并保留其引用文件；旧目录在确认无人依赖前不清理——固定链接依赖历史快照描述符仍然存在。
 
@@ -67,7 +67,7 @@ CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES modul
 
 ## 缓存与数据隔离
 
-缓存 worker 以同源 `/moly/cache-worker.mjs` 注册，脚本路径本身决定 `/moly/` 作用域。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 origin 读取不可变 release/snapshot 与 asset-store 请求；CDN 资源保留真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留，并持久缓存 release 与 `browser-base.json` 声明的基础资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。按需演出的语音、模型等资源只在 worker 内存中复用，最多 64 MiB、单项最多 32 MiB，worker 结束后不保留。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入浏览器长期缓存。旧版 worker 留下的非基础资源在新版激活时清理。存储被浏览器拒绝时仍允许在线播放。
+缓存 worker 以同源 `/moly/cache-worker.mjs` 注册，脚本路径本身决定 `/moly/` 作用域。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 BASE 读取不可变 release/snapshot 与 asset-store 请求；CDN 资源保留真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留。必要基础资源与按需演出的不可变模型、语音共用 512 MiB 硬盘预算，单项最多 128 MiB，写入队列按数量和字节限制；非活动资源按最近使用情况驱逐。worker 不保留已完成响应的内存副本。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入资源缓存。存储被浏览器拒绝时仍允许在线播放。
 
 宿主先显式完成 worker 更新检查，再等待最新 installing/waiting worker 完成 activation 后才发送保留命令；同时存在的旧 active worker 不代表新版本已完成迁移。宿主缓存注册对象而非某代 worker，后续命令仍会检查更新。升级失败或超时可重试，消息通道在同步发送失败时也会关闭。
 
@@ -77,7 +77,7 @@ CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES modul
 
 互动页、资源页、返回及重新加载链接保留 `region` 和 `snapshot`，因此中文界面浏览 JP 后不会在重新加载时隐式换成 CN。过期快照依旧显示来源失效，交由用户显式切换到当前快照。
 
-离线保证只针对已完整准备且未被驱逐的基础包；按需演出资源只保证当前 worker 存活期间的尽力复用，不能承诺跨访问离线播放。离线验收应使用新浏览器 profile，等待缓存完成后断网逐项 fetch 必要资源；随后联网去资源管理页清理至零字节、重新加载并复测。浏览器仍可能回收站点存储。
+离线保证只针对已完整准备且未被驱逐的基础包；按需演出资源只有在已成功写入且尚未驱逐时才能离线复用。离线验收应使用新浏览器 profile，等待缓存完成后断网逐项 fetch 必要资源；随后联网去资源管理页清理至零字节、重新加载并复测。浏览器仍可能回收站点存储。
 
 ## 验证
 
