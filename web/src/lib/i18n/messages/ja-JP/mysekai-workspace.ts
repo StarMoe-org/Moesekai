@@ -22,7 +22,7 @@ export const mysekaiWorkspaceMessages = {
     "inspectScene": "シーンで見る",
     "playScene": "演出を再生",
     "readingAvailable": "この家具は現在のシーンでは未対応です。家具の情報は閲覧できます。",
-    "explicitDownload": "演出データは必要に応じて読み込み、この閲覧中にのみ再利用します。",
+    "explicitDownload": "演出データは必要に応じて読み込み、容量上限付きのディスクキャッシュを再利用します。リソース管理で削除できます。",
     "participants": "登場キャラクター",
     "seeAll": "すべて見る",
     "noRecipe": "このサーバーの資料に制作レシピはありません。",

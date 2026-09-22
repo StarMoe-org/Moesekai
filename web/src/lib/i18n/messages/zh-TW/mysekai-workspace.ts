@@ -22,7 +22,7 @@ export const mysekaiWorkspaceMessages = {
     "inspectScene": "在場景中查看",
     "playScene": "播放演出",
     "readingAvailable": "目前場景暫不支援這件家具，仍可查看家具資料。",
-    "explicitDownload": "演出資源按需下載，僅在本次瀏覽期間重複使用。",
+    "explicitDownload": "演出資源按需載入，在磁碟快取空間上限內重複使用；可在資源管理中清理。",
     "participants": "參與角色",
     "seeAll": "查看全部",
     "noRecipe": "該區服資料中暫無製作配方。",

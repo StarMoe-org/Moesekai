@@ -266,9 +266,10 @@ test("2D chart SVG normalization rewrites relative note asset paths and fixes ne
   const routeSource = readWeb("src/app/chart-svg/[musicId]/[difficulty]/route.ts");
   assert.match(routeSource, /export async function GET/);
 
-  const match = routeSource.match(/export function normalizeChartSvg\((?:[\s\S]*?\n\})/);
-  assert.ok(match, "normalizeChartSvg should be exported");
-  const js = stripTypeScriptTypes(match[0].replace(/^export\s+/, ""), { mode: "transform" });
+  assert.doesNotMatch(routeSource, /export function normalizeChartSvg/, "Next route files may only export route handlers and supported configuration");
+  const match = routeSource.match(/function normalizeChartSvg\((?:[\s\S]*?\n\})/);
+  assert.ok(match, "normalizeChartSvg should remain a private route helper");
+  const js = stripTypeScriptTypes(match[0], { mode: "transform" });
   const normalizeChartSvg = new Function(
     "ABSOLUTE_NOTES_BASE",
     `${js}\nreturn normalizeChartSvg;`,
@@ -418,4 +419,3 @@ test("search inputs, CommandPalette, and FilterDrawer preserve IME composition a
   const modal = readWeb("src/components/common/Modal.tsx");
   assert.match(modal, /isKeyboardEventComposing\(e\)/, "Modal escape listener guards against IME composition cancellation");
 });
-

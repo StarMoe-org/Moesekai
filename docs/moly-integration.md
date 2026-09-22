@@ -69,6 +69,10 @@ CDN 必须允许公开资源 GET/HEAD 跨域读取——引擎胶水以 ES modul
 
 缓存 worker 以同源 `/moly/cache-worker.mjs` 注册，脚本路径本身决定 `/moly/` 作用域。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源 origin 读取不可变 release/snapshot 与 asset-store 请求；CDN 资源保留真实 CDN URL。互动入口在 iframe 开始请求前自动开启保留，并持久缓存 release 与 `browser-base.json` 声明的基础资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。按需演出的语音、模型等资源只在 worker 内存中复用，最多 64 MiB、单项最多 32 MiB，worker 结束后不保留。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入浏览器长期缓存。旧版 worker 留下的非基础资源在新版激活时清理。存储被浏览器拒绝时仍允许在线播放。
 
+宿主先显式完成 worker 更新检查，再等待最新 installing/waiting worker 完成 activation 后才发送保留命令；同时存在的旧 active worker 不代表新版本已完成迁移。宿主缓存注册对象而非某代 worker，后续命令仍会检查更新。升级失败或超时可重试，消息通道在同步发送失败时也会关闭。
+
+网页全屏和浏览器全屏均保留进入前的场景比例，在可用区域内等比居中；只改变展示尺寸，不重建 iframe 或重启音频。退出全屏恢复原布局与焦点。
+
 删除只位于 `/mysekai/interactions/resources/` 资源管理页；离开互动页时先让 runtime 恢复并关闭世界，再清理。清理只删除 `moly-resource-v1-*`，不删除站点设置、用户账户、已有布局或其他 CacheStorage。必要资源重新加载会重新填充对应快照的基础包。缓存统计为实际保留的解码字节，并非网络传输字节。
 
 互动页、资源页、返回及重新加载链接保留 `region` 和 `snapshot`，因此中文界面浏览 JP 后不会在重新加载时隐式换成 CN。过期快照依旧显示来源失效，交由用户显式切换到当前快照。
@@ -87,6 +91,9 @@ bun run lint
 bun run lint:i18n
 bun run lint:i18n-usage
 bun run test:moly-resource-origin
+bun run test:moly-resource-cache
+bun run test:moly-publication-contract
+bun run test:moly-stage-viewport
 bun run test:mysekai-workspace
 bun run test:mysekai-character-filter
 bun run test:mysekai-runtime-selection

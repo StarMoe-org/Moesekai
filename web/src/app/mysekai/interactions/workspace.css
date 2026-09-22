@@ -438,6 +438,17 @@
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-content-detail { max-width:640px;margin:0 auto;padding:0 23px 25px; }
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-fixture-detail { padding:0 23px 25px; }
 .mysekai-workspace[data-workspace-narrow="true"] .workspace-body>.workspace-stage:not(.interaction-immersive):not(:fullscreen) .interaction-stage-surface { min-height:240px;aspect-ratio:16/9;max-height:60dvh; }
+/* The normal stage's height cap can shrink its aspect-ratio box below the
+   full-width heading/tools. Share that spare width equally, not on the right. */
+.mysekai-workspace .workspace-stage:not(.interaction-immersive):not(:fullscreen) .interaction-stage-surface { max-width:100%;margin-inline:auto; }
+/* Fullscreen uses the viewport, not the sidebar/grid's former content box.
+   The surface owns the available space; the existing iframe is fitted into it
+   without stretching, reparenting or restarting its renderer/audio realm. */
+.mysekai-workspace .workspace-stage:is(.interaction-immersive,:fullscreen) { grid-column:auto;align-self:stretch;justify-self:stretch;box-sizing:border-box;min-width:0;width:100%;max-width:none;margin:0;transform:none; }
+.workspace-stage:is(.interaction-immersive,:fullscreen) .workspace-stage-body { display:flex;flex-direction:column;flex:1;min-width:0;min-height:0;width:100%; }
+.mysekai-workspace .workspace-stage:is(.interaction-immersive,:fullscreen) .interaction-stage-surface { flex:1;min-width:0;min-height:0;width:100%;max-height:none;aspect-ratio:auto;container-type:size; }
+.workspace-stage:is(.interaction-immersive,:fullscreen) .interaction-runtime { inset:0;margin:auto;width:min(100cqw,calc(100cqh * var(--moly-stage-aspect,1.777777778)));height:min(100cqh,calc(100cqw / var(--moly-stage-aspect,1.777777778)));max-width:100%;max-height:100%; }
+.workspace-stage:is(.interaction-immersive,:fullscreen) .interaction-runtime iframe { min-width:0!important;min-height:0!important; }
 @media(max-width:359px) {
  .mysekai-workspace { padding-inline:12px; }
  .workspace-stage-icon { display:none; }
