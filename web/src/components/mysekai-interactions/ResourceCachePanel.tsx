@@ -50,7 +50,7 @@ export default function ResourceCachePanel({ playerOpen, reloadHref = "/mysekai/
         } catch { setNotice("failed"); }
         finally { operation.current = false; setBusy(null); }
     };
-    const origin = manifest?.release.resourceOrigin ?? t("page.mysekaiInteractions.cache.sameOrigin");
+    const origin = manifest?.release.resourceBase ?? t("page.mysekaiInteractions.cache.sameOrigin");
     const snapshots = manifest?.snapshots.filter(item => (!region || item.region === region) && (!snapshotId || item.id === snapshotId)) ?? [];
     const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
     const integer = new Intl.NumberFormat(locale);

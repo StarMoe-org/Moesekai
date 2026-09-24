@@ -159,7 +159,7 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                 const current = state.current;
                 owned = sdk.mountMoly(host, {
                     view: "stage", src: request.release.stage, assets: request.snapshot.assets,
-                    resourceOrigin: request.release.resourceOrigin,
+                    resourceBase: request.release.resourceBase,
                     region: request.snapshot.region, version: request.snapshot.version, snapshot: request.snapshot.id,
                     packs: request.snapshot.packs, assetCatalog: request.snapshot.assetCatalog,
                     theme: { mode: current.resolvedColorScheme, accent: current.themeColor }, locale: current.locale,

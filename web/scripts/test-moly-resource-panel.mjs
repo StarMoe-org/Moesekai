@@ -13,7 +13,7 @@ Object.defineProperty(globalThis, "navigator", { configurable: true, value: { st
 const calls = [];
 let reply = { enabled: true, bytes: 1048576, entries: 2 };
 let clearFailure = false, finishClear;
-let manifest = { release: { resourceOrigin: "https://cdn.test" }, snapshots: [{ id: "cn-v1", region: "cn", version: "6.0.0" }] };
+let manifest = { release: { resourceBase: "https://cdn.test/bucket/" }, snapshots: [{ id: "cn-v1", region: "cn", version: "6.0.0" }] };
 const source = await readFile(new URL("../src/components/mysekai-interactions/ResourceCachePanel.tsx", import.meta.url), "utf8");
 const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
 const exports = {};
