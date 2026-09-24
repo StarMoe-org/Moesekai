@@ -12,9 +12,9 @@
     "derives": ["TranslationData categories", "all fetchMasterData types with rendered human-readable string fields", "story route families", "event group source fields", "lyrics artifact fields and publication/UI consumers"]
   },
   "summary": {
-    "entries": 47,
+    "entries": 48,
     "covered": 2,
-    "partial": 21,
+    "partial": 22,
     "requiredUncovered": 15,
     "officialRegional": 4,
     "excluded": 4,
@@ -184,6 +184,20 @@
       "fields": ["name"],
       "stableId": "gacha id plus name",
       "backendMapping": "gacha.name",
+      "zh": "partial",
+      "en": "locale path supported",
+      "status": "partial",
+      "exclusion": null
+    },
+    {
+      "id": "gacha-information",
+      "routes": ["/gacha/{id}"],
+      "components": ["gacha detail summary, bubble text and description"],
+      "sourceType": "masterdata-plus-locale-overlay",
+      "sourceFiles": ["gachas.json", "translation/gachaInfo.json", "translation/en-US/gachaInfo.json"],
+      "fields": ["gachaInformation.summary", "gachaInformation.bubbleText", "gachaInformation.description"],
+      "stableId": "exact multi-line Japanese text; backend pairs JP/CN by gacha id",
+      "backendMapping": "gachaInfo.summary / gachaInfo.bubbleText / gachaInfo.description; loaded lazily by the gacha detail page only, outside the startup set",
       "zh": "partial",
       "en": "locale path supported",
       "status": "partial",

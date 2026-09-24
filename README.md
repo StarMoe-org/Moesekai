@@ -91,6 +91,7 @@ AGPL-3.0
 
 - **NEXT_PUBLIC_API_URL**: 关联活动/卡池等 API 的后端基准地址；使用当前 standalone + 内置反向代理部署时通常无需配置，前后端分离部署时可设为例如 `https://api.pjsk.moe`。
 - **NEXT_PUBLIC_LYRICS_BASE_URL**: 可选覆盖。未设置时，页面、sitemap 与生产镜像都使用编码里的已发布歌词目录 `https://translation.exmeaning.com/files/translation/lyrics`（与 `Dockerfile` ARG 默认值相同）。生产运行与构建只接受不含凭据、query 或 fragment 的 HTTPS URL；开发环境还允许显式配置本机回环 HTTP URL。页面与 sitemap 都从该目录读取同一份 `index.json`，避免发布视图分叉。显式配置无效时会直接失败，不会改去其他源。CI 和明确隔离的非生产环境可通过 `--build-arg NEXT_PUBLIC_LYRICS_BASE_URL="$NEXT_PUBLIC_LYRICS_BASE_URL"` 覆盖，`docker-compose.dev.yml` 继续只透传开发变量。Required PR CI 使用仅在 job 生命周期内存在的一首 strict Public Lyrics v3 Full-only synthetic HTTPS index/detail fixture 验证生产 Docker/Next build contract，临时 CA 通过 BuildKit secret 只挂载到构建步骤且不会进入镜像；这不证明真实生产源可达。不要把令牌或个人配置提交到仓库。
+- **NEXT_PUBLIC_TRANSLATION_ORIGIN**: 可选覆盖翻译文件来源，只填 origin（例如本地开发时的 `http://localhost:8081`），不带 `/files/...`。未设置时使用 `https://translation.exmeaning.com`。影响全部翻译文件（启动时加载的分类译文、活动剧情、卡池简介与说明 `gachaInfo.json`）；启动集合缓存在 IndexedDB，切换来源后需要清除站点数据才能看到新来源的内容。
 
 ## Docker 部署
 
