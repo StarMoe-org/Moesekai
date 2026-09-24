@@ -73,7 +73,7 @@ export interface MountOptions {
   onPlayerData?(value: MolyPlayerDataState): void;
   view?:'shell'|'stage'; src:string; assets?:string; resourceBase?:string; region?:MolyRegion; version?:string; snapshot?:string;
   assetCatalog?:string; packs?:boolean;
-  locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; preload?:boolean; sound?:boolean;
+  locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; sound?:boolean;
   fixture?:number; tab?:MolyTab; content?:MolyKey; filters?:MolyFilters;
   onSnapshot?:(snapshot:MolySnapshot)=>void; onStatus?:(status:MolyStatus)=>void;
   onSelection?:(selection:{key:MolyKey|null; tab:MolyTab; region:MolyRegion; fixture:number|null})=>void;
