@@ -72,7 +72,7 @@ manifest 保留 `downloadBytes`、`decodedBytes`、`brotliBytes`、`gzipBytes`�
 
 ## 缓存与数据隔离
 
-缓存 worker 以同源 `/moly/cache-worker.mjs` 注册，脚本路径本身决定 `/moly/` 作用域。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源目录读取不可变 release/snapshot 与 asset-store 请求；这些请求保留资源目录下的真实 URL。互动入口在 iframe 开始请求前自动开启保留，并持久缓存 release 与 `browser-base.json` 声明的基础资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。按需演出的语音、模型等资源只在 worker 内存中复用，最多 64 MiB、单项最多 32 MiB，worker 结束后不保留。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入浏览器长期缓存。旧版 worker 留下的非基础资源在新版激活时清理。存储被浏览器拒绝时仍允许在线播放。
+缓存 worker 以同源 `/moly/cache-worker.mjs` 注册，脚本路径本身决定 `/moly/` 作用域。该作用域里脚本路径同为 `/moly/cache-worker.mjs` 的已有注册（包括早期版本把资源 origin 写进查询串的注册）属于同一功能的旧版，宿主以当前 URL 重新注册，由新版 worker 接管；作用域被其它脚本占用时不接管。worker 只控制同源 `/moly/` 下的 runtime 页面，并按配置的资源目录读取不可变 release/snapshot 与 asset-store 请求；这些请求保留资源目录下的真实 URL。互动入口在 iframe 开始请求前自动开启保留，并持久缓存 release 与 `browser-base.json` 声明的基础资源；预算为 512 MiB，单项最多 128 MiB，排队写入有上限。按需演出的语音、模型等不可变资源也写入同一份磁盘缓存；超出预算时按最近使用先淘汰，打开中的场景仍需要的基础资源不淘汰。对话详情 JSON 只在当前阅读页面内存中复用（最多 64 条），不进入浏览器长期缓存。新版 worker 激活时保留已有条目，只按同一预算收缩。存储被浏览器拒绝时仍允许在线播放。
 
 宿主先显式完成 worker 更新检查，再等待最新 installing/waiting worker 完成 activation 后才发送保留命令；同时存在的旧 active worker 不代表新版本已完成迁移。宿主缓存注册对象而非某代 worker，后续命令仍会检查更新。升级失败或超时可重试，消息通道在同步发送失败时也会关闭。
 

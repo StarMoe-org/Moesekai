@@ -39,16 +39,30 @@ function activatedWorker(registration: ServiceWorkerRegistration): Promise<Servi
     });
 }
 
+const WORKER_PATH = "/moly/cache-worker.mjs";
+const SCOPE_PATH = "/moly/";
+
+/** A worker served from this feature's script path is one of its generations, whatever
+ * query an earlier host sealed into the registration (the resource origin once was);
+ * any other script owns the scope and is never replaced. A registration's script is
+ * same-origin with its scope, so the path decides. */
+function isOwnWorker(worker: ServiceWorker | null | undefined): boolean {
+    return !worker || new URL(worker.scriptURL).pathname === WORKER_PATH;
+}
+
 /** Only this feature's narrow scope is registered; ordinary site pages are untouched. */
 export async function ensureResourceCache(): Promise<ServiceWorker> {
     if (!registrationPromise) registrationPromise = (async () => {
         if (!window.isSecureContext || !("serviceWorker" in navigator) || !("caches" in window)) throw new Error("Resource retention unavailable");
-        const script = new URL("/moly/cache-worker.mjs", location.origin).href;
-        const scope = new URL("/moly/", location.origin).href;
+        const script = new URL(WORKER_PATH, location.origin).href;
+        const scope = new URL(SCOPE_PATH, location.origin).href;
         const previous = await navigator.serviceWorker.getRegistration(scope);
-        const workers = [previous?.active, previous?.waiting, previous?.installing];
-        if (previous?.scope === scope && workers.some(worker => worker && worker.scriptURL !== script)) throw new Error("The runtime scope belongs to another worker");
-        return navigator.serviceWorker.register(script, { scope: "/moly/", type: "module", updateViaCache: "none" });
+        if (previous?.scope === scope && ![previous.active, previous.waiting, previous.installing].every(isOwnWorker))
+            throw new Error("The runtime scope belongs to another worker");
+        // Registering the canonical URL moves an older generation's registration onto it
+        // (the worker skips waiting and claims its clients); an unchanged URL resolves
+        // with the current registration.
+        return navigator.serviceWorker.register(script, { scope: SCOPE_PATH, type: "module", updateViaCache: "none" });
     })().catch(error => { registrationPromise = null; throw error; });
     try {
         // Cache registration, never a specific worker generation. A later call
