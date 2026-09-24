@@ -1931,6 +1931,8 @@ export const koKRMessages = {
             showLessDescription: "자세한 규칙 접기",
             showMoreSummary: "소개 전체 보기",
             showLessSummary: "소개 접기",
+            showOriginalText: "일본어 원문 보기",
+            showTranslatedText: "번역 보기",
             viewFullCardPool: "출현 멤버 전체 목록 보기 ({count})",
             states: {
                 notStarted: "시작되지 않음",

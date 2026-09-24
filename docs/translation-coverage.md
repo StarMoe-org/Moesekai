@@ -17,14 +17,14 @@ This inventory is generated as a human-readable companion to `docs/translation-c
 | Status | Count |
 | --- | ---: |
 | Covered | 2 |
-| Partial | 21 |
+| Partial | 22 |
 | Required but uncovered | 15 |
 | Official regional source | 4 |
 | Explicitly excluded | 4 |
 | Nontext | 1 |
-| Total | 47 |
+| Total | 48 |
 
-Because 15 required entries remain uncovered and 21 more are partial, this document makes no full-coverage claim.
+Because 15 required entries remain uncovered and 22 more are partial, this document makes no full-coverage claim.
 
 ## Inventory
 
@@ -42,6 +42,7 @@ Because 15 required entries remain uncovered and 21 more are partial, this docum
 | `mysekai-fixture-name` | MySekai and rewards | fixture masterdata + overlay; name, pronunciation | fixture ID + field / fixtureName | name partial | path supported | partial; pronunciation missing |
 | `mysekai-taxonomy-and-flavor` | MySekai and materials | fixture/taxonomy masterdata; flavor and names | entity ID + field / declared maps incompletely consumed | incomplete | incomplete | required-uncovered |
 | `gacha-name` | gacha views | gachas + overlay; name | gacha ID + field / gacha.name | partial | path supported | partial |
+| `gacha-information` | gacha detail | gachas + lazy overlay; gachaInformation summary, bubbleText, description | exact Japanese text (paired by gacha ID) / gachaInfo.* | partial | path supported | partial; loaded only on the detail page |
 | `sticker-name` | sticker, maker, rewards | stamps + overlay; name | stamp ID + field / sticker.name | partial | path supported | partial; reuse incomplete |
 | `comic-title` | comic | tips + old tips + overlay; title | tip ID + field / comic.title | partial | path supported | partial |
 | `character-profile-text` | character views | profiles + overlay; six profile fields plus school fields | character ID + field / six maps | partial | path supported | partial; school fields missing |
