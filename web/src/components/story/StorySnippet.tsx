@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import { IProcessedAction, SnippetAction } from "@/types/story";
+import { IProcessedAction, SnippetAction, type StoryTranslationSource } from "@/types/story";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -16,7 +16,7 @@ interface TalkSnippetProps {
     cnDisplayName?: string;
     translatedText?: string;
     translatedDisplayName?: string;
-    translationSource?: 'official_cn' | 'llm' | 'human';
+    translationSource?: StoryTranslationSource;
     unitName?: string; // Legacy unit name for virtual singers
     unitField?: string; // Unit field for virtual singers (e.g., 'light_sound', 'school_refusal')
     active?: boolean;

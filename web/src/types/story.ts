@@ -224,6 +224,9 @@ export interface IMobCharacter {
     gender: string;
 }
 
+// Public label of a published story translation (episode or file).
+export type StoryTranslationSource = 'official_cn' | 'official_en' | 'llm' | 'human';
+
 // Processed action for display
 export interface IProcessedAction {
     type: SnippetAction;
@@ -244,7 +247,7 @@ export interface IProcessedAction {
     // Locale-neutral target fields. CN aliases above remain for legacy callers.
     translatedBody?: string;
     translatedDisplayName?: string;
-    translationSource?: 'official_cn' | 'llm' | 'human';
+    translationSource?: StoryTranslationSource;
     // SpecialEffect specific
     seType?: string;
     resource?: string;

@@ -1,29 +1,32 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
+import { StoryTranslationSourceBadge } from "@/components/story/StoryTranslationSourceBadge";
 
 import { fetchMasterData } from "@/lib/fetch";
 import { getCardThumbnailUrl } from "@/lib/assets";
 import { ICardInfo, IGameChara } from "@/types/types";
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchStoryAssetFromMirror, StoryAssetMissingError } from "@/lib/storyAsset";
-import { processScenarioForDisplay } from "@/lib/storyLoader";
+import { mergeStoryTitle, mergeTranslations, processScenarioForDisplay } from "@/lib/storyLoader";
+import {
+    IEventStoryTranslation,
+    loadStoryTranslation,
+    sideStoryTranslationEnabled,
+    storyEpisodeTranslationSource,
+} from "@/lib/eventStoryTranslation";
 import { IProcessedScenarioData } from "@/types/story";
 import { useI18n } from "@/contexts/I18nContext";
-
-interface ICardEpisode {
-    id: number; cardId: number;
-    cardEpisodePartType: string;
-    title: string; scenarioId: string;
-}
+import type { UiLocale } from "@/lib/i18n";
+import { ICardStoryEpisode, selectCardStoryParts } from "../cardStoryParts";
 
 export default function StoryCardReaderClient() {
     const params = useParams();
-    const { assetSource, serverSource } = useTheme();
-    const { t } = useI18n();
+    const { assetSource, serverSource, useLLMTranslation } = useTheme();
+    const { locale, t } = useI18n();
     const cardId = Number(params.cardId);
     const lang: "jp" | "cn" = serverSource === "cn" ? "cn" : "jp";
 
@@ -38,26 +41,33 @@ export default function StoryCardReaderClient() {
     const [error1, setError1] = useState<string | null>(null);
     const [error2, setError2] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [translationState, setTranslationState] = useState<{
+        cardId: number;
+        locale: UiLocale;
+        translation: IEventStoryTranslation | null;
+    } | null>(null);
 
     useEffect(() => {
         if (!cardId) return;
+        // serverSource/assetSource hydrate from localStorage one frame after mount; drop the stale run.
+        let cancelled = false;
         async function load() {
             setIsLoading(true);
             try {
                 const [cardsData, episodesData, charasData] = await Promise.all([
                     fetchMasterData<ICardInfo[]>("cards.json"),
-                    fetchMasterData<ICardEpisode[]>("cardEpisodes.json"),
+                    fetchMasterData<ICardStoryEpisode[]>("cardEpisodes.json"),
                     fetchMasterData<IGameChara[]>("gameCharacters.json"),
                 ]);
+                if (cancelled) return;
                 const c = cardsData.find(x => x.id === cardId);
                 if (!c) return;
                 setCard(c);
                 setChara(charasData.find(x => x.id === c.characterId) ?? null);
 
-                const eps = episodesData.filter(e => e.cardId === cardId);
-                const e1 = eps.find(e => e.cardEpisodePartType === "episode_1") ?? eps[0];
-                const e2 = eps.find(e => e.cardEpisodePartType === "episode_2") ?? eps[1];
-                if (!e1 || !e2) return;
+                const parts = selectCardStoryParts(episodesData.filter(e => e.cardId === cardId));
+                if (!parts) return;
+                const [e1, e2] = parts;
                 setEp1({ title: e1.title, scenarioId: e1.scenarioId });
                 setEp2({ title: e2.title, scenarioId: e2.scenarioId });
 
@@ -67,8 +77,11 @@ export default function StoryCardReaderClient() {
                 const loadPart = async (scenarioId: string, setData: typeof setPart1, setMissing: typeof setMissing1, setErr: typeof setError1) => {
                     try {
                         const raw = await fetchStoryAssetFromMirror("card", assetSource, { assetbundleName: c.assetbundleName, scenarioId });
-                        setData(await processScenarioForDisplay(raw, "card", assetSource, serverSource));
+                        if (cancelled) return;
+                        const processed = await processScenarioForDisplay(raw, "card", assetSource, serverSource);
+                        if (!cancelled) setData(processed);
                     } catch (err) {
+                        if (cancelled) return;
                         if (err instanceof StoryAssetMissingError) setMissing(err.missingPaths);
                         else setErr(err instanceof Error ? err.message : t("common.state.loadingFailed"));
                     }
@@ -79,11 +92,43 @@ export default function StoryCardReaderClient() {
                     loadPart(e2.scenarioId, setPart2, setMissing2, setError2),
                 ]);
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         }
         load();
+        return () => { cancelled = true; };
     }, [cardId, lang, assetSource, serverSource, t]);
+
+    const translationEnabled = sideStoryTranslationEnabled(serverSource, locale, useLLMTranslation);
+    useEffect(() => {
+        if (!cardId || !translationEnabled) return;
+        let cancelled = false;
+        loadStoryTranslation("card", cardId, locale).then((translation) => {
+            if (!cancelled) setTranslationState({ cardId, locale, translation });
+        });
+        return () => { cancelled = true; };
+    }, [cardId, locale, translationEnabled]);
+
+    const activeTranslation = translationState?.cardId === cardId && translationState.locale === locale
+        ? translationState
+        : null;
+    const translation = translationEnabled ? activeTranslation?.translation ?? null : null;
+    const translationLoading = translationEnabled && !activeTranslation;
+
+    const parts = useMemo(() => [
+        { key: "1", episode: ep1, data: part1, missing: missing1, err: error1 },
+        { key: "2", episode: ep2, data: part2, missing: missing2, err: error2 },
+    ].map(({ key, episode, data, missing, err }) => {
+        const source = storyEpisodeTranslationSource(translation, key);
+        return {
+            key,
+            missing,
+            err,
+            source,
+            title: episode ? mergeStoryTitle(episode.title, translation, key) : undefined,
+            data: data && source ? { ...data, actions: mergeTranslations(data.actions, translation, key, locale) } : data,
+        };
+    }), [ep1, ep2, part1, part2, missing1, missing2, error1, error2, translation, locale]);
 
     const charaName = chara ? `${chara.firstName ?? ""}${chara.givenName}` : "";
 
@@ -113,14 +158,14 @@ export default function StoryCardReaderClient() {
                     </Link>
                 )}
 
-                {isLoading && (
+                {(isLoading || translationLoading) && (
                     <div className="flex flex-col items-center justify-center py-16">
                         <div className="w-12 h-12 border-4 border-miku/30 border-t-miku rounded-full animate-spin mb-4" />
                         <p className="text-slate-500">{t("page.story.reader.loading")}</p>
                     </div>
                 )}
 
-                {!isLoading && (
+                {!isLoading && !translationLoading && (
                     <div className="max-w-4xl mx-auto">
                         <div className="mb-6 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center gap-2 flex-wrap">
@@ -142,24 +187,27 @@ export default function StoryCardReaderClient() {
                         </div>
 
                         <div className="space-y-10">
-                            {[
-                                { id: "episode-1", label: t("page.story.card.part1"), title: ep1?.title, data: part1, missing: missing1, err: error1 },
-                                { id: "episode-2", label: t("page.story.card.part2"), title: ep2?.title, data: part2, missing: missing2, err: error2 },
-                            ].map(({ id, label, title, data, missing, err }) => (
-                                <div key={id} id={`part-${id}`} className="scroll-mt-32">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <span className="px-3 py-1 bg-miku/10 text-miku text-sm font-bold rounded-full border border-miku/20">{label}</span>
-                                        {title && <h2 className="font-bold text-slate-800 dark:text-slate-200">{title}</h2>}
+                            {parts.map(({ key, title, data, missing, err, source }) => {
+                                const label = key === "1" ? t("page.story.card.part1") : t("page.story.card.part2");
+                                return (
+                                    <div key={key} id={`part-episode-${key}`} className="scroll-mt-32">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <span className="px-3 py-1 bg-miku/10 text-miku text-sm font-bold rounded-full border border-miku/20">{label}</span>
+                                            {title && <h2 className="font-bold text-slate-800 dark:text-slate-200">{title}</h2>}
+                                            {source && <StoryTranslationSourceBadge source={source} />}
+                                        </div>
+                                        <StoryReader
+                                            scenarioData={data}
+                                            isLoading={false}
+                                            error={err}
+                                            missingPaths={missing ?? undefined}
+                                            endLabel={label}
+                                            translationSource={source}
+                                            storyType="card"
+                                        />
                                     </div>
-                                    <StoryReader
-                                        scenarioData={data}
-                                        isLoading={false}
-                                        error={err}
-                                        missingPaths={missing ?? undefined}
-                                        endLabel={label}
-                                    />
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
                 )}

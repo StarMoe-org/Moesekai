@@ -1351,6 +1351,7 @@ export const zhCNMessages = {
                 translationCredit: "翻译文本来源于 moesekai（@雪莹ちゃん） 的{source}，转载请表明出处。",
                 translationSources: {
                     officialCn: "官方CN",
+                    officialEn: "官方EN",
                     aiPolished: "AI翻译（经人工精校）",
                     aiPolishedShort: "AI翻译+人工精校",
                     human: "人工翻译",

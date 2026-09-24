@@ -480,6 +480,7 @@ export const zhTWPagePrimary = {
                 translationCredit: "翻譯文字來自 moesekai（@雪瑩ちゃん） 的{source}，轉載請表明出處。",
                 translationSources: {
                     officialCn: "官方CN",
+                    officialEn: "官方EN",
                     aiPolished: "AI翻譯（經人工精校）",
                     aiPolishedShort: "AI翻譯+人工精校",
                     human: "人工翻譯",
