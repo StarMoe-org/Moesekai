@@ -321,8 +321,8 @@ export async function processScenarioForDisplay(
  * For each Talk action, looks up the CN translation for body and display name
  * 
  * @param actions - The processed actions from JP scenario
- * @param translation - The event story translation data (or null if not available)
- * @param episodeNo - The episode number to look up
+ * @param translation - The story translation data (or null if not available)
+ * @param episodeKey - The episode number (event), "1"/"2" (card) or scenarioId (area)
  * @returns Actions with CN translation fields populated
  */
 import { IEventStoryTranslation, getStoryTranslation } from "./eventStoryTranslation";
@@ -330,22 +330,25 @@ import { IEventStoryTranslation, getStoryTranslation } from "./eventStoryTransla
 export function mergeTranslations(
     actions: IProcessedAction[],
     translation: IEventStoryTranslation | null,
-    episodeNo: number,
+    episodeKey: number | string,
     targetLocale: string = "zh-CN",
 ): IProcessedAction[] {
     if (!translation) return actions;
 
-    const episodeTranslation = getStoryTranslation(translation, episodeNo);
+    const episodeTranslation = getStoryTranslation(translation, episodeKey);
     if (!episodeTranslation) return actions;
+    const translationSource = episodeTranslation.source ?? translation.meta?.source;
+    // The backend keys lines by the trimmed Japanese text; a few script lines end in U+3000.
+    const lookup = (text: string): string | undefined => episodeTranslation.talkData[text] ?? episodeTranslation.talkData[text.trim()];
 
     return actions.map(action => {
         if (action.type === SnippetAction.Talk && action.body) {
             // Find translation for body
-            const cnBody = episodeTranslation.talkData[action.body];
+            const cnBody = lookup(action.body);
 
             // Find translation for Display Name
             const cnDisplayName = action.chara?.name
-                ? episodeTranslation.talkData[action.chara.name]
+                ? lookup(action.chara.name)
                 : undefined;
 
             if (cnBody || cnDisplayName) {
@@ -358,7 +361,7 @@ export function mergeTranslations(
                         cnBody,
                         cnDisplayName: translatedDisplayName,
                     } : {}),
-                    translationSource: translation.meta?.source
+                    translationSource,
                 };
             }
         }
@@ -369,9 +372,9 @@ export function mergeTranslations(
 export function mergeStoryTitle(
     originalTitle: string,
     translation: IEventStoryTranslation | null,
-    episodeNo: number
+    episodeKey: number | string
 ): string {
     if (!translation) return originalTitle;
-    const episodeTranslation = getStoryTranslation(translation, episodeNo);
+    const episodeTranslation = getStoryTranslation(translation, episodeKey);
     return episodeTranslation?.title || originalTitle;
 }

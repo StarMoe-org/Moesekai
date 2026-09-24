@@ -1349,6 +1349,7 @@ export const koKRMessages = {
                 translationCredit: "번역된 텍스트는 moesekai(@雪莹ちゃん)의 {source}에서 가져온 것입니다. 재배포시 출처를 꼭 밝혀주세요.",
                 translationSources: {
                     officialCn: "공식 CN",
+                    officialEn: "공식 EN",
                     aiPolished: "AI 번역(수동 미세 조정 후)",
                     aiPolishedShort: "AI번역+수동수정",
                     human: "인간 번역",

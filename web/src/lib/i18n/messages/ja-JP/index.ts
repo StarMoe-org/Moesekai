@@ -1351,6 +1351,7 @@ export const jaJPMessages = {
         translationCredit: "Translation text is sourced from moesekai (@雪莹ちゃん)'s {source}. Please credit the source when reposting.",
         translationSources: {
           officialCn: 'Official CN',
+          officialEn: 'Official EN',
           aiPolished: 'AI translation with human review',
           aiPolishedShort: 'AI + human review',
           human: 'human translation',

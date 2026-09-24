@@ -10,7 +10,7 @@ import { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchStoryAssetFromMirror, StoryAssetMissingError, StoryAssetType, AssetParams } from "@/lib/storyAsset";
 import { processScenarioForDisplay, mergeTranslations } from "@/lib/storyLoader";
-import { IProcessedScenarioData } from "@/types/story";
+import { IProcessedScenarioData, type StoryTranslationSource } from "@/types/story";
 import { IEventStoryTranslation } from "@/lib/eventStoryTranslation";
 import type { UiLocale } from "@/lib/i18n";
 
@@ -19,8 +19,8 @@ export interface UseStoryAssetOptions {
     params: AssetParams | null; // null = not ready yet
     /** Optional target-locale translation to merge (only used when lang=jp). */
     translation?: IEventStoryTranslation | null;
-    /** Episode number for translation lookup */
-    episodeNo?: number;
+    /** Episode key for translation lookup */
+    episodeNo?: number | string;
     /** Target locale for locale-neutral translated fields. */
     translationLocale?: UiLocale;
     /** Localized fallback used when a thrown value is not an Error instance. */
@@ -33,7 +33,7 @@ export interface UseStoryAssetResult {
     error: string | null;
     missingPaths: string[] | null;
     lang: "jp" | "cn";
-    translationSource: "official_cn" | "llm" | "human" | undefined;
+    translationSource: StoryTranslationSource | undefined;
 }
 
 export function useStoryAsset({
@@ -51,7 +51,7 @@ export function useStoryAsset({
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [missingPaths, setMissingPaths] = useState<string[] | null>(null);
-    const [translationSource, setTranslationSource] = useState<"official_cn" | "llm" | "human" | undefined>(undefined);
+    const [translationSource, setTranslationSource] = useState<StoryTranslationSource | undefined>(undefined);
 
     // Stable key to detect param changes
     const paramsKey = params
