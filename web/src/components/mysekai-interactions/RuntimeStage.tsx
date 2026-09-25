@@ -32,6 +32,7 @@ export interface RuntimeStageHandle {
     preview(key: MolyKey): void;
     browse(filters: MolyFilters): void;
     setWeather(phenomenon: number): void;
+    setSite(site: string): void;
     setSoundEnabled(enabled: boolean): void;
     select(key: MolyKey): void;
     stop(): void;
@@ -111,6 +112,10 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             preview: key => send(player => player.preview(key)),
             browse: filters => send(player => player.browse(filters)),
             setWeather: phenomenon => send(player => player.setWeather(phenomenon)),
+            // Older cached releases have no site dial; they keep their initial site.
+            setSite: site => send(player => {
+                if (typeof player.setSite === "function") player.setSite(site);
+            }),
             // Runtime publications are independently versioned. Feature-detect the
             // sound gate so a host hot-update cannot crash while an older cached
             // release is still mounted; current releases implement this method.
@@ -159,11 +164,11 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                 const current = state.current;
                 owned = sdk.mountMoly(host, {
                     view: "stage", src: request.release.stage, assets: request.snapshot.assets,
-                    resourceOrigin: request.release.resourceOrigin,
+                    resourceBase: request.release.resourceBase,
                     region: request.snapshot.region, version: request.snapshot.version, snapshot: request.snapshot.id,
                     packs: request.snapshot.packs, assetCatalog: request.snapshot.assetCatalog,
                     theme: { mode: current.resolvedColorScheme, accent: current.themeColor }, locale: current.locale,
-                    filters: request.initial, content: request.content ?? undefined, preload: true, sound: request.soundEnabled,
+                    filters: request.initial, content: request.content ?? undefined, sound: request.soundEnabled,
                     onPlayerData: value => { if (!cancelled) state.current.onPlayerData(value); },
                     onSnapshot: value => { if (!cancelled) state.current.onSnapshot(value); },
                     onBoot: value => {

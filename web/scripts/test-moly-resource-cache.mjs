@@ -122,6 +122,25 @@ async function setup(registration, previous = registration) {
     assert.equal(api.registrations(), 0);
 }
 {
+    // An earlier host generation sealed its resource origin into the script URL. The same
+    // script path is this feature's own worker: the canonical URL replaces it in place.
+    const registration = new Registration();
+    registration.active = new Worker("activated", "https://host.test/moly/cache-worker.mjs?resource_origin=https%3A%2F%2Fold.example");
+    const replacement = registration.installing = new Worker();
+    const api = await setup(registration);
+    const ready = api.ensureResourceCache();
+    await flush(); replacement.become("activated");
+    assert.equal(await ready, replacement);
+    assert.equal(api.registrations(), 1);
+}
+{
+    const registration = new Registration();
+    registration.active = new Worker("activated", "https://host.test/moly/other-worker.mjs?resource_origin=https%3A%2F%2Fold.example");
+    const api = await setup(registration);
+    await assert.rejects(api.ensureResourceCache(), /belongs to another worker/);
+    assert.equal(api.registrations(), 0);
+}
+{
     const registration = new Registration();
     registration.installing = new Worker();
     const api = await setup(registration);

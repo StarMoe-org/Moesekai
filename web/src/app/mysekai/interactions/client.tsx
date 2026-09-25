@@ -103,7 +103,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const contextFixture = nav.browse.fixture ? entries.get(`fixture:${nav.browse.fixture}`)?.title : undefined;
     const activeKey = live?.status.activeKey ?? null;
     const phase = closing ? "restoring" : live?.status.phase ?? (session ? "preparing" : "idle");
-    const preparing = Boolean(session && !live?.ready && boot?.phase !== "awaiting-gesture" && !runtimeError);
+    const preparing = Boolean(session && !live?.ready && !runtimeError);
     const currentAdmission = live?.selected?.key === nav.content && live.mode === "current" ? live.selected : null;
     const canPlay = !preparing && !closing && Boolean(snapshot?.available && selected && (mode === "independent" ? selected.available : currentAdmission?.available));
     const reason = mode === "current" ? currentAdmission?.reasonCode ?? null : selected?.reasonCode ?? null;

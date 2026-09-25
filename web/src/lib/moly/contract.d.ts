@@ -30,7 +30,10 @@ export interface MolySnapshot {
   scene?:{ready:boolean; actorUnits:number[]; fixtureIds:number[]};
   /** The live scene's weather dial. Absent until the runtime resolved its catalog. */
   weather?:MolyWeather;
+  /** The site dial: the site the scene is on and every site the runtime can switch to. */
+  site?:MolySite;
 }
+export interface MolySite {id:string; options:{id:string; name:string}[];}
 export interface MolyWeatherOption {
   id: number;
   name: string;
@@ -71,10 +74,10 @@ export interface MolyBoot {
 export interface MolyError {code:string; key?:MolyKey;}
 export interface MountOptions {
   onPlayerData?(value: MolyPlayerDataState): void;
-  view?:'shell'|'stage'; src:string; assets?:string; resourceOrigin?:string; region?:MolyRegion; version?:string; snapshot?:string;
+  view?:'shell'|'stage'; src:string; assets?:string; resourceBase?:string; region?:MolyRegion; version?:string; snapshot?:string;
   assetCatalog?:string; packs?:boolean;
-  locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; preload?:boolean; sound?:boolean;
-  fixture?:number; tab?:MolyTab; content?:MolyKey; filters?:MolyFilters;
+  locale?:MolyLocale; theme?:MolyTheme; renderer?:'auto'|'webgpu'|'webgl2'; sound?:boolean;
+  site?:string; fixture?:number; tab?:MolyTab; content?:MolyKey; filters?:MolyFilters;
   onSnapshot?:(snapshot:MolySnapshot)=>void; onStatus?:(status:MolyStatus)=>void;
   onSelection?:(selection:{key:MolyKey|null; tab:MolyTab; region:MolyRegion; fixture:number|null})=>void;
   onBoot?:(boot:MolyBoot)=>void; onError?:(error:MolyError)=>void;
@@ -84,6 +87,8 @@ export interface MolyMount {
   readonly frame:HTMLIFrameElement; readonly disposed:boolean; readonly snapshot:MolySnapshot|null;
   setTheme(theme:MolyTheme):void; setLocale(locale:MolyLocale):void; browse(filters:MolyFilters):void;
   setWeather(phenomenon:number):void;
+  /** Refused by the runtime for unlisted IDs and while status.canStop is true. */
+  setSite(site:string):void;
   setSoundEnabled(enabled:boolean):void;
   select(key:MolyKey):void; play(key:MolyKey):void; preview(key:MolyKey):void; stop():void; restore():void;
   /** true only when the owner acknowledged restoration (or was already idle). */

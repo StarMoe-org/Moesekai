@@ -11,12 +11,12 @@ async function moduleURL(file, imports = {}) {
     }
     return `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 }
-const resourceOrigin = await moduleURL("../src/lib/moly/resourceOrigin.ts");
+const resourceBase = await moduleURL("../src/lib/moly/resourceBase.ts");
 const navigation = await moduleURL("../src/lib/moly/workspaceNavigation.ts");
 const mysekaiSource = await moduleURL("../src/lib/mysekai-source.ts");
 const catalogURL = await moduleURL("../src/lib/moly/catalog.ts", {
     "../mysekai-source": mysekaiSource,
-    "./resourceOrigin": resourceOrigin,
+    "./resourceBase": resourceBase,
     "./workspaceNavigation": navigation,
 });
 const { fetchRuntimeManifest, fetchContentCatalog, fetchContentDetail } = await import(catalogURL);
@@ -37,7 +37,7 @@ const manifest = () => ({
     snapshots: [source("cn"), source("jp")],
 });
 const originalFetch = globalThis.fetch;
-const originalOrigin = process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
+const originalBase = process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
 const requests = [];
 let replies = [];
 globalThis.fetch = async (url, options) => {
@@ -49,12 +49,13 @@ globalThis.fetch = async (url, options) => {
 async function serve(value, run) { requests.length = 0; replies = [{ body: value }]; return await run(); }
 
 try {
-    process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = "https://resources.example.test";
+    process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE = "https://resources.example.test/bucket/";
     const parsed = await serve(manifest(), () => fetchRuntimeManifest());
     assert.equal(parsed.release.module, "/moly/releases/stage-new/embed.mjs", "SDK remains same-origin");
     assert.equal(parsed.release.stage, "/moly/releases/stage-new/stage.html", "iframe remains same-origin");
-    assert.equal(parsed.release.resourceOrigin, "https://resources.example.test");
-    assert.equal(parsed.snapshots[1].assets, "https://resources.example.test/moly/snapshots/jp-6.0.0-example/assets/");
+    assert.equal(parsed.release.resourceBase, "https://resources.example.test/bucket/");
+    assert.equal(parsed.snapshots[1].assets, "https://resources.example.test/bucket/snapshots/jp-6.0.0-example/assets/");
+    assert.equal(parsed.snapshots[1].catalog, "https://resources.example.test/bucket/snapshots/jp-6.0.0-example/catalog/index.json");
     assert.equal(parsed.snapshots[1].region, "jp");
     assert.equal(parsed.snapshots[1].version, "6.0.0");
     assert.equal(parsed.snapshots[1].coordinateContract, coordinateContract);
@@ -64,15 +65,15 @@ try {
     assert.equal(requests[0].options.credentials, "omit");
     assert.equal(requests[0].options.redirect, "error");
 
-    delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
+    delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
     const local = await serve(manifest(), () => fetchRuntimeManifest());
-    assert.equal(local.release.resourceOrigin, undefined, "same-origin publication needs no configured CDN");
+    assert.equal(local.release.resourceBase, undefined, "same-origin publication needs no configured resource base");
     assert.equal(local.snapshots[0].assets, "/moly/snapshots/cn-6.0.0-example/assets/");
     assert.equal(local.snapshots[0].catalog, "/moly/snapshots/cn-6.0.0-example/catalog/index.json");
     const cachePanel = await readFile(new URL("../src/components/mysekai-interactions/ResourceCachePanel.tsx", import.meta.url), "utf8");
     assert.ok(cachePanel.includes("useRuntimeManifest(retry)"), "resource management discovers publications and can retry failed discovery");
-    assert.ok(!cachePanel.includes("molyResourceOrigin"), "CDN configuration is not deployment status");
-    process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = "https://resources.example.test";
+    assert.ok(!cachePanel.includes("molyResourceBase"), "resource configuration is not deployment status");
+    process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE = "https://resources.example.test/bucket/";
 
     // A host update must also keep a previously pinned immutable release usable;
     // the new runtime itself owns its stricter coordinate preflight.
@@ -84,7 +85,7 @@ try {
     const packed = manifest();
     Object.assign(packed.snapshots[0], { packs: true, assets: "/moly/asset-store/", assetCatalog: "c".repeat(64), assetReleaseVersion: "6.0.0" });
     const packedParsed = await serve(packed, () => fetchRuntimeManifest());
-    assert.equal(packedParsed.snapshots[0].assets, "https://resources.example.test/moly/asset-store/");
+    assert.equal(packedParsed.snapshots[0].assets, "https://resources.example.test/bucket/asset-store/");
     assert.equal(packedParsed.snapshots[0].assetCatalog, "c".repeat(64));
     assert.equal(packedParsed.snapshots[0].releaseModule, packedParsed.release.module);
 
@@ -118,10 +119,10 @@ try {
     const stage = await readFile(new URL("../src/components/mysekai-interactions/RuntimeStage.tsx", import.meta.url), "utf8");
     assert.ok(stage.includes("region: request.snapshot.region, version: request.snapshot.version, snapshot: request.snapshot.id"));
     assert.ok(stage.includes("packs: request.snapshot.packs, assetCatalog: request.snapshot.assetCatalog"));
-    assert.ok(stage.includes("resourceOrigin: request.release.resourceOrigin"));
+    assert.ok(stage.includes("resourceBase: request.release.resourceBase"));
     console.log("moly legacy/canonical/packed publication and source-identity integration tests passed");
 } finally {
     globalThis.fetch = originalFetch;
-    if (originalOrigin === undefined) delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN;
-    else process.env.NEXT_PUBLIC_MOLY_RESOURCE_ORIGIN = originalOrigin;
+    if (originalBase === undefined) delete process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE;
+    else process.env.NEXT_PUBLIC_MOLY_RESOURCE_BASE = originalBase;
 }

@@ -1037,7 +1037,7 @@ export const enUSMessages = {
                 "memoryHint": "This page has no player. Closing a player releases its scene and renderer, but browser RAM reclamation is not immediate or guaranteed. Clearing disk cache does not shrink an open player's WASM memory.",
                 "snapshot": "Snapshot {region} · {version} · {id}",
                 "requestedSnapshot": "Requested snapshot: {id}",
-                "origin": "Resource origin: {origin}",
+                "origin": "Resource location: {origin}",
                 "sameOrigin": "this site (same origin)",
                 "refresh": "Refresh usage",
                 "clearConfirm": "Delete all Moly resource caches?",
