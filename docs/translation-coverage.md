@@ -17,14 +17,14 @@ This inventory is generated as a human-readable companion to `docs/translation-c
 | Status | Count |
 | --- | ---: |
 | Covered | 2 |
-| Partial | 24 |
-| Required but uncovered | 13 |
+| Partial | 22 |
+| Required but uncovered | 15 |
 | Official regional source | 4 |
 | Explicitly excluded | 4 |
 | Nontext | 1 |
 | Total | 48 |
 
-Because 13 required entries remain uncovered and 24 more are partial, this document makes no full-coverage claim.
+Because 15 required entries remain uncovered and 22 more are partial, this document makes no full-coverage claim.
 
 ## Inventory
 
@@ -65,8 +65,8 @@ Because 13 required entries remain uncovered and 24 more are partial, this docum
 | `event-story-summaries` | event story group | eventStories + mirror; outline_jp/outline_cn/event and chapter summary_cn | event ID + chapter + summary field | mirror outline/summaries partial | JP outline fallback; summaries uncovered | partial; CN summaries never leak to non-zh |
 | `event-story-lines` | event reader | scenario + event artifact; body/display name | scenario + TalkData index required; current source string | backward-compatible partial | isolated artifact supported | partial |
 | `unit-story-lines` | unit reader | unitStoryEpisodeGroups + scenarios; group name/outline/title/body/display name | scenario + TalkData index + field | uncovered | uncovered | required-uncovered |
-| `card-story-lines` | `/story/card/{cardId}` / card reader | card scenarios + `translation/cardStory/card_{id}.json`, `v2/en-US/translation/cardStory/card_{id}.json`; title/body/display name/gachaPhrase | card ID + episode `1`/`2` (cardEpisodes seq) + exact Japanese text / JP server only | JP-server artifact: official CN, AI or human | JP-server artifact: official EN, AI or human | partial; JP server only, gachaPhrase not in artifact |
-| `area-story-lines` | `/story/area/{category}/{scenarioId}` / area reader | area scenarios/masterdata + `translation/areaTalk/group_{n}.json`, `v2/en-US/translation/areaTalk/group_{n}.json`; area/body/display name | group floor(JP actionSet ID / 100) + scenarioId + exact Japanese text / JP server only | JP-server artifact: official CN, AI or human | JP-server artifact: official EN, AI or human | partial; JP server only, area name not in artifact |
+| `card-story-lines` | card reader | card scenarios; title/body/display name/gachaPhrase | card/scenario + TalkData index + field | uncovered | uncovered | required-uncovered |
+| `area-story-lines` | area reader | area scenarios/masterdata; area/body/display name | scenario + TalkData index + field | uncovered | uncovered | required-uncovered |
 | `self-story-lines` | self reader | self scenarios; body/display name | scenario + TalkData index + field | uncovered | uncovered | required-uncovered |
 | `special-story-lines` | special reader | special scenarios; group/title/body/display name | story/scenario + TalkData index + field | uncovered | uncovered | required-uncovered |
 | `story-special-effects` | all story readers | scenarios + mobs; telop/fullscreen/selectable/mob text | scenario + effect index + field | uncovered | uncovered | required-uncovered; Talk-only merge today |

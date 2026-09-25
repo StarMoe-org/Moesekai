@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { StorySnippet } from "@/components/story/StorySnippet";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { IProcessedScenarioData, SnippetAction, type StoryTranslationSource } from "@/types/story";
+import { IProcessedScenarioData, SnippetAction } from "@/types/story";
 
 // How many actions ahead of the active line we preload assets for in autoplay mode.
 const PRELOAD_AHEAD = 6;
@@ -14,7 +14,7 @@ interface StoryReaderProps {
     error: string | null;
     missingPaths?: string[];
     endLabel?: string;
-    translationSource?: StoryTranslationSource;
+    translationSource?: "official_cn" | "llm" | "human";
     storyType?: "event" | "unit" | "card" | "area" | "self" | "special";
     storyId?: number;
 }
