@@ -42,7 +42,7 @@ Because 13 required entries remain uncovered and 24 more are partial, this docum
 | `mysekai-fixture-name` | MySekai and rewards | fixture masterdata + overlay; name, pronunciation | fixture ID + field / fixtureName | name partial | path supported | partial; pronunciation missing |
 | `mysekai-taxonomy-and-flavor` | MySekai and materials | fixture/taxonomy masterdata; flavor and names | entity ID + field / declared maps incompletely consumed | incomplete | incomplete | required-uncovered |
 | `gacha-name` | gacha views | gachas + overlay; name | gacha ID + field / gacha.name | partial | path supported | partial |
-| `gacha-information` | gacha detail | gachas + lazy overlay; gachaInformation summary, bubbleText, description | exact Japanese text (paired by gacha ID) / gachaInfo.* | partial | path supported | partial; loaded only on the detail page |
+| `gacha-information` | gacha detail | gachas + lazy overlay `translation/gachaInfo.json`, `v2/en-US/translation/gachaInfo.json`; gachaInformation summary, bubbleText, description | exact Japanese text from JP gachas, registered untranslated (CN text is a separate announcement; gacha ID only in the trace) / gachaInfo.* | partial | path supported | partial; loaded only on the detail page |
 | `sticker-name` | sticker, maker, rewards | stamps + overlay; name | stamp ID + field / sticker.name | partial | path supported | partial; reuse incomplete |
 | `comic-title` | comic | tips + old tips + overlay; title | tip ID + field / comic.title | partial | path supported | partial |
 | `character-profile-text` | character views | profiles + overlay; six profile fields plus school fields | character ID + field / six maps | partial | path supported | partial; school fields missing |
