@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
+import { JSDOM } from "jsdom";
+import React, { act } from "react";
+import { createRoot } from "react-dom/client";
+import ts from "typescript";
+
 import { loadAllMessages } from "../../scripts/i18n-utils.mjs";
 import {
   importTypeScriptSource,
@@ -80,6 +85,150 @@ async function importStoryMergeFunctions(getStoryTranslation) {
     "side-story-merge-characterization",
   );
 }
+
+let clientSequence = 0;
+
+// Mounts a real reader page with every import replaced by the given stubs.
+async function importStoryClient(relativePath, dependencies) {
+  clientSequence += 1;
+  const dependencyKey = `__moesekaiSideStoryClient${clientSequence}`;
+  globalThis[dependencyKey] = { React, ...dependencies };
+  const body = readWeb(relativePath)
+    .replace(/^"use client";\s*/u, "")
+    .replace(/^import[\s\S]*?;\s*$/gmu, "");
+  const transpiled = ts.transpileModule(
+    `const { React, ${Object.keys(dependencies).join(", ")} } = globalThis.${dependencyKey};\n`
+      + `const { useState, useEffect, useMemo } = React;\n${body}`,
+    {
+      compilerOptions: { jsx: ts.JsxEmit.React, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
+      fileName: relativePath,
+    },
+  );
+  const encoded = Buffer.from(`${transpiled.outputText}\n//# sourceURL=${relativePath}-${clientSequence}.mjs`).toString("base64");
+  return (await import(`data:text/javascript;base64,${encoded}`)).default;
+}
+
+const SCRIPT_LINES = { test_card_01: "テスト台詞一", test_card_02: "テスト台詞二", test_area_talk_01: "テスト台詞三" };
+const MASTER_FILES = {
+  "cards.json": [{ id: 101, characterId: 1, assetbundleName: "test_card", prefix: "テストカード", gachaPhrase: "-" }],
+  "cardEpisodes.json": [
+    { id: 1, cardId: 101, seq: 1, title: "テスト前編", scenarioId: "test_card_01" },
+    { id: 2, cardId: 101, seq: 2, title: "テスト後編", scenarioId: "test_card_02" },
+  ],
+  "gameCharacters.json": [{ id: 1, firstName: "テスト", givenName: "キャラ" }],
+  "actionSets.json": [{ id: 1234, areaId: 5, releaseConditionId: 1, scenarioId: "test_area_talk_01" }],
+  "areas.json": [{ id: 5, name: "テストエリア" }],
+};
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
+async function readerStubs(pendingTranslation, translationRequests) {
+  const stories = await importStoryTranslation();
+  const parts = await importWebTypeScript("src/app/story/card/cardStoryParts.ts");
+  const t = (key) => key;
+  const passthrough = ({ children }) => React.createElement("div", null, children);
+  return {
+    useParams: null,
+    Link: passthrough,
+    MainLayout: passthrough,
+    StoryReader: ({ scenarioData, isLoading }) => React.createElement(
+      "section",
+      null,
+      isLoading ? "reader-loading" : scenarioData ? scenarioData.actions.map((action) => action.body).join("|") : "reader-empty",
+    ),
+    StoryTranslationSourceBadge: ({ source }) => React.createElement("span", null, `badge:${source}`),
+    fetchMasterData: async (name) => structuredClone(MASTER_FILES[name]),
+    getCardThumbnailUrl: () => "/thumbnail.webp",
+    useTheme: () => ({ assetSource: "main", serverSource: "jp", useLLMTranslation: true }),
+    useI18n: () => ({ locale: "zh-CN", t }),
+    fetchStoryAssetFromMirror: async (_kind, _assetSource, { scenarioId }) => ({ scenarioId }),
+    StoryAssetMissingError: class StoryAssetMissingError extends Error {},
+    processScenarioForDisplay: async (raw) => ({ characters: [], actions: [{ type: 1, body: SCRIPT_LINES[raw.scenarioId] }] }),
+    mergeStoryTitle: (title, translation, key) => translation?.episodes?.[key]?.title || title,
+    mergeTranslations: (actions, translation, key) => actions.map((action) => ({
+      ...action,
+      body: translation.episodes[key].talkData[action.body] ?? action.body,
+    })),
+    loadStoryTranslation: (...args) => {
+      translationRequests.push(args);
+      return pendingTranslation.promise;
+    },
+    sideStoryTranslationEnabled: stories.sideStoryTranslationEnabled,
+    storyEpisodeTranslationSource: stories.storyEpisodeTranslationSource,
+    areaTalkTranslationGroup: stories.areaTalkTranslationGroup,
+    selectCardStoryParts: parts.selectCardStoryParts,
+  };
+}
+
+async function settle() {
+  for (let round = 0; round < 5; round += 1) {
+    await act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
+  }
+}
+
+async function withReaderDom(run) {
+  const dom = new JSDOM("<!doctype html><html><body><div id=\"root\"></div></body></html>", { url: "https://pjsk.moe/zh-cn/" });
+  Object.assign(globalThis, { window: dom.window, document: dom.window.document, HTMLElement: dom.window.HTMLElement, Node: dom.window.Node });
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const container = dom.window.document.getElementById("root");
+  const root = createRoot(container);
+  try {
+    await run((element) => act(async () => { root.render(element); }), container);
+  } finally {
+    await act(async () => { root.unmount(); });
+    for (const key of ["window", "document", "HTMLElement", "Node", "IS_REACT_ACT_ENVIRONMENT"]) delete globalThis[key];
+    dom.window.close();
+  }
+}
+
+test("card and area readers show the original script while the translation file is still loading", async () => {
+  const cardTranslation = deferred();
+  const cardRequests = [];
+  const cardStubs = await readerStubs(cardTranslation, cardRequests);
+  const CardClient = await importStoryClient("src/app/story/card/[cardId]/client.tsx", { ...cardStubs, useParams: () => ({ cardId: "101" }) });
+  await withReaderDom(async (render, container) => {
+    await render(React.createElement(CardClient));
+    await settle();
+    assert.deepEqual(cardRequests, [["card", 101, "zh-CN"]]);
+    assert.doesNotMatch(container.textContent, /page\.story\.reader\.loading/);
+    assert.match(container.textContent, /テスト台詞一/);
+    assert.match(container.textContent, /テスト台詞二/);
+    assert.match(container.textContent, /テスト前編/);
+
+    cardTranslation.resolve(structuredClone(CARD_FILE));
+    await settle();
+    assert.match(container.textContent, /测试台词一/);
+    assert.match(container.textContent, /测试台词二/);
+    assert.match(container.textContent, /测试标题一/);
+    assert.match(container.textContent, /badge:official_cn/);
+    assert.doesNotMatch(container.textContent, /テスト台詞一/);
+  });
+
+  const areaTranslation = deferred();
+  const areaRequests = [];
+  const areaStubs = await readerStubs(areaTranslation, areaRequests);
+  const AreaClient = await importStoryClient("src/app/story/area/[category]/[scenarioId]/client.tsx", {
+    ...areaStubs,
+    useParams: () => ({ category: "5", scenarioId: "test_area_talk_01" }),
+  });
+  await withReaderDom(async (render, container) => {
+    await render(React.createElement(AreaClient));
+    await settle();
+    assert.deepEqual(areaRequests, [["area", 12, "zh-CN"]]);
+    assert.doesNotMatch(container.textContent, /reader-loading/);
+    assert.match(container.textContent, /テスト台詞三/);
+
+    areaTranslation.resolve(structuredClone(AREA_FILE));
+    await settle();
+    assert.match(container.textContent, /Test line three/);
+    assert.match(container.textContent, /badge:official_en/);
+    assert.doesNotMatch(container.textContent, /テスト台詞三/);
+  });
+});
 
 test("story translation files resolve per kind under the zh-CN root and the en-US v2 root", async () => {
   const requests = [];

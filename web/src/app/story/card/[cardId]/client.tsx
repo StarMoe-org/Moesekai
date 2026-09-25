@@ -112,8 +112,8 @@ export default function StoryCardReaderClient() {
     const activeTranslation = translationState?.cardId === cardId && translationState.locale === locale
         ? translationState
         : null;
+    // The original script shows as soon as it loads; a translation merges in when its file arrives.
     const translation = translationEnabled ? activeTranslation?.translation ?? null : null;
-    const translationLoading = translationEnabled && !activeTranslation;
 
     const parts = useMemo(() => [
         { key: "1", episode: ep1, data: part1, missing: missing1, err: error1 },
@@ -158,14 +158,14 @@ export default function StoryCardReaderClient() {
                     </Link>
                 )}
 
-                {(isLoading || translationLoading) && (
+                {isLoading && (
                     <div className="flex flex-col items-center justify-center py-16">
                         <div className="w-12 h-12 border-4 border-miku/30 border-t-miku rounded-full animate-spin mb-4" />
                         <p className="text-slate-500">{t("page.story.reader.loading")}</p>
                     </div>
                 )}
 
-                {!isLoading && !translationLoading && (
+                {!isLoading && (
                     <div className="max-w-4xl mx-auto">
                         <div className="mb-6 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
                             <div className="flex items-center gap-2 flex-wrap">

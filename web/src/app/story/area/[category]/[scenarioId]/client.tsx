@@ -106,8 +106,8 @@ export default function StoryAreaTalkClient() {
     const activeTranslation = translationState?.group === translationGroup && translationState.locale === locale
         ? translationState
         : null;
+    // The original script shows as soon as it loads; a translation merges in when its file arrives.
     const translation = translationEnabled ? activeTranslation?.translation ?? null : null;
-    const translationLoading = translationEnabled && !activeTranslation;
     const translationSource = storyEpisodeTranslationSource(translation, scenarioId);
     const displayedScenario = useMemo(() => (
         scenarioData && translationSource
@@ -143,7 +143,7 @@ export default function StoryAreaTalkClient() {
 
                 <StoryReader
                     scenarioData={displayedScenario}
-                    isLoading={isLoading || translationLoading}
+                    isLoading={isLoading}
                     error={error}
                     missingPaths={missingPaths ?? undefined}
                     endLabel={t("page.story.area.endLabel")}
