@@ -16,6 +16,7 @@ type Config struct {
 	HTMLCacheEntryMB    int
 	HTMLCachePersistent bool
 	HTMLCacheWarmup     bool
+	NextBuildID         string
 	StaticArchiveDir    string
 }
 
@@ -31,6 +32,7 @@ func Load() *Config {
 		HTMLCacheEntryMB:    getEnvInt("HTML_CACHE_MAX_ENTRY_MB", 4),
 		HTMLCachePersistent: getEnvBool("HTML_CACHE_PERSISTENT", true),
 		HTMLCacheWarmup:     getEnvBool("HTML_CACHE_WARMUP", true),
+		NextBuildID:         getEnv("NEXT_BUILD_ID", ""),
 		StaticArchiveDir:    getEnv("STATIC_ARCHIVE_DIR", "./data/static_archive"),
 	}
 	return cfg

@@ -86,6 +86,7 @@ func main() {
 				MaxEntries:    cfg.HTMLCacheEntries,
 				MaxEntryBytes: int64(cfg.HTMLCacheEntryMB) << 20,
 				Persistent:    cfg.HTMLCachePersistent,
+				BuildID:       cfg.NextBuildID,
 			})
 			mux.HandleFunc("/internal-cache-stats", func(w http.ResponseWriter, r *http.Request) {
 				w.Header().Set("Content-Type", "application/json")

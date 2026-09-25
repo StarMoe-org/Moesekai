@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -331,5 +332,153 @@ func TestWarmupPopulatesCache(t *testing.T) {
 		if rr.Header().Get("X-Moesekai-Cache") != "HIT" {
 			t.Fatalf("expected HIT for %s, got %s", route, rr.Header().Get("X-Moesekai-Cache"))
 		}
+	}
+}
+
+func waitForState(t *testing.T, c *Cache, path, state, body string) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		rr := httptest.NewRecorder()
+		c.ServeHTTP(rr, documentRequest(path))
+		if rr.Header().Get("X-Moesekai-Cache") == state && rr.Body.String() == body {
+			return
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("%s: want %s %q, got %s %q", path, state, body, rr.Header().Get("X-Moesekai-Cache"), rr.Body.String())
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestRestoredEntriesFromAnotherBuildAreRerendered(t *testing.T) {
+	for _, previousBuild := range []string{"build-a", ""} {
+		t.Run("previous="+previousBuild, func(t *testing.T) {
+			dir := t.TempDir()
+			var count atomic.Int32
+
+			c1 := New(cacheableHandler(&count), Config{Dir: dir, Persistent: true, BuildID: previousBuild})
+			c1.ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/gacha/1/"))
+
+			c2 := New(cacheableHandler(&count), Config{Dir: dir, Persistent: true, BuildID: "build-b"})
+			rr := httptest.NewRecorder()
+			c2.ServeHTTP(rr, documentRequest("/zh-cn/gacha/1/"))
+			if got := rr.Header().Get("X-Moesekai-Cache"); got != "STALE" || rr.Body.String() != "page-1" {
+				t.Fatalf("first request after the build changed = %s %q, want STALE page-1", got, rr.Body.String())
+			}
+			waitForState(t, c2, "/zh-cn/gacha/1/", "HIT", "page-2")
+
+			// The sidecar is written just after the entry is installed in memory.
+			metaPath := filepath.Join(dir, cacheKey(documentRequest("/zh-cn/gacha/1/"))+".meta")
+			deadline := time.Now().Add(2 * time.Second)
+			for {
+				data, _ := os.ReadFile(metaPath)
+				if strings.Contains(string(data), `"buildId":"build-b"`) {
+					break
+				}
+				if time.Now().After(deadline) {
+					t.Fatalf("sidecar does not record the new build: %s", data)
+				}
+				time.Sleep(time.Millisecond)
+			}
+
+			// The re-rendered entry belongs to the new build, so another start of
+			// the same build keeps it fresh.
+			c3 := New(cacheableHandler(&count), Config{Dir: dir, Persistent: true, BuildID: "build-b"})
+			rr = httptest.NewRecorder()
+			c3.ServeHTTP(rr, documentRequest("/zh-cn/gacha/1/"))
+			if got := rr.Header().Get("X-Moesekai-Cache"); got != "HIT" || rr.Body.String() != "page-2" {
+				t.Fatalf("restart of the same build = %s %q, want HIT page-2", got, rr.Body.String())
+			}
+			if count.Load() != 2 {
+				t.Fatalf("upstream calls = %d, want 2", count.Load())
+			}
+		})
+	}
+}
+
+func TestRestoredEntriesFromTheSameBuildStayFresh(t *testing.T) {
+	dir := t.TempDir()
+	var count atomic.Int32
+	cfg := Config{Dir: dir, Persistent: true, BuildID: "build-a"}
+
+	New(cacheableHandler(&count), cfg).ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/gacha/1/"))
+	rr := httptest.NewRecorder()
+	New(cacheableHandler(&count), cfg).ServeHTTP(rr, documentRequest("/zh-cn/gacha/1/"))
+	if got := rr.Header().Get("X-Moesekai-Cache"); got != "HIT" || count.Load() != 1 {
+		t.Fatalf("same build restore = %s with %d upstream calls, want HIT with 1", got, count.Load())
+	}
+}
+
+func TestBackgroundRefreshesAreBounded(t *testing.T) {
+	var count, inFlight, peak atomic.Int32
+	release := make(chan struct{})
+	var refreshing atomic.Bool
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := count.Add(1)
+		if refreshing.Load() {
+			cur := inFlight.Add(1)
+			for {
+				old := peak.Load()
+				if cur <= old || peak.CompareAndSwap(old, cur) {
+					break
+				}
+			}
+			<-release
+			inFlight.Add(-1)
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=10, stale-while-revalidate=20")
+		fmt.Fprintf(w, "page-%d", n)
+	})
+	c := New(next, testConfig(t))
+	now := time.Unix(1_000, 0)
+	c.now = func() time.Time { return now }
+
+	const pages = maxBackgroundRefreshes + 3
+	for i := 0; i < pages; i++ {
+		c.ServeHTTP(httptest.NewRecorder(), documentRequest(fmt.Sprintf("/zh-cn/cards/%d/", i)))
+	}
+	now = now.Add(11 * time.Second)
+	refreshing.Store(true)
+
+	for i := 0; i < pages; i++ {
+		rr := httptest.NewRecorder()
+		c.ServeHTTP(rr, documentRequest(fmt.Sprintf("/zh-cn/cards/%d/", i)))
+		if got := rr.Header().Get("X-Moesekai-Cache"); got != "STALE" {
+			t.Fatalf("page %d state = %s, want STALE", i, got)
+		}
+	}
+	deadline := time.Now().Add(time.Second)
+	for inFlight.Load() < maxBackgroundRefreshes && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if got := count.Load(); got != pages+maxBackgroundRefreshes {
+		t.Fatalf("upstream calls = %d, want %d (only %d refreshes may start)", got, pages+maxBackgroundRefreshes, maxBackgroundRefreshes)
+	}
+
+	close(release)
+	deadline = time.Now().Add(time.Second)
+	for inFlight.Load() > 0 && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if peak.Load() > maxBackgroundRefreshes {
+		t.Fatalf("peak concurrent refreshes = %d, want at most %d", peak.Load(), maxBackgroundRefreshes)
+	}
+
+	// A page skipped while every slot was busy refreshes on a later request.
+	last := fmt.Sprintf("/zh-cn/cards/%d/", pages-1)
+	c.ServeHTTP(httptest.NewRecorder(), documentRequest(last))
+	deadline = time.Now().Add(2 * time.Second)
+	for {
+		rr := httptest.NewRecorder()
+		c.ServeHTTP(rr, documentRequest(last))
+		if rr.Header().Get("X-Moesekai-Cache") == "HIT" {
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatalf("skipped page never refreshed: state=%s", rr.Header().Get("X-Moesekai-Cache"))
+		}
+		time.Sleep(time.Millisecond)
 	}
 }

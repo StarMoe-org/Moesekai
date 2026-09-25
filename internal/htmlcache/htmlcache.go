@@ -21,6 +21,11 @@ import (
 
 const OriginCacheHeader = "X-Moesekai-Origin-Cache"
 
+// maxBackgroundRefreshes bounds concurrent stale-while-revalidate renders. A
+// deploy turns every restored entry stale at once, so without a bound each
+// request for a distinct page would start its own Next.js render.
+const maxBackgroundRefreshes = 4
+
 type Config struct {
 	Dir           string
 	MaxBytes      int64
@@ -28,13 +33,18 @@ type Config struct {
 	MaxEntryBytes int64
 	FetchTimeout  time.Duration
 	Persistent    bool
+	// BuildID identifies the Next.js build rendering the pages. Restored
+	// entries rendered by another build are served stale and re-rendered,
+	// because their HTML references that build's JavaScript.
+	BuildID string
 }
 
 type cachedResponse struct {
-	status int
-	header http.Header
-	path   string
-	size   int64
+	status  int
+	header  http.Header
+	path    string
+	size    int64
+	buildID string
 
 	storedAt   time.Time
 	freshUntil time.Time
@@ -82,6 +92,7 @@ type Cache struct {
 	bytes          int64
 	flights        map[string]*flight
 	activeRequests atomic.Int64
+	refreshSlots   chan struct{}
 
 	warmupMu    sync.RWMutex
 	warmupStats WarmupStats
@@ -132,13 +143,14 @@ func New(next http.Handler, cfg Config) *Cache {
 	}
 
 	cache := &Cache{
-		next:    next,
-		cfg:     cfg,
-		now:     time.Now,
-		ready:   ready,
-		items:   make(map[string]*list.Element),
-		lru:     list.New(),
-		flights: make(map[string]*flight),
+		next:         next,
+		cfg:          cfg,
+		now:          time.Now,
+		ready:        ready,
+		items:        make(map[string]*list.Element),
+		lru:          list.New(),
+		flights:      make(map[string]*flight),
+		refreshSlots: make(chan struct{}, maxBackgroundRefreshes),
 	}
 
 	if cfg.Persistent && ready {
@@ -282,7 +294,7 @@ func (c *Cache) makeEntry(r *responseRecorder) *cachedResponse {
 	header.Set("Cache-Control", "public, max-age=60, s-maxage=3600")
 	appendVaryAccept(header)
 	now := c.now()
-	return &cachedResponse{status: r.status, header: header, size: int64(r.body.Len()), storedAt: now, freshUntil: now.Add(fresh), staleUntil: now.Add(fresh + swr)}
+	return &cachedResponse{status: r.status, header: header, size: int64(r.body.Len()), buildID: c.cfg.BuildID, storedAt: now, freshUntil: now.Add(fresh), staleUntil: now.Add(fresh + swr)}
 }
 
 func cacheableHeaders(source http.Header) http.Header {
@@ -448,12 +460,20 @@ func (c *Cache) endFlight(key string) {
 	c.mu.Unlock()
 }
 func (c *Cache) refresh(key string, r *http.Request) {
+	select {
+	case c.refreshSlots <- struct{}{}:
+	default:
+		// Every slot is busy; the entry stays stale and a later request retries.
+		return
+	}
 	_, leader := c.beginFlight(key)
 	if !leader {
+		<-c.refreshSlots
 		return
 	}
 	clone := r.Clone(context.Background())
 	go func() {
+		defer func() { <-c.refreshSlots }()
 		meta, recorded := c.fetch(clone)
 		if meta != nil {
 			_ = c.store(key, meta, recorded.body.Bytes())
@@ -515,6 +535,7 @@ type diskMeta struct {
 	Status     int                 `json:"status"`
 	Header     map[string][]string `json:"header"`
 	Size       int64               `json:"size"`
+	BuildID    string              `json:"buildId,omitempty"`
 	StoredAt   time.Time           `json:"storedAt"`
 	FreshUntil time.Time           `json:"freshUntil"`
 	StaleUntil time.Time           `json:"staleUntil"`
@@ -527,6 +548,7 @@ func (c *Cache) writeDiskMeta(key string, value *cachedResponse) {
 		Status:     value.status,
 		Header:     value.header,
 		Size:       value.size,
+		BuildID:    value.buildID,
 		StoredAt:   value.storedAt,
 		FreshUntil: value.freshUntil,
 		StaleUntil: value.staleUntil,
@@ -557,6 +579,7 @@ func (c *Cache) restoreFromDisk() {
 	}
 	now := c.now()
 	restoredCount := 0
+	otherBuildCount := 0
 	for _, f := range files {
 		if f.IsDir() || !strings.HasSuffix(f.Name(), ".meta") {
 			continue
@@ -580,13 +603,22 @@ func (c *Cache) restoreFromDisk() {
 			continue
 		}
 
+		freshUntil := meta.FreshUntil
+		if c.cfg.BuildID != "" && meta.BuildID != c.cfg.BuildID {
+			otherBuildCount++
+			if freshUntil.After(now) {
+				freshUntil = now
+			}
+		}
+
 		resp := &cachedResponse{
 			status:     meta.Status,
 			header:     meta.Header,
 			path:       htmlPath,
 			size:       fi.Size(),
+			buildID:    meta.BuildID,
 			storedAt:   meta.StoredAt,
-			freshUntil: meta.FreshUntil,
+			freshUntil: freshUntil,
 			staleUntil: meta.StaleUntil,
 		}
 
@@ -596,7 +628,7 @@ func (c *Cache) restoreFromDisk() {
 		restoredCount++
 	}
 	if restoredCount > 0 {
-		fmt.Printf("[HTMLCache] Restored %d persistent cache entries from %s (%d MB) in %s\n", restoredCount, c.cfg.Dir, c.bytes/(1024*1024), time.Since(started).Round(time.Millisecond))
+		fmt.Printf("[HTMLCache] Restored %d persistent cache entries from %s (%d MB) in %s; %d from another build are served stale until re-rendered\n", restoredCount, c.cfg.Dir, c.bytes/(1024*1024), time.Since(started).Round(time.Millisecond), otherBuildCount)
 	}
 }
 

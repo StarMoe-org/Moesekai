@@ -103,10 +103,18 @@ if [ "$NEXTJS_READY" -ne 1 ]; then
     exit 1
 fi
 
+# The HTML cache serves pages restored from another Next.js build as stale, so a
+# deploy re-renders them instead of keeping the previous build's JavaScript.
+NEXT_BUILD_ID="$(cat /app/nextjs/web/.next/BUILD_ID 2>/dev/null || true)"
+if [ -z "$NEXT_BUILD_ID" ]; then
+    echo "Next.js BUILD_ID not found; cached pages from earlier builds stay fresh" >&2
+fi
+
 (
     cd /app
     exec env \
         FRONTEND_PROXY_URL="${FRONTEND_PROXY_URL:-http://127.0.0.1:$NEXTJS_PORT}" \
+        NEXT_BUILD_ID="$NEXT_BUILD_ID" \
         ./server
 ) &
 GO_PID=$!
