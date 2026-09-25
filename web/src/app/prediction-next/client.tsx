@@ -212,7 +212,8 @@ export default function PredictionNextClient() {
         const predEvent = events.find(e => e.id == selectedEventId);
         const masterEvent = masterEvents.find(e => e.id == selectedEventId);
 
-        // 1. Check matching entries in masterdata worldBlooms
+        // 1. Check matching entries in masterdata worldBlooms.
+        // A finale entry has no gameCharacterId; a finale event has only the overall ranking.
         const matched = worldBlooms
             .filter(wb => wb.eventId === selectedEventId && !wb.isSupplemental && wb.gameCharacterId > 0)
             .sort((a, b) => a.chapterNo - b.chapterNo);
@@ -275,32 +276,6 @@ export default function PredictionNextClient() {
                 chapterStartAt: s + idx * durationPerChapter,
                 aggregateAt: s + (idx + 1) * durationPerChapter,
                 chapterEndAt: s + (idx + 1) * durationPerChapter,
-            }));
-        }
-
-        // 4. If event is World Link by name or type, dynamically construct chapters
-        const isWl = masterEvent?.eventType === "world_bloom" || predEvent?.event_type === "world_bloom"
-            || (predEvent?.name?.includes("WORLD LINK") ?? false)
-            || (masterEvent?.name?.includes("WORLD LINK") ?? false)
-            || (predEvent?.name?.includes("ワールドリンク") ?? false)
-            || (masterEvent?.name?.includes("ワールドリンク") ?? false);
-
-        if (isWl) {
-            const s = predEvent?.start_at ? (predEvent.start_at < 10000000000 ? predEvent.start_at * 1000 : predEvent.start_at) : (masterEvent?.startAt || Date.now());
-            const e = predEvent?.end_at ? (predEvent.end_at < 10000000000 ? predEvent.end_at * 1000 : predEvent.end_at) : (masterEvent?.aggregateAt || (s + 9 * 24 * 3600000));
-            const totalHours = Math.max(24, (e - s) / 3600000);
-            const chapterHours = totalHours <= 250 ? 48 : 72;
-            const chapterCount = Math.min(5, Math.max(4, Math.floor(totalHours / chapterHours)));
-            // Fallback member IDs for WL3 shuffle or unit
-            const defaultMembers = [11, 15, 19, 25, 21];
-            return Array.from({ length: chapterCount }).map((_, idx) => ({
-                id: selectedEventId * 100 + idx + 1,
-                eventId: selectedEventId,
-                gameCharacterId: defaultMembers[idx] || (idx + 1),
-                chapterNo: idx + 1,
-                chapterStartAt: s + idx * chapterHours * 3600000,
-                aggregateAt: Math.min(e, s + (idx + 1) * chapterHours * 3600000),
-                chapterEndAt: Math.min(e, s + (idx + 1) * chapterHours * 3600000),
             }));
         }
 
