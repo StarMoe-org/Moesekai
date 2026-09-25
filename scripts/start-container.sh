@@ -111,17 +111,25 @@ fi
 ) &
 GO_PID=$!
 
+# Go listens only after restoring the persistent HTML cache index (about 90k pages
+# in production), which can take far longer than 10s on a cold volume.
 echo "Waiting for the combined service health check..."
 SERVICE_READY=0
-for _ in 1 2 3 4 5 6 7 8 9 10; do
+GO_STARTUP_SECONDS=180
+attempt=0
+while [ "$attempt" -lt "$GO_STARTUP_SECONDS" ]; do
+    attempt=$((attempt + 1))
     if wget -q --spider "http://127.0.0.1:$GO_PORT/healthz" 2>/dev/null; then
         SERVICE_READY=1
-        echo "Combined service is ready"
+        echo "Combined service is ready (attempt ${attempt})"
         break
     fi
     if ! kill -0 "$GO_PID" 2>/dev/null; then
         echo "Go server exited during startup" >&2
         exit 1
+    fi
+    if [ $((attempt % 15)) -eq 0 ]; then
+        echo "Still waiting for the Go server (attempt ${attempt} of ${GO_STARTUP_SECONDS})..."
     fi
     sleep 1
 done

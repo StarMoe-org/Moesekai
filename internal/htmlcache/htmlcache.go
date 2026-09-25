@@ -550,6 +550,7 @@ func (c *Cache) writeDiskMeta(key string, value *cachedResponse) {
 }
 
 func (c *Cache) restoreFromDisk() {
+	started := time.Now()
 	files, err := os.ReadDir(c.cfg.Dir)
 	if err != nil {
 		return
@@ -595,7 +596,7 @@ func (c *Cache) restoreFromDisk() {
 		restoredCount++
 	}
 	if restoredCount > 0 {
-		fmt.Printf("[HTMLCache] Restored %d persistent cache entries from %s (%d MB)\n", restoredCount, c.cfg.Dir, c.bytes/(1024*1024))
+		fmt.Printf("[HTMLCache] Restored %d persistent cache entries from %s (%d MB) in %s\n", restoredCount, c.cfg.Dir, c.bytes/(1024*1024), time.Since(started).Round(time.Millisecond))
 	}
 }
 
