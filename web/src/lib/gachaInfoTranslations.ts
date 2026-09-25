@@ -5,6 +5,7 @@
  */
 
 import {
+    TRANSLATION_CACHE_TTL,
     fetchTranslationFile,
     getTranslationAssetBaseUrl,
     getTranslationDataVersion,
@@ -29,36 +30,47 @@ export interface GachaInfoTextView {
 
 const emptyGachaInfoTranslations: GachaInfoTranslations = { summary: {}, bubbleText: {}, description: {} };
 
-const gachaInfoCaches = new Map<TranslationTargetLocale, GachaInfoTranslations>();
+interface GachaInfoCacheEntry {
+    data: GachaInfoTranslations;
+    version: string;
+    cachedAt: number;
+}
+
+const gachaInfoCaches = new Map<TranslationTargetLocale, GachaInfoCacheEntry>();
 const gachaInfoLoads = new Map<TranslationTargetLocale, Promise<GachaInfoTranslations>>();
 
 /**
  * Load gachaInfo.json for the target locale (memory → network).
- * A missing or unreachable file resolves to empty maps and is not cached,
- * so a later page visit picks the file up once it is published.
+ * The memory entry lives as long as the startup bundle's (TRANSLATION_CACHE_TTL)
+ * and only for the translation data version it was fetched with, so newly
+ * published translations and markTranslationsUpdated reach an open tab.
+ * A missing or unreachable file is not cached: it resolves to the previous
+ * entry when there is one, otherwise to empty maps.
  */
 export async function loadGachaInfoTranslations(locale?: string): Promise<GachaInfoTranslations> {
     const targetLocale = getTranslationTargetLocale(resolveTranslationLocale(locale));
     if (!targetLocale) return emptyGachaInfoTranslations;
 
+    const version = getTranslationDataVersion(targetLocale);
     const cached = gachaInfoCaches.get(targetLocale);
-    if (cached) return cached;
+    if (cached && cached.version === version && Date.now() - cached.cachedAt < TRANSLATION_CACHE_TTL) {
+        return cached.data;
+    }
 
     const inflight = gachaInfoLoads.get(targetLocale);
     if (inflight) return inflight;
 
-    const version = getTranslationDataVersion(targetLocale);
     const query = version ? `?v=${encodeURIComponent(version)}` : "";
     const url = `${getTranslationAssetBaseUrl(targetLocale)}/gachaInfo.json${query}`;
     const loadingPromise = fetchTranslationFile<Partial<GachaInfoTranslations>>(url)
         .then((file): GachaInfoTranslations => {
-            if (!file) return emptyGachaInfoTranslations;
+            if (!file) return cached?.data ?? emptyGachaInfoTranslations;
             const data: GachaInfoTranslations = {
                 summary: file.summary ?? {},
                 bubbleText: file.bubbleText ?? {},
                 description: file.description ?? {},
             };
-            gachaInfoCaches.set(targetLocale, data);
+            gachaInfoCaches.set(targetLocale, { data, version, cachedAt: Date.now() });
             return data;
         })
         .finally(() => {

@@ -112,7 +112,7 @@ const loadingPromises = new Map<TranslationTargetLocale, Promise<TranslationData
 const TRANSLATION_IDB_KEY = "translations-bundle";
 
 // Translation cache TTL: 30 minutes (faster propagation for proofreading updates)
-const TRANSLATION_CACHE_TTL = 30 * 60 * 1000;
+export const TRANSLATION_CACHE_TTL = 30 * 60 * 1000;
 
 // Key for storing translation cache timestamp in localStorage
 const TRANSLATION_CACHE_TIME_KEY = "translation-cache-time";

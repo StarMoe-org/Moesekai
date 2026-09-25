@@ -125,6 +125,50 @@ test("a missing or unreachable gachaInfo.json resolves to empty maps and is retr
   assert.equal(fetches.length, 3);
 });
 
+test("the gachaInfo memory entry expires with the shared TTL and the translation data version", async () => {
+  installBrowser();
+  const realNow = Date.now;
+  let now = 1_000_000;
+  Date.now = () => now;
+  try {
+    const fetches = [];
+    const untranslated = { summary: { [SUMMARY_JA]: "" }, bubbleText: {}, description: {} };
+    let served = untranslated;
+    globalThis.fetch = async (url) => {
+      fetches.push(String(url));
+      return served ? jsonResponse(served) : notFound();
+    };
+    const translations = await importTranslations();
+    const gachaInfo = await importGachaInfo();
+    const ttl = translations.TRANSLATION_CACHE_TTL;
+
+    const first = await gachaInfo.loadGachaInfoTranslations("zh-CN");
+    assert.equal(gachaInfo.getGachaInfoTranslation(first, "summary", SUMMARY_JA), null, "published keys without translations show the source");
+
+    served = GACHA_INFO_FILE;
+    now += ttl - 1;
+    assert.strictEqual(await gachaInfo.loadGachaInfoTranslations("zh-CN"), first, "a live entry is reused");
+    assert.equal(fetches.length, 1);
+
+    now += 2;
+    const refreshed = await gachaInfo.loadGachaInfoTranslations("zh-CN");
+    assert.equal(fetches.length, 2, "an expired entry is fetched again");
+    assert.equal(gachaInfo.getGachaInfoTranslation(refreshed, "summary", SUMMARY_JA), GACHA_INFO_FILE.summary[SUMMARY_JA], "translations published after the first load reach an open tab");
+
+    translations.markTranslationsUpdated("zh-CN");
+    await gachaInfo.loadGachaInfoTranslations("zh-CN");
+    assert.deepEqual(fetches.slice(2), [`${TRANSLATION_ROOT_URL}/gachaInfo.json?v=${now}`], "a data version bump refetches with the new cache-busting query");
+
+    served = null;
+    now += ttl;
+    assert.deepEqual(await gachaInfo.loadGachaInfoTranslations("zh-CN"), GACHA_INFO_FILE, "a failed refresh keeps the previous translations");
+    await gachaInfo.loadGachaInfoTranslations("zh-CN");
+    assert.equal(fetches.length, 5, "a failed refresh is not cached");
+  } finally {
+    Date.now = realNow;
+  }
+});
+
 test("the startup translation bundle does not request gachaInfo.json", async () => {
   installBrowser();
   const fetches = [];
