@@ -1041,8 +1041,6 @@ export const zhTWPagePrimary = {
             showLessDescription: "收起招募說明",
             showMoreSummary: "展開完整招募簡介",
             showLessSummary: "收起招募簡介",
-            showOriginalText: "查看日文原文",
-            showTranslatedText: "查看譯文",
             viewFullCardPool: "檢視完整出現卡牌清單 ({count})",
             states: {
                 notStarted: "未開始",

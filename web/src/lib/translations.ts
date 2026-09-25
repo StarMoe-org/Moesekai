@@ -10,8 +10,7 @@
 import { getTranslationCache, setTranslationCache, isIndexedDBAvailable } from "./masterdata-cache";
 import { MASTERDATA_VERSION_KEY } from "./fetch";
 
-// NEXT_PUBLIC_TRANSLATION_ORIGIN points local development at a local translation backend.
-const TRANSLATION_ORIGIN = (process.env.NEXT_PUBLIC_TRANSLATION_ORIGIN || "https://translation.exmeaning.com").replace(/\/+$/, "");
+const TRANSLATION_ORIGIN = "https://translation.exmeaning.com";
 export const TRANSLATION_BASE_URL = `${TRANSLATION_ORIGIN}/files/translation`;
 
 export function getTranslationAssetBaseUrl(locale: TranslationTargetLocale): string {
@@ -125,7 +124,7 @@ export function getTranslationTargetLocale(locale: string): TranslationTargetLoc
     return null;
 }
 
-export function resolveTranslationLocale(locale?: string): string {
+function resolveTranslationLocale(locale?: string): string {
     if (locale) return locale;
     if (typeof window === "undefined") return "zh-CN";
     const routeLocale = window.location?.pathname?.split("/").filter(Boolean)[0]?.toLowerCase();
@@ -179,7 +178,7 @@ function getTranslationVersionHash(locale: TranslationTargetLocale): string {
     return locale === "zh-CN" ? versionHash : `${locale}:${versionHash}`;
 }
 
-export function getTranslationDataVersion(locale: TranslationTargetLocale): string {
+function getTranslationDataVersion(locale: TranslationTargetLocale): string {
     if (typeof window === "undefined") return "";
     return localStorage.getItem(localeStorageKey(TRANSLATION_DATA_VERSION_KEY, locale)) || "";
 }
@@ -333,7 +332,7 @@ export async function loadTranslations(locale?: string): Promise<TranslationData
 /**
  * Fetch a single translation file, returns null if not found
  */
-export async function fetchTranslationFile<T>(url: string): Promise<T | null> {
+async function fetchTranslationFile<T>(url: string): Promise<T | null> {
     try {
         const response = await fetch(url);
         if (!response.ok) {

@@ -1933,8 +1933,6 @@ export const jaJPMessages = {
       showLessDescription: '詳細ルールをたたむ',
       showMoreSummary: '詳細概要を表示',
       showLessSummary: '詳細概要をたたむ',
-      showOriginalText: '日本語の原文を表示',
-      showTranslatedText: '翻訳を表示',
       viewFullCardPool: '出現メンバー一覧を表示 ({count})',
       states: {
         notStarted: '未開始',

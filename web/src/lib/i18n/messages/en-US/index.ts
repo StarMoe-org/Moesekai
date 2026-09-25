@@ -1910,8 +1910,6 @@ export const enUSMessages = {
             showLessDescription: "Hide details",
             showMoreSummary: "Show full overview",
             showLessSummary: "Hide overview",
-            showOriginalText: "Show Japanese original",
-            showTranslatedText: "Show translation",
             viewFullCardPool: "View Full Card Pool List ({count})",
             states: {
                 notStarted: "Not Started",

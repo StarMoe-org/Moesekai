@@ -15,7 +15,6 @@ import { TranslatedText } from "@/components/common/TranslatedText";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import CardSelectorModal from "@/components/cards/CardSelectorModal";
 import { useI18n } from "@/contexts/I18nContext";
-import { getGachaInfoTranslation, loadGachaInfoTranslations, resolveGachaInfoText, type GachaInfoField, type GachaInfoTranslations } from "@/lib/gachaInfoTranslations";
 
 // Gacha Simulator Types
 interface GachaStatistic {
@@ -117,7 +116,7 @@ function isSelectableWishDetail(detail: IGachaDetail): boolean {
 }
 
 export default function GachaDetailClient() {
-    const { t, formatDate, locale } = useI18n();
+    const { t, formatDate } = useI18n();
     const _router = useRouter();    const params = useParams();
     const gachaId = params.id as string;
     const searchParams = useSearchParams();
@@ -133,11 +132,9 @@ export default function GachaDetailClient() {
     const [selectedWishCardIds, setSelectedWishCardIds] = useState<number[]>([]);
     const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
     const [isSummaryExpanded, setIsSummaryExpanded] = useState(false);
-    const [gachaInfoTranslations, setGachaInfoTranslations] = useState<{ locale: string; data: GachaInfoTranslations } | null>(null);
-    const [originalGachaInfoFields, setOriginalGachaInfoFields] = useState<Partial<Record<GachaInfoField, boolean>>>({});
     const [isCardSelectorModalOpen, setIsCardSelectorModalOpen] = useState(false);
     const [isWishModalOpen, setIsWishModalOpen] = useState(false);
-    const { useTrainedThumbnail, assetSource, useLLMTranslation } = useTheme();
+    const { useTrainedThumbnail, assetSource } = useTheme();
     const { setDetailName } = useBreadcrumb();
 
     // Gacha Simulator states
@@ -191,19 +188,6 @@ export default function GachaDetailClient() {
         }
         fetchData();
     }, [gachaId]);
-
-    const hasGachaInformationText = !!(gacha?.gachaInformation?.summary || gacha?.gachaInformation?.bubbleText || gacha?.gachaInformation?.description);
-
-    useEffect(() => {
-        if (!useLLMTranslation || !hasGachaInformationText) return;
-        let active = true;
-        loadGachaInfoTranslations(locale).then((data) => {
-            if (active) setGachaInfoTranslations({ locale, data });
-        });
-        return () => {
-            active = false;
-        };
-    }, [locale, useLLMTranslation, hasGachaInformationText]);
 
     const formatTimestamp = useCallback((timestamp: number) => {
         if (!mounted) return "...";
@@ -706,25 +690,6 @@ export default function GachaDetailClient() {
     const gachaTypeLabel = gachaTypeLabelKey ? t(gachaTypeLabelKey) : gacha.gachaType;
     const activeImageLabel = t(`page.gacha.imageTabs.${activeImageTab}`);
     const activeImageUrl = activeImageTab === "logo" ? logoUrl : bgUrl;
-    const activeGachaInfoTranslations = useLLMTranslation && gachaInfoTranslations?.locale === locale ? gachaInfoTranslations.data : null;
-    const summaryView = resolveGachaInfoText(
-        gacha.gachaInformation?.summary ?? "",
-        getGachaInfoTranslation(activeGachaInfoTranslations, "summary", gacha.gachaInformation?.summary),
-        !!originalGachaInfoFields.summary,
-    );
-    const bubbleTextView = resolveGachaInfoText(
-        gacha.gachaInformation?.bubbleText ?? "",
-        getGachaInfoTranslation(activeGachaInfoTranslations, "bubbleText", gacha.gachaInformation?.bubbleText),
-        !!originalGachaInfoFields.bubbleText,
-    );
-    const descriptionView = resolveGachaInfoText(
-        gacha.gachaInformation?.description ?? "",
-        getGachaInfoTranslation(activeGachaInfoTranslations, "description", gacha.gachaInformation?.description),
-        !!originalGachaInfoFields.description,
-    );
-    const toggleGachaInfoOriginal = (field: GachaInfoField) => {
-        setOriginalGachaInfoFields(prev => ({ ...prev, [field]: !prev[field] }));
-    };
 
     return (
         <MainLayout>
@@ -931,29 +896,14 @@ export default function GachaDetailClient() {
                                                 {t("page.gacha.bubbleTitle")}
                                             </span>
                                             <p className="text-sm font-medium text-slate-700 leading-snug">
-                                                {bubbleTextView.text}
+                                                {gacha.gachaInformation.bubbleText}
                                             </p>
-                                            {bubbleTextView.canToggle && (
-                                                <GachaInfoOriginalToggle
-                                                    className="ml-auto shrink-0"
-                                                    showingTranslation={bubbleTextView.showingTranslation}
-                                                    onToggle={() => toggleGachaInfoOriginal("bubbleText")}
-                                                />
-                                            )}
                                         </div>
                                     )}
                                     {gacha.gachaInformation.summary && (
                                         <div>
-                                            {summaryView.canToggle && (
-                                                <div className="flex justify-end mb-2">
-                                                    <GachaInfoOriginalToggle
-                                                        showingTranslation={summaryView.showingTranslation}
-                                                        onToggle={() => toggleGachaInfoOriginal("summary")}
-                                                    />
-                                                </div>
-                                            )}
                                             <div className={`text-sm text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50/50 p-4 rounded-xl border border-slate-100 ${!isSummaryExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
-                                                {summaryView.text}
+                                                {gacha.gachaInformation.summary}
                                                 {!isSummaryExpanded && (
                                                     <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none" />
                                                 )}
@@ -1000,16 +950,8 @@ export default function GachaDetailClient() {
                                     </button>
                                 </div>
                                 <div className="p-5">
-                                    {descriptionView.canToggle && (
-                                        <div className="flex justify-end mb-2">
-                                            <GachaInfoOriginalToggle
-                                                showingTranslation={descriptionView.showingTranslation}
-                                                onToggle={() => toggleGachaInfoOriginal("description")}
-                                            />
-                                        </div>
-                                    )}
                                     <div className={`text-xs text-slate-600 leading-relaxed whitespace-pre-line ${!isDescriptionExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
-                                        {descriptionView.text}
+                                        {gacha.gachaInformation.description}
                                         {!isDescriptionExpanded && (
                                             <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
                                         )}
@@ -1515,22 +1457,6 @@ export default function GachaDetailClient() {
                 }}
             />
         </MainLayout >
-    );
-}
-
-function GachaInfoOriginalToggle({ showingTranslation, onToggle, className = "" }: { showingTranslation: boolean; onToggle: () => void; className?: string }) {
-    const { t } = useI18n();
-    return (
-        <button
-            type="button"
-            onClick={onToggle}
-            className={`inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-miku transition-colors ${className}`}
-        >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
-            {showingTranslation ? t("page.gacha.showOriginalText") : t("page.gacha.showTranslatedText")}
-        </button>
     );
 }
 

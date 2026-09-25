@@ -1909,8 +1909,6 @@ export const zhCNMessages = {
             showLessDescription: "收起招募说明",
             showMoreSummary: "展开完整卡池简介",
             showLessSummary: "收起卡池简介",
-            showOriginalText: "查看日文原文",
-            showTranslatedText: "查看译文",
             viewFullCardPool: "查看完整出现卡牌清单 ({count})",
             states: {
                 notStarted: "未开始",
