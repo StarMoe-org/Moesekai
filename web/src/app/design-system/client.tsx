@@ -9,39 +9,212 @@ import Modal from "@/components/common/Modal";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import BaseFilters, { FilterSection, FilterButton, FilterToggle } from "@/components/common/BaseFilters";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { useI18n } from "@/contexts/I18nContext";
+import { getCharacterName } from "@/lib/i18n/characters";
+import { getCharacterIconUrl } from "@/lib/assets";
+import { THEME_SEED_COLORS } from "@/lib/theme-seeds";
+import type { ICardInfo } from "@/types/types";
+import {
+    BottomSheet,
+    Button,
+    Card,
+    Checkbox,
+    Chip,
+    CircularProgress,
+    ConnectedButtonGroup,
+    Dialog,
+    Divider,
+    Fab,
+    IconButton,
+    LinearProgress,
+    List,
+    ListItem,
+    LoadingIndicator,
+    Menu,
+    Radio,
+    SegmentedButton,
+    SideSheet,
+    Slider,
+    Snackbar,
+    Surface,
+    Switch,
+    Tabs,
+    TextField,
+    Tooltip,
+    type ButtonVariant,
+} from "@/components/md3";
+import {
+    mdAdd,
+    mdCheck,
+    mdEdit,
+    mdFavorite,
+    mdFavoriteFill,
+    mdFilterList,
+    mdInfo,
+    mdKeyboardArrowDown,
+    mdLibraryMusic,
+    mdPalette,
+    mdSearch,
+    mdSort,
+    mdStyle,
+    mdCelebration,
+    mdMoreVert,
+} from "@/components/md3/icons";
 
 const MysekaiScenePreview = dynamic(() => import("@/components/mysekai-preview/MysekaiScenePreview"), {
     ssr: false,
-    loading: () => (
-        <div className="flex h-[560px] items-center justify-center rounded-3xl border border-slate-200 bg-slate-50 text-slate-400">
-            正在加载烤森预览器...
-        </div>
-    ),
+    loading: () => <MysekaiLoading />,
 });
 
+function MysekaiLoading() {
+    const { t } = useI18n();
+    return (
+        <div className="flex h-[560px] items-center justify-center gap-3 rounded-md3-xl bg-surface-container text-on-surface-variant">
+            <LoadingIndicator size={40} />
+            {t("page.designSystem.mysekaiLoading")}
+        </div>
+    );
+}
+
+/* ── Demo data ─────────────────────────────────────────────────────────── */
+
+function demoCard(id: number, characterId: number, rarity: ICardInfo["cardRarityType"], assetbundleName: string, attr: ICardInfo["attr"]): ICardInfo {
+    return {
+        id,
+        seq: id,
+        characterId,
+        cardRarityType: rarity,
+        specialTrainingPower1BonusFixed: 0,
+        specialTrainingPower2BonusFixed: 0,
+        specialTrainingPower3BonusFixed: 0,
+        attr,
+        supportUnit: "none",
+        skillId: 1,
+        cardSkillName: "Skill",
+        prefix: "Demo",
+        assetbundleName,
+        gachaPhrase: "Phrase",
+        archiveDisplayType: "normal",
+        archivePublishedAt: 0,
+        cardParameters: { param1: [], param2: [], param3: [] },
+        specialTrainingCosts: [],
+        masterLessonAchieveResources: [],
+        releaseAt: 0,
+        cardSupplyId: 0,
+        cardSupplyType: "normal",
+    } as ICardInfo;
+}
+
+const DEMO_CARDS: Array<{ key: string; card: ICardInfo; trained?: boolean; mastery?: number; width: number; caption: string }> = [
+    { key: "c1", card: demoCard(1, 21, "rarity_4", "res021_no018", "cool"), width: 128, caption: "4★" },
+    { key: "c2", card: demoCard(2, 21, "rarity_4", "res021_no018", "cool"), trained: true, mastery: 5, width: 128, caption: "4★ · trained · M5" },
+    { key: "c3", card: demoCard(3, 21, "rarity_birthday", "birthday_miku_2023", "pure"), width: 128, caption: "Birthday" },
+    { key: "c4", card: demoCard(4, 26, "rarity_2", "res026_no002", "happy"), width: 128, caption: "2★" },
+    { key: "c5", card: demoCard(5, 1, "rarity_3", "res001_no007", "mysterious"), width: 64, caption: "64px" },
+];
+
+const COLOR_ROLES: Array<{ bg: string; fg: string; name: string }> = [
+    { bg: "bg-primary", fg: "text-on-primary", name: "primary" },
+    { bg: "bg-primary-container", fg: "text-on-primary-container", name: "primary-container" },
+    { bg: "bg-secondary", fg: "text-on-secondary", name: "secondary" },
+    { bg: "bg-secondary-container", fg: "text-on-secondary-container", name: "secondary-container" },
+    { bg: "bg-tertiary", fg: "text-on-tertiary", name: "tertiary" },
+    { bg: "bg-tertiary-container", fg: "text-on-tertiary-container", name: "tertiary-container" },
+    { bg: "bg-error", fg: "text-on-error", name: "error" },
+    { bg: "bg-error-container", fg: "text-on-error-container", name: "error-container" },
+];
+
+const SURFACE_ROLES: Array<{ bg: string; name: string }> = [
+    { bg: "bg-surface-container-lowest", name: "surface-container-lowest" },
+    { bg: "bg-surface-container-low", name: "surface-container-low" },
+    { bg: "bg-surface-container", name: "surface-container" },
+    { bg: "bg-surface-container-high", name: "surface-container-high" },
+    { bg: "bg-surface-container-highest", name: "surface-container-highest" },
+    { bg: "bg-inverse-surface text-inverse-on-surface", name: "inverse-surface" },
+];
+
+const TYPE_SCALE = [
+    "type-display-l", "type-display-m", "type-display-s",
+    "type-headline-l", "type-headline-m", "type-headline-s",
+    "type-title-l", "type-title-m", "type-title-s",
+    "type-body-l", "type-body-m", "type-body-s",
+    "type-label-l", "type-label-m", "type-label-s",
+] as const;
+
+const SHAPES = [
+    { cls: "rounded-md3-xs", name: "xs · 4" },
+    { cls: "rounded-md3-sm", name: "sm · 8" },
+    { cls: "rounded-md3-md", name: "md · 12" },
+    { cls: "rounded-md3-lg", name: "lg · 16" },
+    { cls: "rounded-md3-lg-inc", name: "lg+ · 20" },
+    { cls: "rounded-md3-xl", name: "xl · 28" },
+    { cls: "rounded-md3-xl-inc", name: "xl+ · 32" },
+    { cls: "rounded-md3-xxl", name: "xxl · 48" },
+    { cls: "rounded-full", name: "full" },
+];
+
+const ELEVATIONS = ["shadow-elev-0", "shadow-elev-1", "shadow-elev-2", "shadow-elev-3", "shadow-elev-4", "shadow-elev-5"];
+
+const BUTTON_VARIANTS: ButtonVariant[] = ["filled", "tonal", "outlined", "elevated", "text"];
+
+/* ── Section scaffold ──────────────────────────────────────────────────── */
+
+function Section({ title, hint, icon, children }: { title: string; hint?: string; icon?: React.ReactNode; children: React.ReactNode }) {
+    return (
+        <section className="mb-12">
+            <div className="mb-4 flex items-center gap-3">
+                {icon}
+                <h2 className="type-headline-s text-on-surface">{title}</h2>
+            </div>
+            {hint && <p className="-mt-2 mb-4 max-w-3xl type-body-m text-on-surface-variant">{hint}</p>}
+            {children}
+        </section>
+    );
+}
+
+function Code({ children }: { children: React.ReactNode }) {
+    return <code className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 font-mono text-[0.8em] text-on-surface-variant">{children}</code>;
+}
+
+/* ── Page ──────────────────────────────────────────────────────────────── */
+
 export default function DesignSystemClient() {
+    const { t } = useI18n();
+    const { themeCharId, setThemeCharacter } = useTheme();
+
+    // Legacy component demos
     const [modalSize, setModalSize] = useState<"sm" | "md" | "lg" | "xl">("md");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-    // ===== Quick Filter demo state =====
+    // MD3 demos
+    const [favorite, setFavorite] = useState(true);
+    const [chips, setChips] = useState<string[]>(["filter"]);
+    const [inputChips, setInputChips] = useState(["Miku", "Rin", "Len"]);
+    const [field, setField] = useState("");
+    const [switchOn, setSwitchOn] = useState(true);
+    const [checked, setChecked] = useState(true);
+    const [server, setServer] = useState<"jp" | "cn">("jp");
+    const [volume, setVolume] = useState(60);
+    const [segment, setSegment] = useState<"cards" | "music" | "events">("cards");
+    const [multiSegment, setMultiSegment] = useState<string[]>(["cards"]);
+    const [tab, setTab] = useState<"cards" | "music" | "events">("cards");
+    const [sort, setSort] = useState("date");
+    const [snackbar, setSnackbar] = useState(false);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [bottomSheetOpen, setBottomSheetOpen] = useState(false);
+    const [sideSheetOpen, setSideSheetOpen] = useState(false);
+
+    // Quick filter demo
     const [demoSearch, setDemoSearch] = useState("");
     const [demoSortBy, setDemoSortBy] = useState("name");
     const [demoSortOrder, setDemoSortOrder] = useState<"asc" | "desc">("desc");
     const [demoCategory, setDemoCategory] = useState("all");
     const [demoToggle, setDemoToggle] = useState(false);
-
     const demoTotalCount = 128;
     const demoFilteredCount = demoSearch || demoCategory !== "all" || demoToggle ? 42 : 128;
-
-    const demoSortOptions = [
-        { id: "name", label: "名称" },
-        { id: "date", label: "日期" },
-        { id: "level", label: "等级" },
-    ];
-
     const hasActiveFilters = demoSearch !== "" || demoCategory !== "all" || demoToggle || demoSortBy !== "name";
-
     const resetDemoFilters = () => {
         setDemoSearch("");
         setDemoSortBy("name");
@@ -49,927 +222,516 @@ export default function DesignSystemClient() {
         setDemoCategory("all");
         setDemoToggle(false);
     };
+    const categories = [
+        { id: "all", label: t("page.designSystem.categoryAll") },
+        { id: "typeA", label: t("page.designSystem.categoryA") },
+        { id: "typeB", label: t("page.designSystem.categoryB") },
+    ];
 
-    // Register quick filter content for this page
     const quickFilterContent = (
         <BaseFilters
-            title="快捷筛选器演示"
+            title={t("page.designSystem.quickFilterDemo")}
             filteredCount={demoFilteredCount}
             totalCount={demoTotalCount}
-            countUnit="项"
+            countUnit={t("page.designSystem.quickFilterUnit")}
             searchQuery={demoSearch}
             onSearchChange={setDemoSearch}
-            searchPlaceholder="搜索示例..."
-            sortOptions={demoSortOptions}
+            searchPlaceholder={t("page.designSystem.quickFilterSearch")}
+            sortOptions={[
+                { id: "name", label: t("page.designSystem.sortName") },
+                { id: "date", label: t("page.designSystem.sortDate") },
+                { id: "level", label: t("page.designSystem.sortLevel") },
+            ]}
             sortBy={demoSortBy}
             sortOrder={demoSortOrder}
-            onSortChange={(sortBy, sortOrder) => { setDemoSortBy(sortBy); setDemoSortOrder(sortOrder); }}
+            onSortChange={(sortBy, sortOrder) => {
+                setDemoSortBy(sortBy);
+                setDemoSortOrder(sortOrder);
+            }}
             hasActiveFilters={hasActiveFilters}
             onReset={resetDemoFilters}
         >
-            <FilterSection label="分类">
+            <FilterSection label={t("page.designSystem.categoryLabel")}>
                 <div className="grid grid-cols-3 gap-2">
-                    {["all", "typeA", "typeB"].map(cat => (
-                        <FilterButton
-                            key={cat}
-                            selected={demoCategory === cat}
-                            onClick={() => setDemoCategory(cat)}
-                        >
-                            {cat === "all" ? "全部" : cat === "typeA" ? "类型 A" : "类型 B"}
+                    {categories.map((cat) => (
+                        <FilterButton key={cat.id} selected={demoCategory === cat.id} onClick={() => setDemoCategory(cat.id)}>
+                            {cat.label}
                         </FilterButton>
                     ))}
                 </div>
             </FilterSection>
-            <FilterToggle
-                selected={demoToggle}
-                onClick={() => setDemoToggle(prev => !prev)}
-                label="仅显示已完成"
-            />
+            <FilterToggle selected={demoToggle} onClick={() => setDemoToggle((prev) => !prev)} label={t("page.designSystem.onlyCompleted")} />
         </BaseFilters>
     );
 
-    useQuickFilter("快捷筛选器演示", quickFilterContent, [
-        demoSearch, demoSortBy, demoSortOrder, demoCategory, demoToggle,
+    useQuickFilter(t("page.designSystem.quickFilterDemo"), quickFilterContent, [
+        demoSearch,
+        demoSortBy,
+        demoSortOrder,
+        demoCategory,
+        demoToggle,
+        t,
     ]);
 
-
-    const openModal = (size: "sm" | "md" | "lg" | "xl") => {
-        setModalSize(size);
-        setIsModalOpen(true);
-    };
+    const tabItems = [
+        { value: "cards" as const, label: t("page.designSystem.tabCards"), icon: mdStyle },
+        { value: "music" as const, label: t("page.designSystem.tabMusic"), icon: mdLibraryMusic },
+        { value: "events" as const, label: t("page.designSystem.tabEvents"), icon: mdCelebration },
+    ];
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-6 py-12 max-w-6xl relative">
-                {/* iOS 26 Ambient Colorful Glowing Blobs */}
-                <div className="absolute top-1/4 left-10 w-72 h-72 rounded-full bg-miku/12 blur-[90px] pointer-events-none animate-float-blob-1 z-0"></div>
-                <div className="absolute bottom-1/3 right-10 w-96 h-96 rounded-full bg-luka/12 blur-[100px] pointer-events-none animate-float-blob-2 z-0"></div>
-                <div className="absolute top-2/3 left-1/3 w-80 h-80 rounded-full bg-purple-500/8 blur-[90px] pointer-events-none animate-float-blob-1 z-0"></div>
+            <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6 sm:py-12">
+                {/* Header */}
+                <header className="mb-12">
+                    <Chip variant="assist" icon={mdPalette} className="mb-4">
+                        {t("page.designSystem.badge")}
+                    </Chip>
+                    <h1 className="type-display-s text-on-surface sm:type-display-m">{t("page.designSystem.title")}</h1>
+                    <p className="mt-3 max-w-3xl type-body-l text-on-surface-variant">{t("page.designSystem.intro")}</p>
+                </header>
 
-                <div className="mb-12 relative z-10">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 island-pill-active rounded-full mb-3">
-                        <span className="w-2 h-2 rounded-full bg-miku animate-pulse"></span>
-                        <span className="text-[10px] font-bold uppercase tracking-widest">Floating Island · Apple Foundations</span>
+                {/* Seed */}
+                <Section title={t("page.designSystem.seedTitle")} hint={t("page.designSystem.seedHint")}>
+                    <Surface tone="low" className="p-4">
+                        <div className="flex flex-wrap gap-2">
+                            {Object.keys(THEME_SEED_COLORS).map((id) => {
+                                const selected = themeCharId === id;
+                                const name = getCharacterName(t, Number(id), "short");
+                                return (
+                                    <button
+                                        key={id}
+                                        type="button"
+                                        title={name}
+                                        aria-label={name}
+                                        aria-pressed={selected}
+                                        onClick={() => setThemeCharacter(id)}
+                                        className={`focus-ring relative h-12 w-12 overflow-hidden transition-[border-radius] duration-300 ease-md3-spatial-fast ${selected ? "rounded-md3-lg ring-[3px] ring-primary ring-offset-2 ring-offset-surface-container-low" : "rounded-full hover:rounded-md3-lg"}`}
+                                        style={{ backgroundColor: THEME_SEED_COLORS[id] }}
+                                    >
+                                        <img src={getCharacterIconUrl(Number(id))} alt="" className="h-full w-full object-cover" loading="lazy" />
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    </Surface>
+                </Section>
+
+                {/* Colors */}
+                <Section title={t("page.designSystem.colorsTitle")} hint={t("page.designSystem.colorsHint")}>
+                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                        {COLOR_ROLES.map((role) => (
+                            <div key={role.name} className={`flex h-24 flex-col justify-between rounded-md3-lg p-3 ${role.bg} ${role.fg}`}>
+                                <span className="type-label-l">{role.name}</span>
+                                <span className="font-mono type-label-s opacity-80">on-{role.name}</span>
+                            </div>
+                        ))}
                     </div>
-                    <h1 className="text-4xl font-extrabold type-display bg-gradient-to-r from-miku via-miku-dark to-luka bg-clip-text text-transparent mb-4">
-                        Design System & Component Library
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 text-lg type-body max-w-3xl">
-                        Floating Island chrome plus Apple-inspired foundations: critically-damped motion, material hierarchy, size-specific typography, instant press feedback, and reduced-motion / reduced-transparency / contrast support.
-                    </p>
+                    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+                        {SURFACE_ROLES.map((role) => (
+                            <div key={role.name} className={`flex h-20 items-end rounded-md3-lg border border-outline-variant p-3 text-on-surface ${role.bg}`}>
+                                <span className="type-label-m">{role.name}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="mt-3 flex flex-wrap gap-3 type-label-m">
+                        <span className="rounded-md3-sm border border-outline px-3 py-2 text-on-surface">outline</span>
+                        <span className="rounded-md3-sm border border-outline-variant px-3 py-2 text-on-surface">outline-variant</span>
+                        <span className="rounded-md3-sm bg-surface-container px-3 py-2 text-on-surface-variant">on-surface-variant</span>
+                    </div>
+                </Section>
+
+                {/* Typography */}
+                <Section title={t("page.designSystem.typeTitle")}>
+                    <Surface tone="low" className="divide-y divide-outline-variant overflow-hidden">
+                        {TYPE_SCALE.map((cls) => (
+                            <div key={cls} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-6">
+                                <span className="w-36 shrink-0 font-mono type-label-m text-on-surface-variant">{cls.replace("type-", "")}</span>
+                                <span className={`${cls} min-w-0 truncate text-on-surface`}>{t("page.designSystem.typeSample")}</span>
+                            </div>
+                        ))}
+                    </Surface>
+                </Section>
+
+                {/* Shape + elevation */}
+                <div className="grid gap-x-8 lg:grid-cols-2">
+                    <Section title={t("page.designSystem.shapeTitle")}>
+                        <div className="grid grid-cols-3 gap-3">
+                            {SHAPES.map((shape) => (
+                                <div key={shape.name} className="flex flex-col items-center gap-2">
+                                    <div className={`h-16 w-full bg-primary-container ${shape.cls}`} />
+                                    <span className="font-mono type-label-s text-on-surface-variant">{shape.name}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </Section>
+                    <Section title={t("page.designSystem.elevationTitle")} hint={t("page.designSystem.elevationHint")}>
+                        <div className="grid grid-cols-3 gap-4">
+                            {ELEVATIONS.map((shadow, level) => (
+                                <div
+                                    key={level}
+                                    className={`flex h-16 items-center justify-center rounded-md3-md bg-surface-container-low type-label-l text-on-surface ${shadow}`}
+                                >
+                                    {level}
+                                </div>
+                            ))}
+                        </div>
+                    </Section>
                 </div>
 
-                {/* Apple Foundations */}
-                <section className="mb-16 relative z-10">
-                    <h2 className="text-2xl type-title text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-miku rounded-full"></span>
-                        Apple Foundations
-                    </h2>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-                        <div className="island-panel rounded-3xl p-5">
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-miku mb-2">Motion</div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 type-body mb-3">
-                                Default UI springs are critically damped (no bounce). Use momentum bounce only after flicks. Import from <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">@/lib/motion</code>.
-                            </p>
-                            <ul className="text-xs text-slate-500 space-y-1 font-mono">
-                                <li>springSnappy · bounce 0 · 0.32s</li>
-                                <li>springSoft · bounce 0 · 0.42s</li>
-                                <li>springSheet · bounce 0.15 · 0.36s</li>
-                                <li>springMomentum · bounce 0.2 · 0.4s</li>
-                            </ul>
-                        </div>
-
-                        <div className="island-panel rounded-3xl p-5">
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-miku mb-2">Materials</div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 type-body mb-3">
-                                Heavier materials for structural chrome; lighter for interactive chips. Avoid stacking light glass on light glass.
-                            </p>
-                            <div className="grid grid-cols-2 gap-2">
-                                <div className="material-thin rounded-2xl p-3 text-[11px] font-semibold type-on-glass">thin</div>
-                                <div className="material-regular rounded-2xl p-3 text-[11px] font-semibold type-on-glass">regular</div>
-                                <div className="material-thick rounded-2xl p-3 text-[11px] font-semibold type-on-glass">thick</div>
-                                <div className="material-chrome rounded-2xl p-3 text-[11px] font-semibold type-on-glass">chrome</div>
+                {/* Buttons */}
+                <Section title={t("page.designSystem.buttonsTitle")}>
+                    <Surface tone="low" className="space-y-5 p-5">
+                        {BUTTON_VARIANTS.map((variant) => (
+                            <div key={variant} className="flex flex-wrap items-center gap-3">
+                                <span className="w-20 font-mono type-label-m text-on-surface-variant">{variant}</span>
+                                <Button variant={variant}>{t("page.designSystem.buttonLabel")}</Button>
+                                <Button variant={variant} icon={mdAdd}>
+                                    {t("page.designSystem.create")}
+                                </Button>
+                                <Button variant={variant} shape="square">
+                                    {t("page.designSystem.buttonLabel")}
+                                </Button>
+                                <Button variant={variant} disabled>
+                                    {t("page.designSystem.buttonLabel")}
+                                </Button>
                             </div>
+                        ))}
+                        <Divider />
+                        <div className="flex flex-wrap items-end gap-3">
+                            {(["xs", "s", "m", "l"] as const).map((size) => (
+                                <Button key={size} size={size} variant="tonal" icon={mdEdit}>
+                                    {size.toUpperCase()}
+                                </Button>
+                            ))}
                         </div>
-
-                        <div className="island-panel rounded-3xl p-5">
-                            <div className="text-[10px] font-bold uppercase tracking-widest text-miku mb-2">Response & A11y</div>
-                            <p className="text-sm text-slate-600 dark:text-slate-300 type-body mb-3">
-                                Feedback on pointer-down via <code className="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">.pressable</code>. Respects reduced motion, reduced transparency, and more contrast.
-                            </p>
-                            <div className="flex flex-wrap gap-2">
-                                <button type="button" className="pressable px-4 py-2 rounded-full ios-glass-btn text-sm font-semibold">
-                                    Press me
-                                </button>
-                                <button type="button" className="pressable px-4 py-2 rounded-full ios-glass-btn ios-glass-btn-primary text-sm font-semibold">
-                                    Primary
-                                </button>
-                            </div>
+                        <div className="flex flex-wrap items-center gap-3">
+                            <Button variant="filled" color="tertiary">tertiary</Button>
+                            <Button variant="tonal" color="secondary">secondary</Button>
+                            <Button variant="filled" color="error">error</Button>
+                            <Button variant="tonal" selected={favorite} onClick={() => setFavorite((v) => !v)} icon={favorite ? mdFavoriteFill : mdFavorite}>
+                                {t("page.designSystem.favorite")}
+                            </Button>
                         </div>
-                    </div>
+                    </Surface>
+                </Section>
 
-                    <div className="ios-glass-panel rounded-3xl p-5">
-                        <div className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">CSS tokens</div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs font-mono text-slate-500">
-                            <div>--ease-out-soft / --ease-spring</div>
-                            <div>--duration-instant|fast|base|slow</div>
-                            <div>--material-*-bg / blur</div>
-                            <div>--type-tracking-* / --type-leading-*</div>
-                            <div>--press-scale (0.97)</div>
-                            <div>projectMomentum() · rubberband()</div>
-                            <div>prefers-reduced-motion</div>
-                            <div>prefers-reduced-transparency · prefers-contrast</div>
-                        </div>
-                    </div>
-                </section>
+                {/* Icon buttons & FAB */}
+                <Section title={t("page.designSystem.iconButtonsTitle")}>
+                    <Surface tone="low" className="flex flex-wrap items-center gap-3 p-5">
+                        {(["standard", "filled", "tonal", "outlined"] as const).map((variant) => (
+                            <IconButton
+                                key={variant}
+                                variant={variant}
+                                icon={mdFavorite}
+                                selectedIcon={mdFavoriteFill}
+                                selected={favorite}
+                                onClick={() => setFavorite((v) => !v)}
+                                label={t("page.designSystem.favorite")}
+                            />
+                        ))}
+                        <IconButton variant="tonal" size="m" width="wide" icon={mdSearch} label={t("common.action.search")} />
+                        <span className="mx-2 h-10 w-px bg-outline-variant" />
+                        <Fab icon={mdEdit} label={t("page.designSystem.create")} />
+                        <Fab icon={mdEdit} label={t("page.designSystem.create")} size="m" color="tertiary-container" />
+                        <Fab icon={mdAdd} label={t("page.designSystem.create")} extended color="primary" />
+                    </Surface>
+                </Section>
 
-                {/* Colors Section */}
-                <section className="mb-16 relative z-10">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-miku rounded-full"></span>
-                        Color Palette & Glassmorphism
-                    </h2>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        {/* Brand Colors */}
-                        <ColorCard name="Miku Green" variable="--color-miku" className="bg-miku text-white" hex="Dynamic (User Theme)" />
-                        <ColorCard name="Miku Dark" variable="--color-miku-dark" className="bg-miku-dark text-white" hex="Dynamic (Dark Variant)" />
-                        <ColorCard name="Luka Pink" variable="--color-luka" className="bg-luka text-white" hex="#ff6699" />
-                        <ColorCard name="Primary Text" variable="--color-primary-text" className="bg-primary-text text-white" hex="#334455" />
-
-                        {/* Floating Island Tokens */}
-                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow h-32 flex flex-col">
-                            <div className="flex-grow flex items-center justify-center" style={{ background: "var(--accent-soft)" }}>
-                                <span className="font-mono opacity-80 text-[var(--accent-deep)]">accent-soft</span>
-                            </div>
-                            <div className="p-3 bg-white dark:bg-slate-900/60">
-                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">Accent Soft</div>
-                                <div className="text-xs text-slate-400 font-mono mt-0.5">--accent-soft</div>
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow h-32 flex flex-col">
-                            <div className="flex-grow flex items-center justify-center bg-[var(--accent-deep)] text-white">
-                                <span className="font-mono opacity-90">accent-deep</span>
-                            </div>
-                            <div className="p-3 bg-white dark:bg-slate-900/60">
-                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">Accent Deep</div>
-                                <div className="text-xs text-slate-400 font-mono mt-0.5">--accent-deep</div>
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow h-32 flex flex-col">
-                            <div className="flex-grow flex items-center justify-center bg-[var(--cream-deep)]">
-                                <span className="font-mono opacity-70 text-slate-600 dark:text-slate-300">cream-deep</span>
-                            </div>
-                            <div className="p-3 bg-white dark:bg-slate-900/60">
-                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">Cream Deep</div>
-                                <div className="text-xs text-slate-400 font-mono mt-0.5">--cream-deep</div>
-                            </div>
-                        </div>
-                        <div className="rounded-2xl border border-slate-200/60 dark:border-slate-700/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow h-32 flex flex-col">
-                            <div className="flex-grow flex items-center justify-center" style={{ background: "var(--island-glass)", backdropFilter: "blur(8px)" }}>
-                                <span className="font-mono opacity-70 text-slate-600 dark:text-slate-300">island-glass</span>
-                            </div>
-                            <div className="p-3 bg-white dark:bg-slate-900/60">
-                                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">Island Glass</div>
-                                <div className="text-xs text-slate-400 font-mono mt-0.5">--island-glass</div>
-                            </div>
-                        </div>
-
-                        {/* Glassmorphism Classes */}
-                        <div className="glass-card p-4 rounded-2xl flex flex-col justify-between h-32 relative overflow-hidden group">
-                            <span className="font-bold relative z-10 text-primary-text">Legacy Glass Card</span>
-                            <div className="text-xs opacity-70 relative z-10 text-primary-text">.glass-card</div>
-                            <div className="absolute inset-0 bg-white/10 dark:bg-slate-900/10"></div>
-                        </div>
-
-                        <div className="island-panel p-4 rounded-3xl flex flex-col justify-between h-32 relative overflow-hidden group cursor-pointer transition-transform hover:-translate-y-0.5">
-                            <span className="font-bold relative z-10 text-primary-text">Floating Island Panel</span>
-                            <div className="text-xs opacity-75 relative z-10 text-primary-text">.island-panel</div>
-                            <span className="text-[9px] bg-miku/15 text-miku px-2 py-0.5 rounded-full self-start font-extrabold relative z-10">NEW · 浮岛</span>
-                        </div>
-
-                        <div className="ios-glass-card p-4 rounded-3xl flex flex-col justify-between h-32 relative overflow-hidden group ios-glass-card-interactive cursor-pointer">
-                            <span className="font-bold relative z-10 text-primary-text">iOS 26 Glass Card</span>
-                            <div className="text-xs opacity-75 relative z-10 text-primary-text">.ios-glass-card</div>
-                            <span className="text-[9px] bg-purple-500/15 text-purple-500 px-2 py-0.5 rounded-full self-start font-extrabold relative z-10">.ios-glass-card</span>
-                        </div>
-
-                        <div className="ios-glass-panel p-4 rounded-3xl flex flex-col justify-between h-32 relative overflow-hidden group">
-                            <span className="font-bold relative z-10 text-primary-text">iOS 26 Glass Panel</span>
-                            <div className="text-xs opacity-75 relative z-10 text-primary-text">.ios-glass-panel</div>
-                            <span className="text-[9px] bg-sky-500/15 text-sky-500 px-2 py-0.5 rounded-full self-start font-extrabold relative z-10">.ios-glass-panel</span>
-                        </div>
-
-                        <div className="rounded-2xl p-4 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/30 h-32 flex flex-col justify-between">
-                            <span className="font-bold text-slate-700 dark:text-slate-300">Surface / Slate 50</span>
-                            <div className="text-xs text-slate-500">bg-slate-50</div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Typography Section */}
-                <section className="mb-16 relative z-10">
-                    <h2 className="text-2xl type-title text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-luka rounded-full"></span>
-                        Typography
-                    </h2>
-
-                    <div className="ios-glass-card p-8 rounded-3xl space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-b border-dashed border-slate-200/60 dark:border-slate-700/40 pb-8">
-                            <div className="text-sm text-slate-400 font-mono">Display / type-display</div>
-                            <div className="md:col-span-2">
-                                <h1 className="text-4xl type-display text-primary-text">The quick brown fox jumps over the lazy dog</h1>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-b border-dashed border-slate-200/60 dark:border-slate-700/40 pb-8">
-                            <div className="text-sm text-slate-400 font-mono">Title / type-title</div>
-                            <div className="md:col-span-2">
-                                <h2 className="text-2xl type-title text-primary-text">The quick brown fox jumps over the lazy dog</h2>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-b border-dashed border-slate-200/60 dark:border-slate-700/40 pb-8">
-                            <div className="text-sm text-slate-400 font-mono">H3 / xl / Bold</div>
-                            <div className="md:col-span-2">
-                                <h3 className="text-xl type-title text-primary-text">The quick brown fox jumps over the lazy dog</h3>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center border-b border-dashed border-slate-200/60 dark:border-slate-700/40 pb-8">
-                            <div className="text-sm text-slate-400 font-mono">Body / type-body</div>
-                            <div className="md:col-span-2">
-                                <p className="text-base type-body text-primary-text">
-                                    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-center">
-                            <div className="text-sm text-slate-400 font-mono">Caption / type-caption</div>
-                            <div className="md:col-span-2">
-                                <p className="text-sm type-caption text-slate-500">
-                                    Used for captions, timestamps, and secondary information. Slightly positive tracking for legibility at small sizes.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Components Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-amber-400 rounded-full"></span>
-                        Components
-                    </h2>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-
-                        {/* Buttons */}
-                        <div className="ios-glass-card p-6 rounded-3xl">
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Buttons</h3>
-                            <div className="flex flex-wrap gap-4 items-center">
-                                {/* Primary */}
-                                <button className="pressable px-6 py-2.5 ios-glass-btn ios-glass-btn-primary rounded-full font-bold">
-                                    Primary Button
-                                </button>
-
-                                {/* Secondary */}
-                                <button className="pressable px-6 py-2.5 ios-glass-btn text-miku border-miku/30 rounded-full font-bold">
-                                    Secondary
-                                </button>
-
-                                {/* Ghost/Nav */}
-                                <button className="pressable px-4 py-2.5 text-slate-500 hover:text-miku ios-glass-btn rounded-full">
-                                    Ghost / Nav
-                                </button>
-
-                                {/* Island Pill Active (new) */}
-                                <button className="pressable px-6 py-2.5 island-pill-active rounded-full font-bold">
-                                    Island Pill Active
-                                </button>
-
-                                {/* Icon Layout */}
-                                <button className="pressable p-2.5 text-slate-400 hover:text-miku ios-glass-btn rounded-full">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Inputs */}
-                        <div className="ios-glass-card p-6 rounded-3xl">
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Inputs</h3>
-                            <div className="space-y-4 max-w-sm">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Standard Input</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Type something..."
-                                        className="w-full ios-glass-input px-4 py-2 rounded-xl text-primary-text"
-                                    />
-                                </div>
-
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Input with Error</label>
-                                    <input
-                                        type="text"
-                                        defaultValue="Invalid input"
-                                        className="w-full ios-glass-input px-4 py-2 rounded-xl border-red-400 focus:border-red-400 focus:ring-red-200/20 text-red-600 dark:text-red-400"
-                                    />
-                                    <p className="mt-1 text-xs text-red-500">Please enter a valid value</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Badges & Tags */}
-                        <div className="ios-glass-card p-6 rounded-3xl">
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Badges & Tags</h3>
-                            <div className="flex flex-wrap gap-3">
-                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-miku text-white shadow-sm">
-                                    New Feature
-                                </span>
-                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-miku/10 text-miku border border-miku/20">
-                                    Version 1.0
-                                </span>
-                                <span className="px-3 py-1 rounded-full text-xs font-bold island-pill-active">
-                                    Accent Soft Badge
-                                </span>
-                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-amber-500 text-white shadow-sm">
-                                    BETA
-                                </span>
-                                <span className="px-3 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                                    Draft
-                                </span>
-                                <span className="px-3 py-1 rounded-full text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
-                                    Outline
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Loaders */}
-                        <div className="ios-glass-card p-6 rounded-3xl flex flex-col justify-center items-center gap-4">
-                            <h3 className="text-lg font-bold mb-2 text-slate-600 dark:text-slate-400 self-start">Loaders</h3>
-                            <div className="flex items-center gap-8">
-                                <div className="loading-spinner"></div>
-                                <div className="w-8 h-8 border-2 border-miku/30 border-t-miku rounded-full animate-spin"></div>
-                            </div>
-                        </div>
-
-                        {/* Tabs */}
-                        <div className="ios-glass-card p-6 rounded-3xl md:col-span-2">
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Tabs</h3>
-                            <div className="flex gap-2">
-                                <button className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-300 island-pill-active">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                                    Active Tab
-                                </button>
-                                <button className="flex items-center gap-2 px-4 py-2.5 rounded-full font-medium text-sm whitespace-nowrap transition-all duration-300 island-pill-hover text-slate-600 dark:text-slate-400 hover:text-miku">
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                                    Inactive Tab
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Dropdowns */}
-                        <div className="ios-glass-card p-6 rounded-3xl md:col-span-2">
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Dropdowns</h3>
-                            <div className="relative inline-block text-left w-64">
-                                <div className="ios-glass-dropdown rounded-2xl py-1.5">
-                                    <a href="#" className="block px-3 py-1.5 mx-1 text-sm font-medium transition-all rounded-lg island-pill-active">
-                                        Active Option
-                                    </a>
-                                    <a href="#" className="block px-3 py-1.5 mx-1 text-sm font-medium transition-all rounded-lg text-slate-600 dark:text-slate-300 hover:bg-miku/10 dark:hover:bg-miku/15 hover:text-miku">
-                                        Hover Option
-                                    </a>
-                                    <a href="#" className="block px-3 py-1.5 mx-1 text-sm font-medium transition-all rounded-lg text-slate-600 dark:text-slate-300 hover:bg-miku/10 dark:hover:bg-miku/15 hover:text-miku">
-                                        Standard Option
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
-                    </div>
-                </section>
-
-                {/* Complex Components Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-purple-400 rounded-full"></span>
-                        Complex Components
-                    </h2>
-
-                    <div className="space-y-12">
-                        {/* Page Title */}
-                        <div>
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Page Title (Overview Style)</h3>
-                            <div className="ios-glass-card p-8 rounded-3xl">
-                                <div className="text-center">
-                                    <div className="inline-flex items-center gap-2 px-4 py-2 island-pill-active rounded-full mb-4">
-                                        <span className="text-xs font-bold tracking-widest uppercase">PAGE CATEGORY</span>
-                                    </div>
-                                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                                        Page <span className="text-miku">Title</span>
-                                    </h1>
-                                    <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto">
-                                        Page subtitle or description text goes here.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-
-
-
-                        {/* Section Card (Related Events) */}
-                        <div>
-                            <h3 className="text-lg font-bold mb-4 text-slate-600 dark:text-slate-400">Section Card (e.g., Related Event)</h3>
-                            <div className="max-w-md ios-glass-card rounded-3xl overflow-hidden hover:shadow-xl hover:shadow-miku/5 transition-all">
-                                <div className="px-5 py-4 border-b border-dashed border-slate-200/60 dark:border-slate-700/40 bg-gradient-to-r from-miku/10 to-transparent">
-                                    <h2 className="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        Section Title
-                                    </h2>
-                                </div>
-                                <div className="p-0">
-                                    <div className="block group cursor-pointer">
-                                        <div className="relative aspect-[2/1] w-full bg-slate-200 dark:bg-slate-800">
-                                            <div className="absolute inset-0 flex items-center justify-center text-slate-400 dark:text-slate-500">
-                                                Banner Image Placeholder
-                                            </div>
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-                                            <div className="absolute bottom-0 left-0 w-full p-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-white/20 text-white px-2 py-0.5 rounded backdrop-blur-sm">
-                                                        Tag #123
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-white font-bold text-lg leading-tight truncate">
-                                                    Card Title / Event Name
-                                                    <span className="text-sm font-medium text-white/90 truncate block mt-0.5">
-                                                        Subtitle / Translation
-                                                    </span>
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                </section>
-
-                {/* MySekai Preview Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-sky-400 rounded-full"></span>
-                        烤森预览（开发测试）
-                    </h2>
-                    <div className="ios-glass-card p-4 sm:p-6 rounded-3xl">
-                        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                            <div>
-                                <h3 className="text-lg font-bold text-slate-600 dark:text-slate-400">MySekai 3D 场景预览组件</h3>
-                                <p className="mt-1 text-sm text-slate-500">
-                                    使用本地 <code className="rounded bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 text-xs">/data/mysekai-preview/testmysekai.json</code> 验证 OBJ 与纹理资源载入。
-                                </p>
-                            </div>
-                            <span className="text-xs font-medium text-slate-400">
-                                原作 / ルナ茶　部署 / StarMoe　转载请标明原作者
-                            </span>
-                        </div>
-                        <MysekaiScenePreview heightClassName="h-[560px] min-h-[480px]" compact />
-                    </div>
-                </section>
-
-                {/* Sekai Card Thumbnail Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-pink-400 rounded-full"></span>
-                        Sekai Card Thumbnail
-                    </h2>
-
-                    <div className="ios-glass-card p-8 rounded-3xl">
-                        <p className="text-slate-500 mb-6">
-                            New SVG-based component that reproduces the official in-game thumbnail layering logic.
-                        </p>
-
-                        <div className="flex flex-wrap gap-8">
-                            {/* Example 1: 4★ Normal */}
-                            <div className="flex flex-col items-center gap-2">
-                                <SekaiCardThumbnail
-                                    card={{
-                                        id: 1,
-                                        seq: 1,
-                                        characterId: 21, // Miku
-                                        cardRarityType: "rarity_4",
-                                        specialTrainingPower1BonusFixed: 0,
-                                        specialTrainingPower2BonusFixed: 0,
-                                        specialTrainingPower3BonusFixed: 0,
-                                        attr: "cool",
-                                        supportUnit: "none",
-                                        skillId: 1,
-                                        cardSkillName: "Skill",
-                                        prefix: "Always Singing",
-                                        assetbundleName: "res021_no018", // Example: 4* Miku
-                                        gachaPhrase: "Phrase",
-                                        archiveDisplayType: "normal",
-                                        archivePublishedAt: 0,
-                                        cardParameters: { param1: [], param2: [], param3: [] },
-                                        specialTrainingCosts: [],
-                                        masterLessonAchieveResources: [],
-                                        releaseAt: 0,
-                                        cardSupplyId: 0,
-                                        cardSupplyType: "normal",
-                                    }}
-                                    width={128}
-                                />
-                                <span className="text-xs text-slate-500 font-mono">4★ Normal</span>
-                            </div>
-
-                            {/* Example 2: 4★ Trained + Mastery 5 */}
-                            <div className="flex flex-col items-center gap-2">
-                                <SekaiCardThumbnail
-                                    card={{
-                                        id: 2,
-                                        seq: 2,
-                                        characterId: 21,
-                                        cardRarityType: "rarity_4",
-                                        specialTrainingPower1BonusFixed: 0,
-                                        specialTrainingPower2BonusFixed: 0,
-                                        specialTrainingPower3BonusFixed: 0,
-                                        attr: "cute",
-                                        supportUnit: "none",
-                                        skillId: 1,
-                                        cardSkillName: "Skill",
-                                        prefix: "Trained Miku",
-                                        assetbundleName: "res021_no018",
-                                        gachaPhrase: "Phrase",
-                                        archiveDisplayType: "normal",
-                                        archivePublishedAt: 0,
-                                        cardParameters: { param1: [], param2: [], param3: [] },
-                                        specialTrainingCosts: [],
-                                        masterLessonAchieveResources: [],
-                                        releaseAt: 0,
-                                        cardSupplyId: 0,
-                                        cardSupplyType: "normal",
-                                    }}
-                                    trained={true}
-                                    mastery={5}
-                                    width={128}
-                                />
-                                <span className="text-xs text-slate-500 font-mono">4★ Trained + M5</span>
-                            </div>
-
-                            {/* Example 3: Birthday */}
-                            <div className="flex flex-col items-center gap-2">
-                                <SekaiCardThumbnail
-                                    card={{
-                                        id: 3,
-                                        seq: 3,
-                                        characterId: 21,
-                                        cardRarityType: "rarity_birthday",
-                                        specialTrainingPower1BonusFixed: 0,
-                                        specialTrainingPower2BonusFixed: 0,
-                                        specialTrainingPower3BonusFixed: 0,
-                                        attr: "happy",
-                                        supportUnit: "none",
-                                        skillId: 1,
-                                        cardSkillName: "Skill",
-                                        prefix: "Happy Birthday",
-                                        assetbundleName: "birthday_miku_2023", // Hypothetical
-                                        gachaPhrase: "Phrase",
-                                        archiveDisplayType: "normal",
-                                        archivePublishedAt: 0,
-                                        cardParameters: { param1: [], param2: [], param3: [] },
-                                        specialTrainingCosts: [],
-                                        masterLessonAchieveResources: [],
-                                        releaseAt: 0,
-                                        cardSupplyId: 0,
-                                        cardSupplyType: "normal",
-                                    }}
-                                    width={128}
-                                />
-                                <span className="text-xs text-slate-500 font-mono">Birthday</span>
-                            </div>
-
-                            {/* Example 4: 2★ Normal */}
-                            <div className="flex flex-col items-center gap-2">
-                                <SekaiCardThumbnail
-                                    card={{
-                                        id: 4,
-                                        seq: 4,
-                                        characterId: 26, // Kaito
-                                        cardRarityType: "rarity_2",
-                                        specialTrainingPower1BonusFixed: 0,
-                                        specialTrainingPower2BonusFixed: 0,
-                                        specialTrainingPower3BonusFixed: 0,
-                                        attr: "mysterious",
-                                        supportUnit: "none",
-                                        skillId: 1,
-                                        cardSkillName: "Skill",
-                                        prefix: "KAITO",
-                                        assetbundleName: "res026_no002",
-                                        gachaPhrase: "Phrase",
-                                        archiveDisplayType: "normal",
-                                        archivePublishedAt: 0,
-                                        cardParameters: { param1: [], param2: [], param3: [] },
-                                        specialTrainingCosts: [],
-                                        masterLessonAchieveResources: [],
-                                        releaseAt: 0,
-                                        cardSupplyId: 0,
-                                        cardSupplyType: "normal",
-                                    }}
-                                    width={128}
-                                />
-                                <span className="text-xs text-slate-500 font-mono">2★ Normal</span>
-                            </div>
-                        </div>
-
-                        {/* Example 5: Scaled Sizes */}
-                        <div className="w-full mt-6 border-t border-slate-100 pt-6">
-                            <h4 className="text-sm font-bold text-slate-500 mb-4">Scalability (Different Sizes)</h4>
-                            <div className="flex items-end gap-4">
-                                {/* 48px */}
-                                <div className="flex flex-col items-center gap-1">
-                                    <SekaiCardThumbnail
-                                        card={{
-                                            id: 5,
-                                            seq: 5,
-                                            characterId: 1, // Ichika
-                                            cardRarityType: "rarity_3",
-                                            specialTrainingPower1BonusFixed: 0,
-                                            specialTrainingPower2BonusFixed: 0,
-                                            specialTrainingPower3BonusFixed: 0,
-                                            attr: "pure",
-                                            supportUnit: "none",
-                                            skillId: 1,
-                                            cardSkillName: "Skill",
-                                            prefix: "Small",
-                                            assetbundleName: "res001_no007",
-                                            gachaPhrase: "Phrase",
-                                            archiveDisplayType: "normal",
-                                            archivePublishedAt: 0,
-                                            cardParameters: { param1: [], param2: [], param3: [] },
-                                            specialTrainingCosts: [],
-                                            masterLessonAchieveResources: [],
-                                            releaseAt: 0,
-                                            cardSupplyId: 0,
-                                            cardSupplyType: "normal",
-                                        }}
-                                        width={48}
-                                    />
-                                    <span className="text-[10px] text-slate-400 font-mono">48px</span>
-                                </div>
-
-                                {/* 64px */}
-                                <div className="flex flex-col items-center gap-1">
-                                    <SekaiCardThumbnail
-                                        card={{
-                                            id: 5,
-                                            seq: 5,
-                                            characterId: 1,
-                                            cardRarityType: "rarity_3",
-                                            specialTrainingPower1BonusFixed: 0,
-                                            specialTrainingPower2BonusFixed: 0,
-                                            specialTrainingPower3BonusFixed: 0,
-                                            attr: "pure",
-                                            supportUnit: "none",
-                                            skillId: 1,
-                                            cardSkillName: "Skill",
-                                            prefix: "Medium",
-                                            assetbundleName: "res001_no007",
-                                            gachaPhrase: "Phrase",
-                                            archiveDisplayType: "normal",
-                                            archivePublishedAt: 0,
-                                            cardParameters: { param1: [], param2: [], param3: [] },
-                                            specialTrainingCosts: [],
-                                            masterLessonAchieveResources: [],
-                                            releaseAt: 0,
-                                            cardSupplyId: 0,
-                                            cardSupplyType: "normal",
-                                        }}
-                                        width={64}
-                                    />
-                                    <span className="text-[10px] text-slate-400 font-mono">64px</span>
-                                </div>
-
-                                {/* 96px */}
-                                <div className="flex flex-col items-center gap-1">
-                                    <SekaiCardThumbnail
-                                        card={{
-                                            id: 5,
-                                            seq: 5,
-                                            characterId: 1,
-                                            cardRarityType: "rarity_3",
-                                            specialTrainingPower1BonusFixed: 0,
-                                            specialTrainingPower2BonusFixed: 0,
-                                            specialTrainingPower3BonusFixed: 0,
-                                            attr: "pure",
-                                            supportUnit: "none",
-                                            skillId: 1,
-                                            cardSkillName: "Skill",
-                                            prefix: "Large",
-                                            assetbundleName: "res001_no007",
-                                            gachaPhrase: "Phrase",
-                                            archiveDisplayType: "normal",
-                                            archivePublishedAt: 0,
-                                            cardParameters: { param1: [], param2: [], param3: [] },
-                                            specialTrainingCosts: [],
-                                            masterLessonAchieveResources: [],
-                                            releaseAt: 0,
-                                            cardSupplyId: 0,
-                                            cardSupplyType: "normal",
-                                        }}
-                                        width={96}
-                                    />
-                                    <span className="text-[10px] text-slate-400 font-mono">96px</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                {/* Modal / Dialog Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-sky-400 rounded-full"></span>
-                        Modal / Dialog
-                    </h2>
-
-                    <div className="ios-glass-card p-8 rounded-3xl">
-                        <p className="text-slate-500 mb-6">
-                            Generic modal component with theme-colored header, backdrop blur, and smooth framer-motion animations.
-                            Rendered via <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-slate-600">createPortal</code> to
-                            ensure viewport-centered positioning regardless of sidebar state.
-                        </p>
-
-                        <div className="flex flex-wrap gap-4 items-center">
-                            <button
-                                onClick={() => openModal("sm")}
-                                className="px-5 py-2 ios-glass-btn text-miku border-miku/30 rounded-full font-bold text-sm"
+                {/* Chips */}
+                <Section title={t("page.designSystem.chipsTitle")}>
+                    <Surface tone="low" className="flex flex-wrap items-center gap-2 p-5">
+                        {["filter", "sort", "owned"].map((id, i) => (
+                            <Chip
+                                key={id}
+                                variant="filter"
+                                selected={chips.includes(id)}
+                                onClick={() => setChips((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))}
+                                trailingIcon={i === 1 ? mdKeyboardArrowDown : undefined}
                             >
-                                Small
-                            </button>
-                            <button
-                                onClick={() => openModal("md")}
-                                className="px-6 py-2 ios-glass-btn ios-glass-btn-primary rounded-full font-bold shadow-lg shadow-miku/20 text-sm"
-                            >
-                                Medium (Default)
-                            </button>
-                            <button
-                                onClick={() => openModal("lg")}
-                                className="px-5 py-2 ios-glass-btn text-miku border-miku/30 rounded-full font-bold text-sm"
-                            >
-                                Large
-                            </button>
-                            <button
-                                onClick={() => openModal("xl")}
-                                className="px-5 py-2 ios-glass-btn text-miku border-miku/30 rounded-full font-bold text-sm"
-                            >
-                                Extra Large
-                            </button>
-                            <button
-                                onClick={() => setIsImageModalOpen(true)}
-                                className="px-5 py-2 ios-glass-btn text-emerald-600 border-emerald-500/30 hover:border-emerald-500/50 rounded-full font-bold text-sm"
-                            >
-                                Image Preview
-                            </button>
-                        </div>
+                                {t("page.designSystem.chipFilter")} {i + 1}
+                            </Chip>
+                        ))}
+                        <Chip variant="assist" icon={mdInfo}>
+                            {t("page.designSystem.chipAssist")}
+                        </Chip>
+                        <Chip variant="assist" icon={mdInfo} elevated>
+                            {t("page.designSystem.chipAssist")}
+                        </Chip>
+                        <Chip variant="suggestion">{t("page.designSystem.chipSuggestion")}</Chip>
+                        {inputChips.map((name) => (
+                            <Chip key={name} variant="input" onRemove={() => setInputChips((prev) => prev.filter((x) => x !== name))} removeLabel={t("common.md3.clear")}>
+                                {name}
+                            </Chip>
+                        ))}
+                    </Surface>
+                </Section>
 
-                        <div className="mt-4 text-xs text-slate-400 font-mono">
-                            {`<Modal isOpen={…} onClose={…} title="弹出窗口标题" size="sm | md | lg | xl">{children}</Modal>`}
-                        </div>
-                        <div className="mt-2 text-xs text-slate-400 font-mono">
-                            {`<ImagePreviewModal isOpen={…} onClose={…} title="图片预览" imageUrl="..." fileName="example.png" />`}
-                        </div>
-                    </div>
+                {/* Inputs */}
+                <Section title={t("page.designSystem.inputsTitle")}>
+                    <Surface tone="low" className="grid gap-6 p-5 sm:grid-cols-2" style={{ ["--md3-tf-label-bg" as string]: "var(--md-sys-color-surface-container-low)" }}>
+                        <TextField
+                            variant="outlined"
+                            label={t("page.designSystem.fieldLabel")}
+                            icon={mdSearch}
+                            value={field}
+                            onValueChange={setField}
+                            clearable
+                            clearLabel={t("common.md3.clear")}
+                            supportingText={t("page.designSystem.fieldSupport")}
+                            maxLength={40}
+                        />
+                        <TextField variant="filled" label={t("page.designSystem.fieldLabel")} value={field} onValueChange={setField} supportingText={t("page.designSystem.fieldSupport")} />
+                        <TextField variant="outlined" label={t("page.designSystem.fieldLabel")} defaultValue="" errorText={t("page.designSystem.fieldError")} />
+                        <TextField variant="filled" label={t("page.designSystem.fieldLabel")} defaultValue="" disabled />
+                    </Surface>
+                </Section>
 
-                    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="弹出窗口示例" size={modalSize}>
+                {/* Selection */}
+                <Section title={t("page.designSystem.selectionTitle")}>
+                    <Surface tone="low" className="grid gap-6 p-5 md:grid-cols-2">
                         <div className="space-y-4">
-                            <p className="text-slate-600 dark:text-slate-350 text-sm leading-relaxed">
-                                这是一个通用弹出窗口组件的演示。它会始终在视口中央显示，不受侧边栏和顶栏的影响。
-                            </p>
-                            <div className="p-4 ios-glass-panel rounded-2xl">
-                                <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">特性</h3>
-                                <ul className="text-sm text-slate-550 dark:text-slate-400 space-y-1.5 list-disc list-inside">
-                                    <li>使用 createPortal 渲染，避免 z-index 层级问题</li>
-                                    <li>framer-motion 入场/出场动画</li>
-                                    <li>ESC 键关闭 / 点击遮罩关闭</li>
-                                    <li>打开时禁用背景滚动</li>
-                                    <li>支持 sm / md / lg / xl 四种尺寸</li>
-                                    <li>应用主题色（miku）作为标题栏装饰</li>
-                                </ul>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-miku/10 text-miku border border-miku/20">
-                                    当前尺寸: {modalSize}
-                                </span>
+                            <Switch checked={switchOn} onCheckedChange={setSwitchOn} label={t("page.designSystem.switchLabel")} description={t("page.designSystem.switchDesc")} />
+                            <div className="flex items-center gap-4">
+                                <Switch checked={switchOn} onCheckedChange={setSwitchOn} aria-label={t("page.designSystem.switchLabel")} />
+                                <Switch checked={!switchOn} onCheckedChange={(v) => setSwitchOn(!v)} icons={false} aria-label={t("page.designSystem.switchLabel")} />
+                                <Switch checked={false} onCheckedChange={() => undefined} disabled aria-label={t("page.designSystem.switchLabel")} />
                             </div>
                         </div>
-                    </Modal>
+                        <div className="space-y-1">
+                            <Checkbox checked={checked} onCheckedChange={setChecked} label={t("page.designSystem.checkboxLabel")} />
+                            <Checkbox checked={false} indeterminate onCheckedChange={() => undefined} label={t("page.designSystem.checkboxLabel")} />
+                            <div className="flex flex-wrap">
+                                <Radio name="ds-server" checked={server === "jp"} onSelect={() => setServer("jp")} label={t("page.designSystem.radioA")} />
+                                <Radio name="ds-server" checked={server === "cn"} onSelect={() => setServer("cn")} label={t("page.designSystem.radioB")} />
+                            </div>
+                        </div>
+                        <div className="md:col-span-2">
+                            <div className="mb-1 type-label-l text-on-surface-variant">
+                                {t("page.designSystem.sliderLabel")} · {volume}
+                            </div>
+                            <Slider value={volume} onValueChange={setVolume} showValue aria-label={t("page.designSystem.sliderLabel")} />
+                        </div>
+                    </Surface>
+                </Section>
 
+                {/* Segmented & tabs */}
+                <Section title={t("page.designSystem.segmentedTitle")}>
+                    <Surface tone="low" className="space-y-6 p-5">
+                        <SegmentedButton
+                            value={segment}
+                            onValueChange={setSegment}
+                            options={tabItems.map(({ value, label }) => ({ value, label }))}
+                            aria-label={t("page.designSystem.segmentedTitle")}
+                        />
+                        <SegmentedButton
+                            multiple
+                            value={multiSegment}
+                            onValueChange={setMultiSegment}
+                            options={tabItems.map(({ value, label, icon }) => ({ value, label, icon }))}
+                        />
+                        <ConnectedButtonGroup value={segment} onValueChange={setSegment} options={tabItems} />
+                        <Tabs items={tabItems} value={tab} onValueChange={setTab} aria-label={t("page.designSystem.segmentedTitle")} />
+                        <Tabs items={tabItems.map(({ value, label }) => ({ value, label }))} value={tab} onValueChange={setTab} variant="secondary" />
+                    </Surface>
+                </Section>
+
+                {/* Progress */}
+                <Section title={t("page.designSystem.progressTitle")}>
+                    <Surface tone="low" className="flex flex-wrap items-center gap-8 p-5">
+                        <LoadingIndicator aria-label={t("common.md3.loading")} />
+                        <LoadingIndicator contained aria-label={t("common.md3.loading")} />
+                        <CircularProgress aria-label={t("common.md3.loading")} />
+                        <CircularProgress value={volume / 100} aria-label={t("page.designSystem.sliderLabel")} />
+                        <div className="loading-spinner" />
+                        <div className="w-full space-y-4">
+                            <LinearProgress aria-label={t("common.md3.loading")} />
+                            <LinearProgress value={volume / 100} aria-label={t("page.designSystem.sliderLabel")} />
+                        </div>
+                    </Surface>
+                </Section>
+
+                {/* Menu, list, tooltip, snackbar */}
+                <Section title={t("page.designSystem.menuTitle")}>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <Surface tone="low" className="flex flex-wrap items-start gap-3 p-5">
+                            <Menu
+                                anchor={(props) => (
+                                    <Button {...props} variant="outlined" icon={mdSort} trailingIcon={mdKeyboardArrowDown}>
+                                        {t("page.designSystem.menuOpen")}
+                                    </Button>
+                                )}
+                                items={[
+                                    { key: "date", label: t("page.designSystem.menuItemA"), selected: sort === "date", onSelect: () => setSort("date") },
+                                    { key: "name", label: t("page.designSystem.menuItemB"), selected: sort === "name", onSelect: () => setSort("name") },
+                                    { key: "level", label: t("page.designSystem.menuItemC"), selected: sort === "level", onSelect: () => setSort("level") },
+                                ]}
+                            />
+                            <Menu
+                                align="end"
+                                anchor={(props) => <IconButton {...props} icon={mdMoreVert} label={t("common.md3.more")} />}
+                                items={[
+                                    { key: "edit", label: t("page.designSystem.create"), icon: mdEdit },
+                                    { key: "fav", label: t("page.designSystem.favorite"), icon: mdFavorite },
+                                    { key: "filter", label: t("page.designSystem.chipFilter"), icon: mdFilterList, dividerBefore: true },
+                                ]}
+                            />
+                            <Tooltip label={t("page.designSystem.tooltip")}>
+                                <IconButton icon={mdInfo} label={t("page.designSystem.tooltip")} />
+                            </Tooltip>
+                            <Button variant="tonal" onClick={() => setSnackbar(true)}>
+                                {t("page.designSystem.snackbarShow")}
+                            </Button>
+                        </Surface>
+                        <Surface tone="low" className="overflow-hidden">
+                            <List>
+                                <ListItem icon={mdStyle} headline={t("page.designSystem.listHeadline")} supportingText={t("page.designSystem.listSupport")} onClick={() => undefined} trailingText="100+" />
+                                <ListItem icon={mdLibraryMusic} headline={t("page.designSystem.listHeadline")} selected onClick={() => undefined} />
+                                <ListItem
+                                    leading={<Checkbox checked={checked} onCheckedChange={setChecked} aria-label={t("page.designSystem.checkboxLabel")} />}
+                                    headline={t("page.designSystem.checkboxLabel")}
+                                />
+                            </List>
+                        </Surface>
+                    </div>
+                    <Snackbar
+                        open={snackbar}
+                        onClose={() => setSnackbar(false)}
+                        message={t("page.designSystem.snackbarMessage")}
+                        actionLabel={t("page.designSystem.snackbarAction")}
+                        onAction={() => setFavorite(false)}
+                    />
+                </Section>
+
+                {/* Dialogs & sheets */}
+                <Section title={t("page.designSystem.dialogTitle")}>
+                    <Surface tone="low" className="flex flex-wrap gap-3 p-5">
+                        <Button variant="filled" onClick={() => setDialogOpen(true)}>
+                            {t("page.designSystem.dialogOpen")}
+                        </Button>
+                        <Button variant="tonal" onClick={() => setBottomSheetOpen(true)}>
+                            {t("page.designSystem.bottomSheetOpen")}
+                        </Button>
+                        <Button variant="outlined" onClick={() => setSideSheetOpen(true)}>
+                            {t("page.designSystem.sideSheetOpen")}
+                        </Button>
+                    </Surface>
+                    <Dialog
+                        isOpen={dialogOpen}
+                        onClose={() => setDialogOpen(false)}
+                        icon={mdCheck}
+                        title={t("page.designSystem.dialogHeadline")}
+                        supportingText={t("page.designSystem.dialogBody")}
+                        actions={
+                            <>
+                                <Button variant="text" onClick={() => setDialogOpen(false)}>
+                                    {t("common.action.cancel")}
+                                </Button>
+                                <Button variant="text" onClick={() => setDialogOpen(false)}>
+                                    {t("common.action.confirm")}
+                                </Button>
+                            </>
+                        }
+                    />
+                    <BottomSheet isOpen={bottomSheetOpen} onClose={() => setBottomSheetOpen(false)} title={t("page.designSystem.sheetTitle")}>
+                        <p className="type-body-m text-on-surface-variant">{t("page.designSystem.sheetBody")}</p>
+                        <div className="mt-4 flex flex-wrap gap-2">
+                            {categories.map((cat) => (
+                                <Chip key={cat.id} selected={demoCategory === cat.id} onClick={() => setDemoCategory(cat.id)}>
+                                    {cat.label}
+                                </Chip>
+                            ))}
+                        </div>
+                    </BottomSheet>
+                    <SideSheet isOpen={sideSheetOpen} onClose={() => setSideSheetOpen(false)} title={t("page.designSystem.sheetTitle")}>
+                        <p className="type-body-m text-on-surface-variant">{t("page.designSystem.sheetBody")}</p>
+                        <div className="mt-4 space-y-4">
+                            <Switch checked={switchOn} onCheckedChange={setSwitchOn} label={t("page.designSystem.switchLabel")} />
+                            <Switch checked={checked} onCheckedChange={setChecked} label={t("page.designSystem.checkboxLabel")} />
+                        </div>
+                    </SideSheet>
+                </Section>
+
+                {/* Legacy shared components */}
+                <Section title={t("page.designSystem.legacyTitle")} hint={t("page.designSystem.legacyHint")}>
+                    <Card variant="outlined" className="p-5">
+                        <div className="flex flex-wrap gap-3">
+                            {(["sm", "md", "lg", "xl"] as const).map((size) => (
+                                <Button
+                                    key={size}
+                                    variant={size === "md" ? "filled" : "outlined"}
+                                    onClick={() => {
+                                        setModalSize(size);
+                                        setIsModalOpen(true);
+                                    }}
+                                >
+                                    {t("page.designSystem.modalOpen", { size })}
+                                </Button>
+                            ))}
+                            <Button variant="tonal" onClick={() => setIsImageModalOpen(true)}>
+                                {t("page.designSystem.imagePreviewOpen")}
+                            </Button>
+                        </div>
+                        <div className="mt-4 space-y-1 font-mono type-body-s text-on-surface-variant">
+                            <div>{`<Modal isOpen onClose title size="sm | md | lg | xl">…</Modal>`}</div>
+                            <div>{`<ImagePreviewModal isOpen onClose title imageUrl fileName />`}</div>
+                        </div>
+                    </Card>
+                    <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={t("page.designSystem.modalDemoTitle")} size={modalSize}>
+                        <p className="type-body-m text-on-surface-variant">{t("page.designSystem.modalDemoBody", { size: modalSize })}</p>
+                    </Modal>
                     <ImagePreviewModal
                         isOpen={isImageModalOpen}
                         onClose={() => setIsImageModalOpen(false)}
-                        title="图片预览弹窗示例"
+                        title={t("page.designSystem.imagePreviewTitle")}
                         imageUrl="/sticker-maker/img/ichika/ichika1.png"
-                        alt="Image Preview Demo"
+                        alt={t("page.designSystem.imagePreviewTitle")}
                         fileName="design_system_image_preview.png"
                     />
-                </section>
+                </Section>
 
-                {/* Quick Filter Section */}
-                <section className="mb-16">
-                    <h2 className="text-2xl font-bold text-primary-text mb-6 flex items-center gap-2">
-                        <span className="w-1.5 h-8 bg-emerald-400 rounded-full"></span>
-                        Quick Filter (快捷筛选器)
-                    </h2>
-
-                    <div className="ios-glass-card p-8 rounded-3xl">
-                        <p className="text-slate-500 mb-6">
-                            全局通用的快捷筛选器组件。页面通过{" "}
-                            <code className="px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-xs font-mono text-slate-600">useQuickFilter()</code>{" "}
-                            注册筛选内容后，屏幕左侧边缘会出现一个竖向拉手，点击即可拉开筛选抽屉。
-                            宽屏（≥1024px）下抽屉与列表并排常驻，正文自动让出空间；更窄的屏幕上抽屉改为浮层，
-                            带遮罩并支持 Esc 与返回键关闭。
-                        </p>
-
-                        <div className="flex flex-wrap gap-4 items-center mb-6">
-                            <div className="flex items-center gap-3 px-4 py-2 bg-miku/5 border border-miku/20 rounded-2xl">
-                                <svg className="w-5 h-5 text-miku" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                                </svg>
-                                <span className="text-sm font-bold text-miku">← 请查看左侧边缘的筛选抽屉拉手</span>
+                {/* Card thumbnails */}
+                <Section title={t("page.designSystem.cardThumbTitle")}>
+                    <Surface tone="low" className="flex flex-wrap items-end gap-8 p-6">
+                        {DEMO_CARDS.map((demo) => (
+                            <div key={demo.key} className="flex flex-col items-center gap-2">
+                                <SekaiCardThumbnail card={demo.card} trained={demo.trained} mastery={demo.mastery} width={demo.width} />
+                                <span className="font-mono type-label-s text-on-surface-variant">{demo.caption}</span>
                             </div>
+                        ))}
+                    </Surface>
+                </Section>
 
-                            {hasActiveFilters && (
-                                <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-400 text-white animate-pulse shadow-sm">
-                                    筛选器已激活
-                                </span>
-                            )}
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            {/* Inline preview */}
+                {/* Quick filter */}
+                <Section title={t("page.designSystem.quickFilterTitle")} hint={t("page.designSystem.quickFilterHint")}>
+                    <div className="grid gap-4 md:grid-cols-2">
+                        <Surface tone="low" className="p-5">
+                            {quickFilterContent}
+                        </Surface>
+                        <Surface tone="low" className="space-y-1 p-5 font-mono type-body-s text-on-surface-variant">
+                            <div>search: &quot;{demoSearch}&quot;</div>
                             <div>
-                                <h4 className="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">内嵌预览</h4>
-                                <div className="max-w-sm">
-                                    {quickFilterContent}
-                                </div>
+                                sortBy: &quot;{demoSortBy}&quot; / order: &quot;{demoSortOrder}&quot;
                             </div>
-
-                            {/* Usage guide */}
+                            <div>category: &quot;{demoCategory}&quot;</div>
+                            <div>toggle: {String(demoToggle)}</div>
                             <div>
-                                <h4 className="text-sm font-bold text-slate-500 mb-3 uppercase tracking-wider">使用方式</h4>
-                                <div className="p-4 ios-glass-panel rounded-2xl">
-                                    <ul className="text-sm text-slate-550 dark:text-slate-450 space-y-2 list-disc list-inside">
-                                        <li>页面组件中调用 <code className="px-1 py-0.5 bg-white/20 rounded text-xs font-mono">useQuickFilter(title, content, deps)</code></li>
-                                        <li>筛选器内容自动注册到全局 Context</li>
-                                        <li>左侧拉手与抽屉仅在有注册内容时显示</li>
-                                        <li>≥1024px 抽屉与列表并排常驻，更窄屏幕改为浮层</li>
-                                        <li>组件卸载时自动取消注册</li>
-                                        <li>BaseFilters 的所有功能均可在抽屉内使用</li>
-                                    </ul>
-                                </div>
-
-                                <div className="mt-4 p-4 ios-glass-panel rounded-2xl">
-                                    <h5 className="text-xs font-bold text-slate-650 dark:text-slate-350 uppercase tracking-wider mb-2">当前筛选状态</h5>
-                                    <div className="text-xs text-slate-500 font-mono space-y-1">
-                                        <div>search: &quot;{demoSearch || "(空)"}&quot;</div>
-                                        <div>sortBy: &quot;{demoSortBy}&quot; / order: &quot;{demoSortOrder}&quot;</div>
-                                        <div>category: &quot;{demoCategory}&quot;</div>
-                                        <div>toggle: {demoToggle ? "true" : "false"}</div>
-                                        <div>filtered: {demoFilteredCount} / {demoTotalCount}</div>
-                                    </div>
-                                </div>
+                                filtered: {demoFilteredCount} / {demoTotalCount}
                             </div>
-                        </div>
-
-                        <div className="mt-6 text-xs text-slate-400 font-mono">
-                            {`useQuickFilter("筛选标题", <BaseFilters ...>{children}</BaseFilters>, [deps])`}
-                        </div>
+                            <div className="pt-3">
+                                <Code>{`useQuickFilter(title, <BaseFilters …/>, deps)`}</Code>
+                            </div>
+                        </Surface>
                     </div>
-                </section>
-            </div >
-        </MainLayout >
-    );
-}
+                </Section>
 
-function ColorCard({ name, variable, className, hex }: { name: string, variable?: string, className: string, hex?: string }) {
-    return (
-        <div className="flex flex-col h-32 rounded-2xl border border-slate-200/60 dark:border-slate-700/40 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-            <div className={`flex-grow ${className} flex items-center justify-center`}>
-                {hex && <span className="font-mono opacity-80">{hex}</span>}
+                {/* MySekai preview */}
+                <Section title={t("page.designSystem.mysekaiTitle")}>
+                    <Surface tone="low" className="p-4 sm:p-6">
+                        <MysekaiScenePreview heightClassName="h-[560px] min-h-[480px]" compact />
+                    </Surface>
+                </Section>
             </div>
-            <div className="p-3 bg-white dark:bg-slate-900/60">
-                <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{name}</div>
-                {variable && <div className="text-xs text-slate-400 font-mono mt-0.5">{variable}</div>}
-            </div>
-        </div>
+        </MainLayout>
     );
 }
