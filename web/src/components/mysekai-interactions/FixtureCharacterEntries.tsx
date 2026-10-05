@@ -54,14 +54,14 @@ export default function FixtureCharacterEntries({ region, fixture, groups }: {
                 data-fixture={fixture}
                 aria-label={names}
                 title={names}
-                className="group inline-flex min-h-[54px] items-center rounded-full border border-[var(--border-soft)] bg-[var(--surface-soft)] p-1.5 transition-colors hover:border-miku/45 hover:bg-miku/5 focus-visible:outline-2 focus-visible:outline-offset-2"
+                className="state-layer focus-ring group inline-flex min-h-[54px] items-center rounded-full bg-surface-container-high p-1.5"
             >
                 <span className="flex items-center -space-x-3" aria-hidden="true">
                     {people.map(({ unit, name }, index) => exact
-                        ? <span key={unit} className="relative overflow-hidden rounded-full bg-[var(--surface-base)] ring-2 ring-[var(--surface-base)] transition-transform group-hover:-translate-y-0.5" style={{ zIndex: people.length - index }}>
+                        ? <span key={unit} className="relative overflow-hidden rounded-full bg-surface-container-low ring-2 ring-surface-container-low transition-transform" style={{ zIndex: people.length - index }}>
                             <SdPortrait snapshot={exact} unit={unit} name={name} size={46} />
                         </span>
-                        : <span key={unit} className="relative inline-flex size-[46px] items-center justify-center rounded-full bg-[var(--surface-base)] text-[10px] font-semibold text-[var(--text-muted)] ring-2 ring-[var(--surface-base)]" style={{ zIndex: people.length - index }}>
+                        : <span key={unit} className="relative inline-flex size-[46px] items-center justify-center rounded-full bg-surface-container-low type-label-s text-on-surface-variant ring-2 ring-surface-container-low" style={{ zIndex: people.length - index }}>
                             {Array.from(name).slice(0, 2).join("")}
                         </span>)}
                 </span>

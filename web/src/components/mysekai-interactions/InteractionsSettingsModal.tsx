@@ -2,6 +2,8 @@
 
 import React, { useState } from "react";
 import Modal from "@/components/common/Modal";
+import { Button, Chip, Icon, SegmentedButton, Tabs, buttonClassName } from "@/components/md3";
+import { mdArrowForward, mdDelete } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { ServerSourceType } from "@/contexts/ThemeContext";
 import type {
@@ -83,164 +85,96 @@ export default function InteractionsSettingsModal({
         >
             <div className="flex flex-col gap-5">
                 {/* Navigation Tabs */}
-                <div className="flex border-b border-slate-200 dark:border-slate-800 gap-1 sm:gap-2 overflow-x-auto pb-1">
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("general")}
-                        className={`px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                            activeTab === "general"
-                                ? "bg-miku/10 text-miku font-bold"
-                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                        {t("page.mysekaiWorkspace.settingsTabGeneral")}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("weather")}
-                        className={`px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap flex items-center gap-1.5 ${
-                            activeTab === "weather"
-                                ? "bg-miku/10 text-miku font-bold"
-                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                        {t("page.mysekaiWorkspace.settingsTabWeather")}
-                        {live?.weather && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-miku animate-pulse" />
-                        )}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("playerData")}
-                        className={`px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                            activeTab === "playerData"
-                                ? "bg-miku/10 text-miku font-bold"
-                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                        {t("page.mysekaiWorkspace.settingsTabPlayerData")}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setActiveTab("storage")}
-                        className={`px-3.5 py-2 text-xs sm:text-sm font-semibold rounded-lg transition-colors whitespace-nowrap ${
-                            activeTab === "storage"
-                                ? "bg-miku/10 text-miku font-bold"
-                                : "text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800"
-                        }`}
-                    >
-                        {t("page.mysekaiWorkspace.settingsTabStorage")}
-                    </button>
-                </div>
+                <Tabs<SettingsTab>
+                    scrollable
+                    variant="secondary"
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    items={[
+                        { value: "general", label: t("page.mysekaiWorkspace.settingsTabGeneral") },
+                        {
+                            value: "weather",
+                            label: t("page.mysekaiWorkspace.settingsTabWeather"),
+                            badge: live?.weather ? <span className="inline-block h-1.5 w-1.5 rounded-full bg-primary animate-pulse" /> : undefined,
+                        },
+                        { value: "playerData", label: t("page.mysekaiWorkspace.settingsTabPlayerData") },
+                        { value: "storage", label: t("page.mysekaiWorkspace.settingsTabStorage") },
+                    ]}
+                />
 
                 {/* Tab: General */}
                 {activeTab === "general" && (
-                    <div className="flex flex-col gap-4 text-sm">
+                    <div className="flex flex-col gap-4 type-body-m">
                         {/* Server selection */}
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-2.5">
+                        <div className="p-4 rounded-md3-lg bg-surface-container flex flex-col gap-2.5">
                             <div className="flex items-center justify-between">
-                                <span className="font-bold text-slate-800 dark:text-slate-100">
+                                <span className="type-title-s text-on-surface">
                                     {t("page.mysekaiInteractions.source")}
                                 </span>
                                 {snapshot && (
-                                    <span className="text-xs text-slate-500 dark:text-slate-400 bg-slate-200/60 dark:bg-slate-700/60 px-2 py-0.5 rounded font-mono">
+                                    <span className="rounded-md3-xs bg-surface-container-highest px-2 py-0.5 font-mono type-label-m text-on-surface-variant">
                                         {snapshot.region.toUpperCase()} · {snapshot.version}
                                     </span>
                                 )}
                             </div>
-                            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                            <div className="flex flex-wrap gap-2">
                                 {servers.map(server => (
-                                    <button
+                                    <Chip
                                         key={server}
-                                        type="button"
                                         disabled={closing}
+                                        selected={source === server}
                                         onClick={() => onSourceChange(server)}
-                                        className={`py-2 px-3 text-xs font-semibold rounded-lg border transition-all ${
-                                            source === server
-                                                ? "bg-miku text-white border-miku shadow-sm font-bold"
-                                                : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-miku/60"
-                                        }`}
                                     >
                                         {t(`common.server.${server}`)}
-                                    </button>
+                                    </Chip>
                                 ))}
                             </div>
                         </div>
 
                         {/* Sound Toggle */}
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-4">
+                        <div className="p-4 rounded-md3-lg bg-surface-container flex items-center justify-between gap-4">
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-100">
+                                <h4 className="type-title-s text-on-surface">
                                     {t("page.mysekaiWorkspace.soundTitle")}
                                 </h4>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                <p className="mt-0.5 type-body-s text-on-surface-variant">
                                     {t("page.mysekaiWorkspace.soundDesc")}
                                 </p>
                             </div>
-                            <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 p-0.5 bg-slate-200/50 dark:bg-slate-700/50 shrink-0">
-                                <button
-                                    type="button"
-                                    onClick={() => onSoundChange(true)}
-                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                        soundEnabled
-                                            ? "bg-white dark:bg-slate-800 text-miku shadow-xs font-bold"
-                                            : "text-slate-600 dark:text-slate-400"
-                                    }`}
-                                >
-                                    {t("page.mysekaiWorkspace.soundOn")}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => onSoundChange(false)}
-                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                        !soundEnabled
-                                            ? "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 shadow-xs font-bold"
-                                            : "text-slate-600 dark:text-slate-400"
-                                    }`}
-                                >
-                                    {t("page.mysekaiWorkspace.soundOff")}
-                                </button>
-                            </div>
+                            <SegmentedButton
+                                className="w-auto shrink-0"
+                                density={-1}
+                                value={soundEnabled ? "on" : "off"}
+                                onValueChange={(v) => onSoundChange(v === "on")}
+                                options={[
+                                    { value: "on", label: t("page.mysekaiWorkspace.soundOn") },
+                                    { value: "off", label: t("page.mysekaiWorkspace.soundOff") },
+                                ]}
+                            />
                         </div>
 
                         {/* Mode Toggle */}
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="p-4 rounded-md3-lg bg-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-100">
+                                <h4 className="type-title-s text-on-surface">
                                     {t("page.mysekaiWorkspace.sceneMode")}
                                 </h4>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                                <p className="mt-0.5 type-body-s text-on-surface-variant">
                                     {mode === "independent"
                                         ? t("page.mysekaiWorkspace.modeIndependentDesc")
                                         : t("page.mysekaiWorkspace.modeCurrentDesc")}
                                 </p>
                             </div>
-                            <div className="flex rounded-lg border border-slate-300 dark:border-slate-600 p-0.5 bg-slate-200/50 dark:bg-slate-700/50 shrink-0">
-                                <button
-                                    type="button"
-                                    disabled={closing}
-                                    onClick={() => onModeChange("independent")}
-                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                        mode === "independent"
-                                            ? "bg-white dark:bg-slate-800 text-miku shadow-xs font-bold"
-                                            : "text-slate-600 dark:text-slate-400"
-                                    }`}
-                                >
-                                    {t("page.mysekaiInteractions.mode.independent")}
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={closing}
-                                    onClick={() => onModeChange("current")}
-                                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition-all ${
-                                        mode === "current"
-                                            ? "bg-white dark:bg-slate-800 text-miku shadow-xs font-bold"
-                                            : "text-slate-600 dark:text-slate-400"
-                                    }`}
-                                >
-                                    {t("page.mysekaiInteractions.mode.current")}
-                                </button>
-                            </div>
+                            <SegmentedButton
+                                className="w-auto shrink-0"
+                                density={-1}
+                                value={mode}
+                                onValueChange={onModeChange}
+                                options={[
+                                    { value: "independent", label: t("page.mysekaiInteractions.mode.independent"), disabled: closing },
+                                    { value: "current", label: t("page.mysekaiInteractions.mode.current"), disabled: closing },
+                                ]}
+                            />
                         </div>
                     </div>
                 )}
@@ -249,7 +183,7 @@ export default function InteractionsSettingsModal({
                 {activeTab === "weather" && (
                     <div className="flex flex-col gap-3">
                         {live?.weather && onSetWeather ? (
-                            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+                            <div className="p-4 rounded-md3-lg bg-surface-container">
                                 <WeatherControl
                                     weather={live.weather}
                                     disabled={closing}
@@ -257,11 +191,11 @@ export default function InteractionsSettingsModal({
                                 />
                             </div>
                         ) : (
-                            <div className="p-8 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 text-sm">
-                                <p className="font-semibold mb-1">
+                            <div className="rounded-md3-lg border border-dashed border-outline-variant p-8 text-center type-body-m text-on-surface-variant">
+                                <p className="mb-1 type-title-s">
                                     {t("page.mysekaiWorkspace.weatherNeedsActiveScene")}
                                 </p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500">
+                                <p className="type-body-s text-on-surface-variant">
                                     {t("page.mysekaiWorkspace.weatherNeedsActiveSceneDesc")}
                                 </p>
                             </div>
@@ -273,16 +207,16 @@ export default function InteractionsSettingsModal({
                 {activeTab === "playerData" && (
                     <div className="flex flex-col gap-3">
                         {!sessionActive ? (
-                            <div className="p-6 text-center text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 dark:border-slate-700/80 text-sm">
-                                <p className="font-semibold mb-2">
+                            <div className="rounded-md3-lg bg-surface-container p-6 text-center type-body-m text-on-surface-variant">
+                                <p className="mb-2 type-title-s">
                                     {t("page.mysekaiWorkspace.importNeedsScene")}
                                 </p>
-                                <p className="text-xs text-slate-400 dark:text-slate-500 max-w-md mx-auto">
+                                <p className="mx-auto max-w-md type-body-s text-on-surface-variant">
                                     {t("page.mysekaiWorkspace.importNeedsSceneDesc")}
                                 </p>
                             </div>
                         ) : snapshot && onSendPlayerData && onExplorePlayerData ? (
-                            <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80">
+                            <div className="p-4 rounded-md3-lg bg-surface-container">
                                 <PlayerDataPanel
                                     key={snapshot.id}
                                     region={snapshot.region}
@@ -299,41 +233,44 @@ export default function InteractionsSettingsModal({
 
                 {/* Tab: Storage & Cache */}
                 {activeTab === "storage" && (
-                    <div className="flex flex-col gap-4 text-sm">
-                        <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 flex flex-col gap-3">
+                    <div className="flex flex-col gap-4 type-body-m">
+                        <div className="p-4 rounded-md3-lg bg-surface-container flex flex-col gap-3">
                             <div>
-                                <h4 className="font-bold text-slate-800 dark:text-slate-100">
+                                <h4 className="type-title-s text-on-surface">
                                     {t("page.mysekaiInteractions.cache.title")}
                                 </h4>
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                <p className="mt-1 type-body-s text-on-surface-variant">
                                     {t("page.mysekaiWorkspace.cacheManagerDesc")}
                                 </p>
                             </div>
                             <div className="flex flex-wrap gap-2.5 pt-2">
-                                <button
-                                    type="button"
+                                <Button
+                                    size="xs"
+                                    variant="tonal"
+                                    color="error"
+                                    icon={mdDelete}
                                     disabled={cacheClearing || closing || sessionActive}
                                     onClick={handleClearCache}
-                                    className="px-3.5 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/40 dark:hover:bg-red-900/40 dark:text-red-400 font-semibold text-xs transition-colors border border-red-200 dark:border-red-900/50 disabled:opacity-50"
                                 >
                                     {cacheClearing
                                         ? t("common.state.loading")
                                         : cacheCleared
                                         ? t("page.mysekaiInteractions.cache.cleared")
                                         : t("page.mysekaiInteractions.cache.clear")}
-                                </button>
+                                </Button>
                                 <LocalizedLink
                                     href={`/mysekai/interactions/resources/?${new URLSearchParams({
                                         region: source,
                                         ...(snapshot ? { snapshot: snapshot.id } : {}),
                                     })}`}
-                                    className="px-3.5 py-2 rounded-lg bg-slate-200/70 hover:bg-slate-200 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200 font-semibold text-xs transition-colors"
+                                    className={buttonClassName({ variant: "outlined", size: "xs" })}
                                 >
-                                    {t("page.mysekaiInteractions.r4b.manageResources")} →
+                                    {t("page.mysekaiInteractions.r4b.manageResources")}
+                                    <Icon path={mdArrowForward} size={18} />
                                 </LocalizedLink>
                             </div>
                             {sessionActive && (
-                                <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                                <p className="mt-1 type-body-s text-tertiary">
                                     {t("page.mysekaiWorkspace.clearCacheWarningActive")}
                                 </p>
                             )}

@@ -4,6 +4,8 @@ import { Suspense, useCallback, useDeferredValue, useEffect, useEffectEvent, use
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
+import { Button, IconButton, LoadingState, PageHeader } from "@/components/md3";
+import { mdArrowBack, mdClose, mdPlayArrowFill, mdSettings } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
 import { INITIAL_BROWSE, filterCatalog, supportedRegion, type BrowseState, type CatalogEntry } from "@/lib/moly/catalog";
@@ -311,57 +313,51 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     return (
         <div
             ref={workspace}
-            className="mysekai-interactions mysekai-workspace container mx-auto px-4 sm:px-6 py-6"
+            className="mysekai-interactions mysekai-workspace mx-auto w-full"
             data-workspace-region={source}
             onBlurCapture={event => { if (event.target instanceof HTMLInputElement) searchEditing.current = false; }}
         >
             {/* Page Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-                <div>
-                    <div className="flex items-center gap-2.5 mb-1.5">
-                        <h1 className="text-2xl sm:text-3xl font-black text-primary-text tracking-tight">
-                            {t("page.mysekaiInteractions.title")}
-                        </h1>
-                        <span className="px-2 py-0.5 text-[10px] font-bold rounded-full bg-miku/10 text-miku border border-miku/30">
+            <PageHeader
+                className="mb-6 sm:mb-6"
+                title={
+                    <span className="inline-flex flex-wrap items-center gap-2.5">
+                        {t("page.mysekaiInteractions.title")}
+                        <span className="rounded-md3-sm bg-tertiary-container px-2 py-0.5 type-label-m text-on-tertiary-container">
                             {t("page.mysekaiWorkspace.alphaLabel")}
                         </span>
-                    </div>
-                    <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                    </span>
+                }
+                description={
+                    <>
                         {t("page.mysekaiInteractions.subtitle")}
-                    </p>
-                    <p className="mt-1 text-xs text-slate-400">
-                        {t("page.mysekaiInteractions.r6.engineSource")} <ExternalLink href="https://github.com/empty-sekai/moly" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-miku hover:underline">moly</ExternalLink>
-                    </p>
-                </div>
+                        <span className="mt-1 block type-body-s text-on-surface-variant">
+                            {t("page.mysekaiInteractions.r6.engineSource")}{" "}
+                            <ExternalLink href="https://github.com/empty-sekai/moly" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                                moly
+                            </ExternalLink>
+                        </span>
+                    </>
+                }
+                actions={
+                    <>
+                        {/* Enter / Open Scene button */}
+                        <Button
+                            variant="filled"
+                            icon={mdPlayArrowFill}
+                            disabled={!soundReady || !snapshot?.available || closing}
+                            onClick={() => start(null)}
+                        >
+                            {t(`page.mysekaiWorkspace.${session ? "openScene" : "enterScene"}`)}
+                        </Button>
 
-                <div className="flex items-center gap-2.5 shrink-0">
-                    {/* Enter / Open Scene button */}
-                    <button
-                        type="button"
-                        className="px-4 py-2 rounded-xl bg-miku hover:bg-miku/90 text-white font-bold text-xs sm:text-sm transition-all shadow-sm flex items-center gap-2 cursor-pointer disabled:opacity-50"
-                        disabled={!soundReady || !snapshot?.available || closing}
-                        onClick={() => start(null)}
-                    >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
-                        </svg>
-                        <span>{t(`page.mysekaiWorkspace.${session ? "openScene" : "enterScene"}`)}</span>
-                    </button>
-
-                    {/* Settings Modal Trigger */}
-                    <button
-                        type="button"
-                        onClick={() => setSettingsOpen(true)}
-                        className="px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold text-xs sm:text-sm transition-colors flex items-center gap-1.5 cursor-pointer shadow-2xs"
-                    >
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2">
-                            <circle cx="12" cy="12" r="3" />
-                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-                        </svg>
-                        <span className="hidden sm:inline">{t("page.mysekaiWorkspace.settingsModalTitle")}</span>
-                    </button>
-                </div>
-            </div>
+                        {/* Settings Modal Trigger */}
+                        <Button variant="tonal" icon={mdSettings} onClick={() => setSettingsOpen(true)}>
+                            <span className="hidden sm:inline">{t("page.mysekaiWorkspace.settingsModalTitle")}</span>
+                        </Button>
+                    </>
+                }
+            />
 
             {/* Global Settings Modal */}
             <InteractionsSettingsModal
@@ -392,57 +388,63 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
             />
 
             {/* Navigation Tabs */}
-            <nav className="flex gap-6 border-b border-slate-200 dark:border-slate-800 mb-6" aria-label={t("page.mysekaiInteractions.browse")}>
-                {(["conversations", "activities"] as const).map(tab => (
-                    <button
-                        key={tab}
-                        data-tab={tab}
-                        className={`pb-3 text-sm sm:text-base font-bold transition-all border-b-2 -mb-px flex items-center gap-2 cursor-pointer ${
-                            nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances")
-                                ? "border-miku text-miku font-black"
-                                : "border-transparent text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200"
-                        }`}
-                        onClick={() => change({ tab })}
-                    >
-                        <span>{t(`page.mysekaiWorkspace.${tab}`)}</span>
-                        <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400">
-                            {counts[tab]?.toLocaleString() ?? "—"}
-                        </span>
-                    </button>
-                ))}
+            <nav className="mb-6 flex gap-2 border-b border-outline-variant" aria-label={t("page.mysekaiInteractions.browse")}>
+                {(["conversations", "activities"] as const).map(tab => {
+                    const active = nav.browse.tab === tab || (tab === "conversations" && nav.browse.tab === "performances");
+                    return (
+                        <button
+                            key={tab}
+                            data-tab={tab}
+                            aria-pressed={active}
+                            className={`state-layer focus-ring relative -mb-px flex cursor-pointer items-center gap-2 rounded-t-md3-sm border-b-[3px] px-3 pb-3 pt-2 type-title-s transition-colors ${
+                                active
+                                    ? "border-primary text-primary"
+                                    : "border-transparent text-on-surface-variant hover:text-on-surface"
+                            }`}
+                            onClick={() => change({ tab })}
+                        >
+                            <span>{t(`page.mysekaiWorkspace.${tab}`)}</span>
+                            <span className={`rounded-md3-sm px-2 py-0.5 type-label-m ${active ? "bg-primary-container text-on-primary-container" : "bg-surface-container-high text-on-surface-variant"}`}>
+                                {counts[tab]?.toLocaleString() ?? "—"}
+                            </span>
+                        </button>
+                    );
+                })}
             </nav>
 
             {/* Active Context Chip Bar */}
             {(nav.browse.fixture || nav.browse.characters.length > 0) && (
-                <div className="flex items-center flex-wrap gap-2 p-2.5 px-4 mb-4 rounded-xl bg-miku/10 border border-miku/20 text-xs" role="status">
-                    <span className="text-slate-500 dark:text-slate-400 font-medium">{t("page.mysekaiInteractions.filterScope")}:</span>
+                <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md3-lg bg-secondary-container px-4 py-2.5 type-body-s text-on-secondary-container" role="status">
+                    <span>{t("page.mysekaiInteractions.filterScope")}:</span>
                     {nav.browse.fixture && (
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
+                        <span className="type-label-l">
                             {contextFixture ?? `#${nav.browse.fixture}`}
                         </span>
                     )}
                     {nav.browse.characters.map(id => (
-                        <span key={id} className="font-bold text-miku bg-white dark:bg-slate-800 px-2 py-0.5 rounded-md border border-miku/30">
+                        <span key={id} className="rounded-md3-sm bg-surface-container-lowest px-2 py-0.5 type-label-m text-primary">
                             {catalog?.characters.find(person => person.id === id)?.name ?? `#${id}`}
                         </span>
                     ))}
-                    <button
-                        type="button"
-                        className="ml-auto text-xs text-slate-500 hover:text-red-500 transition-colors font-semibold cursor-pointer"
+                    <Button
+                        size="xs"
+                        variant="text"
+                        trailingIcon={mdClose}
+                        className="ml-auto"
                         onClick={() => {
                             setSelectedUnitIds([]);
                             change({ fixture: null, characters: [] });
                         }}
                     >
-                        {t("page.mysekaiInteractions.clearContext")} ×
-                    </button>
+                        {t("page.mysekaiInteractions.clearContext")}
+                    </Button>
                 </div>
             )}
 
             {notice && <p className="workspace-feedback" role="status">{t(`page.mysekaiInteractions.${notice}`)}</p>}
 
             {/* Main Stage & Content Area */}
-            <div className={`workspace-body${nav.content || nav.invalidContent ? " workspace-has-detail" : ""}`}>
+            <div className={`workspace-body${nav.content || nav.invalidContent ?" workspace-has-detail" : ""}`}>
                 <WorkspaceStage
                     session={session}
                     player={player}
@@ -494,31 +496,28 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                             onPage={next => commit(current => ({ ...current, page: next }), { scroll: "catalog" })}
                         />
                     ) : catalogLoading || !sourceReady ? (
-                        <div className="flex items-center justify-center min-h-[300px]" role="status">
-                            <div className="loading-spinner loading-spinner-sm" />
-                        </div>
+                        <LoadingState className="min-h-[300px]" />
                     ) : null}
                 </div>
 
                 {/* Selected Content Detail Aside */}
                 {(nav.content || nav.invalidContent) && (
                     <aside
-                        className="workspace-detail-pane ios-glass-card rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800"
+                        className="workspace-detail-pane overflow-hidden"
                         data-mysekai-detail
                         tabIndex={-1}
                         aria-label={t("page.mysekaiWorkspace.detail")}
                     >
-                        <div className="workspace-detail-toolbar flex items-center justify-between p-3 px-4 border-b border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-sm">
-                            <button className="text-xs font-semibold text-slate-600 dark:text-slate-400 hover:text-miku transition-colors cursor-pointer" onClick={back}>
-                                ← {t("page.mysekaiWorkspace.backToResults")}
-                            </button>
-                            <button
-                                className="w-7 h-7 rounded-full grid place-items-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
-                                aria-label={t("common.action.close")}
+                        <div className="workspace-detail-toolbar">
+                            <Button size="xs" variant="text" icon={mdArrowBack} onClick={back}>
+                                {t("page.mysekaiWorkspace.backToResults")}
+                            </Button>
+                            <IconButton
+                                icon={mdClose}
+                                size="xs"
+                                label={t("common.action.close")}
                                 onClick={() => commit(current => ({ ...current, content: null, invalidContent: false }), { scroll: "catalog" })}
-                            >
-                                ×
-                            </button>
+                            />
                         </div>
 
                         {visibleEntry && snapshot ? (
@@ -543,16 +542,12 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                                 fixture={id => related(id, "performances")}
                             />
                         ) : (
-                            <div className="p-12 text-center text-xs text-slate-400" role="status">
+                            <div className="p-12 text-center type-body-s text-on-surface-variant" role="status">
                                 <p>{t(`page.mysekaiInteractions.${missing ? "contentMissing" : "loading"}`)}</p>
                                 {missing && (
-                                    <button
-                                        type="button"
-                                        className="mt-3 px-3 py-1.5 rounded-lg bg-miku text-white font-semibold"
-                                        onClick={back}
-                                    >
+                                    <Button variant="filled" size="xs" className="mt-3" onClick={back}>
                                         {t("page.mysekaiWorkspace.backToResults")}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                         )}

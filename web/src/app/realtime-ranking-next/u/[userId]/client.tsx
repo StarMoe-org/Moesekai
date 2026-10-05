@@ -6,6 +6,8 @@ import Link from "@/components/LocalizedLink";
 import Image from "next/image";
 import { useParams, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
+import { Button, EmptyState, ErrorState, LoadingState, PageContainer } from "@/components/md3";
+import { mdArrowBack, mdRefresh } from "@/components/md3/icons";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import PlayerHonorPreview from "@/components/realtime-ranking/PlayerHonorPreview";
 import { useI18n } from "@/contexts/I18nContext";
@@ -112,24 +114,21 @@ function UserDetailContent() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 py-8 sm:px-6">
+            <PageContainer>
                 {/* Back link */}
                 <div className="mb-4 flex items-center gap-2 text-sm">
-                    <Link href={backHref} className="inline-flex items-center gap-1 font-bold text-slate-500 transition-colors hover:text-miku dark:text-slate-400">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4">
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                        </svg>
+                    <Button href={backHref} variant="text" icon={mdArrowBack}>
                         {t("page.realtimeRankingNext.detail.back")}
-                    </Link>
+                    </Button>
                     {worldLinkCharacterId != null && (
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[11px] font-black text-emerald-600 dark:text-emerald-400">
+                        <span className="rounded-md3-sm bg-secondary-container px-2 py-0.5 type-label-m text-on-secondary-container">
                             WL · {getCharacterName(t, worldLinkCharacterId)}
                         </span>
                     )}
 
                     {/* Live indicator + manual refresh */}
                     <div className="ml-auto flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        <span className="inline-flex items-center gap-1.5 rounded-md3-sm bg-surface-container-high px-2.5 py-1 type-label-m text-on-surface-variant">
                             <motion.span
                                 className="inline-block h-1.5 w-1.5 rounded-full bg-emerald-500"
                                 animate={{ opacity: [1, 0.3, 1], scale: [1, 0.8, 1] }}
@@ -137,11 +136,7 @@ function UserDetailContent() {
                             />
                             <LiveAgeLabel updatedAt={updatedAt} />
                         </span>
-                        <button
-                            onClick={refresh}
-                            disabled={isRefreshing}
-                            className="inline-flex items-center gap-1 rounded-full bg-miku px-3 py-1 text-[11px] font-black text-white shadow-sm shadow-miku/25 transition-colors hover:bg-miku-dark disabled:opacity-60"
-                        >
+                        <Button size="xs" icon={mdRefresh} onClick={refresh} disabled={isRefreshing}>
                             {isRefreshing ? (
                                 <motion.span animate={{ opacity: [1, 0.4, 1] }} transition={{ duration: 0.8, repeat: Infinity }}>
                                     {t("page.realtimeRankingNext.refreshing")}
@@ -149,24 +144,23 @@ function UserDetailContent() {
                             ) : (
                                 t("page.realtimeRankingNext.refresh")
                             )}
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 {error && (
-                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-                        {t("page.realtimeRankingNext.loadFailed")}
-                    </div>
+                    <ErrorState
+                        className="mb-6"
+                        title={t("page.realtimeRankingNext.loadFailed")}
+                        retryLabel={t("common.action.retry")}
+                        onRetry={refresh}
+                    />
                 )}
 
                 {isLoading && !data.self ? (
-                    <div className="ios-glass-card rounded-2xl p-10 text-center text-slate-500">
-                        {t("page.realtimeRankingNext.loading")}
-                    </div>
+                    <LoadingState label={t("page.realtimeRankingNext.loading")} />
                 ) : !data.self ? (
-                    <div className="ios-glass-card rounded-2xl p-10 text-center text-slate-500">
-                        {t("page.realtimeRankingNext.detail.notFound")}
-                    </div>
+                    <EmptyState title={t("page.realtimeRankingNext.detail.notFound")} />
                 ) : (
                     /*
                      * Layout:
@@ -180,41 +174,41 @@ function UserDetailContent() {
                         {/* Left column (desktop) */}
                         <div className="contents lg:col-span-7 lg:block">
                             {/* Player card */}
-                            <div className="order-1 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60">
+                            <div className="order-1 bg-surface-container-low rounded-md3-xl p-5">
                                 <div className="flex items-start gap-4">
                                     <div className="w-20 shrink-0 sm:w-24">
                                         {leaderCard ? (
                                             <SekaiCardThumbnail card={leaderCard} trained={isTrained} mastery={masterRank} width={96} className="w-full" assetSource={effectiveAssetSource} />
                                         ) : derivedCharacterId ? (
-                                            <div className="relative aspect-square w-full overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                                            <div className="relative aspect-square w-full overflow-hidden rounded-md3-sm border border-outline-variant">
                                                 <Image src={getCharacterIconUrl(derivedCharacterId)} alt="" fill className="object-cover" unoptimized />
                                             </div>
                                         ) : (
-                                            <div className="flex aspect-square w-full items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800">
-                                                <span className="text-sm font-black text-slate-400">#{data.self.rank}</span>
+                                            <div className="flex aspect-square w-full items-center justify-center rounded-md3-sm bg-surface-container">
+                                                <span className="text-sm font-black text-on-surface-variant">#{data.self.rank}</span>
                                             </div>
                                         )}
                                     </div>
                                     <div className="min-w-0 flex-1">
                                         <div className="flex items-center gap-2">
-                                            <span className="rounded-lg bg-miku px-2 py-0.5 text-xs font-black text-white">#{data.self.rank}</span>
+                                            <span className="rounded-md3-sm bg-primary px-2 py-0.5 type-label-l text-on-primary">#{data.self.rank}</span>
                                             {data.parking && (
-                                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-black text-amber-600 dark:text-amber-400">
+                                                <span className="rounded-full bg-amber-500/15 px-2 py-0.5 type-label-s text-on-tertiary-container">
                                                     {t("page.realtimeRankingNext.detail.parkingNow")}
                                                 </span>
                                             )}
                                         </div>
-                                        <h1 className="mt-1.5 truncate text-xl font-black text-primary-text">{data.self.displayName}</h1>
+                                        <h1 className="mt-1.5 truncate type-headline-s text-on-surface">{data.self.displayName}</h1>
                                         {data.self.signature && (
-                                            <p className="mt-0.5 truncate text-xs text-slate-400 dark:text-slate-500">{data.self.signature}</p>
+                                            <p className="mt-0.5 truncate text-xs text-on-surface-variant">{data.self.signature}</p>
                                         )}
                                         <div className="mt-2">
                                             <PlayerHonorPreview honors={data.self.honors} masterData={masterData} assetSource={effectiveAssetSource} compact />
                                         </div>
                                         <div className="mt-3 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-                                            <div className="text-2xl font-black text-primary-text">
+                                            <div className="text-2xl font-black text-on-surface">
                                                 {formatNumber(data.self.score)}
-                                                <span className="ml-1 text-xs font-bold text-slate-400">P</span>
+                                                <span className="ml-1 text-xs font-bold text-on-surface-variant">P</span>
                                             </div>
                                             <LastChangeBadge changes={data.selfChurn?.recent_score_changes ?? []} />
                                         </div>
@@ -223,36 +217,36 @@ function UserDetailContent() {
                             </div>
 
                             {/* Speed gauge */}
-                            <div className="order-2 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60 lg:mt-6">
-                                <h2 className="mb-3 text-sm font-black text-primary-text">{t("page.realtimeRankingNext.detail.speedTitle")}</h2>
+                            <div className="order-2 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                                <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.speedTitle")}</h2>
                                 <SpeedGauge churnEntry={data.selfChurn} />
                             </div>
 
                             {/* Heatmap */}
-                            <div className="order-5 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60 lg:mt-6">
+                            <div className="order-5 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
                                 <ChurnHeatmap hourlyChurn={data.selfChurn?.hourly_churn ?? []} churn48h={data.selfChurn?.churn_48h} />
                             </div>
 
                             {/* Score curve */}
-                            <div className="order-6 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60 lg:mt-6">
-                                <h2 className="mb-2 text-sm font-black text-primary-text">{t("page.realtimeRankingNext.detail.curveTitle")}</h2>
+                            <div className="order-6 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                                <h2 className="mb-2 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.curveTitle")}</h2>
                                 <ScoreLineChart series={series} height={300} />
                             </div>
 
                             {/* Parking periods */}
                             {data.selfChurn?.parking_periods && data.selfChurn.parking_periods.length > 0 && (
-                                <div className="order-8 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60 lg:mt-6">
-                                    <h2 className="mb-3 text-sm font-black text-primary-text">{t("page.realtimeRankingNext.detail.parkingTitle")}</h2>
+                                <div className="order-8 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                                    <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.parkingTitle")}</h2>
                                     <div className="space-y-1.5">
                                         {data.selfChurn.parking_periods.slice(-8).reverse().map((p, i) => {
                                             const start = p.start_time ?? p.since_ms;
                                             const dur = p.duration_s;
                                             return (
-                                                <div key={i} className="flex items-center justify-between rounded-lg bg-slate-50 px-3 py-1.5 text-xs dark:bg-slate-800/60">
-                                                    <span className="text-slate-500 dark:text-slate-400">
+                                                <div key={i} className="flex items-center justify-between rounded-md3-sm bg-surface-container px-3 py-1.5 type-body-s">
+                                                    <span className="text-on-surface-variant">
                                                         {start ? new Date(start).toLocaleString() : "—"}
                                                     </span>
-                                                    <span className="font-black text-slate-700 dark:text-slate-200">
+                                                    <span className="font-black text-on-surface">
                                                         {dur != null ? `${Math.round(dur / 60)}m` : t("page.realtimeRankingNext.detail.parkingOngoing")}
                                                     </span>
                                                 </div>
@@ -266,10 +260,10 @@ function UserDetailContent() {
                         {/* Right column (desktop) */}
                         <div className="contents lg:col-span-5 lg:block">
                             {/* Nearby ranking */}
-                            <div className="order-3 ios-glass-card rounded-2xl border border-slate-200/60 p-4 dark:border-slate-700/60">
-                                <h2 className="mb-3 text-sm font-black text-primary-text">{t("page.realtimeRankingNext.detail.nearbyTitle")}</h2>
+                            <div className="order-3 bg-surface-container-low rounded-md3-xl p-4">
+                                <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.nearbyTitle")}</h2>
                                 {data.nearby.length === 0 ? (
-                                    <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400 dark:border-slate-700">
+                                    <div className="rounded-md3-md border border-dashed border-outline-variant px-3 py-6 text-center type-body-s text-on-surface-variant">
                                         {t("page.realtimeRankingNext.detail.nearbyEmpty")}
                                     </div>
                                 ) : (
@@ -282,10 +276,10 @@ function UserDetailContent() {
                             </div>
 
                             {/* Tier gradient */}
-                            <div className="order-4 ios-glass-card rounded-2xl border border-slate-200/60 p-4 dark:border-slate-700/60 lg:mt-6">
-                                <h2 className="mb-3 text-sm font-black text-primary-text">{t("page.realtimeRankingNext.detail.gradientTitle")}</h2>
+                            <div className="order-4 bg-surface-container-low rounded-md3-xl p-4 lg:mt-6">
+                                <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.gradientTitle")}</h2>
                                 {data.tierGradient.every((g) => g.score == null) ? (
-                                    <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400 dark:border-slate-700">
+                                    <div className="rounded-md3-md border border-dashed border-outline-variant px-3 py-6 text-center type-body-s text-on-surface-variant">
                                         {t("page.realtimeRankingNext.detail.gradientEmpty")}
                                     </div>
                                 ) : (
@@ -294,22 +288,22 @@ function UserDetailContent() {
                                             {data.tierGradient.map((g) => {
                                                 const ahead = g.gapToSelf != null && g.gapToSelf > 0; // tier is ahead of self
                                                 return (
-                                                    <div key={g.tier} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-2 rounded-lg bg-slate-50 px-3 py-2 text-xs dark:bg-slate-800/60">
-                                                        <span className="font-black text-slate-600 dark:text-slate-300">T{g.tier}</span>
-                                                        <span className="text-right tabular-nums text-slate-500 dark:text-slate-400">
+                                                    <div key={g.tier} className="grid grid-cols-[2rem_1fr_auto_auto] items-center gap-x-2 rounded-md3-sm bg-surface-container px-3 py-2 type-body-s">
+                                                        <span className="font-black text-on-surface-variant">T{g.tier}</span>
+                                                        <span className="text-right tabular-nums text-on-surface-variant">
                                                             {g.score != null ? formatNumber(g.score) : "—"}
                                                         </span>
-                                                        <span className="w-12 text-right text-[10px] font-bold text-miku tabular-nums">
+                                                        <span className="w-12 text-right type-label-s text-primary tabular-nums">
                                                             {g.speed1h != null ? `${fmtSpeed(g.speed1h)}/h` : ""}
                                                         </span>
-                                                        <span className={`w-24 text-right text-[10px] font-black tabular-nums ${ahead ? "text-rose-500" : "text-emerald-500"}`}>
+                                                        <span className={`w-24 text-right type-label-s tabular-nums ${ahead ? "text-rose-500" : "text-emerald-500"}`}>
                                                             {g.gapToSelf != null ? `${ahead ? "+" : ""}${formatNumber(g.gapToSelf)}` : ""}
                                                         </span>
                                                     </div>
                                                 );
                                             })}
                                         </div>
-                                        <p className="mt-2 text-[10px] text-slate-400 dark:text-slate-500">
+                                        <p className="mt-2 text-[10px] text-on-surface-variant">
                                             {t("page.realtimeRankingNext.detail.gradientHint")}
                                         </p>
                                     </>
@@ -317,13 +311,13 @@ function UserDetailContent() {
                             </div>
 
                             {/* Recent score changes (live scrolling feed) */}
-                            <div className="order-7 ios-glass-card rounded-2xl border border-slate-200/60 p-5 dark:border-slate-700/60 lg:mt-6">
+                            <div className="order-7 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
                                 <RecentChangesFeed changes={data.selfChurn?.recent_score_changes ?? []} />
                             </div>
                         </div>
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -356,10 +350,10 @@ function LastChangeBadge({ changes }: { changes: { t: number; delta: number }[] 
             initial={{ opacity: 0, y: 4, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             transition={{ type: "spring", stiffness: 360, damping: 22 }}
-            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-xs font-black ${
+            className={`inline-flex items-center gap-1 rounded-md3-xs px-1.5 py-0.5 text-xs font-black ${
                 positive
-                    ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                    : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+                    ? "bg-emerald-100 text-emerald-700 "
+                    : "bg-rose-100 text-rose-700 "
             }`}
             title={t("page.realtimeRankingNext.detail.lastChange")}
         >
@@ -402,28 +396,28 @@ function NearbyRow({ entry, region, worldLinkCharacterId }: {
     const delta = last?.delta ?? 0;
 
     const content = (
-        <div className={`flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs transition-colors ${
+        <div className={`flex items-center gap-2 rounded-md3-sm px-2.5 py-1.5 text-xs transition-colors ${
             entry.isSelf
-                ? "bg-miku/10 ring-1 ring-miku/30"
-                : "hover:bg-slate-50 dark:hover:bg-slate-800/60"
+                ? "bg-primary-container ring-1 ring-primary/30"
+                : "hover:bg-surface-container-low "
         }`}>
-            <span className={`w-8 shrink-0 text-center font-black ${entry.isSelf ? "text-miku" : "text-slate-500 dark:text-slate-400"}`}>#{entry.rank}</span>
-            <span className="min-w-0 flex-1 tabular-nums font-bold text-primary-text">{formatNumber(entry.score)}</span>
+            <span className={`w-8 shrink-0 text-center font-black ${entry.isSelf ? "text-primary" : "text-on-surface-variant"}`}>#{entry.rank}</span>
+            <span className="min-w-0 flex-1 tabular-nums font-bold text-on-surface">{formatNumber(entry.score)}</span>
             {entry.isSelf ? (
-                <span className="shrink-0 text-[10px] font-black text-miku">{t("page.realtimeRankingNext.detail.you")}</span>
+                <span className="shrink-0 type-label-s text-primary">{t("page.realtimeRankingNext.detail.you")}</span>
             ) : (
                 <div className="flex shrink-0 items-center gap-1.5">
                     {delta !== 0 ? (
-                        <span className={`inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[10px] font-black tabular-nums ${
+                        <span className={`inline-flex items-center gap-0.5 rounded-md3-xs px-1 py-0.5 type-label-s tabular-nums ${
                             delta > 0
-                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                                : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+                                ? "bg-emerald-100 text-emerald-700 "
+                                : "bg-rose-100 text-rose-700 "
                         }`}>
                             <span className="text-[8px]">{delta > 0 ? "▲" : "▼"}</span>
                             {delta > 0 ? "+" : ""}{formatNumber(delta)}
                         </span>
                     ) : (
-                        <span className="text-[10px] text-slate-400 dark:text-slate-500">—</span>
+                        <span className="text-[10px] text-on-surface-variant">—</span>
                     )}
                     <ChangeTime changedAt={last?.t} />
                 </div>
@@ -438,7 +432,7 @@ function NearbyRow({ entry, region, worldLinkCharacterId }: {
 export default function UserDetailClient() {
     const { t } = useI18n();
     return (
-        <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.realtimeRankingNext.loading")}</div>}>
+        <Suspense fallback={<LoadingState label={t("page.realtimeRankingNext.loading")} />}>
             <UserDetailContent />
         </Suspense>
     );

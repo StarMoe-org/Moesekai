@@ -2,6 +2,8 @@
 
 import { motion } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
+import { Button, Chip, PageHeader } from "@/components/md3";
+import { mdBolt, mdRefresh } from "@/components/md3/icons";
 import {
     RealtimeRankingRegion,
     REALTIME_RANKING_REGION_OPTIONS,
@@ -61,139 +63,87 @@ export default function BoardHeader({
     return (
         <div className="mb-6 space-y-4">
             {/* Title Header */}
-            <div>
-                <div className="flex items-center gap-2">
-                    <h1 className="text-2xl font-black text-primary-text sm:text-3xl">
+            <PageHeader
+                className="mb-0 sm:mb-0"
+                title={
+                    <span className="inline-flex flex-wrap items-center gap-2">
                         {t("page.realtimeRankingNext.title")}
-                    </h1>
-                    <span className="rounded-full bg-miku/15 px-2.5 py-0.5 text-[11px] font-black uppercase tracking-wider text-miku">
-                        v2 Next
+                        <span className="rounded-md3-sm bg-primary-container px-2.5 py-0.5 type-label-m text-on-primary-container">
+                            v2 Next
+                        </span>
                     </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                    {t("page.realtimeRankingNext.subtitle")}
-                </p>
-            </div>
+                }
+                description={t("page.realtimeRankingNext.subtitle")}
+            />
 
             {/* Controls Bar: Server (Region), Line, Churn toggle */}
             <div className="flex flex-wrap items-center gap-3">
                 {/* Server (Region) Selector */}
-                <div className="flex max-w-full overflow-x-auto rounded-xl border border-slate-200/60 bg-white/70 p-1 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70">
+                <div className="flex max-w-full flex-wrap gap-1.5">
                     {REALTIME_RANKING_REGION_OPTIONS.map((r) => {
-                        const isSelected = region === r;
                         const regionText = t(`page.realtimeRanking.regions.${r}`);
                         return (
-                            <button
-                                key={r}
-                                onClick={() => onRegionChange(r)}
-                                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-black transition-all whitespace-nowrap ${
-                                    isSelected
-                                        ? "bg-miku text-white shadow-sm shadow-miku/25"
-                                        : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white"
-                                }`}
-                                title={regionText}
-                            >
+                            <Chip key={r} selected={region === r} onClick={() => onRegionChange(r)} title={regionText}>
                                 <span className="uppercase">{REGION_SHORT_NAMES[r]}</span>
-                                <span className="hidden text-[10px] font-semibold opacity-85 sm:inline">
-                                    {regionText}
-                                </span>
-                            </button>
+                                <span className="hidden opacity-85 sm:inline"> {regionText}</span>
+                            </Chip>
                         );
                     })}
                 </div>
 
                 {/* Line / Route Selector */}
                 <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    <span className="type-label-m text-on-surface-variant whitespace-nowrap">
                         {t("page.realtimeRanking.line.label")}
                     </span>
-                    <div className="flex max-w-full overflow-x-auto rounded-xl border border-slate-200/60 bg-white/70 p-1 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/70">
-                        {availableLines.map((l) => {
-                            const isSelected = effectiveLine === l;
-                            return (
-                                <button
-                                    key={l}
-                                    onClick={() => onLineChange(l)}
-                                    className={`rounded-lg px-3 py-1.5 text-xs font-black transition-all whitespace-nowrap ${
-                                        isSelected
-                                            ? "bg-miku text-white shadow-sm shadow-miku/25"
-                                            : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-slate-800/80 dark:hover:text-white"
-                                    }`}
-                                >
-                                    {t(`page.realtimeRanking.line.${l}`)}
-                                </button>
-                            );
-                        })}
+                    <div className="flex max-w-full flex-wrap gap-1.5">
+                        {availableLines.map((l) => (
+                            <Chip key={l} selected={effectiveLine === l} onClick={() => onLineChange(l)}>
+                                {t(`page.realtimeRanking.line.${l}`)}
+                            </Chip>
+                        ))}
                     </div>
                 </div>
 
-                {/* Churn & Speed Toggle Button */}
-                <button
+                {/* Churn & Speed Toggle */}
+                <Chip
+                    icon={mdBolt}
+                    selected={showChurn}
                     onClick={() => onShowChurnChange(!showChurn)}
-                    className={`shrink-0 flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-xs font-bold transition-all whitespace-nowrap active:scale-[0.98] ${
-                        showChurn
-                            ? "border-miku bg-miku text-white shadow-sm shadow-miku/25"
-                            : "border-slate-200/60 bg-white/70 text-slate-600 hover:border-miku/40 hover:text-miku dark:border-slate-700/60 dark:bg-slate-900/70 dark:text-slate-300"
-                    }`}
                 >
-                    <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2.2}
-                        className={`h-3.5 w-3.5 ${showChurn ? "text-white" : "text-miku"}`}
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-                    </svg>
-                    <span>{t("page.realtimeRanking.showChurn")}</span>
-                    <div
-                        className={`ml-0.5 flex h-3.5 w-3.5 items-center justify-center rounded-full border transition-colors ${
-                            showChurn
-                                ? "border-white bg-white"
-                                : "border-slate-300 bg-white dark:border-slate-600 dark:bg-slate-800"
-                        }`}
-                    >
-                        {showChurn && (
-                            <svg className="h-2 w-2 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={4.5} d="M5 13l4 4L19 7" />
-                            </svg>
-                        )}
-                    </div>
-                </button>
+                    {t("page.realtimeRanking.showChurn")}
+                </Chip>
             </div>
 
             {/* Status Bar */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl border border-slate-200/40 bg-white/40 px-3.5 py-2 text-xs text-slate-500 backdrop-blur-sm dark:border-slate-800/60 dark:bg-slate-900/40 dark:text-slate-400">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md3-lg bg-surface-container-low px-4 py-2 type-body-s text-on-surface-variant">
                 {eventId != null && (
                     <span className="inline-flex items-center gap-1.5">
-                        <span className="font-medium text-slate-400 dark:text-slate-500">{t("page.realtimeRankingNext.eventId")}</span>
-                        <span className="font-black text-primary-text">#{eventId}</span>
+                        <span>{t("page.realtimeRankingNext.eventId")}</span>
+                        <span className="type-label-l text-on-surface">#{eventId}</span>
                     </span>
                 )}
                 <span className="inline-flex items-center gap-1.5">
-                    <span className="font-medium text-slate-400 dark:text-slate-500">{t("page.realtimeRankingNext.totalEntries")}</span>
-                    <span className="font-black text-primary-text">{formatNumber(totalEntries)}</span>
+                    <span>{t("page.realtimeRankingNext.totalEntries")}</span>
+                    <span className="type-label-l text-on-surface">{formatNumber(totalEntries)}</span>
                 </span>
                 <span className="inline-flex items-center gap-1.5">
-                    <span className="font-medium text-slate-400 dark:text-slate-500">{t("page.realtimeRankingNext.updatedAt")}</span>
-                    <span className="font-black text-primary-text tabular-nums">{updatedLabel}</span>
+                    <span>{t("page.realtimeRankingNext.updatedAt")}</span>
+                    <span className="type-label-l text-on-surface tabular-nums">{updatedLabel}</span>
                 </span>
 
                 <div className="ml-auto flex items-center gap-2">
                     <span
-                        className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold border ${
+                        className={`rounded-md3-sm px-2.5 py-0.5 type-label-s ${
                             isRefreshing
-                                ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300"
-                                : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                ? "bg-tertiary-container text-on-tertiary-container"
+                                : "bg-secondary-container text-on-secondary-container"
                         }`}
                     >
                         {isRefreshing ? t("page.realtimeRanking.refreshing") : t("page.realtimeRanking.synced")}
                     </span>
 
-                    <button
-                        onClick={onRefresh}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-miku px-3 py-1 text-[11px] font-black text-white shadow-sm shadow-miku/25 transition-all hover:bg-miku-dark active:scale-95"
-                    >
+                    <Button size="xs" variant="filled" icon={mdRefresh} onClick={onRefresh}>
                         {isRefreshing ? (
                             <motion.span
                                 animate={{ opacity: [1, 0.4, 1] }}
@@ -207,7 +157,7 @@ export default function BoardHeader({
                                 <span className="tabular-nums opacity-85">{countdown}s</span>
                             </>
                         )}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </div>

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Button } from "@/components/md3";
+import { mdCenterFocusStrong, mdRefresh } from "@/components/md3/icons";
 
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
@@ -225,8 +227,8 @@ export default function MysekaiScenePreview({
     }, []);
 
     const statusTone = status.phase === "error"
-        ? "text-red-600"
-        : status.phase === "ready" ? "text-cyan-700" : "text-sky-700";
+        ? "text-error"
+        : status.phase === "ready" ? "text-primary" : "text-on-surface-variant";
     const progressValue = Math.max(0, Math.min(100, Math.round(status.progress ?? (status.total ? (status.loaded / Math.max(1, status.total)) * 100 : 0))));
     const showLoadingOverlay = status.phase === "loading";
     const loadingTitle = status.stageLabel || (status.stage === "master" ? t("page.mysekaiPreview.preview.loadingMaster") : status.stage === "layout" ? t("page.mysekaiPreview.preview.readingLayout") : t("page.mysekaiPreview.preview.loadingModels"));
@@ -234,52 +236,44 @@ export default function MysekaiScenePreview({
 
     return (
         <div className={`space-y-3 ${className}`}>
-            <div className={`rounded-3xl border border-slate-200/80 bg-white/86 ${panelPadding} text-xs text-slate-700 shadow-lg shadow-slate-900/5 backdrop-blur-xl`}>
+            <div className={`rounded-md3-xl bg-surface-container ${panelPadding} type-body-s text-on-surface`}>
                 <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <div className="text-sm font-black text-primary-text">{resolvedHeaderTitle}</div>
-                            {resolvedHeaderBadge && <span className="rounded-full bg-miku/10 px-2 py-1 text-[10px] font-bold text-miku ring-1 ring-miku/20">{resolvedHeaderBadge}</span>}
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-500">{assetSource}</span>
+                            <div className="type-title-s text-on-surface">{resolvedHeaderTitle}</div>
+                            {resolvedHeaderBadge && <span className="rounded-md3-sm bg-primary-container px-2 py-1 type-label-s text-on-primary-container">{resolvedHeaderBadge}</span>}
+                            <span className="rounded-md3-sm bg-surface-container-highest px-2 py-1 type-label-s text-on-surface-variant">{assetSource}</span>
                         </div>
-                        {!compact && <div className="mt-1 text-[11px] text-slate-500">{headerNote ?? t("page.mysekaiPreview.preview.assetRuleNote")}</div>}
+                        {!compact && <div className="mt-1 type-body-s text-on-surface-variant">{headerNote ?? t("page.mysekaiPreview.preview.assetRuleNote")}</div>}
                     </div>
                     <div className="flex flex-wrap gap-2">
-                        <button
-                            type="button"
-                            onClick={handleReload}
-                            className="rounded-xl bg-miku px-3 py-2 font-bold text-white shadow-lg shadow-miku/20 transition hover:opacity-90 active:scale-95"
-                        >
+                        <Button size="xs" variant="filled" icon={mdRefresh} onClick={handleReload}>
                             {t("page.mysekaiPreview.preview.reload")}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleResetCamera}
-                            className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 font-bold text-slate-700 transition hover:bg-slate-100 active:scale-95"
-                        >
+                        </Button>
+                        <Button size="xs" variant="outlined" icon={mdCenterFocusStrong} onClick={handleResetCamera}>
                             {t("page.mysekaiPreview.preview.resetCamera")}
-                        </button>
+                        </Button>
                     </div>
                 </div>
 
                 <div className={`mt-3 grid gap-3 ${showLayoutUrlInput ? "lg:grid-cols-[minmax(0,1fr)_140px_140px_170px]" : "lg:grid-cols-[140px_140px_170px]"}`}>
                     {showLayoutUrlInput && (
                         <label className="block">
-                            <span className="mb-1 block font-bold text-slate-500">{t("page.mysekaiPreview.preview.layoutJson")}</span>
+                            <span className="mb-1 block type-label-l text-on-surface-variant">{t("page.mysekaiPreview.preview.layoutJson")}</span>
                             <input
                                 value={layoutUrl}
                                 onChange={(event) => setLayoutUrl(event.target.value)}
-                                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-800 outline-none transition focus:border-miku focus:ring-2 focus:ring-miku/20"
+                                className="focus-ring w-full rounded-md3-xs border border-outline bg-surface-container-lowest px-3 py-2 type-body-m text-on-surface outline-none focus:border-primary"
                                 placeholder={LOCAL_TEST_LAYOUT_URL}
                             />
                         </label>
                     )}
                     <label className="block">
-                        <span className="mb-1 block font-bold text-slate-500">{t("page.mysekaiPreview.preview.scene")}</span>
+                        <span className="mb-1 block type-label-l text-on-surface-variant">{t("page.mysekaiPreview.preview.scene")}</span>
                         <select
                             value={siteId}
                             onChange={(event) => setSiteId(Number(event.target.value))}
-                            className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-800 outline-none transition focus:border-miku focus:ring-2 focus:ring-miku/20"
+                            className="focus-ring w-full rounded-md3-xs border border-outline bg-surface-container-lowest px-3 py-2 type-body-m text-on-surface outline-none focus:border-primary"
                         >
                             {SITE_OPTIONS.map(option => (
                                 <option key={option.id} value={option.id}>{option.labelKey ? t(option.labelKey) : option.fallback}</option>
@@ -287,7 +281,7 @@ export default function MysekaiScenePreview({
                         </select>
                     </label>
                     <label className="block">
-                        <span className="mb-1 flex items-center justify-between font-bold text-slate-500">
+                        <span className="mb-1 flex items-center justify-between type-label-l text-on-surface-variant">
                             <span>{t("page.mysekaiPreview.preview.backWall")}</span>
                             <span>{Math.round(backWallOpacity * 100)}%</span>
                         </span>
@@ -297,11 +291,11 @@ export default function MysekaiScenePreview({
                             max={100}
                             value={Math.round(backWallOpacity * 100)}
                             onChange={(event) => setBackWallOpacity(Number(event.target.value) / 100)}
-                            className="mt-2 w-full accent-miku"
+                            className="mt-2 w-full accent-primary"
                         />
                     </label>
                     <label className="block">
-                        <span className="mb-1 flex items-center justify-between font-bold text-slate-500">
+                        <span className="mb-1 flex items-center justify-between type-label-l text-on-surface-variant">
                             <span>{t("page.mysekaiPreview.preview.sensitivity")}</span>
                             <span>{Math.round(lookSensitivity * 100)}%</span>
                         </span>
@@ -312,50 +306,50 @@ export default function MysekaiScenePreview({
                             step={5}
                             value={Math.round(lookSensitivity * 100)}
                             onChange={(event) => setLookSensitivity(Math.max(0.25, Math.min(2.2, Number(event.target.value) / 100)))}
-                            className="mt-2 w-full accent-miku"
+                            className="mt-2 w-full accent-primary"
                         />
                     </label>
                 </div>
 
-                <div className="mt-3 flex flex-wrap items-center gap-4 text-slate-600">
-                    <label className="inline-flex items-center gap-1.5 font-medium">
-                        <input type="checkbox" checked={debugEnabled} onChange={(event) => setDebugEnabled(event.target.checked)} />
+                <div className="mt-3 flex flex-wrap items-center gap-4 text-on-surface-variant">
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 type-label-l">
+                        <input type="checkbox" className="accent-primary" checked={debugEnabled} onChange={(event) => setDebugEnabled(event.target.checked)} />
                         {t("page.mysekaiPreview.preview.debug")}
                     </label>
-                    <label className="inline-flex items-center gap-1.5 font-medium">
-                        <input type="checkbox" checked={gridEnabled} onChange={(event) => setGridEnabled(event.target.checked)} />
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 type-label-l">
+                        <input type="checkbox" className="accent-primary" checked={gridEnabled} onChange={(event) => setGridEnabled(event.target.checked)} />
                         {t("page.mysekaiPreview.preview.grid")}
                     </label>
-                    <label className="inline-flex items-center gap-1.5 font-medium">
-                        <input type="checkbox" checked={shadowEnabled} onChange={(event) => setShadowEnabled(event.target.checked)} />
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 type-label-l">
+                        <input type="checkbox" className="accent-primary" checked={shadowEnabled} onChange={(event) => setShadowEnabled(event.target.checked)} />
                         {t("page.mysekaiPreview.preview.shadow")}
                     </label>
                 </div>
 
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                <div className="mt-3 h-1 overflow-hidden rounded-full bg-surface-container-highest">
                     <div
-                        className="h-full rounded-full bg-gradient-to-r from-miku via-cyan-300 to-sky-300 transition-[width] duration-300"
+                        className="h-full rounded-full bg-primary transition-[width] duration-300"
                         style={{ width: `${progressValue}%` }}
                     />
                 </div>
-                <div className={`mt-2 whitespace-pre-wrap rounded-2xl border border-slate-200 bg-slate-50/80 p-3 font-mono text-[11px] leading-relaxed ${statusTone}`}>
+                <div className={`mt-2 whitespace-pre-wrap rounded-md3-md bg-surface-container-lowest p-3 font-mono type-body-s ${statusTone}`}>
                     {status.message}
                 </div>
                 {!compact && (
-                    <div className="mt-2 text-[11px] leading-relaxed text-slate-500">
+                    <div className="mt-2 type-body-s text-on-surface-variant">
                         {t("page.mysekaiPreview.preview.keyboardHint")}
                     </div>
                 )}
             </div>
 
-            <div className={`relative overflow-hidden rounded-3xl border border-white/40 bg-sky-200 shadow-2xl shadow-slate-900/10 ${heightClassName}`}>
+            <div className={`relative overflow-hidden rounded-md3-xl bg-sky-200 shadow-elev-1 ${heightClassName}`}>
                 <div ref={hostRef} className="absolute inset-0" />
 
                 {showLoadingOverlay && (
-                    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-slate-950/35 backdrop-blur-[6px]">
-                        <div className="w-[min(460px,calc(100%-2rem))] rounded-3xl border border-white/20 bg-slate-950/78 p-6 text-center text-white shadow-2xl shadow-slate-950/35 backdrop-blur-xl">
+                    <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-scrim/32">
+                        <div className="w-[min(460px,calc(100%-2rem))] rounded-md3-xl bg-inverse-surface p-6 text-center text-inverse-on-surface shadow-elev-3">
                             <div
-                                className="mx-auto h-14 w-56 bg-miku drop-shadow-[0_0_18px_rgba(57,197,187,0.45)] sm:h-16 sm:w-64"
+                                className="mx-auto h-14 w-56 bg-inverse-primary sm:h-16 sm:w-64"
                                 style={{
                                     maskImage: `url(${MOE_LOGO_URL})`,
                                     maskSize: "contain",
@@ -369,39 +363,39 @@ export default function MysekaiScenePreview({
                                 role="img"
                                 aria-label="Moe Sekai"
                             />
-                            <div className="mt-5 text-base font-black tracking-wide">{t("page.mysekaiPreview.preview.loadingOverlayTitle")}</div>
-                            <div className="mt-1 text-xs text-slate-300">{loadingTitle}</div>
-                            <div className="mt-5 h-3 overflow-hidden rounded-full border border-white/15 bg-white/10">
+                            <div className="mt-5 type-title-m">{t("page.mysekaiPreview.preview.loadingOverlayTitle")}</div>
+                            <div className="mt-1 type-body-s opacity-80">{loadingTitle}</div>
+                            <div className="mt-5 h-1.5 overflow-hidden rounded-full bg-inverse-on-surface/20">
                                 <div
-                                    className="h-full rounded-full bg-gradient-to-r from-miku via-cyan-300 to-sky-300 shadow-[0_0_18px_rgba(57,197,187,0.65)] transition-[width] duration-300 ease-out"
+                                    className="h-full rounded-full bg-inverse-primary transition-[width] duration-300 ease-out"
                                     style={{ width: `${progressValue}%` }}
                                 />
                             </div>
-                            <div className="mt-2 flex items-center justify-between text-[11px] font-bold text-slate-300">
+                            <div className="mt-2 flex items-center justify-between type-label-m opacity-80">
                                 <span>{progressValue}%</span>
                                 <span>{status.loaded}/{status.renderableTotal ?? status.total ?? 0}</span>
                             </div>
-                            <div className="mt-4 grid grid-cols-3 gap-2 text-[11px]">
-                                <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2">
-                                    <div className="text-slate-400">{t("page.mysekaiPreview.preview.completed")}</div>
-                                    <div className="mt-0.5 text-sm font-black text-cyan-100">{status.loaded}</div>
+                            <div className="mt-4 grid grid-cols-3 gap-2 type-label-m">
+                                <div className="rounded-md3-md bg-inverse-on-surface/10 px-3 py-2">
+                                    <div className="opacity-80">{t("page.mysekaiPreview.preview.completed")}</div>
+                                    <div className="mt-0.5 type-title-s text-inverse-primary">{status.loaded}</div>
                                 </div>
-                                <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2">
-                                    <div className="text-slate-400">{t("page.mysekaiPreview.preview.ignored")}</div>
-                                    <div className="mt-0.5 text-sm font-black text-slate-100">{status.ignored ?? 0}</div>
+                                <div className="rounded-md3-md bg-inverse-on-surface/10 px-3 py-2">
+                                    <div className="opacity-80">{t("page.mysekaiPreview.preview.ignored")}</div>
+                                    <div className="mt-0.5 type-title-s text-inverse-on-surface">{status.ignored ?? 0}</div>
                                 </div>
-                                <div className="rounded-2xl border border-white/10 bg-white/8 px-3 py-2">
-                                    <div className="text-slate-400">{t("page.mysekaiPreview.preview.failed")}</div>
-                                    <div className="mt-0.5 text-sm font-black text-red-200">{status.failed ?? 0}</div>
+                                <div className="rounded-md3-md bg-inverse-on-surface/10 px-3 py-2">
+                                    <div className="opacity-80">{t("page.mysekaiPreview.preview.failed")}</div>
+                                    <div className="mt-0.5 type-title-s text-error-container">{status.failed ?? 0}</div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 )}
 
-                <div ref={axesRef} className="absolute bottom-3 left-3 z-10 h-28 w-28 overflow-hidden rounded-2xl border border-white/25 bg-slate-950/20 backdrop-blur-sm" />
+                <div ref={axesRef} className="absolute bottom-3 left-3 z-10 h-28 w-28 overflow-hidden rounded-md3-lg bg-inverse-surface" />
 
-                <div className="absolute bottom-3 right-3 z-10 max-w-[calc(100%-9rem)] rounded-2xl border border-white/30 bg-white/72 px-4 py-2 text-right text-[11px] font-medium text-slate-600 shadow-lg backdrop-blur">
+                <div className="absolute bottom-3 right-3 z-10 max-w-[calc(100%-9rem)] rounded-md3-md bg-surface-container-lowest px-4 py-2 text-right type-label-m text-on-surface-variant shadow-elev-2">
                     {t("page.mysekaiPreview.preview.credit")}
                 </div>
             </div>

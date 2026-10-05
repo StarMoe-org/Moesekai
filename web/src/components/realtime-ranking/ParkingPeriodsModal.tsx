@@ -1,6 +1,8 @@
 "use client";
 
 import Modal from "@/components/common/Modal";
+import { Icon } from "@/components/md3";
+import { mdLocalParking } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { ChurnRankingEntry } from "@/types/realtime-ranking";
 import { ChurnEntryV2 } from "@/types/realtime-ranking-next";
@@ -35,8 +37,8 @@ export default function ParkingPeriodsModal({ userId, churnEntry, onClose }: Par
             size="md"
         >
             {periods.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 dark:text-slate-500">
-                    <div className="mb-2 text-2xl">🅿️</div>
+                <div className="py-8 text-center text-on-surface-variant">
+                    <Icon path={mdLocalParking} size={32} className="mx-auto mb-2" />
                     <p className="text-sm font-medium">{t("page.realtimeRanking.churn.noParking")}</p>
                 </div>
             ) : (
@@ -47,17 +49,17 @@ export default function ParkingPeriodsModal({ userId, churnEntry, onClose }: Par
                         return (
                             <div
                                 key={index}
-                                className={`flex items-center gap-3 rounded-xl border p-3 transition-colors ${
+                                className={`flex items-center gap-3 rounded-md3-md p-3 transition-colors ${
                                     isOngoing
-                                        ? "border-miku/30 bg-miku/5"
-                                        : "border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-800/50"
+                                        ? "bg-primary-container text-on-primary-container"
+                                        : "bg-surface-container"
                                 }`}
                             >
                                 {/* Index */}
-                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                                <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full type-label-m ${
                                     isOngoing
-                                        ? "bg-miku text-white"
-                                        : "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
+                                        ? "bg-primary text-on-primary"
+                                        : "bg-surface-container-high text-on-surface-variant "
                                 }`}>
                                     {index + 1}
                                 </div>
@@ -65,22 +67,22 @@ export default function ParkingPeriodsModal({ userId, churnEntry, onClose }: Par
                                 {/* Time range */}
                                 <div className="min-w-0 flex-1">
                                     <div className="flex items-center gap-2 text-xs">
-                                        <span className="font-medium text-slate-600 dark:text-slate-300">
+                                        <span className="font-medium text-on-surface-variant">
                                             {formatDate(startTime)}
                                         </span>
-                                        <span className="text-slate-400">→</span>
-                                        <span className={`font-medium ${isOngoing ? "text-miku" : "text-slate-600 dark:text-slate-300"}`}>
+                                        <span className="text-on-surface-variant">→</span>
+                                        <span className={`font-medium ${isOngoing ? "text-primary" : "text-on-surface-variant"}`}>
                                             {isOngoing ? t("page.realtimeRanking.churn.ongoing") : formatDate(period.end_time!)}
                                         </span>
                                     </div>
-                                    <div className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500">
+                                    <div className="mt-0.5 text-[11px] text-on-surface-variant">
                                         {t("page.realtimeRanking.churn.duration", { duration: formatDuration(startTime, period.end_time, period.duration_s) })}
                                     </div>
                                 </div>
 
                                 {/* Status badge */}
                                 {isOngoing && (
-                                    <span className="shrink-0 rounded-full bg-miku/10 px-2 py-0.5 text-[10px] font-bold text-miku">
+                                    <span className="shrink-0 rounded-md3-sm bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container">
                                         {t("page.realtimeRanking.churn.activeParking")}
                                     </span>
                                 )}

@@ -4,18 +4,20 @@ import Link from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
 import { interactionHref } from "@/lib/moly/catalog";
 import type { ServerSourceType } from "@/contexts/ThemeContext";
+import { Icon } from "@/components/md3";
+import { mdArrowForward, mdSmartDisplay } from "@/components/md3/icons";
 
 /** Discovery on ordinary database pages never mounts or preloads the renderer. */
 export default function InteractionEntryLink({ region, fixtureId }: { region: ServerSourceType; fixtureId?: number }) {
     const { t } = useI18n();
     const href = interactionHref({ region, fixture: fixtureId, tab: fixtureId ? "performances" : "conversations" });
     return <Link href={href} prefetch={false} data-mysekai-interactions-entry={fixtureId ?? "catalog"}
-        className="group flex items-center gap-4 rounded-2xl border border-miku/35 bg-[var(--accent-soft)] px-5 py-4 text-left text-[var(--text-strong)] transition-colors hover:bg-[var(--accent-soft-hover)] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--text-strong)]">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-[var(--border-soft)] bg-[var(--surface-base)]" aria-hidden="true">
-            <svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M7 4.5h10A2.5 2.5 0 0 1 19.5 7v10a2.5 2.5 0 0 1-2.5 2.5H7A2.5 2.5 0 0 1 4.5 17V7A2.5 2.5 0 0 1 7 4.5Z"/><path d="m10 8 6 4-6 4V8Z"/></svg>
+        className="state-layer focus-ring group flex items-center gap-4 rounded-md3-lg bg-secondary-container px-5 py-4 text-left text-on-secondary-container">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-md3-md bg-surface-container-lowest text-primary" aria-hidden="true">
+            <Icon path={mdSmartDisplay} size={22} />
         </span>
-        <span className="min-w-0 flex-1"><strong className="block text-sm leading-relaxed">{t(`page.mysekaiInteractions.${fixtureId ? "fixtureEntry" : "title"}`)}</strong>
+        <span className="min-w-0 flex-1"><strong className="block type-title-s">{t(`page.mysekaiInteractions.${fixtureId ? "fixtureEntry" : "title"}`)}</strong>
 </span>
-        <span aria-hidden="true" className="shrink-0 text-lg">→</span>
+        <Icon path={mdArrowForward} size={20} className="shrink-0" />
     </Link>;
 }

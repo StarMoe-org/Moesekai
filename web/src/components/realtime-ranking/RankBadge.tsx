@@ -25,7 +25,7 @@ export default function RankBadge({ rank, toneClassName }: RankBadgeProps) {
         <span
             title={fullLabel}
             aria-label={fullLabel}
-            className={`inline-flex items-center justify-center whitespace-nowrap rounded-md border px-1 py-0.5 text-[10px] font-black leading-none sm:px-1.5 sm:text-[11px] ${toneClassName}`}
+            className={`inline-flex items-center justify-center whitespace-nowrap rounded-md3-xs border px-1 py-0.5 type-label-s leading-none tabular-nums sm:px-1.5 sm:type-label-m ${toneClassName}`}
         >
             #{label}
         </span>

@@ -114,7 +114,7 @@ export default function ScoreLineChart({ series, height = 280, className }: Scor
     const hasData = series.some((s) => s.points.length > 0);
     if (!hasData) {
         return (
-            <div className={`flex items-center justify-center rounded-xl border border-dashed border-slate-200 text-xs text-slate-400 dark:border-slate-700 ${className ?? ""}`} style={{ height }}>
+            <div className={`flex items-center justify-center rounded-md3-md border border-dashed border-outline-variant text-xs text-on-surface-variant ${className ?? ""}`} style={{ height }}>
                 {t("page.realtimeRankingNext.detail.noSeriesData")}
             </div>
         );

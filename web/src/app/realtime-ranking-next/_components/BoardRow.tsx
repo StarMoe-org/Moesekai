@@ -45,15 +45,15 @@ interface BoardRowProps {
 }
 
 const topThreeCardDeco: Record<number, string> = {
-    1: "ring-1 ring-amber-300/70 dark:ring-amber-400/70",
-    2: "ring-1 ring-slate-300/80 dark:ring-slate-400/70",
-    3: "ring-1 ring-orange-300/70 dark:ring-orange-400/70",
+    1: "ring-1 ring-amber-300/70 ",
+    2: "ring-1 ring-outline ",
+    3: "ring-1 ring-orange-300/70 ",
 };
 
 const topThreeBadge: Record<number, string> = {
-    1: "border-amber-200 bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-amber-950 dark:border-amber-400/40 dark:from-amber-500 dark:via-yellow-400 dark:to-amber-500 dark:text-amber-950",
-    2: "border-slate-200 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-300 text-slate-700 dark:border-slate-300/50 dark:from-slate-500 dark:via-slate-400 dark:to-slate-600 dark:text-white",
-    3: "border-orange-200 bg-gradient-to-r from-orange-200 via-amber-100 to-orange-300 text-orange-800 dark:border-orange-400/40 dark:from-orange-500 dark:via-amber-500 dark:to-orange-600 dark:text-orange-950",
+    1: "border-tertiary bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-amber-950 ",
+    2: "border-outline-variant bg-gradient-to-r from-surface-container-high via-surface-container-low to-surface-container-high text-on-surface ",
+    3: "border-orange-200 bg-gradient-to-r from-orange-200 via-amber-100 to-orange-300 text-orange-800 ",
 };
 
 function getCurrentHourChurn(churnEntry?: ChurnEntryV2): number {
@@ -136,23 +136,23 @@ export default function BoardRow({
     const speed1h = churnEntry?.growth_1h ?? 0;
 
     const rowBg = entry.isNewEntry
-        ? "bg-sky-50/40 dark:bg-sky-950/15"
+        ? "bg-sky-50/40 "
         : entry.scoreDelta > 0
-            ? "bg-emerald-50/30 dark:bg-emerald-950/10"
+            ? "bg-emerald-50/30 "
             : entry.scoreDelta < 0
-                ? "bg-rose-50/30 dark:bg-rose-950/10"
+                ? "bg-rose-50/30 "
                 : isTierLine
-                    ? "bg-slate-50/60 dark:bg-slate-900/50"
+                    ? "bg-surface-container-low "
                     : "";
 
     const scoreColorClass = hasCurrentChange
         ? entry.scoreDelta > 0
-            ? "text-emerald-600 dark:text-emerald-400"
-            : "text-rose-600 dark:text-rose-400"
-        : "text-primary-text";
+            ? "text-emerald-600 "
+            : "text-rose-600 "
+        : "text-on-surface";
 
     const trackedClasses = isTracked
-        ? "ring-2 ring-miku shadow-[0_0_15px_rgba(51,204,187,0.3)] dark:shadow-[0_0_20px_rgba(51,204,187,0.2)] z-20 rounded-xl"
+        ? "ring-2 ring-primary shadow-elev-2 z-20 rounded-md3-md"
         : "";
 
     const clickable = !isTierLine && detailHref != null;
@@ -169,7 +169,7 @@ export default function BoardRow({
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: "spring", stiffness: 320, damping: 28 }}
             onClick={handleRowClick}
-            className={`relative overflow-hidden transition-all duration-300 ${rowBg} ${trackedClasses} ${clickable ? "cursor-pointer hover:bg-miku/[0.04] dark:hover:bg-miku/[0.06]" : ""} ${isStale ? "opacity-60" : ""}`}
+            className={`relative overflow-hidden transition-all duration-300 ${rowBg} ${trackedClasses} ${clickable ? "cursor-pointer state-layer" : ""} ${isStale ? "opacity-60" : ""}`}
         >
             <AnimatePresence>
                 {flashType && (
@@ -181,8 +181,8 @@ export default function BoardRow({
                         transition={{ duration: 1.5, ease: "easeOut" }}
                         className={`absolute inset-0 pointer-events-none z-0 ${
                             flashType === "up"
-                                ? "bg-emerald-400/20 dark:bg-emerald-500/15"
-                                : "bg-rose-400/20 dark:bg-rose-500/15"
+                                ? "bg-emerald-400/20 "
+                                : "bg-rose-400/20 "
                         }`}
                     />
                 )}
@@ -193,15 +193,15 @@ export default function BoardRow({
                 <div className="w-12 shrink-0 text-center sm:w-14">
                     <RankBadge
                         rank={entry.rank}
-                        toneClassName={isTopThree ? topThreeBadge[entry.rank] : "border-slate-200 bg-white text-slate-600 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-200"}
+                        toneClassName={isTopThree ? topThreeBadge[entry.rank] : "border-outline-variant bg-surface-container-lowest text-on-surface-variant"}
                     />
                     {isTierLine && (
-                        <div className="mt-0.5 text-[8px] font-medium text-slate-400 dark:text-slate-500">
+                        <div className="mt-0.5 text-[8px] font-medium text-on-surface-variant">
                             {t("page.realtimeRankingNext.list.tierLine")}
                         </div>
                     )}
                     {isStale && (
-                        <div className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1 py-0.5 text-[7px] font-bold text-amber-600 dark:bg-amber-500/15 dark:text-amber-400" title={t("page.realtimeRankingNext.list.staleTitle")}>
+                        <div className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-tertiary-container px-1 py-0.5 text-[7px] font-bold text-on-tertiary-container" title={t("page.realtimeRankingNext.list.staleTitle")}>
                             <span className="h-1 w-1 animate-pulse rounded-full bg-amber-500" />
                             {t("page.realtimeRankingNext.list.stale")}
                         </div>
@@ -212,7 +212,7 @@ export default function BoardRow({
                         <div className="mt-1 flex flex-col items-center gap-0.5">
                             {currentHourChurn > 0 && (
                                 <span
-                                    className="sm:hidden inline-flex items-center justify-center rounded-full bg-miku/15 px-1.5 py-0.5 text-[9px] font-black text-miku tabular-nums dark:bg-miku/20 cursor-help"
+                                    className="sm:hidden inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-primary tabular-nums cursor-help"
                                     title={t("page.realtimeRanking.list.currentHourChurnTitle")}
                                 >
                                     {currentHourChurn}
@@ -226,8 +226,8 @@ export default function BoardRow({
                                 }}
                                 className={`inline-flex items-center justify-center w-5 h-5 rounded-full transition-colors ${
                                     localExpanded
-                                        ? "bg-miku/10 text-miku"
-                                        : "text-slate-300 hover:bg-miku/10 hover:text-miku dark:text-slate-600 dark:hover:text-miku"
+                                        ? "bg-primary-container text-primary"
+                                        : "text-outline hover:bg-primary-container hover:text-primary "
                                 }`}
                                 title={localExpanded ? t("page.realtimeRanking.list.collapseChurn") : t("page.realtimeRanking.list.expandChurn")}
                             >
@@ -252,12 +252,12 @@ export default function BoardRow({
                             <SekaiCardThumbnail card={leaderCard} trained={isTrained} mastery={masterRank} width={72} className="w-full" assetSource={assetSource} />
                         </div>
                     ) : derivedCharacterId ? (
-                        <div className={`relative h-16 w-16 overflow-hidden border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900 sm:h-[72px] sm:w-[72px] ${isTopThree ? topThreeCardDeco[entry.rank] : ""}`}>
+                        <div className={`relative h-16 w-16 overflow-hidden border border-outline-variant bg-surface-container-lowest sm:h-[72px] sm:w-[72px] ${isTopThree ? topThreeCardDeco[entry.rank] : ""}`}>
                             <Image src={getCharacterIconUrl(derivedCharacterId)} alt={getCharacterName(t, derivedCharacterId)} fill className="object-cover" unoptimized />
                         </div>
                     ) : (
-                        <div className="flex h-16 w-16 items-center justify-center bg-slate-100 dark:bg-slate-800/80 sm:h-[72px] sm:w-[72px]">
-                            <span className="text-xs font-black text-slate-400">#{entry.rank}</span>
+                        <div className="flex h-16 w-16 items-center justify-center bg-surface-container sm:h-[72px] sm:w-[72px]">
+                            <span className="text-xs font-black text-on-surface-variant">#{entry.rank}</span>
                         </div>
                     )}
                 </div>
@@ -269,7 +269,7 @@ export default function BoardRow({
                             className="flex items-baseline gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden sm:overflow-visible"
                             style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                         >
-                            <h3 className="shrink-0 text-sm font-bold leading-tight text-primary-text sm:shrink sm:truncate flex items-center gap-1.5">
+                            <h3 className="shrink-0 text-sm font-bold leading-tight text-on-surface sm:shrink sm:truncate flex items-center gap-1.5">
                                 <span className="truncate">{entry.displayName}</span>
                                 {!isTierLine && onTrackToggle && (
                                     <button
@@ -278,8 +278,8 @@ export default function BoardRow({
                                             e.stopPropagation();
                                             onTrackToggle(entry.userId);
                                         }}
-                                        className={`inline-flex items-center justify-center p-0.5 rounded-md transition-all duration-200 hover:scale-110 active:scale-90 hover:bg-miku/15 ${
-                                            isTracked ? "text-miku" : "text-slate-300 hover:text-miku dark:text-slate-600 dark:hover:text-miku"
+                                        className={`inline-flex items-center justify-center p-0.5 rounded-md3-xs transition-all duration-200 hover:bg-primary-container ${
+                                            isTracked ? "text-primary" : "text-outline hover:text-primary "
                                         }`}
                                         title={isTracked ? t("page.realtimeRankingNext.untrack") : t("page.realtimeRankingNext.track")}
                                     >
@@ -295,18 +295,18 @@ export default function BoardRow({
                                 )}
                             </h3>
                             {entry.signature && (
-                                <p className="shrink-0 text-[11px] leading-tight text-slate-400 dark:text-slate-500 sm:shrink sm:truncate">{entry.signature}</p>
+                                <p className="shrink-0 text-[11px] leading-tight text-on-surface-variant sm:shrink sm:truncate">{entry.signature}</p>
                             )}
                         </div>
                         <div
                             className="pointer-events-none absolute right-0 top-0 h-full w-5 sm:hidden"
-                            style={{ background: "linear-gradient(to left, var(--surface-base), transparent)" }}
+                            style={{ background: "linear-gradient(to left, var(--md-sys-color-surface-container-low), transparent)" }}
                         />
                     </div>
                     <div className="mt-1 flex items-center gap-2 max-w-full overflow-hidden">
                         <PlayerHonorPreview honors={entry.honors} masterData={masterData} assetSource={assetSource} compact />
                         {!isTierLine && !showChurn && speed1h > 0 && (
-                            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-miku/10 px-1.5 py-0.5 text-[9px] font-black text-miku tabular-nums dark:bg-miku/15">
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-primary tabular-nums">
                                 1H {fmtSpeed(speed1h)}
                             </span>
                         )}
@@ -323,7 +323,7 @@ export default function BoardRow({
                         className={`text-base font-black leading-tight sm:text-lg ${scoreColorClass}`}
                     >
                         {formatNumber(entry.score)}
-                        <span className="ml-0.5 text-[10px] font-bold text-slate-400 dark:text-slate-500">P</span>
+                        <span className="ml-0.5 type-label-s text-on-surface-variant">P</span>
                     </motion.div>
                     <div className="mt-0.5 flex items-center justify-end gap-1">
                         <RankChangeBadge rankDelta={displayRankDelta} isNewEntry={entry.isNewEntry} hasChurnData={!!churnEntry} />
@@ -335,10 +335,10 @@ export default function BoardRow({
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                                    className={`inline-flex items-center gap-0.5 rounded-md px-1 py-0.5 text-[9px] font-bold ${
+                                    className={`inline-flex items-center gap-0.5 rounded-md3-xs px-1 py-0.5 type-label-s ${
                                         displayScoreDelta > 0
-                                            ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300"
-                                            : "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300"
+                                            ? "bg-emerald-100 text-emerald-700 "
+                                            : "bg-rose-100 text-rose-700 "
                                     }`}
                                 >
                                     <span className="text-[8px]">{displayScoreDelta > 0 ? "▲" : "▼"}</span>
@@ -348,7 +348,7 @@ export default function BoardRow({
                                     )}
                                 </motion.span>
                             ) : (
-                                <motion.span key="no-delta" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-slate-400 dark:text-slate-500">
+                                <motion.span key="no-delta" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="text-[9px] text-on-surface-variant">
                                     —
                                 </motion.span>
                             )}
@@ -357,7 +357,7 @@ export default function BoardRow({
                         {/* Desktop 1H bubble when collapsed */}
                         {canShowChurnDetails && !showChurn && currentHourChurn > 0 && (
                             <span
-                                className="hidden sm:inline-flex items-center justify-center rounded-full bg-miku/15 px-1.5 py-0.5 text-[9px] font-black text-miku tabular-nums dark:bg-miku/20 cursor-help"
+                                className="hidden sm:inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-primary tabular-nums cursor-help"
                                 title={t("page.realtimeRanking.list.currentHourChurnTitle")}
                             >
                                 {currentHourChurn}
@@ -371,7 +371,7 @@ export default function BoardRow({
                     <Link
                         href={detailHref}
                         onClick={(e) => e.stopPropagation()}
-                        className="ml-1 hidden shrink-0 items-center justify-center text-slate-300 transition-colors hover:text-miku dark:text-slate-600 sm:flex"
+                        className="ml-1 hidden shrink-0 items-center justify-center text-outline transition-colors hover:text-primary sm:flex"
                         title={t("page.realtimeRankingNext.viewDetail")}
                     >
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} className="h-4 w-4">
@@ -458,23 +458,23 @@ function ChurnRow({
         ? <span className="text-emerald-500 font-black">▲</span>
         : trend === "down"
             ? <span className="text-rose-500 font-black">▼</span>
-            : <span className="text-slate-400">—</span>;
+            : <span className="text-on-surface-variant">—</span>;
 
     return (
-        <div className="px-3 pb-2.5 pt-0.5 border-t border-slate-100/80 dark:border-slate-800/60">
+        <div className="px-3 pb-2.5 pt-0.5 border-t border-outline-variant">
             {/* Churn grid row */}
             <div className="flex items-center gap-2">
                 {/* 48H total */}
                 <div className="shrink-0 text-center w-12 sm:w-14">
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">48H</span>
-                    <div className="text-xs font-black text-miku">{churnEntry.churn_48h ?? 0}</div>
+                    <span className="type-label-s text-on-surface-variant">48H</span>
+                    <div className="text-xs font-black text-primary">{churnEntry.churn_48h ?? 0}</div>
                 </div>
 
                 {/* Hourly grid */}
                 <div ref={scrollRef} className="flex-1 min-w-0 overflow-x-auto">
                     <div className="flex gap-px mb-px">
                         {row1.map((cell, i) => (
-                            <div key={`h-${i}`} className="flex-1 min-w-[22px] text-center text-[8px] font-medium text-slate-400 dark:text-slate-500">
+                            <div key={`h-${i}`} className="flex-1 min-w-[22px] text-center text-[8px] font-medium text-on-surface-variant">
                                 {i === 0 ? "1H" : cell.hour}
                             </div>
                         ))}
@@ -502,7 +502,7 @@ function ChurnRow({
                         e.stopPropagation();
                         onShowParkingPeriods(userId);
                     }}
-                    className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold text-slate-500 transition-colors hover:border-miku/30 hover:bg-miku/5 hover:text-miku dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:border-miku/30 dark:hover:bg-miku/10 dark:hover:text-miku"
+                    className="shrink-0 rounded-md3-sm border border-outline-variant bg-surface-container-low px-2 py-1 type-label-s text-on-surface-variant transition-colors hover:border-primary/30 hover:bg-primary-container hover:text-primary"
                 >
                     {t("page.realtimeRanking.churn.parking")}
                 </button>
@@ -515,30 +515,30 @@ function ChurnRow({
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                 >
                     {/* Latest 1h churn */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-miku/10 px-1.5 py-0.5 text-[10px] dark:bg-miku/15">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.churn1h")}</span>
-                        <span className="font-black text-miku tabular-nums">{churn1h}</span>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.churn1h")}</span>
+                        <span className="font-black text-primary tabular-nums">{churn1h}</span>
                     </span>
 
                     {/* Latest 20min×3 churn */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-sky-100 px-1.5 py-0.5 text-[10px] dark:bg-sky-500/15">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.churn20min3")}</span>
-                        <span className="font-black text-sky-600 dark:text-sky-400 tabular-nums">{churn20min * 3}</span>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-sky-100 px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.churn20min3")}</span>
+                        <span className="font-black text-sky-600 tabular-nums">{churn20min * 3}</span>
                     </span>
 
-                    <span className="shrink-0 text-slate-300 dark:text-slate-600 select-none px-0.5">·</span>
+                    <span className="shrink-0 text-outline select-none px-0.5">·</span>
 
                     {/* Latest 1h speed and trend marker */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.speed1h")}</span>
-                        <span className="font-black text-slate-700 dark:text-slate-200 tabular-nums">{fmtSpeed(speed1h)}</span>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed1h")}</span>
+                        <span className="font-black text-on-surface tabular-nums">{fmtSpeed(speed1h)}</span>
                         <span className="text-[9px] leading-none">{trendIcon}</span>
                     </span>
 
                     {/* Latest 20min×3 speed */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.speed20min3")}</span>
-                        <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600 dark:text-emerald-400" : trend === "down" ? "text-rose-500 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed20min3")}</span>
+                        <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600" : trend === "down" ? "text-rose-500" : "text-on-surface"}`}>
                             {fmtSpeed(speed20min3)}
                         </span>
                     </span>
@@ -546,21 +546,21 @@ function ChurnRow({
                     {/* Neighbor-tier speed comparison */}
                     {(lowerRank != null || upperRank != null) && (
                         <>
-                            <span className="shrink-0 text-slate-300 dark:text-slate-600 select-none px-0.5">·</span>
+                            <span className="shrink-0 text-outline select-none px-0.5">·</span>
                             {lowerRank != null && (() => {
                                 const spd = lowerEntry?.growth_1h;
                                 const faster = spd != null && speed1h > spd;
                                 const slower = spd != null && speed1h < spd;
                                 return (
-                                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
-                                        faster ? "bg-emerald-100 dark:bg-emerald-500/15" :
-                                        slower ? "bg-rose-100 dark:bg-rose-500/15" :
-                                        "bg-slate-100 dark:bg-slate-800"
+                                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md3-xs px-1.5 py-0.5 type-label-s ${
+                                        faster ? "bg-emerald-100 " :
+                                        slower ? "bg-rose-100 " :
+                                        "bg-surface-container "
                                     }`}>
-                                        <span className={`font-medium ${faster ? "text-emerald-700 dark:text-emerald-300" : slower ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}>
+                                        <span className={`font-medium ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
                                             T{lowerRank}
                                         </span>
-                                        <span className={`tabular-nums ${faster ? "text-emerald-700 dark:text-emerald-300" : slower ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-300"}`}>
+                                        <span className={`tabular-nums ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
                                             {spd != null ? fmtSpeed(spd) : "—"}
                                         </span>
                                         {faster && <span className="text-emerald-500 text-[9px]">↑</span>}
@@ -573,15 +573,15 @@ function ChurnRow({
                                 const faster = spd != null && speed1h > spd;
                                 const slower = spd != null && speed1h < spd;
                                 return (
-                                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ${
-                                        faster ? "bg-emerald-100 dark:bg-emerald-500/15" :
-                                        slower ? "bg-rose-100 dark:bg-rose-500/15" :
-                                        "bg-slate-100 dark:bg-slate-800"
+                                    <span className={`shrink-0 inline-flex items-center gap-1 rounded-md3-xs px-1.5 py-0.5 type-label-s ${
+                                        faster ? "bg-emerald-100 " :
+                                        slower ? "bg-rose-100 " :
+                                        "bg-surface-container "
                                     }`}>
-                                        <span className={`font-medium ${faster ? "text-emerald-700 dark:text-emerald-300" : slower ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-slate-400"}`}>
+                                        <span className={`font-medium ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
                                             T{upperRank}
                                         </span>
-                                        <span className={`tabular-nums ${faster ? "text-emerald-700 dark:text-emerald-300" : slower ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-slate-300"}`}>
+                                        <span className={`tabular-nums ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
                                             {spd != null ? fmtSpeed(spd) : "—"}
                                         </span>
                                         {faster && <span className="text-emerald-500 text-[9px]">↑</span>}
@@ -594,7 +594,7 @@ function ChurnRow({
                 </div>
                 <div
                     className="pointer-events-none absolute right-0 top-0 h-full w-6 sm:hidden"
-                    style={{ background: "linear-gradient(to left, var(--surface-base), transparent)" }}
+                    style={{ background: "linear-gradient(to left, var(--md-sys-color-surface-container-low), transparent)" }}
                 />
             </div>
         </div>
@@ -612,40 +612,40 @@ function TierLineChurnRow({ churnEntry }: { churnEntry: ChurnEntryV2 }) {
         ? <span className="text-emerald-500 font-black">▲</span>
         : trend === "down"
             ? <span className="text-rose-500 font-black">▼</span>
-            : <span className="text-slate-400">—</span>;
+            : <span className="text-on-surface-variant">—</span>;
 
     return (
-        <div className="px-3 pb-2.5 pt-0.5 border-t border-slate-100/80 dark:border-slate-800/60">
+        <div className="px-3 pb-2.5 pt-0.5 border-t border-outline-variant">
             <div className="relative pl-[calc(3rem+0.5rem)] sm:pl-[calc(3.5rem+0.5rem)]">
                 <div
                     className="flex flex-nowrap items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:gap-y-1"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
                 >
                     {/* Label */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-                        <span className="font-medium text-slate-400 dark:text-slate-500">{t("page.realtimeRanking.churn.tierLineSpeed")}</span>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.tierLineSpeed")}</span>
                     </span>
 
-                    <span className="shrink-0 text-slate-300 dark:text-slate-600 select-none px-0.5">·</span>
+                    <span className="shrink-0 text-outline select-none px-0.5">·</span>
 
                     {/* Latest 1h speed and trend */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.speed1h")}</span>
-                        <span className="font-black text-slate-700 dark:text-slate-200 tabular-nums">{fmtSpeed(speed1h)}</span>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed1h")}</span>
+                        <span className="font-black text-on-surface tabular-nums">{fmtSpeed(speed1h)}</span>
                         <span className="text-[9px] leading-none">{trendIcon}</span>
                     </span>
 
                     {/* Latest 20min×3 speed */}
-                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md bg-slate-100 px-1.5 py-0.5 text-[10px] dark:bg-slate-800">
-                        <span className="font-medium text-slate-500 dark:text-slate-400">{t("page.realtimeRanking.churn.speed20min3")}</span>
-                        <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600 dark:text-emerald-400" : trend === "down" ? "text-rose-500 dark:text-rose-400" : "text-slate-700 dark:text-slate-200"}`}>
+                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
+                        <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed20min3")}</span>
+                        <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600" : trend === "down" ? "text-rose-500" : "text-on-surface"}`}>
                             {fmtSpeed(speed20min3)}
                         </span>
                     </span>
                 </div>
                 <div
                     className="pointer-events-none absolute right-0 top-0 h-full w-6 sm:hidden"
-                    style={{ background: "linear-gradient(to left, var(--surface-base), transparent)" }}
+                    style={{ background: "linear-gradient(to left, var(--md-sys-color-surface-container-low), transparent)" }}
                 />
             </div>
         </div>

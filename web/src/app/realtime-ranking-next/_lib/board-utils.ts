@@ -220,11 +220,11 @@ export function buildHourlyGridReversed(
 
 /** Return the background color class based on count. */
 export function getChurnCellColor(count: number, isCurrentHour: boolean): string {
-    if (count === 0) return "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500";
-    if (isCurrentHour) return "bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-300";
-    if (count >= 30) return "bg-rose-300 text-rose-900 dark:bg-rose-500/40 dark:text-rose-100";
-    if (count >= 20) return "bg-rose-200 text-rose-800 dark:bg-rose-500/30 dark:text-rose-200";
-    if (count >= 10) return "bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-300";
-    return "bg-rose-50 text-rose-500 dark:bg-rose-500/15 dark:text-rose-400";
+    if (count === 0) return "bg-surface-container text-on-surface-variant ";
+    if (isCurrentHour) return "bg-sky-100 text-sky-700 ";
+    if (count >= 30) return "bg-rose-300 text-rose-900 ";
+    if (count >= 20) return "bg-rose-200 text-rose-800 ";
+    if (count >= 10) return "bg-rose-100 text-rose-700 ";
+    return "bg-rose-50 text-rose-500 ";
 }
 

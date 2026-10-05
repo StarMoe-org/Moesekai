@@ -11,25 +11,25 @@ interface SpeedGaugeProps {
 interface StatCardProps {
     label: string;
     value: string;
-    accent?: "miku" | "sky" | "emerald" | "rose" | "slate";
+    accent?: "primary" | "sky" | "emerald" | "rose" | "neutral";
     trend?: "up" | "down" | "flat";
 }
 
 const accentClass: Record<NonNullable<StatCardProps["accent"]>, string> = {
-    miku: "text-miku",
-    sky: "text-sky-600 dark:text-sky-400",
-    emerald: "text-emerald-600 dark:text-emerald-400",
-    rose: "text-rose-500 dark:text-rose-400",
-    slate: "text-slate-700 dark:text-slate-200",
+    primary: "text-primary",
+    sky: "text-sky-600 ",
+    emerald: "text-emerald-600 ",
+    rose: "text-rose-500 ",
+    neutral: "text-on-surface",
 };
 
-function StatCard({ label, value, accent = "slate", trend }: StatCardProps) {
+function StatCard({ label, value, accent = "neutral", trend }: StatCardProps) {
     const trendIcon = trend === "up" ? "▲" : trend === "down" ? "▼" : null;
-    const trendColor = trend === "up" ? "text-emerald-500" : trend === "down" ? "text-rose-500" : "text-slate-400";
+    const trendColor = trend === "up" ? "text-emerald-500" : trend === "down" ? "text-rose-500" : "text-on-surface-variant";
     return (
-        <div className="rounded-xl border border-slate-200/60 bg-white/60 px-3 py-2.5 dark:border-slate-700/60 dark:bg-slate-900/50">
-            <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400 dark:text-slate-500">{label}</div>
-            <div className={`mt-0.5 flex items-baseline gap-1 text-lg font-black tabular-nums ${accentClass[accent]}`}>
+        <div className="rounded-md3-md bg-surface-container px-3 py-2.5">
+            <div className="type-label-s text-on-surface-variant">{label}</div>
+            <div className={`mt-0.5 flex items-baseline gap-1 type-title-l tabular-nums ${accentClass[accent]}`}>
                 <span>{value}</span>
                 {trendIcon && <span className={`text-xs ${trendColor}`}>{trendIcon}</span>}
             </div>
@@ -42,7 +42,7 @@ export default function SpeedGauge({ churnEntry }: SpeedGaugeProps) {
 
     if (!churnEntry) {
         return (
-            <div className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400 dark:border-slate-700">
+            <div className="rounded-md3-md border border-dashed border-outline-variant px-3 py-6 text-center text-xs text-on-surface-variant">
                 {t("page.realtimeRankingNext.detail.noSpeedData")}
             </div>
         );
@@ -59,10 +59,10 @@ export default function SpeedGauge({ churnEntry }: SpeedGaugeProps) {
 
     return (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-            <StatCard label={t("page.realtimeRankingNext.detail.speed1h")} value={fmtSpeed(speed1h)} accent="slate" trend={trend} />
-            <StatCard label={t("page.realtimeRankingNext.detail.speed20min3")} value={fmtSpeed(speed20min3)} accent={trend === "up" ? "emerald" : trend === "down" ? "rose" : "slate"} />
-            <StatCard label={t("page.realtimeRankingNext.detail.churn48h")} value={String(churn48h)} accent="miku" />
-            <StatCard label={t("page.realtimeRankingNext.detail.churn1h")} value={String(churn1h)} accent="miku" />
+            <StatCard label={t("page.realtimeRankingNext.detail.speed1h")} value={fmtSpeed(speed1h)} accent="neutral" trend={trend} />
+            <StatCard label={t("page.realtimeRankingNext.detail.speed20min3")} value={fmtSpeed(speed20min3)} accent={trend === "up" ? "emerald" : trend === "down" ? "rose" : "neutral"} />
+            <StatCard label={t("page.realtimeRankingNext.detail.churn48h")} value={String(churn48h)} accent="primary" />
+            <StatCard label={t("page.realtimeRankingNext.detail.churn1h")} value={String(churn1h)} accent="primary" />
             <StatCard label={t("page.realtimeRankingNext.detail.churn20min3")} value={String(churn20min3)} accent="sky" />
         </div>
     );

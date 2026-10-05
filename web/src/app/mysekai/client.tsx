@@ -3,8 +3,8 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
+import { Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/contexts/ThemeContext";
@@ -386,48 +386,44 @@ function MysekaiContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.mysekai.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.mysekai.title")} <span className="text-miku">{t("page.mysekai.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.mysekai.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.mysekai.badge")}
+                title={t("page.mysekai.title")}
+                highlight={t("page.mysekai.titleHighlight")}
+                description={t("page.mysekai.description")}
+            />
 
             {sourceRegion && <div className="mb-6"><InteractionEntryLink region={sourceRegion} /></div>}
 
             {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.mysekai.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("page.mysekai.loadFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading || dataSource !== sourceRegion ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : (
                     <>
                         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedFixtures.map(fixture => (
-                                <Link
+                                <Card
+                                    variant="elevated"
                                     href={mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id, serverSource)}
                                     key={fixture.id}
                                     data-shortcut-item="true"
-                                    className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-3 flex flex-col h-full group"
+                                    className="group flex h-full flex-col p-3"
                                 >
-                                    <div className="relative aspect-square mb-2 bg-slate-50 rounded-lg overflow-hidden group-hover:bg-slate-100 transition-colors">
+                                    <div className="relative aspect-square mb-2 bg-surface-container rounded-md3-sm overflow-hidden">
                                         <Image
                                             src={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)}
                                             alt={fixture.name}
@@ -437,57 +433,44 @@ function MysekaiContent() {
                                         />
                                     </div>
                                     <div className="flex-1 flex flex-col">
-                                        <h3 className="font-bold text-sm text-slate-800 mb-1 group-hover:text-miku transition-colors" title={fixture.name}>
+                                        <h3 className="mb-1 type-title-s text-on-surface group-hover:text-primary transition-colors" title={fixture.name}>
                                             <TranslatedText
                                                 original={fixture.name}
                                                 category="mysekai"
                                                 field="fixtureName"
                                                 originalClassName="block"
-                                                translationClassName="text-xs font-medium text-slate-400 block"
+                                                translationClassName="type-body-s text-on-surface-variant block"
                                             />
                                         </h3>
                                         <div className="mt-auto flex flex-wrap gap-1">
-                                            <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
+                                            <span className="rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                 ID: {fixture.id}
                                             </span>
-                                            <span className="text-[10px] px-1.5 py-0.5 bg-miku/10 text-miku rounded font-medium">
+                                            <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
                                                 {getGenreName(fixture.mysekaiFixtureMainGenreId)}
                                             </span>
                                         </div>
                                     </div>
-                                </Link>
+                                </Card>
                             ))}
                         </div>
 
                         {/* Load More */}
-                        {displayedFixtures.length < filteredFixtures.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                >
-                                    {t("page.mysekai.loadMore")}
-                                    <span className="ml-2 text-sm opacity-80">
-                                        ({displayedFixtures.length} / {filteredFixtures.length})
-                                    </span>
-                                </button>
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.mysekai.loadMore")}
+                            shown={displayedFixtures.length}
+                            total={filteredFixtures.length}
+                            onLoadMore={loadMore}
+                        />
 
                         {/* Empty State */}
                         {!isLoading && filteredFixtures.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p>{t("page.mysekai.noResult")}</p>
-                            </div>
+                            <EmptyState title={t("page.mysekai.noResult")} />
                         )}
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -496,7 +479,7 @@ export default function MysekaiClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.mysekai.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState label={t("page.mysekai.loadingFallback")} />}>
                 <MysekaiContent />
             </Suspense>
         </MainLayout>

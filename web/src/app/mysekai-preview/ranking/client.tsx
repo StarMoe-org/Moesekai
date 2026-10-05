@@ -1,10 +1,11 @@
 "use client";
 
-import Link from "@/components/LocalizedLink";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 
 import MainLayout from "@/components/MainLayout";
+import { Banner, Button, EmptyState, LoadingState, PageContainer } from "@/components/md3";
+import { mdArrowBack } from "@/components/md3/icons";
 import MysekaiScenePreview from "@/components/mysekai-preview/MysekaiScenePreview";
 import { useI18n } from "@/contexts/I18nContext";
 import { replaceAssetSourceRegion, type AssetSourceType, useTheme } from "@/contexts/ThemeContext";
@@ -28,9 +29,9 @@ function HeartIcon({ className = "" }: { className?: string }) {
 
 function DetailStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
     return (
-        <div className={`rounded-2xl border px-4 py-3 shadow-sm backdrop-blur ${accent ? "border-rose-100 bg-rose-50/80 text-rose-500" : "border-white/70 bg-white/68 text-slate-700"}`}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">{label}</div>
-            <div className="mt-1 flex items-center gap-1.5 text-sm font-black">
+        <div className={`rounded-md3-lg bg-surface-container px-4 py-3 ${accent ? "text-rose-500" : "text-on-surface"}`}>
+            <div className="type-label-m text-on-surface-variant">{label}</div>
+            <div className="mt-1 flex items-center gap-1.5 type-title-s">
                 {accent && <HeartIcon className="h-4 w-4" />}
                 <span>{value}</span>
             </div>
@@ -43,17 +44,19 @@ function MissingParamsState() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto max-w-4xl px-4 py-12 text-center sm:px-6">
-                <div className="rounded-[2rem] border border-dashed border-slate-300 bg-white/60 p-8 shadow-lg shadow-slate-900/5 backdrop-blur-xl">
-                    <h1 className="text-2xl font-black text-slate-800">{t("page.mysekaiPreview.ranking.missingParamsTitle")}</h1>
-                    <p className="mt-3 text-sm leading-relaxed text-slate-500">
-                        {t("page.mysekaiPreview.ranking.missingParamsDescription")}
-                    </p>
-                    <Link href="/mysekai-preview" className="mt-6 inline-flex rounded-2xl bg-miku px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-miku/20 transition hover:-translate-y-0.5 active:scale-95">
-                        {t("page.mysekaiPreview.ranking.backToRanking")}
-                    </Link>
+            <PageContainer className="max-w-4xl">
+                <div className="rounded-md3-xl bg-surface-container-low">
+                    <EmptyState
+                        title={t("page.mysekaiPreview.ranking.missingParamsTitle")}
+                        description={t("page.mysekaiPreview.ranking.missingParamsDescription")}
+                        action={
+                            <Button variant="filled" icon={mdArrowBack} href="/mysekai-preview">
+                                {t("page.mysekaiPreview.ranking.backToRanking")}
+                            </Button>
+                        }
+                    />
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -130,41 +133,38 @@ function RankingPreviewInner() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto max-w-[96rem] px-4 py-8 sm:px-6 sm:py-10">
+            <PageContainer wide>
                 <div className="mb-6">
-                    <Link href={`/mysekai-preview?server=${server}`} className="inline-flex items-center gap-2 rounded-2xl border border-slate-200 bg-white/75 px-4 py-2 text-sm font-black text-slate-500 shadow-sm backdrop-blur transition hover:-translate-x-0.5 hover:border-miku/30 hover:text-miku active:scale-95">
-                        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.75 15.75 3 12m0 0 3.75-3.75M3 12h18" />
-                        </svg>
+                    <Button variant="tonal" icon={mdArrowBack} href={`/mysekai-preview?server=${server}`}>
                         {t("page.mysekaiPreview.ranking.backToRanking")}
-                    </Link>
+                    </Button>
                 </div>
 
-                <section className="mb-6 overflow-hidden rounded-[2rem] border border-white/60 bg-white/64 p-5 shadow-2xl shadow-slate-900/8 backdrop-blur-2xl sm:p-6 lg:p-7">
+                <section className="mb-6 overflow-hidden rounded-md3-xl bg-surface-container-low p-5 sm:p-6 lg:p-7">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
                         <div className="min-w-0">
                             <div className="mb-4 flex flex-wrap items-center gap-2">
-                                <span className={`rounded-2xl px-3 py-1.5 text-sm font-black shadow-lg ${getRankTone(rank)}`}>#{rank}</span>
-                                <span className="rounded-2xl border border-miku/15 bg-miku/8 px-3 py-1.5 text-[11px] font-black text-miku">
+                                <span className={`rounded-md3-sm px-3 py-1.5 type-label-l ${getRankTone(rank)}`}>#{rank}</span>
+                                <span className="rounded-md3-sm bg-secondary-container px-3 py-1.5 type-label-m text-on-secondary-container">
                                     {entry ? getTabTypeLabel(entry.tabType, t) : t("page.mysekaiPreview.common.baijingTop")}
                                 </span>
-                                <span className="rounded-2xl bg-slate-100/80 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">
+                                <span className="rounded-md3-sm bg-surface-container-high px-3 py-1.5 type-label-m text-on-surface-variant">
                                     {server.toUpperCase()} · {t("page.mysekaiPreview.ranking.activityStat")} #{competitionId}
                                 </span>
                             </div>
-                            <h1 className="line-clamp-2 text-3xl font-black tracking-tight text-primary-text sm:text-4xl lg:text-5xl">
+                            <h1 className="line-clamp-2 type-headline-m text-on-surface sm:type-headline-l">
                                 {entry?.title || (metaLoading ? t("page.mysekaiPreview.ranking.loadingEntry") : t("page.mysekaiPreview.ranking.layoutPreviewTitle"))}
                             </h1>
-                            <p className="mt-3 text-sm font-bold text-slate-500">
+                            <p className="mt-3 type-title-s text-on-surface-variant">
                                 {entry ? `${entry.ownerUserName || t("page.mysekaiPreview.common.unknownPlayer")} · UID ${entry.ownerUserId || "-"}` : t("page.mysekaiPreview.ranking.entryInfoPending")}
                             </p>
-                            <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-500">
+                            <p className="mt-3 max-w-3xl type-body-m text-on-surface-variant">
                                 {entry?.comment || t("page.mysekaiPreview.ranking.defaultComment")}
                             </p>
                             {metaError && (
-                                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm font-bold text-amber-700">
+                                <Banner tone="warning" className="mt-4">
                                     {t("page.mysekaiPreview.ranking.metaLoadFailed", { message: metaError })}
-                                </div>
+                                </Banner>
                             )}
                             <div className="mt-5 grid max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
                                 <DetailStat label={t("page.mysekaiPreview.ranking.serverStat")} value={server.toUpperCase()} />
@@ -173,18 +173,18 @@ function RankingPreviewInner() {
                                 <DetailStat label={t("page.mysekaiPreview.common.likes")} value={entry ? formatNumber(Number(entry.reviewCount || 0)) : "-"} accent />
                             </div>
                             {entry?.submittedAt && (
-                                <div className="mt-3 text-xs font-bold text-slate-400">
+                                <div className="mt-3 type-label-m text-on-surface-variant">
                                     {t("page.mysekaiPreview.common.submittedAt", { time: formatBaijingDate(entry.submittedAt) })}
                                 </div>
                             )}
                         </div>
 
                         <div className="order-first lg:order-none">
-                            <div className="aspect-[4/3] overflow-hidden rounded-[1.75rem] bg-slate-100 shadow-xl shadow-slate-900/8">
+                            <div className="aspect-[4/3] overflow-hidden rounded-md3-xl bg-surface-container">
                                 {thumbnailUrl ? (
                                     <img src={thumbnailUrl} alt={entry?.title || t("page.mysekaiPreview.ranking.thumbnailAlt")} className="h-full w-full object-cover" />
                                 ) : (
-                                    <div className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-300">
+                                    <div className="flex h-full w-full items-center justify-center type-body-m text-outline">
                                         {metaLoading ? t("page.mysekaiPreview.ranking.loadingThumbnail") : t("page.mysekaiPreview.common.noImage")}
                                     </div>
                                 )}
@@ -193,7 +193,7 @@ function RankingPreviewInner() {
                     </div>
                 </section>
 
-                <section className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/65 p-4 shadow-2xl shadow-slate-900/8 backdrop-blur-2xl sm:p-5">
+                <section className="overflow-hidden rounded-md3-xl bg-surface-container-low p-4 sm:p-5">
                     <MysekaiScenePreview
                         key={`${server}-${competitionId}-${rank}`}
                         defaultLayoutUrl={roomUrl}
@@ -207,7 +207,7 @@ function RankingPreviewInner() {
                         compact
                     />
                 </section>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -217,11 +217,7 @@ function RankingPreviewFallback() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto max-w-4xl px-4 py-12 text-center sm:px-6">
-                <div className="rounded-[2rem] border border-white/60 bg-white/65 p-8 text-sm font-bold text-slate-400 shadow-lg shadow-slate-900/5 backdrop-blur-xl">
-                    {t("page.mysekaiPreview.ranking.suspenseLoading")}
-                </div>
-            </div>
+            <LoadingState label={t("page.mysekaiPreview.ranking.suspenseLoading")} />
         </MainLayout>
     );
 }

@@ -50,8 +50,8 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
     }
 
     return (
-        <Link href={`/events/${event.id}`} className="block group mb-6">
-            <div className="relative flex h-32 md:h-36 rounded-2xl overflow-hidden ios-glass-card ios-glass-card-interactive shadow-sm transition-transform cursor-pointer">
+        <Link href={`/events/${event.id}`} className="focus-ring block group mb-6 rounded-md3-lg">
+            <div className="state-layer relative flex h-32 md:h-36 rounded-md3-lg overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow group-hover:shadow-elev-2 cursor-pointer">
                 {/* Left Side: Background & Logo */}
                 <div className="w-[45%] relative overflow-hidden">
                     {hasBanner ? (
@@ -72,7 +72,7 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
                                         src={getEventLogoUrl(event.assetbundleName, assetSource)}
                                         alt=""
                                         fill
-                                        className="object-contain drop-shadow-2xl"
+                                        className="object-contain drop-shadow-md"
                                         unoptimized
                                         loading="eager"
                                         fetchPriority="high"
@@ -81,7 +81,7 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
                             </div>
                         </>
                     ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-miku to-blue-400 flex items-center justify-center text-white/20 font-bold text-4xl">
+                        <div className="absolute inset-0 bg-primary-container flex items-center justify-center text-on-primary-container/40 type-headline-m">
                             NO IMAGE
                         </div>
                     )}
@@ -104,19 +104,19 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
                     <div className="space-y-1 relative z-20">
                         <div className="flex items-center gap-2 mb-1.5">
                             <span
-                                className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded text-white shadow-sm"
+                                className="rounded-md3-xs px-2 py-0.5 type-label-s text-white"
                                 style={{ backgroundColor: statusDisplay.color }}
                             >
                                 {statusLabel}
                             </span>
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                            <span className="type-label-s text-on-surface-variant">
                                 {eventTypeName}
                             </span>
                         </div>
-                        <h3 className="font-bold text-primary-text text-sm sm:text-base leading-tight line-clamp-1" title={event.name}>
+                        <h3 className="font-bold text-on-surface text-sm sm:text-base leading-tight line-clamp-1" title={event.name}>
                             {event.name}
                         </h3>
-                        <div className="pt-2 text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 font-mono flex flex-col sm:flex-row sm:gap-2">
+                        <div className="pt-2 text-[10px] sm:text-xs text-on-surface-variant font-mono flex flex-col sm:flex-row sm:gap-2">
                             <span>{formatDate(event.startAt)}</span>
                             <span className="hidden sm:inline">-</span>
                             <span>{formatDate(event.aggregateAt)}</span>
@@ -124,7 +124,7 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
                     </div>
 
                     {status === "ongoing" && (
-                        <div className="absolute bottom-0 right-2 text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 select-none z-10 tracking-tighter">
+                        <div className="absolute bottom-0 right-2 text-4xl sm:text-5xl font-black text-on-surface select-none z-10 tracking-tighter">
                             {Math.floor(progressPercent)}<span className="text-2xl ml-1">%</span>
                         </div>
                     )}

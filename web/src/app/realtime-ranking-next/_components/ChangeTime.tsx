@@ -29,7 +29,7 @@ export default function ChangeTime({ changedAt, className }: ChangeTimeProps) {
                 : t("page.realtimeRankingNext.detail.feed.hoursAgo", { hours: Math.floor(sec / 3600) });
 
     return (
-        <span className={className ?? "text-[9px] font-medium text-slate-400 dark:text-slate-500 tabular-nums"}>
+        <span className={className ?? "text-[9px] font-medium text-on-surface-variant tabular-nums"}>
             {rel}
         </span>
     );

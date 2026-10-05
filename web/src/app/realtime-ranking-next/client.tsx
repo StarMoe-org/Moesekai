@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
+import { Chip, ErrorState, LoadingState, PageContainer, Surface } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -185,7 +186,7 @@ function RealtimeRankingNextContent() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 py-8 sm:px-6">
+            <PageContainer>
                 <BoardHeader
                     region={region}
                     onRegionChange={handleRegionChange}
@@ -209,28 +210,14 @@ function RealtimeRankingNextContent() {
 
                 {/* World Link toggle */}
                 {board.worldLinkAvailable && (
-                    <div className="mb-6 rounded-2xl border border-slate-200/60 bg-white/70 p-4 backdrop-blur-sm dark:border-slate-700/60 dark:bg-slate-900/60">
+                    <Surface tone="low" radius="lg" className="mb-6 p-4">
                         <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                onClick={() => setBoardMode("overall")}
-                                className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                                    boardMode === "overall"
-                                        ? "bg-miku text-white shadow-md shadow-miku/20"
-                                        : "border border-slate-200 bg-white text-slate-600 hover:border-miku/40 hover:text-miku dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                }`}
-                            >
+                            <Chip selected={boardMode === "overall"} onClick={() => setBoardMode("overall")}>
                                 {t("page.realtimeRankingNext.board.overall")}
-                            </button>
-                            <button
-                                onClick={() => setBoardMode("worldlink")}
-                                className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                                    boardMode === "worldlink"
-                                        ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                                        : "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
-                                }`}
-                            >
+                            </Chip>
+                            <Chip selected={boardMode === "worldlink"} onClick={() => setBoardMode("worldlink")}>
                                 {t("page.realtimeRankingNext.board.worldlink")}
-                            </button>
+                            </Chip>
                         </div>
 
                         {boardMode === "worldlink" && board.worldLinkSnapshot && (
@@ -238,34 +225,31 @@ function RealtimeRankingNextContent() {
                                 {board.worldLinkSnapshot.groups.map((group) => {
                                     const isActive = group.gameCharacterId === board.activeGroup?.gameCharacterId;
                                     return (
-                                        <button
+                                        <Chip
                                             key={group.gameCharacterId}
+                                            selected={isActive}
                                             onClick={() => board.setSelectedCharacterId(group.gameCharacterId)}
-                                            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-                                                isActive
-                                                    ? "bg-miku text-white shadow-sm shadow-miku/20"
-                                                    : "border border-slate-200 bg-white text-slate-600 hover:border-miku/40 hover:text-miku dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                            }`}
                                         >
                                             {getCharacterName(t, group.gameCharacterId)}
-                                        </button>
+                                        </Chip>
                                     );
                                 })}
                             </div>
                         )}
-                    </div>
+                    </Surface>
                 )}
 
                 {board.error && (
-                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-300">
-                        <p className="font-bold">{t("page.realtimeRankingNext.loadFailed")}</p>
-                    </div>
+                    <ErrorState
+                        className="mb-6"
+                        title={t("page.realtimeRankingNext.loadFailed")}
+                        retryLabel={t("common.action.retry")}
+                        onRetry={board.refresh}
+                    />
                 )}
 
                 {board.isLoading && board.entries.length === 0 ? (
-                    <div className="ios-glass-card rounded-2xl p-10 text-center text-slate-500">
-                        {t("page.realtimeRankingNext.loading")}
-                    </div>
+                    <LoadingState label={t("page.realtimeRankingNext.loading")} />
                 ) : (
                     <BoardList
                         entries={board.entries}
@@ -288,7 +272,7 @@ function RealtimeRankingNextContent() {
                     churnEntry={selectedParkingChurnEntry}
                     onClose={() => setParkingModalUserId(null)}
                 />
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -296,7 +280,7 @@ function RealtimeRankingNextContent() {
 export default function RealtimeRankingNextClient() {
     const { t } = useI18n();
     return (
-        <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.realtimeRankingNext.loading")}</div>}>
+        <Suspense fallback={<LoadingState label={t("page.realtimeRankingNext.loading")} />}>
             <RealtimeRankingNextContent />
         </Suspense>
     );

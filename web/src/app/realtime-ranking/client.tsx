@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import MainLayout from "@/components/MainLayout";
 import RankingHeader from "@/components/realtime-ranking/RankingHeader";
 import RankingList from "@/components/realtime-ranking/RankingList";
@@ -16,6 +16,9 @@ import ParkingPeriodsModal from "@/components/realtime-ranking/ParkingPeriodsMod
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import Link from "@/components/LocalizedLink";
+import { Banner, Button, Chip, Divider, ErrorState, IconButton, LoadingState, PageContainer, Surface, buttonClassName } from "@/components/md3";
+import { mdRefresh } from "@/components/md3/icons";
+import { md3SpatialDefault } from "@/lib/motion";
 import {
     RealtimeRankingBoardMode,
     RealtimeRankingEntryWithDiff,
@@ -53,8 +56,8 @@ function scrollToRank(rank: number) {
     // Add a highlight pulse after scrolling reaches the target row.
     const highlight = () => {
         el.style.transition = "box-shadow 0.3s ease, background-color 0.3s ease";
-        el.style.boxShadow = "inset 0 0 0 2px var(--color-miku), 0 0 16px var(--color-miku)";
-        el.style.backgroundColor = "color-mix(in srgb, var(--color-miku) 8%, transparent)";
+        el.style.boxShadow = "inset 0 0 0 2px var(--md-sys-color-primary), 0 0 16px var(--md-sys-color-primary)";
+        el.style.backgroundColor = "color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent)";
         el.style.borderRadius = "8px";
         setTimeout(() => {
             el.style.transition = "box-shadow 0.8s ease, background-color 0.8s ease, border-radius 0.8s ease";
@@ -210,6 +213,7 @@ function applySnapshotChurnDiff(
 
 function RealtimeRankingContent() {
     const { t, formatNumber = (val: number) => val.toLocaleString() } = useI18n();
+    const reduceMotion = useReducedMotion();
     const { assetSource, themeColor, serverSource } = useTheme();
 
     const [hasInitializedQuery, setHasInitializedQuery] = useState(false);
@@ -948,7 +952,7 @@ function RealtimeRankingContent() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 md:pr-24 py-8">
+            <PageContainer className="md:pr-24">
                 <RankingHeader
                     region={region}
                     onRegionChange={setRegion}
@@ -974,36 +978,23 @@ function RealtimeRankingContent() {
                 />
 
                 {(worldLinkAvailable || isWorldBloomEvent) && (
-                    <div className="mb-6 rounded-2xl border border-slate-200 bg-white/80 p-4 backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/70">
+                    <Surface tone="low" radius="lg" className="mb-6 p-4">
                         <div className="flex flex-wrap items-center gap-2">
-                            <button
-                                onClick={() => setBoardMode("overall")}
-                                className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                                    boardMode === "overall"
-                                        ? "bg-miku text-white shadow-md shadow-miku/20"
-                                        : "border border-slate-200 bg-white text-slate-600 hover:border-miku/40 hover:text-miku dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                }`}
-                            >
+                            <Chip selected={boardMode === "overall"} onClick={() => setBoardMode("overall")}>
                                 {t("page.realtimeRanking.board.overall")}
-                            </button>
-                            <button
+                            </Chip>
+                            <Chip
+                                selected={boardMode === "worldlink" && worldLinkAvailable}
+                                disabled={!worldLinkAvailable}
                                 onClick={() => {
                                     if (worldLinkAvailable) {
                                         setBoardMode("worldlink");
                                     }
                                 }}
-                                disabled={!worldLinkAvailable}
-                                className={`rounded-xl px-4 py-2 text-sm font-bold transition-all ${
-                                    boardMode === "worldlink" && worldLinkAvailable
-                                        ? "bg-emerald-500 text-white shadow-md shadow-emerald-500/20"
-                                        : worldLinkAvailable
-                                            ? "border border-emerald-200 bg-emerald-50 text-emerald-700 hover:border-emerald-400 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300"
-                                            : "cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500"
-                                }`}
                             >
                                 {t("page.realtimeRanking.board.worldlink")}
-                            </button>
-                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                            </Chip>
+                            <span className="type-body-s text-on-surface-variant">
                                 {isWorldLinkMode
                                     ? t("page.realtimeRanking.board.worldlinkHighPrecision")
                                     : t("page.realtimeRanking.board.worldlinkAvailableHint")}
@@ -1015,47 +1006,44 @@ function RealtimeRankingContent() {
                                 {worldLinkSnapshot.groups.map((group) => {
                                     const isActive = group.gameCharacterId === activeWorldLinkGroup?.gameCharacterId;
                                     return (
-                                        <button
+                                        <Chip
                                             key={group.gameCharacterId}
+                                            selected={isActive}
                                             onClick={() => setSelectedWorldLinkCharacterId(group.gameCharacterId)}
-                                            className={`rounded-full px-3 py-1.5 text-sm font-medium transition-all ${
-                                                isActive
-                                                    ? "bg-miku text-white shadow-sm shadow-miku/20"
-                                                    : "border border-slate-200 bg-white text-slate-600 hover:border-miku/40 hover:text-miku dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
-                                            }`}
                                         >
                                             {getCharacterName(t, group.gameCharacterId)}
-                                        </button>
+                                        </Chip>
                                     );
                                 })}
                             </div>
                         )}
 
                         {isWorldLinkMode && (
-                            <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                            <div className="mt-3 type-body-s text-on-surface-variant">
                                 {t("page.realtimeRanking.board.worldlinkIndependentNotice")}
                             </div>
                         )}
-                    </div>
+                    </Surface>
                 )}
 
                 {isWorldBloomEvent && worldLinkConfirmedUnavailable && !isLoading && (
-                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                    <Banner tone="warning" className="mb-6">
                         {t("page.realtimeRanking.board.worldlinkPendingNotice")}
-                    </div>
+                    </Banner>
                 )}
 
                 {error && (
-                    <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
-                        <p className="font-bold">{t("page.realtimeRanking.loadFailedTitle")}</p>
-                        <p>{error}</p>
-                    </div>
+                    <ErrorState
+                        className="mb-6"
+                        title={t("page.realtimeRanking.loadFailedTitle")}
+                        message={error}
+                        retryLabel={t("common.action.retry")}
+                        onRetry={() => void loadSnapshot(region, true)}
+                    />
                 )}
 
                 {isLoading && !activeSnapshot ? (
-                    <div className="ios-glass-card rounded-2xl p-10 text-center text-slate-500">
-                        {t("page.realtimeRanking.loading")}
-                    </div>
+                    <LoadingState label={t("page.realtimeRanking.loading")} />
                 ) : (
                     <RankingList
                         entries={rankingEntries}
@@ -1071,108 +1059,81 @@ function RealtimeRankingContent() {
                         staleRanks={staleRanks}
                     />
                 )}
-            </div>
+            </PageContainer>
 
             {/* Quick Jump Sidebar — desktop: right side, mobile: bottom bar */}
             {activeSnapshot && (
                 <>
                     {/* Desktop floating sidebar */}
                     <motion.div
-                        initial={{ opacity: 0, x: 50 }}
+                        initial={reduceMotion ? false : { opacity: 0, x: 24 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ type: "spring", stiffness: 260, damping: 24, delay: 0.15 }}
-                        className="hidden md:flex fixed right-2 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-1.5 rounded-2xl ios-glass-card border border-miku/20 p-2 shadow-lg dark:border-miku/30"
+                        transition={md3SpatialDefault}
+                        className="hidden md:flex fixed right-2 top-1/2 -translate-y-1/2 z-30 flex-col items-center gap-1.5 rounded-md3-xl bg-surface-container p-2 shadow-elev-2"
                     >
-                        {QUICK_JUMP_RANKS.map((rank, i) => (
-                            <motion.button
+                        {QUICK_JUMP_RANKS.map((rank) => (
+                            <Button
                                 key={rank}
-                                initial={{ opacity: 0, x: 20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ type: "spring", stiffness: 300, damping: 22, delay: 0.25 + i * 0.06 }}
-                                whileHover={{ scale: 1.08 }}
-                                whileTap={{ scale: 0.92 }}
+                                size="xs"
+                                variant={activeRank === rank ? "filled" : "tonal"}
+                                className="w-14 px-1 tabular-nums"
                                 onClick={() => {
                                     setActiveRank(rank);
                                     scrollToRank(rank);
                                 }}
-                                className={`w-14 rounded-xl px-1.5 py-1.5 text-[11px] font-black transition-all ${
-                                    activeRank === rank
-                                        ? "border border-miku bg-miku text-white shadow-md shadow-miku/30"
-                                        : "border border-miku/20 bg-miku/5 text-miku hover:border-miku/50 hover:bg-miku hover:text-white dark:border-miku/30 dark:bg-miku/10 dark:hover:bg-miku dark:hover:text-white"
-                                }`}
                             >
                                 T{rank}
-                            </motion.button>
+                            </Button>
                         ))}
 
-                        <div className="my-0.5 h-px w-8 bg-miku/20 dark:bg-miku/30" />
+                        <Divider className="my-0.5 w-8" />
 
-                        <motion.div
-                            key={countdown}
-                            initial={{ scale: 1.15, opacity: 0.6 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            transition={{ type: "spring", stiffness: 400, damping: 20 }}
-                            className={`text-sm font-black tabular-nums transition-colors ${hasRecentUpdate ? "text-miku" : "text-miku/60 dark:text-miku/50"}`}
-                        >
-                            {isRefreshing ? (
-                                <motion.span
-                                    animate={{ opacity: [1, 0.4, 1] }}
-                                    transition={{ duration: 0.8, repeat: Infinity }}
-                                >
-                                    ...
-                                </motion.span>
-                            ) : (
-                                `${countdown}s`
-                            )}
-                        </motion.div>
+                        <div className={`type-label-l tabular-nums transition-colors ${hasRecentUpdate ? "text-primary" : "text-on-surface-variant"}`} aria-live="polite">
+                            {isRefreshing ? "..." : `${countdown}s`}
+                        </div>
 
-                        <motion.button
-                            whileHover={{ scale: 1.08 }}
-                            whileTap={{ scale: 0.9 }}
+                        <IconButton
+                            icon={mdRefresh}
+                            label={t("page.realtimeRanking.refresh")}
+                            variant="filled"
                             onClick={() => void loadSnapshot(region, true)}
-                            className="w-14 rounded-xl bg-miku px-1.5 py-1.5 text-[11px] font-black text-white shadow-md shadow-miku/25 transition-colors hover:bg-miku-dark dark:shadow-miku/15"
-                        >
-                                {t("page.realtimeRanking.refresh")}
-                        </motion.button>
+                        />
                     </motion.div>
 
                     {/* Mobile bottom bar */}
                     <motion.div
-                        initial={{ opacity: 0, y: 30 }}
+                        initial={reduceMotion ? false : { opacity: 0, y: 24 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ type: "spring", stiffness: 280, damping: 24, delay: 0.1 }}
-                        className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between gap-2 border-t border-miku/20 px-4 py-2.5 ios-glass-card dark:border-miku/30"
+                        transition={md3SpatialDefault}
+                        className="md:hidden fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between gap-2 bg-surface-container px-4 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-elev-2"
                     >
                         <div className="flex items-center gap-1.5">
                             {QUICK_JUMP_RANKS.map((rank) => (
-                                <motion.button
+                                <Button
                                     key={rank}
-                                    whileTap={{ scale: 0.9 }}
+                                    size="xs"
+                                    variant={activeRank === rank ? "filled" : "tonal"}
+                                    className="px-2.5 tabular-nums"
                                     onClick={() => {
                                         setActiveRank(rank);
                                         scrollToRank(rank);
                                     }}
-                                    className={`rounded-lg px-2.5 py-1.5 text-[11px] font-black transition-all ${
-                                        activeRank === rank
-                                            ? "border border-miku bg-miku text-white"
-                                            : "border border-miku/20 bg-miku/5 text-miku active:bg-miku active:text-white dark:border-miku/30 dark:bg-miku/10"
-                                    }`}
                                 >
                                     T{rank}
-                                </motion.button>
+                                </Button>
                             ))}
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className={`text-xs font-black tabular-nums ${hasRecentUpdate ? "text-miku" : "text-miku/60 dark:text-miku/50"}`}>
+                            <span className={`type-label-l tabular-nums transition-colors ${hasRecentUpdate ? "text-primary" : "text-on-surface-variant"}`}>
                                 {isRefreshing ? "..." : `${countdown}s`}
                             </span>
-                            <motion.button
-                                whileTap={{ scale: 0.9 }}
+                            <IconButton
+                                icon={mdRefresh}
+                                label={t("page.realtimeRanking.refresh")}
+                                variant="filled"
+                                size="xs"
                                 onClick={() => void loadSnapshot(region, true)}
-                                className="rounded-lg bg-miku px-3 py-1.5 text-[11px] font-black text-white shadow-sm shadow-miku/25 transition-colors active:bg-miku-dark"
-                            >
-                            {t("page.realtimeRanking.refresh")}
-                            </motion.button>
+                            />
                         </div>
                     </motion.div>
                 </>
@@ -1182,34 +1143,31 @@ function RealtimeRankingContent() {
             <AnimatePresence>
                 {trackedUserId && lastTrackedData && (
                     <motion.div
-                        initial={{ opacity: 0, y: 50, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={{ opacity: 0, y: 40, scale: 0.95 }}
-                        transition={{ type: "spring", stiffness: 300, damping: 26 }}
+                        initial={reduceMotion ? false : { opacity: 0, y: 32 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 24 }}
+                        transition={md3SpatialDefault}
                         className="fixed bottom-18 md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-[92%] sm:w-auto sm:min-w-[480px] max-w-[640px]"
                     >
-                        <div className="ios-glass-panel rounded-2xl p-4 border border-miku/30 dark:border-miku/20 shadow-2xl flex flex-col gap-3 relative overflow-hidden">
-                            {/* Glow element */}
-                            <div className="absolute -inset-px bg-gradient-to-r from-miku/10 via-sky-500/10 to-miku/10 opacity-30 pointer-events-none rounded-2xl" />
-                            
-                            <div className="flex items-center justify-between gap-3 relative z-10">
+                        <Surface tone="high" radius="xl" elevation={3} className="flex flex-col gap-3 p-4">
+                            <div className="flex items-center justify-between gap-3">
                                 {/* Player Info Left */}
                                 <div className="flex items-center gap-2.5 min-w-0">
-                                    <div className="shrink-0 flex items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 px-1.5 py-0.5 text-[10px] font-black leading-none">
+                                    <div className="shrink-0 rounded-md3-sm bg-surface-container-highest px-2 py-1 type-label-m tabular-nums text-on-surface-variant">
                                         #{lastTrackedData.rank}
                                     </div>
                                     <div className="min-w-0">
                                         <div className="flex items-center gap-1.5">
-                                            <span className="text-[10px] font-bold text-miku uppercase px-1.5 py-0.5 rounded-full bg-miku/10 border border-miku/20">
+                                            <span className="rounded-md3-sm bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
                                                 {t("page.realtimeRanking.trackingTarget")}
                                             </span>
                                             {!trackedEntry && (
-                                                <span className="text-[10px] font-bold text-amber-500 uppercase px-1.5 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 animate-pulse-fast">
+                                                <span className="rounded-md3-sm bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container animate-pulse-fast">
                                                     {t("page.realtimeRanking.trackingSync")}
                                                 </span>
                                             )}
                                         </div>
-                                        <h4 className="font-bold text-sm text-primary-text truncate mt-0.5">
+                                        <h4 className="mt-0.5 truncate type-title-s text-on-surface">
                                             {lastTrackedData.displayName}
                                         </h4>
                                     </div>
@@ -1217,11 +1175,11 @@ function RealtimeRankingContent() {
 
                                 {/* Score & Diff Right */}
                                 <div className="text-right shrink-0">
-                                    <div className="text-sm font-black text-primary-text">
-                                        {formatNumber(lastTrackedData.score)}<span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 ml-0.5">P</span>
+                                    <div className="type-title-s tabular-nums text-on-surface">
+                                        {formatNumber(lastTrackedData.score)}<span className="ml-0.5 type-label-s text-on-surface-variant">P</span>
                                     </div>
                                     {lastTrackedData.lastScoreDelta != null && lastTrackedData.lastScoreDelta !== 0 && (
-                                        <div className="text-[10px] font-black text-emerald-500">
+                                        <div className="type-label-m tabular-nums text-emerald-600">
                                             +{formatNumber(lastTrackedData.lastScoreDelta)}
                                         </div>
                                     )}
@@ -1229,7 +1187,7 @@ function RealtimeRankingContent() {
                             </div>
 
                             {/* Extra stats: Churn/Speed & Actions */}
-                            <div className="flex items-center justify-between border-t border-slate-200/40 dark:border-slate-800/40 pt-2.5 gap-4 relative z-10">
+                            <div className="flex items-center justify-between gap-4 border-t border-outline-variant pt-2.5">
                                 {/* Speed info if churn data is loaded */}
                                 <div className="flex items-center gap-2 min-w-0">
                                     {(() => {
@@ -1237,20 +1195,20 @@ function RealtimeRankingContent() {
                                         const churn = activeChurnData.get(key);
                                         if (churn) {
                                             return (
-                                                <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                                                    <span className="shrink-0 inline-flex items-center gap-1 rounded bg-miku/10 px-1 py-0.5 font-bold text-miku">
+                                                <div className="flex items-center gap-2 type-label-m text-on-surface-variant">
+                                                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-on-primary-container">
                                                         <span>1H:</span>
                                                         <span>{churn.growth_1h ? `${Math.round(churn.growth_1h / 1000)}k` : "0k"}</span>
                                                     </span>
-                                                    <span className="shrink-0 inline-flex items-center gap-1 rounded bg-slate-100 dark:bg-slate-800 px-1 py-0.5 font-bold">
+                                                    <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5">
                                                         <span>48H:</span>
-                                                        <span className="text-slate-700 dark:text-slate-300">{churn.churn_48h}</span>
+                                                        <span className="text-on-surface">{churn.churn_48h}</span>
                                                     </span>
                                                 </div>
                                             );
                                         }
                                         return (
-                                            <p className="text-[10px] text-slate-400 truncate">
+                                            <p className="truncate type-body-s text-on-surface-variant">
                                                 {t("page.realtimeRanking.trackingHelp")}
                                             </p>
                                         );
@@ -1260,22 +1218,16 @@ function RealtimeRankingContent() {
                                 {/* Action buttons */}
                                 <div className="flex items-center gap-1.5 shrink-0">
                                     {trackedEntry && (
-                                        <button
-                                            onClick={() => scrollToRank(lastTrackedData.rank)}
-                                            className="ios-glass-btn text-miku border border-miku/20 hover:bg-miku/10 px-2.5 py-1 text-xs font-bold rounded-lg transition-all"
-                                        >
+                                        <Button size="xs" variant="tonal" onClick={() => scrollToRank(lastTrackedData.rank)}>
                                             {t("page.realtimeRanking.trackingFocus")}
-                                        </button>
+                                        </Button>
                                     )}
-                                    <button
-                                        onClick={() => handleTrackToggle(lastTrackedData.userId)}
-                                        className="ios-glass-btn text-slate-500 dark:text-slate-400 hover:text-rose-500 hover:border-rose-500/20 px-2.5 py-1 text-xs font-bold rounded-lg transition-all"
-                                    >
+                                    <Button size="xs" variant="text" color="error" onClick={() => handleTrackToggle(lastTrackedData.userId)}>
                                         {t("page.realtimeRanking.untrackPlayer")}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
-                        </div>
+                        </Surface>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -1298,7 +1250,7 @@ function RealtimeRankingContent() {
                 <div className="space-y-6 text-center">
                     {/* Celebratory header graphic or animation */}
                     <div className="flex justify-center relative py-4">
-                        <div className="absolute inset-0 bg-gradient-to-r from-miku/20 via-sky-400/20 to-luka/20 blur-xl rounded-full" />
+                        <div className="absolute inset-0 rounded-full bg-primary-container opacity-60 blur-xl" />
                         <motion.div
                             animate={{
                                 scale: [1, 1.15, 1],
@@ -1315,16 +1267,16 @@ function RealtimeRankingContent() {
                         </motion.div>
                     </div>
 
-                    <h3 className="text-2xl font-black bg-gradient-to-r from-miku via-sky-500 to-luka bg-clip-text text-transparent">
+                    <h3 className="type-headline-s text-primary">
                         {t("page.realtimeRanking.celebrationTitle")}
                     </h3>
 
-                    <p className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed text-left px-2">
+                    <p className="text-on-surface-variant text-sm leading-relaxed text-left px-2">
                         {t("page.realtimeRanking.celebrationTextPart1")}
                         <Link
                             href="/patreon"
                             target="_blank"
-                            className="text-miku font-black underline decoration-dotted hover:opacity-80 transition-opacity mx-1"
+                            className="text-primary font-black underline decoration-dotted hover:opacity-80 transition-opacity mx-1"
                         >
                             {t("page.realtimeRanking.celebrationTextLink")}
                         </Link>
@@ -1332,39 +1284,39 @@ function RealtimeRankingContent() {
                     </p>
 
                     {/* QR Code scans displayed directly in the modal per user request! */}
-                    <div className="p-4 ios-glass-panel rounded-2xl border border-slate-200/50 dark:border-slate-800/50 space-y-4">
-                        <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                    <div className="space-y-4 rounded-md3-lg bg-surface-container-high p-4">
+                        <p className="type-label-l text-on-surface-variant">
                             {t("page.realtimeRanking.celebrationQrScanHint")}
                         </p>
                         <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
                             {/* Alipay */}
                             <div className="flex flex-col items-center gap-2">
-                                <div className="w-32 h-32 rounded-xl overflow-hidden shadow-md border border-slate-200/70 relative bg-white">
+                                <div className="w-32 h-32 rounded-md3-md overflow-hidden shadow-elev-1 border border-outline-variant relative bg-surface-container-lowest">
                                     <img
                                         src="/patreon/alipay.png"
                                         alt="Alipay QR Code"
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-500">{t("page.realtimeRanking.celebrationAlipay")}</span>
+                                <span className="type-label-s text-on-surface-variant">{t("page.realtimeRanking.celebrationAlipay")}</span>
                             </div>
 
                             {/* WeChat */}
                             <div className="flex flex-col items-center gap-2">
-                                <div className="w-32 h-32 rounded-xl overflow-hidden shadow-md border border-slate-200/70 relative bg-white">
+                                <div className="w-32 h-32 rounded-md3-md overflow-hidden shadow-elev-1 border border-outline-variant relative bg-surface-container-lowest">
                                     <img
                                         src="/patreon/wechat.png"
                                         alt="WeChat QR Code"
                                         className="w-full h-full object-cover"
                                     />
                                 </div>
-                                <span className="text-[10px] font-bold text-slate-500">{t("page.realtimeRanking.celebrationWechat")}</span>
+                                <span className="type-label-s text-on-surface-variant">{t("page.realtimeRanking.celebrationWechat")}</span>
                             </div>
                         </div>
 
                         {/* Ko-fi Link */}
-                        <div className="flex flex-col items-center gap-1.5 pt-3 border-t border-slate-200/40 dark:border-slate-800/40">
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                        <div className="flex flex-col items-center gap-1.5 pt-3 border-t border-outline-variant">
+                            <span className="type-label-m text-on-surface-variant">
                                 {t("page.realtimeRanking.celebrationKofi")}
                             </span>
                             <ExternalLink
@@ -1385,7 +1337,7 @@ function RealtimeRankingContent() {
                         <Link
                             href="/patreon"
                             target="_blank"
-                            className="block w-full py-3 px-6 text-sm font-extrabold text-white text-center bg-gradient-to-r from-miku via-sky-500 to-luka hover:opacity-90 active:scale-[0.98] shadow-lg shadow-miku/20 rounded-2xl transition-all"
+                            className={buttonClassName({ variant: "filled", size: "m", fullWidth: true })}
                         >
                             {t("page.realtimeRanking.celebrationButton")}
                         </Link>
@@ -1400,7 +1352,7 @@ export default function RealtimeRankingClient() {
     const { t } = useI18n();
 
     return (
-        <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.realtimeRanking.loading")}</div>}>
+        <Suspense fallback={<LoadingState label={t("page.realtimeRanking.loading")} />}>
             <RealtimeRankingContent />
         </Suspense>
     );

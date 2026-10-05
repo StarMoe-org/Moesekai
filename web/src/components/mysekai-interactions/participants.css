@@ -11,13 +11,13 @@
     flex-wrap: wrap;
     margin-top: 24px;
     padding-top: 18px;
-    border-top: 1px solid var(--border-soft);
+    border-top: 1px solid var(--md-sys-color-outline-variant);
 }
 
 .interaction-page-range {
     font-size: 0.76rem;
     font-variant-numeric: tabular-nums;
-    color: var(--text-muted);
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 .interaction-page-controls,
@@ -35,7 +35,7 @@
     padding: 8px;
     border: 1px solid transparent;
     border-radius: 12px;
-    color: var(--text-body);
+    color: var(--md-sys-color-on-surface);
     font-size: 0.81rem;
     background: transparent;
     font-variant-numeric: tabular-nums;
@@ -44,15 +44,15 @@
 }
 
 .interaction-page-controls button:hover:not(:disabled) {
-    background: var(--surface-soft);
-    border-color: var(--border-soft);
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 .interaction-page-controls button[aria-current="page"] {
-    background: var(--accent-soft);
-    border-color: var(--color-miku);
+    background: var(--md-sys-color-secondary-container);
+    border-color: var(--md-sys-color-primary);
     font-weight: 750;
-    color: var(--text-strong);
+    color: var(--md-sys-color-on-surface);
 }
 
 .interaction-page-controls button:disabled {
@@ -64,7 +64,7 @@
     display: grid;
     place-items: center;
     min-width: 16px;
-    color: var(--text-muted);
+    color: var(--md-sys-color-on-surface-variant);
 }
 
 @media (max-width: 600px) {

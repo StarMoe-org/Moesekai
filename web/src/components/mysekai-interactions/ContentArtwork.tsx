@@ -32,13 +32,13 @@ export function FixtureArtwork({
                     height={size * 2}
                     unoptimized
                     loading="lazy"
-                    className="object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+                    className="object-contain drop-shadow-sm transition-transform"
                     style={{ width: size, height: size }}
                     onError={() => setFailed(src)}
                 />
             ) : (
                 <span
-                    className="rounded-lg border border-dashed border-slate-300 dark:border-slate-600 grid place-items-center text-[10px] text-slate-400"
+                    className="grid place-items-center rounded-md3-sm border border-dashed border-outline-variant type-label-s text-on-surface-variant"
                     style={{ width: size, height: size }}
                 >
                     {fixture.name.slice(0, 2)}
@@ -77,7 +77,7 @@ export default function ContentArtwork({
     if (large) {
         return (
             <div
-                className="w-full min-h-[130px] rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-900/60 p-4 flex flex-wrap items-center justify-center gap-4 relative border border-slate-200/60 dark:border-slate-800/60"
+                className="relative flex min-h-[130px] w-full flex-wrap items-center justify-center gap-4 rounded-md3-lg bg-surface-container p-4"
                 aria-hidden={character || selectFixture ? undefined : true}
             >
                 {units.length > 0 && (
@@ -87,10 +87,10 @@ export default function ContentArtwork({
                             const name = person?.name ?? `SD ${unit}`;
                             const portrait = (
                                 <div className="flex flex-col items-center gap-1 group/p">
-                                    <span className="rounded-full ring-2 ring-white dark:ring-slate-700 bg-white dark:bg-slate-800 shadow-sm overflow-hidden p-0.5 flex items-center justify-center transition-transform group-hover/p:scale-105">
+                                    <span className="rounded-full ring-2 ring-surface-container-lowest bg-surface-container-lowest shadow-elev-1 overflow-hidden p-0.5 flex items-center justify-center transition-shadow group-hover/p:shadow-elev-2">
                                         <SdPortrait snapshot={snapshot} unit={unit} name={name} size={portraitSize} />
                                     </span>
-                                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-[80px] truncate text-center">
+                                    <span className="type-label-m text-on-surface-variant max-w-[80px] truncate text-center">
                                         {name}
                                     </span>
                                 </div>
@@ -101,7 +101,7 @@ export default function ContentArtwork({
                                     type="button"
                                     title={name}
                                     onClick={() => character(unit)}
-                                    className="cursor-pointer"
+                                    className="state-layer focus-ring cursor-pointer rounded-md3-md p-1"
                                 >
                                     {portrait}
                                 </button>
@@ -113,7 +113,7 @@ export default function ContentArtwork({
                 )}
 
                 {units.length > 0 && fixtures.length > 0 && (
-                    <span className="text-slate-300 dark:text-slate-600 font-bold text-sm select-none">
+                    <span className="select-none type-title-s text-outline">
                         +
                     </span>
                 )}
@@ -124,7 +124,7 @@ export default function ContentArtwork({
                             const item = (
                                 <div className="flex flex-col items-center gap-1 group/f">
                                     <FixtureArtwork fixture={f} snapshot={snapshot} size={fixtureSize} />
-                                    <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 max-w-[80px] truncate text-center">
+                                    <span className="type-label-m text-on-surface-variant max-w-[80px] truncate text-center">
                                         {f.name}
                                     </span>
                                 </div>
@@ -134,7 +134,7 @@ export default function ContentArtwork({
                                     key={f.id}
                                     type="button"
                                     onClick={() => selectFixture(f.id)}
-                                    className="cursor-pointer"
+                                    className="state-layer focus-ring cursor-pointer rounded-md3-md p-1"
                                     title={f.name}
                                 >
                                     {item}
@@ -151,7 +151,7 @@ export default function ContentArtwork({
 
     return (
         <div
-            className="w-full aspect-[16/10] sm:aspect-[4/3] rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800/40 dark:to-slate-900/60 p-2.5 flex items-center justify-center gap-2 relative overflow-hidden border border-slate-100 dark:border-slate-800/80"
+            className="relative flex aspect-[16/10] w-full items-center justify-center gap-2 overflow-hidden rounded-md3-md bg-surface-container p-2.5 sm:aspect-[4/3]"
             aria-hidden={true}
         >
             {/* Character SD portraits stacked */}
@@ -163,7 +163,7 @@ export default function ContentArtwork({
                         return (
                             <span
                                 key={unit}
-                                className="rounded-full ring-2 ring-white dark:ring-slate-800 bg-white dark:bg-slate-800 shadow-xs overflow-hidden flex items-center justify-center shrink-0 transition-transform group-hover:scale-105"
+                                className="rounded-full ring-2 ring-surface-container-lowest bg-surface-container-lowest shadow-elev-1 overflow-hidden flex items-center justify-center shrink-0 transition-transform"
                                 title={name}
                             >
                                 <SdPortrait snapshot={snapshot} unit={unit} name={name} size={portraitSize} />
@@ -175,7 +175,7 @@ export default function ContentArtwork({
 
             {/* Subtle separator if both exist */}
             {units.length > 0 && fixtures.length > 0 && (
-                <span className="text-slate-300 dark:text-slate-600 text-xs font-bold select-none px-0.5">
+                <span className="select-none px-0.5 type-label-l text-outline">
                     ×
                 </span>
             )}
