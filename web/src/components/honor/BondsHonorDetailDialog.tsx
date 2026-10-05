@@ -79,15 +79,15 @@ export default function BondsHonorDetailDialog({
 
                     {bondsHonor.levels.length > 0 && (
                         <div>
-                            <h3 className="mb-3 text-sm font-bold text-slate-700">{t("common.field.levelDetails")}</h3>
+                            <h3 className="mb-3 type-title-s text-on-surface">{t("common.field.levelDetails")}</h3>
                             <div className="space-y-3">
                                 {bondsHonor.levels.map(level => (
-                                    <div key={level.level} className="rounded-xl bg-slate-50 p-4 space-y-2">
+                                    <div key={level.level} className="space-y-2 rounded-md3-md bg-surface-container p-4">
                                         <div className="flex items-center justify-between">
-                                            <span className="text-xs font-bold text-miku">Lv.{level.level}</span>
+                                            <span className="type-label-l text-primary">Lv.{level.level}</span>
                                         </div>
                                         {level.description && (
-                                            <p className="text-sm text-slate-600">{level.description}</p>
+                                            <p className="type-body-m text-on-surface-variant">{level.description}</p>
                                         )}
                                     </div>
                                 ))}
@@ -97,15 +97,15 @@ export default function BondsHonorDetailDialog({
 
                     {bondsHonorWords.filter(w => w.bondsGroupId === bondsHonor.bondsGroupId).length > 0 && (
                         <div>
-                            <h3 className="mb-3 text-sm font-bold text-slate-700">{t("common.field.availableWords")}</h3>
+                            <h3 className="mb-3 type-title-s text-on-surface">{t("common.field.availableWords")}</h3>
                             <div className="space-y-2">
                                 {bondsHonorWords
                                     .filter(w => w.bondsGroupId === bondsHonor.bondsGroupId)
                                     .map(word => (
-                                        <div key={word.id} className="rounded-xl bg-slate-50 p-3">
-                                            <p className="text-sm font-medium text-slate-700">{word.name}</p>
+                                        <div key={word.id} className="rounded-md3-md bg-surface-container p-3">
+                                            <p className="type-body-m text-on-surface">{word.name}</p>
                                             {word.description && (
-                                                <p className="mt-1 text-xs text-slate-500">{word.description}</p>
+                                                <p className="mt-1 type-body-s text-on-surface-variant">{word.description}</p>
                                             )}
                                         </div>
                                     ))}
@@ -113,7 +113,7 @@ export default function BondsHonorDetailDialog({
                         </div>
                     )}
 
-                    {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+                    {errorMessage && <p className="type-body-s text-error">{errorMessage}</p>}
                 </div>
             ) : null}
         </Modal>
@@ -122,9 +122,9 @@ export default function BondsHonorDetailDialog({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
     return (
-        <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
-            <span className="text-sm font-bold text-slate-600">{label}</span>
-            <span className="text-sm text-slate-800 text-right max-w-[60%]">{value}</span>
+        <div className="flex items-center justify-between gap-4 border-b border-outline-variant py-2.5 last:border-0">
+            <span className="type-label-l text-on-surface-variant">{label}</span>
+            <span className="max-w-[60%] text-right type-body-m text-on-surface">{value}</span>
         </div>
     );
 }

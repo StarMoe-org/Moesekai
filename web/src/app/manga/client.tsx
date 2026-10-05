@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Image from "next/image";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import BaseFilters from "@/components/common/BaseFilters";
 import { useI18n } from "@/contexts/I18nContext";
@@ -10,6 +9,7 @@ import { IMangaItem, IMangaData } from "@/types/manga";
 import { getMangaImageUrl } from "@/lib/assets";
 import { fetchMangaData } from "@/lib/fetch";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { Card, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 
 // ==================== Component ====================
 
@@ -103,105 +103,79 @@ function MangaContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 ios-glass-card border-miku/30 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.manga.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.manga.title")} <span className="text-miku">{t("page.manga.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto font-light">
-                    {t("page.manga.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.manga.badge")}
+                title={t("page.manga.title")}
+                highlight={t("page.manga.titleHighlight")}
+                description={t("page.manga.description")}
+            />
 
             {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 ios-glass-card border-red-500/20 bg-red-500/5 text-red-500 rounded-xl text-sm">
-                    <p className="font-bold">{t("page.manga.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={t("page.manga.loadFailed")} message={error} retryLabel={t("common.action.retry")} />
             )}
 
             {/* Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : (
                     <>
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
                             {displayedMangas.map((manga) => (
-                                <Link
+                                <Card
+                                    variant="elevated"
                                     key={manga.id}
                                     href={`/manga/${manga.id}`}
                                     data-shortcut-item="true"
                                     className="group"
                                 >
-                                    <div className="ios-glass-card ios-glass-card-interactive rounded-2xl overflow-hidden group">
-                                        {/* Thumbnail: crop top portion of vertical manga */}
-                                        <div className="relative aspect-square overflow-hidden bg-slate-100/50 dark:bg-slate-900/50">
-                                            <Image
-                                                src={getMangaImageUrl(manga.id)}
-                                                alt={manga.title}
-                                                fill
-                                                className="object-cover object-top group-hover:scale-105 transition-transform duration-500"
-                                                unoptimized
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+                                    {/* Thumbnail: crop top portion of vertical manga */}
+                                    <div className="relative aspect-square overflow-hidden bg-surface-container">
+                                        <Image
+                                            src={getMangaImageUrl(manga.id)}
+                                            alt={manga.title}
+                                            fill
+                                            className="object-cover object-top"
+                                            unoptimized
+                                        />
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="line-clamp-1 type-title-s text-on-surface">
+                                            {manga.title}
                                         </div>
-                                        <div className="p-4 border-t border-slate-200/20 dark:border-slate-800/20">
-                                            <div className="text-sm font-bold text-primary-text line-clamp-1 group-hover:text-miku transition-colors duration-300">
-                                                {manga.title}
-                                            </div>
-                                            <div className="flex items-center justify-between mt-3 text-[10px] text-slate-400 font-medium">
-                                                <span className="text-miku bg-miku/10 dark:bg-miku/20 px-2 py-0.5 rounded-full border border-miku/20">
-                                                    {t("page.manga.episodeLabel", { id: manga.id })}
-                                                </span>
-                                                <span>
-                                                    {formatDate(manga.date * 1000, {
-                                                        year: "numeric",
-                                                        month: "2-digit",
-                                                        day: "2-digit",
-                                                    })}
-                                                </span>
-                                            </div>
+                                        <div className="mt-3 flex items-center justify-between type-label-s text-on-surface-variant">
+                                            <span className="rounded-md3-sm bg-secondary-container px-2 py-0.5 text-on-secondary-container">
+                                                {t("page.manga.episodeLabel", { id: manga.id })}
+                                            </span>
+                                            <span>
+                                                {formatDate(manga.date * 1000, {
+                                                    year: "numeric",
+                                                    month: "2-digit",
+                                                    day: "2-digit",
+                                                })}
+                                            </span>
                                         </div>
                                     </div>
-                                </Link>
+                                </Card>
                             ))}
                         </div>
 
                         {/* Load More */}
-                        {displayedMangas.length < filteredMangas.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="ios-glass-btn ios-glass-btn-primary px-8 py-3 font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
-                                >
-                                    {t("page.manga.loadMore")}
-                                    <span className="text-xs font-semibold opacity-75 bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                                        {displayedMangas.length} / {filteredMangas.length}
-                                    </span>
-                                </button>
-                            </div>
-                        )}
-
-                        {/* All loaded */}
-                        {displayedMangas.length > 0 && displayedMangas.length >= filteredMangas.length && (
-                            <div className="mt-8 text-center text-slate-400 text-sm font-medium">
-                                {t("page.manga.allLoaded", { count: filteredMangas.length })}
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.manga.loadMore")}
+                            shown={displayedMangas.length}
+                            total={filteredMangas.length}
+                            onLoadMore={loadMore}
+                            allLoadedLabel={t("page.manga.allLoaded", { count: filteredMangas.length })}
+                        />
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -210,7 +184,7 @@ export default function MangaClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.manga.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState className="min-h-[50vh]" label={t("page.manga.loadingFallback")} />}>
                 <MangaContent />
             </Suspense>
         </MainLayout>

@@ -12,6 +12,7 @@ import { TranslatedText } from "@/components/common/TranslatedText";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { Card, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 import { oldComicTips } from "@/lib/oldComicTips";
 
 interface ITipInfo {
@@ -119,7 +120,7 @@ function ComicContent() {
 
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             <ImagePreviewModal
                 isOpen={!!selectedComic}
                 onClose={() => setSelectedComic(null)}
@@ -129,111 +130,77 @@ function ComicContent() {
                 fileName={selectedComic ? `comic_${selectedComic.id}.png` : "comic.png"}
             />
 
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 ios-glass-card border-miku/30 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.comic.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.comic.title")} <span className="text-miku">{t("page.comic.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto font-light">
-                    {t("page.comic.description")}
-                </p>
-            </div>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.comic.badge")}
+                title={t("page.comic.title")}
+                highlight={t("page.comic.titleHighlight")}
+                description={t("page.comic.description")}
+            />
 
             {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 ios-glass-card border-red-500/20 bg-red-500/5 text-red-500 rounded-xl text-sm">
-                    <p className="font-bold">{t("page.comic.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={t("page.comic.loadFailed")} message={error} retryLabel={t("common.action.retry")} />
             )}
 
             {/* Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : (
                     <>
                         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                             {displayedComics.map(comic => (
-                                <div
+                                <Card
+                                    variant="elevated"
                                     key={comic.id}
                                     onClick={() => setSelectedComic(comic)}
-                                    onKeyDown={(event) => {
-                                        if (event.key === "Enter" || event.key === " ") {
-                                            event.preventDefault();
-                                            setSelectedComic(comic);
-                                        }
-                                    }}
                                     data-shortcut-item="true"
-                                    tabIndex={0}
-                                    role="button"
                                     className="group cursor-zoom-in"
                                 >
-                                    <div className="ios-glass-card ios-glass-card-interactive rounded-2xl overflow-hidden group">
-                                        <div className="relative aspect-[4/3] bg-slate-100/50 dark:bg-slate-900/50">
-                                            <Image
-                                                src={getComicUrl(comic.assetbundleName!, assetSource)}
-                                                alt={comic.title}
-                                                fill
-                                                className="object-contain group-hover:scale-105 transition-transform duration-500"
-                                                unoptimized
+                                    <div className="relative aspect-[4/3] bg-surface-container">
+                                        <Image
+                                            src={getComicUrl(comic.assetbundleName!, assetSource)}
+                                            alt={comic.title}
+                                            fill
+                                            className="object-contain"
+                                            unoptimized
+                                        />
+                                    </div>
+                                    <div className="p-4">
+                                        <div className="line-clamp-1 type-title-s text-on-surface">
+                                            <TranslatedText
+                                                original={comic.title}
+                                                category="comic"
+                                                field="title"
+                                                originalClassName="block truncate"
+                                                translationClassName="mt-0.5 block truncate type-body-s text-on-surface-variant"
                                             />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
                                         </div>
-                                        <div className="p-4 border-t border-slate-200/20 dark:border-slate-800/20">
-                                            <div className="text-sm font-bold text-primary-text line-clamp-1 group-hover:text-miku transition-colors duration-300">
-                                                <TranslatedText
-                                                    original={comic.title}
-                                                    category="comic"
-                                                    field="title"
-                                                    originalClassName="block truncate"
-                                                    translationClassName="text-xs font-medium text-slate-400 dark:text-slate-500 block truncate mt-0.5"
-                                                />
-                                            </div>
-                                            <div className="flex items-center justify-between mt-3">
-                                                <span className="text-[10px] font-bold text-miku bg-miku/10 dark:bg-miku/20 px-2.5 py-0.5 rounded-full border border-miku/20">#{comic.id}</span>
-                                                {comic.fromUserRank !== undefined && (
-                                                    <span className="text-[10px] text-slate-400 font-medium">Rank {comic.fromUserRank}</span>
-                                                )}
-                                            </div>
+                                        <div className="mt-3 flex items-center justify-between">
+                                            <span className="rounded-md3-sm bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">#{comic.id}</span>
+                                            {comic.fromUserRank !== undefined && (
+                                                <span className="type-label-s text-on-surface-variant">Rank {comic.fromUserRank}</span>
+                                            )}
                                         </div>
                                     </div>
-                                </div>
+                                </Card>
                             ))}
                         </div>
 
                         {/* Load More */}
-                        {displayedComics.length < filteredComics.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="ios-glass-btn ios-glass-btn-primary px-8 py-3 font-bold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center gap-2"
-                                >
-                                    {t("page.comic.loadMore")}
-                                    <span className="text-xs font-semibold opacity-75 bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded-full">
-                                        {displayedComics.length} / {filteredComics.length}
-                                    </span>
-                                </button>
-                            </div>
-                        )}
-
-                        {/* All loaded */}
-                        {displayedComics.length > 0 && displayedComics.length >= filteredComics.length && (
-                            <div className="mt-8 text-center text-slate-400 text-sm font-medium">
-                                {t("page.comic.allLoaded", { count: filteredComics.length })}
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.comic.loadMore")}
+                            shown={displayedComics.length}
+                            total={filteredComics.length}
+                            onLoadMore={loadMore}
+                            allLoadedLabel={t("page.comic.allLoaded", { count: filteredComics.length })}
+                        />
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -242,7 +209,7 @@ export default function ComicClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.comic.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState className="min-h-[50vh]" label={t("page.comic.loadingFallback")} />}>
                 <ComicContent />
             </Suspense>
         </MainLayout>

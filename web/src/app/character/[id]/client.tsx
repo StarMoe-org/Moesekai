@@ -29,6 +29,8 @@ import ColorPreview from "@/components/helpers/ColorPreview";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { formatCharacterDisplayName } from "@/lib/character-name";
+import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, SegmentedButton, Surface } from "@/components/md3";
+import { mdArrowBack, mdBadge, mdPerson, mdPlayingCards, mdZoomIn } from "@/components/md3/icons";
 
 // Derive unit field → icon filename from centralized maps
 const UNIT_FIELD_ICONS: Record<string, string> = Object.fromEntries(
@@ -115,24 +117,22 @@ export default function CharacterDetailClient() {
     }, [characterDisplayName, setDetailName]);
 
     if (isLoading) {
-        return (
-            <div className="flex h-[50vh] w-full items-center justify-center">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-miku border-t-transparent rounded-full animate-spin" />
-                    <span className="text-slate-500">{t("page.character.loadingInfo")}</span>
-                </div>
-            </div>
-        );
+        return <LoadingState className="min-h-[50vh]" label={t("page.character.loadingInfo")} />;
     }
 
     if (!character) {
         return (
-            <div className="container mx-auto px-4 py-8 text-center">
-                <h1 className="text-2xl font-bold text-slate-800">{t("page.character.notFoundTitle")}</h1>
-                <Link href="/character" className="text-miku hover:underline mt-4 inline-block">
-                    {t("page.character.backToList")}
-                </Link>
-            </div>
+            <PageContainer>
+                <EmptyState
+                    icon={mdPerson}
+                    title={t("page.character.notFoundTitle")}
+                    action={
+                        <Button variant="tonal" icon={mdArrowBack} href="/character">
+                            {t("page.character.backToList")}
+                        </Button>
+                    }
+                />
+            </PageContainer>
         );
     }
 
@@ -147,7 +147,7 @@ export default function CharacterDetailClient() {
     const activeImageLabel = t(`page.character.imageTabs.${activeTab}`);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             <ImagePreviewModal
                 isOpen={imageViewerOpen}
                 onClose={() => setImageViewerOpen(false)}
@@ -160,30 +160,22 @@ export default function CharacterDetailClient() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Character Image */}
                 <div className="lg:col-span-5 xl:col-span-4">
-                    <div className="ios-glass-card rounded-2xl overflow-hidden sticky top-24">
-                        <div className="flex p-1 bg-slate-100/30 dark:bg-slate-900/30 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-800/80 gap-1">
-                            <button
-                                onClick={() => setActiveTab("trim")}
-                                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === "trim" ? "ios-glass-tab-active bg-miku text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/20 dark:hover:bg-slate-800/40"}`}
-                            >
-                                {t("page.character.imageTabs.trim")}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("label_h")}
-                                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === "label_h" ? "ios-glass-tab-active bg-miku text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/20 dark:hover:bg-slate-800/40"}`}
-                            >
-                                {t("page.character.imageTabs.label_h")}
-                            </button>
-                            <button
-                                onClick={() => setActiveTab("label_v")}
-                                className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${activeTab === "label_v" ? "ios-glass-tab-active bg-miku text-white shadow-sm" : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/20 dark:hover:bg-slate-800/40"}`}
-                            >
-                                {t("page.character.imageTabs.label_v")}
-                            </button>
+                    <Surface tone="low" className="sticky top-24 overflow-hidden">
+                        <div className="p-3">
+                            <SegmentedButton
+                                density={-1}
+                                value={activeTab}
+                                onValueChange={setActiveTab}
+                                options={[
+                                    { value: "trim", label: t("page.character.imageTabs.trim") },
+                                    { value: "label_h", label: t("page.character.imageTabs.label_h") },
+                                    { value: "label_v", label: t("page.character.imageTabs.label_v") },
+                                ]}
+                            />
                         </div>
 
                         {/* Image Display */}
-                        <div className="p-4 bg-slate-50 min-h-[400px] flex items-center justify-center relative cursor-zoom-in"
+                        <div className="relative mx-3 flex min-h-[400px] cursor-zoom-in items-center justify-center rounded-md3-lg bg-surface-container p-4"
                             onClick={() => setImageViewerOpen(true)}>
                             {activeTab === "trim" && (
                                 <div className="w-full h-auto relative aspect-[3/4]">
@@ -219,31 +211,25 @@ export default function CharacterDetailClient() {
                                 </div>
                             )}
                         </div>
-                        <div className="p-3 bg-white text-center text-xs text-slate-400 border-t border-slate-100">
+                        <div className="flex items-center justify-center gap-1.5 p-3 type-label-m text-on-surface-variant">
+                            <Icon path={mdZoomIn} size={16} />
                             {t("page.character.clickExpand")}
                         </div>
-                    </div>
+                    </Surface>
                 </div>
 
                 {/* Right Column: Info & Profile */}
-                <div className="lg:col-span-7 xl:col-span-8 space-y-8">
+                <div className="space-y-6 lg:col-span-7 xl:col-span-8">
                     {/* Basic Info */}
-                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                            <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                <span className="w-1 h-6 bg-miku rounded-full"></span>
-                                {t("page.character.basicInfo")}
-                            </h2>
-                        </div>
-                        <div className="p-6">
+                    <SectionCard title={t("page.character.basicInfo")} icon={mdBadge}>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                                 <InfoRow label="ID" value={character.id} />
                                 <InfoRow
                                     label={t("page.character.nameLabel")}
                                     value={
                                         <div className="flex flex-col items-end">
-                                            <span className="text-lg font-bold">{characterDisplayName}</span>
-                                            <span className="text-xs text-slate-500">{character.firstNameRuby} {character.givenNameRuby}</span>
+                                            <span className="type-title-m">{characterDisplayName}</span>
+                                            <span className="type-body-s text-on-surface-variant">{character.firstNameRuby} {character.givenNameRuby}</span>
                                         </div>
                                     }
                                 />
@@ -278,7 +264,7 @@ export default function CharacterDetailClient() {
                                             label={t("page.character.colorLabel")}
                                             value={
                                                 <div className="flex items-center gap-2">
-                                                    <span className="uppercase font-mono text-sm">{unitInfo.colorCode}</span>
+                                                    <span className="uppercase font-mono type-body-m">{unitInfo.colorCode}</span>
                                                     <ColorPreview colorCode={unitInfo.colorCode} size={20} />
                                                 </div>
                                             }
@@ -286,19 +272,12 @@ export default function CharacterDetailClient() {
                                     </>
                                 )}
                             </div>
-                        </div>
-                    </div>
+                    </SectionCard>
 
                     {/* Profile */}
                     {profile && (
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                    <span className="w-1 h-6 bg-miku rounded-full"></span>
-                                    {t("page.character.profileTitle")}
-                                </h2>
-                            </div>
-                            <div className="p-6 space-y-4">
+                        <SectionCard title={t("page.character.profileTitle")} icon={mdPerson}>
+                            <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-y-4 gap-x-8">
                                     <InfoRow label={t("page.character.heightLabel")} value={profile.height} />
                                     <InfoRow label={t("page.character.birthdayLabel")} value={profile.birthday} />
@@ -355,9 +334,9 @@ export default function CharacterDetailClient() {
                                         }
                                     />
                                 </div>
-                                <div className="pt-4 border-t border-slate-100">
-                                    <p className="text-sm font-bold text-slate-500 mb-2">{t("page.character.introductionTitle")}</p>
-                                    <div className="whitespace-pre-line text-slate-700 leading-relaxed bg-slate-50 p-4 rounded-xl">
+                                <div className="border-t border-outline-variant pt-4">
+                                    <p className="mb-2 type-title-s text-on-surface-variant">{t("page.character.introductionTitle")}</p>
+                                    <div className="whitespace-pre-line rounded-md3-md bg-surface-container p-4 type-body-m text-on-surface">
                                         <TranslatedText
                                             original={profile.introduction}
                                             category="characters"
@@ -366,21 +345,19 @@ export default function CharacterDetailClient() {
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                        </SectionCard>
                     )}
 
                     {/* Cards */}
-                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                        <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex items-center justify-between">
-                            <h2 className="font-bold text-lg text-slate-800 flex items-center gap-2">
-                                <span className="w-1 h-6 bg-miku rounded-full"></span>
-                                {t("page.character.relatedCardsTitle")}
-                            </h2>
-                            <span className="text-sm text-slate-500 text-sm bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                    <SectionCard
+                        title={t("page.character.relatedCardsTitle")}
+                        icon={mdPlayingCards}
+                        actions={
+                            <span className="rounded-md3-sm bg-secondary-container px-2 py-0.5 type-label-m text-on-secondary-container">
                                 {t("page.character.relatedCardsCount", { count: cards.length })}
                             </span>
-                        </div>
-                        <div className="p-6">
+                        }
+                    >
                             <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-3">
                                 {cards.map((card) => {
                                     const showTrained = getCardDefaultTrainedStatus(card) || (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday");
@@ -388,7 +365,7 @@ export default function CharacterDetailClient() {
                                         <Link
                                             key={card.id}
                                             href={`/cards/${card.id}`}
-                                            className="block"
+                                            className="focus-ring block rounded-md3-sm"
                                             title={card.prefix}
                                         >
                                             <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
@@ -396,13 +373,12 @@ export default function CharacterDetailClient() {
                                     );
                                 })}
                             </div>
-                        </div>
-                    </div>
+                    </SectionCard>
 
                     <DetailPageAdCard />
                 </div>
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -410,9 +386,9 @@ export default function CharacterDetailClient() {
 function InfoRow({ label, value }: { label: string, value: React.ReactNode }) {
     if (!value) return null;
     return (
-        <div className="flex items-center justify-between text-sm py-1">
-            <span className="font-bold text-slate-500">{label}</span>
-            <span className="text-slate-800 text-right">{value}</span>
+        <div className="flex items-center justify-between gap-4 py-1 type-body-m">
+            <span className="type-label-l text-on-surface-variant">{label}</span>
+            <span className="text-right text-on-surface">{value}</span>
         </div>
     );
 }

@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "@/components/LocalizedLink";
 import React, { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
@@ -31,6 +30,8 @@ import type {
     ResolvedExchangeRelationParent,
     ResolvedExchangeReward,
 } from "@/types/exchange";
+import { Banner, Button, Card, LoadingState, PageContainer, SectionCard } from "@/components/md3";
+import { mdArrowBack, mdImage, mdInfo, mdKeyboardArrowDown, mdKeyboardArrowUp, mdLink, mdRedeem, mdStorefront, mdToll } from "@/components/md3/icons";
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -54,75 +55,67 @@ const SIBLINGS_INITIAL_SHOW = 6;
 
 // ─── small ui helpers ─────────────────────────────────────────────────────────
 
+type BadgeTone = "primary" | "secondary" | "tertiary" | "positive" | "error" | "neutral";
+
+const BADGE_TONE_CLASS: Record<BadgeTone, string> = {
+    primary: "bg-primary-container text-on-primary-container",
+    secondary: "bg-secondary-container text-on-secondary-container",
+    tertiary: "bg-tertiary-container text-on-tertiary-container",
+    positive: "bg-primary-fixed text-on-primary-fixed-variant",
+    error: "bg-error-container text-on-error-container",
+    neutral: "bg-surface-container-highest text-on-surface-variant",
+};
+
 function Badge({
     label,
-    tone = "slate",
+    tone = "neutral",
 }: {
     label: string;
-    tone?: "miku" | "violet" | "amber" | "emerald" | "rose" | "slate";
+    tone?: BadgeTone;
 }) {
-    const toneClasses: Record<string, string> = {
-        miku: "bg-miku/10 text-miku",
-        violet: "bg-violet-500/10 text-violet-600",
-        amber: "bg-amber-500/10 text-amber-700",
-        emerald: "bg-emerald-500/10 text-emerald-700",
-        rose: "bg-rose-500/10 text-rose-600",
-        slate: "bg-slate-100 text-slate-500",
-    };
-
     return (
-        <span className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-bold ${toneClasses[tone]}`}>
+        <span className={`inline-flex items-center rounded-md3-sm px-2.5 py-1 type-label-m ${BADGE_TONE_CLASS[tone]}`}>
             {label}
         </span>
     );
 }
 
-function getStatusTone(status: ExchangeStatus): "emerald" | "amber" | "rose" | "slate" {
+function getStatusTone(status: ExchangeStatus): BadgeTone {
     switch (status) {
-        case "active":   return "emerald";
-        case "upcoming": return "amber";
-        case "ended":    return "rose";
+        case "active":   return "positive";
+        case "upcoming": return "tertiary";
+        case "ended":    return "error";
         case "permanent":
-        default:         return "slate";
+        default:         return "neutral";
     }
 }
 
 /** Info row styled to match the detail page layout. */
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold text-right max-w-[60%]">{value}</span>
+        <div className="flex items-center justify-between gap-4 px-5 py-3 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="max-w-[60%] text-right type-title-s text-on-surface">{value}</span>
         </div>
     );
 }
 
 /** Section card wrapper used by detail blocks. */
-function SectionCard({
+function DetailSection({
     title,
     icon,
     children,
     rowStyle = false,
 }: {
     title: string;
-    icon?: React.ReactNode;
+    icon?: string;
     children: React.ReactNode;
     rowStyle?: boolean;
 }) {
     return (
-        <section className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                    {icon}
-                    {title}
-                </h2>
-            </div>
-            {rowStyle ? (
-                <div className="divide-y divide-slate-100">{children}</div>
-            ) : (
-                <div className="p-5">{children}</div>
-            )}
-        </section>
+        <SectionCard title={title} icon={icon} bodyClassName={rowStyle ? "px-0 pb-2" : undefined}>
+            {rowStyle ? <div className="divide-y divide-outline-variant">{children}</div> : children}
+        </SectionCard>
     );
 }
 
@@ -131,11 +124,11 @@ function ResourceThumb({ src, alt }: { src?: string; alt: string }) {
         <img
             src={src}
             alt={alt}
-            className="h-14 w-14 rounded-xl bg-slate-50 object-contain p-2"
+            className="h-14 w-14 rounded-md3-sm bg-surface-container-high object-contain p-2"
             loading="lazy"
         />
     ) : (
-        <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-slate-50 text-xs font-bold text-slate-300">
+        <div className="flex h-14 w-14 items-center justify-center rounded-md3-sm bg-surface-container-high type-label-l text-on-surface-variant">
             ?
         </div>
     );
@@ -145,20 +138,20 @@ function ResourceThumb({ src, alt }: { src?: string; alt: string }) {
 
 function CostGroupBlock({ title, group }: { title?: string; group: ResolvedExchangeCostGroup }) {
     return (
-        <div className="rounded-2xl bg-slate-50 p-4">
-            {title ? <h3 className="mb-3 text-sm font-black text-slate-700">{title}</h3> : null}
+        <div className="rounded-md3-lg bg-surface-container p-4">
+            {title ? <h3 className="mb-3 type-title-s text-on-surface">{title}</h3> : null}
             <div className="space-y-3">
                 {group.costs.map((cost) => (
                     <div
                         key={`${group.costGroupId}-${cost.resourceType}-${cost.resourceId}`}
-                        className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"
+                        className="flex items-center gap-3 rounded-md3-md bg-surface-container-lowest p-3"
                     >
                         <ResourceThumb src={cost.imageUrl} alt={cost.name} />
                         <div className="min-w-0 flex-1">
-                            <div className="break-words text-sm font-bold text-slate-800">{cost.name}</div>
-                            {cost.subtitle ? <div className="mt-1 text-xs text-slate-400">{cost.subtitle}</div> : null}
+                            <div className="break-words type-title-s text-on-surface">{cost.name}</div>
+                            {cost.subtitle ? <div className="mt-1 type-body-s text-on-surface-variant">{cost.subtitle}</div> : null}
                         </div>
-                        <div className="shrink-0 text-sm font-black text-miku">× {cost.quantity}</div>
+                        <div className="shrink-0 type-title-m text-primary">× {cost.quantity}</div>
                     </div>
                 ))}
             </div>
@@ -166,72 +159,78 @@ function CostGroupBlock({ title, group }: { title?: string; group: ResolvedExcha
     );
 }
 
+const REWARD_CARD_CLASS = "h-full rounded-md3-md bg-surface-container-lowest p-4";
+
 function RewardCard({ reward, lookups }: { reward: ResolvedExchangeReward; lookups: ExchangeRewardLookups }) {
     const { t } = useI18n();
 
     if (reward.resourceType === "card" && typeof reward.resourceId === "number") {
         const cardInfo = lookups.cards.get(reward.resourceId);
         if (cardInfo) {
-            const content = (
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-miku/30 hover:shadow-md h-full flex flex-col justify-between">
+            const body = (
+                <>
                     <div>
-                        <div className="mb-3 text-sm font-black text-slate-800 line-clamp-2">{reward.name}</div>
+                        <div className="mb-3 line-clamp-2 type-title-s text-on-surface">{reward.name}</div>
                         <div className="flex justify-center">
                             <SekaiCardThumbnail card={cardInfo} width={80} />
                         </div>
                     </div>
                     <div>
                         <div className="mt-3 flex flex-wrap gap-2">
-                            <Badge label={getRewardTypeLabel(reward.resourceType, t)} tone="miku" />
-                            <Badge label={t("page.exchanges.quantity", { count: reward.quantity })} tone="slate" />
+                            <Badge label={getRewardTypeLabel(reward.resourceType, t)} tone="secondary" />
+                            <Badge label={t("page.exchanges.quantity", { count: reward.quantity })} tone="neutral" />
                         </div>
-                        {reward.subtitle ? <div className="mt-2 text-xs text-slate-400">{reward.subtitle}</div> : null}
+                        {reward.subtitle ? <div className="mt-2 type-body-s text-on-surface-variant">{reward.subtitle}</div> : null}
                     </div>
-                </div>
+                </>
             );
             return reward.linkHref ? (
-                <Link href={reward.linkHref} className="block h-full">{content}</Link>
-            ) : content;
+                <Card variant="outlined" href={reward.linkHref} className="flex h-full flex-col justify-between p-4">{body}</Card>
+            ) : (
+                <div className={`${REWARD_CARD_CLASS} flex flex-col justify-between`}>{body}</div>
+            );
         }
     }
 
-    const content = (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:border-miku/30 hover:shadow-md h-full">
+    const body = (
+        <>
             <div className="mb-3 flex items-start gap-3">
                 <ResourceThumb src={reward.imageUrl} alt={reward.name} />
                 <div className="min-w-0 flex-1">
-                    <div className="break-words text-sm font-black text-slate-800">{reward.name}</div>
+                    <div className="break-words type-title-s text-on-surface">{reward.name}</div>
                     <div className="mt-1 flex flex-wrap gap-2">
-                        <Badge label={getRewardTypeLabel(reward.resourceType, t)} tone="miku" />
-                        <Badge label={t("page.exchanges.quantity", { count: reward.quantity })} tone="slate" />
+                        <Badge label={getRewardTypeLabel(reward.resourceType, t)} tone="secondary" />
+                        <Badge label={t("page.exchanges.quantity", { count: reward.quantity })} tone="neutral" />
                     </div>
-                    {reward.subtitle ? <div className="mt-2 text-xs text-slate-400">{reward.subtitle}</div> : null}
+                    {reward.subtitle ? <div className="mt-2 type-body-s text-on-surface-variant">{reward.subtitle}</div> : null}
                 </div>
             </div>
             {typeof reward.resourceId === "number" ? (
-                <div className="text-[11px] font-mono text-slate-400">resourceId: {reward.resourceId}</div>
+                <div className="font-mono type-label-s text-on-surface-variant">resourceId: {reward.resourceId}</div>
             ) : null}
-        </div>
+        </>
     );
 
     return reward.linkHref ? (
-        <Link href={reward.linkHref} className="block h-full">{content}</Link>
-    ) : content;
+        <Card variant="outlined" href={reward.linkHref} className="h-full p-4">{body}</Card>
+    ) : (
+        <div className={REWARD_CARD_CLASS}>{body}</div>
+    );
 }
 
 function DisplayResourceCard({ resource }: { resource: ResolvedExchangeDisplayResource }) {
     const { t } = useI18n();
 
     return (
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-md3-md bg-surface-container-lowest p-4">
             <div className="mb-3 flex items-start gap-3">
                 <ResourceThumb src={resource.imageUrl} alt={resource.name} />
                 <div className="min-w-0 flex-1">
-                    <div className="break-words text-sm font-black text-slate-800">{resource.name}</div>
-                    {resource.subtitle ? <div className="mt-1 text-xs text-slate-400">{resource.subtitle}</div> : null}
+                    <div className="break-words type-title-s text-on-surface">{resource.name}</div>
+                    {resource.subtitle ? <div className="mt-1 type-body-s text-on-surface-variant">{resource.subtitle}</div> : null}
                     <div className="mt-2 flex flex-wrap gap-2">
-                        <Badge label={getRewardTypeLabel(resource.resourceType, t)} tone="violet" />
-                        <Badge label={t("page.exchanges.groupNumber", { group: resource.groupId })} tone="slate" />
+                        <Badge label={getRewardTypeLabel(resource.resourceType, t)} tone="secondary" />
+                        <Badge label={t("page.exchanges.groupNumber", { group: resource.groupId })} tone="neutral" />
                     </div>
                 </div>
             </div>
@@ -247,67 +246,60 @@ function SiblingsCard({ siblings }: { siblings: FlattenedMaterialExchange[] }) {
     const shown = isExpanded ? siblings : siblings.slice(0, SIBLINGS_INITIAL_SHOW);
 
     return (
-        <SectionCard
+        <DetailSection
             title={t("page.exchanges.siblingsTitle", { count: siblings.length })}
-            icon={
-                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                        d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                </svg>
-            }
+            icon={mdLink}
         >
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {shown.map((sibling) => (
-                    <Link
+                    <Card
+                        variant="outlined"
                         key={sibling.id}
                         href={`/exchanges/${sibling.id}`}
-                        className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 transition-all hover:border-miku/40 hover:bg-miku/5"
+                        className="px-4 py-3"
                     >
-                        <div className="text-sm font-black text-slate-800">{sibling.resolvedTitle}</div>
+                        <div className="type-title-s text-on-surface">{sibling.resolvedTitle}</div>
                         <div className="mt-1 flex flex-wrap gap-2">
                             <Badge label={getExchangeStatusLabel(sibling.status, t)} tone={getStatusTone(sibling.status)} />
-                            <Badge label={getRefreshCycleLabel(sibling.refreshCycle, t)} tone="slate" />
+                            <Badge label={getRefreshCycleLabel(sibling.refreshCycle, t)} tone="neutral" />
                         </div>
-                    </Link>
+                    </Card>
                 ))}
             </div>
 
             {hasMore && (
-                <button
+                <Button
+                    variant="text"
+                    fullWidth
+                    className="mt-3"
+                    icon={isExpanded ? mdKeyboardArrowUp : mdKeyboardArrowDown}
                     onClick={() => setIsExpanded(!isExpanded)}
-                    className="mt-3 w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm text-slate-600"
+                    aria-expanded={isExpanded}
                 >
-                    <svg
-                        className={`w-4 h-4 transition-transform ${isExpanded ? "rotate-180" : ""}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
                     {isExpanded ? t("page.exchanges.collapse") : t("page.exchanges.expandOthers", { count: siblings.length - SIBLINGS_INITIAL_SHOW })}
-                </button>
+                </Button>
             )}
-        </SectionCard>
+        </DetailSection>
     );
 }
 
-function ErrorState({ message }: { message: string }) {
+function DetailErrorState({ message }: { message: string }) {
     const { t } = useI18n();
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-600">
-                <p className="text-lg font-black">{t("page.exchanges.relationLoadFailed")}</p>
-                <p className="mt-2 text-sm">{message}</p>
-                <Link
-                    href="/exchanges"
-                    className="mt-4 inline-flex rounded-xl bg-white px-4 py-2 text-sm font-bold text-red-500 shadow-sm transition-colors hover:bg-red-100"
-                >
+        <PageContainer>
+            <Banner
+                tone="error"
+                title={t("page.exchanges.relationLoadFailed")}
+                action={
+                    <Button variant="text" color="error" icon={mdArrowBack} href="/exchanges">
                         {t("page.exchanges.backToList")}
-                </Link>
-            </div>
-        </div>
+                    </Button>
+                }
+            >
+                {message}
+            </Banner>
+        </PageContainer>
     );
 }
 
@@ -402,7 +394,7 @@ export default function ExchangeDetailClient() {
     if (error) {
         return (
             <MainLayout>
-                <ErrorState message={error} />
+                <DetailErrorState message={error} />
             </MainLayout>
         );
     }
@@ -410,9 +402,7 @@ export default function ExchangeDetailClient() {
     if (isLoading || !entry || !coreData) {
         return (
             <MainLayout>
-                <div className="flex min-h-[60vh] items-center justify-center">
-                    <div className="loading-spinner" />
-                </div>
+                <LoadingState className="min-h-[60vh]" />
             </MainLayout>
         );
     }
@@ -424,62 +414,51 @@ export default function ExchangeDetailClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
 
                 {/* ── Header ── */}
-                <div className="mb-8">
-                    <Link
-                        href="/exchanges"
-                        className="mb-4 inline-flex items-center gap-2 text-sm font-bold text-slate-500 transition-colors hover:text-miku"
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                    {t("page.exchanges.backToList")}
-                    </Link>
+                <header className="mb-8">
+                    <Button variant="text" icon={mdArrowBack} href="/exchanges" className="-ml-3 mb-4">
+                        {t("page.exchanges.backToList")}
+                    </Button>
 
                     {/* ID chip and badges */}
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-3">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                    <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                        <span className="inline-flex w-fit items-center rounded-md3-sm bg-surface-container-high px-3 py-1 font-mono type-label-m text-on-surface-variant">
                             ID: #{entry.id}
                         </span>
                         <Badge label={getExchangeStatusLabel(entry.status, t)} tone={getStatusTone(entry.status)} />
-                        <Badge label={getExchangeCategoryLabel(entry.exchangeCategory, t)} tone="violet" />
-                        <Badge label={getExchangeTypeLabel(entry.materialExchangeType, t)} tone="amber" />
-                        <Badge label={getRefreshCycleLabel(entry.refreshCycle, t)} tone="slate" />
+                        <Badge label={getExchangeCategoryLabel(entry.exchangeCategory, t)} tone="secondary" />
+                        <Badge label={getExchangeTypeLabel(entry.materialExchangeType, t)} tone="tertiary" />
+                        <Badge label={getRefreshCycleLabel(entry.refreshCycle, t)} tone="neutral" />
                         {typeof entry.exchangeLimit === "number" && (
-                            <Badge label={t("page.exchanges.limitTimes", { count: entry.exchangeLimit })} tone="rose" />
+                            <Badge label={t("page.exchanges.limitTimes", { count: entry.exchangeLimit })} tone="error" />
                         )}
                         {entry.materialExchangeRelationParents.length > 0 && (
-                            <Badge label={t("page.exchanges.relatedCostIncluded")} tone="emerald" />
+                            <Badge label={t("page.exchanges.relatedCostIncluded")} tone="positive" />
                         )}
                     </div>
 
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800">{entry.resolvedTitle}</h1>
-                    <p className="mt-2 text-sm text-slate-500">
+                    <h1 className="type-headline-m text-on-surface sm:type-headline-l">{entry.resolvedTitle}</h1>
+                    <p className="mt-2 type-body-m text-on-surface-variant">
                         {t("page.exchanges.belongsToSummary", { summary: entry.summaryName })}
                     </p>
-                </div>
+                </header>
 
                 {/* Main grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
 
                     {/* Left column */}
                     <div className="space-y-6 lg:sticky lg:top-24 lg:self-start">
 
                         {/* Rewards */}
-                        <SectionCard
+                        <DetailSection
                             title={t("page.exchanges.rewardContent", {
                                 count: resolvedRewards.length > 0
                                     ? t("page.exchanges.countSuffix", { count: resolvedRewards.length })
                                     : "",
                             })}
-                            icon={
-                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" />
-                                </svg>
-                            }
+                            icon={mdRedeem}
                         >
                             {resolvedRewards.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -492,20 +471,15 @@ export default function ExchangeDetailClient() {
                                     ))}
                                 </div>
                             ) : (
-                                <p className="text-sm text-slate-400">{t("page.exchanges.noRewards")}</p>
+                                <p className="type-body-m text-on-surface-variant">{t("page.exchanges.noRewards")}</p>
                             )}
-                        </SectionCard>
+                        </DetailSection>
 
                         {/* Display resources */}
                         {displayResources.length > 0 && (
-                            <SectionCard
+                            <DetailSection
                                 title={t("page.exchanges.displayResourceGroup")}
-                                icon={
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                    </svg>
-                                }
+                                icon={mdImage}
                             >
                                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                                     {displayResources.map((resource) => (
@@ -515,18 +489,13 @@ export default function ExchangeDetailClient() {
                                         />
                                     ))}
                                 </div>
-                            </SectionCard>
+                            </DetailSection>
                         )}
 
                         {/* Costs */}
-                        <SectionCard
+                        <DetailSection
                             title={t("page.exchanges.exchangeCosts")}
-                            icon={
-                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            }
+                            icon={mdToll}
                         >
                             <div className="space-y-4">
                                 {costInfo.baseCostGroups.length > 0 ? (
@@ -540,18 +509,18 @@ export default function ExchangeDetailClient() {
                                         />
                                     ))
                                 ) : (
-                                    <p className="text-sm text-slate-400">{t("page.exchanges.noBaseCost")}</p>
+                                    <p className="type-body-m text-on-surface-variant">{t("page.exchanges.noBaseCost")}</p>
                                 )}
                             </div>
 
                             {costInfo.relationParents.length > 0 && (
-                                <div className="mt-6 space-y-4 border-t border-slate-100 pt-6">
-                                    <h3 className="text-base font-black text-slate-800">{t("page.exchanges.relationCostGroups")}</h3>
+                                <div className="mt-6 space-y-4 border-t border-outline-variant pt-6">
+                                    <h3 className="type-title-m text-on-surface">{t("page.exchanges.relationCostGroups")}</h3>
                                     {costInfo.relationParents.map((parent) => (
-                                        <div key={parent.id} className="rounded-2xl border border-emerald-200 bg-emerald-50/50 p-4">
+                                        <div key={parent.id} className="rounded-md3-lg border border-outline-variant bg-secondary-container/40 p-4">
                                             <div className="mb-4 flex flex-wrap items-center gap-2">
-                                                <Badge label={t("page.exchanges.relationCondition")} tone="emerald" />
-                                                <span className="text-sm font-bold text-emerald-700">{parent.description}</span>
+                                                <Badge label={t("page.exchanges.relationCondition")} tone="positive" />
+                                                <span className="type-title-s text-on-secondary-container">{parent.description}</span>
                                             </div>
                                             <div className="space-y-4">
                                                 {parent.costGroups.map((group, index) => (
@@ -566,22 +535,17 @@ export default function ExchangeDetailClient() {
                                     ))}
                                 </div>
                             )}
-                        </SectionCard>
+                        </DetailSection>
                     </div>
 
                     {/* Right column */}
                     <div className="space-y-6">
 
                         {/* Basic information */}
-                        <SectionCard
+                        <DetailSection
                             title={t("page.exchanges.basicInfo")}
                             rowStyle
-                            icon={
-                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            }
+                            icon={mdInfo}
                         >
                             <InfoRow label={t("page.exchanges.fields.exchangeItemId")} value={<span className="font-mono">#{entry.id}</span>} />
                             <InfoRow label={t("page.exchanges.fields.exchangeShopId")} value={<span className="font-mono">#{entry.summaryId}</span>} />
@@ -597,24 +561,19 @@ export default function ExchangeDetailClient() {
                             <InfoRow label={t("page.exchanges.fields.displayRewardQuantity")} value={entry.isDisplayQuantity ? t("common.field.yes") : t("common.field.no")} />
                             <InfoRow label={t("page.exchanges.fields.rewardTypeCount")} value={t("page.exchanges.rewardTypeCount", { count: entry.rewardTypes.length })} />
                             <InfoRow label={t("page.exchanges.fields.costItemCount")} value={t("page.exchanges.costItemCount", { count: entry.costs.length })} />
-                        </SectionCard>
+                        </DetailSection>
 
                         {/* Exchange summary */}
-                        <SectionCard
+                        <DetailSection
                             title={t("page.exchanges.summaryInfo")}
                             rowStyle
-                            icon={
-                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                                        d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                            }
+                            icon={mdStorefront}
                         >
                             <InfoRow label={t("page.exchanges.fields.exchangeShopName")} value={entry.summaryName} />
                             <InfoRow label={t("page.exchanges.fields.exchangeShopStart")} value={formatExchangeTime(entry.summaryStartAt, formatDate)} />
                             <InfoRow label={t("page.exchanges.fields.exchangeShopEnd")} value={formatExchangeTime(entry.summaryEndAt, formatDate)} />
                             <InfoRow label={t("page.exchanges.fields.displayResourceGroupId")} value={entry.summaryDisplayResourceGroupId ? `#${entry.summaryDisplayResourceGroupId}` : "—"} />
-                        </SectionCard>
+                        </DetailSection>
 
                         {/* Sibling entries */}
                         {siblingEntries.length > 0 && (
@@ -624,7 +583,7 @@ export default function ExchangeDetailClient() {
                         <DetailPageAdCard />
                     </div>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

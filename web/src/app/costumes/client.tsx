@@ -3,7 +3,6 @@ import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import CostumeFilters from "@/components/costumes/CostumeFilters";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -21,6 +20,7 @@ import { fetchMasterData } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 
 // ... imports remain the same
 
@@ -327,35 +327,25 @@ function CostumesContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{tI18n("page.costumes.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {tI18n("page.costumes.title")} <span className="text-miku">{tI18n("page.costumes.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {tI18n("page.costumes.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={tI18n("page.costumes.badge")}
+                title={tI18n("page.costumes.title")}
+                highlight={tI18n("page.costumes.titleHighlight")}
+                description={tI18n("page.costumes.description")}
+            />
 
             {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{tI18n("page.costumes.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={tI18n("page.costumes.loadFailed")} message={error} retryLabel={tI18n("common.action.retry")} />
             )}
 
             {/* Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : (
                     <>
                         <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
@@ -383,83 +373,71 @@ function CostumesContent() {
                                 const isSpoiler = (costume.publishedAt || 0) > now;
 
                                 return (
-                                    <Link
+                                    <Card
+                                        variant="elevated"
                                         href={`/costumes/${costume.costumeNumber}`}
                                         key={costume.costumeNumber}
                                         data-shortcut-item="true"
-                                        className="pressable ios-glass-card ios-glass-card-interactive rounded-xl overflow-hidden p-3 flex flex-col h-full group"
+                                        className="group flex h-full flex-col p-3"
                                     >
-                                        <div className="relative aspect-square mb-2 bg-slate-50/70 dark:bg-slate-800/40 rounded-lg overflow-hidden">
+                                        <div className="relative mb-2 aspect-square overflow-hidden rounded-md3-sm bg-surface-container">
                                             <Image
                                                 src={getCostumeThumbnailUrl(assetName, assetSource)}
                                                 alt={costume.name}
                                                 fill
-                                                className="object-contain p-2 transition-transform duration-[var(--duration-base)] ease-[var(--ease-out-soft)] group-hover:scale-105"
+                                                className="object-contain p-2"
                                                 unoptimized
                                             />
                                         </div>
-                                        <div className="flex-1 flex flex-col">
+                                        <div className="flex flex-1 flex-col">
                                             {isSpoiler && (
                                                 <div className="mb-1">
-                                                    <span className="inline-block px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-bold rounded leading-none">
+                                                    <span className="inline-block rounded-md3-xs bg-tertiary px-1.5 py-0.5 type-label-s text-on-tertiary">
                                                         {tI18n("page.costumes.spoilerBadge")}
                                                     </span>
                                                 </div>
                                             )}
-                                            <h3 className="type-title font-bold text-sm text-slate-800 mb-1 group-hover:text-miku" title={costume.name}>
+                                            <h3 className="mb-1 type-title-s text-on-surface" title={costume.name}>
                                                 <TranslatedText
                                                     original={costume.name}
                                                     category="costumes"
                                                     field="name"
                                                     originalClassName="block"
-                                                    translationClassName="text-xs font-medium text-slate-400 block"
+                                                    translationClassName="block type-body-s text-on-surface-variant"
                                                 />
                                             </h3>
                                             <div className="mt-auto flex flex-wrap gap-1">
                                                 {costume.partTypes.map(pt => (
-                                                    <span key={pt} className="text-[10px] px-1.5 py-0.5 bg-miku/10 text-miku rounded font-medium">
+                                                    <span key={pt} className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
                                                         {translateWithFallback(PART_TYPE_LABEL_KEYS[pt], pt)}
                                                     </span>
                                                 ))}
-                                                <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
+                                                <span className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                     {translateWithFallback(SOURCE_LABEL_KEYS[costume.source], costume.source)}
                                                 </span>
                                             </div>
                                         </div>
-                                    </Link>
+                                    </Card>
                                 );
                             })}
                         </div>
 
                         {/* Load More */}
-                        {displayedGroups.length < filteredCostumes.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                >
-                                    {tI18n("page.costumes.loadMore")}
-                                    <span className="ml-2 text-sm opacity-80 type-caption">
-                                        ({displayedGroups.length} / {filteredCostumes.length})
-                                    </span>
-                                </button>
-                            </div>
-                        )}
+                        <LoadMore
+                            label={tI18n("page.costumes.loadMore")}
+                            shown={displayedGroups.length}
+                            total={filteredCostumes.length}
+                            onLoadMore={loadMore}
+                        />
 
                         {/* Empty State */}
                         {!isLoading && filteredCostumes.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <p>{tI18n("page.costumes.noResult")}</p>
-                            </div>
+                            <EmptyState title={tI18n("page.costumes.noResult")} />
                         )}
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 export default function CostumesClient() {
@@ -474,9 +452,5 @@ export default function CostumesClient() {
 
 function CostumesLoadingFallback() {
     const { t } = useI18n();
-    return (
-        <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-            {t("page.costumes.loadingFallback")}
-        </div>
-    );
+    return <LoadingState className="min-h-[50vh]" label={t("page.costumes.loadingFallback")} />;
 }

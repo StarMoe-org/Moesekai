@@ -20,6 +20,7 @@ import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
+import { Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader, SegmentedButton } from "@/components/md3";
 
 type HonorTab = "normal" | "bonds";
 type TranslationFn = ReturnType<typeof useI18n>["t"];
@@ -414,77 +415,23 @@ function HonorsContent() {
             onReset={handleBondsReset}
         >
             <FilterSection label={t("common.filter.character1")}>
-                <div className="grid grid-cols-5 gap-2">
-                    <button
-                        onClick={() => setBondsChar1(null)}
-                        className={`aspect-square rounded-full flex items-center justify-center text-xs font-bold transition-all ${bondsChar1 === null
-                            ? "bg-miku text-white shadow-lg ring-2 ring-miku"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200"
-                            }`}
-                        title={t("common.filter.unlimited")}
-                    >
-                        ALL
-                    </button>
-                    {bondsCharacters.map(id => {
-                        const characterName = getCharacterName(t, id);
-                        return (
-                            <button
-                                key={`bc1-${id}`}
-                                onClick={() => setBondsChar1(bondsChar1 === id ? null : id)}
-                                className={`relative aspect-square rounded-full overflow-hidden transition-all flex items-center justify-center ${bondsChar1 === id
-                                    ? "ring-2 ring-miku shadow-lg"
-                                    : "ring-1 ring-slate-200 hover:ring-miku/50"
-                                    }`}
-                                title={characterName}
-                            >
-                                <Image
-                                    src={getCharacterIconUrl(id)}
-                                    alt={characterName}
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            </button>
-                        );
-                    })}
-                </div>
+                <BondsCharacterPicker
+                    characters={bondsCharacters}
+                    value={bondsChar1}
+                    onChange={setBondsChar1}
+                    allLabel={t("common.filter.unlimited")}
+                    keyPrefix="bc1"
+                />
             </FilterSection>
 
             <FilterSection label={t("common.filter.character2")}>
-                <div className="grid grid-cols-5 gap-2">
-                    <button
-                        onClick={() => setBondsChar2(null)}
-                        className={`aspect-square rounded-full flex items-center justify-center text-xs font-bold transition-all ${bondsChar2 === null
-                            ? "bg-miku text-white shadow-lg ring-2 ring-miku"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200"
-                            }`}
-                        title={t("common.filter.unlimited")}
-                    >
-                        ALL
-                    </button>
-                    {bondsCharacters.map(id => {
-                        const characterName = getCharacterName(t, id);
-                        return (
-                            <button
-                                key={`bc2-${id}`}
-                                onClick={() => setBondsChar2(bondsChar2 === id ? null : id)}
-                                className={`relative aspect-square rounded-full overflow-hidden transition-all flex items-center justify-center ${bondsChar2 === id
-                                    ? "ring-2 ring-miku shadow-lg"
-                                    : "ring-1 ring-slate-200 hover:ring-miku/50"
-                                    }`}
-                                title={characterName}
-                            >
-                                <Image
-                                    src={getCharacterIconUrl(id)}
-                                    alt={characterName}
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            </button>
-                        );
-                    })}
-                </div>
+                <BondsCharacterPicker
+                    characters={bondsCharacters}
+                    value={bondsChar2}
+                    onChange={setBondsChar2}
+                    allLabel={t("common.filter.unlimited")}
+                    keyPrefix="bc2"
+                />
             </FilterSection>
 
             <FilterToggle
@@ -517,53 +464,34 @@ function HonorsContent() {
         filteredBondsHonors.length,
     ]);
 
+    const activeError = activeTab === "normal" ? error : bondsError;
+
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.honors.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.honors.title")} <span className="text-miku">{t("page.honors.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.honors.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.honors.badge")}
+                title={t("page.honors.title")}
+                highlight={t("page.honors.titleHighlight")}
+                description={t("page.honors.description")}
+            />
 
             {/* Tab Switcher */}
-            <div className="flex justify-center mb-6">
-                <div className="inline-flex bg-slate-100 rounded-xl p-1 gap-1">
-                    <button
-                        onClick={() => setActiveTab("normal")}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                            activeTab === "normal"
-                                ? "bg-white text-miku shadow-md"
-                                : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        {t("page.honors.tabs.normal")}
-                    </button>
-                    <button
-                        onClick={() => setActiveTab("bonds")}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${
-                            activeTab === "bonds"
-                                ? "bg-white text-miku shadow-md"
-                                : "text-slate-500 hover:text-slate-700"
-                        }`}
-                    >
-                        {t("page.honors.tabs.bonds")}
-                    </button>
-                </div>
+            <div className="mb-6 flex justify-center">
+                <SegmentedButton
+                    className="w-auto min-w-[16rem]"
+                    value={activeTab}
+                    onValueChange={setActiveTab}
+                    options={[
+                        { value: "normal", label: t("page.honors.tabs.normal") },
+                        { value: "bonds", label: t("page.honors.tabs.bonds") },
+                    ]}
+                />
             </div>
 
             {/* Error */}
-            {(activeTab === "normal" ? error : bondsError) && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.honors.loadFailed")}</p>
-                    <p>{activeTab === "normal" ? error : bondsError}</p>
-                </div>
+            {activeError && (
+                <ErrorState className="mb-6" title={t("page.honors.loadFailed")} message={activeError} retryLabel={t("common.action.retry")} />
             )}
 
             {/* ==================== Normal Tab ==================== */}
@@ -572,28 +500,19 @@ function HonorsContent() {
                    above via useQuickFilter), so the page body is a single column. */
                 <div className="min-w-0">
                     {isLoading ? (
-                        <div className="flex items-center justify-center min-h-[40vh]">
-                            <div className="loading-spinner loading-spinner-sm" />
-                        </div>
+                        <LoadingState />
                     ) : (
                         <>
                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                 {displayedHonors.map(honor => {
                                     const group = honorGroupMap.get(honor.groupId);
                                     return (
-                                        <div
+                                        <Card
+                                            variant="elevated"
                                             key={honor.id}
                                             onClick={() => handleHonorClick(honor)}
-                                            onKeyDown={(event) => {
-                                                if (event.key === "Enter" || event.key === " ") {
-                                                    event.preventDefault();
-                                                    handleHonorClick(honor);
-                                                }
-                                            }}
                                             data-shortcut-item="true"
-                                            tabIndex={0}
-                                            role="button"
-                                            className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-4 cursor-pointer group"
+                                            className="group p-4"
                                         >
                                             <div className="mb-3">
                                                 <DegreeImage
@@ -603,48 +522,35 @@ function HonorsContent() {
                                                     source={assetSource}
                                                 />
                                             </div>
-                                            <h3 className="font-bold text-sm text-slate-800 group-hover:text-miku transition-colors mb-1">
+                                            <h3 className="mb-1 type-title-s text-on-surface">
                                                 {honor.name}
                                             </h3>
                                             <div className="flex flex-wrap gap-1">
                                                 {group && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-miku/10 text-miku rounded font-medium">
+                                                    <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
                                                         {getHonorTypeLabel(group.honorType, t)}
                                                     </span>
                                                 )}
                                                 {honor.honorRarity && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
+                                                    <span className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                         {getHonorRarityLabel(honor.honorRarity, t)}
                                                     </span>
                                                 )}
                                             </div>
-                                        </div>
+                                        </Card>
                                     );
                                 })}
                             </div>
 
-                            {displayedHonors.length < filteredHonors.length && (
-                                <div className="mt-8 flex justify-center">
-                                    <button
-                                        onClick={loadMore}
-                                        data-shortcut-load-more="true"
-                                        className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                    >
-                                        {t("page.honors.loadMore")}
-                                        <span className="ml-2 text-sm opacity-80">
-                                            ({displayedHonors.length} / {filteredHonors.length})
-                                        </span>
-                                    </button>
-                                </div>
-                            )}
+                            <LoadMore
+                                label={t("page.honors.loadMore")}
+                                shown={displayedHonors.length}
+                                total={filteredHonors.length}
+                                onLoadMore={loadMore}
+                            />
 
                             {!isLoading && filteredHonors.length === 0 && (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                    <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <p>{t("page.honors.noResult.normal")}</p>
-                                </div>
+                                <EmptyState title={t("page.honors.noResult.normal")} />
                             )}
                         </>
                     )}
@@ -657,28 +563,19 @@ function HonorsContent() {
                    above via useQuickFilter), so the page body is a single column. */
                 <div className="min-w-0">
                     {isBondsLoading ? (
-                        <div className="flex items-center justify-center min-h-[40vh]">
-                            <div className="loading-spinner loading-spinner-sm" />
-                        </div>
+                        <LoadingState />
                     ) : (
                         <>
                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
                                 {displayedBondsHonors.map(bh => {
                                     const word = bondsWordMap.get(bh.bondsGroupId);
                                     return (
-                                        <div
+                                        <Card
+                                            variant="elevated"
                                             key={bh.id}
                                             onClick={() => handleBondsHonorClick(bh)}
-                                            onKeyDown={(event) => {
-                                                if (event.key === "Enter" || event.key === " ") {
-                                                    event.preventDefault();
-                                                    handleBondsHonorClick(bh);
-                                                }
-                                            }}
                                             data-shortcut-item="true"
-                                            tabIndex={0}
-                                            role="button"
-                                            className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-4 cursor-pointer group"
+                                            className="group p-4"
                                         >
                                             <div className="mb-3">
                                                 <BondsDegreeImage
@@ -690,46 +587,33 @@ function HonorsContent() {
                                                     source={assetSource}
                                                 />
                                             </div>
-                                            <h3 className="font-bold text-sm text-slate-800 group-hover:text-miku transition-colors mb-1">
+                                            <h3 className="mb-1 type-title-s text-on-surface">
                                                 {bh.name}
                                             </h3>
                                             <div className="flex flex-wrap gap-1">
-                                                <span className="text-[10px] px-1.5 py-0.5 bg-pink-50 text-pink-500 rounded font-medium">
+                                                <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                                                     {t("page.honors.bondsBadge")}
                                                 </span>
                                                 {bh.honorRarity && (
-                                                    <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-medium">
+                                                    <span className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                         {getHonorRarityLabel(bh.honorRarity, t)}
                                                     </span>
                                                 )}
                                             </div>
-                                        </div>
+                                        </Card>
                                     );
                                 })}
                             </div>
 
-                            {displayedBondsHonors.length < filteredBondsHonors.length && (
-                                <div className="mt-8 flex justify-center">
-                                    <button
-                                        onClick={bondsLoadMore}
-                                        data-shortcut-load-more="true"
-                                        className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                    >
-                                        {t("page.honors.loadMore")}
-                                        <span className="ml-2 text-sm opacity-80">
-                                            ({displayedBondsHonors.length} / {filteredBondsHonors.length})
-                                        </span>
-                                    </button>
-                                </div>
-                            )}
+                            <LoadMore
+                                label={t("page.honors.loadMore")}
+                                shown={displayedBondsHonors.length}
+                                total={filteredBondsHonors.length}
+                                onLoadMore={bondsLoadMore}
+                            />
 
                             {!isBondsLoading && filteredBondsHonors.length === 0 && bondsDataLoaded && (
-                                <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                                    <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    <p>{t("page.honors.noResult.bonds")}</p>
-                                </div>
+                                <EmptyState title={t("page.honors.noResult.bonds")} />
                             )}
                         </>
                     )}
@@ -754,6 +638,63 @@ function HonorsContent() {
                 gameCharaUnits={gameCharaUnits}
                 source={assetSource}
             />
+        </PageContainer>
+    );
+}
+
+function BondsCharacterPicker({
+    characters,
+    value,
+    onChange,
+    allLabel,
+    keyPrefix,
+}: {
+    characters: number[];
+    value: number | null;
+    onChange: (value: number | null) => void;
+    allLabel: string;
+    keyPrefix: string;
+}) {
+    const { t } = useI18n();
+    return (
+        <div className="grid grid-cols-5 gap-2">
+            <button
+                type="button"
+                onClick={() => onChange(null)}
+                aria-pressed={value === null}
+                className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${value === null
+                    ? "bg-primary text-on-primary"
+                    : "border border-outline-variant text-on-surface-variant"
+                    }`}
+                title={allLabel}
+            >
+                ALL
+            </button>
+            {characters.map(id => {
+                const characterName = getCharacterName(t, id);
+                const selected = value === id;
+                return (
+                    <button
+                        type="button"
+                        key={`${keyPrefix}-${id}`}
+                        onClick={() => onChange(selected ? null : id)}
+                        aria-pressed={selected}
+                        className={`focus-ring relative flex aspect-square items-center justify-center overflow-hidden rounded-full transition-shadow duration-150 ease-md3-standard ${selected
+                            ? "ring-[3px] ring-primary"
+                            : "ring-1 ring-outline-variant hover:ring-primary"
+                            }`}
+                        title={characterName}
+                    >
+                        <Image
+                            src={getCharacterIconUrl(id)}
+                            alt={characterName}
+                            fill
+                            className="object-cover"
+                            unoptimized
+                        />
+                    </button>
+                );
+            })}
         </div>
     );
 }
@@ -761,11 +702,7 @@ function HonorsContent() {
 function HonorsLoadingFallback() {
     const { t } = useI18n();
 
-    return (
-        <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-            {t("page.honors.loadingFallback")}
-        </div>
-    );
+    return <LoadingState className="min-h-[50vh]" label={t("page.honors.loadingFallback")} />;
 }
 
 export default function HonorsClient() {

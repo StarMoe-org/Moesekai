@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "@/components/LocalizedLink";
 import React, { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
@@ -34,99 +33,95 @@ import {
 import { getCharacterName } from "@/lib/i18n";
 import type { ExchangeStatus, FlattenedMaterialExchange } from "@/types/exchange";
 import type { ICardInfo } from "@/types/types";
+import { Banner, Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
+import { mdSwapHoriz } from "@/components/md3/icons";
 
-function PageHeader() {
+function ExchangesPageHeader() {
     const { t } = useI18n();
 
     return (
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.exchanges.badge")}</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                {t("page.exchanges.title")} <span className="text-miku">{t("page.exchanges.titleHighlight")}</span>
-            </h1>
-            <p className="text-slate-500 mt-2 max-w-2xl mx-auto text-sm sm:text-base">
-                {t("page.exchanges.description")}
-            </p>
-        </div>
+        <PageHeader
+            align="center"
+            eyebrow={t("page.exchanges.badge")}
+            title={t("page.exchanges.title")}
+            highlight={t("page.exchanges.titleHighlight")}
+            description={t("page.exchanges.description")}
+        />
     );
 }
 
+type BadgeTone = "primary" | "secondary" | "tertiary" | "positive" | "error" | "neutral";
+
+const BADGE_TONE_CLASS: Record<BadgeTone, string> = {
+    primary: "bg-primary-container text-on-primary-container",
+    secondary: "bg-secondary-container text-on-secondary-container",
+    tertiary: "bg-tertiary-container text-on-tertiary-container",
+    positive: "bg-primary-fixed text-on-primary-fixed-variant",
+    error: "bg-error-container text-on-error-container",
+    neutral: "bg-surface-container-highest text-on-surface-variant",
+};
+
 function Badge({
     label,
-    tone = "slate",
+    tone = "neutral",
 }: {
     label: string;
-    tone?: "miku" | "violet" | "amber" | "emerald" | "rose" | "slate";
+    tone?: BadgeTone;
 }) {
-    const toneClasses: Record<string, string> = {
-        miku: "bg-miku/10 text-miku",
-        violet: "bg-violet-500/10 text-violet-600",
-        amber: "bg-amber-500/10 text-amber-700",
-        emerald: "bg-emerald-500/10 text-emerald-700",
-        rose: "bg-rose-500/10 text-rose-600",
-        slate: "bg-slate-100 text-slate-500",
-    };
-
     return (
-        <span className={`inline-flex items-center rounded-full px-2 py-1 text-[10px] font-bold ${toneClasses[tone]}`}>
+        <span className={`inline-flex items-center rounded-md3-sm px-2 py-0.5 type-label-s ${BADGE_TONE_CLASS[tone]}`}>
             {label}
         </span>
     );
 }
 
-function getStatusTone(status: ExchangeStatus): "emerald" | "amber" | "rose" | "slate" {
+function getStatusTone(status: ExchangeStatus): BadgeTone {
     switch (status) {
         case "active":
-            return "emerald";
+            return "positive";
         case "upcoming":
-            return "amber";
+            return "tertiary";
         case "ended":
-            return "rose";
+            return "error";
         case "permanent":
         default:
-            return "slate";
+            return "neutral";
     }
 }
 
+const SELECT_CLASS =
+    "focus-ring h-10 w-full cursor-pointer rounded-md3-xs border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none focus:border-2 focus:border-primary";
+
+const THUMB_LG = "h-9 w-9 shrink-0 rounded-md3-xs bg-surface-container-high object-contain p-0.5";
+const THUMB_SM = "h-7 w-7 rounded-md3-xs bg-surface-container-high object-contain p-0.5";
+const QTY_BADGE =
+    "absolute -bottom-0.5 -right-0.5 rounded-md3-xs bg-inverse-surface/85 px-0.5 text-[7px] font-bold leading-tight text-inverse-on-surface";
+
 function SkeletonList() {
     return (
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3" aria-hidden="true">
             {Array.from({ length: 9 }).map((_, index) => (
                 <div
                     key={index}
-                    className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm animate-pulse"
+                    className="animate-pulse rounded-md3-md bg-surface-container-low p-4"
                 >
                     <div className="mb-2 flex flex-wrap gap-1.5">
-                        <div className="h-5 w-16 rounded-full bg-slate-100" />
-                        <div className="h-5 w-20 rounded-full bg-slate-100" />
-                        <div className="h-5 w-14 rounded-full bg-slate-100" />
+                        <div className="h-5 w-16 rounded-md3-sm bg-surface-container-high" />
+                        <div className="h-5 w-20 rounded-md3-sm bg-surface-container-high" />
+                        <div className="h-5 w-14 rounded-md3-sm bg-surface-container-high" />
                     </div>
-                    <div className="h-5 w-3/4 rounded bg-slate-200 mb-1" />
-                    <div className="h-4 w-1/2 rounded bg-slate-100 mb-3" />
-                    <div className="flex gap-1.5 mb-3">
-                        <div className="h-5 w-16 rounded-full bg-slate-100" />
-                        <div className="h-5 w-20 rounded-full bg-slate-100" />
+                    <div className="mb-1 h-5 w-3/4 rounded-md3-xs bg-surface-container-highest" />
+                    <div className="mb-3 h-4 w-1/2 rounded-md3-xs bg-surface-container-high" />
+                    <div className="mb-3 flex gap-1.5">
+                        <div className="h-5 w-16 rounded-md3-sm bg-surface-container-high" />
+                        <div className="h-5 w-20 rounded-md3-sm bg-surface-container-high" />
                     </div>
                     <div className="flex justify-between">
-                        <div className="h-3 w-24 rounded bg-slate-100" />
-                        <div className="h-3 w-12 rounded bg-slate-100" />
+                        <div className="h-3 w-24 rounded-md3-xs bg-surface-container-high" />
+                        <div className="h-3 w-12 rounded-md3-xs bg-surface-container-high" />
                     </div>
                 </div>
             ))}
-        </div>
-    );
-}
-
-function EmptyState({ title, description }: { title: string; description?: string }) {
-    return (
-        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-slate-200 bg-white">
-            <svg className="mb-4 h-14 w-14 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V7a2 2 0 00-2-2h-3V3.5A1.5 1.5 0 0013.5 2h-3A1.5 1.5 0 009 3.5V5H6a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2v-4M9 9h6m-6 4h4" />
-            </svg>
-            <p className="text-base font-bold text-slate-500">{title}</p>
-            {description ? <p className="mt-1 text-sm text-slate-400">{description}</p> : null}
         </div>
     );
 }
@@ -147,7 +142,7 @@ function useExchangePageContext() {
 function ScrollRow({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <div className="mb-2">
-            <p className="text-[10px] font-bold text-slate-400 mb-1">{label}</p>
+            <p className="mb-1 type-label-s text-on-surface-variant">{label}</p>
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
                 {children}
             </div>
@@ -175,7 +170,7 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
             <img
                 src={getMaterialThumbnailUrl(detail.resourceId, assetSource)}
                 alt={`material-${detail.resourceId}`}
-                className="shrink-0 h-9 w-9 rounded-md bg-slate-50 object-contain p-0.5"
+                className={THUMB_LG}
                 loading="lazy"
             />
         );
@@ -195,7 +190,7 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
             <img
                 src={getCommonMaterialThumbnailUrl(assetName, assetSource)}
                 alt={detail.resourceType}
-                className="shrink-0 h-9 w-9 rounded-md bg-slate-50 object-contain p-0.5"
+                className={THUMB_LG}
                 loading="lazy"
             />
         );
@@ -210,12 +205,12 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
             <img
                 src={imgUrl}
                 alt={mat?.name ?? `mysekai-mat-${detail.resourceId}`}
-                className="shrink-0 h-9 w-9 rounded-md bg-violet-50 object-contain p-0.5"
+                className="h-9 w-9 shrink-0 rounded-md3-xs bg-tertiary-container object-contain p-0.5"
                 loading="lazy"
                 title={mat?.name}
             />
         ) : (
-            <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-md bg-violet-50 text-[8px] font-bold text-violet-400">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md3-xs bg-tertiary-container text-[8px] font-bold text-on-tertiary-container">
                 MS
             </div>
         );
@@ -226,7 +221,7 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
             <img
                 src={getPracticeTicketThumbnailUrl(detail.resourceId, assetSource)}
                 alt={`practice-ticket-${detail.resourceId}`}
-                className="shrink-0 h-9 w-9 rounded-md bg-slate-50 object-contain p-0.5"
+                className={THUMB_LG}
                 loading="lazy"
                 title={getRewardTypeLabel(detail.resourceType, t)}
             />
@@ -238,7 +233,7 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
             <img
                 src={getSkillPracticeTicketThumbnailUrl(detail.resourceId, assetSource)}
                 alt={`skill-practice-ticket-${detail.resourceId}`}
-                className="shrink-0 h-9 w-9 rounded-md bg-slate-50 object-contain p-0.5"
+                className={THUMB_LG}
                 loading="lazy"
                 title={getRewardTypeLabel(detail.resourceType, t)}
             />
@@ -248,16 +243,16 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
     if (detail.resourceType === "character_rank_exp" && typeof detail.resourceId === "number") {
         return (
             <div
-                className="shrink-0 relative"
+                className="relative shrink-0"
                 title={`${getRewardTypeLabel(detail.resourceType, t)} · ${getCharacterName(t, detail.resourceId)}`}
             >
                 <img
                     src={getCharacterIconUrl(detail.resourceId)}
                     alt={`character-rank-exp-${detail.resourceId}`}
-                    className="h-9 w-9 rounded-full border border-emerald-100 bg-white object-cover"
+                    className="h-9 w-9 rounded-full border border-outline-variant bg-surface-container-lowest object-cover"
                     loading="lazy"
                 />
-                <span className="absolute -bottom-0.5 -right-0.5 rounded bg-emerald-500 px-[3px] text-[6px] font-black text-white leading-tight select-none">
+                <span className="absolute -bottom-0.5 -right-0.5 select-none rounded-md3-xs bg-primary px-[3px] text-[6px] font-black leading-tight text-on-primary">
                     EXP
                 </span>
             </div>
@@ -265,7 +260,7 @@ function RewardThumbnail({ detail }: { detail: { resourceType: string; resourceI
     }
 
     return (
-        <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-md bg-slate-50 text-[8px] font-bold text-slate-300">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md3-xs bg-surface-container-high text-[8px] font-bold text-on-surface-variant">
             {getRewardTypeLabel(detail.resourceType, t).slice(0, 2)}
         </div>
     );
@@ -277,14 +272,14 @@ function CostThumbnail({ cost }: { cost: { resourceType: string; resourceId: num
 
     if (cost.resourceType === "material") {
         return (
-            <div className="shrink-0 relative" title={coreData.materialMap.get(cost.resourceId)?.name}>
+            <div className="relative shrink-0" title={coreData.materialMap.get(cost.resourceId)?.name}>
                 <img
                     src={getMaterialThumbnailUrl(cost.resourceId, assetSource)}
                     alt={`cost-${cost.resourceId}`}
-                    className="h-7 w-7 rounded bg-slate-50 object-contain p-0.5"
+                    className={THUMB_SM}
                     loading="lazy"
                 />
-                <span className="absolute -bottom-0.5 -right-0.5 rounded bg-slate-700/80 px-0.5 text-[7px] font-bold text-white leading-tight">
+                <span className={QTY_BADGE}>
                     {cost.quantity}
                 </span>
             </div>
@@ -297,18 +292,18 @@ function CostThumbnail({ cost }: { cost: { resourceType: string; resourceId: num
             ? getMysekaiMaterialThumbnailUrl(mat.iconAssetbundleName, assetSource)
             : undefined;
         return (
-            <div className="shrink-0 relative" title={mat?.name}>
+            <div className="relative shrink-0" title={mat?.name}>
                 {imgUrl ? (
                     <img
                         src={imgUrl}
                         alt={`cost-ms-${cost.resourceId}`}
-                        className="h-7 w-7 rounded bg-violet-50 object-contain p-0.5"
+                        className="h-7 w-7 rounded-md3-xs bg-tertiary-container object-contain p-0.5"
                         loading="lazy"
                     />
                 ) : (
-                    <div className="h-7 w-7 rounded bg-violet-50 flex items-center justify-center text-[7px] font-bold text-violet-400">MS</div>
+                    <div className="flex h-7 w-7 items-center justify-center rounded-md3-xs bg-tertiary-container text-[7px] font-bold text-on-tertiary-container">MS</div>
                 )}
-                <span className="absolute -bottom-0.5 -right-0.5 rounded bg-slate-700/80 px-0.5 text-[7px] font-bold text-white leading-tight">
+                <span className={QTY_BADGE}>
                     {cost.quantity}
                 </span>
             </div>
@@ -327,31 +322,32 @@ function ExchangeCard({ entry }: { entry: FlattenedMaterialExchange }) {
     const hiddenCostCount = Math.max(0, entry.costs.length - 8);
 
     return (
-        <Link
+        <Card
+            variant="elevated"
             href={`/exchanges/${entry.id}`}
             data-shortcut-item="true"
-            className="group block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-miku/40 hover:shadow-lg"
+            className="group p-4"
         >
             <div className="mb-2 flex flex-wrap gap-1.5">
                 <Badge label={getExchangeStatusLabel(entry.status, t)} tone={getStatusTone(entry.status)} />
-                <Badge label={getExchangeCategoryLabel(entry.exchangeCategory, t)} tone="violet" />
-                <Badge label={getExchangeTypeLabel(entry.materialExchangeType, t)} tone="amber" />
-                {typeof entry.exchangeLimit === "number" ? <Badge label={t("page.exchanges.limitTimes", { count: entry.exchangeLimit })} tone="rose" /> : null}
+                <Badge label={getExchangeCategoryLabel(entry.exchangeCategory, t)} tone="secondary" />
+                <Badge label={getExchangeTypeLabel(entry.materialExchangeType, t)} tone="tertiary" />
+                {typeof entry.exchangeLimit === "number" ? <Badge label={t("page.exchanges.limitTimes", { count: entry.exchangeLimit })} tone="error" /> : null}
             </div>
 
-            <h2 className="text-sm font-black leading-5 text-slate-800 transition-colors group-hover:text-miku mb-3 line-clamp-2">
+            <h2 className="mb-3 line-clamp-2 type-title-s text-on-surface">
                 {entry.resolvedTitle}
             </h2>
 
             <div className="flex gap-4">
                 {visibleRewards.length > 0 && (
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                         <ScrollRow label={t("page.exchanges.rewards")}>
                             {visibleRewards.map((detail, i) => (
                                 <RewardThumbnail key={`r-${entry.id}-${i}`} detail={detail} />
                             ))}
                             {hiddenRewardCount > 0 && (
-                                <div className="shrink-0 flex h-9 w-9 items-center justify-center rounded-md bg-slate-100 text-[10px] font-bold text-slate-400">
+                                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md3-xs bg-surface-container-high type-label-s text-on-surface-variant">
                                     +{hiddenRewardCount}
                                 </div>
                             )}
@@ -360,13 +356,13 @@ function ExchangeCard({ entry }: { entry: FlattenedMaterialExchange }) {
                 )}
 
                 {visibleCosts.length > 0 && (
-                    <div className="flex-1 min-w-0">
+                    <div className="min-w-0 flex-1">
                         <ScrollRow label={t("page.exchanges.costs")}>
                             {visibleCosts.map((cost, i) => (
                                 <CostThumbnail key={`c-${entry.id}-${i}`} cost={cost} />
                             ))}
                             {hiddenCostCount > 0 && (
-                                <div className="shrink-0 flex h-7 w-7 items-center justify-center rounded bg-slate-100 text-[8px] font-bold text-slate-400">
+                                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md3-xs bg-surface-container-high text-[8px] font-bold text-on-surface-variant">
                                     +{hiddenCostCount}
                                 </div>
                             )}
@@ -375,13 +371,13 @@ function ExchangeCard({ entry }: { entry: FlattenedMaterialExchange }) {
                 )}
             </div>
 
-            <div className="flex items-center justify-between text-xs">
-                <span className="text-slate-400">{formatExchangeTime(getExchangeLastModified(entry), formatDate)}</span>
-                <span className="font-bold text-miku transition-transform group-hover:translate-x-0.5">
+            <div className="flex items-center justify-between type-label-m">
+                <span className="text-on-surface-variant">{formatExchangeTime(getExchangeLastModified(entry), formatDate)}</span>
+                <span className="text-primary">
                     {t("page.exchanges.detailLink")}
                 </span>
             </div>
-        </Link>
+        </Card>
     );
 }
 
@@ -554,7 +550,7 @@ function ExchangesContent() {
         >
             <FilterSection label={t("common.filter.exchangeShop")}>
                 <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
+                    className={SELECT_CLASS}
                     value={filters.selectedSummaryIds.length === 1 ? String(filters.selectedSummaryIds[0]) : ""}
                     onChange={(e) => {
                         const val = e.target.value ? [Number(e.target.value)] : [];
@@ -572,7 +568,7 @@ function ExchangesContent() {
 
             <FilterSection label={t("common.filter.category")}>
                 <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
+                    className={SELECT_CLASS}
                     value={filters.selectedCategories.length === 1 ? filters.selectedCategories[0] : ""}
                     onChange={(e) => {
                         const val = e.target.value ? [e.target.value] : [];
@@ -697,7 +693,7 @@ function ExchangesContent() {
 
             <FilterSection label={t("common.filter.rewardType")}>
                 <select
-                    className="w-full p-2 border border-slate-200 rounded-lg text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-miku/50"
+                    className={SELECT_CLASS}
                     value={filters.selectedRewardTypes.length === 1 ? filters.selectedRewardTypes[0] : ""}
                     onChange={(e) => {
                         const val = e.target.value ? [e.target.value] : [];
@@ -719,34 +715,30 @@ function ExchangesContent() {
 
     if (!coreData) {
         return (
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <PageHeader />
+            <PageContainer>
+                <ExchangesPageHeader />
                 {error ? (
-                    <div className="rounded-2xl border border-red-200 bg-red-50 px-5 py-4 text-sm text-red-600">
-                        <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                        <p className="mt-1">{error}</p>
-                    </div>
+                    <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />
                 ) : (
                     <SkeletonList />
                 )}
-            </div>
+            </PageContainer>
         );
     }
 
     return (
         <ExchangePageContext.Provider value={{ coreData, cardsMap }}>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <PageHeader />
+            <PageContainer>
+                <ExchangesPageHeader />
 
                 {error ? (
-                    <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm text-amber-700">
-                        <p className="font-bold">{t("page.exchanges.loadNotice")}</p>
-                        <p className="mt-1">{error}</p>
-                    </div>
+                    <Banner tone="warning" title={t("page.exchanges.loadNotice")} className="mb-6">
+                        {error}
+                    </Banner>
                 ) : null}
 
                 {!isLoading ? (
-                    <div className="mb-4 text-xs text-slate-500">
+                    <div className="mb-4 type-body-s text-on-surface-variant">
                         {t("page.exchanges.currentTotalSummary", {
                             count: filteredEntries.length,
                             total: hasActiveFilters
@@ -763,6 +755,7 @@ function ExchangesContent() {
                         <SkeletonList />
                     ) : filteredEntries.length === 0 ? (
                         <EmptyState
+                            icon={mdSwapHoriz}
                             title={hasActiveFilters ? t("page.exchanges.noResult") : t("page.exchanges.noData")}
                             description={hasActiveFilters ? t("page.exchanges.resetHint") : t("page.exchanges.noDataDescription")}
                         />
@@ -774,28 +767,17 @@ function ExchangesContent() {
                                 ))}
                             </div>
 
-                            {displayedEntries.length < filteredEntries.length ? (
-                                <div className="mt-8 flex justify-center">
-                                    <button
-                                        onClick={loadMore}
-                                        data-shortcut-load-more="true"
-                                        className="rounded-xl bg-gradient-to-r from-miku to-miku-dark px-8 py-3 font-bold text-white shadow-lg transition-all hover:-translate-y-0.5 hover:shadow-xl"
-                                    >
-                                        {t("page.exchanges.loadMore")}
-                                        <span className="ml-2 text-sm opacity-80">
-                                            ({displayedEntries.length} / {filteredEntries.length})
-                                        </span>
-                                    </button>
-                                </div>
-                            ) : (
-                                <div className="mt-8 text-center text-sm text-slate-400">
-                                    {t("page.exchanges.allLoaded", { count: filteredEntries.length })}
-                                </div>
-                            )}
+                            <LoadMore
+                                label={t("page.exchanges.loadMore")}
+                                shown={displayedEntries.length}
+                                total={filteredEntries.length}
+                                onLoadMore={loadMore}
+                                allLoadedLabel={t("page.exchanges.allLoaded", { count: filteredEntries.length })}
+                            />
                         </>
                     )}
                 </div>
-            </div>
+            </PageContainer>
         </ExchangePageContext.Provider>
     );
 }
@@ -803,11 +785,7 @@ function ExchangesContent() {
 function ExchangesLoadingFallback() {
     const { t } = useI18n();
 
-    return (
-        <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-            {t("page.exchanges.loadingFallback")}
-        </div>
-    );
+    return <LoadingState className="min-h-[50vh]" label={t("page.exchanges.loadingFallback")} />;
 }
 
 export default function ExchangesClient() {

@@ -10,6 +10,7 @@ import { fetchMasterData } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { formatCharacterDisplayName } from "@/lib/character-name";
+import { ErrorState, LoadingState, PageContainer, PageHeader, Surface } from "@/components/md3";
 
 // Derive unit field → icon filename from centralized maps
 const UNIT_FIELD_ICONS: Record<string, string> = Object.fromEntries(
@@ -70,121 +71,102 @@ function CharacterListContent() {
     }, [characters, unitProfiles]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.character.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.character.title")} <span className="text-miku">{t("page.character.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.character.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.character.badge")}
+                title={t("page.character.title")}
+                highlight={t("page.character.titleHighlight")}
+                description={t("page.character.description")}
+            />
             {isLoading ? (
-                <div className="flex h-[40vh] w-full items-center justify-center">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-12 h-12 border-4 border-miku border-t-transparent rounded-full animate-spin" />
-                        <span className="text-slate-500">{t("page.character.loadingData")}</span>
-                    </div>
-                </div>
+                <LoadingState label={t("page.character.loadingData")} />
             ) : error ? (
-                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.character.loadFailed")}</p>
-                    <p>{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 text-red-500 underline hover:no-underline"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState title={t("page.character.loadFailed")} message={error} retryLabel={t("common.action.retry")} />
             ) : (
-                <div className="space-y-10">
+                <div className="space-y-6">
                     {Object.entries(charactersByUnit).map(([unitId, { unit, characters: unitCharacters }]) => {
                         const iconName = UNIT_FIELD_ICONS[unitId] || "vs.webp";
 
                         return (
-                            <div key={unitId} className="ios-glass-card rounded-2xl overflow-hidden">
+                            <Surface as="section" tone="low" key={unitId} className="overflow-hidden">
                                 {/* Unit Header */}
-                                <div className="px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex items-center gap-4">
-                                    <div className="w-12 h-12 relative shrink-0">
-                                    <Image
-                                        src={`/data/icon/${iconName}`}
-                                        alt={unit.unitName}
-                                        fill
-                                        className="object-contain"
-                                        unoptimized
-                                    />
-                                </div>
-                                <div>
-                                    <h2 className="font-bold text-lg text-slate-800">
-                                        <TranslatedText
-                                            original={unit.unitName}
-                                            category="units"
-                                            field="unitName"
-                                            inline
-                                            translationClassName="text-sm text-slate-500 font-normal ml-2"
-                                        />
-                                    </h2>
-                                    <div className="text-xs text-slate-500 line-clamp-1">
-                                        <TranslatedText
-                                            original={unit.profileSentence}
-                                            category="units"
-                                            field="profileSentence"
+                                <div className="flex items-center gap-4 border-b border-outline-variant px-5 py-4">
+                                    <div className="relative h-12 w-12 shrink-0">
+                                        <Image
+                                            src={`/data/icon/${iconName}`}
+                                            alt={unit.unitName}
+                                            fill
+                                            className="object-contain"
+                                            unoptimized
                                         />
                                     </div>
+                                    <div className="min-w-0">
+                                        <h2 className="type-title-l text-on-surface">
+                                            <TranslatedText
+                                                original={unit.unitName}
+                                                category="units"
+                                                field="unitName"
+                                                inline
+                                                translationClassName="ml-2 type-body-m text-on-surface-variant"
+                                            />
+                                        </h2>
+                                        <div className="line-clamp-1 type-body-s text-on-surface-variant">
+                                            <TranslatedText
+                                                original={unit.profileSentence}
+                                                category="units"
+                                                field="profileSentence"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Characters Grid */}
-                            <div className="p-4 sm:p-6">
-                                <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-                                    {unitCharacters.map((chara) => {
-                                        const characterName = formatCharacterDisplayName(chara);
+                                {/* Characters Grid */}
+                                <div className="p-4 sm:p-6">
+                                    <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+                                        {unitCharacters.map((chara) => {
+                                            const characterName = formatCharacterDisplayName(chara);
 
-                                        return (
-                                            <div
-                                                key={chara.id}
-                                                className={`${unitId === "piapro"
-                                                    ? "w-[calc(16.666%-10px)] sm:w-[calc(16.666%-14px)]"
-                                                    : "w-[calc(25%-9px)] sm:w-[calc(25%-12px)]"
-                                                    }`}
-                                            >
-                                                <Link
+                                            return (
+                                                <div
                                                     key={chara.id}
-                                                    href={`/character/${chara.id}`}
-                                                    className="group relative h-[160px] sm:h-[220px] md:h-[280px] lg:h-[320px] rounded-xl overflow-hidden ios-glass-card ios-glass-card-interactive flex items-center justify-center p-1 sm:p-2"
+                                                    className={`${unitId === "piapro"
+                                                        ? "w-[calc(16.666%-10px)] sm:w-[calc(16.666%-14px)]"
+                                                        : "w-[calc(25%-9px)] sm:w-[calc(25%-12px)]"
+                                                        }`}
                                                 >
-                                                    <div className="relative w-full h-full">
-                                                        <Image
-                                                            src={getCharacterSelectUrl(chara.id, assetSource)}
-                                                            alt={characterName}
-                                                            fill
-                                                            className="object-contain"
-                                                            unoptimized
-                                                        />
-                                                    </div>
-                                                    {/* Character name overlay on hover */}
-                                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <p className="text-white text-xs font-bold text-center truncate">
-                                                            {characterName}
-                                                        </p>
-                                                    </div>
-                                                </Link>
-                                            </div>
-                                        );
-                                    })}
+                                                    <Link
+                                                        key={chara.id}
+                                                        href={`/character/${chara.id}`}
+                                                        className="group state-layer focus-ring relative flex h-[160px] items-center justify-center overflow-hidden rounded-md3-md bg-surface-container p-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-1 sm:h-[220px] sm:p-2 md:h-[280px] lg:h-[320px]"
+                                                    >
+                                                        <div className="relative h-full w-full">
+                                                            <Image
+                                                                src={getCharacterSelectUrl(chara.id, assetSource)}
+                                                                alt={characterName}
+                                                                fill
+                                                                className="object-contain"
+                                                                unoptimized
+                                                            />
+                                                        </div>
+                                                        {/* Character name overlay on hover */}
+                                                        <div className="absolute inset-x-0 bottom-0 bg-inverse-surface/85 p-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100 group-focus-visible:opacity-100">
+                                                            <p className="truncate text-center type-label-m text-inverse-on-surface">
+                                                                {characterName}
+                                                            </p>
+                                                        </div>
+                                                    </Link>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
                                 </div>
-                            </div>
-                        </div>
-                    );
-                })}
+                            </Surface>
+                        );
+                    })}
                 </div>
             )}
-        </div>
+        </PageContainer>
     );
 }
 
@@ -193,7 +175,7 @@ export default function CharacterClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.character.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState label={t("page.character.loadingFallback")} />}>
                 <CharacterListContent />
             </Suspense>
         </MainLayout>

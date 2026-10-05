@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
-import BaseFilters, { FilterSection } from "@/components/common/BaseFilters";
+import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -12,6 +12,7 @@ import { TranslatedText } from "@/components/common/TranslatedText";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { Card, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 
 interface IStampInfo {
     id: number;
@@ -155,9 +156,9 @@ function StickerContent() {
                     <button
                         key="all1"
                         onClick={() => setSelectedChar1(null)}
-                        className={`aspect-square rounded-full flex items-center justify-center text-xs font-bold transition-all ${selectedChar1 === null
-                            ? "bg-miku text-white shadow-lg ring-2 ring-miku"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200"
+                        className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar1 === null
+                            ? "bg-primary text-on-primary"
+                            : "border border-outline-variant text-on-surface-variant"
                             }`}
                         title={t("page.sticker.anyCharacter")}
                     >
@@ -169,9 +170,9 @@ function StickerContent() {
                             <button
                                 key={`char1-${id}`}
                                 onClick={() => setSelectedChar1(selectedChar1 === id ? null : id)}
-                                className={`relative aspect-square rounded-full overflow-hidden transition-all flex items-center justify-center ${selectedChar1 === id
-                                    ? "ring-2 ring-miku shadow-lg"
-                                    : "ring-1 ring-slate-200 hover:ring-miku/50"
+                                className={`focus-ring relative flex aspect-square items-center justify-center overflow-hidden rounded-full transition-shadow duration-150 ease-md3-standard ${selectedChar1 === id
+                                    ? "ring-[3px] ring-primary"
+                                    : "ring-1 ring-outline-variant hover:ring-primary"
                                     }`}
                                 title={characterName}
                             >
@@ -193,9 +194,9 @@ function StickerContent() {
                     <button
                         key="all2"
                         onClick={() => setSelectedChar2(null)}
-                        className={`aspect-square rounded-full flex items-center justify-center text-xs font-bold transition-all ${selectedChar2 === null
-                            ? "bg-miku text-white shadow-lg ring-2 ring-miku"
-                            : "bg-slate-50 hover:bg-slate-100 text-slate-500 border border-slate-200"
+                        className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar2 === null
+                            ? "bg-primary text-on-primary"
+                            : "border border-outline-variant text-on-surface-variant"
                             }`}
                         title={t("page.sticker.anyCharacter")}
                     >
@@ -207,9 +208,9 @@ function StickerContent() {
                             <button
                                 key={`char2-${id}`}
                                 onClick={() => setSelectedChar2(selectedChar2 === id ? null : id)}
-                                className={`relative aspect-square rounded-full overflow-hidden transition-all flex items-center justify-center ${selectedChar2 === id
-                                    ? "ring-2 ring-miku shadow-lg"
-                                    : "ring-1 ring-slate-200 hover:ring-miku/50"
+                                className={`focus-ring relative flex aspect-square items-center justify-center overflow-hidden rounded-full transition-shadow duration-150 ease-md3-standard ${selectedChar2 === id
+                                    ? "ring-[3px] ring-primary"
+                                    : "ring-1 ring-outline-variant hover:ring-primary"
                                     }`}
                                 title={characterName}
                             >
@@ -228,27 +229,21 @@ function StickerContent() {
 
             <FilterSection label={t("page.sticker.sectionLabel.stampType")}>
                 <div className="flex flex-wrap gap-2">
-                    <button
+                    <FilterButton
                         key="type-all"
+                        selected={stampType === ""}
                         onClick={() => setStampType("")}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${stampType === ""
-                            ? "bg-miku text-white shadow-md"
-                            : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                            }`}
                     >
                         {t("page.sticker.allTypes")}
-                    </button>
+                    </FilterButton>
                     {stampTypes.map(type => (
-                        <button
+                        <FilterButton
                             key={`type-${type}`}
+                            selected={stampType === type}
                             onClick={() => setStampType(stampType === type ? "" : type)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${stampType === type
-                                ? "bg-miku text-white shadow-md"
-                                : "bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200"
-                                }`}
                         >
                             {type === "text" ? t("page.sticker.stampTypes.text") : type === "illustration" ? t("page.sticker.stampTypes.illustration") : type}
-                        </button>
+                        </FilterButton>
                     ))}
                 </div>
             </FilterSection>
@@ -268,7 +263,7 @@ function StickerContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             <ImagePreviewModal
                 isOpen={!!selectedStamp}
                 onClose={() => setSelectedStamp(null)}
@@ -278,95 +273,69 @@ function StickerContent() {
                 fileName={selectedStamp ? `sticker_${selectedStamp.id}.png` : "sticker.png"}
             />
 
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.sticker.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.sticker.title")} <span className="text-miku">{t("page.sticker.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.sticker.description")}
-                </p>
-            </div>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.sticker.badge")}
+                title={t("page.sticker.title")}
+                highlight={t("page.sticker.titleHighlight")}
+                description={t("page.sticker.description")}
+            />
 
             {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.sticker.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={t("page.sticker.loadFailed")} message={error} retryLabel={t("common.action.retry")} />
             )}
 
             {/* Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : (
                     <>
                         <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-3">
                             {displayedStamps.map(stamp => (
-                                <button
-                                    type="button"
+                                <Card
+                                    variant="elevated"
                                     key={stamp.id}
                                     onClick={() => setSelectedStamp(stamp)}
                                     data-shortcut-item="true"
-                                    className="group block w-full text-left cursor-zoom-in"
+                                    className="cursor-zoom-in p-2"
                                 >
-                                    <div className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-2">
-                                        <div className="relative aspect-square">
-                                            <Image
-                                                src={getStampUrl(stamp.assetbundleName, assetSource)}
-                                                alt={stamp.name}
-                                                fill
-                                                className="object-contain group-hover:scale-105 transition-transform"
-                                                unoptimized
-                                            />
-                                        </div>
-                                        <div className="mt-1 text-[10px] text-slate-500 text-center">
-                                            <TranslatedText
-                                                original={stamp.name}
-                                                category="sticker"
-                                                field="name"
-                                                originalClassName="truncate block"
-                                                translationClassName="text-[9px] text-slate-400 truncate block"
-                                            />
-                                        </div>
+                                    <div className="relative aspect-square">
+                                        <Image
+                                            src={getStampUrl(stamp.assetbundleName, assetSource)}
+                                            alt={stamp.name}
+                                            fill
+                                            className="object-contain"
+                                            unoptimized
+                                        />
                                     </div>
-                                </button>
+                                    <div className="mt-1 text-center type-label-s text-on-surface-variant">
+                                        <TranslatedText
+                                            original={stamp.name}
+                                            category="sticker"
+                                            field="name"
+                                            originalClassName="truncate block"
+                                            translationClassName="block truncate type-label-s text-outline"
+                                        />
+                                    </div>
+                                </Card>
                             ))}
                         </div>
 
                         {/* Load More */}
-                        {displayedStamps.length < filteredStamps.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                >
-                                    {t("page.sticker.loadMore")}
-                                    <span className="ml-2 text-sm opacity-80">
-                                        ({displayedStamps.length} / {filteredStamps.length})
-                                    </span>
-                                </button>
-                            </div>
-                        )}
-
-                        {/* All loaded */}
-                        {displayedStamps.length > 0 && displayedStamps.length >= filteredStamps.length && (
-                            <div className="mt-8 text-center text-slate-400 text-sm">
-                                {t("page.sticker.allLoaded", { count: filteredStamps.length })}
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.sticker.loadMore")}
+                            shown={displayedStamps.length}
+                            total={filteredStamps.length}
+                            onLoadMore={loadMore}
+                            allLoadedLabel={t("page.sticker.allLoaded", { count: filteredStamps.length })}
+                        />
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -375,7 +344,7 @@ export default function StickerClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.sticker.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState className="min-h-[50vh]" label={t("page.sticker.loadingFallback")} />}>
                 <StickerContent />
             </Suspense>
         </MainLayout>

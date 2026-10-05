@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useParams } from "next/navigation";
 import Link from "@/components/LocalizedLink";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
@@ -10,6 +11,9 @@ import ExternalLink from "@/components/ExternalLink";
 import { IMangaItem, IMangaData } from "@/types/manga";
 import { getMangaImageUrl } from "@/lib/assets";
 import { fetchMangaData } from "@/lib/fetch";
+import { md3EffectsFast, md3SpatialFast } from "@/lib/motion";
+import { Button, Card, EmptyState, Fab, Icon, IconButton, LoadingState, PageContainer, SectionCard, SideSheet, Surface, buttonClassName } from "@/components/md3";
+import { mdArrowBack, mdArrowForward, mdAutoStories, mdChevronLeft, mdChevronRight, mdClose, mdInfo, mdMenu, mdMenuBook, mdOpenInNew } from "@/components/md3/icons";
 
 // ==================== Component ====================
 
@@ -26,6 +30,7 @@ export default function MangaDetailClient() {
     const [jumpInput, setJumpInput] = useState("");
     const [isBilingualOpen, setIsBilingualOpen] = useState(false);
     const [isFloatMenuOpen, setIsFloatMenuOpen] = useState(false);
+    const reduceMotion = useReducedMotion();
 
     // Fetch all mangas
     useEffect(() => {
@@ -98,12 +103,7 @@ export default function MangaDetailClient() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("page.manga.loading")}</p>
-                    </div>
-                </div>
+                <LoadingState className="min-h-[50vh]" label={t("page.manga.loading")} />
             </MainLayout>
         );
     }
@@ -111,54 +111,40 @@ export default function MangaDetailClient() {
     if (error || !currentManga) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.manga.notFoundTitle", { id: mangaIdLabel })}</h2>
-                        <p className="text-slate-500 mb-6">{t("page.manga.notFoundDesc")}</p>
-                        <Link
-                            href="/manga"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.manga.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdMenuBook}
+                        title={t("page.manga.notFoundTitle", { id: mangaIdLabel })}
+                        description={t("page.manga.notFoundDesc")}
+                        action={
+                            <Button variant="filled" icon={mdArrowBack} href="/manga">
+                                {t("page.manga.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-4xl relative">
+            <PageContainer className="relative max-w-4xl">
                 {/* Top Navigation Bar: Prev / Jump / Next */}
-                <div className="flex items-center justify-between mb-6 ios-glass-card rounded-2xl border border-slate-200/30 dark:border-slate-800/30 px-5 py-4 shadow-md">
+                <Surface tone="low" className="mb-6 flex items-center justify-between gap-2 px-3 py-3 sm:px-4">
                     {/* Prev */}
                     {prevManga ? (
-                        <Link
-                            href={`/manga/${prevManga.id}`}
-                            className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-350 hover:text-miku transition-colors font-medium group"
-                        >
-                            <svg className="w-5 h-5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                            </svg>
+                        <Button variant="text" icon={mdChevronLeft} href={`/manga/${prevManga.id}`} className="pl-2">
                             <span className="hidden sm:inline">{t("page.manga.episodeLabel", { id: prevManga.id })}</span>
                             <span className="sm:hidden">{t("page.manga.previousEpisode")}</span>
-                        </Link>
+                        </Button>
                     ) : (
-                        <div className="text-sm text-slate-350 dark:text-slate-500 font-light">{t("page.manga.firstEpisodeReached")}</div>
+                        <div className="px-2 type-body-m text-on-surface-variant">{t("page.manga.firstEpisodeReached")}</div>
                     )}
 
                     {/* Jump to */}
                     <div className="flex items-center gap-2">
-                        <span className="text-xs text-slate-400 dark:text-slate-500 hidden sm:inline">{t("page.manga.jumpLabel")}</span>
+                        <span className="hidden type-label-l text-on-surface-variant sm:inline">{t("page.manga.jumpLabel")}</span>
                         <input
                             type="number"
                             min={1}
@@ -166,40 +152,30 @@ export default function MangaDetailClient() {
                             onChange={(e) => setJumpInput(e.target.value)}
                             onKeyDown={(e) => { if (e.key === "Enter") handleJump(); }}
                             placeholder={`${currentManga.id}`}
-                            className="w-16 px-2.5 py-1.5 text-center text-sm ios-glass-input rounded-xl focus:outline-none"
+                            aria-label={t("page.manga.jumpLabel")}
+                            className="h-10 w-16 rounded-md3-xs border border-outline bg-transparent px-2 text-center type-body-m text-on-surface caret-primary outline-none placeholder:text-on-surface-variant focus:border-2 focus:border-primary"
                         />
-                        <button
-                            onClick={handleJump}
-                            className="ios-glass-btn px-3 py-1.5 text-xs text-miku border border-miku/20 rounded-xl"
-                        >
-                            GO
-                        </button>
+                        <IconButton variant="tonal" icon={mdArrowForward} label={t("page.manga.jumpLabel")} onClick={handleJump} />
                     </div>
 
                     {/* Next */}
                     {nextManga ? (
-                        <Link
-                            href={`/manga/${nextManga.id}`}
-                            className="flex items-center gap-1.5 text-sm text-slate-600 dark:text-slate-355 hover:text-miku transition-colors font-medium group"
-                        >
+                        <Button variant="text" trailingIcon={mdChevronRight} href={`/manga/${nextManga.id}`} className="pr-2">
                             <span className="hidden sm:inline">{t("page.manga.episodeLabel", { id: nextManga.id })}</span>
                             <span className="sm:hidden">{t("page.manga.nextEpisode")}</span>
-                            <svg className="w-5 h-5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                            </svg>
-                        </Link>
+                        </Button>
                     ) : (
-                        <div className="text-sm text-slate-350 dark:text-slate-500 font-light">{t("page.manga.latestEpisodeReached")}</div>
+                        <div className="px-2 type-body-m text-on-surface-variant">{t("page.manga.latestEpisodeReached")}</div>
                     )}
-                </div>
+                </Surface>
 
                 {/* Header */}
-                <div className="mb-6">
-                    <div className="flex flex-wrap items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3.5 py-1 bg-miku/15 rounded-full text-xs font-bold text-miku border border-miku/25">
+                <header className="mb-6">
+                    <div className="mb-2 flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center rounded-md3-sm bg-primary-container px-3 py-1 type-label-l text-on-primary-container">
                             {t("page.manga.episodeLabel", { id: currentManga.id })}
                         </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
+                        <span className="type-label-m text-on-surface-variant">
                             {formatDate(currentManga.date * 1000, {
                                 year: "numeric",
                                 month: "long",
@@ -207,44 +183,36 @@ export default function MangaDetailClient() {
                             })}
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-primary-text mt-2 mb-4">
+                    <h1 className="mt-2 type-headline-m text-on-surface sm:type-headline-l">
                         {currentManga.title}
                     </h1>
-                </div>
+                </header>
 
                 {/* Full Manga Image */}
-                <div className="ios-glass-card rounded-2xl overflow-hidden mb-6 p-1 bg-white/40 dark:bg-black/30 border border-slate-200/20 dark:border-slate-800/20 shadow-xl">
+                <Surface tone="lowest" className="mb-6 overflow-hidden p-1 shadow-elev-1">
                     <img
                         src={getMangaImageUrl(currentManga.id)}
                         alt={t("page.manga.imageAlt", { id: currentManga.id, title: currentManga.title })}
-                        className="w-full h-auto rounded-xl"
+                        className="h-auto w-full rounded-md3-lg"
                         loading="eager"
                     />
-                </div>
+                </Surface>
 
                 {/* Info Card: Contributors + Source Link */}
-                <div className="ios-glass-card rounded-2xl overflow-hidden mb-8 border border-slate-200/30 dark:border-slate-800/30 shadow-lg">
-                    <div className="px-5 py-4 border-b border-slate-200/20 dark:border-slate-800/20 bg-gradient-to-r from-miku/10 to-transparent">
-                        <h2 className="font-bold text-primary-text flex items-center gap-2">
-                            <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {t("page.manga.mangaInfo")}
-                        </h2>
-                    </div>
-                    <div className="divide-y divide-slate-200/20 dark:divide-slate-800/20">
+                <SectionCard title={t("page.manga.mangaInfo")} icon={mdInfo} className="mb-8" bodyClassName="p-0">
+                    <div className="divide-y divide-outline-variant">
                         {/* Contributors */}
                         {currentManga.contributors && Object.keys(currentManga.contributors).length > 0 && (
                             <div className="px-5 py-4">
-                                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-3 uppercase tracking-wider">{t("page.manga.contributors")}</p>
+                                <p className="mb-3 type-title-s text-on-surface-variant">{t("page.manga.contributors")}</p>
                                 <div className="flex flex-wrap gap-2">
                                     {Object.entries(currentManga.contributors).map(([role, name]) => (
                                         <span
                                             key={role}
-                                            className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-100/50 dark:bg-slate-800/50 border border-slate-200/10 hover:border-miku/20 transition-all rounded-xl text-xs"
+                                            className="inline-flex items-center gap-1.5 rounded-md3-sm bg-surface-container px-3 py-1.5 type-label-l"
                                         >
-                                            <span className="font-bold text-slate-500 dark:text-slate-400">{role}</span>
-                                            <span className="text-primary-text font-medium">{name}</span>
+                                            <span className="text-on-surface-variant">{role}</span>
+                                            <span className="text-on-surface">{name}</span>
                                         </span>
                                     ))}
                                 </div>
@@ -252,281 +220,225 @@ export default function MangaDetailClient() {
                         )}
 
                         {/* Source link */}
-                        <div className="px-5 py-4 flex items-center justify-between">
-                            <span className="text-sm text-slate-500 dark:text-slate-400 font-medium">{t("page.manga.source")}</span>
+                        <div className="flex items-center justify-between px-5 py-4">
+                            <span className="type-body-m text-on-surface-variant">{t("page.manga.source")}</span>
                             <ExternalLink
                                 href={currentManga.url}
-                                className="ios-glass-btn px-4 py-2 border border-miku/20 text-miku text-xs hover:bg-miku/10 flex items-center gap-1.5 rounded-xl font-bold"
+                                className={buttonClassName({ variant: "outlined", size: "s" })}
                             >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                </svg>
+                                <Icon path={mdOpenInNew} size={18} />
                                 {t("page.manga.viewOriginalPost")}
                             </ExternalLink>
                         </div>
                     </div>
-                </div>
+                </SectionCard>
 
-                <div className="mb-8 max-w-xl mx-auto">
+                <div className="mx-auto mb-8 max-w-xl">
                     <DetailPageAdCard />
                 </div>
 
                 {/* Bottom Navigation: Prev / Next (large) */}
-                <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="mb-8 grid grid-cols-2 gap-4">
                     {prevManga ? (
-                        <Link
+                        <Card
+                            variant="filled"
                             href={`/manga/${prevManga.id}`}
-                            className="flex flex-col items-start gap-1.5 p-5 ios-glass-card ios-glass-card-interactive rounded-2xl shadow border border-slate-200/30 dark:border-slate-800/30 hover:shadow-xl group"
+                            className="flex flex-col items-start gap-1.5 p-5"
                         >
-                            <span className="text-xs text-slate-400 group-hover:text-miku transition-colors flex items-center gap-1 font-semibold">
-                                <svg className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
+                            <span className="flex items-center gap-1 type-label-l text-primary">
+                                <Icon path={mdChevronLeft} size={18} />
                                 {t("page.manga.previousEpisode")}
                             </span>
-                            <span className="text-sm font-bold text-primary-text group-hover:text-miku transition-colors truncate w-full">
+                            <span className="w-full truncate type-title-s text-on-surface">
                                 {t("page.manga.episodeWithTitle", { id: prevManga.id, title: prevManga.title })}
                             </span>
-                        </Link>
+                        </Card>
                     ) : (
                         <div />
                     )}
 
                     {nextManga ? (
-                        <Link
+                        <Card
+                            variant="filled"
                             href={`/manga/${nextManga.id}`}
-                            className="flex flex-col items-end gap-1.5 p-5 ios-glass-card ios-glass-card-interactive rounded-2xl shadow border border-slate-200/30 dark:border-slate-800/30 hover:shadow-xl group text-right"
+                            className="flex flex-col items-end gap-1.5 p-5 text-right"
                         >
-                            <span className="text-xs text-slate-400 group-hover:text-miku transition-colors flex items-center gap-1 font-semibold">
+                            <span className="flex items-center gap-1 type-label-l text-primary">
                                 {t("page.manga.nextEpisode")}
-                                <svg className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
+                                <Icon path={mdChevronRight} size={18} />
                             </span>
-                            <span className="text-sm font-bold text-primary-text group-hover:text-miku transition-colors truncate w-full">
+                            <span className="w-full truncate type-title-s text-on-surface">
                                 {t("page.manga.episodeWithTitle", { id: nextManga.id, title: nextManga.title })}
                             </span>
-                        </Link>
+                        </Card>
                     ) : (
                         <div />
                     )}
                 </div>
-            </div>
+            </PageContainer>
 
-            {/* Bilingual Floating Trigger Button */}
-            <div className="fixed bottom-24 right-6 z-40">
-                <button
-                    onClick={() => setIsBilingualOpen(true)}
-                    className="w-14 h-14 rounded-full ios-glass-panel border-miku/30 shadow-[0_8px_32px_rgba(51,204,187,0.3)] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 group"
-                    title={t("page.story.reader.mangaPanel")}
-                >
-                    <svg className="w-6 h-6 text-miku group-hover:scale-110 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                    </svg>
-                </button>
-            </div>
-
-            {/* Flip Navigation Float-Ball */}
+            {/* Floating actions: bilingual panel + flip navigation */}
             <div className="fixed bottom-6 right-6 z-40 flex flex-col items-end gap-3">
                 {/* Expanded Quick Navigation Card */}
-                {isFloatMenuOpen && (
-                    <div className="ios-glass-panel rounded-2xl p-4 w-64 shadow-2xl border border-miku/30 animate-in fade-in slide-in-from-bottom-5 duration-300">
-                        <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-200/20 dark:border-slate-800/20">
-                            <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
-                                {t("page.story.reader.floatBallMenu")}
-                            </span>
-                            <button
-                                onClick={() => setIsFloatMenuOpen(false)}
-                                className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 transition-colors"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
+                <AnimatePresence>
+                    {isFloatMenuOpen && (
+                        <motion.div
+                            initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.96 }}
+                            animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
+                            exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 16, scale: 0.96 }}
+                            transition={reduceMotion ? md3EffectsFast : md3SpatialFast}
+                            style={{ transformOrigin: "bottom right" }}
+                            className="w-64 rounded-md3-lg bg-surface-container text-on-surface shadow-elev-3"
+                        >
+                            <div className="flex items-center justify-between py-1 pl-4 pr-1">
+                                <span className="type-title-s text-on-surface-variant">
+                                    {t("page.story.reader.floatBallMenu")}
+                                </span>
+                                <IconButton size="s" icon={mdClose} label={t("common.md3.close")} onClick={() => setIsFloatMenuOpen(false)} />
+                            </div>
 
-                        {/* Prev & Next Quick Buttons */}
-                        <div className="grid grid-cols-2 gap-2 mb-3">
-                            {prevManga ? (
-                                <Link
-                                    href={`/manga/${prevManga.id}`}
-                                    className="ios-glass-btn flex items-center justify-center gap-1 py-2 text-xs text-slate-700 dark:text-slate-200 hover:text-miku"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                    </svg>
-                                    {t("page.manga.previousEpisode")}
-                                </Link>
-                            ) : (
-                                <button disabled className="ios-glass-btn opacity-40 py-2 text-xs cursor-not-allowed">
-                                    {t("page.manga.previousEpisode")}
-                                </button>
-                            )}
+                            {/* Prev & Next Quick Buttons */}
+                            <div className="mb-3 grid grid-cols-2 gap-2 px-3">
+                                {prevManga ? (
+                                    <Button variant="tonal" size="xs" icon={mdChevronLeft} href={`/manga/${prevManga.id}`}>
+                                        {t("page.manga.previousEpisode")}
+                                    </Button>
+                                ) : (
+                                    <Button variant="tonal" size="xs" disabled>
+                                        {t("page.manga.previousEpisode")}
+                                    </Button>
+                                )}
 
-                            {nextManga ? (
-                                <Link
-                                    href={`/manga/${nextManga.id}`}
-                                    className="ios-glass-btn flex items-center justify-center gap-1 py-2 text-xs text-slate-700 dark:text-slate-200 hover:text-miku"
-                                >
-                                    {t("page.manga.nextEpisode")}
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </Link>
-                            ) : (
-                                <button disabled className="ios-glass-btn opacity-40 py-2 text-xs cursor-not-allowed">
-                                    {t("page.manga.nextEpisode")}
-                                </button>
-                            )}
-                        </div>
+                                {nextManga ? (
+                                    <Button variant="tonal" size="xs" trailingIcon={mdChevronRight} href={`/manga/${nextManga.id}`}>
+                                        {t("page.manga.nextEpisode")}
+                                    </Button>
+                                ) : (
+                                    <Button variant="tonal" size="xs" disabled>
+                                        {t("page.manga.nextEpisode")}
+                                    </Button>
+                                )}
+                            </div>
 
-                        {/* Fast chapters jump list */}
-                        <div className="max-h-40 overflow-y-auto custom-scrollbar border border-slate-200/20 dark:border-slate-800/20 rounded-xl p-1 bg-slate-900/5 dark:bg-black/20">
-                            {allMangas.map((m) => (
-                                <Link
-                                    key={m.id}
-                                    href={`/manga/${m.id}`}
-                                    className={`flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors my-0.5 ${
-                                        m.id === currentManga.id
-                                            ? "bg-miku/10 text-miku font-bold"
-                                            : "hover:bg-black/5 dark:hover:bg-white/5 text-slate-600 dark:text-slate-350"
-                                    }`}
-                                >
-                                    <span>#{m.id}</span>
-                                    <span className="truncate max-w-[130px] font-light text-right">{m.title}</span>
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
+                            {/* Fast chapters jump list */}
+                            <div className="custom-scrollbar mx-3 mb-3 max-h-40 overflow-y-auto rounded-md3-sm bg-surface-container-high p-1">
+                                {allMangas.map((m) => (
+                                    <Link
+                                        key={m.id}
+                                        href={`/manga/${m.id}`}
+                                        aria-current={m.id === currentManga.id ? "page" : undefined}
+                                        className={`state-layer focus-ring my-0.5 flex items-center justify-between rounded-md3-xs px-2.5 py-1.5 type-label-m ${
+                                            m.id === currentManga.id
+                                                ? "bg-secondary-container text-on-secondary-container"
+                                                : "text-on-surface-variant"
+                                        }`}
+                                    >
+                                        <span>#{m.id}</span>
+                                        <span className="max-w-[130px] truncate text-right">{m.title}</span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
-                {/* The Floating Ball itself */}
-                <button
+                {/* Bilingual panel trigger */}
+                <Fab
+                    color="surface"
+                    icon={mdAutoStories}
+                    label={t("page.story.reader.mangaPanel")}
+                    onClick={() => setIsBilingualOpen(true)}
+                />
+
+                {/* Flip navigation trigger */}
+                <Fab
+                    color="primary-container"
+                    icon={isFloatMenuOpen ? mdClose : mdMenu}
+                    label={t("page.story.reader.floatBallMenu")}
+                    aria-expanded={isFloatMenuOpen}
                     onClick={() => setIsFloatMenuOpen(!isFloatMenuOpen)}
-                    className="w-14 h-14 rounded-full ios-glass-panel border-miku/30 shadow-[0_8px_32px_rgba(51,204,187,0.3)] flex items-center justify-center cursor-pointer hover:scale-110 active:scale-95 transition-all duration-300 group z-50"
-                    title={t("page.story.reader.floatBallMenu")}
-                >
-                    <svg
-                        className={`w-6 h-6 text-miku transition-transform duration-500 ${isFloatMenuOpen ? "rotate-180 scale-90" : "group-hover:rotate-12"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        {isFloatMenuOpen ? (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        ) : (
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        )}
-                    </svg>
-                </button>
+                />
             </div>
 
             {/* Bilingual split comparison & Translation notes */}
-            <div className={`fixed inset-y-0 right-0 w-80 md:w-96 ios-glass-panel border-l border-slate-200/30 dark:border-slate-800/30 shadow-2xl z-50 p-6 flex flex-col transition-transform duration-500 ease-out transform ${
-                isBilingualOpen ? "translate-x-0" : "translate-x-full"
-            }`}>
-                {/* Header */}
-                <div className="flex items-center justify-between pb-4 mb-4 border-b border-slate-200/20 dark:border-slate-800/20 shrink-0">
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                        <svg className="w-5 h-5 text-miku animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                        </svg>
-                        {t("page.story.reader.mangaPanel")}
-                    </h3>
-                    <button
-                        onClick={() => setIsBilingualOpen(false)}
-                        className="p-1 rounded-full hover:bg-black/10 dark:hover:bg-white/10 text-slate-400 hover:text-slate-600 transition-colors"
+            <SideSheet
+                isOpen={isBilingualOpen}
+                onClose={() => setIsBilingualOpen(false)}
+                title={t("page.story.reader.mangaPanel")}
+                widthClassName="w-[min(384px,calc(100vw-3.5rem))]"
+                bodyClassName="space-y-6"
+            >
+                {/* Bilingual Metadata */}
+                <section className="space-y-3">
+                    <h4 className="type-title-s text-on-surface-variant">
+                        {t("page.story.reader.bilingualTitle")}
+                    </h4>
+                    <div className="space-y-2 rounded-md3-md bg-surface-container p-4">
+                        <div>
+                            <span className="mb-0.5 block type-label-s text-on-surface-variant">{t("page.manga.chineseVersion")}</span>
+                            <span className="type-title-s text-on-surface">{currentManga.title}</span>
+                        </div>
+                        <div>
+                            <span className="mb-0.5 block type-label-s text-on-surface-variant">{t("page.manga.japaneseOriginal")}</span>
+                            <span className="type-body-m italic text-on-surface-variant">
+                                Project SEKAI 4-Koma Comic #{currentManga.id}
+                            </span>
+                        </div>
+                    </div>
+                </section>
+
+                {/* Contributors & Translation credits */}
+                <section className="space-y-3">
+                    <h4 className="type-title-s text-on-surface-variant">
+                        {t("page.manga.contributors")}
+                    </h4>
+                    <div className="grid grid-cols-1 gap-2">
+                        {currentManga.contributors && Object.entries(currentManga.contributors).map(([role, name]) => (
+                            <div
+                                key={role}
+                                className="flex items-center justify-between rounded-md3-md bg-surface-container p-3"
+                            >
+                                <span className="type-label-l text-on-surface-variant">{role}</span>
+                                <span className="type-label-l text-primary">{name}</span>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                {/* Translator Essay / Commentary */}
+                <section className="space-y-3">
+                    <h4 className="type-title-s text-on-surface-variant">
+                        {t("page.story.reader.mangaEssayTitle")}
+                    </h4>
+                    <div className="space-y-3 rounded-md3-md bg-surface-container p-4 type-body-s text-on-surface-variant">
+                        <p>
+                            <span className="type-label-l text-on-surface">{t("page.manga.contributors")}：</span>
+                            {t("page.story.reader.mangaEssay1")}
+                        </p>
+                        <p>
+                            <span className="type-label-l text-on-surface">{t("page.manga.mangaInfo")}：</span>
+                            {t("page.story.reader.mangaEssay2")}
+                        </p>
+                        <p className="border-t border-outline-variant pt-2 text-center type-label-s italic">
+                            {t("page.story.reader.mangaEssayFooter")}
+                        </p>
+                    </div>
+                </section>
+
+                {/* Source Post */}
+                <section className="space-y-3">
+                    <h4 className="type-title-s text-on-surface-variant">
+                        {t("page.manga.source")}
+                    </h4>
+                    <ExternalLink
+                        href={currentManga.url}
+                        className={buttonClassName({ variant: "outlined", size: "s", fullWidth: true })}
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
-
-                {/* Drawer Scrollable Content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-6">
-                    {/* Bilingual Metadata */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            {t("page.story.reader.bilingualTitle")}
-                        </h4>
-                        <div className="ios-glass-card rounded-xl p-4 border border-slate-200/10 bg-slate-900/5 dark:bg-black/20">
-                            <div className="mb-2">
-                                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">CHINESE VERSION</span>
-                                <span className="text-sm font-bold text-slate-800 dark:text-slate-200">{currentManga.title}</span>
-                            </div>
-                            <div>
-                                <span className="text-[10px] font-bold text-slate-400 block mb-0.5">JAPANESE ORIGINAL</span>
-                                <span className="text-sm font-medium text-slate-500 dark:text-slate-400 italic">
-                                    Project SEKAI 4-Koma Comic #{currentManga.id}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Contributors & Translation credits */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            {t("page.manga.contributors")}
-                        </h4>
-                        <div className="grid grid-cols-1 gap-2">
-                            {currentManga.contributors && Object.entries(currentManga.contributors).map(([role, name]) => (
-                                <div
-                                    key={role}
-                                    className="flex items-center justify-between p-3 ios-glass-card rounded-xl border border-slate-200/10 hover:bg-miku/5 transition-colors"
-                                >
-                                    <span className="text-xs font-bold text-slate-500 dark:text-slate-400">{role}</span>
-                                    <span className="text-xs text-miku font-semibold">{name}</span>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Translator Essay / Commentary */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            {t("page.story.reader.mangaEssayTitle")}
-                        </h4>
-                        <div className="ios-glass-card rounded-xl p-4 border border-slate-200/10 space-y-3 text-xs leading-relaxed text-slate-600 dark:text-slate-350">
-                            <p>
-                                💡 <span className="font-bold">{t("page.manga.contributors")}：</span>
-                                {t("page.story.reader.mangaEssay1")}
-                            </p>
-                            <p>
-                                📚 <span className="font-bold">{t("page.manga.mangaInfo")}：</span>
-                                {t("page.story.reader.mangaEssay2")}
-                            </p>
-                            <p className="border-t border-slate-200/20 dark:border-slate-800/20 pt-2 text-[10px] text-slate-400 italic text-center">
-                                {t("page.story.reader.mangaEssayFooter")}
-                            </p>
-                        </div>
-                    </div>
-
-                    {/* Source Post */}
-                    <div className="space-y-3">
-                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                            {t("page.manga.source")}
-                        </h4>
-                        <ExternalLink
-                            href={currentManga.url}
-                            className="ios-glass-btn w-full py-3 px-4 flex items-center justify-center gap-2 text-xs text-slate-700 dark:text-slate-300 hover:text-miku border border-miku/20 hover:border-miku"
-                        >
-                            <svg className="w-4 h-4 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                            {t("page.manga.viewOriginalPost")}
-                        </ExternalLink>
-                    </div>
-                </div>
-            </div>
-
-            {/* Backdrop for Bilingual Panel */}
-            {isBilingualOpen && (
-                <div
-                    onClick={() => setIsBilingualOpen(false)}
-                    className="fixed inset-0 bg-black/20 dark:bg-black/40 backdrop-blur-sm z-45 transition-opacity"
-                />
-            )}
+                        <Icon path={mdOpenInNew} size={18} />
+                        {t("page.manga.viewOriginalPost")}
+                    </ExternalLink>
+                </section>
+            </SideSheet>
         </MainLayout>
     );
 }

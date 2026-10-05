@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense, type CSSProperties } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
@@ -9,6 +9,29 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { fetchBgmDurationsData, fetchMasterData } from "@/lib/fetch";
 import { getMysekaiRawAssetUrl } from "@/lib/assets";
 import { getMysekaiSoundTrackAudioUrl } from "@/lib/mysekai-preview/assets";
+import { Banner, Button, Chip, CircularProgress, EmptyState, Icon, IconButton, LoadingState, PageContainer, PageHeader, Surface, TextField } from "@/components/md3";
+import {
+    mdArrowDownward,
+    mdArrowUpward,
+    mdChevronRight,
+    mdDownload,
+    mdError,
+    mdGraphicEq,
+    mdMusicOff,
+    mdPauseFill,
+    mdPlayArrowFill,
+    mdRepeat,
+    mdRepeatOne,
+    mdSearch,
+    mdSell,
+    mdShare,
+    mdShuffle,
+    mdSkipNextFill,
+    mdSkipPreviousFill,
+    mdVolumeDown,
+    mdVolumeOff,
+    mdVolumeUp,
+} from "@/components/md3/icons";
 
 // Interface definitions based on masterdata schemas
 interface MysekaiMusicSoundTrackCategory {
@@ -66,7 +89,7 @@ const SPOILER_DURATION_THRESHOLD_SECONDS = 40;
 const MYSEKAI_SOUNDTRACK_CATEGORY_ID = 12;
 const SCENARIO_SOUNDTRACK_CATEGORY_ID = 13;
 const SPOILER_CATEGORY_FILTER = "spoiler" as const;
-const SPOILER_CATEGORY_THEME = { from: "#F97316", to: "#C2410C", shadow: "shadow-orange-500/20", bgGlow: "from-orange-950/20 to-rose-950/20", text: "text-orange-400" };
+const SPOILER_CATEGORY_THEME = { from: "#F97316", to: "#C2410C" };
 const SOUNDTRACK_INITIAL_LIST_LIMIT = 80;
 const SOUNDTRACK_LIST_BATCH_SIZE = 80;
 const SOUNDTRACK_LIST_SCROLL_THRESHOLD_PX = 280;
@@ -316,32 +339,31 @@ function setSoundtrackMediaSessionPlaybackState(
 }
 
 // Color schemes matching each category group
-const CATEGORY_THEMES: Record<number, { from: string; to: string; shadow: string; bgGlow: string; text: string }> = {
-    1: { from: "#00E5CF", to: "#007D85", shadow: "shadow-cyan-500/20", bgGlow: "from-cyan-950/20 to-teal-950/20", text: "text-miku" }, // Unit overview
-    2: { from: "#FF45A4", to: "#7D1BFF", shadow: "shadow-fuchsia-500/20", bgGlow: "from-fuchsia-950/20 to-purple-950/20", text: "text-fuchsia-400" }, // Virtual Singer
-    3: { from: "#33A2FF", to: "#102E7A", shadow: "shadow-blue-500/20", bgGlow: "from-blue-950/20 to-indigo-950/20", text: "text-blue-400" }, // Leo/need
-    4: { from: "#52FF45", to: "#EBE81B", shadow: "shadow-green-500/20", bgGlow: "from-emerald-950/20 to-lime-950/20", text: "text-green-400" }, // MORE MORE JUMP!
-    5: { from: "#FF6E1A", to: "#A60E0E", shadow: "shadow-orange-500/20", bgGlow: "from-orange-950/20 to-red-950/20", text: "text-orange-400" }, // Vivid BAD SQUAD
-    6: { from: "#FFDF00", to: "#FF5E00", shadow: "shadow-yellow-500/20", bgGlow: "from-yellow-950/20 to-amber-950/20", text: "text-yellow-400" }, // Wonderlands x Showtime
-    7: { from: "#C655FF", to: "#1F0F3D", shadow: "shadow-purple-500/20", bgGlow: "from-purple-950/20 to-slate-950/20", text: "text-purple-400" }, // Nightcord
-    11: { from: "#00E5CF", to: "#007D85", shadow: "shadow-teal-500/20", bgGlow: "from-teal-950/20 to-cyan-950/20", text: "text-miku" }, // In-game
-    12: { from: "#00CCBB", to: "#006655", shadow: "shadow-cyan-500/20", bgGlow: "from-emerald-950/25 to-teal-950/25", text: "text-teal-400" }, // Mysekai
-    13: { from: "#94A3B8", to: "#334155", shadow: "shadow-slate-500/10", bgGlow: "from-slate-950/20 to-slate-900/20", text: "text-slate-400" }, // Scenario
-    14: { from: "#38BDF8", to: "#0369A1", shadow: "shadow-sky-500/20", bgGlow: "from-sky-950/20 to-blue-950/20", text: "text-sky-400" }, // Live
-    15: { from: "#F43F5E", to: "#9F1239", shadow: "shadow-rose-500/20", bgGlow: "from-rose-950/20 to-pink-950/20", text: "text-rose-400" }, // Virtual Live
-    16: { from: "#F59E0B", to: "#B45309", shadow: "shadow-amber-500/20", bgGlow: "from-amber-950/20 to-yellow-950/20", text: "text-amber-400" }, // Gacha
-    20: { from: "#64748B", to: "#1E293B", shadow: "shadow-slate-500/10", bgGlow: "from-slate-950/20 to-zinc-950/20", text: "text-slate-400" }, // Other
-    30: { from: "#EC4899", to: "#BE185D", shadow: "shadow-pink-500/20", bgGlow: "from-pink-950/20 to-rose-950/20", text: "text-pink-400" }, // Collaboration
+// Unit / category accent colors (game data colors, not theme colors)
+const CATEGORY_THEMES: Record<number, { from: string; to: string }> = {
+    1: { from: "#00E5CF", to: "#007D85" }, // Unit overview
+    2: { from: "#FF45A4", to: "#7D1BFF" }, // Virtual Singer
+    3: { from: "#33A2FF", to: "#102E7A" }, // Leo/need
+    4: { from: "#52FF45", to: "#EBE81B" }, // MORE MORE JUMP!
+    5: { from: "#FF6E1A", to: "#A60E0E" }, // Vivid BAD SQUAD
+    6: { from: "#FFDF00", to: "#FF5E00" }, // Wonderlands x Showtime
+    7: { from: "#C655FF", to: "#1F0F3D" }, // Nightcord
+    11: { from: "#00E5CF", to: "#007D85" }, // In-game
+    12: { from: "#00CCBB", to: "#006655" }, // Mysekai
+    13: { from: "#94A3B8", to: "#334155" }, // Scenario
+    14: { from: "#38BDF8", to: "#0369A1" }, // Live
+    15: { from: "#F43F5E", to: "#9F1239" }, // Virtual Live
+    16: { from: "#F59E0B", to: "#B45309" }, // Gacha
+    20: { from: "#64748B", to: "#1E293B" }, // Other
+    30: { from: "#EC4899", to: "#BE185D" }, // Collaboration
 };
 
-const DEFAULT_THEME = { from: "#00CCBB", to: "#1E293B", shadow: "shadow-slate-500/10", bgGlow: "from-slate-950/20 to-zinc-950/20", text: "text-slate-400" };
+const DEFAULT_THEME = { from: "#00CCBB", to: "#1E293B" };
 
 function SoundtrackContent() {
     const { t, formatNumber } = useI18n();
-    const { assetSource, resolvedColorScheme, isShowSpoiler, backgroundAnimationBudget } = useTheme();
-    const isDark = resolvedColorScheme === "dark";
+    const { assetSource, isShowSpoiler, backgroundAnimationBudget } = useTheme();
     const isPerformanceVisuals = backgroundAnimationBudget === "on";
-    const shouldAnimateIdleUi = isPerformanceVisuals;
     const searchParams = useSearchParams();
 
     // Data states
@@ -789,15 +811,6 @@ function SoundtrackContent() {
         return CATEGORY_THEMES[currentTrack.musicSoundTrackCategoryId] ?? DEFAULT_THEME;
     }, [currentTrack]);
 
-    // High contrast adaptive icon color
-    const iconColor = useMemo(() => {
-        if (isDark) return currentTheme.from;
-        // Special accessibility color fallbacks for ultra-bright categories in light mode
-        if (currentTrack?.musicSoundTrackCategoryId === 4) return "#15803d"; // Deep emerald green
-        if (currentTrack?.musicSoundTrackCategoryId === 6) return "#c2410c"; // Deep sunset orange
-        return currentTheme.to;
-    }, [isDark, currentTheme, currentTrack]);
-
     const syncCurrentTime = useCallback((force = false) => {
         const audio = audioRef.current;
         if (!audio) return;
@@ -1209,22 +1222,26 @@ function SoundtrackContent() {
     };
 
     const displayDuration = currentTrack?.durationSeconds ?? duration;
-    const playerCardClassName = `relative overflow-hidden rounded-3xl bg-white/88 dark:bg-slate-900/82 border border-slate-200 dark:border-white/10 p-6 sm:p-8 shadow-xl dark:shadow-2xl transition-colors duration-500 ${isPerformanceVisuals ? "backdrop-blur-sm" : ""}`;
-    const toolbarClassName = `flex flex-col sm:flex-row gap-4 items-center justify-between rounded-2xl border border-slate-200 dark:border-white/5 p-4 ${isPerformanceVisuals ? "bg-white/80 dark:bg-slate-900/75 backdrop-blur-sm" : "bg-white/92 dark:bg-slate-900/88"}`;
-    const volumePopoverCardClassName = `bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-2xl p-4 shadow-xl flex flex-col items-center gap-3 ${isPerformanceVisuals ? "backdrop-blur-md" : ""}`;
-
-    // Calculate dynamic ambient background colors based on current track category
-    const ambientBgGlow = useMemo(() => {
-        const rawGlow = currentTheme.bgGlow;
-        if (isDark) return rawGlow;
-        // Replace -950/20 or -900/20 with -200/25 or -200/25 for beautiful light ambient glow
-        return rawGlow.replace(/-950/g, "-200").replace(/-900/g, "-200");
-    }, [currentTheme, isDark]);
 
     const progressPercent = duration > 0 ? Math.min(100, Math.max(0, (currentTime / duration) * 100)) : 0;
+    const playbackModeLabel = playbackMode === "sequential"
+        ? t("page.soundtrack.playbackModes.sequential")
+        : playbackMode === "loop-one"
+            ? t("page.soundtrack.playbackModes.loopOne")
+            : t("page.soundtrack.playbackModes.shuffle");
+    const playbackModeIcon = playbackMode === "sequential" ? mdRepeat : playbackMode === "loop-one" ? mdRepeatOne : mdShuffle;
+    const volumeIcon = volume === 0 ? mdVolumeOff : volume < 0.4 ? mdVolumeDown : mdVolumeUp;
+    const getJacketUrl = (categoryId: number) => {
+        const jacketName = categoryMap.get(categoryId)?.assetbundleName ?? "jacket_s_soundtrack_1";
+        return getMysekaiRawAssetUrl(`music_record_soundtrack/jacket/${jacketName}/${jacketName}.webp`, assetSource);
+    };
+    const sortOptions = [
+        { field: "seq" as const, label: t("page.soundtrack.filters.sortBySeq") },
+        { field: "title" as const, label: t("page.soundtrack.filters.sortByTitle") },
+    ];
 
     return (
-        <div className="relative w-full text-slate-800 dark:text-white select-none transition-colors duration-1000">
+        <div className="relative w-full select-none text-on-surface">
             {/* Embedded styles for spinning CD animations to ensure smooth pause/resumes */}
             <style dangerouslySetInnerHTML={{__html: `
                 @keyframes spin-cd {
@@ -1235,17 +1252,24 @@ function SoundtrackContent() {
                     animation: spin-cd 30s linear infinite;
                     will-change: transform;
                 }
+                @media (prefers-reduced-motion: reduce) {
+                    .animate-cd-spin { animation: none; }
+                }
                 .custom-slider-thumb::-webkit-slider-thumb {
                     appearance: none;
-                    width: 12px;
-                    height: 12px;
+                    width: 14px;
+                    height: 14px;
                     border-radius: 50%;
                     background: ${currentTheme.from};
                     cursor: pointer;
-                    transition: transform 0.15s ease-in-out;
                 }
-                .custom-slider-thumb::-webkit-slider-thumb:hover {
-                    transform: scale(1.3);
+                .custom-slider-thumb::-moz-range-thumb {
+                    width: 14px;
+                    height: 14px;
+                    border: 0;
+                    border-radius: 50%;
+                    background: ${currentTheme.from};
+                    cursor: pointer;
                 }
 
                 .vertical-volume-hitbox {
@@ -1259,19 +1283,10 @@ function SoundtrackContent() {
                     -ms-overflow-style: none;
                     scrollbar-width: none;
                 }
-                /* Thin modern elegant custom scrollbar for playlist */
-                .custom-playlist-scrollbar::-webkit-scrollbar {
-                    width: 6px;
-                }
-                .custom-playlist-scrollbar::-webkit-scrollbar-track {
-                    background: transparent;
-                }
-                .custom-playlist-scrollbar::-webkit-scrollbar-thumb {
-                    background: ${isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.12)'};
-                    border-radius: 99px;
-                }
-                .custom-playlist-scrollbar::-webkit-scrollbar-thumb:hover {
-                    background: ${isDark ? 'rgba(255, 255, 255, 0.25)' : 'rgba(0, 0, 0, 0.25)'};
+                /* Thin custom scrollbar for playlist */
+                .custom-playlist-scrollbar {
+                    scrollbar-width: thin;
+                    scrollbar-color: var(--md-sys-color-outline-variant) transparent;
                 }
             `}} />
 
@@ -1291,169 +1306,117 @@ function SoundtrackContent() {
                 }}
             />
 
-            {/* Ambient Lighting Layers */}
-            {isPerformanceVisuals && (
-                <>
-                    <div className={`absolute inset-0 bg-gradient-to-tr ${ambientBgGlow} opacity-35 blur-2xl pointer-events-none transition-colors duration-1000`} />
-                    <div className="absolute top-0 right-0 w-80 h-80 rounded-full bg-miku/8 blur-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-80 h-80 rounded-full bg-purple-500/4 blur-3xl pointer-events-none" />
-                </>
-            )}
-
-            <div className="container mx-auto px-4 sm:px-6 py-8 relative z-10 max-w-7xl">
-                {/* Header */}
-                <div className="flex flex-col md:flex-row items-center justify-between mb-8 gap-4 border-b border-slate-200 dark:border-white/5 pb-6">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 border border-miku/30 bg-miku/10 rounded-full mb-2">
-                            <span className={`w-1.5 h-1.5 rounded-full bg-miku ${shouldAnimateIdleUi ? "animate-pulse" : ""}`} />
-                            <span className="text-miku text-[10px] font-bold tracking-widest uppercase">{t("page.soundtrack.badge")}</span>
-                        </div>
-                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-white">
-                            {t("page.soundtrack.title")} <span className="text-transparent bg-clip-text bg-gradient-to-r from-miku to-cyan-400">{t("page.soundtrack.titleHighlight")}</span>
-                        </h1>
-                    </div>
-                    <p className="text-slate-500 dark:text-slate-400 text-sm max-w-md md:text-right hidden sm:block">
-                        {t("page.soundtrack.description")}
-                    </p>
-                </div>
+            <PageContainer className="relative z-10">
+                <PageHeader
+                    eyebrow={t("page.soundtrack.badge")}
+                    title={t("page.soundtrack.title")}
+                    highlight={t("page.soundtrack.titleHighlight")}
+                    description={t("page.soundtrack.description")}
+                />
 
                 {/* Main Content Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                    
-                    {/* Left Column: Premium Music Player (Glass Card) */}
-                    <div className="lg:col-span-5 w-full">
-                        <div className={playerCardClassName}>
-                            
-                            {/* Accent Glow Overlay */}
-                            <div 
-                                className="absolute top-0 inset-x-0 h-[2px] opacity-60" 
+                <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12 lg:gap-8">
+
+                    {/* Left Column: Music Player */}
+                    <div className="w-full lg:col-span-5">
+                        <Surface tone="low" className="relative overflow-hidden p-6 sm:p-8">
+
+                            {/* Accent line in the category color */}
+                            <div
+                                className="absolute inset-x-0 top-0 h-[3px]"
                                 style={{ background: `linear-gradient(to right, transparent, ${currentTheme.from}, transparent)` }}
                             />
 
-                            {/* Album Art - Rotating CD */}
-                            <div className="relative w-full aspect-square max-w-[280px] sm:max-w-[320px] mx-auto mb-8 flex items-center justify-center">
-                                {/* CD Case Shadow */}
-                                <div className="absolute inset-4 bg-black/20 dark:bg-black/40 rounded-full blur-lg scale-95 pointer-events-none" />
+                            {/* Album Art - Rotating CD (artwork, fixed dark vinyl colors are intentional) */}
+                            <div className="relative mx-auto mb-8 flex aspect-square w-full max-w-[280px] items-center justify-center sm:max-w-[320px]">
+                                <div className="pointer-events-none absolute inset-4 scale-95 rounded-full bg-shadow/30 blur-lg" />
 
-                                {/* Vinyl Track Body */}
-                                <div className="relative w-full h-full rounded-full bg-neutral-950 p-[6px] border border-slate-800 shadow-inner flex items-center justify-center select-none">
+                                <div className="relative flex h-full w-full select-none items-center justify-center rounded-full bg-[#0a0a0a] p-[6px] shadow-inner">
                                     {/* Concentric Grooves */}
-                                    <div className="absolute inset-2 rounded-full border border-neutral-900/60 pointer-events-none" />
-                                    <div className="absolute inset-6 rounded-full border border-neutral-900/60 pointer-events-none" />
-                                    <div className="absolute inset-12 rounded-full border border-neutral-900/60 pointer-events-none" />
-                                    <div className="absolute inset-20 rounded-full border border-neutral-900/60 pointer-events-none" />
-
-                                    {/* Light Reflection highlights */}
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-white/0 via-white/5 to-white/0 opacity-60 mix-blend-overlay pointer-events-none z-10" />
-                                    <div className="absolute inset-0 rounded-full bg-gradient-to-bl from-white/0 via-white/5 to-white/0 opacity-60 mix-blend-overlay pointer-events-none z-10" />
+                                    <div className="pointer-events-none absolute inset-2 rounded-full border border-[#171717]" />
+                                    <div className="pointer-events-none absolute inset-6 rounded-full border border-[#171717]" />
+                                    <div className="pointer-events-none absolute inset-12 rounded-full border border-[#171717]" />
+                                    <div className="pointer-events-none absolute inset-20 rounded-full border border-[#171717]" />
 
                                     {/* Center spinning core */}
-                                    <div className={`relative w-4/5 h-4/5 rounded-full overflow-hidden bg-neutral-900 flex items-center justify-center ${isPlaying ? "animate-cd-spin" : ""}`}>
-                                        
-                                        {/* Center Jacket Image */}
+                                    <div className={`relative flex h-4/5 w-4/5 items-center justify-center overflow-hidden rounded-full bg-[#171717] ${isPlaying ? "animate-cd-spin" : ""}`}>
                                         {currentTrack && (
-                                            <div className="relative w-full h-full">
+                                            <div className="relative h-full w-full">
                                                 <Image
-                                                    src={(() => {
-                                                        const jacketName = categoryMap.get(currentTrack.musicSoundTrackCategoryId)?.assetbundleName ?? "jacket_s_soundtrack_1";
-                                                        return getMysekaiRawAssetUrl(
-                                                            `music_record_soundtrack/jacket/${jacketName}/${jacketName}.webp`,
-                                                            assetSource
-                                                        );
-                                                    })()}
+                                                    src={getJacketUrl(currentTrack.musicSoundTrackCategoryId)}
                                                     alt={currentTrack.title}
                                                     fill
                                                     className="object-cover"
                                                     unoptimized
                                                     priority
                                                 />
-                                                {/* Matte Overlay */}
-                                                <div className="absolute inset-0 bg-black/10" />
                                             </div>
                                         )}
 
                                         {/* CD Hole Trim */}
-                                        <div className="absolute w-12 h-12 rounded-full bg-neutral-950 border-4 border-neutral-800/80 shadow-md flex items-center justify-center z-20">
-                                            <div className="w-4 h-4 rounded-full bg-slate-950 shadow-inner" />
+                                        <div className="absolute z-20 flex h-12 w-12 items-center justify-center rounded-full border-4 border-[#262626] bg-[#0a0a0a]">
+                                            <div className="h-4 w-4 rounded-full bg-surface-container-low" />
                                         </div>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Song Meta Info */}
-                            <div className="text-center mb-6 px-2">
-                                <div key={currentTrack?.id || "empty"} className="transition-opacity duration-200">
-                                    <h3 className="text-xl font-bold tracking-tight text-slate-800 dark:text-white truncate max-w-full">
+                            <div className="mb-6 px-2 text-center">
+                                <div key={currentTrack?.id || "empty"}>
+                                    <h2 className="max-w-full truncate type-title-l text-on-surface">
                                         {getDisplayTrackTitle(currentTrack, t)}
-                                    </h3>
-                                    <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 truncate">
+                                    </h2>
+                                    <p className="mt-1 truncate type-body-s text-on-surface-variant">
                                         {currentTrack?.pronunciation || t("page.soundtrack.pronunciationLoading")}
                                     </p>
                                     <div className="mt-3 flex flex-wrap items-center justify-center gap-2">
-                                        <div className="px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                                        <span className="inline-flex h-7 items-center rounded-md3-sm bg-secondary-container px-3 type-label-m text-on-secondary-container">
                                             {currentTrack ? (categoryMap.get(currentTrack.musicSoundTrackCategoryId)?.name || "BGM") : "..."}
-                                        </div>
+                                        </span>
                                         {currentTrack?.isSpoiler && (
-                                            <span className="px-3 py-1 bg-orange-500/10 border border-orange-400/30 rounded-full text-[10px] font-bold text-orange-600 dark:text-orange-300">
+                                            <span className="inline-flex h-7 items-center rounded-md3-sm bg-tertiary-container px-3 type-label-m text-on-tertiary-container">
                                                 {t("common.badge.spoiler")}
                                             </span>
                                         )}
                                         {currentTrack && Number.isFinite(displayDuration) && displayDuration > 0 && (
-                                            <span className="px-3 py-1 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-[10px] font-mono font-bold text-slate-500 dark:text-slate-300" title={t("page.soundtrack.durationLabel")}>
+                                            <span className="inline-flex h-7 items-center rounded-md3-sm border border-outline-variant px-3 font-mono type-label-m text-on-surface-variant" title={t("page.soundtrack.durationLabel")}>
                                                 {formatTime(displayDuration)}
                                             </span>
                                         )}
-                                        <button
+                                        <Button
+                                            variant="tonal"
+                                            size="xs"
+                                            icon={isDownloading ? undefined : mdDownload}
                                             onClick={handleDownloadCurrentTrack}
                                             disabled={!currentTrack || !selectedAudioUrl || isDownloading}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-[10px] font-bold text-slate-500 dark:text-slate-300 transition-all hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                             title={isDownloading ? t("page.soundtrack.download.preparingTitle") : t("page.soundtrack.download.currentTitle")}
                                         >
-                                            {isDownloading ? (
-                                                <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
-                                                </svg>
-                                            ) : (
-                                                <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                    <path d="M12 3v12" />
-                                                    <path d="M7 10l5 5 5-5" />
-                                                    <path d="M5 21h14" />
-                                                </svg>
-                                            )}
-                                            <span>{isDownloading ? t("page.soundtrack.download.preparing") : t("page.soundtrack.download.button")}</span>
-                                        </button>
-                                        <button
+                                            {isDownloading && <CircularProgress size={16} strokeWidth={2} />}
+                                            {isDownloading ? t("page.soundtrack.download.preparing") : t("page.soundtrack.download.button")}
+                                        </Button>
+                                        <Button
+                                            variant="tonal"
+                                            size="xs"
+                                            icon={mdShare}
                                             onClick={handleShareCurrentTrack}
                                             disabled={!currentTrack}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 text-[10px] font-bold text-slate-500 dark:text-slate-300 transition-all hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/80 dark:hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"
                                             title={t("page.soundtrack.share.currentTitle")}
                                         >
-                                            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                <circle cx="18" cy="5" r="3" />
-                                                <circle cx="6" cy="12" r="3" />
-                                                <circle cx="18" cy="19" r="3" />
-                                                <path d="M8.59 13.51l6.83 3.98" />
-                                                <path d="M15.41 6.51L8.59 10.49" />
-                                            </svg>
-                                            <span>{t("page.soundtrack.share.button")}</span>
-                                        </button>
+                                            {t("page.soundtrack.share.button")}
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
 
                             {audioError && (
-                                <div className="mb-4 rounded-xl border border-rose-300/60 bg-rose-50/80 px-3 py-2 text-center text-xs font-medium text-rose-600 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300">
-                                    {audioError}
-                                </div>
+                                <Banner tone="error" className="mb-4">{audioError}</Banner>
                             )}
                             {(downloadHint || shareHint || durationWarning) && !audioError && (
-                                <div className="mb-4 rounded-xl border border-miku/30 bg-miku/10 px-3 py-2 text-center text-xs font-medium text-teal-700 dark:text-miku">
-                                    {downloadHint || shareHint || durationWarning}
-                                </div>
+                                <Banner tone="info" className="mb-4">{downloadHint || shareHint || durationWarning}</Banner>
                             )}
 
-                            {/* Custom Slider / Progress Bar */}
+                            {/* Progress Bar (category color is game data) */}
                             <div className="mb-6">
                                 <input
                                     type="range"
@@ -1462,167 +1425,77 @@ function SoundtrackContent() {
                                     value={currentTime}
                                     onChange={handleSeek}
                                     onPointerDown={() => syncCurrentTime(true)}
-                                    className="w-full h-1 bg-slate-200 dark:bg-white/10 rounded-lg appearance-none cursor-pointer accent-miku hover:h-1.5 transition-all outline-none custom-slider-thumb"
+                                    aria-label={t("page.soundtrack.durationLabel")}
+                                    className="custom-slider-thumb focus-ring h-1.5 w-full cursor-pointer appearance-none rounded-full outline-none"
                                     style={{
-                                        background: `linear-gradient(to right, ${currentTheme.from} 0%, ${currentTheme.from} ${progressPercent}%, ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} ${progressPercent}%, ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'} 100%)`
+                                        background: `linear-gradient(to right, ${currentTheme.from} 0%, ${currentTheme.from} ${progressPercent}%, var(--md-sys-color-surface-container-highest) ${progressPercent}%, var(--md-sys-color-surface-container-highest) 100%)`
                                     }}
                                 />
-                                <div className="flex justify-between items-center text-[10px] font-mono text-slate-500 dark:text-slate-400 mt-2">
+                                <div className="mt-2 flex items-center justify-between font-mono type-label-s text-on-surface-variant">
                                     <span>{formatTime(currentTime)}</span>
                                     <span>{formatTime(duration)}</span>
                                 </div>
                             </div>
 
                             {/* Player Controls */}
-                            <div className="flex items-center justify-between gap-2 max-w-sm mx-auto mb-6 px-4">
-                                
+                            <div className="mx-auto mb-2 flex max-w-sm items-center justify-between gap-2 px-2">
+
                                 {/* Playback Mode (Cycle Button) */}
-                                <button
+                                <IconButton
+                                    icon={playbackModeIcon}
+                                    label={playbackModeLabel}
+                                    variant={playbackMode === "sequential" ? "standard" : "tonal"}
                                     onClick={cyclePlaybackMode}
-                                    className={`p-2.5 rounded-full transition-all duration-300 border active:scale-95 ${
-                                        playbackMode === "sequential"
-                                            ? "text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 border-transparent"
-                                            : ""
-                                    }`}
-                                    style={
-                                        playbackMode !== "sequential"
-                                            ? {
-                                                  background: `${currentTheme.from}18`,
-                                                  borderColor: `${currentTheme.from}40`,
-                                                  color: iconColor,
-                                                  boxShadow: `0 4px 12px ${currentTheme.from}15`
-                                              }
-                                            : undefined
-                                    }
-                                    title={
-                                        playbackMode === "sequential"
-                                            ? t("page.soundtrack.playbackModes.sequential")
-                                            : playbackMode === "loop-one"
-                                            ? t("page.soundtrack.playbackModes.loopOne")
-                                            : t("page.soundtrack.playbackModes.shuffle")
-                                    }
-                                >
-                                    {playbackMode === "sequential" && (
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <polyline points="17 1 21 5 17 9" />
-                                            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                                            <polyline points="7 23 3 19 7 15" />
-                                            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-                                        </svg>
-                                    )}
-                                    {playbackMode === "loop-one" && (
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <polyline points="17 1 21 5 17 9" />
-                                            <path d="M3 11V9a4 4 0 0 1 4-4h14" />
-                                            <polyline points="7 23 3 19 7 15" />
-                                            <path d="M21 13v2a4 4 0 0 1-4 4H3" />
-                                            <path d="M11 10h1v4" strokeWidth="2.5" />
-                                            <path d="M10 14h3" strokeWidth="2" />
-                                        </svg>
-                                    )}
-                                    {playbackMode === "shuffle" && (
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <polyline points="16 3 21 3 21 8" />
-                                            <line x1="4" y1="20" x2="21" y2="3" />
-                                            <polyline points="21 16 21 21 16 21" />
-                                            <line x1="15" y1="15" x2="21" y2="21" />
-                                            <line x1="4" y1="4" x2="9" y2="9" />
-                                        </svg>
-                                    )}
-                                </button>
+                                />
 
                                 {/* Playback Navigation & Action Group */}
                                 <div className="flex items-center gap-3">
-                                    {/* Prev Button */}
-                                    <button
+                                    <IconButton
+                                        icon={mdSkipPreviousFill}
+                                        label={t("page.soundtrack.controls.previous")}
                                         onClick={playPrevious}
-                                        className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all active:scale-95 border border-transparent"
-                                        title={t("page.soundtrack.controls.previous")}
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <polygon points="19 20 9 12 19 4 19 20"/>
-                                            <line x1="5" y1="19" x2="5" y2="5"/>
-                                        </svg>
-                                    </button>
+                                    />
 
-                                    {/* Play / Pause */}
-                                    <button
+                                    <IconButton
+                                        icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+                                        label={isPlaying ? t("page.soundtrack.controls.pause") : t("page.soundtrack.controls.play")}
+                                        variant="filled"
+                                        size="m"
+                                        width="wide"
+                                        shape={isPlaying ? "square" : "round"}
                                         onClick={togglePlay}
-                                        className="w-14 h-14 sm:w-16 sm:h-16 rounded-full flex items-center justify-center font-bold hover:scale-105 transition-all active:scale-95 flex-shrink-0 border"
-                                        style={{
-                                            background: isDark 
-                                                ? `linear-gradient(135deg, ${currentTheme.from}22, ${currentTheme.to}12)`
-                                                : `linear-gradient(135deg, ${currentTheme.from}15, ${currentTheme.to}0a)`,
-                                            borderColor: `${currentTheme.from}40`,
-                                            boxShadow: isDark
-                                                ? `0 8px 24px ${currentTheme.from}15, inset 0 1px 0 rgba(255,255,255,0.05)`
-                                                : `0 8px 24px ${currentTheme.from}10, inset 0 1px 0 rgba(255,255,255,0.4)`
-                                        }}
-                                        title={isPlaying ? t("page.soundtrack.controls.pause") : t("page.soundtrack.controls.play")}
-                                    >
-                                        {isPlaying ? (
-                                            <svg 
-                                                className="w-6 h-6" 
-                                                viewBox="0 0 24 24"
-                                                style={{
-                                                    color: iconColor,
-                                                    fill: iconColor
-                                                }}
-                                            >
-                                                <rect x="5" y="4" width="4" height="16" rx="1" />
-                                                <rect x="15" y="4" width="4" height="16" rx="1" />
-                                            </svg>
-                                        ) : (
-                                            <svg 
-                                                className="w-6 h-6 ml-1" 
-                                                viewBox="0 0 24 24"
-                                                style={{
-                                                    color: iconColor,
-                                                    fill: iconColor
-                                                }}
-                                            >
-                                                <path d="M5.5 3a1.5 1.5 0 00-1.5 1.5v15a1.5 1.5 0 002.307 1.28L21.3 13.28a1.5 1.5 0 000-2.56L6.307 3.22A1.5 1.5 0 005.5 3z" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    />
 
-                                    {/* Next Button */}
-                                    <button
+                                    <IconButton
+                                        icon={mdSkipNextFill}
+                                        label={t("page.soundtrack.controls.next")}
                                         onClick={playNext}
-                                        className="p-2.5 text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-full transition-all active:scale-95 border border-transparent"
-                                        title={t("page.soundtrack.controls.next")}
-                                    >
-                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <polygon points="5 4 15 12 5 20 5 4"/>
-                                            <line x1="19" y1="5" x2="19" y2="19"/>
-                                        </svg>
-                                    </button>
+                                    />
                                 </div>
 
                                 {/* Volume (Popover Dropup Trigger) */}
-                                <div 
-                                    className="relative group flex items-center justify-center volume-container"
+                                <div
+                                    className="volume-container group relative flex items-center justify-center"
                                     onMouseEnter={() => setShowVolumePopup(true)}
                                     onMouseLeave={() => setShowVolumePopup(false)}
                                 >
-                                    {/* Vertical Volume Popover Dropup Wrapper (Bridges the Gap) */}
-                                    <div 
-                                        className={`absolute bottom-full left-1/2 -translate-x-1/2 pb-3 transition-all duration-300 z-30 ${
-                                            showVolumePopup 
-                                                ? "opacity-100 translate-y-0 pointer-events-auto" 
-                                                : "opacity-0 translate-y-2 pointer-events-none"
+                                    {/* Vertical Volume Popover Wrapper (Bridges the Gap) */}
+                                    <div
+                                        className={`absolute bottom-full left-1/2 z-30 -translate-x-1/2 pb-3 transition-[opacity,transform] duration-200 ease-md3-standard ${
+                                            showVolumePopup
+                                                ? "pointer-events-auto translate-y-0 opacity-100"
+                                                : "pointer-events-none translate-y-2 opacity-0"
                                         }`}
                                     >
-                                        {/* Vertical Volume Popover Dropup Card (Actual Styled Content) */}
-                                        <div 
-                                            className={volumePopoverCardClassName}
+                                        <div
+                                            className="flex flex-col items-center gap-3 rounded-md3-lg bg-surface-container p-4 shadow-elev-2"
                                             onClick={(e) => e.stopPropagation()}
                                         >
-                                            <span className="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">
+                                            <span className="font-mono type-label-s text-on-surface-variant">
                                                 {`${Math.round(volume * 100)}%`}
                                             </span>
                                             <div
-                                                className="h-28 w-8 flex items-center justify-center relative vertical-volume-hitbox cursor-pointer"
+                                                className="vertical-volume-hitbox focus-ring relative flex h-28 w-8 cursor-pointer items-center justify-center rounded-md3-sm"
                                                 role="slider"
                                                 tabIndex={0}
                                                 aria-label={t("page.soundtrack.controls.volume")}
@@ -1661,99 +1534,77 @@ function SoundtrackContent() {
                                                     }
                                                 }}
                                             >
-                                                <div className="h-24 w-1.5 bg-slate-200 dark:bg-white/10 rounded-full relative overflow-hidden flex items-end pointer-events-none">
+                                                <div className="pointer-events-none relative flex h-24 w-1.5 items-end overflow-hidden rounded-full bg-surface-container-highest">
                                                     <div
-                                                        className="w-full rounded-full transition-all duration-75"
-                                                        style={{
-                                                            height: `${volume * 100}%`,
-                                                            background: currentTheme.from,
-                                                            boxShadow: `0 0 8px ${currentTheme.from}60`
-                                                        }}
+                                                        className="w-full rounded-full bg-primary transition-[height] duration-75"
+                                                        style={{ height: `${volume * 100}%` }}
                                                     />
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    <button
+                                    <IconButton
+                                        icon={volumeIcon}
+                                        label={t("page.soundtrack.controls.volumeAdjust")}
+                                        selected={showVolumePopup}
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             setShowVolumePopup(!showVolumePopup);
                                         }}
-                                        className="p-2.5 rounded-full transition-all duration-300 border border-transparent text-slate-400 dark:text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 active:scale-95"
-                                        title={t("page.soundtrack.controls.volumeAdjust")}
-                                    >
-                                        {volume === 0 ? (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                                <line x1="22" y1="9" x2="16" y2="15" />
-                                                <line x1="16" y1="9" x2="22" y2="15" />
-                                            </svg>
-                                        ) : volume < 0.4 ? (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                                            </svg>
-                                        ) : (
-                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
-                                                <path d="M15.54 8.46a5 5 0 0 1 0 7.07" />
-                                                <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
-                                            </svg>
-                                        )}
-                                    </button>
+                                    />
                                 </div>
                             </div>
-                        </div>
+                        </Surface>
                     </div>
 
                     {/* Right Column: Categories & Playlist */}
-                    <div className="lg:col-span-7 flex flex-col gap-6 w-full">
+                    <div className="flex w-full flex-col gap-6 lg:col-span-7">
 
                         {/* Category Cards Filter Carousel */}
                         <div className="w-full">
-                            <h4 className="text-sm font-bold text-slate-700 dark:text-slate-300 mb-3 flex items-center gap-2">
-                                <svg className="w-4 h-4 text-miku" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581a2.25 2.25 0 003.182 0l5.178-5.178a2.25 2.25 0 000-3.182l-9.581-9.58a2.25 2.25 0 00-1.591-.659z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
-                                </svg>
+                            <h3 className="mb-3 flex items-center gap-2 type-title-s text-on-surface">
+                                <Icon path={mdSell} size={20} className="text-primary" />
                                 {t("page.soundtrack.filters.categoryTitle")}
-                            </h4>
-                            
+                            </h3>
+
                             {/* Horizontal sliding categories list (scrollbars hidden via no-scrollbar) */}
-                            <div className="flex gap-3 overflow-x-auto pb-3 no-scrollbar">
+                            <div className="no-scrollbar flex gap-3 overflow-x-auto pb-3">
                                 {/* "ALL" Card */}
                                 <button
+                                    type="button"
+                                    aria-pressed={selectedCategoryId === null}
                                     onClick={() => selectCategory(null)}
-                                    className={`relative flex-shrink-0 w-24 h-16 rounded-xl overflow-hidden border transition-all text-left flex flex-col justify-between p-2.5 ${
+                                    className={`state-layer focus-ring relative flex h-16 w-24 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
                                         selectedCategoryId === null
-                                            ? "border-miku bg-miku/10 shadow-lg shadow-miku/5"
-                                            : "border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-white/20 hover:scale-[1.02]"
+                                            ? "bg-secondary-container text-on-secondary-container ring-2 ring-primary"
+                                            : "bg-surface-container text-on-surface"
                                     }`}
                                 >
-                                    <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">ALL</span>
-                                    <span className={`text-xs font-bold ${selectedCategoryId === null ? "text-miku" : "text-slate-800 dark:text-white"}`}>{t("page.soundtrack.allCategory")}</span>
+                                    <span className="type-label-s text-on-surface-variant">ALL</span>
+                                    <span className="type-label-l">{t("page.soundtrack.allCategory")}</span>
                                 </button>
 
                                 {/* Spoiler-only supplemental BGM category */}
                                 {isShowSpoiler && (
                                     <button
+                                        type="button"
+                                        aria-pressed={selectedCategoryId === SPOILER_CATEGORY_FILTER}
                                         onClick={() => selectCategory(SPOILER_CATEGORY_FILTER)}
-                                        className={`relative flex-shrink-0 w-32 h-16 rounded-xl overflow-hidden border transition-all text-left flex flex-col justify-between p-2.5 group ${
+                                        className={`state-layer focus-ring relative flex h-16 w-32 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
                                             selectedCategoryId === SPOILER_CATEGORY_FILTER
-                                                ? "bg-white/90 dark:bg-slate-900/80 shadow-lg"
-                                                : "border-slate-200 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-white/20 hover:scale-[1.02]"
+                                                ? "bg-tertiary-container text-on-tertiary-container ring-2"
+                                                : "bg-surface-container text-on-surface"
                                         }`}
                                         style={{
-                                            borderColor: selectedCategoryId === SPOILER_CATEGORY_FILTER ? SPOILER_CATEGORY_THEME.from : undefined,
-                                            boxShadow: selectedCategoryId === SPOILER_CATEGORY_FILTER ? `0 4px 14px ${SPOILER_CATEGORY_THEME.from}25` : undefined,
-                                        }}
+                                            ["--tw-ring-color" as string]: SPOILER_CATEGORY_THEME.from,
+                                            borderLeft: `3px solid ${SPOILER_CATEGORY_THEME.from}`,
+                                            } as CSSProperties}
                                     >
-                                        <div className="absolute inset-0 opacity-15 dark:opacity-20 bg-gradient-to-br from-orange-300 via-rose-400 to-amber-500 group-hover:scale-105 transition-transform duration-500" />
-                                        <span className="text-[8px] font-bold text-orange-500 dark:text-orange-300 tracking-wider relative z-10">
+                                        <span className="relative z-10 type-label-s text-tertiary">
                                             {t("common.badge.spoiler")} · {formatNumber(spoilerTrackCount)}
                                         </span>
-                                        <span className={`text-xs font-bold ${selectedCategoryId === SPOILER_CATEGORY_FILTER ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-white"} relative z-10 block truncate max-w-full`}>
+                                        <span className="relative z-10 block max-w-full truncate type-label-l">
                                             {t("page.soundtrack.spoiler.categoryName")}
                                         </span>
                                     </button>
@@ -1763,27 +1614,29 @@ function SoundtrackContent() {
                                 {categories.map(cat => {
                                     const active = selectedCategoryId === cat.id;
                                     const theme = CATEGORY_THEMES[cat.id] ?? DEFAULT_THEME;
-                                    
+
                                     return (
                                         <button
+                                            type="button"
                                             key={cat.id}
+                                            aria-pressed={active}
                                             onClick={() => selectCategory(cat.id)}
-                                            className={`relative flex-shrink-0 w-32 h-16 rounded-xl overflow-hidden border transition-all text-left flex flex-col justify-between p-2.5 group ${
+                                            className={`group state-layer focus-ring relative flex h-16 w-32 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
                                                 active
-                                                    ? "bg-white/90 dark:bg-slate-900/80 shadow-lg"
-                                                    : "border-slate-200 dark:border-white/10 bg-white/40 dark:bg-slate-900/40 hover:border-slate-300 dark:hover:border-white/20 hover:scale-[1.02]"
+                                                    ? "bg-secondary-container text-on-secondary-container ring-2"
+                                                    : "bg-surface-container text-on-surface"
                                             }`}
                                             style={{
-                                                borderColor: active ? theme.from : undefined,
-                                                boxShadow: active ? `0 4px 14px ${theme.from}25` : undefined
-                                            }}
+                                                ["--tw-ring-color" as string]: theme.from,
+                                                borderLeft: `3px solid ${theme.from}`,
+                                                } as CSSProperties}
                                         >
-                                            {/* Blurred Image Background */}
+                                            {/* Faint jacket background */}
                                             {isPerformanceVisuals && (
-                                                <div className="absolute inset-0 opacity-15 dark:opacity-20 filter blur-xs group-hover:scale-105 transition-transform duration-500">
+                                                <div className="pointer-events-none absolute inset-0 opacity-15">
                                                     <Image
                                                         src={getMysekaiRawAssetUrl(`music_record_soundtrack/jacket/${cat.assetbundleName}/${cat.assetbundleName}.webp`, assetSource)}
-                                                        alt={cat.name}
+                                                        alt=""
                                                         fill
                                                         className="object-cover"
                                                         unoptimized
@@ -1792,12 +1645,12 @@ function SoundtrackContent() {
                                             )}
 
                                             {/* Category Indicator Tag */}
-                                            <span className="text-[8px] font-bold text-slate-500 dark:text-slate-400 tracking-wider">
+                                            <span className="relative z-10 type-label-s text-on-surface-variant">
                                                 CAT #{cat.id}
                                             </span>
-                                            
+
                                             {/* Name */}
-                                            <span className={`text-xs font-bold ${active ? "text-slate-900 dark:text-white" : "text-slate-800 dark:text-white"} relative z-10 block truncate max-w-full`}>
+                                            <span className="relative z-10 block max-w-full truncate type-label-l">
                                                 {cat.name}
                                             </span>
                                         </button>
@@ -1807,159 +1660,91 @@ function SoundtrackContent() {
                         </div>
 
                         {/* Search and Sort Toolbar */}
-                        <div className={toolbarClassName}>
-                            
+                        <Surface tone="low" radius="lg" className="flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
+
                             {/* Fuzzy Search Box */}
-                            <div className="relative w-full sm:w-72">
-                                <svg className="absolute left-3.5 top-3.5 w-4 h-4 text-slate-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                </svg>
-                                <input
-                                    data-shortcut-search="true"
-                                    type="text"
-                                    placeholder={t("page.soundtrack.filters.searchPlaceholder")}
-                                    value={searchQuery}
-                                    onChange={(e) => handleSearch(e.target.value)}
-                                    className="w-full bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-white/5 rounded-xl py-2.5 pl-10 pr-4 text-xs text-slate-800 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:border-miku/50 focus:ring-1 focus:ring-miku/50 transition-colors"
-                                />
-                                {searchQuery && (
-                                    <button
-                                        onClick={() => handleSearch("")}
-                                        className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
-                                    >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
-                                )}
-                            </div>
+                            <TextField
+                                data-shortcut-search="true"
+                                containerClassName="w-full sm:w-72"
+                                dense
+                                icon={mdSearch}
+                                placeholder={t("page.soundtrack.filters.searchPlaceholder")}
+                                aria-label={t("page.soundtrack.filters.searchPlaceholder")}
+                                value={searchQuery}
+                                onValueChange={handleSearch}
+                                clearable
+                                clearLabel={t("common.md3.clear")}
+                            />
 
                             {/* Sort Actions */}
-                            <div className="flex gap-2 flex-shrink-0 w-full sm:w-auto justify-end">
-                                <button
-                                    onClick={() => toggleSort("seq")}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-95 ${
-                                        sortBy === "seq"
-                                            ? ""
-                                            : "bg-slate-100 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white border-slate-200 dark:border-white/5"
-                                    }`}
-                                    style={
-                                        sortBy === "seq"
-                                            ? {
-                                                  background: `${currentTheme.from}15`,
-                                                  borderColor: `${currentTheme.from}30`,
-                                                  color: iconColor
-                                              }
-                                            : undefined
-                                    }
-                                >
-                                    {t("page.soundtrack.filters.sortBySeq")}
-                                    {sortBy === "seq" && (
-                                        <span className="text-[10px]">
-                                            {sortOrder === "asc" ? "▲" : "▼"}
-                                        </span>
-                                    )}
-                                </button>
-                                <button
-                                    onClick={() => toggleSort("title")}
-                                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border active:scale-95 ${
-                                        sortBy === "title"
-                                            ? ""
-                                            : "bg-slate-100 dark:bg-slate-950/60 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white border-slate-200 dark:border-white/5"
-                                    }`}
-                                    style={
-                                        sortBy === "title"
-                                            ? {
-                                                  background: `${currentTheme.from}15`,
-                                                  borderColor: `${currentTheme.from}30`,
-                                                  color: iconColor
-                                              }
-                                            : undefined
-                                    }
-                                >
-                                    {t("page.soundtrack.filters.sortByTitle")}
-                                    {sortBy === "title" && (
-                                        <span className="text-[10px]">
-                                            {sortOrder === "asc" ? "▲" : "▼"}
-                                        </span>
-                                    )}
-                                </button>
+                            <div className="flex w-full flex-shrink-0 justify-end gap-2 sm:w-auto">
+                                {sortOptions.map(({ field, label }) => (
+                                    <Chip
+                                        key={field}
+                                        selected={sortBy === field}
+                                        showCheckmark={false}
+                                        trailingIcon={sortBy === field ? (sortOrder === "asc" ? mdArrowUpward : mdArrowDownward) : undefined}
+                                        onClick={() => toggleSort(field)}
+                                    >
+                                        {label}
+                                    </Chip>
+                                ))}
                             </div>
-                        </div>
+                        </Surface>
 
                         {/* Playlist Box */}
-                        <div className="relative rounded-3xl bg-white/50 dark:bg-slate-900/20 border border-slate-200 dark:border-white/5 overflow-hidden flex-1 flex flex-col min-h-[420px] max-h-[560px]">
-                            
-                            {/* Inner Scroll container with custom light/dark adaptive thin scrollbar */}
-                            <div className="overflow-y-auto flex-1 p-3 custom-playlist-scrollbar" onScroll={handlePlaylistScroll}>
+                        <Surface tone="low" className="relative flex max-h-[560px] min-h-[420px] flex-1 flex-col overflow-hidden">
+
+                            {/* Inner Scroll container */}
+                            <div className="custom-playlist-scrollbar flex-1 overflow-y-auto p-3" onScroll={handlePlaylistScroll}>
                                 {isLoading ? (
-                                    <div className="flex flex-col items-center justify-center h-80 gap-3">
-                                        <div className="loading-spinner loading-spinner-sm" />
-                                        <p className="text-slate-500 dark:text-slate-400 text-xs">{t("page.soundtrack.states.loading")}</p>
-                                    </div>
+                                    <LoadingState className="min-h-80" label={t("page.soundtrack.states.loading")} />
                                 ) : error ? (
-                                    <div className="flex flex-col items-center justify-center h-80 text-center p-6 border-2 border-dashed border-rose-200 dark:border-rose-500/20 rounded-2xl m-3">
-                                        <svg className="w-10 h-10 text-rose-400 dark:text-rose-300 mb-3" fill="none" stroke="currentColor" strokeWidth="1.5" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-                                        </svg>
-                                        <p className="text-rose-600 dark:text-rose-300 font-bold text-sm">{t("page.soundtrack.states.loadFailedTitle")}</p>
-                                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">{error}</p>
-                                    </div>
+                                    <EmptyState
+                                        icon={mdError}
+                                        title={t("page.soundtrack.states.loadFailedTitle")}
+                                        description={error}
+                                    />
                                 ) : filteredTracks.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center h-80 text-center p-6 border-2 border-dashed border-slate-200 dark:border-white/5 rounded-2xl m-3">
-                                        <svg className="w-10 h-10 text-slate-400 dark:text-slate-600 mb-3" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                                            <circle cx="10" cy="18" r="3" />
-                                            <path d="M13 18V5l7-1.5v10" />
-                                            <circle cx="20" cy="14" r="2" />
-                                            <path d="M3 5h5" />
-                                            <path d="M3 9h3" />
-                                        </svg>
-                                        <p className="text-slate-700 dark:text-slate-400 font-bold text-sm">{t("page.soundtrack.states.noResultsTitle")}</p>
-                                        <p className="text-slate-400 dark:text-slate-500 text-xs mt-1">{t("page.soundtrack.states.noResultsDescription")}</p>
-                                    </div>
+                                    <EmptyState
+                                        icon={mdMusicOff}
+                                        title={t("page.soundtrack.states.noResultsTitle")}
+                                        description={t("page.soundtrack.states.noResultsDescription")}
+                                    />
                                 ) : (
-                                    <div className="flex flex-col gap-1.5">
+                                    <div className="flex flex-col gap-1">
                                         {displayedTracks.map((track) => {
                                             const isActive = currentTrack?.id === track.id;
                                             const trackTheme = CATEGORY_THEMES[track.musicSoundTrackCategoryId] ?? DEFAULT_THEME;
-                                            
+
                                             return (
                                                 <button
+                                                    type="button"
                                                     key={track.id}
+                                                    aria-current={isActive ? "true" : undefined}
                                                     onClick={() => handleTrackSelect(track)}
-                                                    className={`group w-full flex items-center justify-between p-3.5 rounded-2xl text-left border transition-all ${
+                                                    className={`group state-layer focus-ring flex w-full items-center justify-between rounded-md3-lg p-3 text-left transition-colors duration-150 ease-md3-standard ${
                                                         isActive
-                                                            ? "bg-white/80 dark:bg-white/5 border-slate-300 dark:border-white/10 shadow-sm"
-                                                            : "bg-slate-50/50 dark:bg-slate-900/10 border-transparent hover:bg-white/60 dark:hover:bg-white/5"
+                                                            ? "bg-secondary-container text-on-secondary-container"
+                                                            : "text-on-surface"
                                                     }`}
                                                 >
-                                                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                                                    <div className="flex min-w-0 flex-1 items-center gap-3.5">
                                                         {/* Play Index or Active equalizer indicator */}
-                                                        <div className="w-8 flex-shrink-0 flex items-center justify-center">
+                                                        <div className="flex w-8 flex-shrink-0 items-center justify-center">
                                                             {isActive && isPlaying ? (
-                                                                // Miniature EQ Wave
-                                                                <div className="flex items-end gap-0.5 h-3">
-                                                                    <div className="w-0.75 h-2 animate-pulse rounded-sm" style={{ backgroundColor: trackTheme.from, animationDuration: "0.5s" }} />
-                                                                    <div className="w-0.75 h-3 animate-pulse rounded-sm" style={{ backgroundColor: trackTheme.from, animationDuration: "0.8s" }} />
-                                                                    <div className="w-0.75 h-1 animate-pulse rounded-sm" style={{ backgroundColor: trackTheme.from, animationDuration: "0.3s" }} />
-                                                                </div>
+                                                                <Icon path={mdGraphicEq} size={20} style={{ color: trackTheme.from }} />
                                                             ) : (
-                                                                <span className={`font-mono text-xs ${isActive ? trackTheme.text : "text-slate-500"} font-bold`}>
+                                                                <span className={`font-mono type-label-m ${isActive ? "text-primary" : "text-on-surface-variant"}`}>
                                                                     {track.seq.toString().padStart(3, "0")}
                                                                 </span>
                                                             )}
                                                         </div>
 
                                                         {/* Cover thumbnail */}
-                                                        <div className="relative w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-slate-200 dark:border-white/5">
+                                                        <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md3-sm">
                                                             <Image
-                                                                src={(() => {
-                                                                    const jacketName = categoryMap.get(track.musicSoundTrackCategoryId)?.assetbundleName ?? "jacket_s_soundtrack_1";
-                                                                    return getMysekaiRawAssetUrl(
-                                                                        `music_record_soundtrack/jacket/${jacketName}/${jacketName}.webp`,
-                                                                        assetSource
-                                                                    );
-                                                                })()}
+                                                                src={getJacketUrl(track.musicSoundTrackCategoryId)}
                                                                 alt={track.title}
                                                                 fill
                                                                 className="object-cover"
@@ -1968,57 +1753,51 @@ function SoundtrackContent() {
                                                                 unoptimized
                                                             />
                                                             {/* Hover Play Arrow Overlay */}
-                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                 <svg className="w-4 h-4 text-white fill-white" viewBox="0 0 24 24">
-                                                                    <path d="M8 5v14l11-7z" />
-                                                                </svg>
+                                                            <div className="absolute inset-0 flex items-center justify-center bg-scrim/40 text-inverse-on-surface opacity-0 transition-opacity group-hover:opacity-100">
+                                                                <Icon path={mdPlayArrowFill} size={20} />
                                                             </div>
                                                         </div>
 
                                                         {/* Titles */}
                                                         <div className="min-w-0 flex-1">
-                                                            <h5 className={`text-sm font-bold truncate transition-colors ${isActive ? trackTheme.text : "text-slate-800 dark:text-white group-hover:text-miku"}`}>
+                                                            <h4 className="truncate type-title-s">
                                                                 {getDisplayTrackTitle(track, t)}
-                                                            </h5>
-                                                            <p className="text-slate-500 text-[10px] truncate mt-0.5 font-sans font-medium">
+                                                            </h4>
+                                                            <p className="mt-0.5 truncate type-body-s text-on-surface-variant">
                                                                 {track.pronunciation}
                                                             </p>
                                                         </div>
                                                     </div>
 
                                                     {/* Right info: category tag, spoiler badge, duration, and action hint */}
-                                                    <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                                                        <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full text-[9px] font-bold border bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-white/5 max-w-[80px] truncate">
+                                                    <div className="ml-2 flex flex-shrink-0 items-center gap-2">
+                                                        <span className="hidden max-w-[80px] truncate rounded-md3-xs bg-surface-container-highest px-2 py-0.5 type-label-s text-on-surface-variant sm:inline-block">
                                                             {categoryMap.get(track.musicSoundTrackCategoryId)?.name || "BGM"}
                                                         </span>
                                                         {track.isSpoiler && (
-                                                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-orange-500 text-white shadow-sm">
+                                                            <span className="rounded-md3-xs bg-tertiary px-2 py-0.5 type-label-s text-on-tertiary">
                                                                 {t("common.badge.spoiler")}
                                                             </span>
                                                         )}
                                                         {track.durationSeconds !== undefined && (
-                                                            <span className="hidden sm:inline-block px-2 py-0.5 rounded-full text-[9px] font-mono font-bold bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-white/5">
+                                                            <span className="hidden rounded-md3-xs border border-outline-variant px-2 py-0.5 font-mono type-label-s text-on-surface-variant sm:inline-block">
                                                                 {formatTime(track.durationSeconds)}
                                                             </span>
                                                         )}
-                                                        
-                                                        {/* Simple chevron indicating interactive row */}
-                                                        <svg className={`w-4 h-4 transition-transform ${isActive ? "text-slate-800 dark:text-white" : "text-slate-600 group-hover:text-slate-400 dark:group-hover:text-slate-300 group-hover:translate-x-0.5"}`} fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-                                                        </svg>
+                                                        <Icon path={mdChevronRight} size={20} className="text-on-surface-variant" />
                                                     </div>
                                                 </button>
                                             );
                                         })}
                                         {hasMoreTracks && (
                                             <div className="flex justify-center py-3">
-                                                <button
-                                                    type="button"
+                                                <Button
+                                                    variant="outlined"
+                                                    size="xs"
                                                     onClick={() => setVisibleTrackLimit(limit => Math.min(limit + SOUNDTRACK_LIST_BATCH_SIZE, filteredTracks.length))}
-                                                    className="rounded-full border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 px-4 py-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-300 transition-colors hover:text-slate-800 dark:hover:text-white"
                                                 >
                                                     {formatNumber(Math.min(visibleTrackLimit, filteredTracks.length))} / {formatNumber(filteredTracks.length)}
-                                                </button>
+                                                </Button>
                                             </div>
                                         )}
                                     </div>
@@ -2026,18 +1805,18 @@ function SoundtrackContent() {
                             </div>
 
                             {/* Playlist footer statistics */}
-                            <div className="bg-slate-100/80 dark:bg-slate-950/80 border-t border-slate-200 dark:border-white/5 py-3 px-6 text-center text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+                            <div className="border-t border-outline-variant bg-surface-container px-6 py-3 text-center type-label-m text-on-surface-variant">
                                 {t("page.soundtrack.footer", {
                                     shown: formatNumber(filteredTracks.length),
                                     total: formatNumber(tracks.length),
                                     category: selectedCategoryLabel,
                                 })}
                             </div>
-                        </div>
+                        </Surface>
 
                     </div>
                 </div>
-            </div>
+            </PageContainer>
         </div>
     );
 }
@@ -2047,14 +1826,7 @@ export default function SoundtrackClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={
-                <div className="flex h-[80vh] w-full items-center justify-center bg-slate-50 dark:bg-slate-950 text-slate-500 select-none">
-                    <div className="flex flex-col items-center gap-3">
-                        <div className="loading-spinner loading-spinner-sm" />
-                        <p className="text-xs">{t("page.soundtrack.states.suspenseLoading")}</p>
-                    </div>
-                </div>
-            }>
+            <Suspense fallback={<LoadingState className="min-h-[80vh]" label={t("page.soundtrack.states.suspenseLoading")} />}>
                 <SoundtrackContent />
             </Suspense>
         </MainLayout>

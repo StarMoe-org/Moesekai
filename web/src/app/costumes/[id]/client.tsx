@@ -22,6 +22,8 @@ import {
 } from "@/types/costume";
 import { fetchMasterData } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
+import { Button, EmptyState, LoadingState, PageContainer, SectionCard, Surface } from "@/components/md3";
+import { mdArrowBack, mdCheckroom, mdGroup, mdInfo, mdLayers, mdPlayingCards } from "@/components/md3/icons";
 
 // Helper to extract base name (remove _XX color suffix)
 function getVariantBaseName(assetName: string): string {
@@ -234,12 +236,7 @@ export default function CostumeDetailClient() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{tI18n("page.costumes.detailLoadingFallback")}</p>
-                    </div>
-                </div>
+                <LoadingState className="min-h-[50vh]" label={tI18n("page.costumes.detailLoadingFallback")} />
             </MainLayout>
         );
     }
@@ -247,67 +244,67 @@ export default function CostumeDetailClient() {
     if (error || !representative) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{tI18n("page.costumes.notFoundTitle", { id: costumeIdLabel })}</h2>
-                        <p className="text-slate-500 mb-6">{tI18n("page.costumes.notFoundDesc")}</p>
-                        <Link
-                            href="/costumes"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {tI18n("page.costumes.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdCheckroom}
+                        title={tI18n("page.costumes.notFoundTitle", { id: costumeIdLabel })}
+                        description={tI18n("page.costumes.notFoundDesc")}
+                        action={
+                            <Button variant="filled" icon={mdArrowBack} href="/costumes">
+                                {tI18n("page.costumes.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
 
+    const sourceChipClass =
+        representative.source === "card"
+            ? "bg-primary-container text-on-primary-container"
+            : representative.source === "shop"
+                ? "bg-secondary-container text-on-secondary-container"
+                : "bg-tertiary-container text-on-tertiary-container";
+    const rarityChipClass =
+        representative.costume3dRarity === "rare"
+            ? "bg-tertiary-container text-on-tertiary-container"
+            : "bg-surface-container-highest text-on-surface-variant";
+
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
-                <div className="mb-8">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500">
+                <header className="mb-8">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex items-center rounded-md3-sm bg-surface-container-high px-3 py-1 font-mono type-label-m text-on-surface-variant">
                             No. {costumeNumber}
                         </span>
-                        <span className={`px-3 py-1 text-xs font-bold rounded-full ${representative.costume3dRarity === "rare"
-                            ? "bg-amber-100 text-amber-700"
-                            : "bg-slate-100 text-slate-500"
-                            }`}>
+                        <span className={`rounded-md3-sm px-3 py-1 type-label-m ${rarityChipClass}`}>
                             {translateWithFallback(RARITY_LABEL_KEYS[representative.costume3dRarity], representative.costume3dRarity)}
                         </span>
-                        <span className="px-3 py-1 text-xs font-bold rounded-full bg-miku/10 text-miku">
+                        <span className="rounded-md3-sm bg-secondary-container px-3 py-1 type-label-m text-on-secondary-container">
                             {translateWithFallback(SOURCE_LABEL_KEYS[representative.source], representative.source)}
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800">
+                    <h1 className="type-headline-m text-on-surface sm:type-headline-l">
                         <TranslatedText
                             original={representative.name}
                             category="costumes"
                             field="name"
                             originalClassName=""
-                            translationClassName="block text-lg font-medium text-slate-400 mt-1"
+                            translationClassName="mt-1 block type-title-m text-on-surface-variant"
                         />
                     </h1>
-                </div>
+                </header>
 
                 {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
                     {/* LEFT Column: Visuals */}
                     <div>
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden lg:sticky lg:top-24">
+                        <Surface tone="low" className="overflow-hidden lg:sticky lg:top-24">
                             {/* Grid of Parts */}
-                            <div className="grid grid-cols-4 gap-0.5 bg-slate-100">
+                            <div className="grid grid-cols-4 gap-0.5 bg-outline-variant">
                                 {displayItems.map((item) => {
                                     let assetName = item.id;
                                     const characterName = item.characterId ? getCharacterName(tI18n, item.characterId) : "";
@@ -330,8 +327,8 @@ export default function CostumeDetailClient() {
                                     }
 
                                     return (
-                                        <div key={item.id} className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-2 group">
-                                            <div className="relative w-full h-full">
+                                        <div key={item.id} className="group relative flex aspect-square items-center justify-center bg-surface-container p-2">
+                                            <div className="relative h-full w-full">
                                                 <Image
                                                     src={getCostumeThumbnailUrl(assetName, assetSource)}
                                                     alt={item.id}
@@ -342,21 +339,21 @@ export default function CostumeDetailClient() {
                                             </div>
 
                                             {/* Labels overlay */}
-                                            <div className="absolute inset-x-0 bottom-0 p-1 flex flex-col gap-0.5 pointer-events-none">
-                                                <span className="self-start px-1.5 py-0.5 bg-white/90 backdrop-blur text-[9px] font-bold text-slate-600 rounded shadow-sm">
+                                            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col gap-0.5 p-1">
+                                                <span className="self-start rounded-md3-xs bg-surface-container-highest/90 px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                     {translateWithFallback(PART_TYPE_LABEL_KEYS[item.partType], item.partType)}
                                                 </span>
                                             </div>
 
                                             {/* Character icon for extraParts items */}
                                             {item.characterId && (
-                                                <div className="absolute top-1 right-1 w-6 h-6 rounded-full overflow-hidden ring-1 ring-slate-200 bg-white shadow-sm z-10" title={characterName}>
+                                                <div className="absolute right-1 top-1 z-10 h-6 w-6 overflow-hidden rounded-full bg-surface-container-lowest ring-1 ring-outline-variant" title={characterName}>
                                                     <Image
                                                         src={getCharacterIconUrl(item.characterId)}
                                                         alt={characterName}
                                                         width={24}
                                                         height={24}
-                                                        className="w-full h-full object-cover"
+                                                        className="h-full w-full object-cover"
                                                         unoptimized
                                                     />
                                                 </div>
@@ -365,7 +362,7 @@ export default function CostumeDetailClient() {
                                     );
                                 })}
                                 {displayItems.length === 0 && (
-                                    <div className="col-span-4 aspect-[4/1] flex items-center justify-center text-slate-400 text-sm">
+                                    <div className="col-span-4 flex aspect-[4/1] items-center justify-center bg-surface-container type-body-m text-on-surface-variant">
                                         {tI18n("page.costumes.noPartsData")}
                                     </div>
                                 )}
@@ -373,21 +370,23 @@ export default function CostumeDetailClient() {
 
                             {/* Color Selector */}
                             {availableColors.length > 1 && (
-                                <div className="p-4 bg-slate-50/50 border-t border-slate-100">
-                                    <p className="text-xs font-bold text-slate-500 mb-2">{tI18n("page.costumes.colorSchemesLabel")}</p>
+                                <div className="border-t border-outline-variant p-4">
+                                    <p className="mb-2 type-title-s text-on-surface-variant">{tI18n("page.costumes.colorSchemesLabel")}</p>
                                     <div className="flex flex-wrap gap-2">
                                         {availableColors.map(variant => {
                                             const isSelected = selectedColorId === variant.colorId;
                                             return (
                                                 <button
                                                     key={variant.colorId}
+                                                    type="button"
+                                                    aria-pressed={isSelected}
                                                     onClick={() => setSelectedColorId(variant.colorId)}
-                                                    className={`flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${isSelected
-                                                        ? "bg-miku/10 text-miku border-2 border-miku"
-                                                        : "bg-white text-slate-600 border border-slate-200 hover:border-miku/50"
+                                                    className={`state-layer focus-ring flex items-center gap-2 whitespace-nowrap rounded-md3-sm py-1 pl-1 pr-3 type-label-l transition-colors duration-150 ease-md3-standard ${isSelected
+                                                        ? "bg-secondary-container text-on-secondary-container ring-2 ring-primary"
+                                                        : "border border-outline-variant text-on-surface-variant"
                                                         }`}
                                                 >
-                                                    <div className="w-8 h-8 rounded overflow-hidden bg-slate-100 relative shrink-0">
+                                                    <div className="relative h-8 w-8 shrink-0 overflow-hidden rounded-md3-xs bg-surface-container-high">
                                                         <Image
                                                             src={getCostumeThumbnailUrl(variant.assetbundleName, assetSource)}
                                                             alt={variant.colorName}
@@ -403,22 +402,14 @@ export default function CostumeDetailClient() {
                                     </div>
                                 </div>
                             )}
-                        </div>
+                        </Surface>
                     </div>
 
                     {/* RIGHT Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {tI18n("page.costumes.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <SectionCard title={tI18n("page.costumes.basicInfo")} icon={mdInfo}>
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label={tI18n("page.costumes.fields.id")} value={`#${costumeNumber}`} />
                                 <InfoRow
                                     label={tI18n("page.costumes.fields.name")}
@@ -428,24 +419,18 @@ export default function CostumeDetailClient() {
                                             category="costumes"
                                             field="name"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="mt-0.5 block type-body-s text-on-surface-variant"
                                         />
                                     }
                                 />
                                 <InfoRow label={tI18n("page.costumes.fields.type")} value={representative.costume3dType} />
                                 <InfoRow label={tI18n("page.costumes.fields.source")} value={
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${representative.source === "card" ? "bg-blue-100 text-blue-600" :
-                                        representative.source === "shop" ? "bg-green-100 text-green-600" :
-                                            "bg-amber-100 text-amber-600"
-                                        }`}>
+                                    <span className={`rounded-md3-xs px-2 py-0.5 type-label-m ${sourceChipClass}`}>
                                         {translateWithFallback(SOURCE_LABEL_KEYS[representative.source], representative.source)}
                                     </span>
                                 } />
                                 <InfoRow label={tI18n("page.costumes.fields.rarity")} value={
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${representative.costume3dRarity === "rare"
-                                        ? "bg-amber-100 text-amber-700"
-                                        : "bg-slate-100 text-slate-500"
-                                        }`}>
+                                    <span className={`rounded-md3-xs px-2 py-0.5 type-label-m ${rarityChipClass}`}>
                                         {translateWithFallback(RARITY_LABEL_KEYS[representative.costume3dRarity], representative.costume3dRarity)}
                                     </span>
                                 } />
@@ -459,100 +444,77 @@ export default function CostumeDetailClient() {
                                         : representative.publishedAt ? "..." : tI18n("page.costumes.unknownPublishedAt")
                                 } />
                             </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Parts List Summary */}
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-500/10 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                    {tI18n("page.costumes.partsListTitle")}
-                                </h2>
-                            </div>
-                            <div className="p-5 flex flex-wrap gap-2">
+                        <SectionCard title={tI18n("page.costumes.partsListTitle")} icon={mdLayers}>
+                            <div className="flex flex-wrap gap-2">
                                 {includedPartTypes.map(tag => (
-                                    <span key={tag} className="inline-flex items-center px-3 py-1 rounded-full bg-slate-50 text-xs font-medium text-slate-600 border border-slate-200">
+                                    <span key={tag} className="inline-flex h-8 items-center rounded-md3-sm border border-outline-variant px-3 type-label-l text-on-surface-variant">
                                         {tag}
                                     </span>
                                 ))}
                             </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Available Characters Card */}
                         {representative.characterIds && representative.characterIds.length > 0 && (
-                            <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                        {tI18n("page.costumes.charactersTitle")}
-                                        <span className="text-xs font-normal text-slate-400 ml-1">
-                                            {tI18n("page.costumes.charactersCount", { count: representative.characterIds.length })}
-                                        </span>
-                                    </h2>
-                                </div>
-                                <div className="p-5">
-                                    <div className="flex flex-wrap gap-2">
-                                        {representative.characterIds
-                                            .filter(charId => charId <= 26)
-                                            .map(charId => {
-                                                const characterName = getCharacterName(tI18n, charId);
-                                                return (
-                                                    <div
-                                                        key={charId}
-                                                        className="flex items-center gap-2 px-2 py-1.5 bg-slate-50 rounded-full"
-                                                        title={characterName}
-                                                    >
-                                                        <div className="w-8 h-8 rounded-full overflow-hidden bg-white ring-1 ring-slate-200">
-                                                            <Image
-                                                                src={getCharacterIconUrl(charId)}
-                                                                alt={characterName}
-                                                                width={32}
-                                                                height={32}
-                                                                className="w-full h-full object-cover"
-                                                                unoptimized
-                                                            />
-                                                        </div>
-                                                        <span className="text-xs font-medium text-slate-700 pr-1">
-                                                            {characterName}
-                                                        </span>
+                            <SectionCard
+                                title={tI18n("page.costumes.charactersTitle")}
+                                icon={mdGroup}
+                                actions={
+                                    <span className="type-label-m text-on-surface-variant">
+                                        {tI18n("page.costumes.charactersCount", { count: representative.characterIds.length })}
+                                    </span>
+                                }
+                            >
+                                <div className="flex flex-wrap gap-2">
+                                    {representative.characterIds
+                                        .filter(charId => charId <= 26)
+                                        .map(charId => {
+                                            const characterName = getCharacterName(tI18n, charId);
+                                            return (
+                                                <div
+                                                    key={charId}
+                                                    className="flex items-center gap-2 rounded-full bg-surface-container py-1 pl-1 pr-3"
+                                                    title={characterName}
+                                                >
+                                                    <div className="h-8 w-8 overflow-hidden rounded-full bg-surface-container-lowest">
+                                                        <Image
+                                                            src={getCharacterIconUrl(charId)}
+                                                            alt={characterName}
+                                                            width={32}
+                                                            height={32}
+                                                            className="h-full w-full object-cover"
+                                                            unoptimized
+                                                        />
                                                     </div>
-                                                );
-                                            })}
-                                    </div>
+                                                    <span className="type-label-l text-on-surface">
+                                                        {characterName}
+                                                    </span>
+                                                </div>
+                                            );
+                                        })}
                                 </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         {/* Related Cards */}
                         {relatedCards.length > 0 && (
-                            <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-blue-500/10 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                                        </svg>
-                                        {tI18n("page.costumes.relatedCardsTitle")}
-                                    </h2>
+                            <SectionCard title={tI18n("page.costumes.relatedCardsTitle")} icon={mdPlayingCards}>
+                                <div className="flex flex-wrap gap-3">
+                                    {relatedCards.map(card => (
+                                        <Link
+                                            key={card.id}
+                                            href={`/cards/${card.id}`}
+                                            className="focus-ring block rounded-md3-sm"
+                                            title={`Card #${card.id} - ${card.prefix}`}
+                                        >
+                                            <SekaiCardThumbnail card={card} trained={getCardDefaultTrainedStatus(card) || (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday")} width={64} />
+                                        </Link>
+                                    ))}
                                 </div>
-                                <div className="p-5">
-                                    <div className="flex flex-wrap gap-3">
-                                        {relatedCards.map(card => (
-                                            <Link
-                                                key={card.id}
-                                                href={`/cards/${card.id}`}
-                                                className="block"
-                                                title={`Card #${card.id} - ${card.prefix}`}
-                                            >
-                                                <SekaiCardThumbnail card={card} trained={getCardDefaultTrainedStatus(card) || (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday")} width={64} />
-                                            </Link>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         <DetailPageAdCard />
@@ -560,20 +522,12 @@ export default function CostumeDetailClient() {
                 </div>
 
                 {/* Back Button */}
-                <div className="mt-12 text-center">
-                    <button
-                        onClick={() => {
-                            router.back();
-                        }}
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                <div className="mt-12 flex justify-center">
+                    <Button variant="tonal" icon={mdArrowBack} onClick={() => router.back()}>
                         {tI18n("page.costumes.backToList")}
-                    </button>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -581,9 +535,9 @@ export default function CostumeDetailClient() {
 // Info Row Component
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold text-right max-w-[60%]">{value}</span>
+        <div className="flex items-center justify-between gap-4 py-3 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="max-w-[60%] text-right type-title-s text-on-surface">{value}</span>
         </div>
     );
 }
