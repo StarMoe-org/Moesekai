@@ -8,7 +8,7 @@ import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { contextFromDataset } from "../src/lib/prediction/model/dataset-context.ts";
 import { YEAR_MS, finalPrior, priorCellKey, priorCurve } from "../src/lib/prediction/model/prior.ts";
@@ -411,7 +411,7 @@ test("parseArgs：默认目录、参数与错误", () => {
 test("CLI：直接运行才写 prior.json，import 不执行", () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "prior-test-"));
     try {
-        const imported = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", `await import(${JSON.stringify(SCRIPT)});`], { encoding: "utf8" });
+        const imported = spawnSync(process.execPath, ["--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", `await import(${JSON.stringify(pathToFileURL(SCRIPT).href)});`], { encoding: "utf8" });
         assert.equal(imported.status, 0, imported.stderr);
         assert.equal(imported.stdout, "");
         const emptyData = path.join(dir, "data");

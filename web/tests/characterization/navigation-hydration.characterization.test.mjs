@@ -10,7 +10,6 @@ import ts from "typescript";
 import { importWebTypeScript, readWeb } from "./test-helpers.mjs";
 
 const HYDRATION_ERROR_PATTERN = /hydrat|server rendered html|didn't match/i;
-const ACTIVE_CLASS = "island-pill-active";
 const TEST_ACCOUNT_STORAGE_KEY = "navigation-hydration-account";
 const LocaleContext = React.createContext("zh-CN");
 
@@ -24,7 +23,7 @@ function stripImports(source) {
     .replace(/^import[\s\S]*?;\s*$/gmu, "");
 }
 
-async function importTsxComponent(relativePath, prelude) {
+async function importTsxComponent(relativePath, prelude, exportName = "default") {
   moduleSequence += 1;
   const transpiled = ts.transpileModule(
     `${prelude}\n${stripImports(readWeb(relativePath))}`,
@@ -48,7 +47,9 @@ async function importTsxComponent(relativePath, prelude) {
   const encoded = Buffer.from(
     `${transpiled.outputText}\n//# sourceURL=${relativePath}-${moduleSequence}.mjs`,
   ).toString("base64");
-  return (await import(`data:text/javascript;base64,${encoded}`)).default;
+  const importedModule = await import(`data:text/javascript;base64,${encoded}`);
+  assert.ok(importedModule[exportName], `${relativePath} must export ${exportName}`);
+  return importedModule[exportName];
 }
 
 async function importLocalizedPath(routing) {
@@ -106,11 +107,12 @@ async function getComponentHarness() {
       };
     };
     dependencies.localizePath = localizedPath.localizePath;
-    dependencies.Link = function LinkStub({ href, onClick, children, prefetch: _prefetch, ...props }) {
+    dependencies.Link = function LinkStub({ href, onClick, children, prefetch, ...props }) {
       const resolvedHref = typeof href === "string" ? href : href.pathname ?? "";
       return React.createElement("a", {
         ...props,
         href: resolvedHref,
+        "data-prefetch": prefetch === false ? "false" : prefetch === true ? "true" : "auto",
         onClick(event) {
           event.preventDefault();
           onClick?.(event);
@@ -151,6 +153,20 @@ async function getComponentHarness() {
       matchesShortcutCombo: (event, combo) => event.key.toLowerCase() === combo[0],
       parseShortcutCombos: (combos) => combos.map((combo) => [combo]),
     });
+    // Load the real MD3 primitives: their active semantics and prefetch defaults
+    // are part of the navigation contract, so a permissive stub would hide bugs.
+    const icons = await importWebTypeScript("src/components/md3/icons.generated.ts");
+    Object.assign(dependencies, icons, await importWebTypeScript("src/components/md3/cn.ts"));
+    const md3Prelude = `
+      const dependencies = globalThis.__moesekaiNavigationHydration;
+      const React = dependencies.React;
+      const { cn, LocalizedLink } = dependencies;
+    `;
+    dependencies.Icon = await importTsxComponent("src/components/md3/Icon.tsx", md3Prelude, "Icon");
+    const md3IconPrelude = `${md3Prelude}\nconst Icon = dependencies.Icon;`;
+    dependencies.IconButton = await importTsxComponent("src/components/md3/Button.tsx", md3IconPrelude, "IconButton");
+    dependencies.NavigationDrawerItem = await importTsxComponent("src/components/md3/Navigation.tsx", md3IconPrelude, "NavigationDrawerItem");
+
     const sidebarPrelude = `
       const dependencies = globalThis.__moesekaiNavigationHydration;
       const React = dependencies.React;
@@ -163,6 +179,7 @@ async function getComponentHarness() {
         getTopCharacterId, getCachedAvatarUrl, useCardThumbnail, useTheme,
         useI18n, NAV_ITEM_LABEL_KEYS, LYRICS_ENTRY_VISIBLE, getShortcutById, isEditableEventTarget,
         isKeyboardEventComposing, matchesShortcutCombo, parseShortcutCombos,
+        Icon, IconButton, NavigationDrawerItem, cn, ${Object.keys(icons).join(", ")},
       } = dependencies;
     `;
     const Sidebar = await importTsxComponent("src/components/Sidebar.tsx", sidebarPrelude);
@@ -199,10 +216,10 @@ async function getComponentHarness() {
       const dependencies = globalThis.__moesekaiNavigationHydration;
       const React = dependencies.React;
       const { useState, useEffect, useCallback, useMemo, useRef, Suspense } = React;
-      const { useRouter, useSearchParams, MainNavbar, Sidebar, MainFooter,
+      const { usePathname, useRouter, useSearchParams, MainNavbar, Sidebar, MainFooter,
         ScrollToTop, FilterDrawer, FilterTabHandle, FilterDrawerGuide, SekaiLoader, BackgroundPattern,
         KeyboardShortcutsHelp, useKeyboardShortcuts, usePageListShortcuts,
-        localizePathForBrowser, DetailSeoSummary, useDetailSeoSummary } = dependencies;
+        localizePathForBrowser, stripRouteLocale, DetailSeoSummary, useDetailSeoSummary } = dependencies;
       const useTheme = dependencies.useMainLayoutTheme;
       const useQuickFilterContext = dependencies.useQuickFilterContext;
     `;
@@ -298,8 +315,10 @@ function sidebarSnapshot(container) {
   return {
     homeHref: home.getAttribute("href"),
     homeClass: home.getAttribute("class"),
+    homeCurrent: home.getAttribute("aria-current"),
     cardsHref: cards.getAttribute("href"),
-    cardsContainerClass: cards.parentElement.getAttribute("class"),
+    cardsClass: cards.getAttribute("class"),
+    cardsCurrent: cards.getAttribute("aria-current"),
   };
 }
 
@@ -346,25 +365,55 @@ test("LocalizedLink and Sidebar hydrate rewritten root and nested routes without
       const container = document.getElementById("root");
       container.innerHTML = serverHtml;
       const beforeHydration = sidebarSnapshot(container);
+      const serverHome = container.querySelector('aside a[data-nav-index="0"]');
+      const serverCards = container.querySelector('aside a[data-nav-index="1"]');
       assert.equal(beforeHydration.homeHref, `/${scenario.routeLocale}/`);
       assert.equal(beforeHydration.cardsHref, `/${scenario.routeLocale}/cards`);
-      assert.equal(beforeHydration.homeClass.includes(ACTIVE_CLASS), scenario.active === "home");
-      assert.equal(beforeHydration.cardsContainerClass.includes(ACTIVE_CLASS), scenario.active === "cards");
+      assert.equal(beforeHydration.homeCurrent, scenario.active === "home" ? "page" : null);
+      assert.equal(beforeHydration.cardsCurrent, scenario.active === "cards" ? "page" : null);
+      assert.equal(container.querySelectorAll('aside a[aria-current="page"]').length, 1);
+      assert.equal(beforeHydration.homeClass.includes("bg-secondary-container"), scenario.active === "home");
+      assert.equal(beforeHydration.cardsClass.includes("bg-secondary-container"), scenario.active === "cards");
 
       dependencies.currentPathname = scenario.publicPath;
       const capture = captureHydrationErrors();
       const root = await hydrate(element, container, capture);
       assert.deepEqual(sidebarSnapshot(container), beforeHydration);
+      assert.ok(container.querySelector('aside a[data-nav-index="0"]') === serverHome, "hydration must retain the SSR home anchor");
+      assert.ok(container.querySelector('aside a[data-nav-index="1"]') === serverCards, "hydration must retain the SSR cards anchor");
       capture.assertNone(scenario.publicPath);
       await unmount(root, dom, capture);
     });
   }
 });
 
-test("Sidebar links opt out of automatic RSC prefetch without changing localized navigation", () => {
-  const sidebar = readWeb("src/components/Sidebar.tsx");
-  assert.equal((sidebar.match(/prefetch=\{false\}/g) ?? []).length, 3);
-  assert.doesNotMatch(readWeb("src/components/LocalizedLink.tsx"), /prefetch=\{false\}/);
+test("Sidebar links opt out of automatic RSC prefetch without changing localized navigation", async () => {
+  const { dependencies, LocalizedLink, Sidebar } = await getComponentHarness();
+  clearDomGlobals();
+  dependencies.currentPathname = "/cards/";
+  for (const [uiLocale, routeLocale] of [["zh-CN", "zh-cn"], ["en-US", "en-us"]]) {
+    const element = localeProvider(uiLocale, React.createElement(React.Fragment, null,
+      React.createElement(Sidebar, { isOpen: true, onClose: () => {}, hasMounted: true }),
+      React.createElement(LocalizedLink, { href: "/music", "data-ordinary-link": true }, "ordinary link"),
+    ));
+    const dom = new JSDOM(renderToString(element));
+    try {
+      const links = [...dom.window.document.querySelectorAll("aside a")];
+      assert.ok(links.length > 3, "the expanded drawer must include grouped navigation and the account link");
+      for (const link of links) {
+        const href = link.getAttribute("href");
+        assert.ok(href.startsWith(`/${routeLocale}/`), `${href} must retain the route locale`);
+        assert.equal(link.dataset.prefetch, "false", `${href} must not automatically prefetch RSC data`);
+      }
+      assert.ok(links.some((link) => link.getAttribute("href") === `/${routeLocale}/cards`));
+      assert.ok(links.some((link) => link.getAttribute("href") === `/${routeLocale}/profile`));
+      const ordinaryLink = dom.window.document.querySelector("a[data-ordinary-link]");
+      assert.equal(ordinaryLink.getAttribute("href"), `/${routeLocale}/music`);
+      assert.equal(ordinaryLink.dataset.prefetch, "auto", "LocalizedLink must not globally disable prefetch");
+    } finally {
+      dom.window.close();
+    }
+  }
 });
 
 test("post-hydration storage, keyboard navigation, and mobile close remain interactive", async () => {
@@ -391,7 +440,8 @@ test("post-hydration storage, keyboard navigation, and mobile close remain inter
   await act(async () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "ArrowDown", bubbles: true }));
   });
-  assert.match(container.querySelector('a[data-nav-index="1"]').parentElement.className, /ring-2/);
+  assert.ok(container.querySelector('a[data-nav-index="1"]').classList.contains("ring-2"), "ArrowDown must highlight the cards anchor itself");
+  assert.ok(!container.querySelector('a[data-nav-index="0"]').classList.contains("ring-2"), "keyboard highlight must leave the previous anchor");
   await act(async () => {
     document.dispatchEvent(new KeyboardEvent("keydown", { key: "Enter", bubbles: true }));
   });
@@ -445,7 +495,7 @@ test("MainLayout restores the saved sidebar preference only after hydration", as
   sessionStorage.setItem("sidebar_open", "true");
   const container = document.getElementById("root");
   container.innerHTML = serverHtml;
-  assert.match(container.querySelector("aside").className, /-translate-x-\[18rem\]/);
+  assert.ok(container.querySelector("aside").classList.contains("-translate-x-full"), "SSR drawer must start fully offscreen before restoring storage");
   assert.doesNotMatch(container.querySelector("aside").className, /transition-transform/);
 
   dependencies.currentPathname = "/zh-cn/";

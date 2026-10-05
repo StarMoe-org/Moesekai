@@ -8,6 +8,8 @@ import test from "node:test";
 import {
   baseline,
   createStorage,
+  importWebTypeScript,
+  readJson,
   readWeb,
   WEB_ROOT,
 } from "./test-helpers.mjs";
@@ -85,7 +87,7 @@ test("TranslatedText keeps original-only, inline, stacked, and hook behavior", (
   assert.match(source, /if \(!translation\)[\s\S]*return <span className=\{originalClassName\}>\{original\}<\/span>/);
   assert.match(source, /if \(inline\)[\s\S]*\(\{translation\}\)/);
   assert.match(source, /<span className="flex flex-col">/);
-  assert.match(source, /translationClassName = "text-xs text-slate-400 mt-0\.5"/);
+  assert.match(source, /translationClassName = "type-body-s text-on-surface-variant mt-0\.5"/);
   assert.match(source, /return t\(category, field, original\);/);
 });
 
@@ -116,15 +118,23 @@ test("translation storage keys and cache ordering remain pinned to the baseline 
   assert.equal(baseline.storage.indexedDB.ttlMs, 30 * 60 * 1000);
 });
 
-function parseCharacterColors() {
-  const source = readWeb("src/types/types.ts");
-  const match = source.match(/export const CHAR_COLORS: Record<string, string> = (\{[\s\S]*?\n\});/);
-  assert.ok(match);
-  return new Function(`return ${match[1]};`)();
+async function parseCharacterColors() {
+  const seedData = readJson("src/lib/theme-seeds.json");
+  const seeds = await importWebTypeScript("src/lib/theme-seeds.ts", [[
+    'import themeSeeds from "./theme-seeds.json";',
+    `const themeSeeds = ${JSON.stringify(seedData)};`,
+  ]]);
+  assert.deepEqual(seeds.THEME_SEED_COLORS, seedData.seeds, "theme seeds must expose the shared official color map");
+  const types = await importWebTypeScript("src/types/types.ts", [[
+    'import { THEME_SEED_COLORS } from "@/lib/theme-seeds";',
+    `const THEME_SEED_COLORS = ${JSON.stringify(seeds.THEME_SEED_COLORS)};`,
+  ]]);
+  assert.deepEqual(types.CHAR_COLORS, seedData.seeds, "types must expose every official character seed unchanged");
+  return types.CHAR_COLORS;
 }
 
-test("CHAR_COLORS remains sourced from types/types.ts and ThemeContext only re-exports it", () => {
-  assert.deepEqual(parseCharacterColors(), baseline.charColors);
+test("CHAR_COLORS preserves official theme-seeds.json colors through types and the ThemeContext re-export", async () => {
+  assert.deepEqual(await parseCharacterColors(), baseline.charColors);
   const themeSource = readWeb("src/contexts/ThemeContext.tsx");
   assert.match(themeSource, /import \{ CHAR_COLORS \} from "@\/types\/types";/);
   assert.match(themeSource, /export \{ CHAR_COLORS \};/);
@@ -200,23 +210,45 @@ test("MusicItem keeps localized default links and translation precedence", () =>
   assert.match(item, /const itemHref = href \?\? `\$\{hrefBase\}\/\$\{music\.id\}`/);
   assert.match(item, /translateMasterText\("music", "title", music\.title\) \?\? \(useLLMTranslation \? indexedTitle : undefined\)/);
   assert.match(item, /\{music\.title\}[\s\S]*\{translatedTitle &&/);
-  assert.ok(item.includes(baseline.musicUi.itemComposerClass));
+  assert.match(item, /<p className="type-body-s text-on-surface-variant mt-1">\s*\{music\.composer\}/, "composer credit must use secondary semantic text");
 });
 
-test("music list/detail mobile and dark-mode layout contracts remain unchanged", () => {
+test("music list/detail preserve responsive layouts and use light/dark semantic colors", () => {
   const layout = readWeb("src/components/music/music-layout.ts");
   const detail = readWeb("src/app/music/[id]/client.tsx");
   const item = readWeb("src/components/music/MusicItem.tsx");
   const filters = readWeb("src/components/music/MusicFilters.tsx");
+  const patterns = readWeb("src/components/md3/Patterns.tsx");
+  const pageContainer = patterns.match(/export function PageContainer[\s\S]*?\n\}/)?.[0];
+  assert.ok(pageContainer, "the shared responsive PageContainer must remain available");
 
   assert.ok(layout.includes(`MUSIC_GRID_CLASS = "${baseline.musicUi.gridClass}"`));
   assert.ok(detail.includes(`className="${baseline.musicUi.detailGridClass}"`));
   assert.ok(detail.includes(`className="${baseline.musicUi.detailStickyClass}"`));
-  assert.match(detail, /container mx-auto px-4 sm:px-6 py-8/);
-  assert.match(detail, /min-w-0 text-2xl font-black text-slate-800 sm:text-3xl/);
+  assert.match(detail, /<PageContainer>[\s\S]*<h1/, "music content must use the shared page gutters");
+  assert.match(pageContainer, /mx-auto w-full px-4 py-6 sm:px-6 sm:py-8/);
+  assert.match(pageContainer, /"max-w-7xl"/, "ordinary pages retain a bounded desktop content width");
+  assert.match(detail, /<h1 className="min-w-0 type-headline-m text-on-surface sm:type-headline-l">/);
   assert.match(item, /sizes="\(max-width: 640px\) 50vw, \(max-width: 1024px\) 33vw, 20vw"/);
-  assert.ok(item.includes("dark:text-slate-400"));
-  assert.ok(filters.includes("dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700"));
+  assert.match(item, /bg-surface-container-low text-on-surface/);
+  assert.match(filters, /className=\{getFilterChipStateClasses\(isSelected\)\}/);
+  assert.match(filters, /className=\{`!p-1\.5 \$\{getFilterIconStateClasses\(isSelected\)\}`\}/);
+  const baseFilters = readWeb("src/components/common/BaseFilters.tsx");
+  assert.ok(baseFilters.includes('border-transparent bg-secondary-container text-on-secondary-container'), "selected filter chips retain a distinct theme-aware state");
+  assert.ok(baseFilters.includes('border-outline-variant bg-transparent text-on-surface-variant'), "unselected filter chips retain theme-aware text and outlines");
+
+  // Dark mode now comes from the shared roles rather than per-component dark: classes.
+  const tokens = readWeb("src/styles/md3-tokens.css");
+  const schemes = readWeb("src/styles/md3-schemes.css");
+  const lightRoles = schemes.match(/:root\s*\{([^}]*--md-sys-color-primary:[^}]*)\}/)?.[1];
+  const darkRoles = schemes.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/)?.[1];
+  assert.ok(lightRoles && darkRoles, "both light and dark default color schemes must be generated");
+  for (const role of ["surface-container-low", "on-surface", "on-surface-variant", "secondary-container", "on-secondary-container", "outline-variant"]) {
+    assert.ok(tokens.includes(`--color-${role}: var(--md-sys-color-${role});`), `${role} must resolve through the dynamic scheme`);
+    const declaration = new RegExp(`--md-sys-color-${role}: #[0-9a-fA-F]{6};`);
+    assert.ok(declaration.test(lightRoles), `${role} must exist in the light scheme`);
+    assert.ok(declaration.test(darkRoles), `${role} must exist in the dark scheme`);
+  }
   assert.doesNotMatch(detail, /fetchLyrics|LyricText/, "the existing music detail route remains independent of lyrics");
 });
 
@@ -400,7 +432,7 @@ test("UI i18n parity, literal usage, hardcoded allowlist, and SEO registry match
   assert.ok(Number(seoCounts?.[2]) >= baseline.validation.seoNoindexRoutes);
 });
 
-test("search inputs, CommandPalette, and FilterDrawer preserve IME composition and prevent premature Enter navigation", () => {
+test("search inputs, CommandPalette, and FilterDrawer preserve IME composition and prevent premature Enter navigation", async () => {
   const commandPalette = readWeb("src/components/CommandPalette.tsx");
   assert.match(commandPalette, /onCompositionStart=\{handleCompositionStart\}/, "CommandPalette input tracks composition start");
   assert.match(commandPalette, /onCompositionEnd=\{handleCompositionEnd\}/, "CommandPalette input tracks composition end");
@@ -417,5 +449,43 @@ test("search inputs, CommandPalette, and FilterDrawer preserve IME composition a
   assert.match(filterDrawer, /isKeyboardEventComposing\(event\)/, "FilterDrawer escape listener guards against IME composition cancellation");
 
   const modal = readWeb("src/components/common/Modal.tsx");
-  assert.match(modal, /isKeyboardEventComposing\(e\)/, "Modal escape listener guards against IME composition cancellation");
+  const dialog = readWeb("src/components/md3/Dialog.tsx");
+  const overlay = readWeb("src/components/md3/useOverlay.ts");
+  assert.match(modal, /import \{ Dialog \} from "@\/components\/md3\/Dialog";/, "Modal must delegate to the real shared Dialog");
+  assert.match(modal, /<Dialog\s+isOpen=\{isOpen\}\s+onClose=\{onClose\}/, "Modal must forward its open state and close callback");
+  assert.match(dialog, /import \{[^}]*\buseOverlay\b[^}]*\} from "\.\/useOverlay";/);
+  assert.match(dialog, /useOverlay\(isOpen, onClose, \{ syncHistory, closeOnEscape: dismissible \}\)/);
+  assert.match(overlay, /document\.addEventListener\("keydown", handleKeyDown\)/, "the guarded handler must be the active document listener");
+
+  // Execute the real listener instead of pinning where its early-return guard lives.
+  const handlerSource = overlay.match(/function handleKeyDown\(event: KeyboardEvent\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(handlerSource, "the shared overlay keydown handler must remain extractable");
+  const { isKeyboardEventComposing } = await importWebTypeScript("src/lib/shortcuts.ts");
+  let effects;
+  const entry = { closeOnEscape: true, modal: true, ref: { current: null }, close: () => { effects.closed += 1; } };
+  const handler = new Function("topEntry", "isKeyboardEventComposing",
+    `${stripTypeScriptTypes(handlerSource, { mode: "transform" })}\nreturn handleKeyDown;`,
+  )(() => entry, isKeyboardEventComposing);
+  const dispatch = (overrides = {}) => {
+    effects = { closed: 0, prevented: 0, stopped: 0 };
+    handler({
+      key: "Escape", isComposing: false, keyCode: 27, defaultPrevented: false,
+      preventDefault() { effects.prevented += 1; },
+      stopImmediatePropagation() { effects.stopped += 1; },
+      ...overrides,
+    });
+    return effects;
+  };
+  for (const [label, event] of [
+    ["composing Escape", { isComposing: true }],
+    ["legacy IME Escape", { keyCode: 229 }],
+    ["IME Process", { key: "Process" }],
+    ["already handled Escape", { defaultPrevented: true }],
+    ["Enter", { key: "Enter", keyCode: 13 }],
+  ]) {
+    assert.deepEqual(dispatch(event), { closed: 0, prevented: 0, stopped: 0 }, `${label} must not dismiss or consume input for the Dialog`);
+  }
+  assert.deepEqual(dispatch(), { closed: 1, prevented: 1, stopped: 1 }, "an ordinary Escape must dismiss the Dialog exactly once");
+  entry.closeOnEscape = false;
+  assert.deepEqual(dispatch(), { closed: 0, prevented: 1, stopped: 1 }, "a nondismissible Dialog must not close or leak Escape to a parent");
 });

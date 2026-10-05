@@ -303,5 +303,5 @@ test("story display gates both CN fields on useLLMTranslation and trimmed inequa
   assert.match(source, /cnDisplayName=\{action\.cnDisplayName\}/);
   assert.match(source, /translatedText=\{action\.translatedBody\}/);
   assert.match(source, /translatedDisplayName=\{action\.translatedDisplayName\}/);
-  assert.match(source, /whitespace-pre-wrap mt-1\.5 pt-1\.5 border-t/);
+  assert.match(source, /mt-2 whitespace-pre-wrap border-t border-outline-variant pt-2/);
 });

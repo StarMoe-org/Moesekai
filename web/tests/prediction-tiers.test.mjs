@@ -476,7 +476,7 @@ test("nestedAdjustFlags decides each record only from events that ended before i
 test("parseArgs: defaults, flags and unknown arguments", () => {
     const d = parseArgs([]);
     assert.equal(d.backtest, false);
-    assert.ok(d.out.endsWith("/prediction-model/fit"));
+    assert.ok(d.out.replaceAll("\\", "/").endsWith("/prediction-model/fit"));
     const a = parseArgs(["--data", "/x", "--out", "/y", "--backtest", "--backtest-out", "/z", "--report", "/r.md"]);
     assert.deepEqual(a, { data: "/x", out: "/y", backtest: true, backtestOut: "/z", report: "/r.md" });
     assert.throws(() => parseArgs(["--nope"]));
