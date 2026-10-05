@@ -3,8 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npm run copy:wasm && next dev",
-    "build": "npm run copy:wasm && npm run sitemap && npm run generate:metadata && next build",
+    "dev": "npm run copy:wasm && npm run generate:md3 && next dev",
+    "build": "npm run copy:wasm && npm run generate:md3 && npm run sitemap && npm run generate:metadata && next build",
     "build:next": "next build",
     "copy:wasm": "node scripts/copy-wasm-artifacts.mjs",
     "test:deck-params": "node --experimental-strip-types scripts/test-deck-engine-params.mjs",
@@ -23,10 +23,14 @@
     "lint": "eslint",
     "lint:i18n": "node scripts/check-i18n-keys.mjs && node scripts/scan-hardcoded-ui-text.mjs && node scripts/check-seo-routes.mjs && node scripts/check-translation-coverage.mjs",
     "lint:i18n-usage": "node scripts/check-i18n-usage.mjs",
-    "test:ssr-localized-links": "npm run build:next && node scripts/check-localized-link-ssr.mjs"
+    "test:ssr-localized-links": "npm run build:next && node scripts/check-localized-link-ssr.mjs",
+    "generate:md3": "bun scripts/generate-md3-schemes.mjs && node scripts/generate-material-symbols.mjs"
   },
   "dependencies": {
     "@empty-sekai/allium-deck-wasm": "0.0.14",
+    "@fontsource-variable/noto-sans-jp": "^5.3.0",
+    "@fontsource-variable/noto-sans-sc": "^5.3.0",
+    "@fontsource-variable/roboto-flex": "^5.3.0",
     "@supabase/supabase-js": "2.106.0",
     "@swc/helpers": "^0.5.15",
     "@types/qrcode": "^1.5.6",
@@ -43,6 +47,8 @@
     "three": "^0.162.0"
   },
   "devDependencies": {
+    "@material-symbols/svg-400": "^0.47.6",
+    "@material/material-color-utilities": "^0.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

@@ -42,7 +42,7 @@ RUN --mount=type=secret,id=public_lyrics_ca,required=false \
       export NODE_EXTRA_CA_CERTS=/run/secrets/public_lyrics_ca; \
     fi; \
     export REQUIRE_PUBLIC_LYRICS_SOURCE=1; \
-    bun run copy:wasm && bun run sitemap && bun run generate:metadata && bun run build:next
+    bun run copy:wasm && bun run generate:md3 && bun run sitemap && bun run generate:metadata && bun run build:next
 
 # Build Stage for Backend
 FROM golang:1.23.12-alpine3.22 AS builder-go

@@ -1,36 +1,46 @@
 /**
- * Apple-inspired motion presets for Framer Motion.
- * Defaults are critically damped (no bounce). Use momentum springs only when
- * the gesture itself carried velocity (flick / drag release).
- *
- * Mapping (WWDC Designing Fluid Interfaces → Motion spring API):
- * - damping ratio 1.0 ≈ bounce 0
- * - damping ratio ~0.8 ≈ bounce ~0.15–0.2
- * - response (seconds) ≈ duration
+ * Motion presets for Framer Motion, based on Material 3 Expressive spring tokens.
+ * Use spatial springs for movement/shape, effects springs for color/opacity.
+ * Honour prefers-reduced-motion via getMotionTransition({ reducedMotion }).
  */
 
 import type { Transition } from "framer-motion";
 
-/** Critically damped UI settle — menus, modals, chrome, toggles */
-export const springSnappy: Transition = {
-  type: "spring",
-  bounce: 0,
-  duration: 0.32,
-};
+/* ------------------------------------------------------------------------
+ * Material 3 Expressive motion physics (spring tokens).
+ * https://m3.material.io/styles/motion/overview/specs
+ *
+ *   spatial  — position / size / shape / rotation. Slight overshoot.
+ *   effects  — color / opacity. Never overshoots.
+ *   fast     — small components (buttons, switches, chips)
+ *   default  — medium/partial-screen (sheets, menus, nav drawer)
+ *   slow     — full-screen transitions
+ *
+ * Framer damping coefficient c = ζ · 2√(k·m): spatial ζ = 0.9, effects ζ = 1.
+ * ---------------------------------------------------------------------- */
+export const md3SpatialFast: Transition = { type: "spring", stiffness: 1400, damping: 67, mass: 1 };
+export const md3SpatialDefault: Transition = { type: "spring", stiffness: 700, damping: 48, mass: 1 };
+export const md3SpatialSlow: Transition = { type: "spring", stiffness: 300, damping: 31, mass: 1 };
+export const md3EffectsFast: Transition = { type: "spring", stiffness: 3800, damping: 123, mass: 1 };
+export const md3EffectsDefault: Transition = { type: "spring", stiffness: 1600, damping: 80, mass: 1 };
+export const md3EffectsSlow: Transition = { type: "spring", stiffness: 800, damping: 57, mass: 1 };
 
-/** Slightly slower critical settle — large panels / layout shifts */
-export const springSoft: Transition = {
-  type: "spring",
-  bounce: 0,
-  duration: 0.42,
-};
+/** M3 easing curves for tween transitions (framer-motion bezier arrays). */
+export const md3EasingEmphasizedDecelerate = [0.05, 0.7, 0.1, 1] as const;
+export const md3EasingEmphasizedAccelerate = [0.3, 0, 0.8, 0.15] as const;
+export const md3EasingStandard = [0.2, 0, 0, 1] as const;
 
-/** Sheet / drawer style — slight bounce only when physically thrown */
-export const springSheet: Transition = {
-  type: "spring",
-  bounce: 0.15,
-  duration: 0.36,
-};
+/* Legacy preset names — now backed by MD3 springs so existing call sites
+ * pick up Material motion without being rewritten. */
+
+/** Menus, modals, chrome, toggles → MD3 spatial default */
+export const springSnappy: Transition = md3SpatialDefault;
+
+/** Large panels / layout shifts → MD3 spatial slow */
+export const springSoft: Transition = md3SpatialSlow;
+
+/** Sheet / drawer → MD3 spatial default */
+export const springSheet: Transition = md3SpatialDefault;
 
 /** Momentum / flick handoff — under-damped, use with release velocity */
 export const springMomentum: Transition = {
@@ -49,7 +59,7 @@ export const reducedMotionFade: Transition = {
   ease: "easeOut",
 };
 
-export type MotionPresetName = "snappy" | "soft" | "sheet" | "momentum";
+export type MotionPresetName = "snappy" | "soft" | "sheet" | "momentum" | "spatialFast" | "spatial" | "spatialSlow" | "effects";
 
 /**
  * Filter drawer enter/exit — slides in from the left edge with a short
@@ -59,14 +69,18 @@ export type MotionPresetName = "snappy" | "soft" | "sheet" | "momentum";
  */
 export const filterDrawerVariants = {
   initial: { opacity: 0, x: -14 },
-  animate: { opacity: 1, x: 0, transition: springSnappy },
-  exit: { opacity: 0, x: -10, transition: { type: "tween", duration: 0.16, ease: "easeOut" } },
+  animate: { opacity: 1, x: 0, transition: md3SpatialDefault },
+  exit: { opacity: 0, x: -10, transition: { type: "tween", duration: 0.15, ease: md3EasingEmphasizedAccelerate } },
 } as const;
 const PRESETS: Record<MotionPresetName, Transition> = {
   snappy: springSnappy,
   soft: springSoft,
   sheet: springSheet,
   momentum: springMomentum,
+  spatialFast: md3SpatialFast,
+  spatial: md3SpatialDefault,
+  spatialSlow: md3SpatialSlow,
+  effects: md3EffectsDefault,
 };
 
 /** Pick a spring preset; falls back to reduced-motion fade when requested. */

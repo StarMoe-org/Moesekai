@@ -1,0 +1,348 @@
+/* ==========================================================================
+   Material 3 (Expressive) design tokens for Tailwind CSS 4
+   --------------------------------------------------------------------------
+   Color roles come from ./md3-schemes.css (generated per seed × light/dark).
+   This file maps them into Tailwind's theme so pages can use semantic
+   utilities: bg-surface-container, text-on-surface, border-outline-variant,
+   bg-primary text-on-primary, rounded-md3-lg, type-title-m, shadow-elev-2 …
+
+   Rule of thumb for page code:
+   - Colors:   ONLY semantic roles. Never slate-*, white, black, dark:*.
+   - Shape:    rounded-md3-{xs|sm|md|lg|lg-inc|xl|xl-inc|xxl|full}
+   - Type:     type-{display|headline|title|body|label}-{l|m|s}
+   - Elevation shadow-elev-{0..5} (light); tonal surface-container in dark
+   - Motion:   ease-md3-* / duration-md3-* (CSS) or lib/motion.ts (framer)
+   ========================================================================== */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme inline {
+    /* ── Color roles ─────────────────────────────────────────────── */
+    --color-primary: var(--md-sys-color-primary);
+    --color-on-primary: var(--md-sys-color-on-primary);
+    --color-primary-container: var(--md-sys-color-primary-container);
+    --color-on-primary-container: var(--md-sys-color-on-primary-container);
+    --color-inverse-primary: var(--md-sys-color-inverse-primary);
+    --color-primary-fixed: var(--md-sys-color-primary-fixed);
+    --color-primary-fixed-dim: var(--md-sys-color-primary-fixed-dim);
+    --color-on-primary-fixed: var(--md-sys-color-on-primary-fixed);
+    --color-on-primary-fixed-variant: var(--md-sys-color-on-primary-fixed-variant);
+
+    --color-secondary: var(--md-sys-color-secondary);
+    --color-on-secondary: var(--md-sys-color-on-secondary);
+    --color-secondary-container: var(--md-sys-color-secondary-container);
+    --color-on-secondary-container: var(--md-sys-color-on-secondary-container);
+    --color-secondary-fixed: var(--md-sys-color-secondary-fixed);
+    --color-secondary-fixed-dim: var(--md-sys-color-secondary-fixed-dim);
+    --color-on-secondary-fixed: var(--md-sys-color-on-secondary-fixed);
+    --color-on-secondary-fixed-variant: var(--md-sys-color-on-secondary-fixed-variant);
+
+    --color-tertiary: var(--md-sys-color-tertiary);
+    --color-on-tertiary: var(--md-sys-color-on-tertiary);
+    --color-tertiary-container: var(--md-sys-color-tertiary-container);
+    --color-on-tertiary-container: var(--md-sys-color-on-tertiary-container);
+    --color-tertiary-fixed: var(--md-sys-color-tertiary-fixed);
+    --color-tertiary-fixed-dim: var(--md-sys-color-tertiary-fixed-dim);
+    --color-on-tertiary-fixed: var(--md-sys-color-on-tertiary-fixed);
+    --color-on-tertiary-fixed-variant: var(--md-sys-color-on-tertiary-fixed-variant);
+
+    --color-error: var(--md-sys-color-error);
+    --color-on-error: var(--md-sys-color-on-error);
+    --color-error-container: var(--md-sys-color-error-container);
+    --color-on-error-container: var(--md-sys-color-on-error-container);
+
+    --color-background: var(--md-sys-color-background);
+    --color-on-background: var(--md-sys-color-on-background);
+    --color-surface: var(--md-sys-color-surface);
+    --color-surface-dim: var(--md-sys-color-surface-dim);
+    --color-surface-bright: var(--md-sys-color-surface-bright);
+    --color-surface-tint: var(--md-sys-color-surface-tint);
+    --color-surface-container-lowest: var(--md-sys-color-surface-container-lowest);
+    --color-surface-container-low: var(--md-sys-color-surface-container-low);
+    --color-surface-container: var(--md-sys-color-surface-container);
+    --color-surface-container-high: var(--md-sys-color-surface-container-high);
+    --color-surface-container-highest: var(--md-sys-color-surface-container-highest);
+    --color-on-surface: var(--md-sys-color-on-surface);
+    --color-surface-variant: var(--md-sys-color-surface-variant);
+    --color-on-surface-variant: var(--md-sys-color-on-surface-variant);
+    --color-inverse-surface: var(--md-sys-color-inverse-surface);
+    --color-inverse-on-surface: var(--md-sys-color-inverse-on-surface);
+    --color-outline: var(--md-sys-color-outline);
+    --color-outline-variant: var(--md-sys-color-outline-variant);
+    --color-shadow: var(--md-sys-color-shadow);
+    --color-scrim: var(--md-sys-color-scrim);
+
+    /* Character brand colors (official, not harmonized). bg-char-21, text-char-9 … */
+    --color-char-1: var(--md-ext-color-char-1);
+    --color-char-2: var(--md-ext-color-char-2);
+    --color-char-3: var(--md-ext-color-char-3);
+    --color-char-4: var(--md-ext-color-char-4);
+    --color-char-5: var(--md-ext-color-char-5);
+    --color-char-6: var(--md-ext-color-char-6);
+    --color-char-7: var(--md-ext-color-char-7);
+    --color-char-8: var(--md-ext-color-char-8);
+    --color-char-9: var(--md-ext-color-char-9);
+    --color-char-10: var(--md-ext-color-char-10);
+    --color-char-11: var(--md-ext-color-char-11);
+    --color-char-12: var(--md-ext-color-char-12);
+    --color-char-13: var(--md-ext-color-char-13);
+    --color-char-14: var(--md-ext-color-char-14);
+    --color-char-15: var(--md-ext-color-char-15);
+    --color-char-16: var(--md-ext-color-char-16);
+    --color-char-17: var(--md-ext-color-char-17);
+    --color-char-18: var(--md-ext-color-char-18);
+    --color-char-19: var(--md-ext-color-char-19);
+    --color-char-20: var(--md-ext-color-char-20);
+    --color-char-21: var(--md-ext-color-char-21);
+    --color-char-22: var(--md-ext-color-char-22);
+    --color-char-23: var(--md-ext-color-char-23);
+    --color-char-24: var(--md-ext-color-char-24);
+    --color-char-25: var(--md-ext-color-char-25);
+    --color-char-26: var(--md-ext-color-char-26);
+
+    /* ── Shape (M3 Expressive corner scale) ───────────────────────── */
+    --radius-md3-none: 0px;
+    --radius-md3-xs: 4px;
+    --radius-md3-sm: 8px;
+    --radius-md3-md: 12px;
+    --radius-md3-lg: 16px;
+    --radius-md3-lg-inc: 20px;
+    --radius-md3-xl: 28px;
+    --radius-md3-xl-inc: 32px;
+    --radius-md3-xxl: 48px;
+    --radius-md3-full: 9999px;
+
+    /* ── Elevation (key + ambient, M3 levels 0–5) ─────────────────── */
+    --shadow-elev-0: none;
+    --shadow-elev-1: 0 1px 2px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 1px 3px 1px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+    --shadow-elev-2: 0 1px 2px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 2px 6px 2px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+    --shadow-elev-3: 0 1px 3px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 4px 8px 3px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+    --shadow-elev-4: 0 2px 3px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 6px 10px 4px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+    --shadow-elev-5: 0 4px 4px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 8px 12px 6px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+
+    /* ── Motion ───────────────────────────────────────────────────── */
+    --ease-md3-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-md3-standard-decelerate: cubic-bezier(0, 0, 0, 1);
+    --ease-md3-standard-accelerate: cubic-bezier(0.3, 0, 1, 1);
+    --ease-md3-emphasized: cubic-bezier(0.2, 0, 0, 1);
+    --ease-md3-emphasized-decelerate: cubic-bezier(0.05, 0.7, 0.1, 1);
+    --ease-md3-emphasized-accelerate: cubic-bezier(0.3, 0, 0.8, 0.15);
+    /* Expressive spatial spring approximations (overshoot) for CSS transitions */
+    --ease-md3-spatial-fast: cubic-bezier(0.42, 1.67, 0.21, 0.9);
+    --ease-md3-spatial: cubic-bezier(0.38, 1.21, 0.22, 1);
+    --ease-md3-spatial-slow: cubic-bezier(0.39, 1.29, 0.35, 0.98);
+    --ease-md3-effects: cubic-bezier(0.31, 0.94, 0.34, 1);
+
+    /* ── Typography ───────────────────────────────────────────────── */
+    --font-sans: var(--md-ref-typeface-plain);
+    --font-brand: var(--md-ref-typeface-brand);
+
+    /* ── Window size classes (M3 breakpoints) ─────────────────────── */
+    --breakpoint-medium: 600px;
+    --breakpoint-expanded: 840px;
+    --breakpoint-large: 1200px;
+    --breakpoint-xlarge: 1600px;
+}
+
+:root {
+    /* Typefaces. Locale-specific CJK order is set below via [data-ui-locale]. */
+    --md-ref-typeface-latin: "Roboto Flex Variable", "Roboto Flex", Roboto;
+    --md-ref-typeface-cjk: "Noto Sans SC Variable", "Noto Sans JP Variable";
+    --md-ref-typeface-system: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+    --md-ref-typeface-brand: var(--md-ref-typeface-latin), var(--md-ref-typeface-cjk), var(--md-ref-typeface-system);
+    --md-ref-typeface-plain: var(--md-ref-typeface-latin), var(--md-ref-typeface-cjk), var(--md-ref-typeface-system);
+
+    /* State layer opacities */
+    --md-sys-state-hover: 0.08;
+    --md-sys-state-focus: 0.1;
+    --md-sys-state-pressed: 0.1;
+    --md-sys-state-dragged: 0.16;
+    --md-sys-state-disabled-container: 0.12;
+    --md-sys-state-disabled-content: 0.38;
+
+    /* Durations */
+    --md-sys-motion-duration-short1: 50ms;
+    --md-sys-motion-duration-short2: 100ms;
+    --md-sys-motion-duration-short3: 150ms;
+    --md-sys-motion-duration-short4: 200ms;
+    --md-sys-motion-duration-medium1: 250ms;
+    --md-sys-motion-duration-medium2: 300ms;
+    --md-sys-motion-duration-medium3: 350ms;
+    --md-sys-motion-duration-medium4: 400ms;
+    --md-sys-motion-duration-long1: 450ms;
+    --md-sys-motion-duration-long2: 500ms;
+
+    color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+}
+
+:root[data-ui-locale="ja-JP"] {
+    --md-ref-typeface-cjk: "Noto Sans JP Variable", "Noto Sans SC Variable";
+}
+
+:root[data-ui-locale="zh-TW"],
+:root[data-ui-locale="ko-KR"] {
+    /* No self-hosted TC/KR face: let the system font take Hanzi/Hangul first,
+       so traditional/Korean glyphs are not rendered with SC shapes. */
+    --md-ref-typeface-plain: var(--md-ref-typeface-latin), var(--md-ref-typeface-system);
+    --md-ref-typeface-brand: var(--md-ref-typeface-latin), var(--md-ref-typeface-system);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    :root {
+        --md-sys-motion-duration-short1: 1ms;
+        --md-sys-motion-duration-short2: 1ms;
+        --md-sys-motion-duration-short3: 1ms;
+        --md-sys-motion-duration-short4: 1ms;
+        --md-sys-motion-duration-medium1: 120ms;
+        --md-sys-motion-duration-medium2: 120ms;
+        --md-sys-motion-duration-medium3: 150ms;
+        --md-sys-motion-duration-medium4: 150ms;
+        --md-sys-motion-duration-long1: 180ms;
+        --md-sys-motion-duration-long2: 200ms;
+    }
+}
+
+/* ── Type scale (M3 Expressive baseline + emphasized) ─────────────── */
+@utility type-display-l { font-family: var(--md-ref-typeface-brand); font-size: 57px; line-height: 64px; font-weight: 400; letter-spacing: -0.25px; }
+@utility type-display-m { font-family: var(--md-ref-typeface-brand); font-size: 45px; line-height: 52px; font-weight: 400; letter-spacing: 0; }
+@utility type-display-s { font-family: var(--md-ref-typeface-brand); font-size: 36px; line-height: 44px; font-weight: 400; letter-spacing: 0; }
+@utility type-headline-l { font-family: var(--md-ref-typeface-brand); font-size: 32px; line-height: 40px; font-weight: 400; letter-spacing: 0; }
+@utility type-headline-m { font-family: var(--md-ref-typeface-brand); font-size: 28px; line-height: 36px; font-weight: 400; letter-spacing: 0; }
+@utility type-headline-s { font-family: var(--md-ref-typeface-brand); font-size: 24px; line-height: 32px; font-weight: 400; letter-spacing: 0; }
+@utility type-title-l { font-family: var(--md-ref-typeface-brand); font-size: 22px; line-height: 28px; font-weight: 400; letter-spacing: 0; }
+@utility type-title-m { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: 0.15px; }
+@utility type-title-s { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: 0.1px; }
+@utility type-body-l { font-size: 16px; line-height: 24px; font-weight: 400; letter-spacing: 0.5px; }
+@utility type-body-m { font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0.25px; }
+@utility type-body-s { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0.4px; }
+@utility type-label-l { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: 0.1px; }
+@utility type-label-m { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
+@utility type-label-s { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
+/* Emphasized: bump weight one step (Expressive). Combine: "type-title-l type-emphasized". */
+@utility type-emphasized { font-weight: 600; }
+
+/* ── Interaction state layer ──────────────────────────────────────────
+   Adds an overlay of the element's content color (currentColor).
+   Usage: <button class="state-layer relative overflow-hidden ...">.
+   Use with `isolate` if the element has its own z-indexed children. */
+@utility state-layer {
+    position: relative;
+    -webkit-tap-highlight-color: transparent;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        background-color: currentColor;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity var(--md-sys-motion-duration-short3) var(--ease-md3-standard);
+    }
+
+    @media (hover: hover) {
+        &:hover::before { opacity: var(--md-sys-state-hover); }
+    }
+    &:focus-visible::before { opacity: var(--md-sys-state-focus); }
+    &:active::before { opacity: var(--md-sys-state-pressed); }
+    &:disabled::before,
+    &[aria-disabled="true"]::before { opacity: 0; }
+}
+
+/* Focus indicator: 3px secondary outline, offset 2px (M3 focus ring). */
+@utility focus-ring {
+    &:focus-visible {
+        outline: 3px solid var(--md-sys-color-secondary);
+        outline-offset: 2px;
+    }
+}
+
+/* Surface helpers: pair container color with its content color. */
+@utility surface { background-color: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); }
+@utility surface-container-lowest { background-color: var(--md-sys-color-surface-container-lowest); color: var(--md-sys-color-on-surface); }
+@utility surface-container-low { background-color: var(--md-sys-color-surface-container-low); color: var(--md-sys-color-on-surface); }
+@utility surface-container { background-color: var(--md-sys-color-surface-container); color: var(--md-sys-color-on-surface); }
+@utility surface-container-high { background-color: var(--md-sys-color-surface-container-high); color: var(--md-sys-color-on-surface); }
+@utility surface-container-highest { background-color: var(--md-sys-color-surface-container-highest); color: var(--md-sys-color-on-surface); }
+
+/* Disabled content/container per M3 (38% content, 12% container of on-surface). */
+@utility md3-disabled {
+    color: rgb(var(--md-sys-color-on-surface-rgb) / var(--md-sys-state-disabled-content)) !important;
+    background-color: rgb(var(--md-sys-color-on-surface-rgb) / var(--md-sys-state-disabled-container)) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
+/* ── Progress / loading indicator animations ─────────────────────────── */
+@keyframes md3-linear-indeterminate {
+    0% { left: -35%; width: 35%; }
+    60% { left: 100%; width: 60%; }
+    100% { left: 100%; width: 10%; }
+}
+
+.md3-linear-indeterminate {
+    animation: md3-linear-indeterminate 1.6s var(--ease-md3-standard) infinite;
+}
+
+/* M3 Expressive loading indicator: morphs soft-burst → cookie → pentagon → pill → sunny → oval
+   (polygon approximations with equal vertex counts so clip-path can interpolate). */
+@keyframes md3-loading-morph {
+    0% {
+        clip-path: polygon(50% 0%, 61% 15%, 79% 10%, 82% 28%, 100% 34%, 90% 50%, 100% 66%, 82% 72%, 79% 90%, 61% 85%, 50% 100%, 39% 85%, 21% 90%, 18% 72%, 0% 66%, 10% 50%, 0% 34%, 18% 28%, 21% 10%, 39% 15%);
+        transform: rotate(0deg);
+    }
+    20% {
+        clip-path: polygon(50% 2%, 66% 6%, 80% 14%, 92% 27%, 98% 42%, 98% 58%, 92% 73%, 80% 86%, 66% 94%, 50% 98%, 34% 94%, 20% 86%, 8% 73%, 2% 58%, 2% 42%, 8% 27%, 20% 14%, 34% 6%, 42% 4%, 46% 3%);
+        transform: rotate(90deg);
+    }
+    40% {
+        clip-path: polygon(50% 0%, 63% 9%, 76% 18%, 88% 27%, 100% 38%, 95% 53%, 90% 69%, 85% 84%, 80% 100%, 65% 100%, 50% 100%, 35% 100%, 20% 100%, 15% 84%, 10% 69%, 5% 53%, 0% 38%, 12% 27%, 24% 18%, 37% 9%);
+        transform: rotate(180deg);
+    }
+    60% {
+        clip-path: polygon(30% 0%, 70% 0%, 85% 3%, 96% 12%, 100% 25%, 100% 50%, 100% 75%, 96% 88%, 85% 97%, 70% 100%, 30% 100%, 15% 97%, 4% 88%, 0% 75%, 0% 50%, 0% 25%, 4% 12%, 15% 3%, 22% 1%, 26% 0%);
+        transform: rotate(270deg);
+    }
+    80% {
+        clip-path: polygon(50% 0%, 63% 10%, 79% 10%, 84% 25%, 98% 35%, 92% 50%, 98% 65%, 84% 75%, 79% 90%, 63% 90%, 50% 100%, 37% 90%, 21% 90%, 16% 75%, 2% 65%, 8% 50%, 2% 35%, 16% 25%, 21% 10%, 37% 10%);
+        transform: rotate(360deg);
+    }
+    100% {
+        clip-path: polygon(50% 0%, 61% 15%, 79% 10%, 82% 28%, 100% 34%, 90% 50%, 100% 66%, 82% 72%, 79% 90%, 61% 85%, 50% 100%, 39% 85%, 21% 90%, 18% 72%, 0% 66%, 10% 50%, 0% 34%, 18% 28%, 21% 10%, 39% 15%);
+        transform: rotate(450deg);
+    }
+}
+
+.md3-loading-shape {
+    animation: md3-loading-morph 2.8s var(--ease-md3-spatial) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .md3-loading-shape {
+        animation: spin 1.6s linear infinite;
+        clip-path: circle(45%);
+    }
+    .md3-linear-indeterminate {
+        animation-duration: 3s;
+    }
+}
+
+/* ── Menu enter (scale-Y from anchor, M3 emphasized decelerate) ─────────── */
+@keyframes md3-menu-enter {
+    from { opacity: 0; transform: scaleY(0.6); }
+    to { opacity: 1; transform: scaleY(1); }
+}
+
+.md3-menu-enter {
+    transform-origin: top;
+    animation: md3-menu-enter var(--md-sys-motion-duration-medium1) var(--ease-md3-emphasized-decelerate) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .md3-menu-enter { animation-duration: 1ms; }
+}

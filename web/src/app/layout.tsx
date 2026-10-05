@@ -9,6 +9,11 @@ import { TranslationProvider } from "@/contexts/TranslationContext";
 import { QuickFilterProvider } from "@/contexts/QuickFilterContext";
 import { BreadcrumbProvider } from "@/contexts/BreadcrumbContext";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
+import { DEFAULT_THEME_SEED_ID, THEME_SEED_COLORS } from "@/lib/theme-seeds";
+import { MD3_DEFAULT_SURFACE } from "@/styles/md3-default-surface.generated";
+import "@fontsource-variable/roboto-flex/wght.css";
+import "@fontsource-variable/noto-sans-sc/index.css";
+import "@fontsource-variable/noto-sans-jp/index.css";
 import {
   COLOR_SCHEME_STORAGE_KEY,
   DARK_MEDIA_QUERY,
@@ -50,8 +55,9 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#1a1a2e" },
+    // MD3 surface of the default seed (Miku) in light / dark.
+    { media: "(prefers-color-scheme: light)", color: MD3_DEFAULT_SURFACE.light },
+    { media: "(prefers-color-scheme: dark)", color: MD3_DEFAULT_SURFACE.dark },
   ],
 };
 
@@ -125,39 +131,12 @@ export default async function RootLayout({
         document.documentElement.style.colorScheme = resolvedColorScheme;
         document.documentElement.classList.toggle('dark', resolvedColorScheme === 'dark');
 
-        var charColors = {
-          "1": "#33aaee", "2": "#ffdd44", "3": "#ee6666", "4": "#BBDD22",
-          "5": "#FFCCAA", "6": "#99CCFF", "7": "#ffaacc", "8": "#99EEDD",
-          "9": "#ff6699", "10": "#00BBDD", "11": "#ff7722", "12": "#0077DD",
-          "13": "#FFBB00", "14": "#FF66BB", "15": "#33DD99", "16": "#BB88EE",
-          "17": "#bb6688", "18": "#8888CC", "19": "#CCAA88", "20": "#DDAACC",
-          "21": "#33ccbb", "22": "#ffcc11", "23": "#FFEE11", "24": "#FFBBCC",
-          "25": "#DD4444", "26": "#3366CC"
-        };
+        // MD3 Dynamic Color: palettes are pre-generated per seed in md3-schemes.css,
+        // so only the seed id needs to be applied before paint.
+        var themeSeedIds = ${JSON.stringify(Object.keys(THEME_SEED_COLORS))};
         var savedCharId = localStorage.getItem('${THEME_CHAR_STORAGE_KEY}');
-        if (savedCharId && charColors[savedCharId]) {
-          var color = charColors[savedCharId];
-          document.documentElement.style.setProperty('--color-miku', color);
-          // Darken for dark variant
-          var num = parseInt(color.replace('#', ''), 16);
-          var amt = Math.round(2.55 * 15);
-          var R = Math.max((num >> 16) - amt, 0);
-          var G = Math.max(((num >> 8) & 0x00ff) - amt, 0);
-          var B = Math.max((num & 0x0000ff) - amt, 0);
-          var darkColor = '#' + (0x1000000 + R * 0x10000 + G * 0x100 + B).toString(16).slice(1);
-          document.documentElement.style.setProperty('--color-miku-dark', darkColor);
-          // Light variant for background
-          var rr = (num >> 16) & 0xff;
-          var gg = (num >> 8) & 0xff;
-          var bb = num & 0xff;
-          var factor = 0.95;
-          var newR = Math.round(rr * (1 - factor) + 255 * factor);
-          var newG = Math.round(gg * (1 - factor) + 255 * factor);
-          var newB = Math.round(bb * (1 - factor) + 255 * factor);
-          var lightColor = '#' + ((1 << 24) + (newR << 16) + (newG << 8) + newB).toString(16).slice(1);
-          document.documentElement.style.setProperty('--theme-light', lightColor);
-
-          document.documentElement.style.setProperty('--color-miku-rgb', rr + ', ' + gg + ', ' + bb);
+        if (savedCharId && themeSeedIds.indexOf(savedCharId) !== -1) {
+          document.documentElement.dataset.seed = savedCharId;
         }
       } catch(e) {}
 
@@ -187,6 +166,7 @@ export default async function RootLayout({
     <html
       lang={UI_LOCALE_HTML_LANG[initialUiLocale]}
       data-ui-locale={initialUiLocale}
+      data-seed={DEFAULT_THEME_SEED_ID}
       suppressHydrationWarning
     >
       <head>
