@@ -8,6 +8,8 @@ import { getAreaItemThumbnailUrl, getCharacterIconUrl, getMaterialThumbnailUrl }
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
+import { Button, Chip, LoadingState, SectionCard, cn } from "@/components/md3";
+import { mdConstruction } from "@/components/md3/icons";
 import type { ServerType, UserArea, UserGamedata, UserMaterial } from "@/lib/account";
 
 type AttrFilter = CardAttribute | "all";
@@ -96,7 +98,7 @@ function mergeCost(target: Map<number, number>, add: Map<number, number>) {
 }
 
 function getAvailableColor(have: number, need: number): string {
-    return have >= need ? "text-emerald-600" : "text-red-500";
+    return have >= need ? "text-primary" : "text-error";
 }
 
 export default function AreaItemUpgradeMaterials({
@@ -284,16 +286,11 @@ export default function AreaItemUpgradeMaterials({
     }, [selectedUnitId, selectedCharacterId, selectedAttr]);
 
     return (
-        <div id="profile-area-item-materials" className="scroll-mt-20 glass-card p-5 sm:p-6 rounded-2xl mb-6">
-            <div className="mb-4">
-                <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                    <span className="w-1.5 h-6 bg-amber-400 rounded-full"></span>
-                    {t("page.profile.stats.areaItemUpgradeMaterials")}
-                </h2>
-                <p className="text-xs text-slate-500 mt-1">
-                    {t("page.profile.stats.areaItemUpgradeDescription")}
-                </p>
-            </div>
+        <div id="profile-area-item-materials" className="mb-6 scroll-mt-20">
+        <SectionCard icon={mdConstruction} title={t("page.profile.stats.areaItemUpgradeMaterials")}>
+            <p className="-mt-1 mb-4 type-body-s text-on-surface-variant">
+                {t("page.profile.stats.areaItemUpgradeDescription")}
+            </p>
 
             <div className="space-y-3 mb-4">
                 <div className="flex flex-wrap gap-2">
@@ -303,10 +300,11 @@ export default function AreaItemUpgradeMaterials({
                             <button
                                 key={unit.id}
                                 onClick={() => onUnitClick(unit.id)}
-                                className={`p-1.5 rounded-xl transition-all ${selected
-                                    ? "ring-2 ring-miku shadow-lg bg-white"
-                                    : "hover:bg-slate-100 border border-transparent bg-slate-50"
-                                    }`}
+                                aria-pressed={selected}
+                                className={cn(
+                                    "state-layer focus-ring rounded-md3-md p-1.5 transition-colors duration-200 ease-md3-standard",
+                                    selected ? "bg-secondary-container ring-2 ring-primary" : "bg-surface-container-high",
+                                )}
                                 title={t(`common.units.${unit.id}`)}
                             >
                                 <div className="w-8 h-8 relative">
@@ -331,13 +329,14 @@ export default function AreaItemUpgradeMaterials({
                             <button
                                 key={characterId}
                                 onClick={() => onCharacterClick(characterId)}
-                                className={`relative transition-all ${selected
-                                    ? "ring-2 ring-miku scale-110 z-10 rounded-full"
-                                    : "ring-2 ring-transparent hover:ring-slate-200 rounded-full opacity-85 hover:opacity-100"
-                                    }`}
+                                aria-pressed={selected}
+                                className={cn(
+                                    "focus-ring relative rounded-full ring-2 transition-[box-shadow,opacity] duration-200 ease-md3-standard",
+                                    selected ? "z-10 ring-primary" : "opacity-85 ring-transparent hover:opacity-100 hover:ring-outline-variant",
+                                )}
                                 title={characterName}
                             >
-                                <div className="w-9 h-9 rounded-full overflow-hidden bg-slate-100">
+                                <div className="w-9 h-9 rounded-full overflow-hidden bg-surface-container-highest">
                                     <Image
                                         src={getCharacterIconUrl(characterId)}
                                         alt={characterName}
@@ -359,10 +358,11 @@ export default function AreaItemUpgradeMaterials({
                             <button
                                 key={attr}
                                 onClick={() => onAttrClick(attr)}
-                                className={`p-1.5 rounded-xl transition-all ${selected
-                                    ? "ring-2 ring-miku shadow-lg bg-white"
-                                    : "hover:bg-slate-100 border border-transparent bg-slate-50"
-                                    }`}
+                                aria-pressed={selected}
+                                className={cn(
+                                    "state-layer focus-ring rounded-md3-md p-1.5 transition-colors duration-200 ease-md3-standard",
+                                    selected ? "bg-secondary-container ring-2 ring-primary" : "bg-surface-container-high",
+                                )}
                                 title={attr}
                             >
                                 <div className="w-8 h-8 relative">
@@ -377,38 +377,30 @@ export default function AreaItemUpgradeMaterials({
                             </button>
                         );
                     })}
-                    <button
-                        onClick={() => onAttrClick("all")}
-                        className={`px-3 h-11 rounded-xl border text-sm font-bold transition-all ${selectedAttr === "all"
-                            ? "border-miku bg-miku/10 text-miku"
-                            : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
-                            }`}
-                    >
-                        all
-                    </button>
+                    <Chip selected={selectedAttr === "all"} onClick={() => onAttrClick("all")}>
+                        {t("common.filter.all")}
+                    </Chip>
                 </div>
             </div>
 
             {loading && (
-                <div className="py-8 text-center text-sm text-slate-500">
-                    {t("page.profile.stats.loadingAreaItems")}
-                </div>
+                <LoadingState className="min-h-[200px]" label={t("page.profile.stats.loadingAreaItems")} />
             )}
 
             {!loading && error && (
-                <div className="py-8 text-center text-sm text-red-500">
+                <div className="py-8 text-center type-body-m text-error">
                     {error}
                 </div>
             )}
 
             {!loading && !error && emptyHint && (
-                <div className="py-8 text-center text-sm text-slate-500">
+                <div className="py-8 text-center type-body-m text-on-surface-variant">
                     {t("page.profile.stats.areaItemEmptyHint")}
                 </div>
             )}
 
             {!loading && !error && !emptyHint && sortedItems.length === 0 && (
-                <div className="py-8 text-center text-sm text-slate-500">
+                <div className="py-8 text-center type-body-m text-on-surface-variant">
                     {t("page.profile.stats.noAreaItemResult")}
                 </div>
             )}
@@ -447,9 +439,9 @@ export default function AreaItemUpgradeMaterials({
                         const expanded = expandedItemId === meta.item.id;
 
                         return (
-                            <div key={meta.item.id} className="rounded-xl border border-slate-200 bg-white p-3 sm:p-4">
+                            <div key={meta.item.id} className="rounded-md3-lg bg-surface-container p-3 sm:p-4">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <div className="relative w-14 h-14 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                                    <div className="relative w-14 h-14 rounded-md3-md overflow-hidden bg-surface-container-highest">
                                         <Image
                                             src={getAreaItemThumbnailUrl(meta.item.assetbundleName, assetSource)}
                                             alt={meta.item.name}
@@ -459,23 +451,23 @@ export default function AreaItemUpgradeMaterials({
                                         />
                                     </div>
                                     <div className="min-w-0">
-                                        <div className="text-sm font-bold text-primary-text truncate">{meta.item.name}</div>
-                                        <div className="text-xs text-slate-500">{t("page.profile.stats.currentMaxLevel", { current: currentLv, max: meta.maxLevel })}</div>
-                                        <div className="text-xs text-slate-500 mt-0.5">{t("page.profile.stats.bonusRange", { current: currentBonus.toFixed(1), max: maxBonus.toFixed(1) })}</div>
+                                        <div className="type-title-s text-on-surface truncate">{meta.item.name}</div>
+                                        <div className="type-body-s text-on-surface-variant">{t("page.profile.stats.currentMaxLevel", { current: currentLv, max: meta.maxLevel })}</div>
+                                        <div className="type-body-s text-on-surface-variant mt-0.5">{t("page.profile.stats.bonusRange", { current: currentBonus.toFixed(1), max: maxBonus.toFixed(1) })}</div>
                                     </div>
                                 </div>
 
                                 <div className="space-y-2">
                                     {lvRows.length === 0 && (
-                                        <div className="text-xs text-emerald-600 font-semibold">{t("page.profile.stats.maxLevelNoMaterials")}</div>
+                                        <div className="type-label-l text-primary">{t("page.profile.stats.maxLevelNoMaterials")}</div>
                                     )}
 
                                     {lvRows.length > 0 && (
                                         <>
-                                            <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5">
+                                            <div className="rounded-md3-md bg-surface-container-high px-3 py-2.5">
                                                 <div className="flex items-center justify-between mb-2">
-                                                    <div className="text-xs font-bold text-slate-600">{t("page.profile.stats.totalRequiredMaterials")}</div>
-                                                    <div className="text-xs font-semibold text-slate-500">{t("page.profile.stats.remainingLevels", { count: levelsRemaining })}</div>
+                                                    <div className="type-label-l text-on-surface">{t("page.profile.stats.totalRequiredMaterials")}</div>
+                                                    <div className="type-label-m text-on-surface-variant">{t("page.profile.stats.remainingLevels", { count: levelsRemaining })}</div>
                                                 </div>
                                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                                                     {totalMaterials.map(([materialId, quantity]) => {
@@ -484,11 +476,11 @@ export default function AreaItemUpgradeMaterials({
                                                         const isCoin = materialId === COIN_ID;
                                                         const materialName = isCoin ? t("page.profile.stats.coin") : (materialNameMap.get(materialId) || t("page.profile.stats.materialFallback", { id: materialId }));
                                                         return (
-                                                            <div key={materialId} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                                                            <div key={materialId} className="flex items-center gap-2 rounded-md3-sm bg-surface-container-lowest px-2 py-1.5">
                                                                 {isCoin ? (
-                                                                    <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-black">¥</div>
+                                                                    <div className="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center text-sm font-black">¥</div>
                                                                 ) : (
-                                                                    <div className="relative w-8 h-8 rounded-md overflow-hidden bg-slate-100">
+                                                                    <div className="relative w-8 h-8 rounded-md3-xs overflow-hidden bg-surface-container-highest">
                                                                         <Image
                                                                             src={getMaterialThumbnailUrl(materialId, assetSource)}
                                                                             alt={materialName}
@@ -499,7 +491,7 @@ export default function AreaItemUpgradeMaterials({
                                                                     </div>
                                                                 )}
                                                                 <div className="min-w-0">
-                                                                    <div className="text-[11px] text-slate-500 truncate">{materialName}</div>
+                                                                    <div className="type-label-s text-on-surface-variant truncate">{materialName}</div>
                                                                     <div className={`text-xs font-bold ${enoughClass}`}>
                                                                         {t("page.profile.stats.ownedTotalRequired", { have: formatNumber(have), total: formatNumber(quantity) })}
                                                                     </div>
@@ -511,22 +503,24 @@ export default function AreaItemUpgradeMaterials({
                                             </div>
 
                                             <div className="flex justify-end pt-1">
-                                                <button
+                                                <Button
+                                                    variant="outlined"
+                                                    size="xs"
+                                                    aria-expanded={expanded}
                                                     onClick={() => setExpandedItemId((prev) => prev === meta.item.id ? null : meta.item.id)}
-                                                    className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:border-miku/40 hover:text-miku transition-colors"
                                                 >
                                                     {expanded ? t("page.profile.stats.collapseLevelDetails") : t("page.profile.stats.viewLevelDetails")}
-                                                </button>
+                                                </Button>
                                             </div>
 
                                             {expanded && (
                                                 <div className="space-y-2 pt-1">
                                                     {lvRows.map((row) => (
-                                                        <div key={row.level} className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2">
+                                                        <div key={row.level} className="rounded-md3-md bg-surface-container-high px-2.5 py-2">
                                                             <div className="flex items-center justify-between mb-2">
-                                                                <div className="text-sm font-bold text-slate-700">
+                                                                <div className="type-title-s text-on-surface">
                                                                     Lv.{row.level}
-                                                                    <span className="ml-2 text-xs text-slate-500 font-semibold">+{row.bonus.toFixed(1)}%</span>
+                                                                    <span className="ml-2 type-label-m text-on-surface-variant">+{row.bonus.toFixed(1)}%</span>
                                                                 </div>
                                                                 <div
                                                                     className="h-1.5 rounded-full"
@@ -545,11 +539,11 @@ export default function AreaItemUpgradeMaterials({
                                                                     const isCoin = materialId === COIN_ID;
                                                                     const materialName = isCoin ? t("page.profile.stats.coin") : (materialNameMap.get(materialId) || t("page.profile.stats.materialFallback", { id: materialId }));
                                                                     return (
-                                                                        <div key={materialId} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-2 py-1.5">
+                                                                        <div key={materialId} className="flex items-center gap-2 rounded-md3-sm bg-surface-container-lowest px-2 py-1.5">
                                                                             {isCoin ? (
-                                                                                <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center text-sm font-black">¥</div>
+                                                                                <div className="w-8 h-8 rounded-full bg-tertiary-container text-on-tertiary-container flex items-center justify-center text-sm font-black">¥</div>
                                                                             ) : (
-                                                                                <div className="relative w-8 h-8 rounded-md overflow-hidden bg-slate-100">
+                                                                                <div className="relative w-8 h-8 rounded-md3-xs overflow-hidden bg-surface-container-highest">
                                                                                     <Image
                                                                                         src={getMaterialThumbnailUrl(materialId, assetSource)}
                                                                                         alt={materialName}
@@ -560,8 +554,8 @@ export default function AreaItemUpgradeMaterials({
                                                                                 </div>
                                                                             )}
                                                                             <div className="min-w-0">
-                                                                                <div className="text-[11px] text-slate-500 truncate">{materialName}</div>
-                                                                                <div className="text-xs font-bold text-slate-700">
+                                                                                <div className="type-label-s text-on-surface-variant truncate">{materialName}</div>
+                                                                                <div className="type-label-m text-on-surface">
                                                                                     {t("page.profile.stats.requiredThisLevel", { count: formatNumber(quantity) })}
                                                                                 </div>
                                                                                 <div className={`text-xs font-bold ${enoughClass}`}>
@@ -584,6 +578,7 @@ export default function AreaItemUpgradeMaterials({
                     })}
                 </div>
             )}
+        </SectionCard>
         </div>
     );
 }

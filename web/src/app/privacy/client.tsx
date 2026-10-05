@@ -3,6 +3,7 @@
 import ExternalLink from "@/components/ExternalLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
+import { PageContainer, PageHeader, Surface } from "@/components/md3";
 
 const bulletGroups = [
     ["local.preferences", "local.account", "local.tokens", "local.gameData"],
@@ -14,18 +15,15 @@ const bulletGroups = [
 export default function PrivacyPolicyClient() {
     const { t } = useI18n();
     const bullets = (group: number) => (
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-600 dark:text-slate-300">
+        <ul className="mt-3 list-disc space-y-2 pl-5">
             {bulletGroups[group]!.map((key) => <li key={key}>{t(`page.privacy.${key}`)}</li>)}
         </ul>
     );
 
     return (
         <MainLayout>
-            <div className="container mx-auto max-w-4xl flex-grow px-4 py-10 sm:px-6 sm:py-12">
-                <header className="mb-8">
-                    <h1 className="text-3xl font-black text-primary-text">{t("page.privacy.title")}</h1>
-                    <p className="mt-2 text-sm text-slate-400">{t("page.privacy.updated")}</p>
-                </header>
+            <PageContainer className="max-w-4xl flex-grow">
+                <PageHeader title={t("page.privacy.title")} description={t("page.privacy.updated")} />
 
                 <div className="space-y-5">
                     <Section title={t("page.privacy.overview.title")}>
@@ -42,7 +40,7 @@ export default function PrivacyPolicyClient() {
                     </Section>
                     <Section title={t("page.privacy.cookies.title")}>
                         <p>{t("page.privacy.cookies.analytics")}</p>
-                        <p className="mt-3 font-medium text-primary-text">{t("page.privacy.cookies.adsDisabled")}</p>
+                        <p className="mt-3 type-emphasized text-on-surface">{t("page.privacy.cookies.adsDisabled")}</p>
                     </Section>
                     <Section title={t("page.privacy.use.title")}>
                         {bullets(2)}
@@ -59,7 +57,7 @@ export default function PrivacyPolicyClient() {
                             href="https://policies.google.com/privacy"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="mt-3 inline-flex font-medium text-miku hover:underline"
+                            className="mt-3 inline-flex type-label-l text-primary hover:underline focus-ring rounded-md3-xs"
                         >
                             {t("page.privacy.links.googlePrivacy")}
                         </ExternalLink>
@@ -72,10 +70,10 @@ export default function PrivacyPolicyClient() {
                     </Section>
                     <Section title={t("page.privacy.contact.title")}>
                         <p>{t("page.privacy.contact.body")}</p>
-                        <ul className="mt-3 list-disc space-y-2 pl-5 text-slate-600 dark:text-slate-300">
+                        <ul className="mt-3 list-disc space-y-2 pl-5">
                             <li>
                                 {t("page.privacy.contact.github")}: {" "}
-                                <ExternalLink href="https://github.com/moe-sekai/Moesekai" target="_blank" rel="noopener noreferrer" className="font-medium text-miku hover:underline">
+                                <ExternalLink href="https://github.com/moe-sekai/Moesekai" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:underline focus-ring rounded-md3-xs">
                                     moe-sekai/Moesekai
                                 </ExternalLink>
                             </li>
@@ -83,16 +81,16 @@ export default function PrivacyPolicyClient() {
                         </ul>
                     </Section>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <section className="ios-glass-card rounded-2xl p-5 sm:p-6">
-            <h2 className="mb-3 text-xl font-bold text-primary-text">{title}</h2>
-            <div className="text-sm leading-7 text-slate-600 dark:text-slate-300">{children}</div>
-        </section>
+        <Surface as="section" tone="low" className="p-5 sm:p-6">
+            <h2 className="mb-3 type-title-l text-on-surface">{title}</h2>
+            <div className="type-body-l text-on-surface-variant">{children}</div>
+        </Surface>
     );
 }

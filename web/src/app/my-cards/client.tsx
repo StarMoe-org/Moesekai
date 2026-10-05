@@ -39,6 +39,7 @@ import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
+import { Banner, Chip, EmptyState, ErrorState, LinearProgress, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
 
 // ==================== Types ====================
 
@@ -537,8 +538,8 @@ function MyCardsContent() {
     // No account state — show inline quick bind form
     if (accounts.length === 0) {
         return (
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl">
-                <PageHeader />
+            <PageContainer className="max-w-3xl">
+                <MyCardsHeader />
                 <QuickBindForm
                     onAccountAdded={() => {
                         setAccountsList(getAccounts());
@@ -549,13 +550,13 @@ function MyCardsContent() {
                     returnTo="/my-cards"
                 />
 
-            </div>
+            </PageContainer>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            <PageHeader />
+        <PageContainer>
+            <MyCardsHeader />
 
             {/* Account Selector with Quick Add */}
             <AccountSelectorBar
@@ -573,72 +574,56 @@ function MyCardsContent() {
 
             {/* User Error */}
             {userError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200/50">
-                    <div className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p className="text-xs font-medium text-red-700">
-                                {t(getUserErrorMessageKey(userError))}
-                            </p>
-                            <ExternalLink
-                                href="https://haruki.seiunx.com"
-                                className="text-xs text-miku hover:underline mt-1 inline-block"
-                            >
-                                {t("common.account.goHaruki")}
-                            </ExternalLink>
-                        </div>
-                    </div>
-                </div>
+                <Banner tone="error" title={t(getUserErrorMessageKey(userError))} className="mb-4">
+                    <ExternalLink
+                        href="https://haruki.seiunx.com"
+                        className="mt-1 inline-block rounded-md3-xs underline focus-ring"
+                    >
+                        {t("common.account.goHaruki")}
+                    </ExternalLink>
+                </Banner>
             )}
 
             {/* Progress Bar */}
             {!isLoading && !isFetchingUser && userCards.size > 0 && (
-                <div className="mb-6 glass-card p-4 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2">
+                <Surface tone="low" radius="lg" className="mb-6 p-4">
+                    <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-primary-text">{t("common.progress.collectionProgress")}</span>
+                            <span className="type-title-s text-on-surface">{t("common.progress.collectionProgress")}</span>
                             {uploadTime && (
-                                <span className="text-[11px] text-slate-400" title={t("common.data.uploadTimeTitle")}>
+                                <span className="type-label-s text-on-surface-variant" title={t("common.data.uploadTimeTitle")}>
                                     {t("common.data.dataTime", { time: formatDate(parseUploadTimeToDate(uploadTime) ?? uploadTime, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) })}
                                 </span>
                             )}
                         </div>
-                        <span className="text-sm font-mono font-bold text-miku">
+                        <span className="font-mono type-label-l text-primary">
                             {progressStats.owned} / {progressStats.total}
-                            <span className="ml-2 text-xs text-slate-400">({progressStats.pct}%)</span>
+                            <span className="ml-2 type-label-s text-on-surface-variant">({progressStats.pct}%)</span>
                         </span>
                     </div>
-                    <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-miku to-miku-dark rounded-full transition-all duration-500"
-                            style={{ width: `${progressStats.pct}%` }}
-                        />
-                    </div>
-                    <div className="flex items-center gap-4 mt-2">
+                    <LinearProgress value={progressStats.pct / 100} aria-label={t("common.progress.collectionProgress")} />
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
                         {(["all", "owned", "missing"] as const).map((f) => (
-                            <button
+                            <Chip
                                 key={f}
+                                selected={ownershipFilter === f}
                                 onClick={() => setOwnershipFilter(f)}
-                                className={`text-xs font-medium px-2 py-1 rounded-lg transition-all ${ownershipFilter === f
-                                    ? "bg-miku/10 text-miku"
-                                    : "text-slate-500 hover:text-slate-700"
-                                    }`}
                             >
                                 {t(`common.progress.${f}`)}
-                            </button>
+                            </Chip>
                         ))}
                     </div>
-                </div>
+                </Surface>
             )}
 
             {/* Error */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                    className="mb-6"
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
@@ -647,22 +632,17 @@ function MyCardsContent() {
                 {isLoading || isFetchingUser ? (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-                                <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-200" />
-                                <div className="p-2 space-y-1.5">
-                                    <div className="h-3 bg-slate-200 rounded w-3/4" />
-                                    <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                            <div key={i} className="animate-pulse overflow-hidden rounded-md3-md bg-surface-container-low">
+                                <div className="aspect-square bg-surface-container-high" />
+                                <div className="space-y-1.5 p-2">
+                                    <div className="h-3 w-3/4 rounded-md3-xs bg-surface-container-highest" />
+                                    <div className="h-2.5 w-1/2 rounded-md3-xs bg-surface-container-high" />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : filteredCards.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                        <p className="text-slate-400 font-medium">{t("page.myCards.noResult")}</p>
-                    </div>
+                    <EmptyState title={t("page.myCards.noResult")} />
                 ) : (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {displayedCards.map((card) => {
@@ -678,49 +658,33 @@ function MyCardsContent() {
                     </div>
                 )}
 
-                {/* Load More Button */}
-                {!isLoading && displayedCards.length < filteredCards.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.myCards.loadMore")}
-                            <span className="ml-2 text-sm opacity-80">
-                                ({displayedCards.length} / {filteredCards.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded indicator */}
-                {!isLoading && displayedCards.length > 0 && displayedCards.length >= filteredCards.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.myCards.allLoaded", { count: filteredCards.length })}
-                    </div>
+                {/* Load More / All loaded */}
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.myCards.loadMore")}
+                        shown={displayedCards.length}
+                        total={filteredCards.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.myCards.allLoaded", { count: filteredCards.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 // ==================== Sub Components ====================
 
-function PageHeader() {
+function MyCardsHeader() {
     const { t } = useI18n();
     return (
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.myCards.badge")}</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                {t("page.myCards.title")}<span className="text-miku">{t("page.myCards.titleHighlight")}</span>
-            </h1>
-            <p className="text-slate-500 mt-2 text-sm">
-                {t("page.myCards.description")}
-            </p>
-        </div>
+        <PageHeader
+            align="center"
+            eyebrow={t("page.myCards.badge")}
+            title={t("page.myCards.title")}
+            highlight={t("page.myCards.titleHighlight")}
+            description={t("page.myCards.description")}
+        />
     );
 }
 
@@ -737,13 +701,19 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
         (isTrained && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday");
 
     return (
-        <Link href={`/cards/${card.id}`} className="group block" data-shortcut-item="true">
-            <div className={`relative cursor-pointer rounded-xl overflow-hidden transition-all bg-white ring-1 ${isOwned
-                ? "ring-slate-200 hover:ring-miku hover:shadow-xl hover:-translate-y-1"
-                : "ring-slate-100 opacity-50 grayscale hover:opacity-70 hover:grayscale-0"
-                }`}>
+        <Link
+            href={`/cards/${card.id}`}
+            className="group state-layer focus-ring block rounded-md3-md"
+            data-shortcut-item="true"
+        >
+            <div className={cn(
+                "relative cursor-pointer overflow-hidden rounded-md3-md bg-surface-container-low transition-[box-shadow,opacity,filter] duration-200 ease-md3-standard",
+                isOwned
+                    ? "shadow-elev-1 hover:shadow-elev-2"
+                    : "opacity-50 grayscale hover:opacity-70 hover:grayscale-0",
+            )}>
                 {/* Card Thumbnail */}
-                <div className="w-full relative">
+                <div className="relative w-full">
                     <SekaiCardThumbnail
                         card={card}
                         trained={showTrained}
@@ -753,8 +723,8 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
 
                     {/* Skill Level Badge */}
                     {isOwned && userCard && (
-                        <div className="absolute top-0 right-0 m-0.5">
-                            <span className="inline-block px-1 py-0.5 bg-indigo-500/90 text-white text-[8px] font-bold rounded leading-none backdrop-blur-sm">
+                        <div className="absolute right-0 top-0 m-0.5">
+                            <span className="inline-block rounded-md3-xs bg-tertiary px-1 py-0.5 text-[8px] font-bold leading-none text-on-tertiary">
                                 Sk.{userCard.skillLevel}
                             </span>
                         </div>
@@ -763,7 +733,7 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
                     {/* Not Owned Overlay */}
                     {!isOwned && (
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="px-2 py-1 bg-black/50 text-white text-[10px] font-bold rounded-lg backdrop-blur-sm">
+                            <span className="rounded-md3-sm bg-inverse-surface/80 px-2 py-1 type-label-s text-inverse-on-surface">
                                 {t("common.progress.notOwned")}
                             </span>
                         </div>
@@ -771,22 +741,22 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
                 </div>
 
                 {/* Card Info Footer */}
-                <div className="px-2 py-1.5 bg-white border-t border-slate-100">
+                <div className="border-t border-outline-variant px-2 py-1.5">
                     <div className="mb-0.5">
                         <TranslatedText
                             original={card.prefix}
                             category="cards"
                             field="prefix"
-                            originalClassName="text-slate-800 text-[10px] font-bold truncate leading-tight group-hover:text-miku transition-colors block"
-                            translationClassName="text-slate-400 text-[9px] truncate leading-tight block"
+                            originalClassName="block truncate text-[10px] font-bold leading-tight text-on-surface transition-colors group-hover:text-primary"
+                            translationClassName="block truncate text-[9px] leading-tight text-on-surface-variant"
                         />
                     </div>
                     <div className="flex items-center justify-between gap-1">
-                        <p className="text-slate-400 text-[9px] truncate leading-tight flex-1">
+                        <p className="flex-1 truncate text-[9px] leading-tight text-on-surface-variant">
                             {getCharacterName(t, card.characterId)}
                         </p>
                         {isOwned && userCard && (
-                            <span className="flex-shrink-0 text-[8px] text-miku bg-miku/10 px-1 py-0.5 rounded leading-none font-mono">
+                            <span className="flex-shrink-0 rounded-md3-xs bg-primary-container px-1 py-0.5 font-mono text-[8px] leading-none text-on-primary-container">
                                 Lv.{userCard.level}
                             </span>
                         )}
@@ -802,7 +772,7 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
 
 function MyCardsLoadingFallback() {
     const { t } = useI18n();
-    return <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("common.state.loading")}</div>;
+    return <LoadingState label={t("common.state.loading")} className="min-h-[50vh]" />;
 }
 
 export default function MyCardsClient() {

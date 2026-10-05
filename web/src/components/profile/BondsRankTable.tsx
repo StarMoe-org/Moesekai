@@ -8,6 +8,8 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 import Modal from "@/components/common/Modal";
+import { Button, SectionCard, cn } from "@/components/md3";
+import { mdHandshake } from "@/components/md3/icons";
 import type { UserBond, UserCharacter } from "@/lib/account";
 
 interface BondsRankTableProps {
@@ -136,28 +138,28 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
         const expText = row.rank === null ? "-" : row.rank >= MAX_BOND_LEVEL ? "MAX" : String(row.exp || 0);
 
         return (
-            <div key={row.key} className="rounded-xl border border-slate-200 bg-white/70 px-3 py-2.5 space-y-2">
+            <div key={row.key} className="rounded-md3-md bg-surface-container px-3 py-2.5 space-y-2">
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex -space-x-2">
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white bg-slate-100">
+                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-surface-container bg-surface-container-highest">
                             <Image src={getCharacterIconUrl(row.c1)} alt={c1Name} fill className="object-cover" unoptimized />
                         </div>
-                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-white bg-slate-100">
+                        <div className="relative w-8 h-8 rounded-full overflow-hidden border-2 border-surface-container bg-surface-container-highest">
                             <Image src={getCharacterIconUrl(row.c2)} alt={c2Name} fill className="object-cover" unoptimized />
                         </div>
                     </div>
-                    <div className="text-xs font-bold text-slate-700">Lv {c1Rank} &amp; {c2Rank}</div>
+                    <div className="type-label-m text-on-surface">Lv {c1Rank} &amp; {c2Rank}</div>
                 </div>
                 <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600">{t("page.profile.stats.bondRank")}</span>
-                    <span className="font-bold text-slate-700">{row.rank ?? "-"}</span>
+                    <span className="text-on-surface-variant">{t("page.profile.stats.bondRank")}</span>
+                    <span className="font-medium text-on-surface">{row.rank ?? "-"}</span>
                 </div>
                 <div className="space-y-1">
-                    <div className="flex items-center justify-between text-[11px] text-slate-500">
+                    <div className="flex items-center justify-between type-label-s text-on-surface-variant">
                         <span>{t("page.profile.stats.progress")}</span>
-                        <span className="font-bold text-slate-700">{t("page.profile.stats.expValue", { value: expText })}</span>
+                        <span className="font-medium text-on-surface">{t("page.profile.stats.expValue", { value: expText })}</span>
                     </div>
-                    <div className="h-3 rounded-full bg-slate-500/75 overflow-hidden relative">
+                    <div className="h-3 rounded-full bg-surface-container-highest overflow-hidden relative">
                         <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: themeColor }} />
                     </div>
                 </div>
@@ -174,54 +176,50 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
         const expText = row.rank === null ? "-" : row.rank >= MAX_BOND_LEVEL ? "MAX" : String(row.exp || 0);
 
         return (
-            <div key={row.key} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white/70 px-2 py-2">
+            <div key={row.key} className="flex items-center gap-2 rounded-md3-md bg-surface-container px-2 py-2">
                 <div className="w-[92px] shrink-0 flex items-center gap-3 min-w-0">
                     <div className="flex -space-x-2">
-                        <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-white bg-slate-100">
+                        <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-surface-container bg-surface-container-highest">
                             <Image src={getCharacterIconUrl(row.c1)} alt={c1Name} fill className="object-cover" unoptimized />
                         </div>
-                        <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-white bg-slate-100">
+                        <div className="relative w-9 h-9 rounded-full overflow-hidden border-2 border-surface-container bg-surface-container-highest">
                             <Image src={getCharacterIconUrl(row.c2)} alt={c2Name} fill className="object-cover" unoptimized />
                         </div>
                     </div>
                 </div>
-                <div className="w-20 shrink-0 text-sm font-bold text-slate-700 text-center">{c1Rank} &amp; {c2Rank}</div>
-                <div className="w-[72px] shrink-0 text-sm font-bold text-slate-700 text-center">{row.rank ?? "-"}</div>
+                <div className="w-20 shrink-0 type-body-m font-medium text-on-surface text-center">{c1Rank} &amp; {c2Rank}</div>
+                <div className="w-[72px] shrink-0 type-body-m font-medium text-on-surface text-center">{row.rank ?? "-"}</div>
                 <div className="flex-1 min-w-0">
-                    <div className="h-4 rounded-full bg-slate-500/75 overflow-hidden relative">
+                    <div className="h-4 rounded-full bg-surface-container-highest overflow-hidden relative">
                         <div className="h-full rounded-full" style={{ width: `${progress}%`, backgroundColor: themeColor }} />
                     </div>
                 </div>
-                <div className="w-[72px] shrink-0 text-sm font-bold text-slate-700 text-center">{expText}</div>
+                <div className="w-[72px] shrink-0 type-body-m font-medium text-on-surface text-center">{expText}</div>
             </div>
         );
     };
 
     return (
-        <div id="profile-bonds-rank" className="scroll-mt-20 glass-card p-5 sm:p-6 rounded-2xl h-full">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                    <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: themeColor }}></span>
-                    {t("page.profile.stats.bondRank")}
-                </h2>
-                {bondsMap.size > DEFAULT_TOPK && (
-                    <button
-                        onClick={handleOpenModal}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:border-miku/40 hover:text-miku transition-colors"
-                    >
-                        {t("page.profile.stats.viewDetails")}
-                    </button>
-                )}
-            </div>
+        <div id="profile-bonds-rank" className="h-full scroll-mt-20">
+        <SectionCard
+            className="h-full"
+            icon={mdHandshake}
+            title={t("page.profile.stats.bondRank")}
+            actions={bondsMap.size > DEFAULT_TOPK ? (
+                <Button variant="outlined" size="xs" onClick={handleOpenModal}>
+                    {t("page.profile.stats.viewDetails")}
+                </Button>
+            ) : undefined}
+        >
 
             {/* Inline top-k rows */}
             <div className="sm:hidden space-y-2">
                 {topRows.map(renderRow)}
-                {topRows.length === 0 && <div className="text-center py-8 text-sm text-slate-400">{t("page.profile.stats.noBondData")}</div>}
+                {topRows.length === 0 && <div className="py-8 text-center type-body-m text-on-surface-variant">{t("page.profile.stats.noBondData")}</div>}
             </div>
 
             <div className="hidden sm:block space-y-2">
-                <div className="flex items-center gap-2 px-2 py-2 text-sm font-bold text-slate-600">
+                <div className="flex items-center gap-2 px-2 py-2 type-label-l text-on-surface-variant">
                     <div className="w-[92px] shrink-0 text-left">{t("page.profile.stats.character")}</div>
                     <div className="w-20 shrink-0 text-center">{t("page.profile.stats.characterRank")}</div>
                     <div className="w-[72px] shrink-0 text-center">{t("page.profile.stats.bondRank")}</div>
@@ -229,7 +227,7 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
                     <div className="w-[72px] shrink-0 text-center">{t("page.profile.stats.nextExp")}</div>
                 </div>
                 {topRows.map(renderDesktopRow)}
-                {topRows.length === 0 && <div className="text-center py-8 text-sm text-slate-400">{t("page.profile.stats.noBondData")}</div>}
+                {topRows.length === 0 && <div className="py-8 text-center type-body-m text-on-surface-variant">{t("page.profile.stats.noBondData")}</div>}
             </div>
 
             <Modal
@@ -239,7 +237,7 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
                 size="xl"
             >
                 <div className="space-y-4">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4 space-y-3">
+                    <div className="rounded-md3-md bg-surface-container-high p-3 sm:p-4 space-y-3">
                         <div className="flex flex-wrap gap-2">
                             {UNIT_DATA.map((unit) => {
                                 const selected = selectedUnitId === unit.id;
@@ -247,10 +245,13 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
                                     <button
                                         key={unit.id}
                                         onClick={() => handleUnitClick(unit.id)}
-                                        className={`p-1.5 rounded-xl transition-all ${selected
-                                            ? "ring-2 ring-miku shadow-lg bg-white"
-                                            : "hover:bg-white border border-transparent bg-slate-100"
-                                            }`}
+                                        aria-pressed={selected}
+                                        className={cn(
+                                            "state-layer focus-ring rounded-md3-md p-1.5 transition-colors duration-200 ease-md3-standard",
+                                            selected
+                                                ? "bg-secondary-container ring-2 ring-primary"
+                                                : "bg-surface-container-high",
+                                        )}
                                         title={t(`common.units.${unit.id}`)}
                                     >
                                         <div className="w-8 h-8 relative">
@@ -269,13 +270,16 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
                                         <button
                                             key={characterId}
                                             onClick={() => setSelectedCharacterId(selected ? null : characterId)}
-                                            className={`relative transition-all ${selected
-                                                ? "ring-2 ring-miku scale-110 z-10 rounded-full"
-                                                : "ring-2 ring-transparent hover:ring-slate-200 rounded-full opacity-85 hover:opacity-100"
-                                                }`}
+                                            aria-pressed={selected}
+                                            className={cn(
+                                                "focus-ring relative rounded-full ring-2 transition-[box-shadow,opacity] duration-200 ease-md3-standard",
+                                                selected
+                                                    ? "z-10 ring-primary"
+                                                    : "opacity-85 ring-transparent hover:opacity-100 hover:ring-outline-variant",
+                                            )}
                                             title={characterName}
                                         >
-                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
+                                            <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-highest">
                                                 <Image src={getCharacterIconUrl(characterId)} alt={characterName} width={40} height={40} className="w-full h-full object-cover" unoptimized />
                                             </div>
                                         </button>
@@ -287,12 +291,12 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
 
                     <div className="sm:hidden space-y-2">
                         {modalRows.map(renderRow)}
-                        {modalRows.length === 0 && <div className="text-center py-8 text-sm text-slate-400">{t("page.profile.stats.noBondData")}</div>}
+                        {modalRows.length === 0 && <div className="py-8 text-center type-body-m text-on-surface-variant">{t("page.profile.stats.noBondData")}</div>}
                     </div>
 
                     <div className="hidden sm:block overflow-x-auto">
                         <div className="min-w-[760px] space-y-2">
-                            <div className="flex items-center gap-2 px-2 py-2 text-sm font-bold text-slate-600">
+                            <div className="flex items-center gap-2 px-2 py-2 type-label-l text-on-surface-variant">
                                 <div className="w-[92px] shrink-0 text-left">{t("page.profile.stats.character")}</div>
                                 <div className="w-20 shrink-0 text-center">{t("page.profile.stats.characterRank")}</div>
                                 <div className="w-[72px] shrink-0 text-center">{t("page.profile.stats.bondRank")}</div>
@@ -300,11 +304,12 @@ export default function BondsRankTable({ userBonds, userCharacters }: BondsRankT
                                 <div className="w-[72px] shrink-0 text-center">{t("page.profile.stats.nextExp")}</div>
                             </div>
                             {modalRows.map(renderDesktopRow)}
-                            {modalRows.length === 0 && <div className="text-center py-8 text-sm text-slate-400">{t("page.profile.stats.noBondData")}</div>}
+                            {modalRows.length === 0 && <div className="py-8 text-center type-body-m text-on-surface-variant">{t("page.profile.stats.noBondData")}</div>}
                         </div>
                     </div>
                 </div>
             </Modal>
+        </SectionCard>
         </div>
     );
 }

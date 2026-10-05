@@ -40,6 +40,8 @@ import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { fetchSongConstants, buildSongConstantsMap } from "@/lib/songConstants";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, Button, EmptyState, ErrorState, Icon, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
+import { mdImage, mdKeyboardArrowDown, mdLibraryMusic } from "@/components/md3/icons";
 
 // ==================== Types ====================
 
@@ -820,8 +822,8 @@ function MyMusicsContent() {
     // No account state
     if (accounts.length === 0) {
         return (
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl">
-                <PageHeader />
+            <PageContainer className="max-w-3xl">
+                <MyMusicsHeader />
                 <QuickBindForm
                     onAccountAdded={() => {
                         setAccountsList(getAccounts());
@@ -832,13 +834,13 @@ function MyMusicsContent() {
                     returnTo="/my-musics"
                 />
 
-            </div>
+            </PageContainer>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            <PageHeader />
+        <PageContainer>
+            <MyMusicsHeader />
 
             {/* Account Selector */}
             <AccountSelectorBar
@@ -856,39 +858,29 @@ function MyMusicsContent() {
 
             {/* User Error */}
             {userError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200/50">
-                    <div className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p className="text-xs font-medium text-red-700">
-                                {t(getUserErrorMessageKey(userError))}
-                            </p>
-                            <ExternalLink href="https://haruki.seiunx.com" className="text-xs text-miku hover:underline mt-1 inline-block">
-                                {t("common.account.goHaruki")}
-                            </ExternalLink>
-                        </div>
-                    </div>
-                </div>
+                <Banner tone="error" title={t(getUserErrorMessageKey(userError))} className="mb-4">
+                    <ExternalLink href="https://haruki.seiunx.com" className="mt-1 inline-block rounded-md3-xs underline focus-ring">
+                        {t("common.account.goHaruki")}
+                    </ExternalLink>
+                </Banner>
             )}
 
             {/* Progress Bar */}
             {!isLoading && !isFetchingUser && userMusicResults.size > 0 && progressStats && (
-                <div className="mb-6 glass-card p-4 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2">
+                <Surface tone="low" radius="lg" className="mb-6 p-4">
+                    <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
-                            <span className="text-sm font-bold text-primary-text">
+                            <span className="type-title-s text-on-surface">
                                 {t("common.progress.completionProgress", { difficulty: selectedDifficulty.toUpperCase() })}
                             </span>
                             {uploadTime && (
-                                <span className="text-[11px] text-slate-400" title={t("common.data.uploadTimeTitle")}>
+                                <span className="type-label-s text-on-surface-variant" title={t("common.data.uploadTimeTitle")}>
                                     {t("common.data.dataTime", { time: formatDate(parseUploadTimeToDate(uploadTime) ?? uploadTime, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) })}
                                 </span>
                             )}
                         </div>
                     </div>
-                    <div className="flex gap-4 text-sm font-bold mb-2">
+                    <div className="mb-2 flex flex-wrap gap-4 type-label-l text-on-surface">
                         <div className="flex items-center gap-1">
                             <Image src="/data/music/icon_clear.png" alt="Clear" width={20} height={20} className="drop-shadow-sm" />
                             <span>{progressStats.clear} / {progressStats.total}</span>
@@ -902,47 +894,42 @@ function MyMusicsContent() {
                             <span>{progressStats.ap} / {progressStats.total}</span>
                         </div>
                     </div>
-                </div>
+                </Surface>
             )}
 
             {/* Best30 Card */}
             {!isLoading && !isFetchingUser && best30Data && best30Data.entries.length > 0 && (
-                <div className="mb-6 glass-card rounded-2xl overflow-hidden">
-                    <div className="p-4 flex items-center justify-between">
-                        <div
-                            className="flex items-center gap-3 cursor-pointer flex-1 hover:opacity-80 transition-opacity"
+                <Surface tone="low" radius="lg" className="mb-6 overflow-hidden">
+                    <div className="flex items-center justify-between gap-2 p-2 pl-2">
+                        <button
+                            type="button"
+                            aria-expanded={best30Expanded}
+                            className="state-layer focus-ring flex flex-1 cursor-pointer flex-wrap items-center gap-3 rounded-md3-md px-2 py-1 text-left"
                             onClick={() => setBest30Expanded(!best30Expanded)}
                         >
-                            <span className="text-sm font-bold text-primary-text">{t("page.myMusics.best30")}</span>
-                            <span className="text-2xl font-black text-miku">{best30Data.average.toFixed(2)}</span>
-                            <span className="text-[10px] text-slate-400">{t("page.myMusics.communityConstantHint")}</span>
-                            <svg
-                                className={`w-4 h-4 text-slate-400 transition-transform ${best30Expanded ? 'rotate-180' : ''}`}
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                        </div>
-                        <button
-                            onClick={() => setShowBest30Share(true)}
-                            className="flex items-center gap-1.5 px-3 py-1.5 bg-miku/10 hover:bg-miku/20 text-miku text-xs font-bold rounded-lg transition-colors"
-                        >
-                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                            {t("common.action.share")}
+                            <span className="type-title-s text-on-surface">{t("page.myMusics.best30")}</span>
+                            <span className="type-headline-s text-primary">{best30Data.average.toFixed(2)}</span>
+                            <span className="type-label-s text-on-surface-variant">{t("page.myMusics.communityConstantHint")}</span>
+                            <Icon
+                                path={mdKeyboardArrowDown}
+                                size={20}
+                                className={cn("text-on-surface-variant transition-transform duration-200 ease-md3-standard", best30Expanded && "rotate-180")}
+                            />
                         </button>
+                        <Button variant="tonal" size="xs" icon={mdImage} onClick={() => setShowBest30Share(true)}>
+                            {t("common.action.share")}
+                        </Button>
                     </div>
                     {best30Expanded && (
-                        <div className="border-t border-slate-200/50 grid grid-cols-1 sm:grid-cols-2">
+                        <div className="grid grid-cols-1 border-t border-outline-variant sm:grid-cols-2">
                             {best30Data.entries.map((entry, idx) => (
                                 <Link
                                     key={`${entry.musicId}-${entry.difficulty}`}
                                     href={`/music/${entry.musicId}`}
-                                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-slate-50/80 transition-colors border-b border-r border-slate-100/50"
+                                    className="state-layer focus-ring flex items-center gap-2 border-b border-r border-outline-variant/50 px-3 py-1.5"
                                 >
-                                    <span className="text-[10px] font-bold text-slate-400 w-5 text-right">#{idx + 1}</span>
-                                    <div className="w-8 h-8 rounded-md overflow-hidden relative flex-shrink-0">
+                                    <span className="w-5 text-right type-label-s text-on-surface-variant">#{idx + 1}</span>
+                                    <div className="relative h-8 w-8 flex-shrink-0 overflow-hidden rounded-md3-xs">
                                         <Image
                                             src={getMusicThumbnailUrl({ assetbundleName: entry.assetbundleName } as Music)}
                                             alt=""
@@ -951,13 +938,13 @@ function MyMusicsContent() {
                                             unoptimized
                                         />
                                     </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="text-[11px] font-bold text-primary-text truncate">{entry.title}</div>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="truncate type-label-m text-on-surface">{entry.title}</div>
                                     </div>
-                                    <span className={`text-[9px] font-bold uppercase px-1 py-0.5 rounded ${entry.difficulty === 'master' ? 'bg-purple-100 text-purple-600' :
+                                    <span className={`rounded-md3-xs px-1 py-0.5 text-[9px] font-bold uppercase ${entry.difficulty === 'master' ? 'bg-purple-100 text-purple-600' :
                                         entry.difficulty === 'append' ? 'bg-pink-100 text-pink-600' :
                                             entry.difficulty === 'expert' ? 'bg-red-100 text-red-600' :
-                                                'bg-slate-100 text-slate-600'
+                                                'bg-surface-container-high text-on-surface-variant'
                                         }`}>
                                         {entry.difficulty.slice(0, 3)}
                                     </span>
@@ -968,14 +955,14 @@ function MyMusicsContent() {
                                         height={14}
                                         className="drop-shadow-sm flex-shrink-0"
                                     />
-                                    <div className="text-right flex-shrink-0 w-10">
-                                        <div className="text-[11px] font-black text-miku">{entry.userConstant.toFixed(1)}</div>
+                                    <div className="w-10 flex-shrink-0 text-right">
+                                        <div className="type-label-m text-primary">{entry.userConstant.toFixed(1)}</div>
                                     </div>
                                 </Link>
                             ))}
                         </div>
                     )}
-                </div>
+                </Surface>
             )}
 
             {/* Best30 Share Image Modal */}
@@ -1002,10 +989,12 @@ function MyMusicsContent() {
 
             {/* Error */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                    className="mb-6"
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
@@ -1014,18 +1003,13 @@ function MyMusicsContent() {
                 {isLoading || isFetchingUser ? (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-                                <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-200" />
+                            <div key={i} className="animate-pulse overflow-hidden rounded-md3-md bg-surface-container-low">
+                                <div className="aspect-square bg-surface-container-high" />
                             </div>
                         ))}
                     </div>
                 ) : filteredMusics.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                        </svg>
-                        <p className="text-slate-400 font-medium">{t("page.myMusics.noResult")}</p>
-                    </div>
+                    <EmptyState icon={mdLibraryMusic} title={t("page.myMusics.noResult")} />
                 ) : (
                     <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {displayedMusicsWithSeparators.map((item, _index) => {
@@ -1058,30 +1042,18 @@ function MyMusicsContent() {
                     </div>
                 )}
 
-                {/* Load More Button */}
-                {!isLoading && displayedMusicsWithSeparators.filter(i => i.type === 'music').length < filteredMusics.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.myMusics.loadMore")}
-                            <span className="ml-2 text-sm opacity-80">
-                                ({displayedMusicsWithSeparators.filter(i => i.type === 'music').length} / {filteredMusics.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded indicator */}
-                {!isLoading && displayedMusicsWithSeparators.filter(i => i.type === 'music').length > 0 && displayedMusicsWithSeparators.filter(i => i.type === 'music').length >= filteredMusics.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.myMusics.allLoaded", { count: filteredMusics.length })}
-                    </div>
+                {/* Load More / All loaded */}
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.myMusics.loadMore")}
+                        shown={displayedMusicsWithSeparators.filter(i => i.type === 'music').length}
+                        total={filteredMusics.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.myMusics.allLoaded", { count: filteredMusics.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -1098,10 +1070,10 @@ function LevelSeparatorCard({ level, difficulty }: { level: number; difficulty: 
         APPEND: "from-pink-500 to-pink-600",
     };
 
-    const gradientClass = difficultyColors[difficulty] || "from-slate-400 to-slate-500";
+    const gradientClass = difficultyColors[difficulty] || "from-outline to-outline";
 
     return (
-        <div className={`aspect-square rounded-xl bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center shadow-lg`}>
+        <div className={`flex aspect-square flex-col items-center justify-center rounded-md3-md bg-gradient-to-br shadow-elev-1 ${gradientClass}`}>
             <div className="text-white text-center px-2">
                 <div className="text-[10px] sm:text-xs font-bold opacity-90 mb-0.5">
                     {difficulty}
@@ -1114,20 +1086,16 @@ function LevelSeparatorCard({ level, difficulty }: { level: number; difficulty: 
     );
 }
 
-function PageHeader() {
+function MyMusicsHeader() {
     const { t } = useI18n();
     return (
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.myMusics.badge")}</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                {t("page.myMusics.title")}<span className="text-miku">{t("page.myMusics.titleHighlight")}</span>
-            </h1>
-            <p className="text-slate-500 mt-2 text-sm">
-                {t("page.myMusics.description")}
-            </p>
-        </div>
+        <PageHeader
+            align="center"
+            eyebrow={t("page.myMusics.badge")}
+            title={t("page.myMusics.title")}
+            highlight={t("page.myMusics.titleHighlight")}
+            description={t("page.myMusics.description")}
+        />
     );
 }
 
@@ -1147,21 +1115,21 @@ function MusicItem({ music, difficulties, results, thumbnailUrl, hasUserData, se
     const currentLevel = difficulties[selectedDifficulty];
 
     return (
-        <Link href={`/music/${music.id}`} className="group block" data-shortcut-item="true">
-            <div className="relative cursor-pointer rounded-xl overflow-hidden transition-all bg-white/60 ring-1 ring-slate-200/60 hover:ring-miku hover:shadow-xl hover:-translate-y-1">
+        <Link href={`/music/${music.id}`} className="group state-layer focus-ring block rounded-md3-md" data-shortcut-item="true">
+            <div className="relative cursor-pointer overflow-hidden rounded-md3-md bg-surface-container-low shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
                 {/* Music Thumbnail */}
                 <div className="w-full aspect-square relative">
                     <Image
                         src={thumbnailUrl}
                         alt={music.title}
                         fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover"
                         unoptimized
                     />
 
                     {/* Badge - top right corner */}
                     {currentLevel !== undefined && (
-                        <div className={`absolute top-1 right-1 text-white font-bold px-1.5 py-0.5 rounded ${constant ? 'bg-miku/80 backdrop-blur-sm text-[10px] shadow-sm' : 'bg-black/70 text-xs'}`}>
+                        <div className={`absolute right-1 top-1 rounded-md3-xs px-1.5 py-0.5 font-bold ${constant ? 'bg-primary text-[10px] text-on-primary' : 'bg-inverse-surface/80 text-xs text-inverse-on-surface'}`}>
                             {constant ? constant.toFixed(1) : (sortBy === 'constant' ? `${currentLevel}.?` : currentLevel)}
                         </div>
                     )}
@@ -1196,13 +1164,13 @@ function MusicItem({ music, difficulties, results, thumbnailUrl, hasUserData, se
 
                 {/* Title Info */}
                 <div className="p-3">
-                    <h3 className="text-sm font-bold text-primary-text group-hover:text-miku transition-colors">
+                    <h3 className="type-title-s text-on-surface transition-colors group-hover:text-primary">
                         <TranslatedText
                             original={music.title}
                             category="music"
                             field="title"
                             originalClassName="truncate block"
-                            translationClassName="text-xs font-medium text-slate-400 truncate block"
+                            translationClassName="block truncate type-label-s text-on-surface-variant"
                         />
                     </h3>
                 </div>
@@ -1215,7 +1183,7 @@ function MusicItem({ music, difficulties, results, thumbnailUrl, hasUserData, se
 
 function MyMusicsLoadingFallback() {
     const { t } = useI18n();
-    return <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("common.state.loading")}</div>;
+    return <LoadingState label={t("common.state.loading")} className="min-h-[50vh]" />;
 }
 
 export default function MyMusicsClient() {

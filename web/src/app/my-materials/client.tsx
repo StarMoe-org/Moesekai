@@ -25,6 +25,8 @@ import QuickBindForm from "@/components/QuickBindForm";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, EmptyState, ErrorState, Icon, LoadMore, LoadingState, PageContainer, PageHeader, SegmentedButton } from "@/components/md3";
+import { mdInventory2 } from "@/components/md3/icons";
 
 // ==================== Types ====================
 
@@ -367,8 +369,8 @@ function MyMaterialsContent() {
     // No account state
     if (accounts.length === 0) {
         return (
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-3xl">
-                <PageHeader />
+            <PageContainer className="max-w-3xl">
+                <MyMaterialsHeader />
                 <QuickBindForm
                     onAccountAdded={() => {
                         setAccountsList(getAccounts());
@@ -379,13 +381,13 @@ function MyMaterialsContent() {
                     returnTo="/my-materials"
                 />
 
-            </div>
+            </PageContainer>
         );
     }
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            <PageHeader />
+        <PageContainer>
+            <MyMaterialsHeader />
 
             <AccountSelectorBar
                 accounts={accounts}
@@ -402,46 +404,30 @@ function MyMaterialsContent() {
 
             {/* User Error */}
             {userError && (
-                <div className="mb-4 p-3 rounded-xl bg-red-50 border border-red-200/50">
-                    <div className="flex items-start gap-2">
-                        <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <div>
-                            <p className="text-xs font-medium text-red-700">
-                                {t(getUserErrorMessageKey(userError))}
-                            </p>
-                            <ExternalLink
-                                href="https://haruki.seiunx.com"
-                                className="text-xs text-miku hover:underline mt-1 inline-block"
-                            >
-                                {t("common.account.goHaruki")}
-                            </ExternalLink>
-                        </div>
-                    </div>
-                </div>
+                <Banner tone="error" title={t(getUserErrorMessageKey(userError))} className="mb-4">
+                    <ExternalLink
+                        href="https://haruki.seiunx.com"
+                        className="mt-1 inline-block rounded-md3-xs underline focus-ring"
+                    >
+                        {t("common.account.goHaruki")}
+                    </ExternalLink>
+                </Banner>
             )}
 
             {/* Tab Bar */}
-            <div className="mb-4 flex items-center gap-2">
-                {([
-                    { key: "materials" as TabType, label: t("page.myMaterials.tabs.materials") },
-                    { key: "mysekaiMaterials" as TabType, label: t("page.myMaterials.tabs.mysekaiMaterials") },
-                ]).map((tab) => (
-                    <button
-                        key={tab.key}
-                        onClick={() => handleTabChange(tab.key)}
-                        className={`px-4 py-2 text-sm font-bold rounded-xl transition-all ${activeTab === tab.key
-                            ? "bg-miku/10 text-miku ring-1 ring-miku/30"
-                            : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                            }`}
-                    >
-                        {tab.label}
-                    </button>
-                ))}
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+                <SegmentedButton<TabType>
+                    className="w-auto"
+                    value={activeTab}
+                    onValueChange={handleTabChange}
+                    options={[
+                        { value: "materials", label: t("page.myMaterials.tabs.materials") },
+                        { value: "mysekaiMaterials", label: t("page.myMaterials.tabs.mysekaiMaterials") },
+                    ]}
+                />
                 {/* Upload time badge */}
                 {uploadTime && !isLoading && !isFetchingUser && (
-                    <span className="ml-auto text-[11px] text-slate-400" title={t("common.data.uploadTimeTitle")}>
+                    <span className="ml-auto type-label-s text-on-surface-variant" title={t("common.data.uploadTimeTitle")}>
                         {t("common.data.dataTime", { time: formatDate(parseUploadTimeToDate(uploadTime) ?? uploadTime, { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) })}
                     </span>
                 )}
@@ -449,17 +435,19 @@ function MyMaterialsContent() {
 
             {/* Stats summary */}
             {!isLoading && !isFetchingUser && currentItems.length > 0 && (
-                <div className="mb-4 text-xs text-slate-500">
+                <div className="mb-4 type-body-s text-on-surface-variant">
                     {t("common.progress.totalMaterialsSummary", { count: currentItems.length, total: formatNumber(totalQuantity) })}
                 </div>
             )}
 
             {/* Error */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                    className="mb-6"
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
@@ -468,29 +456,21 @@ function MyMaterialsContent() {
                 {isLoading || isFetchingUser ? (
                     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                         {Array.from({ length: 12 }).map((_, i) => (
-                            <div key={i} className="rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-                                <div className="aspect-square bg-gradient-to-br from-slate-100 to-slate-200" />
-                                <div className="p-2 space-y-1.5">
-                                    <div className="h-3 bg-slate-200 rounded w-3/4" />
-                                    <div className="h-2.5 bg-slate-100 rounded w-1/2" />
+                            <div key={i} className="animate-pulse overflow-hidden rounded-md3-md bg-surface-container-low">
+                                <div className="aspect-square bg-surface-container-high" />
+                                <div className="space-y-1.5 p-2">
+                                    <div className="h-3 w-3/4 rounded-md3-xs bg-surface-container-highest" />
+                                    <div className="h-2.5 w-1/2 rounded-md3-xs bg-surface-container-high" />
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : currentItems.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                        </svg>
-                        <p className="text-slate-400 font-medium">
-                            {searchQuery ? t("page.myMaterials.noResult") : t("page.myMaterials.noData")}
-                        </p>
-                        {!searchQuery && (
-                            <p className="text-slate-400 text-xs mt-1">
-                                {t("common.data.suiteUploadHint")}
-                            </p>
-                        )}
-                    </div>
+                    <EmptyState
+                        icon={mdInventory2}
+                        title={searchQuery ? t("page.myMaterials.noResult") : t("page.myMaterials.noData")}
+                        description={!searchQuery ? t("common.data.suiteUploadHint") : undefined}
+                    />
                 ) : (
                     <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3">
                         {displayedItems.map((item) => (
@@ -499,49 +479,33 @@ function MyMaterialsContent() {
                     </div>
                 )}
 
-                {/* Load More */}
-                {!isLoading && !isFetchingUser && displayedItems.length < currentItems.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.myMaterials.loadMore")}
-                            <span className="ml-2 text-sm opacity-80">
-                                ({displayedItems.length} / {currentItems.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded */}
-                {!isLoading && !isFetchingUser && displayedItems.length > 0 && displayedItems.length >= currentItems.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.myMaterials.allLoaded", { count: currentItems.length })}
-                    </div>
+                {/* Load More / All loaded */}
+                {!isLoading && !isFetchingUser && (
+                    <LoadMore
+                        label={t("page.myMaterials.loadMore")}
+                        shown={displayedItems.length}
+                        total={currentItems.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.myMaterials.allLoaded", { count: currentItems.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 // ==================== Sub Components ====================
 
-function PageHeader() {
+function MyMaterialsHeader() {
     const { t } = useI18n();
     return (
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.myMaterials.badge")}</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                {t("page.myMaterials.title")}<span className="text-miku">{t("page.myMaterials.titleHighlight")}</span>
-            </h1>
-            <p className="text-slate-500 mt-2 text-sm">
-                {t("page.myMaterials.description")}
-            </p>
-        </div>
+        <PageHeader
+            align="center"
+            eyebrow={t("page.myMaterials.badge")}
+            title={t("page.myMaterials.title")}
+            highlight={t("page.myMaterials.titleHighlight")}
+            description={t("page.myMaterials.description")}
+        />
     );
 }
 
@@ -549,8 +513,8 @@ function MaterialCard({ item }: { item: DisplayMaterial }) {
     const [imgError, setImgError] = useState(false);
 
     return (
-        <div className="relative rounded-xl overflow-hidden bg-white ring-1 ring-slate-200 hover:ring-miku hover:shadow-lg hover:-translate-y-0.5 transition-all">
-            <div className="aspect-square bg-gradient-to-br from-slate-50 to-slate-100 flex items-center justify-center p-3">
+        <div className="relative overflow-hidden rounded-md3-md bg-surface-container-low">
+            <div className="flex aspect-square items-center justify-center bg-surface-container p-3">
                 {item.thumbnailUrl && !imgError ? (
                     <img
                         src={item.thumbnailUrl}
@@ -560,18 +524,16 @@ function MaterialCard({ item }: { item: DisplayMaterial }) {
                         onError={() => setImgError(true)}
                     />
                 ) : (
-                    <svg className="w-10 h-10 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
+                    <Icon path={mdInventory2} size={40} className="text-on-surface-variant opacity-60" />
                 )}
             </div>
-            <div className="px-2 py-1.5 bg-white border-t border-slate-100">
-                <p className="text-[10px] font-bold text-slate-800 leading-tight" title={item.name}>
+            <div className="border-t border-outline-variant px-2 py-1.5">
+                <p className="text-[10px] font-bold leading-tight text-on-surface" title={item.name}>
                     {item.name}
                 </p>
                 <div className="flex items-center justify-between mt-0.5">
-                    <span className="text-[9px] text-slate-400">#{item.id}</span>
-                    <span className="text-[10px] font-mono font-bold text-miku bg-miku/10 px-1.5 py-0.5 rounded leading-none">
+                    <span className="text-[9px] text-on-surface-variant">#{item.id}</span>
+                    <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 font-mono text-[10px] font-bold leading-none text-on-primary-container">
                         ×{item.quantity.toLocaleString()}
                     </span>
                 </div>
@@ -584,7 +546,7 @@ function MaterialCard({ item }: { item: DisplayMaterial }) {
 
 function MyMaterialsLoadingFallback() {
     const { t } = useI18n();
-    return <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("common.state.loading")}</div>;
+    return <LoadingState label={t("common.state.loading")} className="min-h-[50vh]" />;
 }
 
 export default function MyMaterialsClient() {

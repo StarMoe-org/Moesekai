@@ -29,6 +29,34 @@ import {
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
 import { useI18n } from "@/contexts/I18nContext";
+import {
+    Banner,
+    Button,
+    Chip,
+    CircularProgress,
+    EmptyState,
+    Icon,
+    IconButton,
+    LoadingState,
+    PageContainer,
+    PageHeader,
+    SectionCard,
+    TextField,
+    cn,
+} from "@/components/md3";
+import {
+    mdAdd,
+    mdBuild,
+    mdCalculate,
+    mdChevronRight,
+    mdDelete,
+    mdLayers,
+    mdLink,
+    mdPerson,
+    mdStyle,
+    mdSync,
+    mdWarning,
+} from "@/components/md3/icons";
 
 export default function ProfileClient() {
     const { t, formatDate } = useI18n();
@@ -232,79 +260,75 @@ export default function ProfileClient() {
     if (!loaded) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 sm:px-6 py-8 max-w-7xl">
-                    <div className="text-center py-20 text-slate-400">{t("common.state.loading")}</div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
 
+    const toolLinks = [
+        { href: "/deck-recommend", icon: mdStyle, titleKey: "page.profile.tools.deckRecommend.title", descriptionKey: "page.profile.tools.deckRecommend.description" },
+        { href: "/score-control", icon: mdCalculate, titleKey: "page.profile.tools.scoreControl.title", descriptionKey: "page.profile.tools.scoreControl.description" },
+        { href: "/my-cards", icon: mdLayers, titleKey: "page.profile.tools.myCards.title", descriptionKey: "page.profile.tools.myCards.description" },
+    ] as const;
+
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-7xl">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.profile.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.profile.title")}<span className="text-miku">{t("page.profile.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 mt-2 text-sm">
-                        {t("page.profile.description")}
-                    </p>
-                </div>
+            <PageContainer>
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.profile.badge")}
+                    title={t("page.profile.title")}
+                    highlight={t("page.profile.titleHighlight")}
+                    description={t("page.profile.description")}
+                />
 
                 {(oauthMessage || oauthStatus === "success") && (
-                    <div className="mb-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                    <Banner tone="info" className="mb-6">
                         {oauthMessage || t("common.account.oauthBindSuccess")}
-                    </div>
+                    </Banner>
                 )}
 
                 {/* Accounts List */}
-                <div className="glass-card p-5 sm:p-6 rounded-2xl mb-6">
-                    <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-miku rounded-full"></span>
+                <SectionCard
+                    className="mb-6"
+                    icon={mdPerson}
+                    title={
+                        <>
                             {t("page.profile.boundAccounts")}
                             {accounts.length > 0 && (
-                                <span className="text-xs font-normal text-slate-400 ml-1">({accounts.length})</span>
+                                <span className="ml-1 type-body-m text-on-surface-variant">({accounts.length})</span>
                             )}
-                        </h2>
-                        <div className="flex items-center gap-3">
-                            <button
-                                onClick={() => void handleOAuthBind()}
-                                className="px-3 py-1.5 border border-miku/30 text-miku rounded-lg font-bold text-xs hover:bg-miku/5 transition-all"
-                            >
+                        </>
+                    }
+                    actions={
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outlined" size="xs" icon={mdLink} onClick={() => void handleOAuthBind()}>
                                 {t("common.account.oauthBind")}
-                            </button>
-                            <button
+                            </Button>
+                            <Button
+                                variant="filled"
+                                size="xs"
+                                icon={mdAdd}
                                 onClick={() => { setShowAddForm(true); setVerifyError(null); }}
-                                className="px-3 py-1.5 bg-gradient-to-r from-miku to-miku-dark text-white rounded-lg font-bold text-xs shadow-md shadow-miku/20 hover:opacity-90 active:scale-[0.98] transition-all flex items-center gap-1"
                             >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                </svg>
                                 {t("common.account.addAccount")}
-                            </button>
+                            </Button>
                         </div>
-                    </div>
-
+                    }
+                >
                     {accounts.length === 0 && !showAddForm ? (
-                        <div className="text-center py-10">
-                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-slate-100 flex items-center justify-center">
-                                <svg className="w-8 h-8 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                </svg>
-                            </div>
-                            <p className="text-slate-500 text-sm mb-4">{t("common.account.noAccounts")}</p>
-                            <button
-                                onClick={() => { setShowAddForm(true); setVerifyError(null); }}
-                                className="px-6 py-2.5 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold text-sm shadow-lg shadow-miku/20 hover:opacity-90 active:scale-[0.98] transition-all"
-                            >
-                                {t("common.account.addFirstAccount")}
-                            </button>
-                        </div>
+                        <EmptyState
+                            className="py-10"
+                            icon={mdPerson}
+                            title={t("common.account.noAccounts")}
+                            action={
+                                <Button variant="filled" size="m" onClick={() => { setShowAddForm(true); setVerifyError(null); }}>
+                                    {t("common.account.addFirstAccount")}
+                                </Button>
+                            }
+                        />
                     ) : (
                         <div className="space-y-3">
                             {accounts.map((acc) => {
@@ -315,48 +339,55 @@ export default function ProfileClient() {
                                 return (
                                     <div
                                         key={acc.id}
-                                        className={`relative p-4 rounded-xl border transition-all ${isActive
-                                            ? "border-miku/40 bg-miku/5 shadow-sm"
-                                            : "border-slate-100 bg-slate-50/50 hover:border-slate-200"
-                                            }`}
+                                        className={cn(
+                                            "relative rounded-md3-lg border p-4 transition-colors duration-200 ease-md3-standard",
+                                            isActive
+                                                ? "border-primary bg-primary-container/40"
+                                                : "border-outline-variant bg-surface-container",
+                                        )}
                                     >
                                         <div className="flex items-center gap-3">
                                             {/* Avatar - use the leader card thumbnail. */}
-                                            <AccountAvatar account={acc} size="lg" className={`ring-2 ring-offset-1 transition-all ${isActive ? "ring-miku/40" : "ring-slate-200"}`} />
+                                            <AccountAvatar account={acc} size="lg" className={cn("ring-2 ring-offset-1 ring-offset-surface transition-all", isActive ? "ring-primary" : "ring-outline-variant")} />
 
                                             {/* Info */}
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center gap-2 flex-wrap">
+                                            <div className="min-w-0 flex-1">
+                                                <div className="flex flex-wrap items-center gap-2">
                                                     {displayName && (
-                                                        <span className="text-sm font-bold text-primary-text truncate">{displayName}</span>
+                                                        <span className="truncate type-title-s text-on-surface">{displayName}</span>
                                                     )}
-                                                    <span className="font-mono text-xs text-slate-500">{acc.gameId}</span>
-                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${isActive ? "bg-miku/20 text-miku" : "bg-slate-100 text-slate-500"
-                                                        }`}>
+                                                    <span className="font-mono type-body-s text-on-surface-variant">{acc.gameId}</span>
+                                                    <span className={cn(
+                                                        "rounded-md3-xs px-1.5 py-0.5 type-label-s",
+                                                        isActive ? "bg-primary text-on-primary" : "bg-surface-container-highest text-on-surface-variant",
+                                                    )}>
                                                         {t(`common.server.${acc.server}`)}
                                                     </span>
                                                     {isActive && (
-                                                        <span className="px-1.5 py-0.5 bg-miku/10 text-miku text-[10px] font-bold rounded">
+                                                        <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
                                                             {t("common.account.current")}
                                                         </span>
                                                     )}
-                                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${acc.authSource === "oauth2" ? "bg-indigo-100 text-indigo-600" : "bg-slate-100 text-slate-500"}`}>
+                                                    <span className={cn(
+                                                        "rounded-md3-xs px-1.5 py-0.5 type-label-s",
+                                                        acc.authSource === "oauth2" ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-highest text-on-surface-variant",
+                                                    )}>
                                                         {acc.authSource === "oauth2" ? "OAuth2" : t("common.account.publicApi")}
                                                     </span>
                                                     {acc.authError === "reauth_required" && (
-                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-600">
+                                                        <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                                                             {t("common.account.reauthRequired")}
                                                         </span>
                                                     )}
                                                 </div>
-                                                <div className="flex items-center gap-2 mt-0.5">
-                                                    <p className="text-[10px] text-slate-400">
+                                                <div className="mt-0.5 flex flex-wrap items-center gap-2 type-label-s text-on-surface-variant">
+                                                    <p>
                                                         {t("common.account.createdAt", { date: formatDate(acc.createdAt) })}
                                                     </p>
                                                     {acc.uploadTime && (
                                                         <>
-                                                            <span className="text-[10px] text-slate-300">•</span>
-                                                            <p className="text-[10px] text-slate-400">
+                                                            <span aria-hidden="true" className="opacity-60">•</span>
+                                                            <p>
                                                                 {t("common.account.dataUpdatedAt", { date: formatDate(acc.uploadTime * 1000, { dateStyle: "medium", timeStyle: "short" }) })}
                                                             </p>
                                                         </>
@@ -365,51 +396,43 @@ export default function ProfileClient() {
                                             </div>
 
                                             {/* Actions */}
-                                            <div className="flex items-center gap-1.5 flex-shrink-0 flex-wrap justify-end">
+                                            <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
                                                 {!isActive && (
-                                                    <button
-                                                        onClick={() => handleSetActive(acc.id)}
-                                                        className="px-2.5 py-1.5 text-[11px] font-medium text-miku hover:bg-miku/10 rounded-lg transition-colors"
-                                                    >
+                                                    <Button variant="text" size="xs" onClick={() => handleSetActive(acc.id)}>
                                                         {t("common.account.setDefault")}
-                                                    </button>
+                                                    </Button>
                                                 )}
                                                 {acc.authSource === "oauth2" && (
-                                                    <button
+                                                    <Button
+                                                        variant="text"
+                                                        size="xs"
+                                                        color="secondary"
+                                                        icon={mdSync}
                                                         onClick={() => void refreshOAuthAccountData(acc.id).then(reload).catch((error) => {
                                                             console.warn(`OAuth2 account ${acc.gameId} manual sync failed`, error);
                                                             setVerifyError(t("common.harukiErrors.oauthRefreshFailed"));
                                                         })}
-                                                        className="px-2.5 py-1.5 text-[11px] font-medium text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
                                                     >
                                                         {t("common.account.resync")}
-                                                    </button>
+                                                    </Button>
                                                 )}
                                                 {deleteConfirmId === acc.id ? (
                                                     <div className="flex items-center gap-1">
-                                                        <button
-                                                            onClick={() => handleDelete(acc.id)}
-                                                            className="px-2 py-1 text-[11px] font-bold text-red-500 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-                                                        >
+                                                        <Button variant="tonal" size="xs" color="error" onClick={() => handleDelete(acc.id)}>
                                                             {t("common.action.confirm")}
-                                                        </button>
-                                                        <button
-                                                            onClick={() => setDeleteConfirmId(null)}
-                                                            className="px-2 py-1 text-[11px] font-medium text-slate-500 hover:bg-slate-100 rounded-lg transition-colors"
-                                                        >
+                                                        </Button>
+                                                        <Button variant="text" size="xs" onClick={() => setDeleteConfirmId(null)}>
                                                             {t("common.action.cancel")}
-                                                        </button>
+                                                        </Button>
                                                     </div>
                                                 ) : (
-                                                    <button
+                                                    <IconButton
+                                                        icon={mdDelete}
+                                                        label={t("common.account.deleteAccount")}
+                                                        size="xs"
+                                                        className="hover:text-error"
                                                         onClick={() => setDeleteConfirmId(acc.id)}
-                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                                                        title={t("common.account.deleteAccount")}
-                                                    >
-                                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                        </svg>
-                                                    </button>
+                                                    />
                                                 )}
                                             </div>
                                         </div>
@@ -421,100 +444,87 @@ export default function ProfileClient() {
 
                     {/* Add Account Form */}
                     {showAddForm && (
-                        <div className="mt-4 p-4 rounded-xl border border-miku/20 bg-miku/5">
-                            <h3 className="text-sm font-bold text-primary-text mb-3 flex items-center gap-2">
-                                <span className="w-1 h-4 bg-miku rounded-full"></span>
+                        <div className="mt-4 rounded-md3-lg bg-surface-container p-4">
+                            <h3 className="mb-3 type-title-m text-on-surface">
                                 {t("common.account.addNewAccount")}
                             </h3>
-                            <div className="space-y-3">
+                            <div className="space-y-4">
+                                <TextField
+                                    variant="outlined"
+                                    label={t("common.form.gameUid")}
+                                    required
+                                    value={formGameId}
+                                    onChange={(e) => setFormGameId(e.target.value)}
+                                    placeholder={t("common.account.inputGameUid")}
+                                    disabled={isVerifying}
+                                />
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        {t("common.form.gameUid")} <span className="text-red-400">*</span>
-                                    </label>
-                                    <input
-                                        type="text"
-                                        value={formGameId}
-                                        onChange={(e) => setFormGameId(e.target.value)}
-                                        placeholder={t("common.account.inputGameUid")}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
-                                        disabled={isVerifying}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("common.form.server")}</label>
+                                    <div className="mb-2 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
                                     <div className="flex flex-wrap gap-2">
                                         {SERVER_OPTIONS.map((s) => (
-                                            <button
+                                            <Chip
                                                 key={s.value}
+                                                selected={formServer === s.value}
                                                 onClick={() => setFormServer(s.value)}
                                                 disabled={isVerifying}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${formServer === s.value
-                                                    ? "bg-miku text-white shadow-md shadow-miku/20"
-                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                    }`}
                                             >
                                                 {t(`common.server.${s.value}`)}
-                                            </button>
+                                            </Chip>
                                         ))}
                                     </div>
                                 </div>
 
                                 {verifyError && (
-                                    <div className="p-3 rounded-lg bg-red-50 border border-red-200/50">
-                                        <div className="flex items-start gap-2">
-                                            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                            </svg>
-                                            <div>
-                                                <p className="text-xs font-medium text-red-700">{verifyError}</p>
-                                                <ExternalLink
-                                                    href="https://haruki.seiunx.com"
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="text-xs text-miku hover:underline mt-1 inline-block"
-                                                >
-                                                    {t("common.account.goHaruki")}
-                                                </ExternalLink>
-                                            </div>
-                                        </div>
-                                    </div>
+                                    <Banner tone="error" title={verifyError}>
+                                        <ExternalLink
+                                            href="https://haruki.seiunx.com"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="mt-1 inline-block rounded-md3-xs underline focus-ring"
+                                        >
+                                            {t("common.account.goHaruki")}
+                                        </ExternalLink>
+                                    </Banner>
                                 )}
 
-                                <p className="text-xs text-slate-400">
+                                <p className="type-body-s text-on-surface-variant">
                                     {t("common.account.addHint")}
                                 </p>
 
                                 <div className="flex gap-3 pt-1">
-                                    <button
+                                    <Button
+                                        variant="filled"
+                                        size="m"
+                                        className="flex-1"
                                         onClick={handleAddAccount}
                                         disabled={!formGameId.trim() || isVerifying}
-                                        className="flex-1 px-6 py-2.5 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold text-sm shadow-lg shadow-miku/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                                     >
                                         {isVerifying ? (
                                             <>
-                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                                                <CircularProgress size={18} strokeWidth={2} />
                                                 {t("common.account.verifyingWithDots")}
                                             </>
                                         ) : (
                                             t("common.account.verifyAndAdd")
                                         )}
-                                    </button>
-                                    <button
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        size="m"
                                         onClick={() => { setShowAddForm(false); setVerifyError(null); }}
                                         disabled={isVerifying}
-                                        className="px-6 py-2.5 border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all"
                                     >
                                         {t("common.action.cancel")}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         </div>
                     )}
-                </div>
+                </SectionCard>
 
                 {activeAccount && (
-                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch mb-6">
-                        <div className="min-w-0 h-full flex flex-col gap-6">
+                    <div className="mb-6 grid grid-cols-1 items-stretch gap-6 xl:grid-cols-2">
+                        <div className="flex h-full min-w-0 flex-col gap-6">
                             <div className="min-w-0">
                                 <CharacterRankRadar
                                     characterRanks={activeCharacterRanks}
@@ -530,7 +540,7 @@ export default function ProfileClient() {
                                 />
                             </div>
                         </div>
-                        <div className="min-w-0 h-full flex flex-col gap-6">
+                        <div className="flex h-full min-w-0 flex-col gap-6">
                             <div className="min-w-0">
                                 <BondsRankTable
                                     userBonds={activeAccount.userBonds || []}
@@ -551,113 +561,68 @@ export default function ProfileClient() {
                 )}
 
                 {/* Tool Quick Links */}
-                <div className="glass-card p-5 sm:p-6 rounded-2xl mb-6">
-                    <h2 className="text-lg font-bold text-primary-text mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-amber-400 rounded-full"></span>
-                        {t("page.profile.toolQuickLinks")}
-                    </h2>
-                    <p className="text-xs text-slate-400 mb-4">
+                <SectionCard className="mb-6" icon={mdBuild} title={t("page.profile.toolQuickLinks")}>
+                    <p className="mb-4 type-body-s text-on-surface-variant">
                         {t("page.profile.toolQuickLinksHint")}
                     </p>
-                    <div className="space-y-3">
-                        <Link
-                            href="/deck-recommend"
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-miku/30 hover:bg-miku/5 transition-all group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-indigo-100 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
+                    <div className="space-y-2">
+                        {toolLinks.map((tool) => (
+                            <Link
+                                key={tool.href}
+                                href={tool.href}
+                                className="group state-layer focus-ring flex items-center justify-between rounded-md3-lg bg-surface-container p-3"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-10 w-10 items-center justify-center rounded-md3-md bg-secondary-container text-on-secondary-container">
+                                        <Icon path={tool.icon} size={22} />
+                                    </div>
+                                    <div>
+                                        <div className="type-title-s text-on-surface">{t(tool.titleKey)}</div>
+                                        <div className="type-body-s text-on-surface-variant">{t(tool.descriptionKey)}</div>
+                                    </div>
                                 </div>
-                                <div>
-                                    <div className="text-sm font-bold text-primary-text">{t("page.profile.tools.deckRecommend.title")}</div>
-                                    <div className="text-xs text-slate-400">{t("page.profile.tools.deckRecommend.description")}</div>
-                                </div>
-                            </div>
-                            <span className="text-xs font-medium text-miku group-hover:translate-x-0.5 transition-transform">{t("page.profile.goTo")}</span>
-                        </Link>
-
-                        <Link
-                            href="/score-control"
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-miku/30 hover:bg-miku/5 transition-all group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-emerald-100 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div className="text-sm font-bold text-primary-text">{t("page.profile.tools.scoreControl.title")}</div>
-                                    <div className="text-xs text-slate-400">{t("page.profile.tools.scoreControl.description")}</div>
-                                </div>
-                            </div>
-                            <span className="text-xs font-medium text-miku group-hover:translate-x-0.5 transition-transform">{t("page.profile.goTo")}</span>
-                        </Link>
-
-                        <Link
-                            href="/my-cards"
-                            className="flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50/50 hover:border-miku/30 hover:bg-miku/5 transition-all group"
-                        >
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-lg bg-pink-100 flex items-center justify-center">
-                                    <svg className="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                    </svg>
-                                </div>
-                                <div>
-                                    <div className="text-sm font-bold text-primary-text">{t("page.profile.tools.myCards.title")}</div>
-                                    <div className="text-xs text-slate-400">{t("page.profile.tools.myCards.description")}</div>
-                                </div>
-                            </div>
-                            <span className="text-xs font-medium text-miku group-hover:translate-x-0.5 transition-transform">{t("page.profile.goTo")}</span>
-                        </Link>
+                                <span className="flex items-center gap-0.5 type-label-l text-primary">
+                                    {t("page.profile.goTo")}
+                                    <Icon path={mdChevronRight} size={18} />
+                                </span>
+                            </Link>
+                        ))}
                     </div>
-                </div>
+                </SectionCard>
 
                 {/* Danger Zone */}
                 {accounts.length > 0 && (
-                    <div className="glass-card p-5 sm:p-6 rounded-2xl mb-6 border border-red-100">
-                        <h2 className="text-lg font-bold text-red-500 mb-2 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-red-400 rounded-full"></span>
-                            {t("page.profile.dangerZone")}
-                        </h2>
-                        <p className="text-xs text-slate-400 mb-4">
+                    <SectionCard
+                        className="mb-6 border border-error/40"
+                        icon={mdWarning}
+                        title={<span className="text-error">{t("page.profile.dangerZone")}</span>}
+                    >
+                        <p className="mb-4 type-body-s text-on-surface-variant">
                             {t("page.profile.dangerDescription")}
                         </p>
                         {!showClearConfirm ? (
-                            <button
-                                onClick={() => setShowClearConfirm(true)}
-                                className="px-4 py-2 border-2 border-red-300 text-red-500 rounded-lg text-sm font-bold hover:bg-red-50 transition-all"
-                            >
+                            <Button variant="outlined" color="error" onClick={() => setShowClearConfirm(true)}>
                                 {t("page.profile.clearAllData")}
-                            </button>
+                            </Button>
                         ) : (
-                            <div className="flex items-center gap-3">
-                                <span className="text-sm text-red-500 font-medium">{t("page.profile.clearAllConfirm")}</span>
-                                <button
-                                    onClick={handleClearAll}
-                                    className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm font-bold hover:bg-red-600 transition-all"
-                                >
+                            <div className="flex flex-wrap items-center gap-3">
+                                <span className="type-body-m text-error">{t("page.profile.clearAllConfirm")}</span>
+                                <Button variant="filled" color="error" onClick={handleClearAll}>
                                     {t("page.profile.confirmClear")}
-                                </button>
-                                <button
-                                    onClick={() => setShowClearConfirm(false)}
-                                    className="px-4 py-2 border border-slate-200 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-50 transition-all"
-                                >
+                                </Button>
+                                <Button variant="outlined" onClick={() => setShowClearConfirm(false)}>
                                     {t("common.action.cancel")}
-                                </button>
+                                </Button>
                             </div>
                         )}
-                    </div>
+                    </SectionCard>
                 )}
 
                 {/* Info */}
-                <div className="text-center text-xs text-slate-400 mt-8">
+                <div className="mt-8 text-center type-body-s text-on-surface-variant">
                     <p>{t("common.account.localOnlyNotice")}</p>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

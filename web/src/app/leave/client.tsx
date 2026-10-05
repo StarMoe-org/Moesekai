@@ -3,9 +3,10 @@
 import React, { Suspense, useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { localizePathForBrowser } from '@/lib/localized-path';
-import Link from "@/components/LocalizedLink";
 import { useI18n } from '@/contexts/I18nContext';
 import { MOE_LOGO_URL } from '@/lib/assets';
+import { Button, Icon, LoadingState, Surface, buttonClassName } from '@/components/md3';
+import { mdHome, mdOpenInNew, mdWarningFill } from '@/components/md3/icons';
 
 function LeavePageContent() {
     const { t } = useI18n();
@@ -29,38 +30,34 @@ function LeavePageContent() {
 
     if (!target) {
         return (
-            <div className="min-h-[80vh] flex flex-col items-center justify-center p-4">
-                <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg max-w-md w-full text-center border border-gray-100 dark:border-gray-700">
-                    <h1 className="text-xl font-bold text-gray-800 dark:text-gray-100 mb-4">
+            <div className="flex min-h-[80vh] flex-col items-center justify-center p-4">
+                <Surface tone="low" className="w-full max-w-md p-8 text-center">
+                    <h1 className="mb-4 type-headline-s text-on-surface">
                         {t("page.leave.missingTitle")}
                     </h1>
-                    <p className="text-gray-600 dark:text-gray-300 mb-6">
+                    <p className="mb-6 type-body-l text-on-surface-variant">
                         {t("page.leave.missingDescription")}
                     </p>
-                    <Link
-                        href="/"
-                        className="px-6 py-2 bg-theme-primary text-white rounded-lg hover:opacity-90 transition-opacity inline-block"
-                    >
+                    <Button href="/" variant="filled" size="m" icon={mdHome}>
                         {t("page.leave.backHome")}
-                    </Link>
-                </div>
+                    </Button>
+                </Surface>
             </div>
         );
     }
 
     return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50 dark:bg-slate-900/50">
-            <div className="bg-white dark:bg-gray-800 p-8 md:p-10 rounded-3xl shadow-xl max-w-lg w-full border border-slate-100 dark:border-slate-700 relative overflow-hidden">
-
-                {/* Decorative background element */}
-                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-miku to-teal-200"></div>
+        <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-4">
+            <Surface tone="low" elevation={1} className="relative w-full max-w-lg overflow-hidden p-8 md:p-10">
+                {/* Decorative accent bar */}
+                <div className="absolute left-0 top-0 h-1.5 w-full bg-primary" />
 
                 <div className="flex flex-col items-center text-center">
 
                     {/* Logo Section */}
-                    <div className="flex items-center gap-2 mb-8 scale-110">
+                    <div className="mb-8 flex items-center gap-2">
                         <div
-                            className="h-8 w-[5rem] bg-miku"
+                            className="h-9 w-[5.5rem] bg-primary"
                             style={{
                                 maskImage: `url(${MOE_LOGO_URL})`,
                                 maskSize: "contain",
@@ -72,55 +69,51 @@ function LeavePageContent() {
                                 WebkitMaskRepeat: "no-repeat",
                             }}
                         />
-                        <div className="flex items-center gap-1.5 h-full border-l border-slate-300 pl-2 ml-1">
-                            <span className="text-sm text-slate-500 font-bold tracking-widest uppercase leading-none">
+                        <div className="ml-1 flex h-full items-center gap-1.5 border-l border-outline-variant pl-2">
+                            <span className="type-label-l leading-none text-on-surface-variant">
                                 {t("page.leave.badge")}
                             </span>
                         </div>
                     </div>
 
-                    <div className="w-20 h-20 bg-yellow-50 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-6 text-yellow-500 ring-8 ring-yellow-50/50">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
+                    <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-tertiary-container text-on-tertiary-container">
+                        <Icon path={mdWarningFill} size={40} />
                     </div>
 
-                    <h2 className="text-2xl font-bold text-slate-800 dark:text-gray-100 mb-3">
+                    <h2 className="mb-3 type-headline-s text-on-surface">
                         {t("page.leave.title")}
                     </h2>
 
-                    <p className="text-slate-600 dark:text-slate-300 mb-6 leading-relaxed">
+                    <p className="mb-6 type-body-l text-on-surface-variant">
                         {t("page.leave.description")}
                     </p>
 
-                    <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl w-full mb-6 break-all text-sm text-miku font-mono border border-slate-200 dark:border-slate-700 bg-opacity-50">
+                    <div className="mb-6 w-full break-all rounded-md3-md border border-outline-variant bg-surface-container p-4 font-mono type-body-m text-primary">
                         {target}
                     </div>
 
-                    <p className="text-slate-500 dark:text-slate-400 text-xs mb-8 bg-slate-100 dark:bg-slate-800/50 p-3 rounded-lg">
+                    <p className="mb-8 w-full rounded-md3-sm bg-surface-container-high p-3 type-body-s text-on-surface-variant">
                         {t("page.leave.warningLine1")}
                         <br />
                         {t("page.leave.warningLine2")}
                     </p>
 
-                    <div className="flex flex-col space-y-3 w-full">
+                    <div className="flex w-full flex-col space-y-3">
                         <a
                             href={target}
                             rel="noopener noreferrer"
-                            className="w-full py-3.5 bg-miku hover:bg-miku-dark text-white rounded-xl shadow-lg shadow-miku/20 hover:shadow-xl hover:shadow-miku/30 transition-all font-bold text-center active:scale-[0.98]"
+                            className={buttonClassName({ variant: "filled", size: "m", fullWidth: true })}
                         >
+                            <Icon path={mdOpenInNew} size={20} />
                             {t("page.leave.continue")}
                         </a>
 
-                        <button
-                            onClick={handleClose}
-                            className="w-full py-3.5 bg-white border-2 border-slate-100 text-slate-600 rounded-xl hover:bg-slate-50 hover:border-slate-200 transition-all font-bold active:scale-[0.98]"
-                        >
+                        <Button variant="outlined" size="m" fullWidth onClick={handleClose}>
                             {canClose ? t("page.leave.closePage") : t("page.leave.backHome")}
-                        </button>
+                        </Button>
                     </div>
                 </div>
-            </div>
+            </Surface>
         </div>
     );
 }
@@ -129,9 +122,7 @@ function LeavePageFallback() {
     const { t } = useI18n();
 
     return (
-        <div className="min-h-screen flex items-center justify-center">
-            {t("common.state.loading")}
-        </div>
+        <LoadingState label={t("common.state.loading")} className="min-h-screen" />
     );
 }
 

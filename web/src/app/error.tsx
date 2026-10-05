@@ -2,6 +2,8 @@
 
 import { useEffect } from 'react';
 import { useI18n } from '@/contexts/I18nContext';
+import { Button, Icon } from '@/components/md3';
+import { mdErrorFill, mdRefresh } from '@/components/md3/icons';
 
 export default function Error({
     error,
@@ -37,50 +39,21 @@ export default function Error({
     }, [error]);
 
     return (
-        <div style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '100vh',
-            padding: '2rem',
-            fontFamily: 'system-ui, -apple-system, sans-serif',
-            textAlign: 'center',
-        }}>
-            <h2 style={{ fontSize: '1.5rem', marginBottom: '1rem' }}>
-                {t('common.errorBoundary.title')}
-            </h2>
-            <p style={{ color: '#666', marginBottom: '1.5rem', maxWidth: '400px' }}>
-                {t('common.errorBoundary.description')}
-            </p>
-            <div style={{ display: 'flex', gap: '1rem' }}>
-                <button
-                    onClick={() => window.location.reload()}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: '8px',
-                        border: 'none',
-                        backgroundColor: 'var(--color-miku, #33aaee)',
-                        color: 'white',
-                        fontSize: '1rem',
-                        cursor: 'pointer',
-                    }}
-                >
+        <div className="flex min-h-screen flex-col items-center justify-center gap-6 p-8 text-center">
+            <span className="flex h-16 w-16 items-center justify-center rounded-md3-xl bg-error-container text-on-error-container">
+                <Icon path={mdErrorFill} size={32} />
+            </span>
+            <div className="flex flex-col gap-2">
+                <h2 className="type-headline-s text-on-surface">{t('common.errorBoundary.title')}</h2>
+                <p className="mx-auto max-w-md type-body-l text-on-surface-variant">{t('common.errorBoundary.description')}</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-3">
+                <Button variant="filled" size="m" icon={mdRefresh} onClick={() => window.location.reload()}>
                     {t('common.errorBoundary.refreshPage')}
-                </button>
-                <button
-                    onClick={reset}
-                    style={{
-                        padding: '0.75rem 1.5rem',
-                        borderRadius: '8px',
-                        border: '1px solid #ddd',
-                        backgroundColor: 'transparent',
-                        fontSize: '1rem',
-                        cursor: 'pointer',
-                    }}
-                >
+                </Button>
+                <Button variant="outlined" size="m" onClick={reset}>
                     {t('common.action.retry')}
-                </button>
+                </Button>
             </div>
         </div>
     );

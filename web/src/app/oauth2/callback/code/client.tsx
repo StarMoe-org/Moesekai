@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { localizePathForBrowser } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, Button, Card, CircularProgress, Icon, PageContainer, PageHeader, Surface } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
 import { createOrUpdateOAuthAccount, fetchOAuthBindingInitialData } from "@/lib/account";
 import {
     clearPendingOAuthState,
@@ -161,60 +163,62 @@ export default function CallbackClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-10 max-w-3xl">
-                <div className="glass-card p-6 sm:p-8 rounded-2xl">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.oauth2.callback.badge")}</span>
-                    </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-primary-text mb-3">{t("page.oauth2.callback.title")}</h1>
+            <PageContainer className="max-w-3xl">
+                <Surface tone="low" className="p-6 sm:p-8">
+                    <PageHeader eyebrow={t("page.oauth2.callback.badge")} title={t("page.oauth2.callback.title")} className="mb-4 sm:mb-4" />
                     {loading ? (
-                        <div className="space-y-2 text-sm text-slate-500">
-                            <div className="flex items-center gap-2">
-                                <div className="w-4 h-4 border-2 border-miku/20 border-t-miku rounded-full animate-spin" />
+                        <div className="space-y-2 type-body-m text-on-surface-variant">
+                            <div className="flex items-center gap-3">
+                                <CircularProgress size={20} strokeWidth={2} />
                                 <span>{getPhaseMessage(phase, t)}</span>
                             </div>
-                            <p className="text-xs text-slate-400">{t("page.oauth2.callback.currentPhase", { phase })}</p>
+                            <p className="type-body-s text-on-surface-variant">{t("page.oauth2.callback.currentPhase", { phase })}</p>
                         </div>
                     ) : errorMessage ? (
-                        <div className="p-4 rounded-xl border border-red-200 bg-red-50">
-                            <p className="text-sm font-bold text-red-600">{t("page.oauth2.callback.failureTitle")}</p>
-                            <p className="text-xs text-red-500 mt-1 break-all">{errorMessage}</p>
-                            <p className="text-[11px] text-red-400 mt-2">{t("page.oauth2.callback.failedPhase", { phase })}</p>
-                            <button
+                        <Banner tone="error" title={t("page.oauth2.callback.failureTitle")}>
+                            <p className="break-all">{errorMessage}</p>
+                            <p className="mt-2 type-body-s opacity-80">{t("page.oauth2.callback.failedPhase", { phase })}</p>
+                            <Button
+                                variant="filled"
+                                color="error"
+                                className="mt-4"
                                 onClick={() => router.replace(localizePathForBrowser(returnTo))}
-                                className="mt-4 px-4 py-2 rounded-lg bg-red-500 text-white text-sm font-bold hover:bg-red-600 transition-colors"
                             >
                                 {t("page.oauth2.callback.returnSource")}
-                            </button>
-                        </div>
+                            </Button>
+                        </Banner>
                     ) : bindings.length > 1 ? (
                         <div>
-                            <p className="text-sm text-slate-500 mb-4">{t("page.oauth2.callback.selectBindingDescription")}</p>
+                            <p className="mb-4 type-body-m text-on-surface-variant">{t("page.oauth2.callback.selectBindingDescription")}</p>
                             <div className="space-y-3">
                                 {bindings.map((binding, index) => {
                                     const server = normalizeBindingServer(binding) || t("page.oauth2.callback.unknownServer");
                                     const gameId = normalizeBindingGameId(binding) || t("page.oauth2.callback.unknownUid");
                                     return (
-                                        <button
+                                        <Card
                                             key={`${binding.bindingId ?? binding.id ?? index}`}
+                                            variant="outlined"
                                             onClick={() => void handleBinding(binding)}
-                                            className="w-full text-left p-4 rounded-xl border border-slate-200 hover:border-miku/40 hover:bg-miku/5 transition-all"
+                                            className="p-4"
                                         >
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
-                                                    <p className="text-sm font-bold text-primary-text">{gameId}</p>
-                                                    <p className="text-xs text-slate-500 mt-1">{t("page.oauth2.callback.serverLabel", { server })}</p>
+                                                    <p className="type-title-s text-on-surface">{gameId}</p>
+                                                    <p className="mt-1 type-body-s text-on-surface-variant">{t("page.oauth2.callback.serverLabel", { server })}</p>
                                                 </div>
-                                                <span className="text-xs font-bold text-miku">{t("page.oauth2.callback.selectAction")}</span>
+                                                <span className="flex items-center gap-1 type-label-l text-primary">
+                                                    {t("page.oauth2.callback.selectAction")}
+                                                    <Icon path={mdChevronRight} size={18} />
+                                                </span>
                                             </div>
-                                        </button>
+                                        </Card>
                                     );
                                 })}
                             </div>
                         </div>
                     ) : null}
-                </div>
-            </div>
+                </Surface>
+            </PageContainer>
         </MainLayout>
     );
 }

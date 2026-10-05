@@ -5,10 +5,11 @@ import Image from "next/image";
 import { UNIT_DATA, UNIT_FIELD_TO_ID, UNIT_ICON_FILES, type CardAttribute } from "@/types/types";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
-import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 import Modal from "@/components/common/Modal";
+import { Button, LoadingState, SectionCard } from "@/components/md3";
+import { mdBolt } from "@/components/md3/icons";
 import type {
     ServerType,
     UserArea,
@@ -104,7 +105,6 @@ export default function PowerBonusDetail({
     userMysekaiFixtureGameCharacterPerformanceBonuses,
     userMysekaiGates,
 }: Props) {
-    const { themeColor } = useTheme();
     const { t } = useI18n();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -226,12 +226,12 @@ export default function PowerBonusDetail({
                 const isVirtualSinger = unitKey === "piapro";
 
                 return (
-                    <div key={unitKey} className="rounded-xl border border-slate-200 bg-white/70 p-3">
+                    <div key={unitKey} className="rounded-md3-md bg-surface-container p-3">
                         <div className="flex flex-col items-center gap-2 mb-3">
                             <div className="relative w-8 h-8 flex-shrink-0">
                                 <Image src={UNIT_ICON[unitKey]} alt={unitLabel} fill className="object-contain" unoptimized />
                             </div>
-                            <span className="text-xl font-black text-slate-800">{fmt(unitBonus.total)}</span>
+                            <span className="type-title-l text-on-surface">{fmt(unitBonus.total)}</span>
                         </div>
 
                         <div className={`flex justify-center flex-wrap ${isVirtualSinger ? "gap-1.5 sm:gap-2" : "gap-3"}`}>
@@ -240,10 +240,10 @@ export default function PowerBonusDetail({
                                 const characterName = getCharacterName(t, cid);
                                 return (
                                     <div key={cid} className="flex flex-col items-center gap-0.5">
-                                        <div className={`relative rounded-full overflow-hidden bg-slate-100 ${isVirtualSinger ? "w-7 h-7" : "w-8 h-8"}`}>
+                                        <div className={`relative rounded-full overflow-hidden bg-surface-container-highest ${isVirtualSinger ? "w-7 h-7" : "w-8 h-8"}`}>
                                             <Image src={getCharacterIconUrl(cid)} alt={characterName} fill className="object-cover" unoptimized />
                                         </div>
-                                        <span className={`font-bold text-slate-600 ${isVirtualSinger ? "text-[9px]" : "text-[10px]"}`}>
+                                        <span className={`font-medium text-on-surface-variant ${isVirtualSinger ? "text-[9px]" : "text-[10px]"}`}>
                                             {cb ? fmt(cb.total) : "-"}
                                         </span>
                                     </div>
@@ -252,23 +252,23 @@ export default function PowerBonusDetail({
                         </div>
 
                         {showBreakdown && (
-                            <div className="mt-3 pt-2 border-t border-slate-100 space-y-1.5">
-                                <div className="text-[11px] text-slate-500">
-                                    <span className="font-bold text-slate-600">{t("page.profile.stats.unitBonus")}</span>
+                            <div className="mt-3 pt-2 border-t border-outline-variant space-y-1.5">
+                                <div className="type-label-s text-on-surface-variant">
+                                    <span className="font-medium text-on-surface-variant">{t("page.profile.stats.unitBonus")}</span>
                                     <span className="ml-1.5">{fmt(unitBonus.total)}</span>
-                                    <span className="ml-1 text-slate-400">{t("page.profile.stats.unitBonusFormula", { areaItem: fmt(unitBonus.areaItem), gate: fmt(unitBonus.gate) })}</span>
+                                    <span className="ml-1 text-on-surface-variant opacity-80">{t("page.profile.stats.unitBonusFormula", { areaItem: fmt(unitBonus.areaItem), gate: fmt(unitBonus.gate) })}</span>
                                 </div>
                                 {charIds.map((cid) => {
                                     const cb = bonus.chara.get(cid);
                                     if (!cb) return null;
                                     const name = getCharacterName(t, cid, "short");
                                     return (
-                                        <div key={cid} className="text-[11px] text-slate-500 flex items-center gap-1.5 flex-wrap">
-                                            <div className="relative w-4 h-4 rounded-full overflow-hidden bg-slate-100 flex-shrink-0">
+                                        <div key={cid} className="type-label-s text-on-surface-variant flex items-center gap-1.5 flex-wrap">
+                                            <div className="relative w-4 h-4 rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0">
                                                 <Image src={getCharacterIconUrl(cid)} alt={name} fill className="object-cover" unoptimized />
                                             </div>
-                                            <span className="font-bold text-slate-600">{fmt(cb.total)}</span>
-                                            <span className="text-slate-400">{t("page.profile.stats.characterBonusFormula", { areaItem: fmt(cb.areaItem), rank: fmt(cb.rank), fixture: fmt(cb.fixture) })}</span>
+                                            <span className="font-medium text-on-surface-variant">{fmt(cb.total)}</span>
+                                            <span className="text-on-surface-variant opacity-80">{t("page.profile.stats.characterBonusFormula", { areaItem: fmt(cb.areaItem), rank: fmt(cb.rank), fixture: fmt(cb.fixture) })}</span>
                                         </div>
                                     );
                                 })}
@@ -281,17 +281,17 @@ export default function PowerBonusDetail({
     );
 
     const renderAttrCards = () => (
-        <div className="rounded-xl border border-slate-200 bg-white/70 p-3">
-            <div className="text-sm font-bold text-slate-700 mb-3">{t("page.profile.stats.attributeBonus")}</div>
+        <div className="rounded-md3-md bg-surface-container p-3">
+            <div className="type-title-s text-on-surface mb-3">{t("page.profile.stats.attributeBonus")}</div>
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                 {ATTR_ORDER.map((a) => {
                     const b = bonus.attr.get(a)!;
                     return (
-                        <div key={a} className="rounded-lg border border-slate-200 bg-slate-50/70 px-2.5 py-2 flex items-center gap-2">
+                        <div key={a} className="rounded-md3-sm bg-surface-container-highest px-2.5 py-2 flex items-center gap-2">
                             <div className="relative w-6 h-6">
                                 <Image src={`/data/icon/${ATTR_ICON_FILES[a]}`} alt={a} fill className="object-contain" unoptimized />
                             </div>
-                            <div className="text-sm font-black text-slate-800">{fmt(b.total)}</div>
+                            <div className="type-title-s text-on-surface">{fmt(b.total)}</div>
                         </div>
                     );
                 })}
@@ -300,24 +300,19 @@ export default function PowerBonusDetail({
     );
 
     return (
-        <div id="profile-power-bonus" className="scroll-mt-20 glass-card p-5 sm:p-6 rounded-2xl h-full">
-            <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                    <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: themeColor }}></span>
-                    {t("page.profile.stats.powerBonus")}
-                </h2>
-                {!loading && !error && (
-                    <button
-                        onClick={() => setShowDetailModal(true)}
-                        className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:border-miku/40 hover:text-miku transition-colors"
-                    >
-                        {t("page.profile.stats.viewDetails")}
-                    </button>
-                )}
-            </div>
-
-            {loading && <div className="py-8 text-center text-sm text-slate-500">{t("page.profile.stats.loadingPowerBonus")}</div>}
-            {!loading && error && <div className="py-8 text-center text-sm text-red-500">{error}</div>}
+        <div id="profile-power-bonus" className="h-full scroll-mt-20">
+        <SectionCard
+            className="h-full"
+            icon={mdBolt}
+            title={t("page.profile.stats.powerBonus")}
+            actions={!loading && !error ? (
+                <Button variant="outlined" size="xs" onClick={() => setShowDetailModal(true)}>
+                    {t("page.profile.stats.viewDetails")}
+                </Button>
+            ) : undefined}
+        >
+            {loading && <LoadingState className="min-h-[200px]" label={t("page.profile.stats.loadingPowerBonus")} />}
+            {!loading && error && <div className="py-8 text-center type-body-m text-error">{error}</div>}
 
             {!loading && !error && (
                 <div className="space-y-4">
@@ -334,17 +329,18 @@ export default function PowerBonusDetail({
                     size="xl"
                 >
                     <div className="space-y-5">
-                        <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4 space-y-3">
-                            <h3 className="text-sm font-bold text-slate-700">{t("page.profile.stats.unitCharacterBonusBreakdown")}</h3>
+                        <section className="rounded-md3-lg bg-surface-container-high p-3 sm:p-4 space-y-3">
+                            <h3 className="type-title-s text-on-surface">{t("page.profile.stats.unitCharacterBonusBreakdown")}</h3>
                             {renderUnitCards(true)}
                         </section>
-                        <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4 space-y-3">
-                            <h3 className="text-sm font-bold text-slate-700">{t("page.profile.stats.attributeBonus")}</h3>
+                        <section className="rounded-md3-lg bg-surface-container-high p-3 sm:p-4 space-y-3">
+                            <h3 className="type-title-s text-on-surface">{t("page.profile.stats.attributeBonus")}</h3>
                             {renderAttrCards()}
                         </section>
                     </div>
                 </Modal>
             )}
+        </SectionCard>
         </div>
     );
 }

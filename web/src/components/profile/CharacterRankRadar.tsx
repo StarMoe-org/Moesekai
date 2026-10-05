@@ -5,6 +5,9 @@ import ReactECharts from "echarts-for-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
+import { SectionCard, cn } from "@/components/md3";
+import { mdRadar } from "@/components/md3/icons";
+import { useProfileChartColors } from "./useProfileChartColors";
 
 type UnitKey = "overview" | "ln" | "mmj" | "vbs" | "wxs" | "n25" | "vs";
 
@@ -27,6 +30,7 @@ const unitColor = (id: number) => id >= 21 ? UNIT_CONFIG.vs.color : id <= 4 ? UN
 export default function CharacterRankRadar({ characterRanks }: Props) {
     const { themeColor } = useTheme();
     const { t } = useI18n();
+    const colors = useProfileChartColors();
     const [unit, setUnit] = useState<UnitKey>("overview");
     const [mobile, setMobile] = useState(false);
     const [points, setPoints] = useState<Array<{ x: number; y: number; lx: number; ly: number; color: string; value: number }>>([]);
@@ -63,10 +67,10 @@ export default function CharacterRankRadar({ characterRanks }: Props) {
             center: ["50%", "54%"],
             radius: mobile ? (unit === "overview" ? "58%" : "64%") : (unit === "overview" ? "67%" : "74%"),
             splitNumber: 10,
-            axisName: { color: "#6e6e6e", fontSize: mobile ? (unit === "overview" ? 9 : 10) : (unit === "overview" ? 10 : 12), fontWeight: 700 },
-            splitLine: { lineStyle: { color: "rgba(110,110,110,0.15)" } },
-            splitArea: { areaStyle: { color: ["rgba(200,224,227,0.2)", "rgba(200,224,227,0.35)"] } },
-            axisLine: { lineStyle: { color: "rgba(110,110,110,0.25)" } },
+            axisName: { color: colors.onSurfaceVariant, fontSize: mobile ? (unit === "overview" ? 9 : 10) : (unit === "overview" ? 10 : 12), fontWeight: 700 },
+            splitLine: { lineStyle: { color: `${colors.outlineVariant}66` } },
+            splitArea: { areaStyle: { color: [`${colors.surfaceContainer}66`, `${colors.surfaceContainerHigh}aa`] } },
+            axisLine: { lineStyle: { color: `${colors.outlineVariant}aa` } },
         },
         series: [{
             type: "radar",
@@ -77,7 +81,7 @@ export default function CharacterRankRadar({ characterRanks }: Props) {
                 symbol: "none",
             }],
         }],
-    }), [orderedIds, chartData, unit, mobile, themeColor, t]);
+    }), [orderedIds, chartData, unit, mobile, themeColor, t, colors]);
 
     const refreshOverlay = useCallback(() => {
         const chart = chartRef.current?.getEchartsInstance();
@@ -120,13 +124,8 @@ export default function CharacterRankRadar({ characterRanks }: Props) {
     }, [chartData, orderedIds, unit, mobile]);
 
     return (
-        <div id="profile-character-related" className="scroll-mt-20 glass-card p-5 sm:p-6 rounded-2xl h-full">
-            <div className="mb-4">
-                <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                    <span className="w-1.5 h-6 rounded-full" style={{ backgroundColor: themeColor }}></span>
-                    {t("page.profile.stats.characterRank")}
-                </h2>
-            </div>
+        <div id="profile-character-related" className="h-full scroll-mt-20">
+        <SectionCard className="h-full" icon={mdRadar} title={t("page.profile.stats.characterRank")}>
 
             <div className={`mb-5 ${mobile ? "" : "overflow-x-auto snap-x snap-mandatory"}`}>
                 <div className={mobile ? "grid grid-cols-7 gap-1.5" : "flex gap-3 min-w-max pb-1"}>
@@ -136,17 +135,14 @@ export default function CharacterRankRadar({ characterRanks }: Props) {
                             <button
                                 key={k}
                                 onClick={() => setUnit(k)}
-                                className={`${mobile ? "p-1 rounded-lg min-w-0" : "p-1.5 rounded-xl shrink-0 snap-start"} border flex items-center justify-center transition-all ${active
-                                    ? "bg-white"
-                                    : "bg-white/70 border-slate-200 text-slate-500 hover:border-slate-300"
-                                    }`}
-                                style={active
-                                    ? {
-                                        color: themeColor,
-                                        borderColor: themeColor,
-                                        boxShadow: `0 0 0 2px ${themeColor}1f`,
-                                    }
-                                    : undefined}
+                                aria-pressed={active}
+                                className={cn(
+                                    "state-layer focus-ring flex items-center justify-center border transition-colors duration-200 ease-md3-standard",
+                                    mobile ? "min-w-0 rounded-md3-sm p-1" : "shrink-0 snap-start rounded-md3-md p-1.5",
+                                    active
+                                        ? "border-primary bg-secondary-container text-on-secondary-container"
+                                        : "border-outline-variant bg-surface-container text-on-surface-variant",
+                                )}
                                 title={t(u.labelKey)}
                             >
                                 <div className={`${mobile ? "w-6 h-6" : "w-8 h-8"} relative flex items-center justify-center`}>
@@ -174,12 +170,13 @@ export default function CharacterRankRadar({ characterRanks }: Props) {
                 <svg className="absolute inset-0 pointer-events-none" width={size.width} height={size.height}>
                     {points.map((p, i) => (
                         <g key={i}>
-                            <circle cx={p.x} cy={p.y} r={mobile ? 2.5 : 4.5} fill={p.color} stroke="#fff" strokeWidth={2} />
-                            <text x={p.lx} y={p.ly} fill="#4b5563" fontSize={mobile ? (unit === "overview" ? 10 : 11) : (unit === "overview" ? 12 : 13)} fontWeight={700} textAnchor="middle" dominantBaseline="middle">{p.value}</text>
+                            <circle cx={p.x} cy={p.y} r={mobile ? 2.5 : 4.5} fill={p.color} stroke={colors.surface} strokeWidth={2} />
+                            <text x={p.lx} y={p.ly} fill={colors.onSurfaceVariant} fontSize={mobile ? (unit === "overview" ? 10 : 11) : (unit === "overview" ? 12 : 13)} fontWeight={700} textAnchor="middle" dominantBaseline="middle">{p.value}</text>
                         </g>
                     ))}
                 </svg>
             </div>
+        </SectionCard>
         </div>
     );
 }
