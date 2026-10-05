@@ -34,6 +34,8 @@ export const enUSMessages = {
             copy: "Copy",
             download: "Download",
             share: "Share",
+            play: "Play",
+            pause: "Pause",
         },
         imageActions: {
             previewNotReady: "The preview image is not ready yet. Please try again later.",
@@ -196,11 +198,6 @@ export const enUSMessages = {
             collapse: "Tap to collapse",
             expand: "Tap to expand filters",
             openQuickFilter: "Open quick filters",
-            drawerHintTitle: "Filters Moved to Left Side",
-            drawerHintTag: "Click left to open",
-            drawerHintBody: "Filters are now integrated into the left side. Welcome to try the new version!",
-            drawerHintActionOpen: "Try It Now",
-            drawerHintDismiss: "Got it",
             unit: "Unit",
             character: "Character",
             all: "All",
@@ -640,6 +637,7 @@ export const enUSMessages = {
                 support: "Support",
                 about: "About",
             },
+            scrollToTop: "Back to top",
         },
         breadcrumb: {
             expandNavigation: "Expand navigation",
@@ -1674,6 +1672,7 @@ export const enUSMessages = {
                 mangaEssay1: "This four-frame comic continues the funny and casual interactions among characters in Project Sekai. The translation carefully preserves character-specific speech particles and emotional quirks.",
                 mangaEssay2: "As an official Project Sekai web comic release, this episode serves not only as a fun side story for in-game events, but also as great material for discovering hidden traits of the characters.",
                 mangaEssayFooter: "* The translated version is provided by MoeSekai, please do not use for commercial purposes without authorization.",
+                lineProgress: "Line {current} / {total}",
             },
             snippet: {
                 fullScreenText: "Full-screen Text",
@@ -4704,6 +4703,8 @@ export const enUSMessages = {
             viewOriginalPost: "View Original Post",
             imageAlt: "Episode {id} {title}",
             unknownError: "Unknown error",
+            chineseVersion: "Chinese version",
+            japaneseOriginal: "Japanese original",
         },
         assetViewer: {
             title: "Asset Browser",
@@ -4760,6 +4761,8 @@ export const enUSMessages = {
                 sec5Content: "We reserve the right of final interpretation. For sites abusing bandwidth, omitting attribution, or violating terms, we reserve the right to block their Referer, IP, or domain without prior notice.",
                 agree: "Agree",
             },
+            fileCountValue: "{count} files",
+            formats: "Formats",
         },
         assetVersions: {
             title: "Asset Version",

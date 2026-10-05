@@ -580,6 +580,8 @@ export const zhTWPageSecondaryB = {
         viewOriginalPost: "查看原始貼文",
         imageAlt: "第 {id} 話 {title}",
         unknownError: "未知錯誤",
+        chineseVersion: "中文版",
+        japaneseOriginal: "日文原版",
     },
     assetViewer: {
         title: "資源瀏覽器",
@@ -636,6 +638,8 @@ export const zhTWPageSecondaryB = {
             sec5Content: "本站保留解釋與修訂本使用者協議的權利。若第三方網站惡意消耗流量、未註明來源或濫用本站 CDN 服務，本站有權不經事前通知，透過封鎖其 Referer、IP 或網域等方式直接阻擋存取。",
             agree: "同意",
         },
+        fileCountValue: "{count} 個檔案",
+        formats: "格式",
     },
     best30Share: {
         title: "Best30 分享圖片",

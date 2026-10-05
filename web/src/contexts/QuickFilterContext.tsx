@@ -17,8 +17,6 @@ import { useIsLgScreen } from "@/hooks/useMediaQuery";
 const FILTER_DRAWER_STORAGE_KEY = "filter_drawer_open";
 const FILTER_DRAWER_EVENT = "moesekai_filter_drawer_change";
 
-export const FILTER_DRAWER_HINT_STORAGE_KEY = "moesekai_filter_drawer_hint_seen";
-
 /** `null` means "the user never touched the drawer in this session". */
 type UserPreference = boolean | null;
 

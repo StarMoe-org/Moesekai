@@ -31,7 +31,9 @@ export const koKRMessages = {
             reset: "초기화",
             copy: "복사",
             download: "다운로드",
-            share: "공유"
+            share: "공유",
+            play: "재생",
+            pause: "일시정지",
         },
         imageActions: {
             previewNotReady: "미리보기 이미지가 아직 준비되지 않았습니다. 나중에 다시 시도해 주세요.",
@@ -193,11 +195,6 @@ export const koKRMessages = {
             collapse: "접으려면 클릭하세요.",
             expand: "필터를 확장하려면 클릭하세요.",
             openQuickFilter: "퀵 필터 열기",
-            drawerHintTitle: "필터가 화면 왼쪽으로 이동했습니다",
-            drawerHintTag: "왼쪽을 클릭하여 열기",
-            drawerHintBody: "필터 기능이 화면 왼쪽으로 통합되었습니다. 새로운 버전을 경험해 보세요.",
-            drawerHintActionOpen: "지금 사용해보기",
-            drawerHintDismiss: "확인",
             unit: "그룹",
             character: "역할",
             all: "모두",
@@ -636,7 +633,8 @@ export const koKRMessages = {
                 myMaterials: "리소스 쿼리",
                 support: "지원하다",
                 about: "소개"
-            }
+            },
+            scrollToTop: "맨 위로",
         },
         breadcrumb: {
             expandNavigation: "탐색 확장",
@@ -1670,7 +1668,8 @@ export const koKRMessages = {
                 mangaEssayTitle: "번역 에세이 및 주석",
                 mangaEssay1: "이 4컷짜리 만화는 월드 플랜의 등장인물들 사이의 흥미롭고 일상적인 농담을 계속합니다. 번역하는 동안 우리는 각 캐릭터의 독특한 모달 입자와 츤데레/생생한 감정을 유지하는 데 중점을 두었습니다.",
                 mangaEssay2: "공식 월드 프로젝트에 연재된 작품은 현재 게임 내 활동 장이나 일상적인 상호 작용에 대한 흥미로운 보충 자료일 뿐만 아니라, 캐릭터의 숨겨진 특성(예: 수줍음, 타고난 멍청함 등)을 발견하는 데 탁월한 자료이기도 합니다.",
-                mangaEssayFooter: "* 번역본은 모에세카이에서 제작한 것이므로, 무단으로 상업적인 목적으로 사용하지 마시기 바랍니다."
+                mangaEssayFooter: "* 번역본은 모에세카이에서 제작한 것이므로, 무단으로 상업적인 목적으로 사용하지 마시기 바랍니다.",
+                lineProgress: "{current} / {total}번째 줄",
             },
             snippet: {
                 fullScreenText: "전체 화면 텍스트",
@@ -4724,7 +4723,9 @@ export const koKRMessages = {
             source: "소스",
             viewOriginalPost: "원본 게시물 보기",
             imageAlt: "{id}장 {title}장",
-            unknownError: "알 수 없는 오류"
+            unknownError: "알 수 없는 오류",
+            chineseVersion: "중국어판",
+            japaneseOriginal: "일본어 원작",
         },
         assetViewer: {
             title: "자산 브라우저",
@@ -4780,7 +4781,9 @@ export const koKRMessages = {
                 sec5Title: "최종해석권 및 블랙리스트",
                 sec5Content: "본 사이트는 본 사용자 계약의 최종 해석권을 보유합니다. 악의적으로 트래픽을 훔치거나, 소스를 표시하지 않거나, 당사의 CDN 서비스를 남용하는 제3자 사이트의 경우, 본 사이트는 추천자, IP 또는 도메인 이름을 차단하여 경고 없이 직접 차단할 권리가 있습니다.",
                 agree: "동의하다"
-            }
+            },
+            fileCountValue: "파일 {count}개",
+            formats: "형식",
         },
         best30Share: {
             title: "베스트30 사진 공유",

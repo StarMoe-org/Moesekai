@@ -168,7 +168,7 @@ for (const locale of LOCALES) {
     }
     for (const [file, entries] of byFile) {
         let src = fs.readFileSync(file, "utf8");
-        const step = /\n  [a-zA-Z]/.test(src.slice(0, 400)) && !/\n    [a-zA-Z]/.test(src.slice(0, 200)) ? "  " : "    ";
+        const step = src.match(/^([ \t]+)\w+\s*:/m)?.[1] ?? "    ";
         for (const [key, value] of entries) {
             let segs = key.split(".");
             // zh-TW split files: strip the root segment represented by the file itself

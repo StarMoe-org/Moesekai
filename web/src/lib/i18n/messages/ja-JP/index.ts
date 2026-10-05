@@ -33,7 +33,9 @@ export const jaJPMessages = {
       reset: 'リセット',
       copy: 'コピー',
       download: 'ダウンロード',
-      share: '共有'
+      share: '共有',
+      play: "再生",
+      pause: "一時停止",
     },
     imageActions: {
       previewNotReady: 'プレビュー画像はまだ準備できていません。しばらくしてからもう一度お試しください。',
@@ -195,11 +197,6 @@ export const jaJPMessages = {
       collapse: 'タップして折りたたむ',
       expand: 'タップしてフィルターを展開',
       openQuickFilter: 'クイックフィルターを開く',
-      drawerHintTitle: 'フィルターが左側に新登場',
-      drawerHintTag: '左側をクリックして開く',
-      drawerHintBody: 'フィルター機能が画面左側に統合されました。ぜひ新機能をお試しください。',
-      drawerHintActionOpen: '使ってみる',
-      drawerHintDismiss: '了解',
       unit: 'ユニット',
       character: 'キャラクター',
       all: 'すべて',
@@ -638,7 +635,8 @@ export const jaJPMessages = {
         myMaterials: '素材確認',
         support: 'サポート',
         about: '概要'
-      }
+      },
+      scrollToTop: "トップへ戻る",
     },
     breadcrumb: {
       expandNavigation: 'ナビゲーションを展開',
@@ -1672,7 +1670,8 @@ export const jaJPMessages = {
         mangaEssayTitle: '翻訳解説とメタデータ',
         mangaEssay1: 'この4コマ漫画は、プロジェクトセカイのキャラクターたちの面白く日常的な掛け合いを描いています。翻訳時には、各キャラクター固有の語尾や感情の起伏を大切に表現しています。',
         mangaEssay2: 'プロセカ公式の4コマ漫画として、このエピソードはゲーム内イベントの楽しさを補完するだけでなく、キャラクターたちの新たな一面を発見する素晴らしい素材となっています。',
-        mangaEssayFooter: '＊翻訳版は MoeSekai 提供によるものです。無断での商用利用はご遠慮ください。'
+        mangaEssayFooter: '＊翻訳版は MoeSekai 提供によるものです。無断での商用利用はご遠慮ください。',
+        lineProgress: "{current} / {total} 行目",
       },
       snippet: {
         fullScreenText: 'Full-screen Text',
@@ -4728,7 +4727,9 @@ export const jaJPMessages = {
       source: 'Source',
       viewOriginalPost: 'View Original Post',
       imageAlt: 'Episode {id} {title}',
-      unknownError: '不明なエラー'
+      unknownError: '不明なエラー',
+      chineseVersion: "中国語版",
+      japaneseOriginal: "日本語原作",
     },
     assetViewer: {
       title: 'アセットブラウザ',
@@ -4784,7 +4785,9 @@ export const jaJPMessages = {
         sec5Title: '最終解釈権とアクセス制限',
         sec5Content: '当サイトは本規約の最終解釈権を留保します。転載明記のないサイトやトラフィックを濫用するサイトに対しては、予告なく Referer、IP、ドメインをブロックする権利を有します。',
         agree: '同意する',
-      }
+      },
+      fileCountValue: "{count} ファイル",
+      formats: "形式",
     },
     assetVersions: {
       title: 'バージョン更新',

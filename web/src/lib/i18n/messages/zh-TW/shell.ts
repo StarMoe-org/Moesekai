@@ -67,6 +67,7 @@ export const zhTWLayout = {
             support: "支持",
             about: "關於",
         },
+        scrollToTop: "回到頂部",
     },
     breadcrumb: {
         expandNavigation: "展開導覽",

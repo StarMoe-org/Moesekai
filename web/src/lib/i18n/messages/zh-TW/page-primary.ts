@@ -783,6 +783,7 @@ export const zhTWPagePrimary = {
                 mangaEssay1: "這一話四格漫畫延續了世計劃中角色之間有趣又日常的玩梗橋段。翻譯時著重保留了各個角色特有的語氣助詞和傲嬌/活潑情緒。",
                 mangaEssay2: "連載於世界計劃官方的該話作品，不僅是對目前遊戲內活動章節或者日常互動的趣味補充，更是發掘角色隱藏屬性（如害羞、天然呆等）的絕佳材料。",
                 mangaEssayFooter: "* 翻譯版本來自 MoeSekai，未經授權請勿商用。",
+                lineProgress: "第 {current} / {total} 行",
             },
             snippet: {
                 fullScreenText: "全螢幕文字",

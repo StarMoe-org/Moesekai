@@ -1,7 +1,0 @@
-{
-	"zh-CN": { "page.story.reader.lineProgress": "第 {current} / {total} 行" },
-	"zh-TW": { "page.story.reader.lineProgress": "第 {current} / {total} 行" },
-	"en-US": { "page.story.reader.lineProgress": "Line {current} / {total}" },
-	"ja-JP": { "page.story.reader.lineProgress": "{current} / {total} 行目" },
-	"ko-KR": { "page.story.reader.lineProgress": "{current} / {total}번째 줄" }
-}

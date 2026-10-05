@@ -1,7 +1,0 @@
-{
-  "zh-CN": { "common.action.play": "播放", "common.action.pause": "暂停" },
-  "zh-TW": { "common.action.play": "播放", "common.action.pause": "暫停" },
-  "en-US": { "common.action.play": "Play", "common.action.pause": "Pause" },
-  "ja-JP": { "common.action.play": "再生", "common.action.pause": "一時停止" },
-  "ko-KR": { "common.action.play": "재생", "common.action.pause": "일시정지" }
-}

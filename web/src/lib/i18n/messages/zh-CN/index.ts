@@ -34,6 +34,8 @@ export const zhCNMessages = {
             copy: "复制",
             download: "下载",
             share: "分享",
+            play: "播放",
+            pause: "暂停",
         },
         imageActions: {
             previewNotReady: "预览图片尚未准备好，请稍后重试",
@@ -195,11 +197,6 @@ export const zhCNMessages = {
             collapse: "点击收起",
             expand: "点击展开筛选",
             openQuickFilter: "打开快捷筛选",
-            drawerHintTitle: "筛选器现已移至左侧",
-            drawerHintTag: "点击左侧打开",
-            drawerHintBody: "筛选功能已整合至页面左侧，欢迎体验新版。",
-            drawerHintActionOpen: "立即体验",
-            drawerHintDismiss: "我知道了",
             unit: "团体",
             character: "角色",
             all: "全部",
@@ -639,6 +636,7 @@ export const zhCNMessages = {
                 support: "支持",
                 about: "关于",
             },
+            scrollToTop: "回到顶部",
         },
         breadcrumb: {
             expandNavigation: "展开导航",
@@ -1673,6 +1671,7 @@ export const zhCNMessages = {
                 mangaEssay1: "这一话四格漫画延续了世计划中角色之间有趣又日常的玩梗桥段。翻译时着重保留了各个角色特有的语气助词和傲娇/活泼情绪。",
                 mangaEssay2: "连载于世界计划官方的该话作品，不仅是对当前游戏内活动章节或者日常互动的趣味补充，更是发掘角色隐藏属性（如害羞、天然呆等）的绝佳材料。",
                 mangaEssayFooter: "* 翻译版本来自 MoeSekai，未经授权请勿商用。",
+                lineProgress: "第 {current} / {total} 行",
             },
             snippet: {
                 fullScreenText: "全屏文字",
@@ -4703,6 +4702,8 @@ export const zhCNMessages = {
             viewOriginalPost: "查看原帖",
             imageAlt: "第{id}话 {title}",
             unknownError: "未知错误",
+            chineseVersion: "中文版",
+            japaneseOriginal: "日文原版",
         },
         assetViewer: {
             title: "资产浏览器",
@@ -4759,6 +4760,8 @@ export const zhCNMessages = {
                 sec5Content: "本站保留本用户协议的最终解释权。对于恶意盗刷流量、未注明来源、或滥用本站 CDN 服务的第三方站点，本站有权无预警通过屏蔽其 Referer、IP 或域名等手段对其进行直接阻断。",
                 agree: "同意",
             },
+            fileCountValue: "{count} 个文件",
+            formats: "格式",
         },
         assetVersions: {
             title: "版本更新记录",
