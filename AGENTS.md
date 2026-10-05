@@ -15,9 +15,13 @@
 
 ### 类型定义 — `web/src/types/`
 
-## 设计规范
+## 设计规范 — Material 3 Expressive
 
-### 请参考 `web/src/app/design-system/page.tsx`
+- 规范与迁移规则：`web/docs/md3-migration.md`；组件目录与示例：`/design-system`（`web/src/app/design-system/client.tsx`）。
+- 配色为 MD3 Dynamic Color：角色主题色作种子（`web/src/lib/theme-seeds.json`），由 `bun run generate:md3` 生成 `src/styles/md3-schemes.css`；运行时只切换 `<html data-seed data-theme>`。
+- 页面代码只用语义 token：`bg-surface-container*`、`text-on-surface(-variant)`、`bg-primary text-on-primary`、`border-outline-variant` 等；形状 `rounded-md3-*`；字体 `type-{display|headline|title|body|label}-{l|m|s}`；交互 `state-layer focus-ring`。
+- 禁止新增 `slate-*` / `white` / `dark:` / `miku` / glass / island / `backdrop-blur` 类；`src/styles/md3-legacy-bridge.css` 仅为过渡兼容层。
+- 图标：`import { mdSearch } from "@/components/md3/icons"` + `<Icon path={mdSearch} />`（Material Symbols Rounded，生成脚本按导入自动打包）。
 
 
 ## 页面模块约定
@@ -47,7 +51,9 @@ web/src/app/<module>/
 | 外部链接 | `components/ExternalLink.tsx` (自动添加离站确认) |
 | 卡牌缩略图 | `components/cards/SekaiCardThumbnail.tsx` |
 | 页面布局 | `components/MainLayout.tsx` |
-| 加载器 | `.loading-spinner` CSS 类 |
+| MD3 组件原语 | `components/md3`（`Button` / `IconButton` / `Fab` / `Card` / `Surface` / `Chip` / `TextField` / `Switch` / `Checkbox` / `Radio` / `Slider` / `SegmentedButton` / `Tabs` / `Dialog` / `BottomSheet` / `SideSheet` / `Menu` / `List` / `Snackbar` / `Tooltip`） |
+| 弹窗 | `components/common/Modal.tsx`（基于 MD3 `Dialog`）或直接使用 `Dialog` |
+| 加载器 | `components/md3` 的 `LoadingIndicator` / `CircularProgress` / `LinearProgress`（旧 `.loading-spinner` 仅兼容） |
 
 ## 滚动位置保存 — `hooks/useScrollRestore.ts`
 
