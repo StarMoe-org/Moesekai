@@ -162,24 +162,24 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
     };
 
     const rowBg = entry.isNewEntry
-        ? "bg-sky-50/40 "
+        ? "bg-secondary-container/40 "
         : entry.scoreDelta > 0
-            ? "bg-emerald-50/30 "
+            ? "bg-tertiary-container/30 "
             : entry.scoreDelta < 0
-                ? "bg-rose-50/30 "
+                ? "bg-error-container/30 "
                 : isExtendedTier
                     ? "bg-surface-container-low "
                     : entry.rankDelta > 0
-                        ? "bg-emerald-50/30 "
+                        ? "bg-tertiary-container/30 "
                         : entry.rankDelta < 0
-                            ? "bg-rose-50/30 "
+                            ? "bg-error-container/30 "
                             : "";
 
     // Score color reflects movement when a change exists.
     const scoreColorClass = hasCurrentChange
         ? entry.scoreDelta > 0
-            ? "text-emerald-600 "
-            : "text-rose-600 "
+            ? "text-tertiary "
+            : "text-error "
         : "text-on-surface";
 
     const trackedClasses = isTracked ? "ring-2 ring-primary shadow-elev-2 z-20 rounded-md3-md" : "";
@@ -204,8 +204,8 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                         transition={{ duration: 1.5, ease: "easeOut" }}
                         className={`absolute inset-0 pointer-events-none z-0 ${
                             flashType === "up"
-                                ? "bg-emerald-400/20 "
-                                : "bg-rose-400/20 "
+                                ? "bg-tertiary/20 "
+                                : "bg-error/20 "
                         }`}
                     />
                 )}
@@ -223,7 +223,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                     )}
                     {isStale && (
                         <div className="mt-0.5 inline-flex items-center gap-0.5 rounded-full bg-tertiary-container px-1 py-0.5 text-[7px] font-bold text-on-tertiary-container" title={t("page.realtimeRanking.list.staleTitle")}>
-                            <span className="h-1 w-1 animate-pulse rounded-full bg-amber-500" />
+                            <span className="h-1 w-1 animate-pulse rounded-full bg-on-tertiary-container" />
                             {t("page.realtimeRanking.list.stale")}
                         </div>
                     )}
@@ -233,7 +233,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                             {/* Mobile: also show the 1H bubble in the rank column. */}
                             {currentHourChurn > 0 && (
                                 <span
-                                    className="sm:hidden inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-primary tabular-nums cursor-help"
+                                    className="sm:hidden inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container tabular-nums cursor-help"
                                     title={t("page.realtimeRanking.list.currentHourChurnTitle")}
                                 >
                                     {currentHourChurn}
@@ -243,8 +243,8 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                 onClick={() => setLocalExpanded((v) => !v)}
                                 className={`inline-flex items-center justify-center w-5 h-5 rounded-full transition-colors ${
                                     localExpanded
-                                        ? "bg-primary-container text-primary"
-                                        : "text-outline hover:bg-primary-container hover:text-primary "
+                                        ? "bg-primary-container text-on-primary-container"
+                                        : "text-outline hover:bg-primary-container hover:text-on-primary-container "
                                 }`}
                                 title={localExpanded ? t("page.realtimeRanking.list.collapseChurn") : t("page.realtimeRanking.list.expandChurn")}
                             >
@@ -296,10 +296,10 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                             e.stopPropagation();
                                             onTrackToggle(entry.userId);
                                         }}
-                                        className={`inline-flex items-center justify-center p-0.5 rounded-md3-xs transition-all duration-200 hover:bg-primary-container ${
+                                        className={`inline-flex items-center justify-center p-0.5 rounded-md3-xs transition-all duration-200 hover:bg-primary-container hover:text-on-primary-container ${
                                             isTracked
                                                 ? "text-primary"
-                                                : "text-outline hover:text-primary "
+                                                : "text-outline"
                                         }`}
                                         title={isTracked ? t("page.realtimeRanking.untrackPlayer") : t("page.realtimeRanking.trackPlayer")}
                                     >
@@ -362,8 +362,8 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                     transition={{ type: "spring", stiffness: 350, damping: 20 }}
                                     className={`inline-flex items-center gap-0.5 rounded-md3-xs px-1 py-0.5 type-label-s ${
                                         displayScoreDelta > 0
-                                            ? "bg-emerald-100 text-emerald-700 "
-                                            : "bg-rose-100 text-rose-700 "
+                                            ? "bg-tertiary-container text-on-tertiary-container "
+                                            : "bg-error-container text-on-error-container "
                                     }`}
                                 >
                                     <span className="text-[8px]">{displayScoreDelta > 0 ? "▲" : "▼"}</span>
@@ -387,7 +387,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                         {/* Desktop: place the 1H bubble next to the score row when there is room. */}
                         {canShowChurnDetails && !showChurn && currentHourChurn > 0 && (
                             <span
-                                className="hidden sm:inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-primary tabular-nums cursor-help"
+                                className="hidden sm:inline-flex items-center justify-center rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container tabular-nums cursor-help"
                                 title={t("page.realtimeRanking.list.currentHourChurnTitle")}
                             >
                                 {currentHourChurn}
@@ -576,9 +576,9 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
     const upperEntry = findByRank(upperRank);
 
     const trendIcon = trend === "up"
-        ? <span className="text-emerald-500 font-black">▲</span>
+        ? <span className="text-tertiary font-black">▲</span>
         : trend === "down"
-            ? <span className="text-rose-500 font-black">▼</span>
+            ? <span className="text-error font-black">▼</span>
             : <span className="text-on-surface-variant">—</span>;
 
     return (
@@ -619,7 +619,7 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
                 {/* Parking button */}
                 <button
                     onClick={() => onShowParkingPeriods(userId)}
-                    className="shrink-0 rounded-md3-sm border border-outline-variant bg-surface-container-low px-2 py-1 type-label-s text-on-surface-variant transition-colors hover:border-primary/30 hover:bg-primary-container hover:text-primary"
+                    className="shrink-0 rounded-md3-sm border border-outline-variant bg-surface-container-low px-2 py-1 type-label-s text-on-surface-variant transition-colors hover:border-primary/30 hover:bg-primary-container hover:text-on-primary-container"
                 >
                     {t("page.realtimeRanking.churn.parking")}
                 </button>
@@ -633,14 +633,14 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
                 >
                 {/* Latest 1h churn */}
                 <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-[10px]">
-                    <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.churn1h")}</span>
-                    <span className="font-black text-primary tabular-nums">{churn1h}</span>
+                    <span className="font-medium text-on-primary-container">{t("page.realtimeRanking.churn.churn1h")}</span>
+                    <span className="font-black text-on-primary-container tabular-nums">{churn1h}</span>
                 </span>
 
                 {/* Latest 20min×3 churn */}
-                <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-sky-100 px-1.5 py-0.5 text-[10px]">
-                    <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.churn20min3")}</span>
-                    <span className="font-black text-sky-600 tabular-nums">{churn20min * 3}</span>
+                <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 text-[10px]">
+                    <span className="font-medium text-on-secondary-container">{t("page.realtimeRanking.churn.churn20min3")}</span>
+                    <span className="font-black text-on-secondary-container tabular-nums">{churn20min * 3}</span>
                 </span>
 
                 <span className="shrink-0 text-outline select-none px-0.5">·</span>
@@ -655,7 +655,7 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
                     {/* Latest 20min×3 speed */}
                 <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
                         <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed20min3")}</span>
-                    <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600" : trend === "down" ? "text-rose-500" : "text-on-surface"}`}>
+                    <span className={`font-black tabular-nums ${trend === "up" ? "text-tertiary" : trend === "down" ? "text-error" : "text-on-surface"}`}>
                         {fmtSpeed(speed20min3)}
                     </span>
                 </span>
@@ -670,18 +670,18 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
                             const slower = spd != null && speed1h < spd;
                             return (
                                 <span className={`shrink-0 inline-flex items-center gap-1 rounded-md3-xs px-1.5 py-0.5 type-label-s ${
-                                    faster ? "bg-emerald-100 " :
-                                    slower ? "bg-rose-100 " :
+                                    faster ? "bg-tertiary-container " :
+                                    slower ? "bg-error-container " :
                                     "bg-surface-container "
                                 }`}>
-                                    <span className={`font-medium ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
+                                    <span className={`font-medium ${faster ? "text-on-tertiary-container" : slower ? "text-on-error-container" : "text-on-surface-variant"}`}>
                                         T{lowerRank}
                                     </span>
-                                    <span className={`tabular-nums ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
+                                    <span className={`tabular-nums ${faster ? "text-on-tertiary-container" : slower ? "text-on-error-container" : "text-on-surface-variant"}`}>
                                         {spd != null ? fmtSpeed(spd) : "—"}
                                     </span>
-                                    {faster && <span className="text-emerald-500 text-[9px]">↑</span>}
-                                    {slower && <span className="text-rose-500 text-[9px]">↓</span>}
+                                    {faster && <span className="text-on-tertiary-container text-[9px]">↑</span>}
+                                    {slower && <span className="text-on-error-container text-[9px]">↓</span>}
                                 </span>
                             );
                         })()}
@@ -691,18 +691,18 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
                             const slower = spd != null && speed1h < spd;
                             return (
                                 <span className={`shrink-0 inline-flex items-center gap-1 rounded-md3-xs px-1.5 py-0.5 type-label-s ${
-                                    faster ? "bg-emerald-100 " :
-                                    slower ? "bg-rose-100 " :
+                                    faster ? "bg-tertiary-container " :
+                                    slower ? "bg-error-container " :
                                     "bg-surface-container "
                                 }`}>
-                                    <span className={`font-medium ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
+                                    <span className={`font-medium ${faster ? "text-on-tertiary-container" : slower ? "text-on-error-container" : "text-on-surface-variant"}`}>
                                         T{upperRank}
                                     </span>
-                                    <span className={`tabular-nums ${faster ? "text-emerald-700" : slower ? "text-rose-600" : "text-on-surface-variant"}`}>
+                                    <span className={`tabular-nums ${faster ? "text-on-tertiary-container" : slower ? "text-on-error-container" : "text-on-surface-variant"}`}>
                                         {spd != null ? fmtSpeed(spd) : "—"}
                                     </span>
-                                    {faster && <span className="text-emerald-500 text-[9px]">↑</span>}
-                                    {slower && <span className="text-rose-500 text-[9px]">↓</span>}
+                                    {faster && <span className="text-on-tertiary-container text-[9px]">↑</span>}
+                                    {slower && <span className="text-on-error-container text-[9px]">↓</span>}
                                 </span>
                             );
                         })()}
@@ -729,9 +729,9 @@ function TierLineChurnRow({ churnEntry }: { churnEntry: ChurnRankingEntry }) {
     const activityCount = churnEntry.recent_activity?.count ?? 0;
 
     const trendIcon = trend === "up"
-        ? <span className="text-emerald-500 font-black">▲</span>
+        ? <span className="text-tertiary font-black">▲</span>
         : trend === "down"
-            ? <span className="text-rose-500 font-black">▼</span>
+            ? <span className="text-error font-black">▼</span>
             : <span className="text-on-surface-variant">—</span>;
 
     return (
@@ -758,7 +758,7 @@ function TierLineChurnRow({ churnEntry }: { churnEntry: ChurnRankingEntry }) {
                 {/* Latest 20min×3 speed */}
                     <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-surface-container px-1.5 py-0.5 text-[10px]">
                     <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.speed20min3")}</span>
-                        <span className={`font-black tabular-nums ${trend === "up" ? "text-emerald-600" : trend === "down" ? "text-rose-500" : "text-on-surface"}`}>
+                        <span className={`font-black tabular-nums ${trend === "up" ? "text-tertiary" : trend === "down" ? "text-error" : "text-on-surface"}`}>
                             {fmtSpeed(speed20min3)}
                         </span>
                     </span>
@@ -767,9 +767,9 @@ function TierLineChurnRow({ churnEntry }: { churnEntry: ChurnRankingEntry }) {
                         <>
                             <span className="shrink-0 text-outline select-none px-0.5">·</span>
                             {/* Recent sample count */}
-                            <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-sky-100 px-1.5 py-0.5 text-[10px]">
-                                <span className="font-medium text-on-surface-variant">{t("page.realtimeRanking.churn.recentSamples")}</span>
-                                <span className="font-black text-sky-600 tabular-nums">{activityCount}</span>
+                            <span className="shrink-0 inline-flex items-center gap-1 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 text-[10px]">
+                                <span className="font-medium text-on-secondary-container">{t("page.realtimeRanking.churn.recentSamples")}</span>
+                                <span className="font-black text-on-secondary-container tabular-nums">{activityCount}</span>
                             </span>
                         </>
                     )}

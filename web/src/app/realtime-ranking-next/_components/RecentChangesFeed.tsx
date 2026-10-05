@@ -36,8 +36,8 @@ function FeedRow({ change, now }: { change: ChurnScoreChangeV2; now: number }) {
             className="flex items-center justify-between gap-2 rounded-lg bg-surface-container-low px-3 py-1.5"
         >
             <span className="flex items-center gap-1.5 text-xs">
-                <span className={`text-[10px] ${positive ? "text-emerald-500" : "text-rose-500"}`}>{positive ? "▲" : "▼"}</span>
-                <span className={`font-black tabular-nums ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+                <span className={`text-[10px] ${positive ? "text-tertiary" : "text-error"}`}>{positive ? "▲" : "▼"}</span>
+                <span className={`font-black tabular-nums ${positive ? "text-tertiary" : "text-error"}`}>
                     {positive ? "+" : ""}{formatNumber(change.delta)}
                 </span>
             </span>
@@ -80,7 +80,7 @@ export default function RecentChangesFeed({ changes, limit = 30 }: RecentChanges
             <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-black text-on-surface">{t("page.realtimeRankingNext.detail.feed.title")}</h2>
                 <div className="flex items-center gap-2 text-[11px]">
-                    <span className="rounded-full bg-primary-container px-2 py-0.5 font-black text-primary tabular-nums">
+                    <span className="rounded-full bg-primary-container px-2 py-0.5 font-black text-on-primary-container tabular-nums">
                         +{formatNumber(total1h)}
                     </span>
                     <span className="rounded-full bg-surface-container px-2 py-0.5 font-bold text-on-surface-variant tabular-nums">
