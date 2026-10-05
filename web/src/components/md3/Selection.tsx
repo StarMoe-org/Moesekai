@@ -196,7 +196,8 @@ export interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputEle
 }
 
 export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, showValue, formatValue, className, disabled, ...rest }: SliderProps) {
-    const pct = max === min ? 0 : ((value - min) / (max - min)) * 100;
+    const clampedValue = Math.max(min, Math.min(max, value));
+    const pct = max <= min ? 0 : ((clampedValue - min) / (max - min)) * 100;
     return (
         <span className={cn("group/slider relative flex h-11 w-full items-center", disabled && "opacity-38", className)}>
             {/* active track */}
@@ -214,7 +215,7 @@ export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, sho
             {/* handle */}
             <span
                 aria-hidden
-                className="absolute h-11 w-1 -translate-x-1/2 rounded-full bg-primary transition-[width] duration-100 group-active/slider:w-0.5"
+                className="absolute h-11 w-1 -translate-x-1/2 rounded-full bg-primary transition-[width] duration-100 group-active/slider:w-0.5 group-focus-within/slider:outline-3 group-focus-within/slider:outline-offset-2 group-focus-within/slider:outline-secondary"
                 style={{ left: `${pct}%` }}
             />
             {showValue && (
@@ -223,7 +224,7 @@ export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, sho
                     className="pointer-events-none absolute -top-10 -translate-x-1/2 scale-0 rounded-full bg-inverse-surface px-3 py-1.5 type-label-l text-inverse-on-surface opacity-0 transition-[opacity,transform] duration-150 group-focus-within/slider:scale-100 group-focus-within/slider:opacity-100 group-active/slider:scale-100 group-active/slider:opacity-100"
                     style={{ left: `${pct}%` }}
                 >
-                    {formatValue ? formatValue(value) : value}
+                    {formatValue ? formatValue(clampedValue) : clampedValue}
                 </span>
             )}
             <input
@@ -233,6 +234,7 @@ export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, sho
                 step={step}
                 value={value}
                 disabled={disabled}
+                aria-valuetext={formatValue?.(clampedValue)}
                 onChange={(e) => onValueChange(Number(e.target.value))}
                 className="relative z-10 m-0 h-full w-full cursor-pointer appearance-none bg-transparent opacity-0 focus-visible:opacity-0 disabled:cursor-not-allowed"
                 {...rest}

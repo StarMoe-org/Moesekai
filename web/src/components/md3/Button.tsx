@@ -143,7 +143,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     );
     if (href && !disabled) {
         return (
-            <LocalizedLink href={href} className={cls} {...linkProps}>
+            <LocalizedLink href={href} className={cls} {...rest as unknown as React.AnchorHTMLAttributes<HTMLAnchorElement>} {...linkProps}>
                 {content}
             </LocalizedLink>
         );
@@ -244,7 +244,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
     const path = selected && selectedIcon ? selectedIcon : icon;
     if (href && !disabled) {
         return (
-            <LocalizedLink href={href} className={cls} aria-label={label} title={title ?? label}>
+            <LocalizedLink href={href} className={cls} aria-label={label} title={title ?? label} {...rest as unknown as React.AnchorHTMLAttributes<HTMLAnchorElement>}>
                 <Icon path={path} size={s.icon} />
             </LocalizedLink>
         );

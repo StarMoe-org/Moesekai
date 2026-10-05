@@ -3,6 +3,7 @@ import React, { useLayoutEffect, useRef, useState } from "react";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck } from "./icons";
+import { isKeyboardEventComposing } from "@/lib/shortcuts";
 
 /* ==========================================================================
    SegmentedButton (M3): 2–5 options, single or multi select, 40px tall.
@@ -42,9 +43,33 @@ export type SegmentedButtonProps<T extends string> = SingleProps<T> | MultiProps
 
 const DENSITY = { 0: "h-10", [-1]: "h-9", [-2]: "h-8" } as const;
 
+function moveOptionFocus(e: React.KeyboardEvent<HTMLDivElement>, nodes: HTMLButtonElement[], vertical = false) {
+    if (e.defaultPrevented || isKeyboardEventComposing(e.nativeEvent)) return null;
+    const keys = vertical ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"] : ["ArrowLeft", "ArrowRight", "Home", "End"];
+    if (!keys.includes(e.key) || !nodes.length) return null;
+    const current = (e.target as HTMLElement).closest<HTMLButtonElement>("button");
+    const index = current ? nodes.indexOf(current) : -1;
+    const rtl = window.getComputedStyle(e.currentTarget).direction === "rtl";
+    const forward = e.key === "ArrowDown" || (e.key === "ArrowRight" ? !rtl : e.key === "ArrowLeft" && rtl);
+    const next = e.key === "Home" ? 0 : e.key === "End" ? nodes.length - 1
+        : index < 0 ? (forward ? 0 : nodes.length - 1) : (index + (forward ? 1 : -1) + nodes.length) % nodes.length;
+    e.preventDefault();
+    nodes[next].focus();
+    return next;
+}
+
+function onSegmentKeyDown<T extends string>(e: React.KeyboardEvent<HTMLDivElement>, props: SegmentedButtonProps<T>) {
+    if (props.multiple) return;
+    const nodes = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]:not([disabled])'));
+    const next = moveOptionFocus(e, nodes, true);
+    const option = next === null ? undefined : props.options.filter((opt) => !opt.disabled)[next];
+    if (option) props.onValueChange(option.value);
+}
+
 export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>) {
     const { options, className, showCheckmark = true, density = 0 } = props;
     const isSelected = (v: T) => (props.multiple ? props.value.includes(v) : props.value === v);
+    const tabStopValue = options.find((opt) => !opt.disabled && isSelected(opt.value))?.value ?? options.find((opt) => !opt.disabled)?.value;
     const toggle = (v: T) => {
         if (props.multiple) {
             const next = props.value.includes(v) ? props.value.filter((x) => x !== v) : [...props.value, v];
@@ -57,6 +82,7 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
         <div
             role={props.multiple ? "group" : "radiogroup"}
             aria-label={props["aria-label"]}
+            onKeyDown={(e) => onSegmentKeyDown(e, props)}
             className={cn("inline-flex w-full overflow-hidden rounded-full border border-outline", className)}
         >
             {options.map((opt, i) => {
@@ -69,6 +95,7 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
                         aria-checked={props.multiple ? undefined : selected}
                         aria-pressed={props.multiple ? selected : undefined}
                         disabled={opt.disabled}
+                        tabIndex={opt.disabled ? -1 : props.multiple || opt.value === tabStopValue ? 0 : -1}
                         onClick={() => toggle(opt.value)}
                         className={cn(
                             "state-layer focus-ring relative flex min-w-0 flex-1 items-center justify-center gap-2 px-3 type-label-l",
@@ -97,6 +124,7 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
 export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonProps<T>) {
     const { options, className, density = 0 } = props;
     const isSelected = (v: T) => (props.multiple ? props.value.includes(v) : props.value === v);
+    const tabStopValue = options.find((opt) => !opt.disabled && isSelected(opt.value))?.value ?? options.find((opt) => !opt.disabled)?.value;
     const toggle = (v: T) => {
         if (props.multiple) {
             const next = props.value.includes(v) ? props.value.filter((x) => x !== v) : [...props.value, v];
@@ -106,7 +134,7 @@ export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonPro
         }
     };
     return (
-        <div role={props.multiple ? "group" : "radiogroup"} aria-label={props["aria-label"]} className={cn("flex w-full gap-0.5", className)}>
+        <div role={props.multiple ? "group" : "radiogroup"} aria-label={props["aria-label"]} onKeyDown={(e) => onSegmentKeyDown(e, props)} className={cn("flex w-full gap-0.5", className)}>
             {options.map((opt, i) => {
                 const selected = isSelected(opt.value);
                 const first = i === 0;
@@ -119,6 +147,7 @@ export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonPro
                         aria-checked={props.multiple ? undefined : selected}
                         aria-pressed={props.multiple ? selected : undefined}
                         disabled={opt.disabled}
+                        tabIndex={opt.disabled ? -1 : props.multiple || opt.value === tabStopValue ? 0 : -1}
                         onClick={() => toggle(opt.value)}
                         className={cn(
                             "state-layer focus-ring relative flex min-w-0 flex-1 items-center justify-center gap-2 px-4 type-label-l",
@@ -194,16 +223,12 @@ export function Tabs<T extends string>({
         return () => ro.disconnect();
     }, [value, items, variant]);
 
+    const tabStopValue = items.find((item) => !item.disabled && item.value === value)?.value ?? items.find((item) => !item.disabled)?.value;
     const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-        const enabled = items.filter((i) => !i.disabled);
-        const idx = enabled.findIndex((i) => i.value === value);
-        const next = enabled[(idx + (e.key === "ArrowRight" ? 1 : -1) + enabled.length) % enabled.length];
-        if (next) {
-            e.preventDefault();
-            onValueChange(next.value);
-            listRef.current?.querySelector<HTMLElement>(`[data-tab-value="${CSS.escape(next.value)}"]`)?.focus();
-        }
+        const nodes = Array.from(e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]:not([disabled])'));
+        const index = moveOptionFocus(e, nodes);
+        const next = index === null ? undefined : items.filter((item) => !item.disabled)[index];
+        if (next) onValueChange(next.value);
     };
 
     return (
@@ -224,7 +249,7 @@ export function Tabs<T extends string>({
                             role="tab"
                             data-tab-value={item.value}
                             aria-selected={selected}
-                            tabIndex={selected ? 0 : -1}
+                            tabIndex={!item.disabled && item.value === tabStopValue ? 0 : -1}
                             disabled={item.disabled}
                             onClick={() => onValueChange(item.value)}
                             className={cn(

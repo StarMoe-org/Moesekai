@@ -1,6 +1,7 @@
 "use client";
 import React from "react";
 import { cn } from "./cn";
+import { useI18n } from "@/contexts/I18nContext";
 
 /* ==========================================================================
    M3 progress indicators + M3 Expressive LoadingIndicator (morphing shape).
@@ -14,12 +15,13 @@ export interface ProgressProps {
 }
 
 export function LinearProgress({ value, className, "aria-label": label }: ProgressProps) {
+    const { t } = useI18n();
     const determinate = typeof value === "number";
     const pct = determinate ? Math.max(0, Math.min(1, value)) * 100 : 0;
     return (
         <div
             role="progressbar"
-            aria-label={label}
+            aria-label={label ?? t("common.md3.loading")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={determinate ? Math.round(pct) : undefined}
@@ -50,6 +52,7 @@ export interface CircularProgressProps extends ProgressProps {
 }
 
 export function CircularProgress({ value, size = 48, strokeWidth = 4, className, "aria-label": label }: CircularProgressProps) {
+    const { t } = useI18n();
     const determinate = typeof value === "number";
     const r = (size - strokeWidth) / 2;
     const c = 2 * Math.PI * r;
@@ -57,7 +60,7 @@ export function CircularProgress({ value, size = 48, strokeWidth = 4, className,
     return (
         <span
             role="progressbar"
-            aria-label={label}
+            aria-label={label ?? t("common.md3.loading")}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={determinate ? Math.round(pct * 100) : undefined}
@@ -98,10 +101,11 @@ export function LoadingIndicator({
     className?: string;
     "aria-label"?: string;
 }) {
+    const { t } = useI18n();
     return (
         <span
             role="progressbar"
-            aria-label={label}
+            aria-label={label ?? t("common.md3.loading")}
             className={cn(
                 "inline-flex items-center justify-center",
                 contained && "rounded-full bg-primary-container",

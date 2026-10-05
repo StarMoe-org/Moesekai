@@ -4,6 +4,8 @@ import { createPortal } from "react-dom";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck } from "./icons";
+import { isKeyboardEventComposing } from "@/lib/shortcuts";
+import { OverlayParentContext, useOverlay } from "./useOverlay";
 
 /* ==========================================================================
    M3 Menu: anchored popup list (surface-container, 4px radius… Expressive 16px).
@@ -42,8 +44,14 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
     const [open, setOpen] = useState(false);
     const [pos, setPos] = useState<{ top: number; left: number; width: number; flipUp: boolean } | null>(null);
     const anchorRef = useRef<HTMLButtonElement>(null);
-    const menuRef = useRef<HTMLDivElement>(null);
+    const [activeKey, setActiveKey] = useState(() => items.find((item) => !item.disabled)?.key);
+    const closeMenu = useCallback(() => {
+        setOpen(false);
+        anchorRef.current?.focus();
+    }, []);
+    const { overlayRef: menuRef, overlayContext, onFocusCapture, isTopOverlay } = useOverlay(open, closeMenu, { syncHistory: false, modal: false });
     const menuId = useId();
+    const tabStopKey = items.some((item) => item.key === activeKey && !item.disabled) ? activeKey : items.find((item) => !item.disabled)?.key;
 
     const place = useCallback(() => {
         const el = anchorRef.current;
@@ -69,35 +77,35 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
     useEffect(() => {
         if (!open) return;
         const onDown = (e: PointerEvent) => {
+            if (!isTopOverlay()) return;
             const t = e.target as Node;
             if (menuRef.current?.contains(t) || anchorRef.current?.contains(t)) return;
             setOpen(false);
         };
-        const onKey = (e: KeyboardEvent) => {
-            if (e.key === "Escape") {
-                e.preventDefault();
-                setOpen(false);
-                anchorRef.current?.focus();
-            }
-        };
         document.addEventListener("pointerdown", onDown);
-        document.addEventListener("keydown", onKey);
-        // focus first enabled item
-        requestAnimationFrame(() => menuRef.current?.querySelector<HTMLElement>('[role^="menuitem"]:not([disabled])')?.focus());
-        return () => {
-            document.removeEventListener("pointerdown", onDown);
-            document.removeEventListener("keydown", onKey);
-        };
-    }, [open]);
+        return () => document.removeEventListener("pointerdown", onDown);
+    }, [open, menuRef, isTopOverlay]);
 
     const onMenuKeyDown = (e: React.KeyboardEvent) => {
+        if (!isTopOverlay() || !e.currentTarget.contains(e.target as Node) || e.defaultPrevented || isKeyboardEventComposing(e.nativeEvent)) return;
+        if (e.key === "Escape") {
+            e.preventDefault();
+            e.stopPropagation();
+            closeMenu();
+            return;
+        }
+        if (e.key === "Tab") {
+            e.stopPropagation();
+            closeMenu();
+            return;
+        }
         if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return;
         e.preventDefault();
         const nodes = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([disabled])') ?? []);
         if (!nodes.length) return;
         const idx = nodes.indexOf(document.activeElement as HTMLElement);
         const next =
-            e.key === "Home" ? 0 : e.key === "End" ? nodes.length - 1 : (idx + (e.key === "ArrowDown" ? 1 : -1) + nodes.length) % nodes.length;
+            e.key === "Home" ? 0 : e.key === "End" ? nodes.length - 1 : idx < 0 ? (e.key === "ArrowDown" ? 0 : nodes.length - 1) : (idx + (e.key === "ArrowDown" ? 1 : -1) + nodes.length) % nodes.length;
         nodes[next]?.focus();
     };
 
@@ -105,7 +113,10 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
         <>
             {anchor({
                 ref: anchorRef,
-                onClick: () => setOpen((v) => !v),
+                onClick: () => {
+                    setActiveKey(items.find((item) => !item.disabled)?.key);
+                    setOpen((v) => !v);
+                },
                 "aria-haspopup": "menu",
                 "aria-expanded": open,
                 "aria-controls": menuId,
@@ -113,10 +124,13 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
             {open &&
                 pos &&
                 createPortal(
+                    <OverlayParentContext.Provider value={overlayContext}>
                     <div
                         ref={menuRef}
+                        onFocusCapture={onFocusCapture}
                         id={menuId}
                         role="menu"
+                        tabIndex={-1}
                         onKeyDown={onMenuKeyDown}
                         className={cn(
                             "md3-menu-enter fixed z-[300] max-h-[min(60vh,420px)] min-w-[112px] max-w-[280px] overflow-y-auto rounded-md3-lg bg-surface-container py-2 text-on-surface shadow-elev-2",
@@ -139,11 +153,12 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                                     type="button"
                                     role={item.selected === undefined ? "menuitem" : "menuitemradio"}
                                     disabled={item.disabled}
+                                    tabIndex={item.key === tabStopKey ? 0 : -1}
+                                    onFocus={() => setActiveKey(item.key)}
                                     aria-checked={item.selected === undefined ? undefined : item.selected}
                                     onClick={() => {
                                         item.onSelect?.();
-                                        setOpen(false);
-                                        anchorRef.current?.focus();
+                                        closeMenu();
                                     }}
                                     className={cn(
                                         "state-layer flex h-12 w-full cursor-pointer items-center gap-3 px-3 text-left type-label-l outline-none focus-visible:bg-on-surface/10",
@@ -161,7 +176,8 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                                 </button>
                             </React.Fragment>
                         ))}
-                    </div>,
+                    </div>
+                    </OverlayParentContext.Provider>,
                     document.body,
                 )}
         </>

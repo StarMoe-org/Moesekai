@@ -73,11 +73,21 @@ export function ListItem({
     return (
         <li>
             {href ? (
-                <LocalizedLink href={href} className={cls} aria-current={selected ? "page" : undefined}>
+                <LocalizedLink
+                    href={href}
+                    className={cls}
+                    aria-current={selected ? "page" : undefined}
+                    aria-disabled={disabled || undefined}
+                    tabIndex={disabled ? -1 : undefined}
+                    onClick={(e) => {
+                        if (disabled) e.preventDefault();
+                        else onClick?.();
+                    }}
+                >
                     {content}
                 </LocalizedLink>
             ) : onClick ? (
-                <button type="button" onClick={onClick} className={cls} aria-pressed={selected}>
+                <button type="button" onClick={onClick} disabled={disabled} className={cls} aria-pressed={selected}>
                     {content}
                 </button>
             ) : (

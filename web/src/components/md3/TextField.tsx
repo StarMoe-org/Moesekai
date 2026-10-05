@@ -1,6 +1,7 @@
 "use client";
-import React, { useCallback, useId, useRef, useState } from "react";
+import React, { useCallback, useId, useImperativeHandle, useRef, useState } from "react";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
+import { useI18n } from "@/contexts/I18nContext";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { mdCancel, mdErrorFill } from "./icons";
@@ -66,6 +67,8 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
         defaultValue,
         placeholder,
         disabled,
+        readOnly,
+        "aria-describedby": describedBy,
         required,
         maxLength,
         onChange,
@@ -78,6 +81,10 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
     },
     ref,
 ) {
+    const { t } = useI18n();
+    const inputRef = useRef<HTMLInputElement>(null);
+    useImperativeHandle(ref, () => inputRef.current as HTMLInputElement, []);
+    const committedCompositionRef = useRef<string | null>(null);
     const autoId = useId();
     const inputId = id ?? `tf-${autoId}`;
     const supportId = `${inputId}-support`;
@@ -98,7 +105,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
     const populated = isControlled ? localValue.length > 0 : uncontrolledHasValue;
     const floated = focused || populated || Boolean(placeholder) || Boolean(prefixText);
     const isError = Boolean(error || errorText);
-    const shouldClearOnEscape = clearOnEscape ?? Boolean(clearable);
+    const shouldClearOnEscape = !disabled && !readOnly && (clearOnEscape ?? Boolean(clearable));
 
     const emit = useCallback((next: string) => onValueChange?.(next), [onValueChange]);
 
@@ -107,7 +114,10 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
         if (isControlled) setLocalValue(next);
         else setUncontrolledHasValue(next.length > 0);
         onChange?.(e);
-        if (!isComposingRef.current) emit(next);
+        if (!isComposingRef.current && !(e.nativeEvent as InputEvent).isComposing) {
+            if (committedCompositionRef.current !== next) emit(next);
+            committedCompositionRef.current = null;
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -136,12 +146,17 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
     };
 
     const handleClear = () => {
+        if (disabled || readOnly || isComposingRef.current) return;
         if (isControlled) setLocalValue("");
+        else if (inputRef.current) inputRef.current.value = "";
         setUncontrolledHasValue(false);
+        committedCompositionRef.current = null;
         emit("");
+        inputRef.current?.focus();
     };
 
-    const showClear = clearable && populated && !disabled;
+    const showClear = clearable && populated && !disabled && !readOnly;
+    const accessibleClearLabel = clearLabel ?? t("common.md3.clear");
     const height = dense ? "h-12" : "h-14";
     const filled = variant === "filled";
 
@@ -181,26 +196,30 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                         <span className={cn("type-body-l text-on-surface-variant", filled && label && "pt-4")}>{prefixText}</span>
                     )}
                     <input
-                        ref={ref}
+                        ref={inputRef}
                         id={inputId}
                         value={current}
                         defaultValue={isControlled ? undefined : defaultValue}
                         placeholder={floated ? placeholder : undefined}
                         disabled={disabled}
+                        readOnly={readOnly}
                         required={required}
                         maxLength={maxLength}
                         aria-invalid={isError || undefined}
-                        aria-describedby={supportingText || errorText ? supportId : undefined}
+                        aria-describedby={[describedBy, supportingText || errorText || maxLength ? supportId : undefined].filter(Boolean).join(" ") || undefined}
                         onChange={handleChange}
                         onKeyDown={handleKeyDown}
                         onCompositionStart={(e) => {
                             isComposingRef.current = true;
+                            committedCompositionRef.current = null;
                             onCompositionStart?.(e);
                         }}
                         onCompositionEnd={(e) => {
                             isComposingRef.current = false;
                             const next = e.currentTarget.value;
                             if (isControlled) setLocalValue(next);
+                            else setUncontrolledHasValue(next.length > 0);
+                            committedCompositionRef.current = next;
                             emit(next);
                             onCompositionEnd?.(e);
                         }}
@@ -249,8 +268,8 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                     <button
                         type="button"
                         onClick={handleClear}
-                        aria-label={clearLabel}
-                        title={clearLabel}
+                        aria-label={accessibleClearLabel}
+                        title={accessibleClearLabel}
                         className="state-layer focus-ring mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant"
                     >
                         <Icon path={mdCancel} size={24} />

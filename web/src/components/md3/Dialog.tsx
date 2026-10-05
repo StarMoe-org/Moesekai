@@ -8,7 +8,7 @@ import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { IconButton } from "./Button";
 import { mdArrowBack, mdClose } from "./icons";
-import { useOverlay } from "./useOverlay";
+import { OverlayParentContext, useOverlay } from "./useOverlay";
 
 /* ==========================================================================
    M3 Dialog
@@ -69,13 +69,14 @@ export function Dialog({
     const { t } = useI18n();
     const titleId = useId();
     const reduced = useReducedMotion();
-    const { mounted, close } = useOverlay(isOpen, onClose, { syncHistory, closeOnEscape: dismissible });
+    const { mounted, close, overlayRef, overlayContext, onFocusCapture } = useOverlay(isOpen, onClose, { syncHistory, closeOnEscape: dismissible });
     if (!mounted) return null;
 
     const withClose = showClose ?? !actions;
     const centered = Boolean(icon);
 
     return createPortal(
+        <OverlayParentContext.Provider value={overlayContext}>
         <AnimatePresence>
             {isOpen && (
                 <div className={cn("fixed inset-0 z-[200] isolate flex items-center justify-center", fullscreenOnMobile ? "p-0 sm:p-6" : "p-4 sm:p-6")}>
@@ -88,8 +89,11 @@ export function Dialog({
                         onClick={dismissible ? close : undefined}
                     />
                     <motion.div
+                        ref={overlayRef}
+                        onFocusCapture={onFocusCapture}
                         role="dialog"
                         aria-modal="true"
+                        tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
                         className={cn(
                             "relative flex w-full flex-col overflow-hidden bg-surface-container-high text-on-surface shadow-elev-3",
@@ -148,7 +152,8 @@ export function Dialog({
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>,
+        </AnimatePresence>
+        </OverlayParentContext.Provider>,
         document.body,
     );
 }

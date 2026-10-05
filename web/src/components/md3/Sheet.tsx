@@ -7,7 +7,7 @@ import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/m
 import { cn } from "./cn";
 import { IconButton } from "./Button";
 import { mdClose } from "./icons";
-import { useOverlay } from "./useOverlay";
+import { OverlayParentContext, useOverlay } from "./useOverlay";
 
 /* ==========================================================================
    M3 Sheets
@@ -32,7 +32,7 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
     const { t } = useI18n();
     const reduced = useReducedMotion();
     const titleId = useId();
-    const { mounted, close } = useOverlay(isOpen, onClose, { syncHistory });
+    const { mounted, close, overlayRef, overlayContext, onFocusCapture } = useOverlay(isOpen, onClose, { syncHistory });
     if (!mounted) return null;
 
     const onDragEnd = (_: unknown, info: PanInfo) => {
@@ -40,6 +40,7 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
     };
 
     return createPortal(
+        <OverlayParentContext.Provider value={overlayContext}>
         <AnimatePresence>
             {isOpen && (
                 <div className="fixed inset-0 z-[200] isolate flex items-end justify-center">
@@ -52,8 +53,11 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
                         onClick={close}
                     />
                     <motion.div
+                        ref={overlayRef}
+                        onFocusCapture={onFocusCapture}
                         role="dialog"
                         aria-modal="true"
+                        tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
                         className={cn(
                             "relative flex max-h-[90dvh] w-full max-w-[640px] flex-col overflow-hidden rounded-t-md3-xl bg-surface-container-low text-on-surface shadow-elev-1",
@@ -91,7 +95,8 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>,
+        </AnimatePresence>
+        </OverlayParentContext.Provider>,
         document.body,
     );
 }
@@ -120,11 +125,12 @@ export function SideSheet({
     const { t } = useI18n();
     const reduced = useReducedMotion();
     const titleId = useId();
-    const { mounted, close } = useOverlay(isOpen, onClose, { syncHistory });
+    const { mounted, close, overlayRef, overlayContext, onFocusCapture } = useOverlay(isOpen, onClose, { syncHistory });
     if (!mounted) return null;
     const from = side === "right" ? "100%" : "-100%";
 
     return createPortal(
+        <OverlayParentContext.Provider value={overlayContext}>
         <AnimatePresence>
             {isOpen && (
                 <div className={cn("fixed inset-0 z-[200] isolate flex", side === "right" ? "justify-end" : "justify-start")}>
@@ -137,8 +143,11 @@ export function SideSheet({
                         onClick={close}
                     />
                     <motion.div
+                        ref={overlayRef}
+                        onFocusCapture={onFocusCapture}
                         role="dialog"
                         aria-modal="true"
+                        tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
                         className={cn(
                             "relative flex h-full flex-col bg-surface-container-low text-on-surface shadow-elev-1",
@@ -165,7 +174,8 @@ export function SideSheet({
                     </motion.div>
                 </div>
             )}
-        </AnimatePresence>,
+        </AnimatePresence>
+        </OverlayParentContext.Provider>,
         document.body,
     );
 }
