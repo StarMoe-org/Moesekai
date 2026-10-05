@@ -42,22 +42,11 @@ export default function SekaiLoader() {
           align-items: center;
           justify-content: center;
           
-          /* Liquid Glass Background Mask */
-          background-color: rgba(255, 255, 255, 0.72);
-          backdrop-filter: blur(28px) saturate(190%);
-          -webkit-backdrop-filter: blur(28px) saturate(190%);
-          border: 1px solid rgba(255, 255, 255, 0.45);
+          background-color: var(--md-sys-color-surface);
           
-          transition: opacity 0.4s ease, visibility 0.4s ease;
+          transition: opacity 0.4s cubic-bezier(0.2, 0, 0, 1), visibility 0.4s cubic-bezier(0.2, 0, 0, 1);
         }
 
-        :root[data-theme="dark"] .loading-overlay {
-          /* Dark theme Liquid Glass Background Mask */
-          background-color: rgba(15, 23, 42, 0.68);
-          backdrop-filter: blur(28px) saturate(220%);
-          -webkit-backdrop-filter: blur(28px) saturate(220%);
-          border: 1px solid rgba(148, 163, 184, 0.22);
-        }
 
         .loading-overlay.hidden {
           opacity: 0;
@@ -92,8 +81,7 @@ export default function SekaiLoader() {
         
         /* Base layer - light cyan (unloaded) */
         .base {
-          background-color: color-mix(in srgb, var(--color-miku) 30%, var(--surface-base, white));
-          opacity: 0.8;
+          background-color: var(--md-sys-color-secondary-container);
           z-index: 1;
         }
         
@@ -124,8 +112,7 @@ export default function SekaiLoader() {
         .progress-color {
           width: min(400px, 60vw);
           height: 100%;
-          background-color: var(--color-miku);
-          filter: drop-shadow(0 0 5px var(--color-miku));
+          background-color: var(--md-sys-color-primary);
         }
         
         @keyframes miku-load-fast {
@@ -134,11 +121,11 @@ export default function SekaiLoader() {
         }
         
         .loading-text {
-          color: var(--text-body, var(--color-miku-dark));
-          font-family: sans-serif;
-          font-weight: bold;
-          font-size: 1rem;
-          letter-spacing: 0.05em;
+          color: var(--md-sys-color-on-surface-variant);
+          font-size: 14px;
+          line-height: 20px;
+          font-weight: 500;
+          letter-spacing: 0.1px;
           animation: pulse 1.5s ease-in-out infinite;
         }
         @keyframes pulse {

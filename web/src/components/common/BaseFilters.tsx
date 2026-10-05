@@ -3,6 +3,9 @@ import React, { useEffect, useState, useRef, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
+import { Icon } from "@/components/md3/Icon";
+import { cn } from "@/components/md3/cn";
+import { mdCheck, mdFilterList, mdKeyboardArrowDown, mdRestartAlt, mdSearch, mdArrowDownward } from "@/components/md3/icons";
 
 // ============================================================================
 // Types
@@ -129,18 +132,24 @@ function FilterSearchInput({ value, onChange, placeholder }: FilterSearchInputPr
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             onKeyDown={handleKeyDown}
-            className="w-full ios-glass-input material-thin px-3.5 py-2.5 pr-10 rounded-xl text-sm type-body text-slate-700 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500"
+            className="h-12 w-full rounded-full bg-surface-container-highest pl-12 pr-12 type-body-l text-on-surface placeholder:text-on-surface-variant caret-primary outline-none transition-shadow duration-150 focus:shadow-[inset_0_0_0_2px_var(--md-sys-color-primary)]"
         />
     );
 }
+
+/** MD3 filter chip state classes (shared by filter panels across pages). */
+const MD3_CHIP_BASE =
+    "state-layer focus-ring relative inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md3-sm border px-3 py-1.5 type-label-l cursor-pointer transition-colors duration-150 ease-md3-standard";
+const MD3_CHIP_SELECTED = `${MD3_CHIP_BASE} border-transparent bg-secondary-container text-on-secondary-container`;
+const MD3_CHIP_UNSELECTED = `${MD3_CHIP_BASE} border-outline-variant bg-transparent text-on-surface-variant`;
 
 export function getFilterChipStateClasses(
     selected: boolean,
     selectedClassName?: string,
     unselectedClassName?: string
 ) {
-    const selectedState = selectedClassName ?? "island-chip island-chip-active";
-    const unselectedState = unselectedClassName ?? "island-chip island-chip-hover hover:text-miku";
+    const selectedState = selectedClassName ?? MD3_CHIP_SELECTED;
+    const unselectedState = unselectedClassName ?? MD3_CHIP_UNSELECTED;
 
     return selected ? selectedState : unselectedState;
 }
@@ -150,16 +159,16 @@ export function getFilterIconStateClasses(
     selectedClassName?: string,
     unselectedClassName?: string
 ) {
-    const selectedState = selectedClassName ?? "island-chip island-chip-active ring-2 ring-miku/30 scale-[1.03]";
-    const unselectedState = unselectedClassName ?? "island-chip island-chip-hover";
+    const selectedState = selectedClassName ?? cn(MD3_CHIP_SELECTED, "ring-2 ring-primary ring-offset-1 ring-offset-surface");
+    const unselectedState = unselectedClassName ?? MD3_CHIP_UNSELECTED;
 
     return selected ? selectedState : unselectedState;
 }
 
 export function getFilterToggleStateClasses(selected: boolean) {
     return selected
-        ? "island-pill-active"
-        : "island-pill-hover text-slate-600 dark:text-slate-400 hover:text-miku";
+        ? "bg-secondary-container text-on-secondary-container"
+        : "text-on-surface-variant";
 }
 
 export const FilterDrawerContext = React.createContext<boolean>(false);
@@ -227,21 +236,21 @@ export default function BaseFilters({
     };
 
     // Shared filter inner content (Search, Sort, Custom sections, Reset)
+    const countText = filteredCount === totalCount
+        ? `${totalCount}${countUnit ? ` ${countUnit}` : ""}`
+        : `${filteredCount} / ${totalCount}${countUnit ? ` ${countUnit}` : ""}`;
+
     const filterControls = (
-        <div className={compact ? "space-y-3 workspace-compact-filters" : "space-y-4"}>
+        <div className={compact ? "space-y-3 workspace-compact-filters" : "space-y-5"}>
             {/* Filter item count summary if provided */}
             {totalCount > 0 && (
-                <div className="flex items-center justify-between text-xs type-caption text-slate-500 dark:text-slate-400 px-0.5">
-                    <span>
-                        {filteredCount === totalCount
-                            ? `${totalCount}${countUnit ? ` ${countUnit}` : ""}`
-                            : `${filteredCount} / ${totalCount}${countUnit ? ` ${countUnit}` : ""}`}
-                    </span>
+                <div className="flex min-h-8 items-center justify-between px-0.5 type-label-l text-on-surface-variant">
+                    <span>{countText}</span>
                     {hasActiveFilters && onReset && (
                         <button
                             type="button"
                             onClick={onReset}
-                            className="pressable text-xs font-semibold text-miku hover:underline cursor-pointer"
+                            className="state-layer focus-ring -mr-2 h-8 cursor-pointer rounded-full px-3 type-label-l text-primary"
                         >
                             {t("common.filter.reset")}
                         </button>
@@ -252,10 +261,11 @@ export default function BaseFilters({
             {/* Search */}
             {showSearch && onSearchChange && (
                 <div>
-                    <label className={compact ? "sr-only" : "block text-xs font-bold type-caption text-slate-600 dark:text-slate-350 uppercase tracking-wider mb-1.5"}>
+                    <label className={compact ? "sr-only" : "mb-2 block px-1 type-title-s text-on-surface"}>
                         {t("common.filter.search")}
                     </label>
                     <div className="relative">
+                        <Icon path={mdSearch} size={24} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                         <FilterSearchInput
                             placeholder={resolvedSearchPlaceholder}
                             value={searchQuery ?? ""}
@@ -267,18 +277,14 @@ export default function BaseFilters({
                                 onClick={() => setShowSearchHelp(v => !v)}
                                 aria-label={t("search.syntax.title")}
                                 aria-expanded={showSearchHelp}
-                                className={`pressable absolute right-9 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center border transition-colors ${
-                                    showSearchHelp
-                                        ? "bg-miku text-white border-miku"
-                                        : "text-slate-400 border-slate-200 hover:text-miku hover:border-miku/40 dark:border-slate-600"
-                                }`}
+                                className={cn(
+                                    "state-layer focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full type-label-l",
+                                    showSearchHelp ? "bg-primary text-on-primary" : "text-on-surface-variant",
+                                )}
                             >
                                 ?
                             </button>
                         )}
-                        <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-500 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
                     </div>
                     {showSearchHelp && searchHelp && (
                         <div data-search-help="true" className="mt-2">
@@ -291,24 +297,31 @@ export default function BaseFilters({
             {/* Sort Options */}
             {sortOptions && sortOptions.length > 0 && onSortChange && (
                 <div>
-                    <label className="block text-xs font-bold type-caption text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5">
+                    <label className="mb-2 block px-1 type-title-s text-on-surface">
                         {t("common.filter.sort")}
                     </label>
                     <div className={`grid gap-2 ${sortOptions.length <= 2 ? "grid-cols-2" : sortOptions.length === 3 ? "grid-cols-3" : "grid-cols-2"}`}>
-                        {sortOptions.map((opt) => (
-                            <button
-                                key={opt.id}
-                                onClick={() => handleSortClick(opt.id)}
-                                className={`pressable px-2 py-2 flex items-center justify-center gap-1 ${getFilterChipStateClasses(sortBy === opt.id)}`}
-                            >
-                                {opt.label}
-                                {sortBy === opt.id && (
-                                    <svg className={`w-3 h-3 transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] ${sortOrder === "asc" ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                )}
-                            </button>
-                        ))}
+                        {sortOptions.map((opt) => {
+                            const active = sortBy === opt.id;
+                            return (
+                                <button
+                                    key={opt.id}
+                                    type="button"
+                                    aria-pressed={active}
+                                    onClick={() => handleSortClick(opt.id)}
+                                    className={getFilterChipStateClasses(active)}
+                                >
+                                    {active && (
+                                        <Icon
+                                            path={mdArrowDownward}
+                                            size={18}
+                                            className={cn("transition-transform duration-200 ease-md3-spatial-fast", sortOrder === "asc" && "rotate-180")}
+                                        />
+                                    )}
+                                    <span className="truncate">{opt.label}</span>
+                                </button>
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -321,11 +334,9 @@ export default function BaseFilters({
                 <button
                     type="button"
                     onClick={onReset}
-                    className="pressable w-full py-2.5 border border-slate-200 dark:border-slate-700 rounded-full text-sm text-slate-600 dark:text-slate-300 font-medium material-thin hover:bg-slate-50 dark:hover:bg-slate-800 flex items-center justify-center gap-2"
+                    className="state-layer focus-ring flex h-10 w-full cursor-pointer items-center justify-center gap-2 rounded-full border border-outline-variant type-label-l text-on-surface-variant"
                 >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+                    <Icon path={mdRestartAlt} size={18} />
                     {t("common.filter.reset")}
                 </button>
             )}
@@ -343,126 +354,134 @@ export default function BaseFilters({
 
     // 2. Standalone Card variant (For in-page static layouts like Information page)
     return (
-        <div data-shortcut-filters="true" className="ios-glass-card material-regular rounded-3xl overflow-hidden">
+        <div data-shortcut-filters="true" className="overflow-hidden rounded-md3-xl bg-surface-container-low text-on-surface">
             {/* Header — clickable on mobile to toggle collapse */}
             <div
-                className="px-5 py-4 border-b border-dashed border-slate-200/60 dark:border-slate-700/40 bg-gradient-to-r from-miku/10 to-transparent dark:from-miku/15 dark:to-slate-900/10 flex items-center justify-between lg:cursor-default cursor-pointer select-none"
+                className="flex cursor-pointer select-none items-center justify-between gap-2 px-5 py-4 lg:cursor-default"
                 onClick={toggleCollapsed}
             >
-                <h2 className="type-title font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
-                    </svg>
+                <h2 className="flex items-center gap-2 type-title-m text-on-surface">
+                    <Icon path={mdFilterList} size={24} className="text-primary" />
                     {resolvedTitle}
                     {hasActiveFilters && mobileCollapsed && (
-                        <span className="lg:hidden w-2 h-2 rounded-full bg-miku animate-pulse" />
+                        <span className="h-2 w-2 rounded-full bg-primary lg:hidden" />
                     )}
                 </h2>
                 <div className="flex items-center gap-2">
-                    <span className="text-xs type-caption text-slate-500 dark:text-slate-400">
+                    <span className="type-label-m text-on-surface-variant">
                         {filteredCount === totalCount
                             ? `${totalCount}${countUnit ? ` ${countUnit}` : ""}`
                             : `${filteredCount} / ${totalCount}`}
                     </span>
-                    <svg
-                        className={`w-4 h-4 text-slate-400 dark:text-slate-500 transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] lg:hidden ${mobileCollapsed ? "" : "rotate-180"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <Icon
+                        path={mdKeyboardArrowDown}
+                        size={24}
+                        className={cn("text-on-surface-variant transition-transform duration-200 ease-md3-spatial-fast lg:hidden", !mobileCollapsed && "rotate-180")}
+                    />
                 </div>
             </div>
 
             {/* Collapsible section */}
             <div data-filter-collapsible="true" className={`${mobileCollapsed ? "hidden" : "block"} lg:!block`}>
-                <div className="p-5">
+                <div className="px-5 pb-5">
                     {filterControls}
                 </div>
             </div>
 
             {/* "Tap to expand" hint bar — mobile only, shown when collapsed */}
             {mobileCollapsed && (
-                <div
+                <button
+                    type="button"
                     data-filter-collapse-pad="true"
-                    className="lg:hidden flex items-center justify-center gap-1 py-2.5 mt-4 bg-slate-50 dark:bg-slate-800/80 border-t border-slate-100 dark:border-slate-700 cursor-pointer select-none text-xs text-slate-400 dark:text-slate-500 hover:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700/80 transition-colors"
+                    className="state-layer flex w-full cursor-pointer select-none items-center justify-center gap-1 border-t border-outline-variant py-2.5 type-label-l text-on-surface-variant lg:hidden"
                     onClick={toggleCollapsed}
                 >
-                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <Icon path={mdKeyboardArrowDown} size={18} />
                     {t("common.filter.expand")}
-                </div>
+                </button>
             )}
         </div>
     );
-}
+    }
 
-// ============================================================================
-// Helper Components for custom filter sections
-// ============================================================================
+    // ============================================================================
+    // Helper Components for custom filter sections
+    // ============================================================================
 
-interface FilterSectionProps {
+    interface FilterSectionProps {
     label: string;
     children: React.ReactNode;
-}
+    }
 
-export function FilterSection({ label, children }: FilterSectionProps) {
+    export function FilterSection({ label, children }: FilterSectionProps) {
     return (
         <div>
-            <label className="block text-xs font-bold type-caption text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-2">
+            <label className="mb-2 block px-1 type-title-s text-on-surface">
                 {label}
             </label>
             {children}
         </div>
     );
-}
+    }
 
-interface FilterButtonProps {
+    interface FilterButtonProps {
     selected: boolean;
     onClick: () => void;
     children: React.ReactNode;
     className?: string;
     style?: React.CSSProperties;
-}
+    }
 
-export function FilterButton({ selected, onClick, children, className = "", style }: FilterButtonProps) {
+    export function FilterButton({ selected, onClick, children, className = "", style }: FilterButtonProps) {
     return (
         <button
             type="button"
             aria-pressed={selected}
             onClick={onClick}
-            className={`pressable ${getFilterChipStateClasses(selected)} ${className}`}
+            className={cn(getFilterChipStateClasses(selected), className)}
             style={style}
         >
             {children}
         </button>
     );
-}
+    }
 
-interface FilterToggleProps {
+    interface FilterToggleProps {
     selected: boolean;
     onClick: () => void;
     label: string;
-}
+    }
 
-export function FilterToggle({ selected, onClick, label }: FilterToggleProps) {
+    /** MD3 list-item style toggle with a trailing switch. */
+    export function FilterToggle({ selected, onClick, label }: FilterToggleProps) {
     return (
         <button
+            type="button"
+            role="switch"
+            aria-checked={selected}
             onClick={onClick}
-            className={`pressable w-full flex items-center justify-between px-4 py-3 rounded-2xl border border-transparent ${getFilterToggleStateClasses(selected)}`}
+            className={cn(
+                "state-layer focus-ring flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 rounded-md3-lg px-4 py-2 text-left transition-colors duration-150",
+                getFilterToggleStateClasses(selected),
+            )}
         >
-            <span className={`text-sm font-bold type-on-glass ${selected ? "text-[var(--accent-deep)]" : "text-slate-600 dark:text-slate-300"}`}>
-                {label}
-            </span>
-            <div className={`w-5 h-5 rounded-full border flex items-center justify-center transition-colors duration-[var(--duration-fast)] ${selected ? "bg-miku border-miku shadow-sm shadow-miku/20" : "border-slate-200/60 bg-white/20 dark:border-slate-700 dark:bg-slate-800/40"}`}>
-                {selected && (
-                    <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                    </svg>
+            <span className="type-body-l">{label}</span>
+            <span
+                aria-hidden
+                className={cn(
+                    "relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full border-2 transition-colors duration-200",
+                    selected ? "border-primary bg-primary" : "border-outline bg-surface-container-highest",
                 )}
-            </div>
+            >
+                <span
+                    className={cn(
+                        "absolute flex items-center justify-center rounded-full transition-all duration-300 ease-md3-spatial-fast",
+                        selected ? "left-[22px] h-6 w-6 bg-on-primary text-on-primary-container" : "left-[6px] h-4 w-4 bg-outline",
+                    )}
+                >
+                    {selected && <Icon path={mdCheck} size={16} />}
+                </span>
+            </span>
         </button>
     );
-}
+    }

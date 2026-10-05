@@ -6,31 +6,28 @@ import { findNavMatch, findGroupMatch, navigationGroups, NAV_GROUP_LABEL_KEYS, N
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { stripRouteLocale } from "@/lib/localized-path";
+import { Icon, cn } from "@/components/md3";
+import { mdKeyboardArrowDown } from "@/components/md3/icons";
 
 // Expand arrow button.
 function ExpandButton({ open, onClick, ariaLabel }: { open: boolean; onClick: () => void; ariaLabel: string }) {
     return (
         <button
+            type="button"
             onClick={onClick}
-            className="pressable p-0.5 -mr-0.5 rounded hover:bg-miku/10"
+            className="state-layer focus-ring flex h-6 w-6 cursor-pointer items-center justify-center rounded-full text-on-surface-variant"
             aria-label={ariaLabel}
+            aria-expanded={open}
         >
-            <svg
-                className={`w-3 h-3 transition-transform duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] ${open ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-            >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-            </svg>
+            <Icon path={mdKeyboardArrowDown} size={18} className={cn("transition-transform duration-200 ease-md3-spatial-fast", open && "rotate-180")} />
         </button>
     );
 }
 
-// Dropdown panel.
+// Dropdown panel (MD3 menu surface).
 function DropdownPanel({ children }: { children: React.ReactNode }) {
     return (
-        <div className="absolute top-full left-0 mt-1.5 ios-glass-dropdown material-regular rounded-2xl py-1.5 min-w-[10rem] z-[200] animate-breadcrumb-dropdown">
+        <div role="menu" className="md3-menu-enter absolute left-0 top-full z-[200] mt-1 max-h-[60vh] min-w-[12rem] overflow-y-auto rounded-md3-lg bg-surface-container py-2 text-on-surface shadow-elev-2">
             {children}
         </div>
     );
@@ -41,11 +38,12 @@ function DropdownItem({ href, isCurrent, children }: { href: string; isCurrent: 
     return (
         <Link
             href={href}
-            className={`pressable block px-3 py-1.5 mx-1 text-sm type-on-glass whitespace-nowrap rounded-lg ${
-                isCurrent
-                    ? "island-pill-active"
-                    : "text-slate-600 dark:text-slate-300 hover:bg-miku/10 dark:hover:bg-miku/15 hover:text-miku dark:hover:text-miku"
-            }`}
+            role="menuitem"
+            aria-current={isCurrent ? "page" : undefined}
+            className={cn(
+                "state-layer flex h-12 items-center whitespace-nowrap px-4 type-label-l",
+                isCurrent ? "bg-secondary-container text-on-secondary-container" : "text-on-surface",
+            )}
         >
             {children}
         </Link>
@@ -116,9 +114,9 @@ export default function Breadcrumb() {
     if (groupMatch) {
         return (
             <div ref={dropdownRef} className="flex items-center gap-1.5 min-w-0">
-                <span className="text-miku/30 shrink-0">/</span>
+                <span className="shrink-0 text-outline">/</span>
                 <div className="relative flex items-center gap-0.5">
-                    <span className="text-miku font-medium shrink-0 text-sm">
+                    <span className="shrink-0 type-label-l text-on-surface">
                         {getGroupLabel(groupMatch.href)}
                     </span>
                     <ExpandButton
@@ -138,9 +136,9 @@ export default function Breadcrumb() {
                 </div>
 
                 {/* Secondary navigation shortcut */}
-                <span className="text-miku/30 shrink-0">/</span>
+                <span className="shrink-0 text-outline">/</span>
                 <div className="relative flex items-center gap-0.5">
-                    <span className="text-miku/40 shrink-0 text-sm">...</span>
+                    <span className="shrink-0 type-label-l text-on-surface-variant">…</span>
                     <ExpandButton
                         open={openDropdown === "item"}
                         onClick={() => toggleDropdown("item")}
@@ -171,11 +169,11 @@ export default function Breadcrumb() {
     return (
         <div ref={dropdownRef} className="flex items-center gap-1.5 min-w-0">
             {/* First level: group label with dropdown. */}
-            <span className="text-miku/30 shrink-0">/</span>
+            <span className="shrink-0 text-outline">/</span>
             <div className="relative flex items-center gap-0.5">
                     <Link
                         href={group.href}
-                        className="text-miku/60 hover:text-miku transition-colors shrink-0 text-sm"
+                        className="shrink-0 rounded-full px-1 type-label-l text-on-surface-variant transition-colors hover:text-primary"
                     >
                         {getGroupLabel(group.href)}
                     </Link>
@@ -198,17 +196,17 @@ export default function Breadcrumb() {
             </div>
 
             {/* Second level: item label with dropdown. */}
-            <span className="text-miku/30 shrink-0">/</span>
+            <span className="shrink-0 text-outline">/</span>
             <div className="relative flex items-center gap-0.5">
                 {isDetailPage ? (
                     <Link
                         href={item.href}
-                        className="text-miku/60 hover:text-miku transition-colors shrink-0 text-sm"
+                        className="shrink-0 rounded-full px-1 type-label-l text-on-surface-variant transition-colors hover:text-primary"
                     >
                         {getItemLabel(item.href)}
                     </Link>
                 ) : (
-                    <span className="text-miku font-medium shrink-0 text-sm">
+                    <span className="shrink-0 type-label-l text-on-surface">
                         {getItemLabel(item.href)}
                     </span>
                 )}
@@ -231,8 +229,8 @@ export default function Breadcrumb() {
             {/* Third level: detail label without dropdown. */}
             {isDetailPage && detail && (
                 <>
-                    <span className="text-miku/30 shrink-0">/</span>
-                    <span className="inline-block text-miku font-medium text-sm truncate max-w-[120px] sm:max-w-[200px] align-middle">
+                    <span className="shrink-0 text-outline">/</span>
+                    <span className="inline-block max-w-[120px] truncate align-middle type-label-l text-on-surface sm:max-w-[200px]">
                         {detail}
                     </span>
                 </>

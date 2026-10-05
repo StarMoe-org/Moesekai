@@ -1,21 +1,19 @@
 "use client";
 import React, { useState, useEffect, useCallback, useMemo, useRef, Suspense } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import MainNavbar from "./MainNavbar";
 import Sidebar from "./Sidebar";
 import MainFooter from "./MainFooter";
 import ScrollToTop from "./ScrollToTop";
 import FilterDrawer from "./FilterDrawer";
 import FilterTabHandle from "./FilterTabHandle";
-import FilterDrawerGuide from "./FilterDrawerGuide";
 import SekaiLoader from "./SekaiLoader";
-import BackgroundPattern from "./BackgroundPattern";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilterContext } from "@/contexts/QuickFilterContext";
-import { localizePathForBrowser } from "@/lib/localized-path";
+import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
 import DetailSeoSummary from "@/components/seo/DetailSeoSummary";
 import { useDetailSeoSummary } from "@/contexts/DetailSeoSummaryContext";
 
@@ -49,11 +47,11 @@ export default function MainLayout({
     immersiveMode = false,
 }: MainLayoutProps) {
     const router = useRouter();
+    const pathname = usePathname();
+    const isHomeRoute = stripRouteLocale(pathname) === "/";
     const detailSeoSummary = useDetailSeoSummary();
-    const { useTrainedThumbnail, setUseTrainedThumbnail, backgroundAnimationBudget } = useTheme();
+    const { useTrainedThumbnail, setUseTrainedThumbnail } = useTheme();
     const pageContentRef = useRef<HTMLDivElement>(null);
-    const shouldShowAmbientBlobs = backgroundAnimationBudget === "on";
-    const shouldAnimateAmbientBlobs = shouldShowAmbientBlobs;
 
     // Keep the initial value false to avoid hydration mismatch.
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -333,7 +331,7 @@ export default function MainLayout({
     });
 
     return (
-        <main className="min-h-screen relative selection:bg-miku selection:text-white font-sans flex flex-col">
+        <main className="relative flex min-h-screen flex-col bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
             <Suspense fallback={null}>
                 <ScreenshotParamsListener onChange={setIsScreenshotMode} />
             </Suspense>
@@ -341,26 +339,7 @@ export default function MainLayout({
             {/* Loading Animation */}
             {showLoader && <SekaiLoader />}
 
-            {/* Background Pattern */}
-            <BackgroundPattern />
-
-            {/* iOS 26 Ambient Colorful Glowing Blobs */}
-            {shouldShowAmbientBlobs && (
-                <div className="absolute inset-0 overflow-hidden pointer-events-none z-0" aria-hidden="true">
-                    <div
-                        className={`absolute top-1/4 left-10 w-72 h-72 rounded-full pointer-events-none ${shouldAnimateAmbientBlobs ? "animate-float-blob-1 will-change-transform" : ""}`}
-                        style={{ backgroundColor: "rgba(var(--color-miku-rgb, 51, 204, 187), 0.10)", filter: shouldAnimateAmbientBlobs ? "blur(90px)" : "blur(72px)" }}
-                    />
-                    <div
-                        className={`absolute bottom-1/3 right-10 w-96 h-96 rounded-full pointer-events-none ${shouldAnimateAmbientBlobs ? "animate-float-blob-2 will-change-transform" : ""}`}
-                        style={{ backgroundColor: "rgba(var(--color-comp-rgb, 255, 117, 168), 0.10)", filter: shouldAnimateAmbientBlobs ? "blur(100px)" : "blur(76px)" }}
-                    />
-                    <div
-                        className={`absolute top-2/3 left-1/3 w-80 h-80 rounded-full pointer-events-none ${shouldAnimateAmbientBlobs ? "animate-float-blob-1 will-change-transform" : ""}`}
-                        style={{ backgroundColor: "rgba(var(--color-mid-rgb, 255, 229, 138), 0.07)", filter: shouldAnimateAmbientBlobs ? "blur(90px)" : "blur(72px)" }}
-                    />
-                </div>
-            )}
+            {/* Background: plain MD3 surface (set on <body>); no decorative washes. */}
 
             {/* Navbar */}
             {!immersiveMode && (
@@ -378,7 +357,7 @@ export default function MainLayout({
             )}
 
             {/* Layout with Sidebar */}
-            <div className={`flex flex-grow relative ${immersiveMode ? "" : "pt-[5.5rem]"}`}>
+            <div className={`relative flex flex-grow ${immersiveMode ? "" : isHomeRoute ? "pt-16" : "pt-[6.5rem] sm:pt-16"}`}>
                 {/* Sidebar */}
                 {!immersiveMode && (
                     <Sidebar
@@ -390,7 +369,7 @@ export default function MainLayout({
                 )}
 
                 {/* Main content area */}
-                <div ref={pageContentRef} data-shortcut-page-root="true" className={`flex-grow relative z-10 w-full min-w-0 ${hasMounted ? 'transition-all duration-300' : ''} ${railOffsetClass}`}>
+                <div ref={pageContentRef} data-shortcut-page-root="true" className={`relative z-10 w-full min-w-0 flex-grow ${hasMounted ? "transition-[margin] duration-300 ease-md3-emphasized-decelerate" : ""} ${railOffsetClass}`}>
                     {children}
                     {detailSeoSummary && (
                         <DetailSeoSummary
@@ -406,23 +385,16 @@ export default function MainLayout({
             {!immersiveMode && (
                 <>
                     {/* Footer */}
-                    <div className={`relative z-[5] ${hasMounted ? 'transition-all duration-300' : ''} ${railOffsetClass}`}>
+                    <div className={`relative z-[5] ${hasMounted ? "transition-[margin] duration-300 ease-md3-emphasized-decelerate" : ""} ${railOffsetClass}`}>
                         <MainFooter />
                     </div>
 
                     {/* Scroll To Top */}
                     <ScrollToTop />
 
-                    {/* Filter drawer: the single mount point for every page's
-                        filter panel, plus its pull tab and first-run coach mark.
-                        All three read the page's registered filters from
-                        QuickFilterContext and render nothing when a page has
-                        none, so they are safe to mount unconditionally here.
-                        They take `isRailOpen` because the drawer and its tab are
-                        anchored to the sidebar's trailing edge. */}
+                    {/* Filter sheet (single mount point for every page's filters) and its FAB entry point. */}
                     <FilterDrawer isSidebarOpen={effectiveSidebarOpen} />
                     <FilterTabHandle isSidebarOpen={effectiveSidebarOpen} />
-                    <FilterDrawerGuide isSidebarOpen={effectiveSidebarOpen} />
 
                     {/* Keyboard Shortcuts Help */}
                     <KeyboardShortcutsHelp isOpen={isShortcutsHelpOpen} onClose={() => setIsShortcutsHelpOpen(false)} />
