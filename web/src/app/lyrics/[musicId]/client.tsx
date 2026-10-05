@@ -42,6 +42,8 @@ import { fetchLyricsMusicById } from "@/lib/lyrics-music-source";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import type { IMusicInfo, IMusicVocalInfo, IOutsideCharacter } from "@/types/music";
 import { getMusicJacketUrl, MUSIC_CATEGORY_COLORS } from "@/types/music";
+import { Button, EmptyState, Icon, LoadingState, PageContainer, SegmentedButton } from "@/components/md3";
+import { mdArrowBack, mdArrowForward, mdDownload, mdEditNote, mdInfo, mdLyrics, mdMic, mdPause, mdPlayArrow } from "@/components/md3/icons";
 type LyricsDisplayAttribution = ILyricsAttribution | ILyricsV3ComponentAttribution;
 
 function getLyricsDisplayAttributions(attributions: readonly LyricsDisplayAttribution[]): LyricsDisplayAttribution[] {
@@ -77,6 +79,7 @@ function VocalPlayer({
     downloadLabel: string;
     getCharacterLabel: (characterId: number) => string;
 }) {
+    const { t } = useI18n();
     const [isPlaying, setIsPlaying] = useState(false);
     const [progress, setProgress] = useState(0);
     const [duration, setDuration] = useState(0);
@@ -134,36 +137,30 @@ function VocalPlayer({
     }, []);
 
     return (
-        <div className="px-5 py-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition-colors group">
+        <div className="px-5 py-4 transition-colors group">
             <div className="flex items-center gap-4">
                 <button
+                    type="button"
                     onClick={togglePlay}
-                    aria-label={isPlaying ? "Pause" : "Play"}
-                    className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${isPlaying
-                        ? "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900"
-                        : "bg-miku text-white shadow-md shadow-miku/20 hover:scale-105 active:scale-95"
+                    aria-label={isPlaying ? t("common.action.pause") : t("common.action.play")}
+                    aria-pressed={isPlaying}
+                    className={`state-layer focus-ring shrink-0 w-12 h-12 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-spatial-fast ${isPlaying
+                        ? "bg-primary-container text-on-primary-container rounded-md3-lg"
+                        : "bg-primary text-on-primary rounded-full shadow-elev-1"
                     }`}
                 >
-                    {isPlaying ? (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                        </svg>
-                    ) : (
-                        <svg className="w-5 h-5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                    )}
+                    <Icon path={isPlaying ? mdPause : mdPlayArrow} size={24} />
                 </button>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="text-sm font-bold text-primary-text truncate">
+                        <div className="type-title-s text-on-surface truncate">
                             <TranslatedText
                                 original={vocal.caption}
                                 category="music"
                                 field="vocalCaption"
                                 originalClassName="truncate block"
-                                translationClassName="text-xs text-slate-400 truncate block font-normal"
+                                translationClassName="type-body-s text-on-surface-variant truncate block"
                             />
                         </div>
                         <a
@@ -171,13 +168,12 @@ function VocalPlayer({
                             download={`${vocal.caption}.mp3`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-slate-400 hover:text-miku hover:bg-miku/5 rounded-lg transition-colors"
+                            className="state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant"
                             title={downloadLabel}
+                            aria-label={downloadLabel}
                             onClick={(e) => e.stopPropagation()}
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                            </svg>
+                            <Icon path={mdDownload} size={20} />
                         </a>
                     </div>
 
@@ -194,7 +190,7 @@ function VocalPlayer({
                             return hasIcon && avatarUrl ? (
                                 <div
                                     key={chara.id}
-                                    className="w-6 h-6 rounded-full overflow-hidden bg-slate-100 ring-1 ring-white dark:ring-slate-800"
+                                    className="w-6 h-6 rounded-full overflow-hidden bg-surface-container-high ring-1 ring-surface"
                                     title={charName}
                                 >
                                     <Image
@@ -209,7 +205,7 @@ function VocalPlayer({
                             ) : (
                                 <span
                                     key={chara.id}
-                                    className="text-[10px] px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full"
+                                    className="type-label-s px-2 py-0.5 bg-surface-container-high text-on-surface-variant rounded-full"
                                 >
                                     {charName}
                                 </span>
@@ -218,7 +214,7 @@ function VocalPlayer({
                     </div>
 
                     {duration > 0 && (
-                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <div className="flex items-center gap-2 type-label-s text-on-surface-variant">
                             <span>{formatTime(progress)}</span>
                             <input
                                 type="range"
@@ -227,7 +223,7 @@ function VocalPlayer({
                                 step={0.1}
                                 value={progress}
                                 onChange={handleSeek}
-                                className="flex-1 h-1 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-miku"
+                                className="flex-1 h-1 bg-surface-container-highest rounded-full appearance-none cursor-pointer accent-primary"
                             />
                             <span>{formatTime(duration)}</span>
                         </div>
@@ -445,12 +441,9 @@ export default function LyricsDetailClient() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex min-h-[50vh] flex-col items-center justify-center" aria-label={t("page.lyrics.loading")}>
-                        <div className="loading-spinner" />
-                        <p className="mt-4 text-slate-500 dark:text-slate-400">{t("page.lyrics.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("page.lyrics.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -458,22 +451,19 @@ export default function LyricsDetailClient() {
     if (!music || publication?.state === "satisfied_no_lyrics") {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div role="alert" className="mx-auto max-w-md text-center">
-                        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                            <svg className="h-12 w-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
-                        </div>
-                        <h1 className="mb-2 text-2xl font-bold text-primary-text">
-                            {errorKind === "failed" ? t("page.lyrics.error") : t("page.lyrics.notFound")}
-                        </h1>
-                        <Link href="/lyrics" className="pressable ios-glass-btn ios-glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-6 py-3 font-bold">
-                            <span aria-hidden="true">←</span>
-                            {t("page.lyrics.backToList")}
-                        </Link>
+                <PageContainer>
+                    <div role="alert">
+                        <EmptyState
+                            icon={mdLyrics}
+                            title={errorKind === "failed" ? t("page.lyrics.error") : t("page.lyrics.notFound")}
+                            action={
+                                <Button variant="filled" icon={mdArrowBack} href="/lyrics">
+                                    {t("page.lyrics.backToList")}
+                                </Button>
+                            }
+                        />
                     </div>
-                </div>
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -483,38 +473,35 @@ export default function LyricsDetailClient() {
     if (!lyrics && errorKind !== "not-found") {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div role="alert" className="mx-auto max-w-md text-center">
-                        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-full bg-amber-100 dark:bg-amber-900/30">
-                            <svg className="h-12 w-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
-                        </div>
-                        <h1 className="mb-2 text-2xl font-bold text-primary-text">
-                            {errorKind === "failed" ? t("page.lyrics.error") : t("page.lyrics.notFound")}
-                        </h1>
-                        <Link href="/lyrics" className="pressable ios-glass-btn ios-glass-btn-primary mt-5 inline-flex items-center gap-2 rounded-xl px-6 py-3 font-bold">
-                            <span aria-hidden="true">←</span>
-                            {t("page.lyrics.backToList")}
-                        </Link>
+                <PageContainer>
+                    <div role="alert">
+                        <EmptyState
+                            icon={mdLyrics}
+                            title={errorKind === "failed" ? t("page.lyrics.error") : t("page.lyrics.notFound")}
+                            action={
+                                <Button variant="filled" icon={mdArrowBack} href="/lyrics">
+                                    {t("page.lyrics.backToList")}
+                                </Button>
+                            }
+                        />
                     </div>
-                </div>
+                </PageContainer>
             </MainLayout>
         );
     }
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 <header className="mb-8">
                     <div className="mb-3 flex flex-wrap items-center gap-2">
-                        <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 font-mono text-xs text-slate-500 dark:bg-slate-800 dark:text-slate-300">
+                        <span className="inline-flex w-fit items-center gap-1.5 rounded-md3-sm bg-surface-container-high px-3 py-1 font-mono type-label-m text-on-surface-variant">
                             ID: {music.id}
                         </span>
                         {Array.from(new Set(music.categories ?? [])).map((category) => (
                             <span
                                 key={category}
-                                className="rounded px-2 py-0.5 text-xs font-bold text-white"
+                                className="rounded-md3-xs px-2 py-0.5 type-label-m text-white"
                                 style={{ backgroundColor: MUSIC_CATEGORY_COLORS[category] }}
                             >
                                 {t(`common.musicCategories.${category}`)}
@@ -522,14 +509,14 @@ export default function LyricsDetailClient() {
                         ))}
                         <Link
                             href={`/music/${music.id}`}
-                            className="inline-flex items-center gap-1 rounded-full border border-sky-400/35 bg-sky-500/10 px-2.5 py-0.5 text-xs font-bold text-sky-500 transition-colors hover:border-sky-400/60 hover:bg-sky-500/15 hover:text-sky-400"
+                            className="state-layer focus-ring inline-flex h-7 items-center gap-1 rounded-md3-sm bg-tertiary-container pl-2.5 pr-1.5 type-label-m text-on-tertiary-container"
                         >
                             <span>{t("page.music.goToMusicDetail")}</span>
-                            <span aria-hidden="true">→</span>
+                            <Icon path={mdArrowForward} size={16} />
                         </Link>
                     </div>
-                    <h1 className="break-words text-2xl font-black text-primary-text sm:text-3xl">{music.title}</h1>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-slate-500 dark:text-slate-400">
+                    <h1 className="break-words type-headline-m text-on-surface sm:type-headline-l">{music.title}</h1>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 type-body-m text-on-surface-variant">
                         {music.composer && <span>{music.composer}</span>}
                         {music.lyricist && music.lyricist !== music.composer && <span>{music.lyricist}</span>}
                     </div>
@@ -538,8 +525,8 @@ export default function LyricsDetailClient() {
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)]">
                     <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                         {/* Music Jacket Card */}
-                        <div className="ios-glass-card overflow-hidden rounded-2xl">
-                            <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-800 dark:to-slate-900">
+                        <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                            <div className="relative aspect-square bg-surface-container">
                                 <Image
                                     src={getMusicJacketUrl(music.assetbundleName, assetSource)}
                                     alt={music.title}
@@ -550,25 +537,25 @@ export default function LyricsDetailClient() {
                                     priority
                                 />
                             </div>
-                            <div className="border-t border-slate-100/80 p-5 dark:border-slate-700/60">
+                            <div className="border-t border-outline-variant p-5">
                                 {lyrics ? (
-                                    <dl className="space-y-3 text-sm">
+                                    <dl className="space-y-3 type-body-m">
                                         <div className="flex items-start justify-between gap-4">
-                                            <dt className="text-slate-500 dark:text-slate-400">{t("page.lyrics.revision")}</dt>
-                                            <dd className="font-mono font-bold text-primary-text">v{lyrics.revision}</dd>
+                                            <dt className="text-on-surface-variant">{t("page.lyrics.revision")}</dt>
+                                            <dd className="font-mono font-bold text-on-surface">v{lyrics.revision}</dd>
                                         </div>
                                         <div className="flex items-start justify-between gap-4">
-                                            <dt className="text-slate-500 dark:text-slate-400">{t("page.lyrics.updatedAt")}</dt>
-                                            <dd className="text-right font-medium text-primary-text">
+                                            <dt className="text-on-surface-variant">{t("page.lyrics.updatedAt")}</dt>
+                                            <dd className="text-right font-medium text-on-surface">
                                                 {formatDate(lyrics.updatedAt, { year: "numeric", month: "short", day: "numeric" })}
                                             </dd>
                                         </div>
                                     </dl>
                                 ) : (
-                                    <dl className="space-y-3 text-sm">
+                                    <dl className="space-y-3 type-body-m">
                                         <div className="flex items-start justify-between gap-4">
-                                            <dt className="text-slate-500 dark:text-slate-400">{t("page.lyrics.versionLabel")}</dt>
-                                            <dd className="inline-flex items-center rounded-md bg-amber-500/10 px-2 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                            <dt className="text-on-surface-variant">{t("page.lyrics.versionLabel")}</dt>
+                                            <dd className="inline-flex items-center rounded-md3-xs bg-tertiary-container px-2 py-0.5 type-label-m text-on-tertiary-container">
                                                 {t("page.lyrics.inProgressBadge")}
                                             </dd>
                                         </div>
@@ -579,16 +566,9 @@ export default function LyricsDetailClient() {
 
                         {/* Vocal Versions Audio Player Card */}
                         {vocals.length > 0 && (
-                            <div className="ios-glass-card overflow-hidden rounded-2xl">
-                                <div className="border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent px-5 py-4 dark:border-slate-700/60 dark:from-miku/10">
-                                    <h2 className="flex items-center gap-2 font-bold text-primary-text">
-                                        <svg className="h-5 w-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                        </svg>
-                                        {t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}
-                                    </h2>
-                                </div>
-                                <div className="divide-y divide-slate-100/80 dark:divide-slate-700/60 max-h-80 overflow-y-auto">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                                <SectionTitle icon={mdMic}>{t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}</SectionTitle>
+                                <div className="divide-y divide-outline-variant max-h-80 overflow-y-auto">
                                     {vocals.map((vocal) => (
                                         <VocalPlayer
                                             key={vocal.id}
@@ -606,37 +586,30 @@ export default function LyricsDetailClient() {
 
                         {/* Attribution Card */}
                         {lyrics && (
-                            <div className="ios-glass-card overflow-hidden rounded-2xl">
-                                <div className="border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent px-5 py-4 dark:border-slate-700/60 dark:from-miku/10">
-                                    <h2 className="flex items-center gap-2 font-bold text-primary-text">
-                                        <svg className="h-5 w-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {t("page.lyrics.attribution")}
-                                    </h2>
-                                </div>
-                                <div className="p-5">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                                <SectionTitle icon={mdInfo}>{t("page.lyrics.attribution")}</SectionTitle>
+                                <div className="p-5 pt-2">
                                     {lyrics.version === 1 ? (
                                         lyrics.attribution ? (
-                                            <dl className="text-sm">
+                                            <dl className="type-body-m">
                                                 <div className="space-y-1">
-                                                    <dt className="font-bold text-primary-text">{t("page.lyrics.translation")}</dt>
-                                                    <dd className="whitespace-pre-wrap break-words leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">
+                                                    <dt className="type-title-s text-on-surface">{t("page.lyrics.translation")}</dt>
+                                                    <dd className="whitespace-pre-wrap break-words leading-relaxed text-on-surface-variant [overflow-wrap:anywhere]">
                                                         {renderMemberText(lyrics.attribution, undefined, { stripAtPrefix: true })}
                                                     </dd>
                                                 </div>
                                             </dl>
                                         ) : (
-                                            <p className="text-sm text-slate-500 dark:text-slate-400">
+                                            <p className="type-body-m text-on-surface-variant">
                                                 {t("page.lyrics.translationCreditsEmpty")}
                                             </p>
                                         )
                                     ) : translationCredits ? (
-                                        <dl className="space-y-4 text-sm">
+                                        <dl className="space-y-4 type-body-m">
                                             {sharedTranslationCredit ? (
                                                 <div className="space-y-1">
-                                                    <dt className="font-bold text-primary-text">{t("page.lyrics.translationAndProofreading")}</dt>
-                                                    <dd className="whitespace-pre-wrap break-words leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">
+                                                    <dt className="type-title-s text-on-surface">{t("page.lyrics.translationAndProofreading")}</dt>
+                                                    <dd className="whitespace-pre-wrap break-words leading-relaxed text-on-surface-variant [overflow-wrap:anywhere]">
                                                         {renderMemberText(sharedTranslationCredit, undefined, { stripAtPrefix: true })}
                                                     </dd>
                                                 </div>
@@ -644,16 +617,16 @@ export default function LyricsDetailClient() {
                                                 <>
                                                     {translationCredit && (
                                                         <div className="space-y-1">
-                                                            <dt className="font-bold text-primary-text">{t("page.lyrics.translation")}</dt>
-                                                            <dd className="whitespace-pre-wrap break-words leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">
+                                                            <dt className="type-title-s text-on-surface">{t("page.lyrics.translation")}</dt>
+                                                            <dd className="whitespace-pre-wrap break-words leading-relaxed text-on-surface-variant [overflow-wrap:anywhere]">
                                                                 {renderMemberText(translationCredit, undefined, { stripAtPrefix: true })}
                                                             </dd>
                                                         </div>
                                                     )}
                                                     {proofreadingCredit && (
                                                         <div className="space-y-1">
-                                                            <dt className="font-bold text-primary-text">{t("page.lyrics.proofreading")}</dt>
-                                                            <dd className="whitespace-pre-wrap break-words leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">
+                                                            <dt className="type-title-s text-on-surface">{t("page.lyrics.proofreading")}</dt>
+                                                            <dd className="whitespace-pre-wrap break-words leading-relaxed text-on-surface-variant [overflow-wrap:anywhere]">
                                                                 {renderMemberText(proofreadingCredit, undefined, { stripAtPrefix: true })}
                                                             </dd>
                                                         </div>
@@ -662,30 +635,30 @@ export default function LyricsDetailClient() {
                                             )}
                                         </dl>
                                     ) : (
-                                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                                        <p className="type-body-m text-on-surface-variant">
                                             {t("page.lyrics.translationCreditsEmpty")}
                                         </p>
                                     )}
                                 </div>
                                 {attributions.length > 0 && (
                                     <>
-                                        <div className="border-y border-slate-100/80 bg-slate-50/40 px-5 py-3 dark:border-slate-700/60 dark:bg-slate-900/20">
-                                            <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                                        <div className="border-y border-outline-variant bg-surface-container px-5 py-3">
+                                            <h3 className="type-title-s text-on-surface-variant">
                                                 {t("page.lyrics.sourceLicenseTitle")}
                                             </h3>
                                         </div>
-                                        <ul className="divide-y divide-slate-100/80 dark:divide-slate-700/60">
+                                        <ul className="divide-y divide-outline-variant">
                                             {attributions.map((attribution) => (
-                                                <li key={`${attribution.provider}-${attribution.revisionUrl}-${"component" in attribution ? attribution.component : "legacy"}`} className="space-y-2 p-5 text-sm">
+                                                <li key={`${attribution.provider}-${attribution.revisionUrl}-${"component" in attribution ? attribution.component : "legacy"}`} className="space-y-2 p-5 type-body-m">
                                                     <div>
-                                                        <p className="font-bold text-primary-text">{t(`page.lyrics.attributionProviders.${attribution.provider}`)}</p>
-                                                        <p className="mt-0.5 break-words text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300">{attribution.title}</p>
+                                                        <p className="type-title-s text-on-surface">{t(`page.lyrics.attributionProviders.${attribution.provider}`)}</p>
+                                                        <p className="mt-0.5 break-words text-on-surface-variant [overflow-wrap:anywhere]">{attribution.title}</p>
                                                     </div>
-                                                    <dl className="space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                                    <dl className="space-y-1.5 type-body-s text-on-surface-variant">
                                                         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                                             <dt>{t("page.lyrics.sourceRevision")}</dt>
                                                             <dd>
-                                                                <ExternalLink href={attribution.revisionUrl} className="font-mono font-bold text-miku hover:underline">
+                                                                <ExternalLink href={attribution.revisionUrl} className="font-mono font-bold text-primary hover:underline">
                                                                     {attribution.revisionId}
                                                                 </ExternalLink>
                                                             </dd>
@@ -693,7 +666,7 @@ export default function LyricsDetailClient() {
                                                         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
                                                             <dt>{t("page.lyrics.sourceLicense")}</dt>
                                                             <dd>
-                                                                <ExternalLink href={attribution.licenseUrl} className="font-medium text-miku hover:underline">
+                                                                <ExternalLink href={attribution.licenseUrl} className="font-medium text-primary hover:underline">
                                                                     {attribution.licenseName}
                                                                 </ExternalLink>
                                                             </dd>
@@ -710,43 +683,29 @@ export default function LyricsDetailClient() {
 
                     <section className="min-w-0">
                         {!lyrics ? (
-                            <div className="ios-glass-card overflow-hidden rounded-2xl p-8 sm:p-12 text-center">
-                                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-miku/10 text-miku">
-                                    <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low p-8 sm:p-12 text-center">
+                                <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-md3-xl bg-primary-container text-on-primary-container">
+                                    <Icon path={mdEditNote} size={40} />
                                 </div>
-                                <div className="inline-flex items-center gap-2 px-3 py-1 border border-miku/30 bg-miku/5 rounded-full mb-3">
-                                    <span className="text-miku text-xs font-bold tracking-wider">{t("page.lyrics.inProgressBadge")}</span>
-                                </div>
-                                <h2 className="text-2xl font-bold text-primary-text mb-3">{t("page.lyrics.draftTitle")}</h2>
-                                <p className="max-w-md mx-auto text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                                <div className="mb-3 type-label-l text-primary">{t("page.lyrics.inProgressBadge")}</div>
+                                <h2 className="type-headline-s text-on-surface mb-3">{t("page.lyrics.draftTitle")}</h2>
+                                <p className="max-w-md mx-auto text-on-surface-variant type-body-m mb-8">
                                     {t("page.lyrics.draftDescription")}
                                 </p>
-                                <div className="flex flex-wrap items-center justify-center gap-4">
-                                    <Link
-                                        href={`/music/${music.id}`}
-                                        className="pressable ios-glass-btn inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold text-slate-600 hover:text-miku dark:text-slate-300"
-                                    >
-                                        <span>{t("page.music.goToMusicDetail")}</span>
-                                        <span aria-hidden="true">→</span>
-                                    </Link>
-                                    <Link
-                                        href="/lyrics"
-                                        className="pressable ios-glass-btn ios-glass-btn-primary inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-bold"
-                                    >
-                                        <span aria-hidden="true">←</span>
-                                        <span>{t("page.lyrics.backToList")}</span>
-                                    </Link>
+                                <div className="flex flex-wrap items-center justify-center gap-3">
+                                    <Button variant="outlined" trailingIcon={mdArrowForward} href={`/music/${music.id}`}>
+                                        {t("page.music.goToMusicDetail")}
+                                    </Button>
+                                    <Button variant="filled" icon={mdArrowBack} href="/lyrics">
+                                        {t("page.lyrics.backToList")}
+                                    </Button>
                                 </div>
                             </div>
                         ) : (
-                            <div className="ios-glass-card overflow-hidden rounded-2xl">
-                                <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent px-5 py-4 dark:border-slate-700/60 dark:from-miku/10 sm:flex-row sm:items-center sm:justify-between">
-                                <h2 className="flex shrink-0 items-center gap-2 font-bold text-primary-text">
-                                    <svg className="h-5 w-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                    </svg>
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                                <div className="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                                <h2 className="flex shrink-0 items-center gap-3 type-title-l text-on-surface">
+                                    <Icon path={mdLyrics} size={24} className="text-primary" />
                                     {t("page.lyrics.contentTitle")}
                                 </h2>
                                 <div className="flex w-full min-w-0 flex-col gap-2 sm:w-auto sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
@@ -767,16 +726,16 @@ export default function LyricsDetailClient() {
                                         />
                                     )}
                                     {renditions.length > 1 && (
-                                        <div role="group" aria-label={t("page.lyrics.renditionLabel")} className="flex max-w-full flex-wrap gap-1 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+                                        <div role="group" aria-label={t("page.lyrics.renditionLabel")} className="flex max-w-full flex-wrap gap-2">
                                             {renditions.map((rendition) => (
                                                 <button
                                                     key={rendition.key}
                                                     type="button"
                                                     aria-pressed={activeRendition?.key === rendition.key}
                                                     onClick={() => selectRendition(rendition.key)}
-                                                    className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${activeRendition?.key === rendition.key
-                                                        ? "bg-white text-miku shadow-sm dark:bg-slate-700 dark:text-miku"
-                                                        : "text-slate-500 hover:text-primary-text dark:text-slate-300"
+                                                    className={`state-layer focus-ring h-8 rounded-md3-sm border px-3 type-label-l transition-colors ${activeRendition?.key === rendition.key
+                                                        ? "border-transparent bg-secondary-container text-on-secondary-container"
+                                                        : "border-outline-variant text-on-surface-variant"
                                                     }`}
                                                 >
                                                     {rendition.label}
@@ -785,32 +744,19 @@ export default function LyricsDetailClient() {
                                         </div>
                                     )}
                                     {hasFullVersion && hasGameVersion ? (
-                                        <div role="group" aria-label={t("page.lyrics.versionLabel")} className="inline-flex w-fit rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
-                                            <button
-                                                type="button"
-                                                aria-pressed={activeVersion === "full"}
-                                                onClick={() => selectVersion("full")}
-                                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${activeVersion === "full"
-                                                    ? "bg-white text-miku shadow-sm dark:bg-slate-700 dark:text-miku"
-                                                    : "text-slate-500 hover:text-primary-text dark:text-slate-300"
-                                                }`}
-                                            >
-                                                {t("page.lyrics.versionFull")}
-                                            </button>
-                                            <button
-                                                type="button"
-                                                aria-pressed={activeVersion === "game"}
-                                                onClick={() => selectVersion("game")}
-                                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${activeVersion === "game"
-                                                    ? "bg-white text-miku shadow-sm dark:bg-slate-700 dark:text-miku"
-                                                    : "text-slate-500 hover:text-primary-text dark:text-slate-300"
-                                                }`}
-                                            >
-                                                {t("page.lyrics.versionGame")}
-                                            </button>
-                                        </div>
+                                        <SegmentedButton
+                                            aria-label={t("page.lyrics.versionLabel")}
+                                            className="w-fit"
+                                            density={-1}
+                                            value={activeVersion}
+                                            onValueChange={(v) => selectVersion(v)}
+                                            options={[
+                                                { value: "full" as LyricsVersion, label: t("page.lyrics.versionFull") },
+                                                { value: "game" as LyricsVersion, label: t("page.lyrics.versionGame") },
+                                            ]}
+                                        />
                                     ) : (
-                                        <span className="inline-flex items-center rounded-lg bg-miku/10 px-3 py-1.5 text-xs font-bold text-miku">
+                                        <span className="inline-flex h-8 items-center rounded-md3-sm bg-secondary-container px-3 type-label-l text-on-secondary-container">
                                             {activeVersion === "game" ? t("page.lyrics.versionGame") : t("page.lyrics.versionFull")}
                                         </span>
                                     )}
@@ -818,28 +764,28 @@ export default function LyricsDetailClient() {
                             </div>
 
                             {displayLines.length === 0 ? (
-                                <div className="p-10 text-center text-slate-500 dark:text-slate-400">
+                                <div className="p-10 text-center type-body-m text-on-surface-variant">
                                     {t("page.lyrics.emptyDocument")}
                                 </div>
                             ) : (
                                 <div>
-                                    <div className={`hidden gap-6 border-b border-slate-100 bg-white/30 px-5 py-3 text-xs font-bold uppercase tracking-wide text-slate-400 dark:border-slate-700/60 dark:bg-slate-900/20 md:grid ${showTargetColumn ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
+                                    <div className={`hidden gap-6 border-b border-outline-variant bg-surface-container px-5 py-3 type-title-s text-on-surface-variant md:grid ${showTargetColumn ? "md:grid-cols-2" : "md:grid-cols-1"}`}>
                                         <span>{t("page.lyrics.japanese")}</span>
                                         {showTargetColumn && (
                                             <span>{displayTargetLocale === "zh-CN" ? t("page.lyrics.chinese") : t("page.lyrics.english")}</span>
                                         )}
                                     </div>
-                                    <div className="divide-y divide-slate-100/80 dark:divide-slate-700/60">
+                                    <div className="divide-y divide-outline-variant">
                                         {displayLines.map((line) => {
                                             const translated = displayTargetLocale ? line[displayTargetLocale] : undefined;
                                             const targetText = translated || line.japanese;
                                             return (
                                                 <article
                                                     key={line.id}
-                                                    className={`${line.stanzaBreakBefore ? "border-t-8 border-t-slate-100/80 dark:border-t-slate-800/80" : ""} grid grid-cols-1 gap-4 px-5 py-5 md:gap-6 ${showTargetColumn ? "md:grid-cols-2" : "md:grid-cols-1"}`}
+                                                    className={`${line.stanzaBreakBefore ? "border-t-8 border-t-surface-container" : ""} grid grid-cols-1 gap-4 px-5 py-5 md:gap-6 ${showTargetColumn ? "md:grid-cols-2" : "md:grid-cols-1"}`}
                                                 >
                                                     <div className="min-w-0">
-                                                        <span className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-slate-400 md:hidden">
+                                                        <span className="mb-2 block type-label-s text-on-surface-variant md:hidden">
                                                             {t("page.lyrics.japanese")}
                                                         </span>
                                                         <LyricText
@@ -849,13 +795,13 @@ export default function LyricsDetailClient() {
                                                         />
                                                     </div>
                                                     {showTargetColumn && (
-                                                        <div className="min-w-0 border-t border-slate-200/60 pt-4 dark:border-slate-700/60 md:border-l md:border-t-0 md:pl-6 md:pt-0">
-                                                            <span className="mb-2 block text-[10px] font-bold uppercase tracking-wide text-slate-400 md:hidden">
+                                                        <div className="min-w-0 border-t border-outline-variant pt-4 md:border-l md:border-t-0 md:pl-6 md:pt-0">
+                                                            <span className="mb-2 block type-label-s text-on-surface-variant md:hidden">
                                                                 {displayTargetLocale === "zh-CN" ? t("page.lyrics.chinese") : t("page.lyrics.english")}
                                                             </span>
                                                             <LyricText text={targetText} performerIds={[]} />
                                                             {!translated && (
-                                                                <span className="mt-2 inline-flex rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300">
+                                                                <span className="mt-2 inline-flex rounded-md3-xs bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
                                                                     {t("page.lyrics.translationFallback")}
                                                                 </span>
                                                             )}
@@ -873,13 +819,22 @@ export default function LyricsDetailClient() {
                 </div>
 
                 <div className="mt-12 text-center">
-                    <Link href="/lyrics" className="pressable ios-glass-btn inline-flex items-center gap-2 rounded-xl px-6 py-3 font-bold text-slate-600 hover:text-miku dark:text-slate-300">
-                        <span aria-hidden="true">←</span>
+                    <Button variant="tonal" icon={mdArrowBack} href="/lyrics">
                         {t("page.lyrics.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
+    );
+}
+
+// Section heading used by the sidebar cards
+function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
+    return (
+        <div className="flex min-h-14 items-center gap-3 px-5 pt-4 pb-2">
+            <Icon path={icon} size={24} className="text-primary" />
+            <h2 className="min-w-0 flex-1 truncate type-title-l text-on-surface">{children}</h2>
+        </div>
     );
 }
 

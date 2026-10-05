@@ -8,6 +8,8 @@ import MusicFilters from "@/components/music/MusicFilters";
 import MusicItem from "@/components/music/MusicItem";
 import { MUSIC_GRID_CLASS } from "@/components/music/music-layout";
 import { useI18n } from "@/contexts/I18nContext";
+import { EmptyState, ErrorState, LoadingState, LoadMore, PageContainer, PageHeader } from "@/components/md3";
+import { mdLyrics } from "@/components/md3/icons";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
@@ -256,25 +258,22 @@ function LyricsContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.lyrics.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.lyrics.title")} <span className="text-miku">{t("page.lyrics.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto">{t("page.lyrics.description")}</p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.lyrics.badge")}
+                title={t("page.lyrics.title")}
+                highlight={t("page.lyrics.titleHighlight")}
+                description={t("page.lyrics.description")}
+            />
 
             {error && (
-                <div role="alert" className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm dark:bg-red-950/30 dark:border-red-900/60 dark:text-red-300">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                    <button onClick={() => window.location.reload()} className="mt-2 text-red-500 underline hover:no-underline dark:text-red-300">
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
@@ -284,22 +283,18 @@ function LyricsContent() {
                     <div className={MUSIC_GRID_CLASS} aria-label={t("page.lyrics.loading")}>
                         {Array.from({ length: 15 }).map((_, index) => (
                             <div key={index} className="animate-pulse">
-                                <div className="overflow-hidden rounded-xl border border-slate-200/60 bg-white/60 dark:border-slate-700/60 dark:bg-slate-800/60">
-                                    <div className="aspect-square bg-slate-200 dark:bg-slate-700" />
+                                <div className="overflow-hidden rounded-md3-md bg-surface-container-low">
+                                    <div className="aspect-square bg-surface-container-high" />
                                     <div className="space-y-2 p-3">
-                                        <div className="h-4 w-3/4 rounded bg-slate-200 dark:bg-slate-700" />
-                                        <div className="h-3 w-1/2 rounded bg-slate-200 dark:bg-slate-700" />
+                                        <div className="h-4 w-3/4 rounded-md3-xs bg-surface-container-highest" />
+                                        <div className="h-3 w-1/2 rounded-md3-xs bg-surface-container-high" />
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : filteredMusics.length === 0 ? (
-                    <div className="py-16 text-center">
-                        <div className="mb-4 text-6xl" aria-hidden="true">🎼</div>
-                        <h3 className="mb-2 text-xl font-bold text-slate-600 dark:text-slate-300">{t("page.lyrics.empty")}</h3>
-                        <p className="text-slate-500 dark:text-slate-400">{t("page.lyrics.emptyHint")}</p>
-                    </div>
+                    <EmptyState icon={mdLyrics} title={t("page.lyrics.empty")} description={t("page.lyrics.emptyHint")} />
                 ) : (
                     <>
                         <div className={MUSIC_GRID_CLASS}>
@@ -326,35 +321,24 @@ function LyricsContent() {
                                 );
                             })}
                         </div>
-                        {displayCount < filteredMusics.length ? (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="pressable ios-glass-btn ios-glass-btn-primary rounded-full px-8 py-3 font-bold"
-                                >
-                                    {t("page.lyrics.loadMore")}
-                                    <span className="ml-2 text-sm opacity-80 type-caption">
-                                        ({Math.min(displayCount, filteredMusics.length)} / {filteredMusics.length})
-                                    </span>
-                                </button>
-                            </div>
-                        ) : (
-                            <div className="mt-8 text-center text-sm text-slate-400">
-                                {t("page.lyrics.allLoaded", { count: String(filteredMusics.length) })}
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.lyrics.loadMore")}
+                            shown={Math.min(displayCount, filteredMusics.length)}
+                            total={filteredMusics.length}
+                            onLoadMore={loadMore}
+                            allLoadedLabel={t("page.lyrics.allLoaded", { count: String(filteredMusics.length) })}
+                        />
                     </>
                 )}
             </section>
-        </div>
+        </PageContainer>
     );
 }
 
 export default function LyricsClient() {
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex min-h-[50vh] items-center justify-center"><div className="loading-spinner" /></div>}>
+            <Suspense fallback={<LoadingState />}>
                 <LyricsContent />
             </Suspense>
         </MainLayout>

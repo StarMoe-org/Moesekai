@@ -78,7 +78,7 @@ function segmentStyle(performers: PerformerDescriptor[]): { className: string; s
             },
         };
     }
-    return { className: "text-primary-text" };
+    return { className: "text-on-surface" };
 }
 
 function RubyText({ spans }: { spans: ILyricsRubySpan[] }) {
@@ -86,7 +86,7 @@ function RubyText({ spans }: { spans: ILyricsRubySpan[] }) {
         <ruby key={`${index}-${span.text}`} className="ruby-annotation">
             {span.text}
             <rp>(</rp>
-            <rt className="text-[0.55em] font-normal text-slate-500 dark:text-slate-400">{span.reading}</rt>
+            <rt className="text-[0.55em] font-normal text-on-surface-variant">{span.reading}</rt>
             <rp>)</rp>
         </ruby>
     ) : (
@@ -148,7 +148,7 @@ export default function LyricText({
         : [];
 
     return (
-        <p className="min-w-0 max-w-full whitespace-pre-wrap break-words font-medium leading-relaxed text-primary-text [overflow-wrap:anywhere]">
+        <p className="min-w-0 max-w-full whitespace-pre-wrap break-words font-medium leading-relaxed text-on-surface [overflow-wrap:anywhere]">
             {displaySegments.map((segment, index) => {
                 const performers = segment.performerIds
                     .map(performer)
@@ -173,7 +173,7 @@ export default function LyricText({
                                 {group.map((item) => item.avatarUrl ? (
                                     <span
                                         key={String(item.id)}
-                                        className="relative inline-flex h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 border-white bg-slate-100 shadow-sm ring-1 ring-slate-900/10 dark:border-slate-900 dark:bg-slate-800 dark:ring-white/15"
+                                        className="relative inline-flex h-6 w-6 shrink-0 overflow-hidden rounded-full border-2 border-surface bg-surface-container-high ring-1 ring-outline-variant"
                                         aria-hidden="true"
                                     >
                                         <Image
@@ -188,7 +188,7 @@ export default function LyricText({
                                 ) : (
                                     <span
                                         key={String(item.id)}
-                                        className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-slate-200 bg-slate-50 px-1.5 text-[9px] font-bold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                                        className="inline-flex h-6 min-w-6 items-center justify-center rounded-full border border-outline-variant bg-surface-container px-1.5 text-[9px] font-bold text-on-surface-variant"
                                         aria-hidden="true"
                                     >
                                         {item.name.slice(0, 2)}

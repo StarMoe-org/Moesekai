@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "@/components/LocalizedLink";
+import { ErrorState, Icon } from "@/components/md3";
+import { mdBolt } from "@/components/md3/icons";
 import Image from "next/image";
 import { IEventInfo, getEventStatus, EVENT_STATUS_DISPLAY } from "@/types/events";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -10,7 +12,7 @@ import { getEventBannerUrl, getEventLogoUrl } from "@/lib/assets";
 import { useTranslation } from "@/contexts/TranslationContext";
 
 export default function CurrentEventTab() {
-    const { assetSource, themeColor, isShowSpoiler } = useTheme();
+    const { assetSource, isShowSpoiler } = useTheme();
     const { t, formatDate: formatLocaleDate } = useI18n();
     const { t: translateMasterText } = useTranslation();
     const [currentEvent, setCurrentEvent] = useState<IEventInfo | null>(null);
@@ -70,23 +72,20 @@ export default function CurrentEventTab() {
 
     if (isLoading) {
         return (
-            <div className="animate-pulse h-32 w-full rounded-2xl bg-slate-100" />
+            <div className="animate-pulse h-32 w-full rounded-md3-xl bg-surface-container-high" />
         );
     }
 
     if (error) {
         return (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm text-center">
-                <p className="font-bold">{t("page.home.currentEvent.loadFailedTitle")}</p>
-                <p>{error}</p>
-            </div>
+            <ErrorState title={t("page.home.currentEvent.loadFailedTitle")} message={error} />
         );
     }
 
     if (!currentEvent) {
         return (
-            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="font-medium">{t("page.home.currentEvent.noActiveEvent")}</p>
+            <div className="p-8 text-center text-on-surface-variant bg-surface-container-low rounded-md3-xl">
+                <p className="type-body-l">{t("page.home.currentEvent.noActiveEvent")}</p>
             </div>
         );
     }
@@ -115,8 +114,8 @@ export default function CurrentEventTab() {
 
     return (
         <div>
-            <Link href={`/events/${currentEvent.id}`} className="block group">
-                <div className="relative flex h-32 md:h-36 rounded-2xl overflow-hidden glass-card border border-white/40 hover:shadow-xl transition-all duration-300 hover:-translate-y-1 bg-white">
+            <Link href={`/events/${currentEvent.id}`} className="state-layer focus-ring block group rounded-md3-xl">
+                <div className="relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
 
                     {/* Left Side: Background & Logo (45%) */}
                     <div className="w-[45%] relative overflow-hidden">
@@ -126,11 +125,11 @@ export default function CurrentEventTab() {
                                 src={getEventBannerUrl(currentEvent.assetbundleName, assetSource)}
                                 alt={currentEvent.name}
                                 fill
-                                className="object-cover transition-transform duration-700 group-hover:scale-110"
+                                className="object-cover"
                                 unoptimized
                             />
                             {/* Dark Overlay Mask */}
-                            <div className="absolute inset-0 bg-black/50" />
+                            <div className="absolute inset-0 bg-scrim/50" />
                         </div>
 
                         {/* Centered Logo */}
@@ -140,7 +139,7 @@ export default function CurrentEventTab() {
                                     src={getEventLogoUrl(currentEvent.assetbundleName, assetSource)}
                                     alt=""
                                     fill
-                                    className="object-contain drop-shadow-2xl"
+                                    className="object-contain drop-shadow-xl"
                                     unoptimized
                                     loading="eager"
                                     fetchPriority="high"
@@ -155,11 +154,9 @@ export default function CurrentEventTab() {
                         {/* Progress Background Overlay (Limited to right side) - Using Theme Color */}
                         {status === "ongoing" && (
                             <div
-                                className="absolute inset-y-0 left-0 transition-all duration-500 ease-out z-0 pointer-events-none"
+                                className="absolute inset-y-0 left-0 bg-primary-container transition-[width] duration-500 ease-md3-standard z-0 pointer-events-none"
                                 style={{
                                     width: `${progressPercent}%`,
-                                    backgroundColor: themeColor,
-                                    opacity: 0.12
                                 }}
                             />
                         )}
@@ -169,12 +166,12 @@ export default function CurrentEventTab() {
                             {/* Status Badge */}
                             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                                 <span
-                                    className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded text-white shadow-sm"
+                                    className="type-label-m px-2 py-0.5 rounded-md3-sm text-white"
                                     style={{ backgroundColor: statusDisplay.color }}
                                 >
                                     {statusLabel}
                                 </span>
-                                <span className="text-[10px] font-bold text-slate-400">
+                                <span className="type-label-s text-on-surface-variant">
                                     {eventTypeName}
                                 </span>
                                 {staminaReserve && (() => {
@@ -188,7 +185,7 @@ export default function CurrentEventTab() {
                                     if (!label) return null;
                                     return (
                                         <span
-                                            className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-miku/10 text-miku cursor-help"
+                                            className="inline-flex items-center gap-0.5 type-label-s px-1.5 py-0.5 rounded-md3-xs bg-tertiary-container text-on-tertiary-container cursor-help"
                                             title={
                                                 staminaReserve.normalReserve > 0 && staminaReserve.passReserve > 0
                                                     ? t("page.home.stamina.detailBoth", { normal: staminaReserve.normalReserve, pass: staminaReserve.passReserve })
@@ -197,24 +194,25 @@ export default function CurrentEventTab() {
                                                     : undefined
                                             }
                                         >
-                                            ⚡ {label}
+                                            <Icon path={mdBolt} size={14} />
+                                            {label}
                                         </span>
                                     );
                                 })()}
                             </div>
 
                             {/* Title (JP Priority) */}
-                            <h3 className="font-bold text-primary-text text-sm sm:text-base leading-tight line-clamp-1 group-hover:text-miku transition-colors" title={currentEvent.name}>
+                            <h3 className="type-title-m text-on-surface line-clamp-1 group-hover:text-primary transition-colors" title={currentEvent.name}>
                                 {currentEvent.name}
                             </h3>
 
                             {/* Title (CN - Second Line) */}
-                            <p className="text-xs text-slate-500 line-clamp-1 h-4">
+                            <p className="type-body-s text-on-surface-variant line-clamp-1 h-4">
                                 {translatedName !== currentEvent.name ? translatedName : ""}
                             </p>
 
                             {/* Date Range & Time */}
-                            <div className="pt-2 text-[10px] sm:text-xs text-slate-400 font-mono flex flex-col sm:flex-row sm:gap-2">
+                            <div className="pt-2 type-label-s text-on-surface-variant font-mono flex flex-col sm:flex-row sm:gap-2">
                                 <span>{formatDate(currentEvent.startAt)}</span>
                                 <span className="hidden sm:inline">-</span>
                                 <span>{formatDate(currentEvent.aggregateAt)}</span>
@@ -224,9 +222,9 @@ export default function CurrentEventTab() {
                         {/* Big Percentage (Bottom Right) */}
                         {status === "ongoing" && (
                             <div
-                                className="absolute bottom-0 right-2 text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 select-none z-10 tracking-tighter"
+                                className="absolute bottom-0 right-2 type-display-s type-emphasized text-on-surface select-none z-10"
                             >
-                                {Math.floor(progressPercent)}<span className="text-2xl ml-1">%</span>
+                                {Math.floor(progressPercent)}<span className="type-headline-s ml-1">%</span>
                             </div>
                         )}
                     </div>

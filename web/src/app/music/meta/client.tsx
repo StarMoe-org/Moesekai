@@ -18,6 +18,8 @@ import {
 import { fetchMasterData, fetchMusicMetas } from "@/lib/fetch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { Button, ErrorState, Icon, LoadingState, PageContainer, PageHeader, SegmentedButton, TextField } from "@/components/md3";
+import { mdHelp, mdKeyboardArrowDown, mdKeyboardArrowUp, mdLeaderboard, mdSearch } from "@/components/md3/icons";
 
 // Items per page options
 const PAGE_SIZE_OPTIONS = [20, 50, 100];
@@ -74,9 +76,9 @@ const getRankingCategories = (mode: LiveMode): RankingCategory[] => {
 // Rank colors for top 3
 const getRankColor = (rank: number): string => {
     if (rank === 1) return "text-yellow-500"; // Gold
-    if (rank === 2) return "text-slate-400"; // Silver
+    if (rank === 2) return "text-outline"; // Silver
     if (rank === 3) return "text-amber-600"; // Bronze
-    return "text-slate-300";
+    return "text-outline-variant";
 };
 
 // Hook to get responsive column count
@@ -424,9 +426,9 @@ function MusicMetaContent() {
         return (
             <Link
                 href={`/music/${meta.music_id}`}
-                className="group relative block"
+                className="group state-layer focus-ring relative block rounded-md3-md"
             >
-                <div className="relative rounded-xl overflow-hidden bg-white/80 border border-slate-200/60 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex">
+                <div className="relative rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 group-hover:shadow-elev-2 transition-shadow duration-200 ease-md3-standard flex">
                     {/* Cover Image - Smaller */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 overflow-hidden">
                         {music && (
@@ -435,7 +437,7 @@ function MusicMetaContent() {
                                 alt={music.title}
                                 fill
                                 sizes="96px"
-                                className="object-cover group-hover:scale-105 transition-transform duration-300"
+                                className="object-cover"
                                 unoptimized
                             />
                         )}
@@ -443,7 +445,7 @@ function MusicMetaContent() {
                         {/* Difficulty Badge - Only show if not hidden */}
                         {!category.hideDifficulty && (
                             <div
-                                className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-bold text-white shadow"
+                                className="absolute bottom-1 left-1 px-1.5 py-0.5 rounded-md3-xs text-[9px] font-bold text-white shadow-elev-1"
                                 style={{ backgroundColor: diffColor }}
                             >
                                 {diffName} {level}
@@ -453,17 +455,17 @@ function MusicMetaContent() {
 
                     {/* Info Section */}
                     <div className="flex-1 p-2 sm:p-3 flex flex-col justify-center min-w-0">
-                        <h3 className="text-sm font-bold text-primary-text truncate group-hover:text-miku transition-colors">
+                        <h3 className="type-title-s text-on-surface truncate group-hover:text-primary transition-colors">
                             {music?.title || `Music ${meta.music_id}`}
                         </h3>
-                        <p className="text-xs text-slate-500 truncate mt-0.5">
+                        <p className="type-body-s text-on-surface-variant truncate mt-0.5">
                             {music?.composer}
                             {music?.composer !== music?.arranger && music?.arranger !== "-" && ` / ${music?.arranger}`}
                         </p>
                         {/* PSPI Score */}
                         <div className="mt-1.5 flex items-baseline gap-1">
-                            <span className="text-lg font-black text-miku">{category.format(value)}</span>
-                            <span className="text-[10px] text-slate-400">{t(category.subtitleKey)}</span>
+                            <span className="type-title-l type-emphasized text-primary">{category.format(value)}</span>
+                            <span className="type-label-s text-on-surface-variant">{t(category.subtitleKey)}</span>
                         </div>
                     </div>
 
@@ -487,20 +489,21 @@ function MusicMetaContent() {
                 {/* Section Header */}
                 <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                        <span className="w-1 h-6 bg-miku rounded-full"></span>
-                        <h2 className="text-lg font-bold text-primary-text">{t(category.titleKey)}</h2>
-                        <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded">{t(category.subtitleKey)}</span>
+                        <Icon path={mdLeaderboard} size={24} className="text-primary" />
+                        <h2 className="type-title-l text-on-surface">{t(category.titleKey)}</h2>
+                        <span className="type-label-m text-on-surface-variant bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{t(category.subtitleKey)}</span>
                     </div>
-                    <button
-                        type="button"
+                    <Button
+                        variant="text"
+                        size="xs"
+                        trailingIcon={isExpanded ? mdKeyboardArrowUp : mdKeyboardArrowDown}
                         onClick={(e) => {
                             e.preventDefault();
                             toggleRankingExpand(category.id);
                         }}
-                        className="text-xs text-slate-500 hover:text-miku transition-colors px-3 py-1 rounded-lg hover:bg-slate-100"
                     >
                         {isExpanded ? t("page.musicMeta.collapse") : t("page.musicMeta.expandMore")}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Ranking Grid - Responsive: 1 col mobile, 2 sm, 3 lg, 5 xl */}
@@ -525,15 +528,15 @@ function MusicMetaContent() {
         field: keyof IMusicMeta; main: string; sub?: string; center?: boolean; className?: string;
     }) => (
         <th
-            className={`px-3 py-3 ${center ? "text-center" : "text-left"} cursor-pointer hover:bg-slate-100 transition-colors whitespace-nowrap bg-slate-50 ${className}`}
+            className={`px-3 py-3 ${center ? "text-center" : "text-left"} cursor-pointer hover:bg-surface-container-highest transition-colors whitespace-nowrap bg-surface-container-high ${className}`}
             onClick={() => handleSort(field)}
         >
             <div className={`flex flex-col ${center ? "items-center" : "items-start"}`}>
-                <span className="text-sm font-bold text-slate-700">
+                <span className="type-title-s text-on-surface">
                     {main}
                     {sortField === field && <span className="ml-1">{sortOrder === "asc" ? "↑" : "↓"}</span>}
                 </span>
-                {sub && <span className="text-xs text-slate-400">{sub}</span>}
+                {sub && <span className="type-body-s text-on-surface-variant">{sub}</span>}
             </div>
         </th>
     );
@@ -545,7 +548,7 @@ function MusicMetaContent() {
         const level = difficultyMap.get(`${musicId}-${difficulty}`) || "?";
         return (
             <div className="flex justify-center">
-                <span className="w-[85px] sm:w-[120px] px-2 py-0.5 rounded text-xs font-bold text-white inline-flex items-center justify-center gap-1 shadow-sm" style={{ backgroundColor: color }}>
+                <span className="w-[85px] sm:w-[120px] px-2 py-0.5 rounded-md3-xs text-xs font-bold text-white inline-flex items-center justify-center gap-1" style={{ backgroundColor: color }}>
                     <span className="hidden sm:inline">{name}</span>
                     <span className="opacity-90">Lv.{level}</span>
                 </span>
@@ -556,49 +559,49 @@ function MusicMetaContent() {
     // Pagination Component
     const Pagination = () => (
         <div className="flex flex-wrap items-center justify-between gap-4 mt-4 px-2">
-            <div className="flex items-center gap-2 text-sm text-slate-600">
+            <div className="flex items-center gap-2 type-body-m text-on-surface-variant">
                 <span>{t("page.musicMeta.pagination.perPagePrefix")}</span>
                 <select value={pageSize} onChange={(e) => {
                     setPageSize(Number(e.target.value));
                     setCurrentPage(1);
-                }} className="px-2 py-1 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-miku/50">
+                }} className="h-8 px-2 border border-outline-variant rounded-md3-xs bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
                     {PAGE_SIZE_OPTIONS.map((size) => (<option key={size} value={size}>{size}</option>))}
                 </select>
                 <span>{t("page.musicMeta.pagination.perPageSuffix")}</span>
-                <span className="text-slate-400 ml-2">{t("page.musicMeta.pagination.total", { count: formatNumber(filteredMetas.length) })}</span>
+                <span className="ml-2">{t("page.musicMeta.pagination.total", { count: formatNumber(filteredMetas.length) })}</span>
             </div>
             <div className="flex items-center gap-1">
-                <button type="button" onClick={() => setCurrentPage(1)} disabled={currentPage === 1} className="px-2 py-1 rounded text-sm border border-slate-200 disabled:opacity-40 hover:bg-slate-50">{t("page.musicMeta.pagination.first")}</button>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="px-2 py-1 rounded text-sm border border-slate-200 disabled:opacity-40 hover:bg-slate-50">{t("page.musicMeta.pagination.previous")}</button>
-                <span className="px-3 py-1 text-sm text-slate-600 font-mono">{currentPage}/{totalPages || 1}</span>
-                <button type="button" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages} className="px-2 py-1 rounded text-sm border border-slate-200 disabled:opacity-40 hover:bg-slate-50">{t("page.musicMeta.pagination.next")}</button>
-                <button type="button" onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages} className="px-2 py-1 rounded text-sm border border-slate-200 disabled:opacity-40 hover:bg-slate-50">{t("page.musicMeta.pagination.last")}</button>
+                <Button variant="outlined" size="xs" onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>{t("page.musicMeta.pagination.first")}</Button>
+                <Button variant="outlined" size="xs" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1}>{t("page.musicMeta.pagination.previous")}</Button>
+                <span className="px-3 py-1 type-body-m text-on-surface-variant font-mono">{currentPage}/{totalPages || 1}</span>
+                <Button variant="outlined" size="xs" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages}>{t("page.musicMeta.pagination.next")}</Button>
+                <Button variant="outlined" size="xs" onClick={() => setCurrentPage(totalPages)} disabled={currentPage >= totalPages}>{t("page.musicMeta.pagination.last")}</Button>
             </div>
         </div>
     );
 
     // PSPI Explanation Section
     const PSPIExplanation = () => (
-        <div className="mt-12 p-6 bg-slate-50 border border-slate-200 rounded-2xl">
-            <h2 className="text-lg font-bold text-primary-text mb-4 flex items-center gap-2">
-                <span className="w-1 h-6 bg-miku rounded-full"></span>
+        <div className="mt-12 p-6 bg-surface-container-low rounded-md3-xl">
+            <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
+                <Icon path={mdHelp} size={24} className="text-primary" />
                 {t("page.musicMeta.pspi.title")}
             </h2>
-            <div className="space-y-4 text-slate-600 text-sm leading-relaxed">
+            <div className="space-y-4 text-on-surface-variant type-body-m">
                 <p>
                     <strong>{t("page.musicMeta.pspi.term")}</strong>{t("page.musicMeta.pspi.descriptionAfterTerm")}
                 </p>
                 <div className="grid md:grid-cols-2 gap-4">
-                    <div className="p-4 bg-white rounded-lg border border-slate-100">
-                        <h3 className="font-bold text-slate-700 mb-2">{t("page.musicMeta.pspi.teamTitle")}</h3>
-                        <ul className="space-y-1 text-sm">
+                    <div className="p-4 bg-surface-container-lowest rounded-md3-lg">
+                        <h3 className="type-title-s text-on-surface mb-2">{t("page.musicMeta.pspi.teamTitle")}</h3>
+                        <ul className="space-y-1 type-body-m">
                             <li>{t("page.musicMeta.pspi.soloAutoTeam")}</li>
                             <li>{t("page.musicMeta.pspi.multiTeam")}</li>
                         </ul>
                     </div>
-                    <div className="p-4 bg-white rounded-lg border border-slate-100">
-                        <h3 className="font-bold text-slate-700 mb-2">{t("page.musicMeta.pspi.cyclesTitle")}</h3>
-                        <ul className="space-y-1 text-sm">
+                    <div className="p-4 bg-surface-container-lowest rounded-md3-lg">
+                        <h3 className="type-title-s text-on-surface mb-2">{t("page.musicMeta.pspi.cyclesTitle")}</h3>
+                        <ul className="space-y-1 type-body-m">
                             <li>{t("page.musicMeta.pspi.autoCycle")}</li>
                             <li>{t("page.musicMeta.pspi.multiCycle")}</li>
                         </ul>
@@ -610,83 +613,49 @@ function MusicMetaContent() {
 
     // Credits Section
     const CreditsSection = () => (
-        <div className="mt-8 py-6 border-t border-slate-100 text-center">
-            <div className="text-sm text-slate-400 mb-2">{t("page.musicMeta.creditsTitle")}</div>
-            <div className="text-center text-sm text-slate-500 py-8">
-                Meta Data Provided by <ExternalLink href="https://github.com/Sekai-World/sekai-viewer" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-miku transition-colors">Sekai-World/sekai-viewer</ExternalLink> & <ExternalLink href="https://3-3.dev/" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-miku transition-colors">xfl03</ExternalLink> & <ExternalLink href="https://github.com/NeuraXmy" target="_blank" rel="noopener noreferrer" className="text-slate-600 hover:text-miku transition-colors">Luna</ExternalLink>
+        <div className="mt-8 py-6 border-t border-outline-variant text-center">
+            <div className="type-label-l text-on-surface-variant mb-2">{t("page.musicMeta.creditsTitle")}</div>
+            <div className="text-center type-body-m text-on-surface-variant py-8">
+                Meta Data Provided by <ExternalLink href="https://github.com/Sekai-World/sekai-viewer" target="_blank" rel="noopener noreferrer" className="text-on-surface hover:text-primary transition-colors">Sekai-World/sekai-viewer</ExternalLink> & <ExternalLink href="https://3-3.dev/" target="_blank" rel="noopener noreferrer" className="text-on-surface hover:text-primary transition-colors">xfl03</ExternalLink> & <ExternalLink href="https://github.com/NeuraXmy" target="_blank" rel="noopener noreferrer" className="text-on-surface hover:text-primary transition-colors">Luna</ExternalLink>
             </div>
         </div>
     );
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.musicMeta.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text mb-3">
-                    {t("page.musicMeta.title")} <span className="text-miku">{t("page.musicMeta.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 max-w-2xl mx-auto text-sm">
-                    {t("page.musicMeta.description")}
-                </p>
-            </div>
+        <PageContainer wide>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.musicMeta.badge")}
+                title={t("page.musicMeta.title")}
+                highlight={t("page.musicMeta.titleHighlight")}
+                description={t("page.musicMeta.description")}
+            />
 
             {/* Controls */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
-                {/* Live Mode Toggle */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    {LIVE_MODE_OPTIONS.map((option) => (
-                        <button
-                            type="button"
-                            key={option.value}
-                            onClick={() => setLiveMode(option.value)}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${liveMode === option.value
-                                ? "bg-white text-miku shadow-sm"
-                                : "text-slate-500 hover:text-slate-900"
-                                }`}
-                        >
-                            {t(option.labelKey)}
-                        </button>
-                    ))}
-                </div>
-
-                {/* View Mode Toggle */}
-                <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl">
-                    <button
-                        type="button"
-                        onClick={() => setViewMode("overview")}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "overview" ? "bg-white text-miku shadow-sm" : "text-slate-500 hover:text-slate-900"
-                            }`}
-                    >
-                        {t("page.musicMeta.viewModes.overview")}
-                    </button>
-                    <button
-                        type="button"
-                        onClick={() => setViewMode("detailed")}
-                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${viewMode === "detailed" ? "bg-white text-miku shadow-sm" : "text-slate-500 hover:text-slate-900"
-                            }`}
-                    >
-                        {t("page.musicMeta.viewModes.detailed")}
-                    </button>
-                </div>
+                <SegmentedButton
+                    className="w-auto"
+                    value={liveMode}
+                    onValueChange={(v) => setLiveMode(v)}
+                    options={LIVE_MODE_OPTIONS.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+                />
+                <SegmentedButton
+                    className="w-auto"
+                    value={viewMode}
+                    onValueChange={(v) => setViewMode(v)}
+                    options={[
+                        { value: "overview" as const, label: t("page.musicMeta.viewModes.overview") },
+                        { value: "detailed" as const, label: t("page.musicMeta.viewModes.detailed") },
+                    ]}
+                />
             </div>
 
-            {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.musicMeta.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={t("page.musicMeta.loadFailed")} message={error} />
             )}
 
-            {/* Loading State */}
             {isLoading ? (
-                <div className="flex h-[30vh] w-full items-center justify-center text-slate-500 flex-col gap-3">
-                    <div className="w-8 h-8 border-4 border-miku/30 border-t-miku rounded-full animate-spin" />
-                    <p>{t("page.musicMeta.loading")}</p>
-                </div>
+                <LoadingState className="min-h-[30vh]" label={t("page.musicMeta.loading")} />
             ) : viewMode === "overview" ? (
                 /* Overview Mode - Rankings */
                 <div>
@@ -697,32 +666,29 @@ function MusicMetaContent() {
             ) : (
                 /* Detailed Mode - Table */
                 <>
-                    <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between sticky top-[4.5rem] z-30 bg-white/95 backdrop-blur-sm p-4 rounded-xl border border-slate-100 shadow-sm">
+                    <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between sticky top-[4.5rem] z-30 bg-surface-container p-4 rounded-md3-lg shadow-elev-1">
                         <div className="relative w-full sm:max-w-md">
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
+                            <TextField
                                 data-shortcut-search="true"
-                                type="text"
+                                dense
+                                icon={mdSearch}
                                 placeholder={t("page.musicMeta.searchPlaceholder")}
                                 value={searchQuery}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value);
                                     setCurrentPage(1);
                                 }}
-                                className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-miku/50"
                             />
                         </div>
                     </div>
 
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm">
-                        <table className="w-full text-sm border-separate border-spacing-0">
-                            <thead className="bg-slate-50">
+                    <div className="overflow-x-auto rounded-md3-lg border border-outline-variant bg-surface-container-lowest">
+                        <table className="w-full type-body-m text-on-surface border-separate border-spacing-0">
+                            <thead className="bg-surface-container-high">
                                 <tr>
-                                    <TableHeader field="music_id" main="ID" center className={`${enableStickyColumns ? 'sticky left-0 z-20' : ''} border-r border-slate-200/60 w-[45px] min-w-[45px] sm:w-[60px]`} />
-                                    <TableHeader field="difficulty" main={t("page.musicMeta.table.difficulty")} center className={`${enableStickyColumns ? 'sticky left-[45px] sm:left-[60px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]' : ''} border-r border-slate-200/60 w-[95px] min-w-[95px] sm:w-[140px]`} />
-                                    <th className={`px-3 py-3 text-left text-sm font-bold text-slate-700 min-w-[180px] ${enableStickyColumns ? 'sticky left-[140px] sm:left-[200px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]' : ''} bg-slate-50 border-r border-slate-200/60`}>{t("page.musicMeta.table.songName")}</th>
+                                    <TableHeader field="music_id" main="ID" center className={`${enableStickyColumns ? 'sticky left-0 z-20' : ''} border-r border-outline-variant w-[45px] min-w-[45px] sm:w-[60px]`} />
+                                    <TableHeader field="difficulty" main={t("page.musicMeta.table.difficulty")} center className={`${enableStickyColumns ? 'sticky left-[45px] sm:left-[60px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]' : ''} border-r border-outline-variant w-[95px] min-w-[95px] sm:w-[140px]`} />
+                                    <th className={`px-3 py-3 text-left type-title-s text-on-surface min-w-[180px] ${enableStickyColumns ? 'sticky left-[140px] sm:left-[200px] z-20 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]' : ''} bg-surface-container-high border-r border-outline-variant`}>{t("page.musicMeta.table.songName")}</th>
                                     <TableHeader field="music_time" main={t("page.musicMeta.table.duration")} sub={t("page.musicMeta.units.seconds")} center className="w-[80px]" />
                                     <TableHeader field="event_rate" main={t("page.musicMeta.table.eventRate")} center className="w-[100px]" />
                                     <TableHeader field="base_score" main={t("page.musicMeta.table.baseScore")} center className="min-w-[100px]" />
@@ -735,25 +701,25 @@ function MusicMetaContent() {
                             </thead>
                             <tbody>
                                 {paginatedMetas.map((meta, idx) => {
-                                    const rowBgClass = idx % 2 === 0 ? "bg-white" : "bg-slate-50";
+                                    const rowBgClass = idx % 2 === 0 ? "bg-surface-container-lowest" : "bg-surface-container-low";
                                     const music = musicMap.get(meta.music_id);
                                     return (
-                                        <tr key={`${meta.music_id}-${meta.difficulty}`} className="hover:bg-slate-50 transition-colors group">
-                                            <td className={`px-3 py-3 font-mono text-slate-500 text-center ${enableStickyColumns ? 'sticky left-0 z-10' : ''} border-r border-slate-200/60 ${rowBgClass}`}>{meta.music_id}</td>
-                                            <td className={`px-3 py-3 ${enableStickyColumns ? 'sticky left-[45px] sm:left-[60px] z-10 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]' : ''} border-r border-slate-200/60 ${rowBgClass}`}><DifficultyBadge musicId={meta.music_id} difficulty={meta.difficulty} /></td>
-                                            <td className={`px-3 py-3 ${enableStickyColumns ? 'sticky left-[140px] sm:left-[200px] z-10 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]' : ''} border-r border-slate-200/60 ${rowBgClass}`}>
-                                                <Link href={`/music/${meta.music_id}`} className="text-slate-700 group-hover:text-miku font-medium transition-colors line-clamp-1" title={music?.title}>
+                                        <tr key={`${meta.music_id}-${meta.difficulty}`} className="transition-colors group">
+                                            <td className={`px-3 py-3 font-mono text-on-surface-variant text-center ${enableStickyColumns ? 'sticky left-0 z-10' : ''} border-r border-outline-variant ${rowBgClass}`}>{meta.music_id}</td>
+                                            <td className={`px-3 py-3 ${enableStickyColumns ? 'sticky left-[45px] sm:left-[60px] z-10 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.1)]' : ''} border-r border-outline-variant ${rowBgClass}`}><DifficultyBadge musicId={meta.music_id} difficulty={meta.difficulty} /></td>
+                                            <td className={`px-3 py-3 ${enableStickyColumns ? 'sticky left-[140px] sm:left-[200px] z-10 shadow-[4px_0_8px_-4px_rgba(0,0,0,0.05)]' : ''} border-r border-outline-variant ${rowBgClass}`}>
+                                                <Link href={`/music/${meta.music_id}`} className="text-on-surface group-hover:text-primary font-medium transition-colors line-clamp-1" title={music?.title}>
                                                     {music?.title || `Music ${meta.music_id}`}
                                                 </Link>
                                             </td>
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{meta.music_time.toFixed(1)}</td>
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{meta.event_rate}%</td>
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta.base_score * 100).toFixed(2)}%</td>
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta.fever_score * 100).toFixed(2)}%</td>
-                                            {modeFields.cycles && <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta[modeFields.cycles] as number).toFixed(1)}</td>}
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta[modeFields.score] as number).toFixed(1)}</td>
-                                            <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta[modeFields.pt] as number).toFixed(1)}</td>
-                                            {modeFields.hourly && <td className={`px-3 py-3 text-slate-600 font-mono text-center ${rowBgClass}`}>{(meta[modeFields.hourly] as number).toFixed(1)}</td>}
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{meta.music_time.toFixed(1)}</td>
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{meta.event_rate}%</td>
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta.base_score * 100).toFixed(2)}%</td>
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta.fever_score * 100).toFixed(2)}%</td>
+                                            {modeFields.cycles && <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta[modeFields.cycles] as number).toFixed(1)}</td>}
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta[modeFields.score] as number).toFixed(1)}</td>
+                                            <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta[modeFields.pt] as number).toFixed(1)}</td>
+                                            {modeFields.hourly && <td className={`px-3 py-3 text-on-surface-variant font-mono text-center ${rowBgClass}`}>{(meta[modeFields.hourly] as number).toFixed(1)}</td>}
                                         </tr>
                                     );
                                 })}
@@ -767,7 +733,7 @@ function MusicMetaContent() {
             {/* PSPI Explanation & Credits */}
             <PSPIExplanation />
             <CreditsSection />
-        </div>
+        </PageContainer>
     );
 }
 
@@ -782,9 +748,7 @@ export default function MusicMetaClient() {
         <MainLayout>
             <Suspense
                 fallback={
-                    <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-                        <MusicMetaFallback />
-                    </div>
+                    <LoadingState label={<MusicMetaFallback />} />
                 }
             >
                 <MusicMetaContent />

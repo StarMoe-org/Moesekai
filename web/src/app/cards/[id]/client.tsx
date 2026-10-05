@@ -32,6 +32,8 @@ import { TranslatedText } from "@/components/common/TranslatedText";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { ICostumeInfo, IMoeCostumeData, PART_TYPE_LABEL_KEYS } from "@/types/costume";
+import { Button, Icon, LoadingIndicator, LoadingState, PageContainer, EmptyState, SegmentedButton } from "@/components/md3";
+import { mdApparel, mdArrowBack, mdBarChart, mdBolt, mdCalendarMonth, mdChevronRight, mdInfo, mdMenuBook, mdPaid, mdSchedule, mdStopCircle, mdVolumeUp, mdZoomIn } from "@/components/md3/icons";
 
 // Max levels by rarity
 const MAX_LEVELS = CARD_RARITY_MAX_LEVELS;
@@ -358,12 +360,9 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("common.state.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -371,26 +370,18 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
     if (error || !card) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.cards.notFoundTitle")}</h2>
-                        <p className="text-slate-500 mb-6">{t("page.cards.notFoundDesc")}</p>
-                        <Link
-                            href="/cards"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.cards.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdSchedule}
+                        title={t("page.cards.notFoundTitle")}
+                        description={t("page.cards.notFoundDesc")}
+                        action={
+                            <Button variant="filled" icon={mdArrowBack} href="/cards">
+                                {t("page.cards.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -406,16 +397,16 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                 fileName={`card_${card.id}_${effectiveShowTrained ? "trained" : "normal"}.png`}
             />
 
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-md3-sm type-label-m font-mono text-on-surface-variant w-fit">
                             ID: {card.id}
                         </span>
                         {isJpAdvance && (
-                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-rose-100 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 rounded-full text-xs font-semibold w-fit border border-rose-200 dark:border-rose-900/50">
-                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-error-container text-on-error-container rounded-md3-sm type-label-m w-fit">
+                                <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
                                 {t("page.cards.jpAdvanceBadge")}
                             </span>
                         )}
@@ -459,20 +450,20 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             </div>
                         </div>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800 mb-2">
+                    <h1 className="type-headline-m sm:type-headline-l text-on-surface mb-2">
                         <TranslatedText
                             original={card.prefix}
                             category="cards"
                             field="prefix"
                             originalClassName=""
-                            translationClassName="block text-base font-medium text-slate-400 mt-1"
+                            translationClassName="block type-title-m text-on-surface-variant mt-1"
                         />
                     </h1>
                     <div className="flex items-center gap-3">
-                        <span className="text-lg text-slate-600">{characterName}</span>
+                        <span className="type-title-m text-on-surface-variant">{characterName}</span>
                         {characterUnit && (
                             <span
-                                className="text-xs px-2 py-0.5 rounded-full text-white"
+                                className="type-label-m px-2 py-0.5 rounded-md3-sm text-white"
                                 style={{ backgroundColor: characterUnit.color }}
                             >
                                 {characterUnit.name}
@@ -490,11 +481,11 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             <div className="space-y-4">
                                 {/* Normal Image */}
                                 {!cardDefaultTrained && (
-                                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                            <span className="text-sm font-bold text-slate-600">{t("page.cards.viewNormal")}</span>
+                                    <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                        <div className="px-4 py-2 border-b border-outline-variant">
+                                            <span className="type-title-s text-on-surface-variant">{t("page.cards.viewNormal")}</span>
                                         </div>
-                                        <div className="relative aspect-[2/1] bg-gradient-to-br from-slate-50 to-slate-100">
+                                        <div className="relative aspect-[2/1] bg-surface-container">
                                             <Image
                                                 src={getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource)}
                                                 alt={`${card.prefix} - ${t("page.cards.viewNormal")}`}
@@ -508,11 +499,11 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                 )}
                                 {/* Trained Image */}
                                 {(cardDefaultTrained || (trainable && !isBirthday)) && (
-                                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                        <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                            <span className="text-sm font-bold text-slate-600">{t("page.cards.viewTrained")}</span>
+                                    <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                        <div className="px-4 py-2 border-b border-outline-variant">
+                                            <span className="type-title-s text-on-surface-variant">{t("page.cards.viewTrained")}</span>
                                         </div>
-                                        <div className="relative aspect-[2/1] bg-gradient-to-br from-slate-50 to-slate-100">
+                                        <div className="relative aspect-[2/1] bg-surface-container">
                                             <Image
                                                 src={getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource)}
                                                 alt={`${card.prefix} - ${t("page.cards.viewTrained")}`}
@@ -526,39 +517,30 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             </div>
                         ) : (
                             /* Normal Mode: Tabs and switchable view */
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
                                 {/* Image Toggle (only for trainable non-birthday cards that have both images) */}
                                 {trainable && !isBirthday && !cardDefaultTrained && (
-                                    <div className="flex p-1 bg-slate-100/30 dark:bg-slate-900/30 backdrop-blur-sm border-b border-slate-200/50 dark:border-slate-800/80 gap-1">
-                                        <button
-                                            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${!showTrained
-                                                ? "ios-glass-tab-active bg-miku text-white shadow-sm"
-                                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/20 dark:hover:bg-slate-800/40"
-                                                }`}
-                                            onClick={() => setShowTrained(false)}
-                                        >
-                                            {t("page.cards.viewNormal")}
-                                        </button>
-                                        <button
-                                            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-all ${showTrained
-                                                ? "ios-glass-tab-active bg-miku text-white shadow-sm"
-                                                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-white/20 dark:hover:bg-slate-800/40"
-                                                }`}
-                                            onClick={() => setShowTrained(true)}
-                                        >
-                                            {t("page.cards.viewTrained")}
-                                        </button>
+                                    <div className="p-3 border-b border-outline-variant">
+                                        <SegmentedButton
+                                            className="w-full"
+                                            value={showTrained ? "trained" : "normal"}
+                                            onValueChange={(v) => setShowTrained(v === "trained")}
+                                            options={[
+                                                { value: "normal", label: t("page.cards.viewNormal") },
+                                                { value: "trained", label: t("page.cards.viewTrained") },
+                                            ]}
+                                        />
                                     </div>
                                 )}
 
                                 {/* Main Image */}
                                 <div
-                                    className="relative aspect-[2/1] bg-gradient-to-br from-slate-50 to-slate-100 cursor-zoom-in group"
+                                    className="relative aspect-[2/1] bg-surface-container cursor-zoom-in group"
                                     onClick={() => setImageViewerOpen(true)}
                                 >
                                     {/* Loading Spinner (behind image) */}
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="loading-spinner loading-spinner-sm"></div>
+                                        <LoadingIndicator size={32} />
                                     </div>
 
                                     <Image
@@ -570,20 +552,18 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                         unoptimized
                                         priority
                                     />
-                                    <div className="absolute bottom-3 right-3 z-20 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                        </svg>
+                                    <div className="absolute bottom-3 right-3 z-20 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                        <Icon path={mdZoomIn} size={16} />
                                         {t("page.cards.clickExpand")}
                                     </div>
                                 </div>
 
                                 {/* Thumbnails */}
-                                <div className="p-4 flex gap-3 justify-center bg-slate-50/50">
+                                <div className="p-4 flex gap-3 justify-center">
                                     {/* Only show normal thumbnail if card has both images */}
                                     {!cardDefaultTrained && (
                                         <div
-                                            className={`relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer ring-2 transition-all ${!effectiveShowTrained ? "ring-miku" : "ring-transparent hover:ring-slate-300"
+                                            className={`relative w-16 h-16 rounded-md3-sm overflow-hidden cursor-pointer ring-2 transition-[box-shadow] duration-150 ${!effectiveShowTrained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"
                                                 }`}
                                             onClick={() => setShowTrained(false)}
                                         >
@@ -599,7 +579,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                     {/* Show trained thumbnail for trainable cards or default-trained cards */}
                                     {(cardDefaultTrained || (trainable && !isBirthday)) && (
                                         <div
-                                            className={`relative w-16 h-16 rounded-lg overflow-hidden cursor-pointer ring-2 transition-all ${effectiveShowTrained ? "ring-miku" : "ring-transparent hover:ring-slate-300"
+                                            className={`relative w-16 h-16 rounded-md3-sm overflow-hidden cursor-pointer ring-2 transition-[box-shadow] duration-150 ${effectiveShowTrained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"
                                                 }`}
                                             onClick={() => !cardDefaultTrained && setShowTrained(true)}
                                         >
@@ -620,16 +600,9 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                     {/* Right: Card Info */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.cards.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <SectionTitle icon={mdInfo}>{t("page.cards.basicInfo")}</SectionTitle>
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label={t("page.cards.cardIdLabel")} value={`#${card.id}`} />
                                 <InfoRow
                                     label={t("common.field.name")}
@@ -639,15 +612,15 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                             category="cards"
                                             field="prefix"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-s text-on-surface-variant mt-0.5"
                                         />
                                     }
                                 />
                                 <InfoRow label={t("common.filter.character")} value={characterName} />
                                 <InfoRow label={t("common.filter.cardType")} value={
-                                    <span className={`px-2 py-0.5 rounded text-xs font-bold ${supplyName === t("common.cardSupplyTypes.normal") ? "bg-slate-100 text-slate-500" :
-                                        supplyName === t("common.cardSupplyTypes.birthday") ? "bg-pink-100 text-pink-500" :
-                                            "bg-amber-100 text-amber-600"
+                                    <span className={`px-2 py-0.5 rounded-md3-xs type-label-m ${supplyName === t("common.cardSupplyTypes.normal") ? "bg-surface-container-high text-on-surface-variant" :
+                                        supplyName === t("common.cardSupplyTypes.birthday") ? "bg-tertiary-container text-on-tertiary-container" :
+                                            "bg-secondary-container text-on-secondary-container"
                                         }`}>
                                         {supplyName}
                                     </span>
@@ -714,7 +687,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                 />
                                 <InfoRow
                                     label={t("page.events.assetNameLabel")}
-                                    value={<span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{card.assetbundleName}</span>}
+                                    value={<span className="font-mono type-body-s bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{card.assetbundleName}</span>}
                                 />
                                 {/* Support Unit - Only for Virtual Singers (characterId >= 21) */}
                                 {card.characterId >= 21 && (
@@ -733,7 +706,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                                         />
                                                     </div>
                                                 )}
-                                                <span className={card.supportUnit === "none" ? "text-slate-400" : ""}>
+                                                <span className={card.supportUnit === "none" ? "text-on-surface-variant" : ""}>
                                                     {t(SUPPORT_UNIT_LABEL_KEYS[card.supportUnit])}
                                                 </span>
                                             </div>
@@ -751,19 +724,12 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
 
                         {/* Stats Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                    </svg>
-                                    {t("page.cards.powerLabel")}
-                                </h2>
-                            </div>
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <SectionTitle icon={mdBarChart}>{t("page.cards.powerLabel")}</SectionTitle>
 
                             {/* Level Slider - Compact */}
-                            <div className="px-4 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center gap-3">
-                                <span className="text-xs font-bold text-slate-500 whitespace-nowrap w-12 text-right">
+                            <div className="px-5 py-3 border-b border-outline-variant flex items-center gap-3">
+                                <span className="type-label-l text-on-surface-variant whitespace-nowrap w-12 text-right">
                                     Lv.{cardLevel}
                                 </span>
                                 <input
@@ -772,9 +738,9 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                     max={maxLevel}
                                     value={cardLevel}
                                     onChange={(e) => setCardLevel(Number(e.target.value))}
-                                    className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-miku"
+                                    className="flex-1 h-1.5 bg-surface-container-highest rounded-full appearance-none cursor-pointer accent-primary"
                                 />
-                                <span className="text-xs text-slate-400 w-8">
+                                <span className="type-label-m text-on-surface-variant w-8">
                                     /{maxLevel}
                                 </span>
                             </div>
@@ -782,28 +748,21 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             {/* Stats Display - Simplified (No Bars) */}
                             <div className="px-5 py-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="font-bold text-slate-700">{t("page.cards.totalPower")}</span>
-                                    <span className="text-2xl font-black text-miku">{stats.total.toLocaleString()}</span>
+                                    <span className="type-title-m text-on-surface">{t("page.cards.totalPower")}</span>
+                                    <span className="type-headline-s type-emphasized text-primary">{stats.total.toLocaleString()}</span>
                                 </div>
                             </div>
 
                         </div>
 
                         {/* Skill Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                                    </svg>
-                                    {t("page.cards.skillTitle")}
-                                </h2>
-                            </div>
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <SectionTitle icon={mdBolt}>{t("page.cards.skillTitle")}</SectionTitle>
                             <div className="p-5">
                                 {/* Skill Level Slider */}
                                 {skillData && (
-                                    <div className="mb-4 flex items-center gap-3 pb-3 border-b border-slate-200/60">
-                                        <span className="text-xs font-bold text-slate-500 whitespace-nowrap">
+                                    <div className="mb-4 flex items-center gap-3 pb-3 border-b border-outline-variant">
+                                        <span className="type-label-l text-on-surface-variant whitespace-nowrap">
                                             {t("page.cards.skillTitle")} Lv.{skillLevel}
                                         </span>
                                         <input
@@ -812,35 +771,35 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                             max={skillData.skillEffects[0]?.skillEffectDetails.length || 4}
                                             value={skillLevel}
                                             onChange={(e) => setSkillLevel(Number(e.target.value))}
-                                            className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-miku"
+                                            className="flex-1 h-1.5 bg-surface-container-highest rounded-full appearance-none cursor-pointer accent-primary"
                                         />
-                                        <span className="text-xs text-slate-400">
+                                        <span className="type-label-m text-on-surface-variant">
                                             /{skillData.skillEffects[0]?.skillEffectDetails.length || 4}
                                         </span>
                                     </div>
                                 )}
 
                                 {/* Normal Skill (Before Blooming) */}
-                                <div className={`mb-4 ${trainedSkillData ? 'pb-4 border-b border-slate-200/60' : ''}`}>
+                                <div className={`mb-4 ${trainedSkillData ? 'pb-4 border-b border-outline-variant' : ''}`}>
                                     <div className="flex items-center gap-2 mb-2">
-                                        <span className="text-xs text-slate-400 uppercase tracking-wider">{t("page.cards.skillNameLabel")}</span>
+                                        <span className="type-label-m text-on-surface-variant">{t("page.cards.skillNameLabel")}</span>
                                         {trainedSkillData && (
-                                            <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-full">
+                                            <span className="type-label-s px-2 py-0.5 bg-surface-container-high text-on-surface-variant rounded-md3-xs">
                                                 {t("page.cards.beforeTrained")}
                                             </span>
                                         )}
                                     </div>
-                                    <p className="text-lg font-bold text-slate-800 mb-2">
+                                    <p className="type-title-l text-on-surface mb-2">
                                         <TranslatedText
                                             original={card.cardSkillName}
                                             category="cards"
                                             field="skillName"
                                             originalClassName=""
-                                            translationClassName="block text-sm font-medium text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-m text-on-surface-variant mt-0.5"
                                         />
                                     </p>
-                                    <div className="p-4 bg-slate-50 rounded-xl">
-                                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                                    <div className="p-4 bg-surface-container rounded-md3-md">
+                                        <p className="type-body-m text-on-surface-variant whitespace-pre-line">
                                             {skillDescription || t("page.cards.loadingSkill")}
                                         </p>
                                     </div>
@@ -851,22 +810,22 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                 {trainedSkillData && card.specialTrainingSkillName && (
                                     <div>
                                         <div className="flex items-center gap-2 mb-2">
-                                            <span className="text-xs text-slate-400 uppercase tracking-wider">{t("page.cards.skillNameLabel")}</span>
-                                            <span className="text-[10px] px-2 py-0.5 bg-amber-100 text-amber-600 rounded-full">
+                                            <span className="type-label-m text-on-surface-variant">{t("page.cards.skillNameLabel")}</span>
+                                            <span className="type-label-s px-2 py-0.5 bg-tertiary-container text-on-tertiary-container rounded-md3-xs">
                                                 {t("page.cards.afterTrained")}
                                             </span>
                                         </div>
-                                        <p className="text-lg font-bold text-slate-800 mb-2">
+                                        <p className="type-title-l text-on-surface mb-2">
                                             <TranslatedText
                                                 original={card.specialTrainingSkillName}
                                                 category="cards"
                                                 field="skillName"
                                                 originalClassName=""
-                                                translationClassName="block text-sm font-medium text-slate-400 mt-0.5"
+                                                translationClassName="block type-body-m text-on-surface-variant mt-0.5"
                                             />
                                         </p>
-                                        <div className="p-4 bg-gradient-to-br from-amber-50 to-slate-50 rounded-xl ring-1 ring-amber-200/50">
-                                            <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line">
+                                        <div className="p-4 bg-tertiary-container/40 rounded-md3-md ring-1 ring-tertiary/30">
+                                            <p className="type-body-m text-on-surface whitespace-pre-line">
                                                 {trainedSkillDescription || t("page.cards.loadingSkill")}
                                             </p>
                                         </div>
@@ -877,15 +836,8 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Costumes Card */}
                         {relatedCostumes.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                        </svg>
-                                        {t("page.cards.costumeTitle")}
-                                    </h2>
-                                </div>
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdApparel}>{t("page.cards.costumeTitle")}</SectionTitle>
                                 <div className="p-5">
                                     <CostumeGrid costumes={relatedCostumes} assetSource={assetSource} />
                                 </div>
@@ -894,30 +846,24 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Card Story Card */}
                         {hasCardStory && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden group">
-                                <Link href={`/story/card/${cardId}`} className="block">
-                                    <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-pink-500/10 to-transparent group-hover:from-pink-500/20 transition-colors">
-                                        <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                            <svg className="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                            </svg>
-                                            {t("page.cards.storyTitle")}
-                                        </h2>
+                            <div className="rounded-md3-xl bg-tertiary-container text-on-tertiary-container overflow-hidden">
+                                <Link href={`/story/card/${cardId}`} className="state-layer focus-ring block rounded-md3-xl">
+                                    <div className="flex min-h-14 items-center gap-3 px-5 pt-4">
+                                        <Icon path={mdMenuBook} size={24} />
+                                        <h2 className="type-title-l">{t("page.cards.storyTitle")}</h2>
                                     </div>
-                                    <div className="p-5 flex items-center justify-between group-hover:bg-pink-50/30 transition-colors">
+                                    <div className="p-5 pt-2 flex items-center justify-between gap-4">
                                         <div>
-                                            <p className="font-bold text-slate-800 group-hover:text-pink-600 transition-colors">
+                                            <p className="type-title-m">
                                                 {t("page.cards.storyReadBtn")}
                                             </p>
-                                            <p className="text-xs text-slate-500 mt-1">
+                                            <p className="type-body-s opacity-80 mt-1">
                                                 {t("page.cards.storyReadDesc")}
                                             </p>
                                         </div>
-                                        <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                                            <svg className="w-4 h-4 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                            </svg>
-                                        </div>
+                                        <span className="w-10 h-10 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shrink-0">
+                                            <Icon path={mdChevronRight} size={24} />
+                                        </span>
                                     </div>
                                 </Link>
                             </div>
@@ -925,33 +871,26 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Related Event Card */}
                         {relatedEvent && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        {t("page.cards.relatedEventTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-0">
-                                    <Link href={`/events/${relatedEvent.id}`} className="block group">
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdCalendarMonth}>{t("page.cards.relatedEventTitle")}</SectionTitle>
+                                <div className="p-4 pt-2">
+                                    <Link href={`/events/${relatedEvent.id}`} className="focus-ring block group rounded-md3-lg overflow-hidden">
                                         <div className="relative aspect-[2/1] w-full">
                                             <Image
                                                 src={getEventBannerUrl(relatedEvent.assetbundleName, assetSource)}
                                                 alt={relatedEvent.name}
                                                 fill
-                                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                                className="object-cover"
                                                 unoptimized
                                             />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
                                             <div className="absolute bottom-0 left-0 w-full p-4">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-white/20 text-white px-2 py-0.5 rounded backdrop-blur-sm">
+                                                    <span className="text-[10px] font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
                                                         Event #{relatedEvent.id}
                                                     </span>
                                                 </div>
-                                                <h3 className="text-white font-bold text-lg leading-tight truncate">
+                                                <h3 className="text-white type-title-l leading-tight truncate">
                                                     <TranslatedText
                                                         original={relatedEvent.name}
                                                         category="events"
@@ -969,46 +908,39 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Related Gacha Card */}
                         {relatedGachas.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-500/10 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {t("page.cards.relatedGachaTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-4 grid grid-cols-1 gap-3">
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdPaid}>{t("page.cards.relatedGachaTitle")}</SectionTitle>
+                                <div className="p-4 pt-2 grid grid-cols-1 gap-3">
                                     {relatedGachas.map((gacha) => (
-                                        <Link key={gacha.id} href={`/gacha/${gacha.id}`} className="block group relative h-32 bg-white rounded-xl overflow-hidden ring-1 ring-slate-200 shadow-sm transition-all hover:shadow-md hover:scale-[1.02]">
+                                        <Link key={gacha.id} href={`/gacha/${gacha.id}`} className="state-layer focus-ring block group relative h-32 bg-surface-container-lowest rounded-md3-lg overflow-hidden shadow-elev-1 transition-shadow duration-200 hover:shadow-elev-2">
                                             {/* Logo Container with Padding */}
                                             <div className="absolute inset-3 z-0 flex items-center justify-center">
                                                 <Image
                                                     src={getGachaLogoUrl(gacha.assetbundleName, assetSource)}
                                                     alt={gacha.name}
                                                     fill
-                                                    className="object-contain transition-transform duration-500 group-hover:scale-110 opacity-90 group-hover:opacity-100"
+                                                    className="object-contain opacity-90 transition-opacity group-hover:opacity-100"
                                                     unoptimized
                                                 />
                                             </div>
 
                                             {/* Gradient Overlay for Text Readability - Lighter for light mode, or white fade */}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-white/90 via-white/50 to-transparent z-10" />
+                                            <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/95 via-surface-container-lowest/50 to-transparent z-10" />
 
                                             {/* Text Content */}
                                             <div className="absolute bottom-0 left-0 w-full p-3 z-20">
                                                 <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-purple-100 text-purple-600 px-1.5 py-0.5 rounded border border-purple-200 shadow-sm">
+                                                    <span className="text-[10px] font-mono bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded-md3-xs">
                                                         #{gacha.id}
                                                     </span>
                                                 </div>
-                                                <h3 className="text-slate-800 font-bold text-sm leading-snug w-full line-clamp-2 text-shadow-sm">
+                                                <h3 className="text-on-surface type-title-s w-full line-clamp-2">
                                                     <TranslatedText
                                                         original={gacha.name}
                                                         category="gacha"
                                                         field="name"
                                                         originalClassName="truncate block"
-                                                        translationClassName="text-xs font-medium text-slate-500 truncate block mt-0.5"
+                                                        translationClassName="type-body-s text-on-surface-variant truncate block mt-0.5"
                                                     />
                                                 </h3>
                                             </div>
@@ -1024,27 +956,31 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Link
-                        href="/cards"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                    <Button variant="tonal" icon={mdArrowBack} href="/cards">
                         {t("page.cards.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div >
-        </MainLayout >
+            </PageContainer>
+        </MainLayout>
+    );
+}
+
+// Section heading used by the detail cards
+function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
+    return (
+        <div className="flex min-h-14 items-center gap-3 px-5 pt-4 pb-2">
+            <Icon path={icon} size={24} className="text-primary" />
+            <h2 className="min-w-0 flex-1 truncate type-title-l text-on-surface">{children}</h2>
+        </div>
     );
 }
 
 // Info Row Component
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between">
-            <span className="text-sm text-slate-500">{label}</span>
-            <span className="text-sm font-medium text-slate-800">{value}</span>
+        <div className="px-5 py-3 flex items-center justify-between gap-4">
+            <span className="type-body-m text-on-surface-variant">{label}</span>
+            <span className="type-body-m text-on-surface text-right">{value}</span>
         </div>
     );
 }
@@ -1070,33 +1006,26 @@ function GachaPhraseRow({ phrase, assetbundleName }: { phrase: string; assetbund
 
     return (
         <div className="px-5 py-3 flex flex-col gap-2">
-            <span className="text-sm text-slate-500">{t("page.cards.gachaPhraseLabel")}</span>
+            <span className="type-body-m text-on-surface-variant">{t("page.cards.gachaPhraseLabel")}</span>
             <div className="flex items-start gap-3">
                 <button
+                    type="button"
                     onClick={togglePlay}
-                    className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all ${isPlaying
-                        ? "bg-miku text-white shadow-md scale-110"
-                        : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                    aria-pressed={isPlaying}
+                    className={`state-layer focus-ring flex-shrink-0 w-10 h-10 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-spatial-fast ${isPlaying
+                        ? "bg-primary text-on-primary rounded-md3-md"
+                        : "bg-surface-container-high text-on-surface-variant rounded-full"
                         }`}
                 >
-                    {isPlaying ? (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-                        </svg>
-                    ) : (
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-                        </svg>
-                    )}
+                    <Icon path={isPlaying ? mdStopCircle : mdVolumeUp} size={20} />
                 </button>
-                <p className="text-sm font-medium text-slate-800 leading-relaxed pt-1">
+                <p className="type-body-m text-on-surface pt-2">
                     <TranslatedText
                         original={phrase}
                         category="cards"
                         field="gachaPhrase"
                         originalClassName=""
-                        translationClassName="block text-xs font-normal text-slate-500 mt-1"
+                        translationClassName="block type-body-s text-on-surface-variant mt-1"
                     />
                 </p>
                 <audio
@@ -1220,23 +1149,23 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
     }, [costume]);
 
     return (
-        <div className="bg-slate-50 rounded-xl border border-slate-100 overflow-hidden">
+        <div className="bg-surface-container rounded-md3-lg overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-100">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-outline-variant">
                 <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-xs font-mono text-slate-400">No.{costume.costumeNumber}</span>
-                    <span className="text-sm font-bold text-slate-700 truncate">{costume.name}</span>
+                    <span className="type-label-s font-mono text-on-surface-variant">No.{costume.costumeNumber}</span>
+                    <span className="type-title-s text-on-surface truncate">{costume.name}</span>
                 </div>
                 <Link
                     href={`/costumes/${costume.costumeNumber}`}
-                    className="flex-shrink-0 text-xs text-miku hover:text-miku-dark font-medium transition-colors"
+                    className="state-layer focus-ring flex-shrink-0 rounded-full px-2 py-1 type-label-l text-primary"
                 >
                     {t("page.cards.costumeDetailLink")}
                 </Link>
             </div>
 
             {/* Parts Grid */}
-            <div className="grid grid-cols-4 gap-0.5 bg-slate-200/50">
+            <div className="grid grid-cols-4 gap-0.5 bg-outline-variant/50">
                 {displayItems.map((item) => {
                     let assetName = item.id;
 
@@ -1257,7 +1186,7 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
                     }
 
                     return (
-                        <div key={item.id} className="relative aspect-square bg-gradient-to-br from-white to-slate-50 flex items-center justify-center p-1.5 group">
+                        <div key={item.id} className="relative aspect-square bg-surface-container-lowest flex items-center justify-center p-1.5 group">
                             <div className="relative w-full h-full">
                                 <Image
                                     src={getCostumeThumbnailUrl(assetName, assetSource)}
@@ -1268,12 +1197,12 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
                                 />
                             </div>
                             <div className="absolute inset-x-0 bottom-0 p-0.5 pointer-events-none">
-                                <span className="inline-block px-1 py-0.5 bg-white/90 backdrop-blur text-[9px] font-bold text-slate-600 rounded shadow-sm">
+                                <span className="inline-block px-1 py-0.5 bg-surface-container-high/90 text-[9px] font-bold text-on-surface-variant rounded-md3-xs">
                                     {translateWithFallback(PART_TYPE_LABEL_KEYS[item.partType], item.partType)}
                                 </span>
                             </div>
                             {item.characterId && (
-                                <div className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full overflow-hidden ring-1 ring-slate-200 bg-white shadow-sm z-10">
+                                <div className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full overflow-hidden ring-1 ring-outline-variant bg-surface-container-lowest shadow-elev-1 z-10">
                                     <Image
                                         src={getCharacterIconUrl(item.characterId)}
                                         alt={getCharacterName(t, item.characterId)}
@@ -1288,7 +1217,7 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
                     );
                 })}
                 {displayItems.length === 0 && (
-                    <div className="col-span-4 py-4 flex items-center justify-center text-slate-400 text-xs">
+                    <div className="col-span-4 py-4 flex items-center justify-center bg-surface-container-lowest text-on-surface-variant type-body-s">
                         {t("page.cards.costumeNoParts")}
                     </div>
                 )}
@@ -1296,8 +1225,8 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
 
             {/* Color Selector */}
             {availableColors.length > 1 && (
-                <div className="px-3 py-2.5 border-t border-slate-100">
-                    <p className="text-[10px] font-bold text-slate-500 mb-1.5">{t("page.cards.costumeColorSchemes")}</p>
+                <div className="px-3 py-2.5 border-t border-outline-variant">
+                    <p className="type-label-m text-on-surface-variant mb-1.5">{t("page.cards.costumeColorSchemes")}</p>
                     <div className="flex gap-1.5 overflow-x-auto md:flex-wrap md:overflow-x-visible scrollbar-hide pb-1 md:pb-0">
                         {availableColors.map(variant => {
                             const isSelected = selectedColorId === variant.colorId;
@@ -1305,12 +1234,12 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
                                 <button
                                     key={variant.colorId}
                                     onClick={() => setSelectedColorId(variant.colorId)}
-                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium transition-all whitespace-nowrap ${isSelected
-                                        ? "bg-miku/10 text-miku border-2 border-miku"
-                                        : "bg-white text-slate-600 border border-slate-200 hover:border-miku/50"
+                                    className={`state-layer focus-ring flex items-center gap-1.5 pl-1 pr-2.5 h-8 rounded-md3-sm type-label-m transition-colors whitespace-nowrap border ${isSelected
+                                        ? "bg-secondary-container text-on-secondary-container border-transparent"
+                                        : "text-on-surface-variant border-outline-variant"
                                         }`}
                                 >
-                                    <div className="w-6 h-6 rounded overflow-hidden bg-slate-100 relative shrink-0">
+                                    <div className="w-6 h-6 rounded-md3-xs overflow-hidden bg-surface-container-highest relative shrink-0">
                                         <Image
                                             src={getCostumeThumbnailUrl(variant.assetbundleName, assetSource)}
                                             alt={variant.colorName}

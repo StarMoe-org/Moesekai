@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "@/components/LocalizedLink";
+import { Button, ErrorState } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
 import Image from "next/image";
 import {
     IVirtualLiveInfo,
@@ -85,7 +87,7 @@ export default function UpcomingLiveTab() {
         return (
             <div className="space-y-3">
                 {[1, 2].map(i => (
-                    <div key={i} className="animate-pulse h-20 w-full rounded-xl bg-slate-100" />
+                    <div key={i} className="animate-pulse h-20 w-full rounded-md3-lg bg-surface-container-high" />
                 ))}
             </div>
         );
@@ -93,17 +95,14 @@ export default function UpcomingLiveTab() {
 
     if (error) {
         return (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm text-center">
-                <p className="font-bold">{t("page.home.upcomingLive.loadFailedTitle")}</p>
-                <p>{error}</p>
-            </div>
+            <ErrorState title={t("page.home.upcomingLive.loadFailedTitle")} message={error} />
         );
     }
 
     if (displayLives.length === 0) {
         return (
-            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="font-medium">{t("page.home.upcomingLive.noData")}</p>
+            <div className="p-8 text-center text-on-surface-variant bg-surface-container-low rounded-md3-xl">
+                <p className="type-body-l">{t("page.home.upcomingLive.noData")}</p>
             </div>
         );
     }
@@ -120,18 +119,18 @@ export default function UpcomingLiveTab() {
                     const nextSchedule = getNextSchedule(vl);
 
                     return (
-                        <Link key={vl.id} href={`/live/${vl.id}`} className="block group">
-                            <div className="relative flex h-20 sm:h-24 rounded-xl overflow-hidden glass-card border border-white/40 hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 bg-white">
+                        <Link key={vl.id} href={`/live/${vl.id}`} className="state-layer focus-ring block group rounded-md3-lg">
+                            <div className="relative flex h-20 sm:h-24 rounded-md3-lg overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
                                 {/* Left: Banner (35%) */}
                                 <div className="w-[35%] relative overflow-hidden">
                                     <Image
                                         src={getVirtualLiveBannerUrl(vl.assetbundleName, assetSource)}
                                         alt={vl.name}
                                         fill
-                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                        className="object-cover"
                                         unoptimized
                                     />
-                                    <div className="absolute inset-0 bg-black/30" />
+                                    <div className="absolute inset-0 bg-scrim/20" />
                                 </div>
 
                                 {/* Right: Info (65%) */}
@@ -139,13 +138,13 @@ export default function UpcomingLiveTab() {
                                     {/* Badges */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span
-                                            className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                                            className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-md3-xs text-white"
                                             style={{ backgroundColor: statusDisplay.color }}
                                         >
                                             {t(`common.status.${status}`)}
                                         </span>
                                         <span
-                                            className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded text-white"
+                                            className="text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-md3-xs text-white"
                                             style={{ backgroundColor: typeColor }}
                                         >
                                             {typeName}
@@ -153,18 +152,18 @@ export default function UpcomingLiveTab() {
                                     </div>
 
                                     {/* Title */}
-                                    <h3 className="font-bold text-primary-text text-xs sm:text-sm leading-tight line-clamp-1 group-hover:text-miku transition-colors">
+                                    <h3 className="type-title-s text-on-surface line-clamp-1 group-hover:text-primary transition-colors">
                                         <TranslatedText
                                             original={vl.name}
                                             category="virtualLive"
                                             field="name"
                                             originalClassName="line-clamp-1"
-                                            translationClassName="text-[10px] text-slate-400 line-clamp-1 font-normal"
+                                            translationClassName="type-label-s text-on-surface-variant line-clamp-1"
                                         />
                                     </h3>
 
                                     {/* Schedule info */}
-                                    <div className="text-[10px] sm:text-xs text-slate-400 font-mono">
+                                    <div className="type-label-s text-on-surface-variant font-mono">
                                         {nextSchedule ? (
                                             <span>
                                                 {t("page.home.upcomingLive.nextSchedule", { date: formatDate(nextSchedule.startAt) })}
@@ -183,12 +182,9 @@ export default function UpcomingLiveTab() {
             </div>
             {/* View All Link */}
             <div className="mt-4 text-center">
-                <Link href="/live" className="inline-flex items-center gap-1 text-sm text-miku hover:text-miku-dark font-medium transition-colors">
+                <Button variant="text" trailingIcon={mdChevronRight} href="/live">
                     {t("page.home.upcomingLive.viewAll")}
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                </Link>
+                </Button>
             </div>
         </div>
     );

@@ -15,6 +15,7 @@ import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, ErrorState, LoadingState, LoadMore, PageContainer, PageHeader } from "@/components/md3";
 
 interface ICardSupply {
     id: number;
@@ -405,32 +406,22 @@ function CardsContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.cards.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.cards.title")} <span className="text-miku">{t("page.cards.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.cards.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.cards.badge")}
+                title={t("page.cards.title")}
+                highlight={t("page.cards.titleHighlight")}
+                description={t("page.cards.description")}
+            />
 
-            {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 text-red-500 underline hover:no-underline"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Card grid. Filters live in the global FilterDrawer (registered
@@ -438,44 +429,30 @@ function CardsContent() {
             <div className="min-w-0">
                 <CardGrid cards={displayedCards} isLoading={isLoading} />
 
-                {/* Screenshot Mode Notice */}
                 {isScreenshotMode && (
-                    <div className="mt-8 text-center text-slate-500 text-sm font-medium p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <Banner tone="info" className="mt-8">
                         {t("page.cards.screenshotModeNotice")}
-                    </div>
+                    </Banner>
                 )}
 
-                {/* Load More Button */}
-                {!isScreenshotMode && !isLoading && displayedCards.length < filteredCards.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.cards.loadMore")}
-                            <span className="ml-2 text-sm opacity-80 type-caption">
-                                ({displayedCards.length} / {filteredCards.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded indicator */}
-                {!isScreenshotMode && !isLoading && displayedCards.length > 0 && displayedCards.length >= filteredCards.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.cards.allLoaded", { count: String(filteredCards.length) })}
-                    </div>
+                {!isScreenshotMode && !isLoading && (
+                    <LoadMore
+                        label={t("page.cards.loadMore")}
+                        shown={displayedCards.length}
+                        total={filteredCards.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.cards.allLoaded", { count: String(filteredCards.length) })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 export default function CardsClient() {
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">Loading cards...</div>}>
+            <Suspense fallback={<LoadingState />}>
                 <CardsContent />
             </Suspense>
         </MainLayout>

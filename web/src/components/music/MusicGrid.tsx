@@ -3,6 +3,8 @@ import MusicItem from "./MusicItem";
 import { IMusicInfo } from "@/types/music";
 import { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { EmptyState } from "@/components/md3";
+import { mdMusicNote } from "@/components/md3/icons";
 
 interface MusicGridProps {
     musics: IMusicInfo[];
@@ -13,11 +15,11 @@ interface MusicGridProps {
 function MusicSkeleton() {
     return (
         <div className="animate-pulse">
-            <div className="rounded-xl overflow-hidden bg-white/60 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60">
-                <div className="aspect-square bg-slate-200 dark:bg-slate-700"></div>
+            <div className="rounded-md3-md overflow-hidden bg-surface-container-low">
+                <div className="aspect-square bg-surface-container-high"></div>
                 <div className="p-3 space-y-2">
-                    <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-3/4"></div>
-                    <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/2"></div>
+                    <div className="h-4 bg-surface-container-highest rounded-md3-xs w-3/4"></div>
+                    <div className="h-3 bg-surface-container-high rounded-md3-xs w-1/2"></div>
                 </div>
             </div>
         </div>
@@ -39,17 +41,7 @@ export default function MusicGrid({ musics, isLoading }: MusicGridProps) {
     }
 
     if (musics.length === 0) {
-        return (
-            <div className="text-center py-16">
-                <div className="text-6xl mb-4">🎵</div>
-                <h3 className="text-xl font-bold text-slate-600 dark:text-slate-400 mb-2">
-                    {t("page.music.noResult")}
-                </h3>
-                <p className="text-slate-500 dark:text-slate-500">
-                    {t("page.music.noResultHint")}
-                </p>
-            </div>
-        );
+        return <EmptyState icon={mdMusicNote} title={t("page.music.noResult")} description={t("page.music.noResultHint")} />;
     }
 
     return (

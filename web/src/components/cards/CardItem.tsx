@@ -26,8 +26,8 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
         (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday");
 
     return (
-        <Link href={`${hrefPrefix}/${card.id}`} className="group pressable block" data-shortcut-item="true">
-            <div className="relative cursor-pointer rounded-xl overflow-hidden ios-glass-card ios-glass-card-interactive">
+        <Link href={`${hrefPrefix}/${card.id}`} className="group state-layer focus-ring block rounded-md3-md" data-shortcut-item="true">
+            <div className="relative cursor-pointer rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Card Image Container */}
                 <div className="w-full relative">
                     <SekaiCardThumbnail
@@ -38,11 +38,11 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
                 </div>
 
                 {/* Card Info - Persistent Footer */}
-                <div className="px-2 py-1.5 bg-slate-50/30 dark:bg-slate-900/30 border-t border-slate-200/50 dark:border-slate-800">
+                <div className="px-2 py-1.5 border-t border-outline-variant">
                     {/* Spoiler Badge - inline in footer */}
                     {isSpoiler && (
                         <div className="mb-0.5">
-                            <span className="inline-block px-1.5 py-0.5 bg-orange-500 text-white text-[9px] font-bold rounded leading-none">
+                            <span className="inline-block px-1.5 py-0.5 bg-tertiary text-on-tertiary text-[9px] font-bold rounded-md3-xs leading-none">
                                 {t("common.badge.spoiler")}
                             </span>
                         </div>
@@ -52,13 +52,13 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
                             original={card.prefix}
                             category="cards"
                             field="prefix"
-                            originalClassName="text-slate-800 dark:text-slate-200 text-[10px] type-on-glass font-bold truncate leading-tight group-hover:text-miku block"
-                            translationClassName="text-slate-400 dark:text-slate-500 text-[9px] type-caption truncate leading-tight block"
+                            originalClassName="text-on-surface text-[10px] font-bold truncate leading-tight group-hover:text-primary block"
+                            translationClassName="text-on-surface-variant text-[9px] truncate leading-tight block"
                         />
                     </div>
                     <div className="flex items-center justify-between gap-1">
-                        <p className="text-slate-400 dark:text-slate-500 text-[9px] type-caption truncate leading-tight flex-1">{characterName}</p>
-                        <span className="flex-shrink-0 text-[8px] text-slate-400 bg-slate-100/50 dark:bg-slate-800/50 ios-glass-tab px-1 py-0.5 rounded leading-none font-mono">
+                        <p className="text-on-surface-variant text-[9px] truncate leading-tight flex-1">{characterName}</p>
+                        <span className="flex-shrink-0 text-[8px] text-on-surface-variant bg-surface-container-high px-1 py-0.5 rounded-md3-xs leading-none font-mono">
                             ID:{card.id}
                         </span>
                     </div>

@@ -6,7 +6,10 @@ import { useTheme, type ServerSourceType, type AssetSourceType, type BackgroundA
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, type UiLocale } from "@/lib/i18n";
 import { MOE_LOGO_URL } from "@/lib/assets";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { Button, Icon, Switch } from "@/components/md3";
+import { mdArrowForward, mdBrightnessAuto, mdCheck, mdCheckCircle, mdChevronLeft, mdChevronRight, mdDarkMode, mdInfo, mdLightMode } from "@/components/md3/icons";
+import { md3SpatialDefault, md3EffectsFast } from "@/lib/motion";
 // Character subset for theme selection
 // Full character list for theme selection
 const SELECTED_THEME_CHARACTERS = [
@@ -92,7 +95,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
   const { t, locale, setLocale } = useI18n();
   const {
     themeCharId,
-    themeColor,
+
     setThemeCharacter,
     colorSchemePreference,
     setColorSchemePreference,
@@ -110,6 +113,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
     setUseLLMTranslation,
   } = useTheme();
 
+  const prefersReducedMotion = useReducedMotion();
   const [currentStep, setCurrentStep] = useState<number>(0);
   const [mounted, setMounted] = useState(false);
   const [greetingIndex, setGreetingIndex] = useState(0);
@@ -208,80 +212,48 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
 
   const languageCopy = getLanguageGuideCopy(t, locale);
 
-  // iOS-style container variants
-  const slideVariants = {
-    initial: { opacity: 0, x: 50 },
-    animate: { opacity: 1, x: 0, transition: { type: "spring" as const, stiffness: 300, damping: 30 } },
-    exit: { opacity: 0, x: -50, transition: { duration: 0.2 } }
-  };
+  // MD3 Expressive container variants (spatial spring for position, effects for opacity)
+  const slideVariants = prefersReducedMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: md3EffectsFast },
+        exit: { opacity: 0, transition: md3EffectsFast },
+      }
+    : {
+        initial: { opacity: 0, x: 48 },
+        animate: { opacity: 1, x: 0, transition: md3SpatialDefault },
+        exit: { opacity: 0, x: -48, transition: md3EffectsFast },
+      };
 
-  // Drifting colorful blobs styling for mesh background
-  const meshStyles = `
-    @keyframes driftBlob1 {
-      0% { transform: translate(0px, 0px) scale(1); }
-      33% { transform: translate(40px, -60px) scale(1.15); }
-      66% { transform: translate(-30px, 30px) scale(0.9); }
-      100% { transform: translate(0px, 0px) scale(1); }
-    }
-    @keyframes driftBlob2 {
-      0% { transform: translate(0px, 0px) scale(1); }
-      50% { transform: translate(-50px, 50px) scale(1.1); }
-      100% { transform: translate(0px, 0px) scale(1); }
-    }
-    @keyframes driftBlob3 {
-      0% { transform: translate(0px, 0px) scale(1); }
-      40% { transform: translate(60px, 40px) scale(0.95); }
-      80% { transform: translate(-20px, -40px) scale(1.05); }
-      100% { transform: translate(0px, 0px) scale(1); }
-    }
-    .drift-blob-1 { animation: driftBlob1 25s infinite ease-in-out; }
-    .drift-blob-2 { animation: driftBlob2 20s infinite ease-in-out; }
-    .drift-blob-3 { animation: driftBlob3 22s infinite ease-in-out; }
-  `;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/30 backdrop-blur-2xl p-0 sm:p-6 overflow-hidden">
-      <style dangerouslySetInnerHTML={{ __html: meshStyles }} />
-
-      {/* Main setup container: Card on desktop, Full screen on mobile */}
-      <div className="relative w-full h-full sm:max-w-md sm:h-[720px] rounded-none sm:rounded-3xl border-0 sm:border border-white/20 shadow-none sm:shadow-2xl overflow-hidden bg-white/80 dark:bg-slate-900/70 backdrop-blur-xl flex flex-col justify-between p-6 sm:p-8 text-slate-800 dark:text-slate-100 transition-all duration-300">
-        
-        {/* Shifting Mesh Gradient Background */}
-        <div className="absolute inset-0 -z-10 overflow-hidden pointer-events-none opacity-40 dark:opacity-30">
-          <div className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-miku/30 blur-[80px] drift-blob-1" style={{ backgroundColor: `${themeColor}40` }} />
-          <div className="absolute top-[40%] -right-[15%] w-[70%] h-[75%] rounded-full bg-pink-400/25 blur-[100px] drift-blob-2" />
-          <div className="absolute -bottom-[10%] left-[20%] w-[55%] h-[55%] rounded-full bg-yellow-300/20 blur-[80px] drift-blob-3" />
-        </div>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-scrim/32 p-0 sm:p-6 overflow-hidden">
+      {/* Main setup container: Dialog card on desktop, full screen on mobile */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        className="relative w-full h-full sm:max-w-md sm:h-[720px] rounded-none sm:rounded-md3-xl shadow-none sm:shadow-elev-3 overflow-hidden bg-surface-container-high flex flex-col justify-between p-6 sm:p-8 text-on-surface"
+      >
 
         {/* ─── Top Header (Step counter & branding) ─── */}
         <div className="flex items-center justify-between w-full h-8 z-10">
           {currentStep > 0 && currentStep < 6 ? (
-            <button
-              onClick={() => handleStepChange(currentStep - 1)}
-              className="flex items-center gap-1 text-sm font-semibold transition-all hover:opacity-80"
-              style={{ color: themeColor }}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M15 19l-7-7 7-7" />
-              </svg>
+            <Button variant="text" size="xs" icon={mdChevronLeft} onClick={() => handleStepChange(currentStep - 1)} className="-ml-3">
               {t("page.setup.back")}
-            </button>
+            </Button>
           ) : (
             <div />
           )}
 
           {currentStep > 0 && currentStep < 6 && (
-            <span className="text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 uppercase">
+            <span className="type-label-m text-on-surface-variant">
               {t("page.setup.stepIndicator", { current: String(currentStep), total: "5" })}
             </span>
           )}
           {currentStep < 6 ? (
-            <button
-              onClick={handleSkip}
-              className="text-xs font-bold tracking-wider text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors uppercase cursor-pointer"
-            >
+            <Button variant="text" size="xs" onClick={handleSkip} className="-mr-3 text-on-surface-variant">
               {currentStep <= 1 ? t("page.setup.skipBilingual") : t("page.setup.skip")}
-            </button>
+            </Button>
           ) : (
             <div />
           )}
@@ -305,14 +277,11 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 <div className="h-16 flex items-center justify-center">
                   <motion.h1
                     key={greetingIndex}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -15 }}
-                    transition={{ duration: 0.4 }}
-                    className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-miku to-miku-dark bg-clip-text text-transparent filter drop-shadow-sm font-sans"
-                    style={{
-                      backgroundImage: `linear-gradient(to right, ${themeColor}, var(--color-miku-dark, ${themeColor}))`
-                    }}
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 15 }}
+                    animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -15 }}
+                    transition={md3SpatialDefault}
+                    className="type-display-m type-emphasized text-primary"
                   >
                     {GREETINGS[greetingIndex]}
                   </motion.h1>
@@ -321,9 +290,8 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 {/* Brand Logo & Name */}
                 <div className="flex flex-col items-center gap-2">
                   <div
-                    className="h-12 w-44 bg-gradient-to-r transition-all duration-300"
+                    className="h-12 w-44 bg-primary"
                     style={{
-                      backgroundImage: `linear-gradient(to right, ${themeColor}, var(--color-miku-dark, ${themeColor}))`,
                       maskImage: `url(${MOE_LOGO_URL})`,
                       maskSize: "contain",
                       maskPosition: "center",
@@ -336,18 +304,18 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                     role="img"
                     aria-label="Moesekai Logo"
                   />
-                  <h2 className="text-xl font-bold tracking-wide text-slate-800 dark:text-slate-100 mt-1">
+                  <h2 className="type-title-l text-on-surface mt-1">
                     Moesekai
                   </h2>
-                  <p className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                  <p className="type-label-m text-on-surface-variant">
                     {t("page.home.formerName")}
                   </p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                  <p className="type-title-s text-on-surface">
                     {t("page.setup.welcomeBilingual")}
                   </p>
                 </div>
 
-                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed whitespace-pre-line">
+                <p className="type-body-m text-on-surface-variant max-w-xs whitespace-pre-line">
                   {t("page.setup.welcomeBilingualDesc")}
                 </p>
               </motion.div>
@@ -364,10 +332,10 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 className="flex flex-col space-y-5"
               >
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-s text-on-surface">
                     {languageCopy.title}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="type-body-m text-on-surface-variant">
                     {languageCopy.description}
                   </p>
                 </div>
@@ -385,35 +353,32 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                           }
                           handleStepChange(2);
                         }}
-                        className={`w-full p-4 rounded-2xl flex items-center justify-between border text-left font-bold transition-all duration-300 ${
+                        type="button"
+                        aria-pressed={isSelected}
+                        className={`state-layer focus-ring w-full p-4 rounded-md3-lg flex items-center justify-between border text-left transition-colors duration-200 ${
                           isSelected
-                            ? "bg-white dark:bg-slate-800 shadow-md scale-[1.01]"
-                            : "bg-white/40 dark:bg-slate-900/30 hover:bg-white/60 dark:hover:bg-slate-900/50 border-slate-200/50 dark:border-slate-800/40"
+                            ? "bg-secondary-container text-on-secondary-container border-transparent"
+                            : "bg-surface-container-low border-outline-variant"
                         }`}
-                        style={{
-                          borderColor: isSelected ? themeColor : undefined,
-                        }}
                       >
                         <div className="flex flex-col">
-                          <span className="text-base text-slate-800 dark:text-slate-100">
+                          <span className="type-title-m">
                             {UI_LOCALE_LABELS[l]}
                           </span>
-                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                          <span className="type-body-s opacity-75">
                             {getLanguageGuideCopy(t, l).subtitle}
                           </span>
                         </div>
                         {isSelected && (
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke={themeColor} strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Icon path={mdCheckCircle} size={24} className="text-primary" />
                         )}
                       </button>
                     );
                   })}
                 </div>
 
-                <p className="mt-1 flex items-start gap-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/20 border border-amber-200/30 dark:border-amber-900/30 px-2.5 py-2 text-[10px] leading-relaxed text-amber-700 dark:text-amber-500">
-                  <span className="mt-0.5 inline-flex h-3 w-3 shrink-0 items-center justify-center rounded-full bg-amber-200 dark:bg-amber-900/50 text-[8px] font-black text-amber-700 dark:text-amber-500">!</span>
+                <p className="mt-1 flex items-start gap-2 rounded-md3-md bg-tertiary-container px-3 py-2 type-body-s text-on-tertiary-container">
+                  <Icon path={mdInfo} size={16} className="mt-0.5 shrink-0" />
                   <span>{t("settings.uiLanguage.machineTranslationNotice")}</span>
                 </p>
               </motion.div>
@@ -430,10 +395,10 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 className="flex flex-col space-y-5"
               >
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-s text-on-surface">
                     {t("page.setup.serverTitle")}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="type-body-m text-on-surface-variant">
                     {t("page.setup.serverDesc")}
                   </p>
                 </div>
@@ -455,27 +420,24 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                           setServerSource(srv);
                           handleStepChange(3);
                         }}
-                        className={`w-full p-4 rounded-2xl flex items-center justify-between border text-left font-bold transition-all duration-300 shrink-0 ${
+                        type="button"
+                        aria-pressed={isSelected}
+                        className={`state-layer focus-ring w-full p-4 rounded-md3-lg flex items-center justify-between border text-left transition-colors duration-200 shrink-0 ${
                           isSelected
-                            ? "bg-white dark:bg-slate-800 shadow-md scale-[1.01]"
-                            : "bg-white/40 dark:bg-slate-900/30 hover:bg-white/60 dark:hover:bg-slate-900/50 border-slate-200/50 dark:border-slate-800/40"
+                            ? "bg-secondary-container text-on-secondary-container border-transparent"
+                            : "bg-surface-container-low border-outline-variant"
                         }`}
-                        style={{
-                          borderColor: isSelected ? themeColor : undefined,
-                        }}
                       >
                         <div className="flex flex-col">
-                          <span className="text-base text-slate-800 dark:text-slate-100">
+                          <span className="type-title-m">
                             {t("settings.serverSource." + srv)}
                           </span>
-                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                          <span className="type-body-s opacity-75">
                             {serverDescriptions[srv]}
                           </span>
                         </div>
                         {isSelected && (
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke={themeColor} strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Icon path={mdCheckCircle} size={24} className="text-primary" />
                         )}
                       </button>
                     );
@@ -495,10 +457,10 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 className="flex flex-col space-y-5"
               >
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-s text-on-surface">
                     {t("page.setup.assetTitle")}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="type-body-m text-on-surface-variant">
                     {t("page.setup.assetDesc")}
                   </p>
                 </div>
@@ -516,25 +478,24 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                           setAssetSource(assetOpt.type);
                           handleStepChange(4);
                         }}
-                        className={`w-full p-4 rounded-2xl flex items-center justify-between border text-left font-bold transition-all duration-300 ${
+                        type="button"
+                        aria-pressed={isSelected}
+                        className={`state-layer focus-ring w-full p-4 rounded-md3-lg flex items-center justify-between border text-left transition-colors duration-200 ${
                           isSelected
-                            ? "bg-white dark:bg-slate-800 shadow-md scale-[1.01]"
-                            : "bg-white/40 dark:bg-slate-900/30 hover:bg-white/60 dark:hover:bg-slate-900/50 border-slate-200/50 dark:border-slate-800/40"
+                            ? "bg-secondary-container text-on-secondary-container border-transparent"
+                            : "bg-surface-container-low border-outline-variant"
                         }`}
-                        style={{
-                          borderColor: isSelected ? themeColor : undefined,
-                        }}
                       >
                         <div className="flex flex-col">
-                          <span className="text-base text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                          <span className="type-title-m flex items-center gap-2">
                             {assetOpt.label}
                             {assetOpt.type.startsWith("main") ? (
                               pings.main === null ? (
                                 isPinging ? (
-                                  <span className="text-[10px] text-slate-400 font-normal animate-pulse">({t("page.setup.testingPing")})</span>
+                                  <span className="type-label-s text-on-surface-variant animate-pulse">({t("page.setup.testingPing")})</span>
                                 ) : null
                               ) : (
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                <span className={`px-1.5 py-0.5 rounded-md3-xs type-label-s border ${
                                   pings.main === 9999
                                     ? "text-red-500 bg-red-500/10 border-red-500/20"
                                     : pings.main < 100
@@ -547,10 +508,10 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                             ) : (
                               pings.overseas === null ? (
                                 isPinging ? (
-                                  <span className="text-[10px] text-slate-400 font-normal animate-pulse">({t("page.setup.testingPing")})</span>
+                                  <span className="type-label-s text-on-surface-variant animate-pulse">({t("page.setup.testingPing")})</span>
                                 ) : null
                               ) : (
-                                <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                                <span className={`px-1.5 py-0.5 rounded-md3-xs type-label-s border ${
                                   pings.overseas === 9999
                                     ? "text-red-500 bg-red-500/10 border-red-500/20"
                                     : pings.overseas < 100
@@ -562,14 +523,12 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                               )
                             )}
                           </span>
-                          <span className="text-xs font-medium text-slate-400 dark:text-slate-500">
+                          <span className="type-body-s opacity-75">
                             {assetOpt.desc}
                           </span>
                         </div>
                         {isSelected && (
-                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke={themeColor} strokeWidth={3}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                          </svg>
+                          <Icon path={mdCheckCircle} size={24} className="text-primary" />
                         )}
                       </button>
                     );
@@ -589,40 +548,38 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 className="flex flex-col space-y-4"
               >
                 <div className="space-y-1">
-                  <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-s text-on-surface">
                     {t("page.setup.themeTitle")}
                   </h2>
-                  <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+                  <p className="type-body-m text-on-surface-variant">
                     {t("page.setup.themeDesc")}
                   </p>
                 </div>
 
                 {/* Appearance cards */}
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <h3 className="type-title-s text-on-surface-variant">
                     {t("page.setup.appearanceTitle")}
                   </h3>
                   <div className="grid grid-cols-3 gap-2">
                     {[
-                      { id: "light" as const, label: t("page.setup.appearanceMockLight"), bg: "bg-slate-100 border-slate-200 text-slate-800" },
-                      { id: "dark" as const, label: t("page.setup.appearanceMockDark"), bg: "bg-slate-950 border-slate-800 text-slate-200" },
-                      { id: "system" as const, label: t("page.setup.appearanceMockSystem"), bg: "bg-gradient-to-r from-slate-100 to-slate-950 border-slate-300 text-slate-500" }
+                      { id: "light" as const, label: t("page.setup.appearanceMockLight"), icon: mdLightMode },
+                      { id: "dark" as const, label: t("page.setup.appearanceMockDark"), icon: mdDarkMode },
+                      { id: "system" as const, label: t("page.setup.appearanceMockSystem"), icon: mdBrightnessAuto }
                     ].map((pref) => {
                       const isSelected = colorSchemePreference === pref.id;
                       return (
                         <button
                           key={pref.id}
+                          type="button"
+                          aria-pressed={isSelected}
                           onClick={() => setColorSchemePreference(pref.id)}
-                          className={`p-3 rounded-xl border text-center transition-all duration-300 flex flex-col items-center gap-1.5 ${pref.bg} ${
-                            isSelected ? "ring-2 scale-[1.02] shadow-sm font-bold" : "opacity-75 hover:opacity-100"
+                          className={`state-layer focus-ring p-3 rounded-md3-md border text-center transition-colors duration-200 flex flex-col items-center gap-1.5 ${
+                            isSelected ? "bg-secondary-container text-on-secondary-container border-transparent" : "bg-surface-container-low text-on-surface-variant border-outline-variant"
                           }`}
-                          style={{
-                            boxShadow: isSelected ? `0 0 0 2px ${themeColor}` : undefined,
-                            borderColor: isSelected ? themeColor : undefined,
-                          }}
                         >
-                          <div className="w-8 h-4 rounded bg-white/20 border border-white/10" />
-                          <span className="text-[10px] leading-none truncate w-full">{pref.label}</span>
+                          <Icon path={pref.icon} size={20} />
+                          <span className="type-label-s truncate w-full">{pref.label}</span>
                         </button>
                       );
                     })}
@@ -631,7 +588,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
 
                 {/* Background animation budget */}
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <h3 className="type-title-s text-on-surface-variant">
                     {t("page.setup.backgroundAnimationTitle")}
                   </h3>
                   <div className="grid grid-cols-2 gap-2">
@@ -641,20 +598,18 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                         <button
                           key={option.id}
                           onClick={() => setBackgroundAnimationBudget(option.id)}
-                          className={`p-3 rounded-xl border text-center transition-all duration-300 flex flex-col items-center gap-1 ${
+                          type="button"
+                          aria-pressed={isSelected}
+                          className={`state-layer focus-ring p-3 rounded-md3-md border text-center transition-colors duration-200 flex flex-col items-center gap-1 ${
                             isSelected
-                              ? "bg-white dark:bg-slate-800 shadow-md scale-[1.02] font-bold"
-                              : "bg-white/40 dark:bg-slate-900/30 border-slate-200/50 dark:border-slate-800/40 opacity-75 hover:opacity-100"
+                              ? "bg-secondary-container text-on-secondary-container border-transparent"
+                              : "bg-surface-container-low text-on-surface border-outline-variant"
                           }`}
-                          style={{
-                            boxShadow: isSelected ? `0 0 0 2px ${themeColor}` : undefined,
-                            borderColor: isSelected ? themeColor : undefined,
-                          }}
                         >
-                          <span className="text-[11px] leading-none truncate w-full text-slate-700 dark:text-slate-100">
+                          <span className="type-label-m truncate w-full">
                             {t(option.labelKey)}
                           </span>
-                          <span className="text-[9px] leading-tight text-slate-400 dark:text-slate-500 line-clamp-2">
+                          <span className="text-[10px] leading-tight opacity-75 line-clamp-2">
                             {t(option.descriptionKey)}
                           </span>
                         </button>
@@ -665,7 +620,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
 
                 {/* Theme character color scroll list */}
                 <div className="space-y-2">
-                  <h3 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  <h3 className="type-title-s text-on-surface-variant">
                     {t("page.setup.themeColorTitle")}
                   </h3>
                   <div className="flex gap-2.5 overflow-x-auto pb-2 -mx-2 px-2 scrollbar-thin">
@@ -677,28 +632,25 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                         <button
                           key={char.id}
                           onClick={() => setThemeCharacter(char.id)}
-                          className={`flex flex-col items-center gap-1 shrink-0 p-2.5 rounded-2xl transition-all duration-300 border ${
+                          type="button"
+                          aria-pressed={isSelected}
+                          className={`state-layer focus-ring flex flex-col items-center gap-1 shrink-0 p-2.5 rounded-md3-lg transition-colors duration-200 ${
                             isSelected
-                              ? "bg-white dark:bg-slate-800 shadow-md scale-105"
-                              : "bg-white/40 dark:bg-slate-900/30 border-transparent hover:bg-white/60"
+                              ? "bg-secondary-container text-on-secondary-container"
+                              : "bg-surface-container-low text-on-surface-variant"
                           }`}
-                          style={{
-                            borderColor: isSelected ? themeColor : "transparent",
-                          }}
                         >
                           <span
-                            className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold text-white shadow-sm transition-transform duration-300"
+                            className={`w-10 h-10 flex items-center justify-center text-white shadow-elev-1 transition-[border-radius] duration-300 ease-md3-spatial-fast ${isSelected ? "rounded-md3-md" : "rounded-full"}`}
                             style={{
                               backgroundColor: color,
                             }}
                           >
                             {isSelected && (
-                              <svg className="w-5 h-5 text-white filter drop-shadow" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                              </svg>
+                              <Icon path={mdCheck} size={22} className="drop-shadow" />
                             )}
                           </span>
-                          <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                          <span className="type-label-s">
                             {charName}
                           </span>
                         </button>
@@ -720,78 +672,42 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 className="flex flex-col space-y-5"
               >
                 <div className="space-y-2">
-                  <h2 className="text-2xl font-bold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-s text-on-surface">
                     {t("page.setup.contentTitle")}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="type-body-m text-on-surface-variant">
                     {t("page.setup.contentDesc")}
                   </p>
                 </div>
 
-                <div className="flex flex-col bg-white/40 dark:bg-slate-900/30 rounded-3xl border border-slate-200/50 dark:border-slate-800/40 divide-y divide-slate-200/50 dark:divide-slate-800/40">
+                <div className="flex flex-col bg-surface-container-low rounded-md3-lg divide-y divide-outline-variant">
                   {/* Spoiler toggle */}
-                  <div className="p-4 flex items-center justify-between">
-                    <div className="flex flex-col pr-4 text-left">
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                        {t("settings.showSpoiler.label")}
-                      </span>
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
-                        {t("settings.showSpoiler.description")}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setShowSpoiler(!isShowSpoiler)}
-                      className="w-12 h-7 rounded-full transition-colors relative duration-200 shrink-0"
-                      style={{
-                        backgroundColor: isShowSpoiler ? themeColor : "var(--color-slate-200, #cbd5e1)",
-                      }}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${isShowSpoiler ? 'translate-x-5' : ''}`} />
-                    </button>
-                  </div>
+                  <Switch
+                    className="p-4"
+                    checked={!!isShowSpoiler}
+                    onCheckedChange={(checked) => setShowSpoiler(checked)}
+                    label={t("settings.showSpoiler.label")}
+                    description={t("settings.showSpoiler.description")}
+                  />
 
                   {/* Trained thumbnail toggle */}
-                  <div className="p-4 flex items-center justify-between">
-                    <div className="flex flex-col pr-4 text-left">
-                      <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                        {t("settings.trainedThumbnail.label")}
-                      </span>
-                      <span className="text-xs text-slate-400 dark:text-slate-500">
-                        {t("settings.trainedThumbnail.description")}
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setUseTrainedThumbnail(!useTrainedThumbnail)}
-                      className="w-12 h-7 rounded-full transition-colors relative duration-200 shrink-0"
-                      style={{
-                        backgroundColor: useTrainedThumbnail ? themeColor : "var(--color-slate-200, #cbd5e1)",
-                      }}
-                    >
-                      <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${useTrainedThumbnail ? 'translate-x-5' : ''}`} />
-                    </button>
-                  </div>
+                  <Switch
+                    className="p-4"
+                    checked={!!useTrainedThumbnail}
+                    onCheckedChange={(checked) => setUseTrainedThumbnail(checked)}
+                    label={t("settings.trainedThumbnail.label")}
+                    description={t("settings.trainedThumbnail.description")}
+                  />
 
                   {/* LLM translation toggle — only shown when locale is zh-CN */}
                   {locale === "zh-CN" && (
-                    <div className="p-4 flex items-center justify-between">
-                      <div className="flex flex-col pr-4 text-left">
-                        <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
-                          {t("settings.translation.label")}
-                        </span>
-                        <span className="text-xs text-slate-400 dark:text-slate-500">
-                          {t("settings.translation.description")}
-                        </span>
-                      </div>
-                      <button
-                        onClick={() => setUseLLMTranslation(!useLLMTranslation)}
-                        className="w-12 h-7 rounded-full transition-colors relative duration-200 shrink-0"
-                        style={{
-                          backgroundColor: useLLMTranslation ? themeColor : "var(--color-slate-200, #cbd5e1)",
-                        }}
-                      >
-                        <span className={`absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white shadow transition-transform duration-200 ${useLLMTranslation ? 'translate-x-5' : ''}`} />
-                      </button>
-                    </div>
+                    <Switch
+                    className="p-4"
+                    checked={!!useLLMTranslation}
+                    onCheckedChange={(checked) => setUseLLMTranslation(checked)}
+                    label={t("settings.translation.label")}
+                    description={t("settings.translation.description")}
+                  />
                   )}
                 </div>
               </motion.div>
@@ -809,24 +725,19 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
               >
                 {/* Huge animated checkmark circle */}
                 <motion.div
-                  initial={{ scale: 0.3, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 200, damping: 20, delay: 0.2 }}
-                  className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg"
-                  style={{
-                    backgroundColor: themeColor,
-                  }}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.3, opacity: 0 }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { scale: 1, opacity: 1 }}
+                  transition={md3SpatialDefault}
+                  className="w-24 h-24 rounded-md3-xl flex items-center justify-center bg-primary text-on-primary shadow-elev-2"
                 >
-                  <svg className="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
+                  <Icon path={mdCheck} size={48} />
                 </motion.div>
 
                 <div className="space-y-2">
-                  <h2 className="text-3xl font-extrabold tracking-tight text-slate-800 dark:text-slate-100">
+                  <h2 className="type-headline-l text-on-surface">
                     {t("page.setup.finishTitle")}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs leading-relaxed">
+                  <p className="type-body-m text-on-surface-variant max-w-xs">
                     {t("page.setup.finishDesc")}
                   </p>
                 </div>
@@ -839,48 +750,17 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
         {/* ─── Bottom Actions (Pill buttons) ─── */}
         <div className="w-full flex flex-col gap-3 z-10">
           {currentStep === 0 ? (
-            <button
-              onClick={() => handleStepChange(1)}
-              className="w-full py-4 px-6 rounded-2xl text-base font-bold text-white shadow-lg shadow-miku/20 hover:brightness-105 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-              style={{
-                backgroundImage: `linear-gradient(to right, ${themeColor}, var(--color-miku-dark, ${themeColor}))`,
-                boxShadow: `0 8px 24px -4px ${themeColor}40`,
-              }}
-            >
+            <Button variant="filled" size="m" fullWidth trailingIcon={mdChevronRight} onClick={() => handleStepChange(1)}>
               {t("page.setup.getStartedBilingual")}
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            </Button>
           ) : currentStep === 6 ? (
-            <button
-              onClick={handleFinish}
-              className="w-full py-4 px-6 rounded-2xl text-base font-bold text-white shadow-lg active:scale-[0.99] transition-all flex items-center justify-center gap-2 animate-pulse"
-              style={{
-                backgroundImage: `linear-gradient(to right, ${themeColor}, var(--color-miku-dark, ${themeColor}))`,
-                boxShadow: `0 8px 24px -4px ${themeColor}40`,
-                animationDuration: "2s",
-              }}
-            >
+            <Button variant="filled" size="m" fullWidth trailingIcon={mdArrowForward} onClick={handleFinish}>
               {t("page.setup.startExploring")}
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M14 5l7 7-7 7" />
-              </svg>
-            </button>
+            </Button>
           ) : (
-            <button
-              onClick={() => handleStepChange(currentStep + 1)}
-              className="w-full py-4 px-6 rounded-2xl text-base font-bold text-white shadow-lg hover:brightness-105 active:scale-[0.99] transition-all flex items-center justify-center gap-2"
-              style={{
-                backgroundImage: `linear-gradient(to right, ${themeColor}, var(--color-miku-dark, ${themeColor}))`,
-                boxShadow: `0 8px 24px -4px ${themeColor}40`,
-              }}
-            >
+            <Button variant="filled" size="m" fullWidth trailingIcon={mdChevronRight} onClick={() => handleStepChange(currentStep + 1)}>
               {t("page.setup.next")}
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
+            </Button>
           )}
 
           {/* Indicator bar style */}
@@ -890,12 +770,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
               return (
                 <span
                   key={stepIdx}
-                  className="h-1.5 rounded-full transition-all duration-300"
-                  style={{
-                    width: isActive ? "16px" : "6px",
-                    backgroundColor: isActive ? themeColor : "var(--color-slate-200, #e2e8f0)",
-                    opacity: isActive ? 1 : 0.4,
-                  }}
+                  className={`h-1.5 rounded-full transition-[width,background-color] duration-300 ease-md3-spatial-fast ${isActive ? "w-4 bg-primary" : "w-1.5 bg-outline-variant"}`}
                 />
               );
             })}

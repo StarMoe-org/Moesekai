@@ -6,9 +6,11 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { formatBpmValue } from "@/lib/musicBpm";
+import { Icon } from "@/components/md3";
+import { mdSearch } from "@/components/md3/icons";
 
 const ALL_DIFFICULTIES: MusicDifficultyType[] = ["easy", "normal", "hard", "expert", "master", "append"];
-const JACKET_OVERLAY_BADGE_CLASS = "inline-flex h-5 items-center rounded bg-black/60 px-1.5 font-mono text-[10px] font-normal leading-4 text-white shadow-sm backdrop-blur-sm";
+const JACKET_OVERLAY_BADGE_CLASS = "inline-flex h-5 items-center rounded-md3-xs bg-scrim/60 px-1.5 font-mono text-[10px] font-normal leading-4 text-white";
 
 interface MusicItemProps {
     music: IMusicInfo;
@@ -37,8 +39,8 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
     const itemHref = href ?? `${hrefBase}/${music.id}`;
 
     return (
-        <Link href={itemHref} className="group pressable block [content-visibility:auto] [contain-intrinsic-size:auto_320px]" data-shortcut-item="true">
-            <div className="relative rounded-xl overflow-hidden ios-glass-card ios-glass-card-interactive">
+        <Link href={itemHref} className="group state-layer focus-ring block rounded-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_320px]" data-shortcut-item="true">
+            <div className="relative rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Jacket Image */}
                 <div className="relative aspect-square overflow-hidden">
                     <Image
@@ -46,7 +48,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                         alt={music.title}
                         fill
                         sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-[var(--duration-base)] ease-[var(--ease-out-soft)]"
+                        className="object-cover"
                         unoptimized
                         loading="lazy"
                         decoding="async"
@@ -57,7 +59,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                         {Array.from(new Set(music.categories ?? [])).map((cat) => (
                             <span
                                 key={cat}
-                                className="px-1.5 py-0.5 text-[10px] font-bold rounded text-white shadow-sm"
+                                className="px-1.5 py-0.5 text-[10px] font-bold rounded-md3-xs text-white shadow-elev-1"
                                 style={{ backgroundColor: MUSIC_CATEGORY_COLORS[cat as MusicCategoryType] }}
                             >
                                 {t(`common.musicCategories.${cat}`)}
@@ -72,7 +74,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
 
 {/* Constant Badge - bottom right */}
                     {constant !== undefined && (
-                        <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-miku/80 backdrop-blur-sm rounded text-[10px] text-white font-bold shadow-sm">
+                        <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-primary text-on-primary rounded-md3-xs text-[10px] font-bold shadow-elev-1">
                             {constant.toFixed(1)}
                         </div>
                     )}
@@ -86,7 +88,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                                 </span>
                             )}
                             {isSpoiler && (
-                                <span className="rounded bg-orange-500 px-1.5 py-0.5 text-[10px] font-bold leading-4 text-white shadow-sm">
+                                <span className="rounded-md3-xs bg-tertiary px-1.5 py-0.5 text-[10px] font-bold leading-4 text-on-tertiary shadow-elev-1">
                                     {t("common.badge.spoiler")}
                                 </span>
                             )}
@@ -105,32 +107,26 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
 
                 {/* Info */}
                 <div className="p-3">
-                    <h3 className="text-sm type-title font-bold text-primary-text group-hover:text-miku">
+                    <h3 className="type-title-s text-on-surface group-hover:text-primary">
                         <span className="flex flex-col">
                             <span className="block">{music.title}</span>
                             {translatedTitle && (
-                                <span className="text-xs type-caption font-medium text-slate-400 block">{translatedTitle}</span>
+                                <span className="type-body-s text-on-surface-variant block">{translatedTitle}</span>
                             )}
                         </span>
                     </h3>
-                    <p className="text-xs type-caption text-slate-500 dark:text-slate-400 mt-1">
+                    <p className="type-body-s text-on-surface-variant mt-1">
                         {music.composer}
                         {music.composer !== music.arranger && music.arranger !== "-" && ` / ${music.arranger}`}
                     </p>
                     {matchedAliases && matchedAliases.length > 0 && (
                         <div className="mt-1.5 flex flex-wrap items-center gap-1 text-[11px] leading-4">
-                            <svg
-                                className="h-3 w-3 shrink-0 text-miku"
-                                fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                aria-hidden="true"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <span className="shrink-0 text-slate-500 dark:text-slate-400">{t("page.music.aliasesLabel")}</span>
+                            <Icon path={mdSearch} size={12} className="text-primary" />
+                            <span className="shrink-0 text-on-surface-variant">{t("page.music.aliasesLabel")}</span>
                             {matchedAliases.map((alias) => (
                                 <span
                                     key={alias}
-                                    className="max-w-full truncate rounded-full bg-miku/10 px-1.5 py-0.5 font-bold text-miku"
+                                    className="max-w-full truncate rounded-md3-xs bg-primary-container px-1.5 py-0.5 font-bold text-on-primary-container"
                                     title={alias}
                                 >
                                     {alias}
@@ -146,7 +142,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                                 return (
                                     <span
                                         key={diff}
-                                        className="text-[10px] font-bold text-white min-w-[1.25rem] text-center py-0.5 rounded"
+                                        className="text-[10px] font-bold text-white min-w-[1.25rem] text-center py-0.5 rounded-md3-xs"
                                         style={{ backgroundColor: DIFFICULTY_COLORS[diff] }}
                                     >
                                         {level}

@@ -5,6 +5,8 @@ import QRCode from "qrcode";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import Modal from "@/components/common/Modal";
+import { Button, IconButton, LinearProgress, LoadingIndicator } from "@/components/md3";
+import { mdCheck, mdContentCopy, mdDownload, mdRefresh } from "@/components/md3/icons";
 import { getMusicJacketUrl } from "@/lib/assets";
 
 // ==================== Types ====================
@@ -675,58 +677,22 @@ export default function Best30ShareImage({
 
     const headerActions = (
         <>
-            <button
+            <IconButton
+                icon={copied ? mdCheck : mdContentCopy}
                 onClick={handleCopy}
                 disabled={isGenerating}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={t("page.best30Share.copyImage")}
+                label={t("page.best30Share.copyImage")}
                 title={copied ? t("page.best30Share.copied") : t("page.best30Share.copyImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copied ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copied ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                </span>
-            </button>
-            <button
+                className={copied ? "text-primary" : undefined}
+            />
+            <IconButton
+                icon={saveSuccess ? mdCheck : mdDownload}
                 onClick={handleDownload}
                 disabled={isGenerating}
-                className="p-1.5 text-slate-400 hover:text-miku hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={t("page.best30Share.saveImage")}
+                label={t("page.best30Share.saveImage")}
                 title={saveSuccess ? t("page.best30Share.saved") : t("page.best30Share.saveImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${saveSuccess ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${saveSuccess ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                </span>
-            </button>
+                className={saveSuccess ? "text-primary" : undefined}
+            />
         </>
     );
 
@@ -740,44 +706,36 @@ export default function Best30ShareImage({
             headerActions={headerActions}
         >
             <div className="space-y-4">
-                <div className="relative rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="relative rounded-md3-lg bg-surface-container p-4">
                     <div className="overflow-auto max-h-[68vh] flex items-start justify-center">
                         {isGenerating && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-xl">
+                            <div className="absolute inset-0 flex items-center justify-center bg-surface-container/85 z-10 rounded-md3-lg">
                                 <div className="flex flex-col items-center gap-4 w-64">
-                                    <div className="w-10 h-10 border-3 border-slate-200 border-t-miku rounded-full animate-spin" />
+                                    <LoadingIndicator size={40} />
                                     <div className="w-full">
                                         <div className="flex items-center justify-between mb-1.5">
-                                            <span className="text-slate-500 text-xs font-medium">{progressText}</span>
-                                            <span className="text-miku text-xs font-bold">{progress}%</span>
+                                            <span className="text-on-surface-variant type-label-m">{progressText}</span>
+                                            <span className="text-primary type-label-l">{progress}%</span>
                                         </div>
-                                        <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                                            <div
-                                                className="h-full bg-gradient-to-r from-miku to-miku-dark rounded-full transition-all duration-500 ease-out"
-                                                style={{ width: `${progress}%` }}
-                                            />
-                                        </div>
+                                        <LinearProgress value={progress / 100} aria-label={progressText} />
                                     </div>
-                                    <span className="text-slate-400 text-[10px]">{t("page.best30Share.generatingTitle")}</span>
+                                    <span className="text-on-surface-variant type-label-s">{t("page.best30Share.generatingTitle")}</span>
                                 </div>
                             </div>
                         )}
                         {error && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-white/80 z-10 rounded-xl">
+                            <div className="absolute inset-0 flex items-center justify-center bg-surface-container/85 z-10 rounded-md3-lg">
                                 <div className="text-center">
-                                    <p className="text-red-500 text-sm font-medium mb-2">{error}</p>
-                                    <button
-                                        onClick={generateImage}
-                                        className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs rounded-lg transition-colors"
-                                    >
+                                    <p className="text-error type-body-m mb-2">{error}</p>
+                                    <Button variant="tonal" size="xs" icon={mdRefresh} onClick={generateImage}>
                                         {t("page.best30Share.regenerate")}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
                         <canvas
                             ref={canvasCallbackRef}
-                            className="rounded-lg shadow-lg"
+                            className="rounded-md3-sm shadow-elev-2"
                             style={{ maxWidth: "100%", height: "auto" }}
                         />
                     </div>

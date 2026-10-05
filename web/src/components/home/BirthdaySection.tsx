@@ -20,9 +20,8 @@ export default function BirthdaySection() {
         <div className="w-full max-w-5xl animate-fade-in-up">
             {/* Upcoming Birthdays List */}
             <div>
-                <div className="flex items-center gap-2 mb-4">
-                    <div className="h-6 w-1 rounded-full bg-miku"></div>
-                    <h2 className="text-xl font-bold text-primary-text opacity-80">{t("page.home.sections.upcomingBirthdays")}</h2>
+                <div className="mb-4">
+                    <h2 className="type-title-l text-on-surface">{t("page.home.sections.upcomingBirthdays")}</h2>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
@@ -31,16 +30,15 @@ export default function BirthdaySection() {
                             key={birthday.id}
                             href={`/character/${birthday.id}`}
                             className={`
-                                group relative p-3 rounded-xl transition-all duration-300 flex flex-col items-center gap-2
-                                border backdrop-blur-sm
+                                group state-layer focus-ring relative p-3 rounded-md3-lg transition-shadow duration-200 ease-md3-standard flex flex-col items-center gap-2
                                 ${birthday.isToday
-                                    ? "bg-gradient-to-br from-miku/10 to-white/80 border-miku/40 shadow-miku/20 shadow-md transform hover:-translate-y-1"
-                                    : "bg-white/40 hover:bg-white/70 border-white/50 hover:border-miku/30 transform hover:-translate-y-1 hover:shadow-lg"
+                                    ? "bg-primary-container text-on-primary-container shadow-elev-1 hover:shadow-elev-2"
+                                    : "bg-surface-container-low text-on-surface hover:shadow-elev-1"
                                 }
                                 ${index < 2 ? "flex" : (index < 3 ? "hidden sm:flex" : "hidden lg:flex")} 
                             `}
                         >
-                            <div className="relative w-14 h-14 transition-transform duration-300 group-hover:scale-110">
+                            <div className="relative w-14 h-14">
                                 <Image
                                     src={getCharacterIconUrl(birthday.id)}
                                     alt={birthday.name}
@@ -49,16 +47,16 @@ export default function BirthdaySection() {
                                     unoptimized
                                 />
                                 {birthday.isToday && (
-                                    <div className="absolute -top-1 -right-1 bg-miku text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-sm animate-pulse z-10">
+                                    <div className="absolute -top-1 -right-1 bg-primary text-on-primary text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow-elev-1 z-10">
                                         {t("page.home.birthdays.today")}
                                     </div>
                                 )}
                             </div>
                             <div className="text-center w-full">
-                                <div className={`text-sm font-bold truncate ${birthday.isToday ? "text-miku" : "text-slate-700 group-hover:text-miku"}`}>
+                                <div className={`type-title-s truncate ${birthday.isToday ? "" : "group-hover:text-primary"}`}>
                                     {birthday.name}
                                 </div>
-                                <div className={`text-xs mt-0.5 ${birthday.isToday ? "text-miku/80 font-bold" : "text-slate-400"}`}>
+                                <div className={`type-label-m mt-0.5 ${birthday.isToday ? "" : "text-on-surface-variant"}`}>
                                     {formatDate(new Date(2000, birthday.month - 1, birthday.day), { month: "long", day: "numeric" })}
                                 </div>
                             </div>

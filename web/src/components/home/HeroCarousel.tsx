@@ -16,6 +16,8 @@ import {
 import { getTodayBirthdays, isVirtualSinger, type UpcomingBirthday } from "@/lib/birthdays";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { Icon, IconButton } from "@/components/md3";
+import { mdBolt, mdChevronLeft, mdChevronRight } from "@/components/md3/icons";
 
 // ─── Slide type definitions ───
 
@@ -42,7 +44,7 @@ type Slide = EventSlide | GachaSlide | BirthdaySlide;
 const AUTO_PLAY_INTERVAL = 5000;
 
 export default function HeroCarousel() {
-    const { assetSource, themeColor, isShowSpoiler } = useTheme();
+    const { assetSource, isShowSpoiler } = useTheme();
     const { t, formatDate: formatLocaleDate } = useI18n();
     const { t: translateMasterText } = useTranslation();
     const [slides, setSlides] = useState<Slide[]>([]);
@@ -214,37 +216,40 @@ export default function HeroCarousel() {
 
     if (isLoading) {
         return (
-            <div className="w-full h-[180px] lg:h-[260px] rounded-2xl animate-pulse bg-gradient-to-br from-slate-100 to-slate-200" />
+            <div className="w-full h-[180px] lg:h-[260px] rounded-md3-xl animate-pulse bg-surface-container-high" />
         );
     }
 
     if (slides.length === 0) {
         return (
-            <div className="w-full h-[180px] lg:h-[260px] rounded-2xl bg-slate-50 border border-slate-100 flex items-center justify-center text-slate-400">
-                <p className="font-medium">{t("page.home.hero.noContent")}</p>
+            <div className="w-full h-[180px] lg:h-[260px] rounded-md3-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+                <p className="type-body-l">{t("page.home.hero.noContent")}</p>
             </div>
         );
     }
 
     return (
         <div
-            className="relative w-full h-[180px] lg:h-[260px] rounded-2xl overflow-hidden group/carousel select-none"
+            className="w-full group/carousel select-none"
             onMouseEnter={() => setIsPaused(true)}
             onMouseLeave={() => setIsPaused(false)}
+        >
+        <div
+            className="relative w-full h-[180px] lg:h-[260px] rounded-md3-xl overflow-hidden bg-surface-container-high shadow-elev-1"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
         >
-            {/* Slides — soft critical settle; reduced-motion falls back via CSS tokens */}
+            {/* Slides — MD3 emphasized settle; reduced-motion falls back via CSS tokens */}
             {slides.map((slide, index) => (
                 <div
                     key={`${slide.type}-${index}`}
-                    className={`absolute inset-0 transition-[opacity,transform] duration-[var(--duration-slow)] ease-[var(--ease-out-soft)] ${
+                    className={`absolute inset-0 transition-[opacity,transform] duration-500 ease-md3-emphasized motion-reduce:transition-opacity ${
                         index === currentIndex
-                            ? "opacity-100 translate-x-0 z-10"
+                            ? "opacity-100 translate-x-0 scale-100 z-10"
                             : index < currentIndex
-                            ? "opacity-0 -translate-x-3 z-0"
-                            : "opacity-0 translate-x-3 z-0"
+                            ? "opacity-0 -translate-x-6 scale-[0.98] z-0"
+                            : "opacity-0 translate-x-6 scale-[0.98] z-0"
                     }`}
                     aria-hidden={index !== currentIndex}
                 >
@@ -253,7 +258,6 @@ export default function HeroCarousel() {
                             slide={slide}
                             isActive={index === currentIndex}
                             assetSource={assetSource}
-                            themeColor={themeColor}
                             now={now}
                             formatDate={formatDate}
                             getStaminaLabel={getStaminaLabel}
@@ -287,38 +291,39 @@ export default function HeroCarousel() {
             {/* Navigation Arrows */}
             {slides.length > 1 && (
                 <>
-                    <button
+                    <IconButton
+                        icon={mdChevronLeft}
+                        variant="tonal"
+                        size="s"
                         onClick={(e) => { e.preventDefault(); goPrev(); }}
-                        className="pressable absolute left-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black/50"
-                        aria-label={t("page.home.hero.previousSlide")}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                        </svg>
-                    </button>
-                    <button
+                        label={t("page.home.hero.previousSlide")}
+                        className="!absolute left-3 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/carousel:opacity-100 focus-visible:opacity-100 transition-opacity"
+                    />
+                    <IconButton
+                        icon={mdChevronRight}
+                        variant="tonal"
+                        size="s"
                         onClick={(e) => { e.preventDefault(); goNext(); }}
-                        className="pressable absolute right-2 top-1/2 -translate-y-1/2 z-20 w-8 h-8 rounded-full bg-black/30 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover/carousel:opacity-100 transition-opacity hover:bg-black/50"
-                        aria-label={t("page.home.hero.nextSlide")}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                    </button>
+                        label={t("page.home.hero.nextSlide")}
+                        className="!absolute right-3 top-1/2 -translate-y-1/2 z-20 opacity-0 group-hover/carousel:opacity-100 focus-visible:opacity-100 transition-opacity"
+                    />
                 </>
             )}
+        </div>
 
-            {/* Dot Indicators */}
+            {/* Dot Indicators (MD3: primary active pill, outline-variant inactive) */}
             {slides.length > 1 && (
-                <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-20 flex gap-1.5">
+                <div className="mt-3 flex justify-center gap-1.5">
                     {slides.map((_, index) => (
                         <button
                             key={index}
+                            type="button"
                             onClick={() => goTo(index)}
-                            className={`pressable rounded-full transition-[width,background-color] duration-[var(--duration-fast)] ease-[var(--ease-out-soft)] ${
+                            aria-current={index === currentIndex ? "true" : undefined}
+                            className={`focus-ring h-2 rounded-full cursor-pointer transition-[width,background-color] duration-300 ease-md3-spatial-fast ${
                                 index === currentIndex
-                                    ? "w-6 h-2 bg-white shadow-sm"
-                                    : "w-2 h-2 bg-white/50 hover:bg-white/70"
+                                    ? "w-6 bg-primary"
+                                    : "w-2 bg-outline-variant hover:bg-outline"
                             }`}
                             aria-label={t("page.home.hero.goToSlide", { index: index + 1 })}
                         />
@@ -335,7 +340,6 @@ function EventSlideContent({
     slide,
     isActive,
     assetSource,
-    themeColor,
     now,
     formatDate,
     getStaminaLabel,
@@ -345,7 +349,6 @@ function EventSlideContent({
     slide: EventSlide;
     isActive: boolean;
     assetSource: AssetSourceType;
-    themeColor: string;
     now: number;
     formatDate: (ts: number) => string;
     getStaminaLabel: (event: IEventInfo) => string | null;
@@ -370,7 +373,7 @@ function EventSlideContent({
     const staminaLabel = getStaminaLabel(event);
 
     return (
-        <Link href={`/events/${event.id}`} className="block w-full h-full relative">
+        <Link href={`/events/${event.id}`} className="focus-ring block w-full h-full relative rounded-md3-xl">
             {/* Background */}
             <Image
                 src={getEventBannerUrl(event.assetbundleName, assetSource)}
@@ -381,7 +384,7 @@ function EventSlideContent({
                 loading={isActive ? "eager" : "lazy"}
                 fetchPriority={isActive ? "high" : undefined}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-scrim/30 to-scrim/10" />
 
             {/* Event Logo (centered) */}
             <div className="absolute inset-0 flex items-center justify-center p-8 pb-16">
@@ -390,7 +393,7 @@ function EventSlideContent({
                         src={getEventLogoUrl(event.assetbundleName, assetSource)}
                         alt=""
                         fill
-                        className="object-contain drop-shadow-2xl"
+                        className="object-contain drop-shadow-xl"
                         unoptimized
                         loading="lazy"
                     />
@@ -403,47 +406,48 @@ function EventSlideContent({
                     {/* Badges */}
                     <div className="flex items-center gap-2 flex-wrap">
                         <span
-                            className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded text-white shadow-sm"
+                            className="type-label-m px-2 py-0.5 rounded-md3-sm text-white"
                             style={{ backgroundColor: statusDisplay.color }}
                         >
                             {statusLabel}
                         </span>
-                        <span className="text-[10px] font-bold text-white/70">
+                        <span className="type-label-s text-white/80">
                             {eventTypeName}
                         </span>
                         {staminaLabel && (
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-white/20 backdrop-blur-sm text-amber-300">
-                                ⚡ {staminaLabel}
+                            <span className="inline-flex items-center gap-0.5 type-label-s px-1.5 py-0.5 rounded-md3-xs bg-tertiary-container text-on-tertiary-container">
+                                <Icon path={mdBolt} size={14} />
+                                {staminaLabel}
                             </span>
                         )}
                     </div>
                     {/* Title */}
-                    <h3 className="font-bold text-white text-sm sm:text-base leading-tight line-clamp-1 drop-shadow-sm">
+                    <h3 className="type-title-m text-white line-clamp-1 drop-shadow-sm">
                         {event.name}
                     </h3>
                     {translatedName && translatedName !== event.name && (
-                        <p className="text-xs text-white/60 line-clamp-1">{translatedName}</p>
+                        <p className="type-body-s text-white/70 line-clamp-1">{translatedName}</p>
                     )}
                     {/* Date */}
-                    <div className="text-[10px] sm:text-xs text-white/50 font-mono">
+                    <div className="type-label-s text-white/60 font-mono">
                         {formatDate(event.startAt)} - {formatDate(event.aggregateAt)}
                     </div>
                 </div>
 
                 {/* Progress percentage */}
                 {status === "ongoing" && (
-                    <div className="text-3xl lg:text-4xl font-black text-white/90 select-none tracking-tighter ml-4 shrink-0 drop-shadow-sm">
-                        {Math.floor(progressPercent)}<span className="text-xl ml-0.5">%</span>
+                    <div className="type-display-s type-emphasized text-white/90 select-none ml-4 shrink-0 drop-shadow-sm">
+                        {Math.floor(progressPercent)}<span className="type-title-l ml-0.5">%</span>
                     </div>
                 )}
             </div>
 
             {/* Progress bar at very bottom */}
             {status === "ongoing" && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5">
+                <div className="absolute bottom-0 left-0 right-0 h-1">
                     <div
-                        className="h-full transition-all duration-500 ease-out"
-                        style={{ width: `${progressPercent}%`, backgroundColor: themeColor }}
+                        className="h-full rounded-r-full bg-primary transition-[width] duration-500 ease-md3-standard"
+                        style={{ width: `${progressPercent}%` }}
                     />
                 </div>
             )}
@@ -486,7 +490,7 @@ function GachaSlideContent({
         : null;
 
     return (
-        <Link href={`/gacha/${gacha.id}`} className="block w-full h-full relative">
+        <Link href={`/gacha/${gacha.id}`} className="focus-ring block w-full h-full relative rounded-md3-xl">
             {/* Background: pickup card full art */}
             {pickupBgUrl ? (
                 <Image
@@ -499,9 +503,9 @@ function GachaSlideContent({
                     fetchPriority={isActive ? "high" : undefined}
                 />
             ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-pink-100 to-purple-100" />
+                <div className="absolute inset-0 bg-tertiary-container" />
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
+            <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-scrim/30 to-scrim/10" />
 
             {/* Gacha Logo (centered) */}
             <div className="absolute inset-0 flex items-center justify-center p-8 pb-16">
@@ -510,7 +514,7 @@ function GachaSlideContent({
                         src={getGachaLogoUrl(gacha.assetbundleName, assetSource)}
                         alt=""
                         fill
-                        className="object-contain drop-shadow-2xl"
+                        className="object-contain drop-shadow-xl"
                         unoptimized
                         loading="lazy"
                     />
@@ -522,15 +526,15 @@ function GachaSlideContent({
                 <div className="flex items-end justify-between">
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                         <div className="flex items-center gap-2">
-                            <span className={`text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded text-white shadow-sm ${isUpcoming ? "bg-blue-500" : "bg-pink-500"}`}>
+                            <span className={`type-label-m px-2 py-0.5 rounded-md3-sm ${isUpcoming ? "bg-secondary-container text-on-secondary-container" : "bg-tertiary-container text-on-tertiary-container"}`}>
                                 {isUpcoming ? t("page.home.hero.upcomingGacha") : t("page.home.hero.currentGacha")}
                             </span>
                         </div>
-                        <h3 className="font-bold text-white text-sm sm:text-base leading-tight line-clamp-1 drop-shadow-sm">
+                        <h3 className="type-title-m text-white line-clamp-1 drop-shadow-sm">
                             {gacha.name}
                         </h3>
                     </div>
-                    <div className="text-xs sm:text-sm font-bold text-white/70 ml-4 shrink-0">
+                    <div className="type-label-l text-white/80 ml-4 shrink-0">
                         {isUpcoming ? t("page.home.hero.gachaStartsAt", { date: formatDate(gacha.startAt) }) : formatRemaining(gacha.endAt)}
                     </div>
                 </div>
@@ -568,7 +572,7 @@ function BirthdaySlideContent({
         : null;
 
     return (
-        <Link href={`/character/${birthday.id}`} className="block w-full h-full relative">
+        <Link href={`/character/${birthday.id}`} className="focus-ring block w-full h-full relative rounded-md3-xl">
             {/* Background */}
             {cardImageUrl ? (
                 <>
@@ -581,7 +585,7 @@ function BirthdaySlideContent({
                         loading={isActive ? "eager" : "lazy"}
                         fetchPriority={isActive ? "high" : undefined}
                     />
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-scrim/70 via-scrim/40 to-transparent" />
                 </>
             ) : (
                 <div
@@ -595,10 +599,10 @@ function BirthdaySlideContent({
                 <div className="flex items-center gap-4 lg:gap-6">
                     {/* Character Icon */}
                     <div
-                        className="relative w-16 h-16 lg:w-20 lg:h-20 shrink-0 rounded-full p-0.5 shadow-lg"
+                        className="relative w-16 h-16 lg:w-20 lg:h-20 shrink-0 rounded-full p-0.5 shadow-elev-2"
                         style={{ backgroundColor: charColor }}
                     >
-                        <div className="w-full h-full rounded-full overflow-hidden bg-white">
+                        <div className="w-full h-full rounded-full overflow-hidden bg-surface-container-lowest">
                             <Image
                                 src={getCharacterIconUrl(birthday.id)}
                                 alt={birthday.name}
@@ -611,18 +615,18 @@ function BirthdaySlideContent({
 
                     {/* Text */}
                     <div>
-                        <div className="text-white/70 text-xs lg:text-sm font-medium mb-1">
+                        <div className="text-white/80 type-label-l mb-1">
                             {formatDate(new Date(2000, birthday.month - 1, birthday.day).getTime())}
                         </div>
                         <h3
-                            className="text-xl lg:text-3xl font-black text-white drop-shadow-lg"
+                            className="type-headline-s lg:type-headline-l type-emphasized text-white drop-shadow-lg"
                         >
                             {isVirtualSinger(birthday.id)
                                 ? t("page.home.hero.anniversaryGreeting", { name: birthday.name })
                                 : t("page.home.hero.birthdayGreeting", { name: birthday.name })}
                         </h3>
                         {card && card.cardRarityType === "rarity_birthday" && (
-                            <p className="text-xs lg:text-sm text-white/60 mt-1 font-medium">
+                            <p className="type-body-m text-white/70 mt-1">
                                 🎉 {card.prefix}
                             </p>
                         )}

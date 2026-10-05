@@ -37,6 +37,8 @@ import { fetchMusicBpmMap, getMusicBpm, formatBpmValue, formatBarValue, MusicBpm
 import { fetchMusicAliases, getMusicAliases } from "@/lib/musicAliases";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import { useI18n } from "@/contexts/I18nContext";
+import { Button, EmptyState, Icon, LoadingState, PageContainer } from "@/components/md3";
+import { mdArrowBack, mdBarChart, mdCalendarMonth, mdDownload, mdInfo, mdKeyboardArrowDown, mdLibraryMusic, mdMic, mdOpenInNew, mdPause, mdPlayArrow, mdPlayCircle, mdSchedule, mdZoomIn } from "@/components/md3/icons";
 
 // Difficulty order for tabs
 const DIFFICULTY_ORDER: MusicDifficultyType[] = ["easy", "normal", "hard", "expert", "master", "append"];
@@ -355,12 +357,9 @@ export default function MusicDetailPage() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("common.state.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -368,26 +367,18 @@ export default function MusicDetailPage() {
     if (error || !music) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.music.notFoundTitle", { id: musicId })}</h2>
-                        <p className="text-slate-500 mb-6">{t("page.music.notFoundDesc")}</p>
-                        <Link
-                            href="/music"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.music.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdSchedule}
+                        title={t("page.music.notFoundTitle", { id: musicId })}
+                        description={t("page.music.notFoundDesc")}
+                        action={
+                            <Button variant="filled" icon={mdArrowBack} href="/music">
+                                {t("page.music.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -415,11 +406,11 @@ export default function MusicDetailPage() {
                 fileName={`music_${music.id}_jacket.png`}
             />
 
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
                     <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-md3-sm type-label-m font-mono text-on-surface-variant w-fit">
                             ID: {music.id}
                         </span>
                         {/* Category Tags */}
@@ -431,7 +422,7 @@ export default function MusicDetailPage() {
                                 return (
                                     <span
                                         key={cat}
-                                        className="px-2 py-0.5 text-xs font-bold rounded text-white"
+                                        className="px-2 py-0.5 type-label-m rounded-md3-xs text-white"
                                         style={{ backgroundColor: MUSIC_CATEGORY_COLORS[cat as MusicCategoryType] }}
                                     >
                                         {categoryLabel === categoryKey ? cat : categoryLabel}
@@ -442,39 +433,34 @@ export default function MusicDetailPage() {
                     </div>
                     <div className="mb-2">
                         <div className="inline-flex max-w-full flex-wrap items-start gap-2">
-                            <h1 className="min-w-0 text-2xl font-black text-slate-800 sm:text-3xl">
+                            <h1 className="min-w-0 type-headline-m text-on-surface sm:type-headline-l">
                                 <TranslatedText
                                     original={music.title}
                                     category="music"
                                     field="title"
                                     originalClassName=""
-                                    translationClassName="block text-lg font-medium text-slate-400 mt-1"
+                                    translationClassName="block type-title-l text-on-surface-variant mt-1"
                                 />
                             </h1>
                             {aliases.length > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => setAliasesOpen(v => !v)}
-                                    className="-translate-y-1 inline-flex items-center gap-0.5 whitespace-nowrap rounded-md border border-slate-300/70 bg-slate-50 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 transition-colors hover:border-miku/60 hover:bg-miku/10 hover:text-miku sm:text-xs"
+                                    className={`state-layer focus-ring inline-flex h-7 items-center gap-0.5 whitespace-nowrap rounded-md3-sm border pl-2 pr-1 type-label-m transition-colors ${aliasesOpen ? "border-transparent bg-secondary-container text-on-secondary-container" : "border-outline-variant text-on-surface-variant"}`}
                                     aria-expanded={aliasesOpen}
                                     title={t("page.music.aliasesToggle")}
                                 >
                                     {t("page.music.aliasesLabel")}
-                                    <svg
-                                        className={`w-3 h-3 transition-transform duration-200 ${aliasesOpen ? "rotate-180" : ""}`}
-                                        fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                    <Icon path={mdKeyboardArrowDown} size={18} className={`transition-transform duration-200 ${aliasesOpen ? "rotate-180" : ""}`} />
                                 </button>
                             )}
                             {LYRICS_ENTRY_VISIBLE && hasPublishedLyrics && (
                                 <Link
                                     href={`/lyrics/${music.id}`}
-                                    className="-translate-y-1 whitespace-nowrap rounded-md border border-sky-400/35 bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold text-sky-500 transition-colors hover:border-sky-400/60 hover:bg-sky-500/15 hover:text-sky-400 sm:text-xs"
+                                    className="state-layer focus-ring inline-flex h-7 items-center gap-0.5 whitespace-nowrap rounded-md3-sm bg-tertiary-container pl-2 pr-1.5 type-label-m text-on-tertiary-container"
                                 >
                                     {t("page.music.goToLyrics")}
-                                    <span className="ms-0.5" aria-hidden="true">↗</span>
+                                    <Icon path={mdOpenInNew} size={16} />
                                 </Link>
                             )}
                         </div>
@@ -483,7 +469,7 @@ export default function MusicDetailPage() {
                                 {aliases.map((alias, i) => (
                                     <span
                                         key={`${alias}-${i}`}
-                                        className="max-w-full break-words rounded-full bg-slate-100 px-2.5 py-1 text-xs text-slate-600"
+                                        className="max-w-full break-words rounded-md3-sm bg-surface-container-high px-2.5 py-1 type-label-l text-on-surface-variant"
                                     >
                                         {alias}
                                     </span>
@@ -492,11 +478,11 @@ export default function MusicDetailPage() {
                         )}
                     </div>
                     <div className="flex items-center gap-3 flex-wrap">
-                        <span className="text-slate-600">{music.composer}</span>
+                        <span className="type-title-m text-on-surface-variant">{music.composer}</span>
                         {tagNames.length > 0 && (
                             <div className="flex gap-1 flex-wrap">
                                 {tagNames.map((tag, i) => (
-                                    <span key={i} className="text-xs px-2 py-0.5 bg-miku/10 text-miku rounded-full">
+                                    <span key={i} className="type-label-m px-2 py-0.5 bg-secondary-container text-on-secondary-container rounded-md3-sm">
                                         {tag}
                                     </span>
                                 ))}
@@ -509,10 +495,10 @@ export default function MusicDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Left Column: Jacket Image */}
                     <div className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
                             {/* Jacket Image */}
                             <div
-                                className="relative aspect-square bg-gradient-to-br from-slate-50 to-slate-100 cursor-zoom-in"
+                                className="relative aspect-square bg-surface-container cursor-zoom-in"
                                 onClick={() => setImageViewerOpen(true)}
                             >
                                 <Image
@@ -523,10 +509,8 @@ export default function MusicDetailPage() {
                                     unoptimized
                                     priority
                                 />
-                                <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                    </svg>
+                                <div className="absolute bottom-3 right-3 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                    <Icon path={mdZoomIn} size={16} />
                                     {t("page.music.clickExpand")}
                                 </div>
                             </div>
@@ -536,16 +520,9 @@ export default function MusicDetailPage() {
                     {/* Right Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.music.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <SectionTitle icon={mdInfo}>{t("page.music.basicInfo")}</SectionTitle>
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label="ID" value={`#${music.id}`} />
                                 <InfoRow
                                     label={t("page.music.fields.title")}
@@ -555,7 +532,7 @@ export default function MusicDetailPage() {
                                             category="music"
                                             field="title"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-s text-on-surface-variant mt-0.5"
                                         />
                                     }
                                 />
@@ -579,17 +556,12 @@ export default function MusicDetailPage() {
                                                     <button
                                                         type="button"
                                                         onClick={() => setBpmListOpen(v => !v)}
-                                                        className="inline-flex items-center gap-1 text-slate-800 font-bold hover:text-miku transition-colors"
+                                                        className="state-layer focus-ring inline-flex items-center gap-1 rounded-full px-2 -mr-2 text-on-surface hover:text-primary transition-colors"
                                                         aria-expanded={bpmListOpen}
                                                         title={t("page.music.bpmListToggle")}
                                                     >
                                                         {formatBpmValue(bpmEntry.bpm)}
-                                                        <svg
-                                                            className={`w-3.5 h-3.5 transition-transform duration-200 ${bpmListOpen ? "rotate-180" : ""}`}
-                                                            fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                                                        >
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                                        </svg>
+                                                        <Icon path={mdKeyboardArrowDown} size={18} className={`transition-transform duration-200 ${bpmListOpen ? "rotate-180" : ""}`} />
                                                     </button>
                                                 ) : (
                                                     formatBpmValue(bpmEntry.bpm)
@@ -597,17 +569,17 @@ export default function MusicDetailPage() {
                                             }
                                         />
                                         {bpmListOpen && (bpmEntry.bpm_segments?.length ?? 0) > 1 && (
-                                            <div className="px-5 py-3 border-t border-slate-100">
-                                                <div className="bg-slate-50 rounded-xl px-3 py-1 max-h-56 overflow-y-auto custom-scrollbar">
+                                            <div className="px-5 py-3 border-t border-outline-variant">
+                                                <div className="bg-surface-container rounded-md3-md px-3 py-1 max-h-56 overflow-y-auto custom-scrollbar">
                                                     {bpmEntry.bpm_segments?.map((segment, index) => (
                                                         <div
                                                             key={index}
-                                                            className="flex items-center justify-between py-1.5 text-xs border-b border-slate-100 last:border-0"
+                                                            className="flex items-center justify-between py-1.5 type-body-s border-b border-outline-variant last:border-0"
                                                         >
-                                                            <span className="font-mono font-bold text-slate-700">
+                                                            <span className="font-mono font-bold text-on-surface">
                                                                 {formatBpmValue(segment.bpm)}
                                                             </span>
-                                                            <span className="font-mono text-slate-400">
+                                                            <span className="font-mono text-on-surface-variant">
                                                                 {formatBarValue(segment.start_bar)} → {formatBarValue(segment.end_bar)}
                                                             </span>
                                                         </div>
@@ -633,25 +605,18 @@ export default function MusicDetailPage() {
                                 />
                                 <InfoRow
                                     label={t("page.music.fields.assetName")}
-                                    value={<span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{music.assetbundleName}</span>}
+                                    value={<span className="font-mono type-body-s bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{music.assetbundleName}</span>}
                                 />
                             </div>
                         </div>
 
                         {/* Ranking Card */}
                         {rankings && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                        {t("page.music.metaRanking")}
-                                    </h2>
-                                </div>
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdBarChart}>{t("page.music.metaRanking")}</SectionTitle>
 
                                 {/* Category Tabs */}
-                                <div className="px-3 py-2 border-b border-slate-100 flex flex-wrap gap-1">
+                                <div className="px-4 py-2 border-b border-outline-variant flex flex-wrap gap-2">
                                     {RANKING_CATEGORIES.map((cat) => {
                                         const catRanking = rankings.categories[cat.key];
                                         const isSelected = selectedRankingCategory === cat.key;
@@ -659,11 +624,11 @@ export default function MusicDetailPage() {
                                             <button
                                                 key={cat.key}
                                                 onClick={() => setSelectedRankingCategory(cat.key)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isSelected
-                                                    ? "bg-miku text-white shadow-sm"
+                                                className={`state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l border transition-colors ${isSelected
+                                                    ? "border-transparent bg-secondary-container text-on-secondary-container"
                                                     : catRanking
-                                                        ? "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                        : "bg-slate-50 text-slate-300 cursor-not-allowed"
+                                                        ? "border-outline-variant text-on-surface-variant"
+                                                        : "border-outline-variant text-on-surface-variant opacity-38 cursor-not-allowed"
                                                     }`}
                                                 disabled={!catRanking}
                                             >
@@ -679,22 +644,22 @@ export default function MusicDetailPage() {
                                         {/* Left: PSPI */}
                                         <div className="flex items-center gap-3">
                                             <div>
-                                                <div className="text-xs text-slate-400 mb-0.5">PSPI</div>
-                                                <div className="text-2xl font-black text-miku">
+                                                <div className="type-label-m text-on-surface-variant mb-0.5">PSPI</div>
+                                                <div className="type-headline-s type-emphasized text-primary">
                                                     {(rankings.categories[selectedRankingCategory]!.pspi ?? 0).toFixed(1)}
                                                 </div>
                                             </div>
-                                            <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded uppercase font-mono">
+                                            <span className="px-2 py-0.5 bg-surface-container-high text-on-surface-variant type-label-m rounded-md3-xs uppercase font-mono">
                                                 {rankings.categories[selectedRankingCategory]!.difficulty}
                                             </span>
                                         </div>
 
                                         {/* Right: Rank */}
                                         <div className="text-right">
-                                            <span className="text-4xl sm:text-5xl font-black text-miku">
+                                            <span className="type-display-s type-emphasized text-primary">
                                                 #{rankings.categories[selectedRankingCategory]!.rank}
                                             </span>
-                                            <span className="text-slate-400 text-sm ml-1">/{rankings.total}</span>
+                                            <span className="text-on-surface-variant type-body-m ml-1">/{rankings.total}</span>
                                         </div>
                                     </div>
                                 )}
@@ -702,24 +667,17 @@ export default function MusicDetailPage() {
                         )}
 
                         {/* Difficulty Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                    </svg>
-                                    {t("page.music.difficultyInfo")}
-                                </h2>
-                            </div>
+                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <SectionTitle icon={mdLibraryMusic}>{t("page.music.difficultyInfo")}</SectionTitle>
 
                             {/* Difficulty Grid */}
                             <div className={`p-4 grid gap-2 ${difficulties.length > 5 ? "grid-cols-6" : "grid-cols-5"}`}>
                                 {difficulties.map((diff) => (
                                     <button
                                         key={diff.musicDifficulty}
-                                        className={`flex flex-col items-center p-2 rounded-xl transition-all ${selectedDifficulty === diff.musicDifficulty
-                                            ? "ring-2 shadow-lg bg-white"
-                                            : "hover:bg-slate-50 border border-transparent"
+                                        className={`state-layer focus-ring flex flex-col items-center p-2 rounded-md3-md transition-colors ${selectedDifficulty === diff.musicDifficulty
+                                            ? "ring-2 bg-surface-container-lowest"
+                                            : "border border-transparent"
                                             }`}
                                         style={
                                             selectedDifficulty === diff.musicDifficulty
@@ -744,7 +702,7 @@ export default function MusicDetailPage() {
                                             {diff.playLevel}
                                         </span>
                                         {songConstantsMap[musicId]?.[diff.musicDifficulty] !== undefined && (
-                                            <span className="text-[9px] font-bold text-slate-400 -mt-0.5">
+                                            <span className="text-[9px] font-bold text-on-surface-variant -mt-0.5">
                                                 {songConstantsMap[musicId][diff.musicDifficulty].toFixed(1)}
                                             </span>
                                         )}
@@ -755,22 +713,22 @@ export default function MusicDetailPage() {
                             {/* Selected Difficulty Details */}
                             {selectedDifficultyInfo && (
                                 <div className="px-5 pb-4">
-                                    <div className="flex items-center justify-between py-2 border-t border-slate-100">
-                                        <span className="text-sm text-slate-500">{t("page.music.fields.noteCount")}</span>
-                                        <span className="text-sm font-bold text-slate-700">
+                                    <div className="flex items-center justify-between py-2 border-t border-outline-variant">
+                                        <span className="type-body-m text-on-surface-variant">{t("page.music.fields.noteCount")}</span>
+                                        <span className="type-title-s text-on-surface">
                                             {formatNumber(selectedDifficultyInfo.totalNoteCount)}
                                         </span>
                                     </div>
                                     {songConstantsMap[musicId]?.[selectedDifficulty] !== undefined && (
-                                        <div className="flex items-center justify-between py-2 border-t border-slate-100">
-                                            <span className="text-sm text-slate-500">{t("page.music.fields.constant")}</span>
-                                            <span className="text-sm font-black text-miku">
+                                        <div className="flex items-center justify-between py-2 border-t border-outline-variant">
+                                            <span className="type-body-m text-on-surface-variant">{t("page.music.fields.constant")}</span>
+                                            <span className="type-title-s type-emphasized text-primary">
                                                 {songConstantsMap[musicId][selectedDifficulty].toFixed(1)}
                                             </span>
                                         </div>
                                     )}
                                     {songConstantsMap[musicId] && Object.keys(songConstantsMap[musicId]).length > 0 && (
-                                        <div className="pt-1 pb-0.5 text-[10px] text-slate-400 text-center">
+                                        <div className="pt-1 pb-0.5 type-label-s text-on-surface-variant text-center">
                                             {t("page.music.communityConstantNote")}
                                         </div>
                                     )}
@@ -779,23 +737,18 @@ export default function MusicDetailPage() {
                                         href={`/chart-image?musicId=${musicId}&difficulty=${selectedDifficulty}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-white text-sm font-bold shadow-md hover:shadow-lg hover:-translate-y-0.5 transition-all"
+                                        className="state-layer focus-ring mt-2 flex items-center justify-center gap-2 w-full h-12 rounded-full text-white type-label-l shadow-elev-1 hover:shadow-elev-2 transition-shadow"
                                         style={{ backgroundColor: DIFFICULTY_COLORS[selectedDifficulty] }}
                                     >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                        </svg>
+                                        <Icon path={mdOpenInNew} size={20} />
                                         {t("page.music.openChartImagePreview", { difficulty: DIFFICULTY_NAMES[selectedDifficulty] })}
                                     </Link>
                                     <Link
                                         href={`/chart-preview?musicId=${musicId}&difficulty=${selectedDifficulty}&preview=true&from=/music/${musicId}`}
-                                        className="flex items-center justify-center gap-2 w-full py-3 rounded-xl text-sm font-bold border-2 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all mt-2"
+                                        className="state-layer focus-ring flex items-center justify-center gap-2 w-full h-12 rounded-full type-label-l border-2 transition-colors mt-2"
                                         style={{ borderColor: DIFFICULTY_COLORS[selectedDifficulty], color: DIFFICULTY_COLORS[selectedDifficulty] }}
                                     >
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                        <Icon path={mdPlayCircle} size={20} />
                                         {t("page.music.open3dChartPreview")}
                                     </Link>
                                 </div>
@@ -804,16 +757,9 @@ export default function MusicDetailPage() {
 
                         {/* Vocals Card */}
                         {vocals.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                                        </svg>
-                                        {t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}
-                                    </h2>
-                                </div>
-                                <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdMic}>{t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}</SectionTitle>
+                                <div className="divide-y divide-outline-variant max-h-96 overflow-y-auto">
                                     {vocals.map((vocal) => (
                                         <VocalPlayer
                                             key={vocal.id}
@@ -831,34 +777,27 @@ export default function MusicDetailPage() {
 
                         {/* Related Events Card */}
                         {relatedEvents.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        {t("page.music.relatedEvents")}
-                                    </h2>
-                                </div>
-                                <div className="p-0">
+                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                <SectionTitle icon={mdCalendarMonth}>{t("page.music.relatedEvents")}</SectionTitle>
+                                <div className="p-4 pt-2 space-y-3">
                                     {relatedEvents.map((event) => (
-                                        <Link key={event.id} href={`/events/${event.id}`} className="block group border-b border-slate-50 last:border-0 relative">
+                                        <Link key={event.id} href={`/events/${event.id}`} className="focus-ring block group rounded-md3-lg overflow-hidden relative">
                                             <div className="relative aspect-[2/1] w-full">
                                                 <Image
                                                     src={getEventBannerUrl(event.assetbundleName, assetSource)}
                                                     alt={event.name}
                                                     fill
-                                                    className="object-cover transition-transform duration-500 group-hover:scale-105"
+                                                    className="object-cover"
                                                     unoptimized
                                                 />
-                                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                                <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
                                                 <div className="absolute bottom-0 left-0 w-full p-4">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-[10px] font-mono bg-white/20 text-white px-2 py-0.5 rounded backdrop-blur-sm">
+                                                        <span className="text-[10px] font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
                                                             Event #{event.id}
                                                         </span>
                                                     </div>
-                                                    <h3 className="text-white font-bold text-lg leading-tight truncate">
+                                                    <h3 className="text-white type-title-l leading-tight truncate">
                                                         <TranslatedText
                                                             original={event.name}
                                                             category="events"
@@ -881,18 +820,22 @@ export default function MusicDetailPage() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Link
-                        href="/music"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                    <Button variant="tonal" icon={mdArrowBack} href="/music">
                         {t("page.music.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
+    );
+}
+
+// Section heading used by the detail cards
+function SectionTitle({ icon, children }: { icon: string; children: React.ReactNode }) {
+    return (
+        <div className="flex min-h-14 items-center gap-3 px-5 pt-4 pb-2">
+            <Icon path={icon} size={24} className="text-primary" />
+            <h2 className="min-w-0 flex-1 truncate type-title-l text-on-surface">{children}</h2>
+        </div>
     );
 }
 
@@ -972,36 +915,30 @@ function VocalPlayer({
     }, []);
 
     return (
-        <div className="px-5 py-4 hover:bg-slate-50 transition-colors group">
+        <div className="px-5 py-4 transition-colors group">
             <div className="flex items-center gap-4">
                 {/* Play Button */}
                 <button
+                    type="button"
                     onClick={togglePlay}
-                    className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all ${isPlaying
-                        ? "bg-slate-800 text-white"
-                        : "bg-miku text-white shadow-md shadow-miku/20 hover:scale-105 active:scale-95"
+                    aria-pressed={isPlaying}
+                    className={`state-layer focus-ring shrink-0 w-12 h-12 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-spatial-fast ${isPlaying
+                        ? "bg-primary-container text-on-primary-container rounded-md3-lg"
+                        : "bg-primary text-on-primary rounded-full shadow-elev-1"
                         }`}
                 >
-                    {isPlaying ? (
-                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                        </svg>
-                    ) : (
-                        <svg className="w-5 h-5 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                    )}
+                    <Icon path={isPlaying ? mdPause : mdPlayArrow} size={24} />
                 </button>
 
                 <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2 mb-1">
-                        <div className="text-sm font-bold text-slate-700 truncate">
+                        <div className="type-title-s text-on-surface truncate">
                             <TranslatedText
                                 original={vocal.caption}
                                 category="music"
                                 field="vocalCaption"
                                 originalClassName="truncate block"
-                                translationClassName="text-xs text-slate-400 truncate block font-normal"
+                                translationClassName="type-body-s text-on-surface-variant truncate block"
                             />
                         </div>
                         <div className="flex items-center gap-2">
@@ -1011,13 +948,12 @@ function VocalPlayer({
                                 download={`${vocal.caption}.mp3`}
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="p-1.5 text-slate-400 hover:text-miku hover:bg-miku/5 rounded-lg transition-colors"
+                                className="state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant"
                                 title={downloadLabel}
+                                aria-label={downloadLabel}
                                 onClick={(e) => e.stopPropagation()}
                             >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
+                                <Icon path={mdDownload} size={20} />
                             </a>
                         </div>
                     </div>
@@ -1035,7 +971,7 @@ function VocalPlayer({
                             return hasIcon && avatarUrl ? (
                                 <div
                                     key={chara.id}
-                                    className="w-6 h-6 rounded-full overflow-hidden bg-slate-100 ring-1 ring-white"
+                                    className="w-6 h-6 rounded-full overflow-hidden bg-surface-container-high ring-1 ring-surface"
                                     title={charName}
                                 >
                                     <Image
@@ -1050,10 +986,10 @@ function VocalPlayer({
                             ) : (
                                 <div
                                     key={chara.id}
-                                    className="h-6 px-2 rounded-full bg-slate-100 ring-1 ring-white flex items-center"
+                                    className="h-6 px-2 rounded-full bg-surface-container-high ring-1 ring-surface flex items-center"
                                     title={charName}
                                 >
-                                    <span className="text-[10px] text-slate-500 font-medium leading-none whitespace-nowrap">
+                                    <span className="type-label-s text-on-surface-variant leading-none whitespace-nowrap">
                                         {charName}
                                     </span>
                                 </div>
@@ -1069,9 +1005,9 @@ function VocalPlayer({
                             max={duration || 100}
                             value={progress}
                             onChange={handleSeek}
-                            className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-miku hover:bg-slate-300 transition-colors"
+                            className="flex-1 h-1.5 bg-surface-container-highest rounded-full appearance-none cursor-pointer accent-primary"
                         />
-                        <span className="text-[10px] font-mono text-slate-400 shrink-0 min-w-[60px] text-right">
+                        <span className="text-[10px] font-mono text-on-surface-variant shrink-0 min-w-[60px] text-right">
                             {formatTime(progress)} / {formatTime(duration)}
                         </span>
                     </div>
@@ -1084,9 +1020,9 @@ function VocalPlayer({
 // Info Row Component
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold">{value}</span>
+        <div className="px-5 py-3 flex items-center justify-between gap-4 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="text-on-surface font-medium text-right">{value}</span>
         </div>
     );
 }

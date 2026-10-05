@@ -3,6 +3,8 @@ import React from "react";
 import { ICardInfo } from "@/types/types";
 import CardItem from "./CardItem";
 import { useI18n } from "@/contexts/I18nContext";
+import { EmptyState } from "@/components/md3";
+import { mdStyle } from "@/components/md3/icons";
 
 interface CardGridProps {
     cards: ICardInfo[];
@@ -13,11 +15,11 @@ interface CardGridProps {
 // Loading skeleton component
 function CardSkeleton() {
     return (
-        <div className="rounded-xl overflow-hidden bg-white border border-slate-100 shadow-sm animate-pulse">
-            <div className="aspect-[4/5] bg-gradient-to-br from-slate-100 to-slate-200" />
+        <div className="rounded-md3-md overflow-hidden bg-surface-container-low animate-pulse">
+            <div className="aspect-[4/5] bg-surface-container-high" />
             <div className="p-3 space-y-2">
-                <div className="h-4 bg-slate-200 rounded w-3/4" />
-                <div className="h-3 bg-slate-100 rounded w-1/2" />
+                <div className="h-4 bg-surface-container-highest rounded-md3-xs w-3/4" />
+                <div className="h-3 bg-surface-container-high rounded-md3-xs w-1/2" />
             </div>
         </div>
     );
@@ -38,15 +40,7 @@ export default function CardGrid({ cards, isLoading = false, hrefPrefix }: CardG
     }
 
     if (cards.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-                <svg className="w-16 h-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                </svg>
-                <p className="text-slate-400 font-medium">{t("page.cards.noResult")}</p>
-                <p className="text-slate-300 text-sm mt-1">{t("page.cards.noResultHint")}</p>
-            </div>
-        );
+        return <EmptyState icon={mdStyle} title={t("page.cards.noResult")} description={t("page.cards.noResultHint")} />;
     }
 
     return (

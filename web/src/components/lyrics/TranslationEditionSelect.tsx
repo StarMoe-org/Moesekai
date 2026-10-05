@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
+import { Icon } from "@/components/md3";
+import { mdCheck, mdKeyboardArrowDown } from "@/components/md3/icons";
 
 export interface TranslationEditionSelectOption {
     key: string;
@@ -271,23 +273,19 @@ export default function TranslationEditionSelect({
                 onKeyDown={handleKeyDown}
                 onCompositionStart={() => { isComposingRef.current = true; }}
                 onCompositionEnd={() => { isComposingRef.current = false; }}
-                className="pressable material-thin flex min-h-11 w-full min-w-0 items-center justify-between gap-3 rounded-xl px-3 py-2 text-left text-slate-700 outline-none transition-[border-color,background-color,box-shadow] duration-[var(--duration-fast)] hover:border-miku/50 focus-visible:ring-2 focus-visible:ring-miku/50 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:text-slate-200 motion-reduce:transition-none"
+                className={`state-layer focus-ring flex min-h-12 w-full min-w-0 items-center justify-between gap-3 rounded-md3-xs border px-3 py-1.5 text-left text-on-surface outline-none transition-colors duration-150 ease-md3-standard motion-reduce:transition-none ${isOpen ? "border-primary" : "border-outline"}`}
             >
                 <span className="min-w-0">
-                    <span className="block text-[10px] font-bold uppercase tracking-wide text-slate-500 dark:text-slate-400">{label}</span>
+                    <span className={`block type-label-s ${isOpen ? "text-primary" : "text-on-surface-variant"}`}>{label}</span>
                     <span className="mt-0.5 flex min-w-0 items-baseline gap-2">
-                        <span className="truncate text-sm font-bold text-primary-text">{selectedOption?.label}</span>
+                        <span className="truncate type-body-l text-on-surface">{selectedOption?.label}</span>
                     </span>
                 </span>
-                <svg
-                    aria-hidden="true"
-                    className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-[var(--duration-fast)] motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <Icon
+                    path={mdKeyboardArrowDown}
+                    size={24}
+                    className={`text-on-surface-variant transition-transform duration-150 motion-reduce:transition-none ${isOpen ? "rotate-180" : ""}`}
+                />
             </button>
 
             {typeof document !== "undefined" && isOpen && position && createPortal(
@@ -302,7 +300,7 @@ export default function TranslationEditionSelect({
                     onKeyDown={handleKeyDown}
                     onCompositionStart={() => { isComposingRef.current = true; }}
                     onCompositionEnd={() => { isComposingRef.current = false; }}
-                    className="ios-glass-dropdown material-thick fixed z-[300] overflow-y-auto overscroll-contain rounded-2xl p-2 shadow-2xl outline-none motion-reduce:transition-none"
+                    className="fixed z-[300] overflow-y-auto overscroll-contain rounded-md3-xs bg-surface-container py-2 text-on-surface shadow-elev-2 outline-none motion-reduce:transition-none"
                 >
                     {options.map((option, index) => {
                         const isSelected = option.key === value;
@@ -318,23 +316,15 @@ export default function TranslationEditionSelect({
                                 tabIndex={-1}
                                 onClick={() => selectIndex(index)}
                                 onPointerMove={() => setActiveIndex(index)}
-                                className={`flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-left text-sm font-bold outline-none transition-colors duration-[var(--duration-fast)] motion-reduce:transition-none ${isSelected
-                                    ? "bg-miku/12 text-miku"
+                                className={`state-layer flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left type-label-l outline-none transition-colors duration-150 motion-reduce:transition-none ${isSelected
+                                    ? "bg-secondary-container text-on-secondary-container"
                                     : isActive
-                                        ? "bg-slate-100/80 text-primary-text dark:bg-slate-800/70"
-                                        : "text-slate-600 hover:bg-slate-100/70 hover:text-primary-text dark:text-slate-300 dark:hover:bg-slate-800/60"
+                                        ? "bg-on-surface/8 text-on-surface"
+                                        : "text-on-surface"
                                 }`}
                             >
                                 <span className="min-w-0 flex-1 truncate">{option.label}</span>
-                                <svg
-                                    aria-hidden="true"
-                                    className={`h-4 w-4 shrink-0 text-miku ${isSelected ? "opacity-100" : "opacity-0"}`}
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.25} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Icon path={mdCheck} size={20} className={isSelected ? "opacity-100" : "opacity-0"} />
                             </button>
                         );
                     })}

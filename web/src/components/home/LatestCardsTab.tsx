@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "@/components/LocalizedLink";
+import { Button, ErrorState } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
 import { ICardInfo } from "@/types/types";
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchMasterData } from "@/lib/fetch";
@@ -45,8 +46,8 @@ export default function LatestCardsTab() {
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                     <div key={i} className="animate-pulse">
-                        <div className="aspect-square rounded-xl bg-slate-100" />
-                        <div className="mt-2 h-3 bg-slate-100 rounded w-3/4" />
+                        <div className="aspect-square rounded-md3-md bg-surface-container-high" />
+                        <div className="mt-2 h-3 bg-surface-container-high rounded-md3-xs w-3/4" />
                     </div>
                 ))}
             </div>
@@ -55,17 +56,14 @@ export default function LatestCardsTab() {
 
     if (error) {
         return (
-            <div className="p-6 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm text-center">
-                <p className="font-bold">{t("page.home.latestCards.loadFailedTitle")}</p>
-                <p>{error}</p>
-            </div>
+            <ErrorState title={t("page.home.latestCards.loadFailedTitle")} message={error} />
         );
     }
 
     if (cards.length === 0) {
         return (
-            <div className="p-8 text-center text-slate-400 bg-slate-50 rounded-2xl border border-slate-100">
-                <p className="font-medium">{t("page.home.latestCards.noData")}</p>
+            <div className="p-8 text-center text-on-surface-variant bg-surface-container-low rounded-md3-xl">
+                <p className="type-body-l">{t("page.home.latestCards.noData")}</p>
             </div>
         );
     }
@@ -81,12 +79,9 @@ export default function LatestCardsTab() {
             </div>
             {/* View All Link */}
             <div className="mt-4 text-center">
-                <Link href="/cards" className="inline-flex items-center gap-1 text-sm text-miku hover:text-miku-dark font-medium transition-colors">
+                <Button variant="text" trailingIcon={mdChevronRight} href="/cards">
                     {t("page.home.latestCards.viewAll")}
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                </Link>
+                </Button>
             </div>
         </div>
     );

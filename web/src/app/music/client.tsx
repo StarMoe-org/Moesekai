@@ -31,6 +31,9 @@ import { fetchMusicAliases } from "@/lib/musicAliases";
 import { SEARCH_INDEX_URL } from "@/lib/lyrics-aliases.mjs";
 import { fetchMusicBpmMap, MusicBpmEntry } from "@/lib/musicBpm";
 import { useI18n } from "@/contexts/I18nContext";
+import ExternalLink from "@/components/ExternalLink";
+import { EmptyState, ErrorState, LoadingState, LoadMore, PageContainer, PageHeader } from "@/components/md3";
+import { mdMusicNote } from "@/components/md3/icons";
 
 // Search index item (from search-index.json)
 interface SearchIndexItem {
@@ -71,10 +74,10 @@ function LevelSeparatorCard({ level, difficulty }: { level: number; difficulty: 
         APPEND: "from-pink-500 to-pink-600",
     };
 
-    const gradientClass = difficultyColors[difficulty] || "from-slate-400 to-slate-500";
+    const gradientClass = difficultyColors[difficulty] || "from-outline to-outline";
 
     return (
-        <div className={`aspect-square rounded-xl bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center shadow-lg`}>
+        <div className={`aspect-square rounded-md3-md bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center shadow-elev-1`}>
             <div className="text-white text-center px-2">
                 <div className="text-[10px] sm:text-xs font-bold opacity-90 mb-0.5">
                     {difficulty}
@@ -578,37 +581,29 @@ function MusicContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">
-                        {t("page.music.badge")}
-                    </span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.music.title")} <span className="text-miku">{t("page.music.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.music.description")}
-                </p>
-                <p className="text-xs text-slate-400 mt-1">
-                    {t("page.music.aliasHint")}<a href="https://github.com/Team-Haruki" target="_blank" rel="noopener noreferrer" className="text-miku hover:underline">{t("page.music.aliasSource")}</a>{t("page.music.aliasDisclaimer")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.music.badge")}
+                title={t("page.music.title")}
+                highlight={t("page.music.titleHighlight")}
+                description={
+                    <>
+                        {t("page.music.description")}
+                        <span className="mt-1 block type-body-s">
+                            {t("page.music.aliasHint")}<ExternalLink href="https://github.com/Team-Haruki" className="text-primary hover:underline">{t("page.music.aliasSource")}</ExternalLink>{t("page.music.aliasDisclaimer")}
+                        </span>
+                    </>
+                }
+            />
 
-            {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 text-red-500 underline hover:no-underline"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Music Grid. Filters live in the global FilterDrawer (registered
@@ -618,26 +613,18 @@ function MusicContent() {
                     <div className={MUSIC_GRID_CLASS}>
                         {Array.from({ length: 15 }).map((_, i) => (
                             <div key={i} className="animate-pulse">
-                                <div className="rounded-xl overflow-hidden bg-white/60 border border-slate-200/60">
-                                    <div className="aspect-square bg-slate-200"></div>
+                                <div className="rounded-md3-md overflow-hidden bg-surface-container-low">
+                                    <div className="aspect-square bg-surface-container-high"></div>
                                     <div className="p-3 space-y-2">
-                                        <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-                                        <div className="h-3 bg-slate-200 rounded w-1/2"></div>
+                                        <div className="h-4 bg-surface-container-highest rounded-md3-xs w-3/4"></div>
+                                        <div className="h-3 bg-surface-container-high rounded-md3-xs w-1/2"></div>
                                     </div>
                                 </div>
                             </div>
                         ))}
                     </div>
                 ) : displayedMusicsWithSeparators.filter(item => item.type === 'music').length === 0 ? (
-                    <div className="text-center py-16">
-                        <div className="text-6xl mb-4">🎵</div>
-                        <h3 className="text-xl font-bold text-slate-600 mb-2">
-                            {t("page.music.noResult")}
-                        </h3>
-                        <p className="text-slate-500">
-                            {t("page.music.noResultHint")}
-                        </p>
-                    </div>
+                    <EmptyState icon={mdMusicNote} title={t("page.music.noResult")} description={t("page.music.noResultHint")} />
                 ) : (
                     <div className={MUSIC_GRID_CLASS}>
                         {displayedMusicsWithSeparators.map((item) => {
@@ -661,39 +648,24 @@ function MusicContent() {
                     </div>
                 )}
 
-                {/* Load More Button */}
-                {!isLoading && displayedMusicsWithSeparators.filter(item => item.type === 'music').length < filteredMusics.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.music.loadMore")}
-                            <span className="ml-2 text-sm opacity-80 type-caption">
-                                ({displayedMusicsWithSeparators.filter(item => item.type === 'music').length} / {filteredMusics.length})
-                            </span>
-                        </button>
-                    </div>
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.music.loadMore")}
+                        shown={displayedMusicsWithSeparators.filter(item => item.type === 'music').length}
+                        total={filteredMusics.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.music.allLoaded", { count: String(filteredMusics.length) })}
+                    />
                 )}
-
-                {/* All loaded indicator */}
-                {!isLoading &&
-                    displayedMusicsWithSeparators.filter(item => item.type === 'music').length > 0 &&
-                    displayedMusicsWithSeparators.filter(item => item.type === 'music').length >= filteredMusics.length && (
-                        <div className="mt-8 text-center text-slate-400 text-sm">
-                            {t("page.music.allLoaded", { count: String(filteredMusics.length) })}
-                        </div>
-                    )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 export default function MusicClient() {
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">Loading music...</div>}>
+            <Suspense fallback={<LoadingState />}>
                 <MusicContent />
             </Suspense>
         </MainLayout>

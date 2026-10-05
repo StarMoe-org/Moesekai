@@ -16,6 +16,8 @@ import {
 } from "@/lib/information";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import Modal from "@/components/common/Modal";
+import { Chip, EmptyState, ErrorState, Icon, LoadingIndicator } from "@/components/md3";
+import { mdArticle, mdSchedule } from "@/components/md3/icons";
 
 const SERVERS: { id: InformationServer; labelKey: string }[] = [
     { id: "jp", labelKey: "page.information.servers.jp" },
@@ -35,13 +37,10 @@ function getMessageFallback(t: (key: string) => string, key: string, fallback: s
 
 function BannerPlaceholder({ tagLabel }: { tagLabel: string }) {
     return (
-        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_20%_20%,rgba(var(--color-miku-rgb),0.28),transparent_34%),linear-gradient(135deg,rgba(var(--color-miku-rgb),0.15),rgba(var(--color-comp-rgb),0.18))] text-miku">
+        <div className="flex h-full w-full items-center justify-center bg-primary-container text-on-primary-container">
             <div className="flex flex-col items-center gap-2 opacity-80">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v10.5a2.25 2.25 0 0 1-2.25 2.25H6.75a2.25 2.25 0 0 1-2.25-2.25V6.75Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 8.5h8M8 12h8M8 15.5h5" />
-                </svg>
-                <span className="text-[10px] font-black uppercase tracking-[0.2em]">{tagLabel}</span>
+                <Icon path={mdArticle} size={32} />
+                <span className="type-label-m">{tagLabel}</span>
             </div>
         </div>
     );
@@ -74,10 +73,10 @@ function AnnouncementModal({
             size="xl"
         >
             {frameUrl ? (
-                <div className="relative h-[72vh] min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-inner shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-950">
+                <div className="relative h-[72vh] min-h-[28rem] overflow-hidden rounded-md3-lg border border-outline-variant bg-surface-container-lowest">
                     {!isFrameLoaded && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/80 text-sm font-bold text-slate-500 backdrop-blur-sm dark:bg-slate-950/80 dark:text-slate-400">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-miku/20 border-t-miku" />
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest type-body-m text-on-surface-variant">
+                            <LoadingIndicator size={40} />
                             <span>{t("page.information.loadingAnnouncement")}</span>
                         </div>
                     )}
@@ -92,7 +91,7 @@ function AnnouncementModal({
                     />
                 </div>
             ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300/70 bg-slate-50/80 p-8 text-center text-sm font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900/45 dark:text-slate-400">
+                <div className="rounded-md3-lg border border-dashed border-outline-variant bg-surface-container p-8 text-center type-body-m text-on-surface-variant">
                     {t("page.information.emptyAnnouncementUrl")}
                 </div>
             )}
@@ -191,21 +190,15 @@ export default function AnnouncementSection() {
     return (
         <div>
             {/* Server Switcher */}
-            <div className="flex gap-3 mb-6 overflow-x-auto pb-2">
+            <div className="flex gap-2 mb-4 overflow-x-auto pb-2">
                 {SERVERS.map((server) => (
-                    <button
+                    <Chip
                         key={server.id}
+                        selected={activeServer === server.id}
                         onClick={() => setActiveServer(server.id)}
-                        className={`
-                            px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 cursor-pointer select-none border
-                            ${activeServer === server.id
-                                ? "bg-gradient-to-r from-miku to-miku-dark text-white shadow-lg shadow-miku/20 border-miku"
-                                : "bg-white/60 text-slate-600 hover:bg-white/80 border border-slate-200/50"
-                            }
-                        `}
                     >
                         {t(server.labelKey)}
-                    </button>
+                    </Chip>
                 ))}
             </div>
 
@@ -213,31 +206,29 @@ export default function AnnouncementSection() {
             {isLoading ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="ios-glass-card overflow-hidden rounded-2xl border-none">
-                            <div className="aspect-[16/7] animate-pulse bg-slate-200/30 dark:bg-slate-800/50" />
+                        <div key={i} className="overflow-hidden rounded-md3-lg bg-surface-container-low">
+                            <div className="aspect-[16/7] animate-pulse bg-surface-container-high" />
                             <div className="space-y-3 p-4">
-                                <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
-                                <div className="h-4 w-5/6 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
-                                <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
+                                <div className="h-4 w-20 animate-pulse rounded-full bg-surface-container-highest" />
+                                <div className="h-4 w-5/6 animate-pulse rounded-full bg-surface-container-highest" />
+                                <div className="h-3 w-2/3 animate-pulse rounded-full bg-surface-container-high" />
                             </div>
                         </div>
                     ))}
                 </div>
             ) : error ? (
-                <div className="p-8 text-center bg-red-50/50 dark:bg-red-950/20 text-red-600 dark:text-red-400 rounded-2xl border border-red-100 dark:border-red-900/30 backdrop-blur-xl">
-                    <p className="font-bold mb-2">{t("page.home.announcements.loadFailedTitle")}</p>
-                    <p className="text-sm opacity-80">{error}</p>
-                    <button
-                        onClick={() => setActiveServer(activeServer)}
-                        className="mt-4 px-4 py-2 bg-white dark:bg-slate-900 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold border border-red-200 dark:border-red-900/40 hover:bg-red-50 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    title={t("page.home.announcements.loadFailedTitle")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                    onRetry={() => setActiveServer(activeServer)}
+                />
             ) : announcements.length === 0 ? (
-                <div className="p-12 text-center text-slate-400 bg-slate-50/40 dark:bg-slate-900/30 rounded-2xl border border-slate-100 dark:border-slate-800/50 backdrop-blur-xl">
-                    {t("page.home.announcements.noData")}
-                </div>
+                <EmptyState
+                    icon={mdArticle}
+                    title={t("page.home.announcements.noData")}
+                    className="rounded-md3-xl bg-surface-container-low py-10"
+                />
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {announcements.map((item) => {
@@ -253,56 +244,54 @@ export default function AnnouncementSection() {
                                 key={item.id}
                                 type="button"
                                 onClick={() => setSelectedItem(item)}
-                                className="group block h-full w-full cursor-pointer rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-miku/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950 transition-transform duration-300 hover:-translate-y-1"
+                                className="group state-layer focus-ring block h-full w-full cursor-pointer rounded-md3-lg text-left"
                             >
-                                <article className="ios-glass-card ios-glass-card-interactive flex h-full flex-col overflow-hidden rounded-2xl border-none">
-                                    <div className="relative aspect-[16/7] overflow-hidden bg-slate-100 dark:bg-slate-900/70">
+                                <article className="flex h-full flex-col overflow-hidden rounded-md3-lg bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+                                    <div className="relative aspect-[16/7] overflow-hidden bg-surface-container-high">
                                         {hasBanner ? (
                                             <img
                                                 src={bannerUrl}
                                                 alt={item.title}
                                                 loading="lazy"
-                                                className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                                                className="h-full w-full object-cover"
                                                 onError={() => handleImageError(item.id)}
                                             />
                                         ) : (
                                             <BannerPlaceholder tagLabel={tagLabel} />
                                         )}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 opacity-80" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-scrim/45 via-transparent to-scrim/10 opacity-80" />
                                         <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
-                                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-black shadow-lg ${getInformationTagTone(item.informationTag)}`}>
+                                            <span className={`rounded-md3-sm px-2 py-0.5 type-label-s shadow-elev-1 ${getInformationTagTone(item.informationTag)}`}>
                                                 {tagLabel}
                                             </span>
-                                            <span className="rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-black text-white shadow-lg backdrop-blur-md">
+                                            <span className="rounded-md3-sm bg-scrim/50 px-2 py-0.5 type-label-s text-white">
                                                 {platformLabel}
                                             </span>
                                         </div>
                                         <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-                                            <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-mono font-black text-white backdrop-blur-md">
+                                            <span className="rounded-md3-sm bg-scrim/50 px-2 py-0.5 type-label-s font-mono text-white">
                                                 #{item.id}
                                             </span>
-                                            <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ring-1 backdrop-blur-md ${getInformationStatusTone(status)}`}>
+                                            <span className={`rounded-md3-sm px-2 py-0.5 type-label-s ring-1 ${getInformationStatusTone(status)}`}>
                                                 {statusLabel}
                                             </span>
                                         </div>
                                     </div>
 
                                     <div className="flex flex-1 flex-col p-4">
-                                        <h3 className="min-h-[2.75rem] text-sm font-black leading-snug text-primary-text transition group-hover:text-miku sm:text-base">
+                                        <h3 className="min-h-[2.75rem] type-title-m text-on-surface transition-colors group-hover:text-primary">
                                             <TranslatedText
                                                 original={item.title}
                                                 category="information"
                                                 field="title"
                                                 originalClassName="line-clamp-2"
-                                                translationClassName="line-clamp-1 text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5"
+                                                translationClassName="line-clamp-1 type-body-s text-on-surface-variant mt-0.5"
                                             />
                                         </h3>
 
-                                        <div className="mt-3 space-y-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                                        <div className="mt-3 space-y-1.5 type-label-m text-on-surface-variant">
                                             <div className="flex items-center gap-2">
-                                                <svg className="h-3.5 w-3.5 shrink-0 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                                                </svg>
+                                                <Icon path={mdSchedule} size={16} className="text-primary" />
                                                 <span className="truncate">{formatInfoDate(item.startAt)}</span>
                                             </div>
                                         </div>

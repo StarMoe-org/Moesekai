@@ -69,38 +69,40 @@ export function getInformationStatus(item: Pick<InformationItem, "startAt" | "en
     return "ongoing";
 }
 
+/** Category color for an information tag (categorical data color; not themed). */
 export function getInformationTagTone(tag?: string) {
     switch (tag) {
         case "event":
-            return "bg-pink-500 text-white shadow-pink-500/20";
+            return "bg-pink-600 text-white";
         case "gacha":
-            return "bg-purple-500 text-white shadow-purple-500/20";
+            return "bg-purple-600 text-white";
         case "music":
-            return "bg-sky-500 text-white shadow-sky-500/20";
+            return "bg-sky-600 text-white";
         case "campaign":
-            return "bg-amber-500 text-white shadow-amber-500/20";
+            return "bg-amber-600 text-white";
         case "bug":
-            return "bg-red-500 text-white shadow-red-500/20";
+            return "bg-error text-on-error";
         case "update":
-            return "bg-emerald-500 text-white shadow-emerald-500/20";
+            return "bg-emerald-600 text-white";
         case "information":
-            return "bg-miku text-white shadow-miku/20";
+            return "bg-primary text-on-primary";
         default:
-            return "bg-slate-500 text-white shadow-slate-500/20";
+            return "bg-secondary text-on-secondary";
     }
 }
 
+/** MD3 tonal status chip colors. */
 export function getInformationStatusTone(status: InformationStatus) {
     switch (status) {
         case "upcoming":
-            return "bg-amber-100 text-amber-700 ring-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-500/25";
+            return "bg-tertiary-container text-on-tertiary-container ring-transparent";
         case "ongoing":
-            return "bg-emerald-100 text-emerald-700 ring-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:ring-emerald-500/25";
+            return "bg-primary-container text-on-primary-container ring-transparent";
         case "ended":
-            return "bg-slate-100 text-slate-500 ring-slate-200 dark:bg-slate-800/70 dark:text-slate-400 dark:ring-slate-700";
+            return "bg-surface-container-highest text-on-surface-variant ring-transparent";
         case "permanent":
         default:
-            return "bg-miku/10 text-miku ring-miku/20";
+            return "bg-secondary-container text-on-secondary-container ring-transparent";
     }
 }
 

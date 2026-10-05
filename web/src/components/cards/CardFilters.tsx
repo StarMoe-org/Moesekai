@@ -265,13 +265,13 @@ export default function CardFilters({
                     <button
                         key={`vs-subunit-${unitId}`}
                         onClick={() => toggleVirtualSingerUnitTag(supportUnit)}
-                        className={`relative transition-all ${isSelected
-                            ? "ring-2 ring-miku scale-110 z-10 rounded-full shadow-lg"
-                            : "ring-2 ring-transparent hover:ring-slate-200 dark:hover:ring-slate-600 rounded-full opacity-80 hover:opacity-100"
+                        className={`state-layer focus-ring relative rounded-full transition-[box-shadow,opacity] duration-150 ease-md3-standard ${isSelected
+                            ? "z-10 ring-2 ring-primary ring-offset-2 ring-offset-surface"
+                            : "ring-2 ring-transparent opacity-80 hover:opacity-100 hover:ring-outline-variant"
                             }`}
                         title={t("common.virtualSingerWithUnit", { unit: getSupportUnitLabel(supportUnit) })}
                     >
-                        <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800 p-1.5">
+                        <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high p-1.5">
                             <div className="w-full h-full relative">
                                 <Image
                                     src={`/data/icon/${UNIT_ICON_FILES.vs}`}
@@ -282,7 +282,7 @@ export default function CardFilters({
                                 />
                             </div>
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                        <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-surface-container-lowest shadow-elev-1 flex items-center justify-center">
                             <Image
                                 src={`/data/icon/${UNIT_ICON_FILES[unitId]}`}
                                 alt=""
@@ -319,7 +319,7 @@ export default function CardFilters({
                                 <button
                                     key={unit}
                                     onClick={() => toggleSupportUnit(unit)}
-                                    className={`p-1.5 rounded-xl transition-all ${getFilterIconStateClasses(isSelected)}`}
+                                    className={`!p-1.5 ${getFilterIconStateClasses(isSelected)}`}
                                     title={getSupportUnitLabel(unit)}
                                 >
                                     <div className="w-8 h-8 relative">
@@ -347,7 +347,7 @@ export default function CardFilters({
                             <button
                                 key={attr}
                                 onClick={() => toggleAttr(attr)}
-                                className={`p-1.5 rounded-xl transition-all ${getFilterIconStateClasses(selectedAttrs.includes(attr))}`}
+                                className={`!p-1.5 ${getFilterIconStateClasses(selectedAttrs.includes(attr))}`}
                                 title={ATTR_NAMES[attr]}
                             >
                                 <div className="w-6 h-6 relative">
@@ -373,7 +373,7 @@ export default function CardFilters({
                                 <button
                                     key={type}
                                     onClick={() => toggleRarity(type)}
-                                    className={`h-9 px-2.5 rounded-xl transition-all flex items-center justify-center gap-0.5 border ${getFilterIconStateClasses(isSelected, "ring-2 ring-miku shadow-lg bg-white border-transparent dark:bg-miku/12 dark:border-miku/40 dark:ring-miku/75", "bg-slate-50 border-slate-200 hover:bg-slate-100 dark:bg-slate-800/80 dark:border-slate-700 dark:hover:bg-slate-700/80 dark:hover:border-slate-600")}`}
+                                    className={`h-9 !gap-0.5 !px-2.5 ${getFilterChipStateClasses(isSelected)}`}
                                     title={type}
                                 >
                                     {type === "rarity_birthday" ? (
@@ -415,7 +415,7 @@ export default function CardFilters({
                             <button
                                 key={st.type}
                                 onClick={() => toggleSupplyType(st.type)}
-                                className={`px-3 py-1.5 rounded-xl text-sm transition-all border ${getFilterChipStateClasses(isSelected, "ring-2 ring-miku shadow-lg bg-white text-slate-700 border-transparent dark:bg-miku/12 dark:text-slate-100 dark:border-miku/40 dark:ring-miku/75", "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80 dark:hover:border-slate-600")}`}
+                                className={getFilterChipStateClasses(isSelected)}
                             >
                                 {t(`common.cardSupplyTypes.${st.type}`)}
                             </button>
@@ -433,7 +433,7 @@ export default function CardFilters({
                             <button
                                 key={sk.descriptionSpriteName}
                                 onClick={() => toggleSkillType(sk.descriptionSpriteName)}
-                                className={`px-3 py-1.5 rounded-xl text-sm transition-all border ${getFilterChipStateClasses(isSelected, "ring-2 ring-miku shadow-lg bg-white text-slate-700 border-transparent dark:bg-miku/12 dark:text-slate-100 dark:border-miku/40 dark:ring-miku/75", "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100 dark:bg-slate-800/80 dark:text-slate-300 dark:border-slate-700 dark:hover:bg-slate-700/80 dark:hover:border-slate-600")}`}
+                                className={getFilterChipStateClasses(isSelected)}
                             >
                                 {t(`common.skillTypes.${sk.descriptionSpriteName}`)}
                             </button>
