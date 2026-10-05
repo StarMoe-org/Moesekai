@@ -8,7 +8,9 @@ import { getPrimaryShortcutLabel, isKeyboardEventComposing } from "@/lib/shortcu
 import { fetchMusicAliases } from "@/lib/musicAliases";
 import { SEARCH_INDEX_URL } from "@/lib/lyrics-aliases.mjs";
 import { useI18n } from "@/contexts/I18nContext";
-import { getMotionTransition } from "@/lib/motion";
+import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
+import { CircularProgress, Icon, IconButton, Switch, cn } from "@/components/md3";
+import { mdArrowBack, mdClose, mdSearch } from "@/components/md3/icons";
 
 // Dynamic search index item from search-index.json
 interface SearchIndexItem {
@@ -68,13 +70,6 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
     const wildcardShortcut = getPrimaryShortcutLabel("toggle-search-wildcard");
     const { locale, t } = useI18n();
     const prefersReducedMotion = useReducedMotion();
-    const overlayTransition = getMotionTransition("snappy", {
-        reducedMotion: !!prefersReducedMotion,
-    });
-    // Anchored from top (search trigger) — same path in/out
-    const panelTransition = getMotionTransition("snappy", {
-        reducedMotion: !!prefersReducedMotion,
-    });
 
     useEffect(() => {
         try {
@@ -366,57 +361,51 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
 
     if (!mounted) return null;
 
+    const kbdClass = "inline-flex items-center rounded-md3-xs border border-outline-variant px-1.5 type-label-s text-on-surface-variant";
+    const groupHeaderClass = "flex items-center gap-2 px-4 pb-1 pt-3 type-title-s text-primary";
+    const rowClass = (isActive: boolean) =>
+        cn(
+            "state-layer flex w-full min-h-14 cursor-pointer items-center justify-between gap-3 px-4 py-2 text-left",
+            isActive ? "bg-secondary-container text-on-secondary-container" : "text-on-surface",
+        );
+
     return createPortal(
         <AnimatePresence>
             {isOpen && (
-                <div className="fixed inset-0 z-[200] isolate flex items-start justify-center px-3 pt-4 sm:px-4 sm:pt-[min(20vh,8rem)]">
-                    {/* Backdrop */}
+                <div className="fixed inset-0 z-[200] isolate flex items-start justify-center sm:px-4 sm:pt-[min(15vh,6rem)]">
+                    {/* Scrim */}
                     <motion.div
-                        className="absolute inset-0 transform-gpu bg-black/35 backdrop-blur-[8px]"
+                        className="absolute inset-0 bg-scrim/32"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        transition={overlayTransition}
+                        transition={prefersReducedMotion ? reducedMotionFade : md3EffectsDefault}
                         onClick={onClose}
                     />
 
-                    {/* Dialog — enter/exit from top (source-anchored path) */}
+                    {/* Search view — full screen on compact, docked dialog on wider windows */}
                     <motion.div
-                        className="relative w-full max-w-lg transform-gpu will-change-transform liquid-glass-modal rounded-3xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] sm:max-h-[70vh]"
-                        initial={
-                            prefersReducedMotion
-                                ? { opacity: 0 }
-                                : { opacity: 0, scale: 0.97, y: -12 }
-                        }
-                        animate={
-                            prefersReducedMotion
-                                ? { opacity: 1 }
-                                : { opacity: 1, scale: 1, y: 0 }
-                        }
-                        exit={
-                            prefersReducedMotion
-                                ? { opacity: 0 }
-                                : { opacity: 0, scale: 0.97, y: -12 }
-                        }
-                        transition={panelTransition}
+                        role="dialog"
+                        aria-modal="true"
+                        aria-label={t("search.commandPalette.placeholder")}
+                        className="relative flex h-full w-full flex-col overflow-hidden bg-surface-container-high text-on-surface shadow-elev-3 sm:h-auto sm:max-h-[70vh] sm:max-w-xl sm:rounded-md3-xl"
+                        style={{ transformOrigin: "top center" }}
+                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.9, y: -12 }}
+                        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scaleY: 1, y: 0 }}
+                        exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scaleY: 0.95, y: -8 }}
+                        transition={prefersReducedMotion ? reducedMotionFade : md3SpatialDefault}
                         onKeyDown={handleKeyDown}
                     >
-                        {/* Search input */}
-                        <div className="flex flex-col sm:flex-row sm:items-center gap-3 px-4 py-2 border-b border-slate-200">
-                            <div className="flex items-center gap-3 flex-1">
-                                <svg
-                                    className="w-5 h-5 text-slate-400 flex-shrink-0"
-                                    fill="none"
-                                    viewBox="0 0 24 24"
-                                    stroke="currentColor"
-                                >
-                                    <path
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        strokeWidth={2}
-                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                                    />
-                                </svg>
+                        {/* Search bar */}
+                        <div className="shrink-0 p-2 sm:p-3">
+                            <div className="flex h-14 items-center gap-1 rounded-full bg-surface-container-highest pl-1 pr-2 sm:bg-surface-container">
+                                <IconButton
+                                    icon={mdArrowBack}
+                                    label={t("common.action.close")}
+                                    onClick={onClose}
+                                    className="sm:hidden"
+                                />
+                                <Icon path={mdSearch} size={24} className="ml-3 hidden shrink-0 text-on-surface-variant sm:block" />
                                 <input
                                     ref={inputRef}
                                     type="text"
@@ -425,45 +414,48 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                                     onCompositionStart={handleCompositionStart}
                                     onCompositionEnd={handleCompositionEnd}
                                     placeholder={t("search.commandPalette.placeholder")}
-                                    className="flex-1 py-1.5 sm:py-2.5 bg-transparent text-sm text-slate-800 placeholder-slate-400 outline-none min-w-0"
+                                    aria-label={t("search.commandPalette.placeholder")}
+                                    className="min-w-0 flex-1 bg-transparent px-2 type-body-l text-on-surface outline-none placeholder:text-on-surface-variant"
                                 />
-                                <kbd className="hidden sm:inline-flex items-center px-1.5 py-0.5 text-[10px] font-medium text-slate-400 bg-slate-100 rounded border border-slate-200">
-                                    {t("common.shortcut.escape")}
-                                </kbd>
-                            </div>
-
-                            <div className="flex items-center justify-between sm:justify-end gap-2 border-t sm:border-t-0 border-slate-100 pt-2 sm:pt-0 shrink-0">
-                                <span className="flex items-center gap-1.5 text-xs font-medium text-slate-600">
-                                    {t("search.commandPalette.wildcard")}
-                                    <kbd className="hidden sm:inline-flex items-center px-1 py-0.5 text-[9px] font-mono font-medium text-slate-400 bg-slate-100 rounded border border-slate-200 shadow-sm leading-none h-4">
-                                        {wildcardShortcut}
-                                    </kbd>
-                                </span>
-                                <button
-                                    onClick={() => setUseWildcard(!useWildcard)}
-                                    className={`pressable relative w-11 h-6 rounded-full transition-colors duration-[var(--duration-fast)] ${useWildcard ? 'bg-miku' : 'bg-slate-200'}`}
-                                >
-                                    <span
-                                        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${useWildcard ? 'translate-x-5' : 'translate-x-0'}`}
+                                {query && (
+                                    <IconButton
+                                        icon={mdClose}
+                                        label={t("common.md3.clear")}
+                                        onClick={() => {
+                                            setQuery("");
+                                            inputRef.current?.focus();
+                                        }}
                                     />
-                                </button>
+                                )}
+                                <kbd className={cn(kbdClass, "hidden sm:inline-flex")}>{t("common.shortcut.escape")}</kbd>
+                            </div>
+                            <div className="mt-2 flex items-center justify-between gap-2 px-3">
+                                <span className="flex items-center gap-1.5 type-label-l text-on-surface-variant">
+                                    {t("search.commandPalette.wildcard")}
+                                    <kbd className={cn(kbdClass, "hidden font-mono sm:inline-flex")}>{wildcardShortcut}</kbd>
+                                </span>
+                                <Switch
+                                    checked={useWildcard}
+                                    onCheckedChange={setUseWildcard}
+                                    aria-label={t("search.commandPalette.wildcard")}
+                                />
                             </div>
                         </div>
 
+                        <div className="h-px shrink-0 bg-outline-variant" role="separator" />
+
                         {/* Results */}
-                        <div ref={listRef} className="overflow-y-auto flex-1 py-2">
+                        <div ref={listRef} role="listbox" className="flex-1 overflow-y-auto overscroll-contain py-2">
                             {totalItems === 0 && !isLoadingIndex ? (
-                                <div className="px-4 py-8 text-center text-sm text-slate-400">
+                                <div className="px-4 py-10 text-center type-body-m text-on-surface-variant">
                                     {t("search.commandPalette.noResults")}
                                 </div>
                             ) : (
                                 <>
                                     {/* Static navigation results */}
                                     {grouped.map((group) => (
-                                        <div key={group.titleKey}>
-                                            <div className="px-4 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider">
-                                                {t(group.titleKey)}
-                                            </div>
+                                        <div key={group.titleKey} role="group">
+                                            <div className={groupHeaderClass}>{t(group.titleKey)}</div>
                                             {group.items.map((item) => {
                                                 flatIndex++;
                                                 const isActive = flatIndex === activeIndex;
@@ -471,19 +463,16 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                                                 return (
                                                     <button
                                                         key={item.href}
+                                                        type="button"
+                                                        role="option"
+                                                        aria-selected={isActive}
                                                         data-active={isActive}
                                                         onClick={() => navigate(item.href)}
                                                         onMouseEnter={() => setActiveIndex(idx)}
-                                                        className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${isActive
-                                                            ? "bg-miku/10 text-miku"
-                                                            : "text-slate-600 hover:bg-slate-50"
-                                                            }`}
+                                                        className={rowClass(isActive)}
                                                     >
-                                                        <span className="font-medium">{t(NAV_ITEM_LABEL_KEYS[item.href] ?? item.href)}</span>
-                                                        <span
-                                                            className={`text-xs ${isActive ? "text-miku/60" : "text-slate-400"
-                                                                }`}
-                                                        >
+                                                        <span className="truncate type-body-l">{t(NAV_ITEM_LABEL_KEYS[item.href] ?? item.href)}</span>
+                                                        <span className={cn("shrink-0 type-label-m", isActive ? "text-on-secondary-container/70" : "text-on-surface-variant")}>
                                                             {item.href}
                                                         </span>
                                                     </button>
@@ -494,12 +483,12 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
 
                                     {/* Dynamic search results */}
                                     {dynamicGrouped.map((group) => (
-                                        <div key={`dyn-${group.titleKey}`}>
-                                            <div className="px-4 pt-3 pb-1 text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                        <div key={`dyn-${group.titleKey}`} role="group">
+                                            <div className={groupHeaderClass}>
                                                 {t(group.titleKey)}
                                                 {group.titleKey === SEARCH_GROUP_LABEL_KEYS.music && (
-                                                    <span className="font-normal normal-case text-[10px] text-slate-400/70">
-                                                        ({t("search.commandPalette.musicAliasHint")} · <a href="https://github.com/Team-Haruki" target="_blank" rel="noopener noreferrer" className="hover:text-miku">haruki</a>)
+                                                    <span className="type-label-s text-on-surface-variant">
+                                                        ({t("search.commandPalette.musicAliasHint")} · <a href="https://github.com/Team-Haruki" target="_blank" rel="noopener noreferrer" className="underline-offset-2 hover:text-primary hover:underline">haruki</a>)
                                                     </span>
                                                 )}
                                             </div>
@@ -524,33 +513,25 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                                                 return (
                                                     <button
                                                         key={`${item.g}-${item.id}`}
+                                                        type="button"
+                                                        role="option"
+                                                        aria-selected={isActive}
                                                         data-active={isActive}
                                                         onClick={() => navigate(href)}
                                                         onMouseEnter={() => setActiveIndex(idx)}
-                                                        className={`w-full flex items-center justify-between gap-3 px-4 py-2.5 text-sm transition-colors cursor-pointer ${isActive
-                                                            ? "bg-miku/10 text-miku"
-                                                            : "text-slate-600 hover:bg-slate-50"
-                                                            }`}
+                                                        className={rowClass(isActive)}
                                                     >
-                                                        <span className="flex flex-col items-start min-w-0">
-                                                            <span className="font-medium truncate max-w-[280px]">
-                                                                {item.n}
-                                                            </span>
+                                                        <span className="flex min-w-0 flex-col items-start">
+                                                            <span className="max-w-full truncate type-body-l">{item.n}</span>
                                                             {(musicSubtitle || subtitle) && (
-                                                                <span
-                                                                    className={`text-xs truncate max-w-[280px] ${isActive ? "text-miku/50" : "text-slate-400"
-                                                                        }`}
-                                                                >
+                                                                <span className={cn("max-w-full truncate type-body-m", isActive ? "text-on-secondary-container/70" : "text-on-surface-variant")}>
                                                                     {musicSubtitle}
                                                                     {musicSubtitle && subtitle ? " · " : ""}
                                                                     {subtitle}
                                                                 </span>
                                                             )}
                                                         </span>
-                                                        <span
-                                                            className={`text-xs font-mono flex-shrink-0 ${isActive ? "text-miku/60" : "text-slate-400"
-                                                                }`}
-                                                        >
+                                                        <span className={cn("shrink-0 font-mono type-label-m", isActive ? "text-on-secondary-container/70" : "text-on-surface-variant")}>
                                                             #{item.id}
                                                         </span>
                                                     </button>
@@ -561,7 +542,8 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
 
                                     {/* Loading indicator for first load */}
                                     {isLoadingIndex && query && (
-                                        <div className="px-4 py-3 text-center text-xs text-slate-400">
+                                        <div className="flex items-center justify-center gap-2 px-4 py-3 type-body-s text-on-surface-variant">
+                                            <CircularProgress size={16} strokeWidth={2} />
                                             {t("search.commandPalette.loadingIndex")}
                                         </div>
                                     )}
@@ -570,18 +552,18 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                         </div>
 
                         {/* Footer hints */}
-                        <div className="flex items-center gap-4 px-4 py-2 border-t border-slate-100 text-[11px] text-slate-400">
+                        <div className="hidden shrink-0 items-center gap-4 border-t border-outline-variant px-4 py-2 type-label-s text-on-surface-variant sm:flex">
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 text-[10px]">↑</kbd>
-                                <kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 text-[10px]">↓</kbd>
+                                <kbd className={kbdClass}>↑</kbd>
+                                <kbd className={kbdClass}>↓</kbd>
                                 {t("search.commandPalette.footer.navigate")}
                             </span>
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 text-[10px]">Enter</kbd>
+                                <kbd className={kbdClass}>Enter</kbd>
                                 {t("search.commandPalette.footer.open")}
                             </span>
                             <span className="flex items-center gap-1">
-                                <kbd className="px-1 py-0.5 bg-slate-100 rounded border border-slate-200 text-[10px]">Esc</kbd>
+                                <kbd className={kbdClass}>Esc</kbd>
                                 {t("search.commandPalette.footer.close")}
                             </span>
                         </div>

@@ -1,9 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-
 import { useI18n } from "@/contexts/I18nContext";
+import { Button, Dialog } from "@/components/md3";
 
 export const ASSET_TOS_STORAGE_KEY = "asset-viewer-tos-agreed";
 
@@ -66,84 +65,43 @@ export default function AssetTosModal({
         onOpenChange(false);
     }, [onOpenChange]);
 
-    if (!mounted || !open) return null;
+    if (!mounted) return null;
 
-    return createPortal(
-        <div className="fixed inset-0 z-[300] isolate flex items-center justify-center p-4 sm:p-6 select-none">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 transform-gpu bg-black/35 backdrop-blur-[8px]"
-                onClick={() => {
-                    if (hasAgreed) onOpenChange(false);
-                }}
-            />
-
-            {/* Dialog Container */}
-            <div className="relative w-full max-w-lg transform-gpu will-change-transform liquid-glass-modal rounded-3xl overflow-hidden flex flex-col max-h-[calc(100vh-2rem)] max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] shadow-2xl animate-in zoom-in-95 duration-200">
-                {/* Header */}
-                <div className="flex items-center justify-between px-5 py-3.5 border-b border-dashed border-slate-200/60 dark:border-slate-700/40 bg-gradient-to-r from-miku/5 to-transparent flex-shrink-0">
-                    <h2 className="text-base font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-miku rounded-full" />
-                        {t("page.assetViewer.tos.title")}
-                    </h2>
-                    {hasAgreed && (
-                        <button
-                            onClick={() => onOpenChange(false)}
-                            className="p-1.5 -mr-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 island-pill-hover rounded-full transition-colors"
-                            aria-label={t("common.action.close")}
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    )}
-                </div>
-                {/* Body */}
-                <div className="flex-1 overflow-y-auto p-5 space-y-4 text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed custom-scrollbar">
-                    <p className="font-bold text-slate-700 dark:text-slate-200">
-                        {t("page.assetViewer.tos.welcome")}
-                    </p>
-
-                    <div className="space-y-4">
-                        {([1, 2, 3, 4, 5] as const).map((sec) => (
-                            <div key={sec}>
-                                <h3 className="font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
-                                    <span className="text-miku">{sec}.</span> {t(`page.assetViewer.tos.sec${sec}Title`)}
-                                </h3>
-                                <p className="pl-4 mt-0.5 text-slate-500 dark:text-slate-400">
-                                    {t(`page.assetViewer.tos.sec${sec}Content`)}
-                                </p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-                {/* Footer */}
-                <div className="p-4 border-t border-dashed border-slate-200/60 dark:border-slate-700/40 bg-slate-50/50 dark:bg-slate-900/50 flex justify-end flex-shrink-0">
-                    {hasAgreed ? (
-                        <button
-                            onClick={() => onOpenChange(false)}
-                            className="px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ios-glass-btn"
-                        >
-                            {t("common.action.close")}
-                        </button>
-                    ) : (
-                        <button
-                            disabled={tosCountdown > 0}
-                            onClick={handleAgree}
-                            className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
-                                tosCountdown > 0
-                                    ? "bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed"
-                                    : "ios-glass-btn ios-glass-btn-primary"
-                            }`}
-                        >
-                            {tosCountdown > 0
-                                ? `${t("page.assetViewer.tos.agree")} (${tosCountdown}s)`
-                                : t("page.assetViewer.tos.agree")}
-                        </button>
-                    )}
-                </div>
+    return (
+        <Dialog
+            isOpen={open}
+            onClose={() => onOpenChange(false)}
+            title={t("page.assetViewer.tos.title")}
+            size="md"
+            syncHistory={false}
+            dismissible={hasAgreed}
+            showClose={hasAgreed}
+            className="select-none"
+            actions={
+                hasAgreed ? (
+                    <Button variant="tonal" onClick={() => onOpenChange(false)}>
+                        {t("common.action.close")}
+                    </Button>
+                ) : (
+                    <Button variant="filled" disabled={tosCountdown > 0} onClick={handleAgree}>
+                        {tosCountdown > 0
+                            ? `${t("page.assetViewer.tos.agree")} (${tosCountdown}s)`
+                            : t("page.assetViewer.tos.agree")}
+                    </Button>
+                )
+            }
+        >
+            <div className="space-y-4 type-body-m text-on-surface-variant">
+                <p className="type-title-s text-on-surface">{t("page.assetViewer.tos.welcome")}</p>
+                {([1, 2, 3, 4, 5] as const).map((sec) => (
+                    <section key={sec}>
+                        <h3 className="flex items-center gap-1.5 type-title-s text-on-surface">
+                            <span className="text-primary">{sec}.</span> {t(`page.assetViewer.tos.sec${sec}Title`)}
+                        </h3>
+                        <p className="mt-0.5 pl-4">{t(`page.assetViewer.tos.sec${sec}Content`)}</p>
+                    </section>
+                ))}
             </div>
-        </div>,
-        document.body
+        </Dialog>
     );
 }

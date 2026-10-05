@@ -45,7 +45,7 @@ export default function AccountAvatar({ account, size = "md", className }: Accou
     if (size === "lg") {
         // Use fill mode for large avatars, such as the profile page.
         return (
-            <div className={`relative ${s.cls} rounded-lg overflow-hidden bg-slate-100 flex-shrink-0 ${className || ""}`}>
+            <div className={`relative ${s.cls} rounded-md3-sm overflow-hidden bg-surface-container-highest flex-shrink-0 ${className || ""}`}>
                 <Image
                     src={avatarUrl}
                     alt=""
@@ -58,7 +58,7 @@ export default function AccountAvatar({ account, size = "md", className }: Accou
     }
 
     return (
-        <div className={`${s.cls} rounded-full overflow-hidden bg-slate-100 flex-shrink-0 ${className || ""}`}>
+        <div className={`${s.cls} rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0 ${className || ""}`}>
             <Image
                 src={avatarUrl}
                 alt=""

@@ -13,7 +13,7 @@ interface MemberTextProps {
 
 export function renderMemberText(
     text: string | null | undefined,
-    linkClassName: string = "text-miku hover:underline font-medium transition-colors",
+    linkClassName: string = "text-primary hover:underline type-emphasized transition-colors",
     options?: { stripAtPrefix?: boolean },
 ): React.ReactNode {
     if (!text) return null;

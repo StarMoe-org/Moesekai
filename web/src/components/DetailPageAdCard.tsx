@@ -4,6 +4,8 @@ import AdUnit from "@/components/AdUnit";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { DETAIL_FEED_AD } from "@/lib/ads";
+import { Icon } from "@/components/md3";
+import { mdCampaign } from "@/components/md3/icons";
 
 interface DetailPageAdCardProps {
     hidden?: boolean;
@@ -16,14 +18,10 @@ export default function DetailPageAdCard({ hidden = false }: DetailPageAdCardPro
     if (hidden || !showAds) return null;
 
     return (
-        <div className="moesekai-ad-slot bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-amber-500/10 to-transparent">
-                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" />
-                    </svg>
-                    {t("settings.ads.title")}
-                </h2>
+        <div className="moesekai-ad-slot overflow-hidden rounded-md3-xl bg-surface-container-low">
+            <div className="flex items-center gap-2 px-5 pb-2 pt-4">
+                <Icon path={mdCampaign} size={20} className="text-tertiary" />
+                <h2 className="type-title-m text-on-surface">{t("settings.ads.title")}</h2>
             </div>
             <div className="max-h-[400px] overflow-hidden">
                 <AdUnit

@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "@/components/common/Modal";
 import { useI18n } from "@/contexts/I18nContext";
 import { copyImageFromUrl, saveImageFromUrl } from "@/lib/imageActions";
+import { Banner, CircularProgress, IconButton } from "@/components/md3";
+import { mdCheck, mdContentCopy, mdDownload } from "@/components/md3/icons";
 
 interface ImagePreviewModalProps {
     isOpen: boolean;
@@ -105,78 +107,39 @@ export default function ImagePreviewModal({
         }
     }, [fileName, imageUrl, t]);
 
+    const copyIcon = copySuccess && !isCopying ? mdCheck : mdContentCopy;
+    const saveIcon = saveSuccess && !isSaving ? mdCheck : mdDownload;
+
     const headerActions = (
         <>
-            <button
-                onClick={handleCopy}
-                disabled={isCopying || isSaving}
-                className="pressable p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 island-pill-hover rounded-full disabled:opacity-50"
-                aria-label={t("common.imageActions.copyImage")}
-                title={isCopying ? t("common.imageActions.copying") : copySuccess ? t("common.imageActions.copySuccess") : t("common.imageActions.copyImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${isCopying || copySuccess ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 animate-spin transition-all duration-200 ${isCopying ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <circle cx="12" cy="12" r="9" strokeWidth="2" className="opacity-30" />
-                        <path d="M12 3a9 9 0 019 9" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copySuccess && !isCopying ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
+            {isCopying ? (
+                <span className="inline-flex h-10 w-10 items-center justify-center" aria-label={t("common.imageActions.copying")}>
+                    <CircularProgress size={20} strokeWidth={2} />
                 </span>
-            </button>
-            <button
-                onClick={handleSave}
-                disabled={isSaving || isCopying}
-                className="pressable p-1.5 text-slate-400 hover:text-miku island-pill-hover rounded-full disabled:opacity-50"
-                aria-label={t("common.imageActions.saveImage")}
-                title={isSaving ? t("common.imageActions.saving") : saveSuccess ? t("common.imageActions.saveSuccess") : t("common.imageActions.saveImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${isSaving || saveSuccess ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 animate-spin transition-all duration-200 ${isSaving ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <circle cx="12" cy="12" r="9" strokeWidth="2" className="opacity-30" />
-                        <path d="M12 3a9 9 0 019 9" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${saveSuccess && !isSaving ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
+            ) : (
+                <IconButton
+                    icon={copyIcon}
+                    onClick={handleCopy}
+                    disabled={isSaving}
+                    label={t("common.imageActions.copyImage")}
+                    title={copySuccess ? t("common.imageActions.copySuccess") : t("common.imageActions.copyImage")}
+                    className={copySuccess ? "text-primary" : undefined}
+                />
+            )}
+            {isSaving ? (
+                <span className="inline-flex h-10 w-10 items-center justify-center" aria-label={t("common.imageActions.saving")}>
+                    <CircularProgress size={20} strokeWidth={2} />
                 </span>
-            </button>
+            ) : (
+                <IconButton
+                    icon={saveIcon}
+                    onClick={handleSave}
+                    disabled={isCopying}
+                    label={t("common.imageActions.saveImage")}
+                    title={saveSuccess ? t("common.imageActions.saveSuccess") : t("common.imageActions.saveImage")}
+                    className={saveSuccess ? "text-primary" : undefined}
+                />
+            )}
         </>
     );
 
@@ -190,24 +153,22 @@ export default function ImagePreviewModal({
         >
             <div className="space-y-3">
                 {saveClickCount >= 2 && (
-                    <div className="rounded-2xl bg-gradient-to-r from-miku/5 to-luka/5 border border-miku/15 px-4 py-2.5 animate-in fade-in duration-300">
-                        <p className="text-xs text-slate-600 leading-relaxed">
-                            {t("common.imageActions.downloadHintPrefix")}<strong className="text-slate-700">{t("common.imageActions.downloadHintAction")}</strong>{t("common.imageActions.downloadHintSuffix")}
-                            <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" className="text-miku font-medium hover:underline ml-1">Chrome</a>
-                            <span className="mx-0.5 text-slate-300">/</span>
-                            <a href="https://www.firefox.com/" target="_blank" rel="noopener noreferrer" className="text-miku font-medium hover:underline">Firefox</a>
-                        </p>
-                    </div>
+                    <Banner tone="info">
+                        {t("common.imageActions.downloadHintPrefix")}<strong className="type-emphasized">{t("common.imageActions.downloadHintAction")}</strong>{t("common.imageActions.downloadHintSuffix")}
+                        <a href="https://www.google.com/chrome/" target="_blank" rel="noopener noreferrer" className="ml-1 underline">Chrome</a>
+                        <span className="mx-0.5">/</span>
+                        <a href="https://www.firefox.com/" target="_blank" rel="noopener noreferrer" className="underline">Firefox</a>
+                    </Banner>
                 )}
 
-                {errorMessage && <p className="text-xs text-red-500">{errorMessage}</p>}
+                {errorMessage && <Banner tone="error">{errorMessage}</Banner>}
 
-                <div className="rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 sm:p-4">
-                    <div className="max-h-[65vh] overflow-auto flex items-center justify-center">
+                <div className="rounded-md3-lg bg-surface-container p-3 sm:p-4">
+                    <div className="flex max-h-[65vh] items-center justify-center overflow-auto">
                         <img
                             src={imageUrl}
                             alt={alt}
-                            className="max-w-full max-h-[60vh] object-contain"
+                            className="max-h-[60vh] max-w-full object-contain"
                         />
                     </div>
                 </div>

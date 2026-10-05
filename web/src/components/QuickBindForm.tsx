@@ -11,6 +11,8 @@ import {
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, Button, Chip, CircularProgress, Icon, Surface, TextField } from "@/components/md3";
+import { mdPersonAdd } from "@/components/md3/icons";
 
 interface QuickBindFormProps {
     onAccountAdded: () => void;
@@ -22,11 +24,7 @@ interface QuickBindFormProps {
     returnTo?: string;
 }
 
-const DefaultIcon = () => (
-    <svg className="w-8 h-8 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-    </svg>
-);
+const DefaultIcon = () => <Icon path={mdPersonAdd} size={32} />;
 
 export default function QuickBindForm({
     onAccountAdded,
@@ -82,97 +80,86 @@ export default function QuickBindForm({
     }, [returnTo, t]);
 
     return (
-        <div className="glass-card p-6 sm:p-8 rounded-2xl">
-            <div className="text-center mb-6">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-miku/10 flex items-center justify-center">
+        <Surface tone="low" radius="xl" className="p-6 sm:p-8">
+            <div className="mb-6 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
                     {icon || <DefaultIcon />}
                 </div>
-                <h2 className="text-lg font-bold text-primary-text mb-1">{t("common.account.quickBindTitle")}</h2>
-                <p className="text-xs text-slate-400">{resolvedDescription}</p>
+                <h2 className="mb-1 type-headline-s text-on-surface">{t("common.account.quickBindTitle")}</h2>
+                <p className="type-body-m text-on-surface-variant">{resolvedDescription}</p>
             </div>
 
-            <div className="space-y-4 max-w-sm mx-auto">
+            <div className="mx-auto max-w-sm space-y-4">
+                <TextField
+                    label={t("common.form.gameUid")}
+                    required
+                    value={gameId}
+                    onValueChange={setGameId}
+                    onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                    placeholder={t("common.account.inputGameUid")}
+                    disabled={isVerifying}
+                />
                 <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                        {t("common.form.gameUid")} <span className="text-red-400">*</span>
-                    </label>
-                    <input
-                        type="text"
-                        value={gameId}
-                        onChange={(e) => setGameId(e.target.value)}
-                        onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
-                        placeholder={t("common.account.inputGameUid")}
-                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
-                        disabled={isVerifying}
-                    />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1.5">{t("common.form.server")}</label>
+                    <div className="mb-1.5 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
                     <div className="grid grid-cols-3 gap-2">
                         {SERVER_OPTIONS.map((s) => (
-                            <button
+                            <Chip
                                 key={s.value}
+                                selected={server === s.value}
+                                showCheckmark={false}
                                 onClick={() => setServer(s.value)}
                                 disabled={isVerifying}
-                                className={`px-3 py-2 rounded-xl text-xs font-medium transition-all ${server === s.value
-                                    ? "bg-miku text-white shadow-md shadow-miku/20"
-                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                    }`}
+                                className="justify-center"
                             >
                                 {t(`common.server.${s.value}`)}
-                            </button>
+                            </Chip>
                         ))}
                     </div>
                 </div>
 
                 {(error || oauthError) && (
-                    <div className="p-3 rounded-xl bg-red-50 border border-red-200/50">
-                        <div className="flex items-start gap-2">
-                            <svg className="w-4 h-4 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <div>
-                                <p className="text-xs font-medium text-red-700">{error || oauthError}</p>
-                                <ExternalLink href="https://haruki.seiunx.com" className="text-xs text-miku hover:underline mt-1 inline-block">
-                                    {t("common.account.goHaruki")}
-                                </ExternalLink>
-                            </div>
-                        </div>
-                    </div>
+                    <Banner tone="error">
+                        <p>{error || oauthError}</p>
+                        <ExternalLink href="https://haruki.seiunx.com" className="mt-1 inline-block underline">
+                            {t("common.account.goHaruki")}
+                        </ExternalLink>
+                    </Banner>
                 )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                    <Button
+                        variant="filled"
+                        fullWidth
                         onClick={handleSubmit}
                         disabled={!gameId.trim() || isVerifying}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold text-sm shadow-lg shadow-miku/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                         {isVerifying ? (
                             <>
-                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <CircularProgress size={18} strokeWidth={2} />
                                 {t("common.account.verifyingWithDots")}
                             </>
                         ) : (
                             t("common.account.verifyAndBind")
                         )}
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        fullWidth
                         onClick={() => void handleOAuthBind()}
                         disabled={isVerifying}
-                        className="w-full px-6 py-3 border border-miku/30 text-miku rounded-xl font-bold text-sm hover:bg-miku/5 transition-all disabled:opacity-50"
                     >
                         {t("common.account.oauthAuthorizeBind")}
-                    </button>
+                    </Button>
                 </div>
 
-                <p className="text-[10px] text-slate-400 text-center">
+                <p className="text-center type-body-s text-on-surface-variant">
                     {t("common.account.manualBindHintStart")}{" "}
-                    <ExternalLink href="https://haruki.seiunx.com" className="text-miku hover:underline">
+                    <ExternalLink href="https://haruki.seiunx.com" className="text-primary hover:underline">
                         {t("common.account.manualBindHintHaruki")}
                     </ExternalLink>
                     {" "}{t("common.account.manualBindHintEnd")}
                 </p>
             </div>
-        </div>
+        </Surface>
     );
 }

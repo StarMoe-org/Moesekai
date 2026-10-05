@@ -12,6 +12,7 @@ import {
     type ServerType,
 } from "@/lib/account";
 import { useI18n } from "@/contexts/I18nContext";
+import { cn } from "@/components/md3";
 
 interface AccountSelectorProps {
     /** Called after an account is selected, with gameId and server. */
@@ -44,8 +45,8 @@ export default function AccountSelector({ onSelect, currentUserId, currentServer
     return (
         <div className="mb-3 max-w-full">
             <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-xs font-medium text-slate-500">{t("common.account.savedAccounts")}</span>
-                <span className="text-[10px] text-slate-400">{t("common.account.quickFill")}</span>
+                <span className="type-label-l text-on-surface-variant">{t("common.account.savedAccounts")}</span>
+                <span className="type-label-s text-outline">{t("common.account.quickFill")}</span>
             </div>
             <div className="flex gap-2 flex-wrap">
                 {accounts.map((acc) => {
@@ -62,13 +63,15 @@ export default function AccountSelector({ onSelect, currentUserId, currentServer
                                 setActiveAccount(acc.id);
                                 onSelect(acc.gameId, acc.server);
                             }}
-                            className={`flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all border max-w-full min-w-0 ${
+                            className={cn(
+                                "state-layer focus-ring flex h-8 min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-md3-sm border pl-1.5 pr-2 type-label-l sm:gap-2",
                                 isActive
-                                    ? "bg-miku/10 border-miku/40 text-miku shadow-sm"
-                                    : "bg-white/60 dark:bg-slate-800/60 border-slate-200/60 dark:border-slate-700/60 text-slate-600 dark:text-slate-300 hover:border-miku/30 hover:bg-miku/5"
-                            }`}
+                                    ? "border-transparent bg-secondary-container text-on-secondary-container"
+                                    : "border-outline-variant text-on-surface-variant",
+                            )}
+                            aria-pressed={isActive}
                         >
-                            <div className="w-5 h-5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700 flex-shrink-0">
+                            <div className="w-5 h-5 rounded-full overflow-hidden bg-surface-container-highest flex-shrink-0">
                                 <Image
                                     src={avatarUrl}
                                     alt=""
@@ -79,12 +82,10 @@ export default function AccountSelector({ onSelect, currentUserId, currentServer
                                 />
                             </div>
                             {displayName && (
-                                <span className="font-bold truncate max-w-[65px] sm:max-w-[85px] flex-shrink-0">{displayName}</span>
+                                <span className="type-emphasized truncate max-w-[65px] sm:max-w-[85px] flex-shrink-0">{displayName}</span>
                             )}
                             <span className="font-mono truncate min-w-0 flex-1">{acc.gameId}</span>
-                            <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold flex-shrink-0 whitespace-nowrap ${
-                                isActive ? "bg-miku/20 text-miku" : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                            }`}>
+                            <span className={cn("shrink-0 whitespace-nowrap rounded-md3-xs px-1.5 type-label-s", isActive ? "bg-on-secondary-container/12" : "bg-surface-container-highest")}>
                                 {t(`common.server.${acc.server}`)}
                             </span>
                         </button>
