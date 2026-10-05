@@ -37,15 +37,15 @@ export default function SearchSyntaxHelp({ fieldItems }: SearchSyntaxHelpProps) 
     const rows = [...baseRows, ...fieldItems];
 
     return (
-        <div className="ios-glass-card border-none rounded-xl bg-slate-50/80 dark:bg-slate-800/60 p-3.5 space-y-2 text-xs">
-            <p className="font-bold type-caption text-slate-700 dark:text-slate-200 mb-1">
+        <div className="space-y-2 rounded-md3-md bg-surface-container-high p-3.5 type-body-s text-on-surface">
+            <p className="mb-1 type-title-s text-on-surface">
                 {t("search.syntax.title")}
             </p>
             {rows.map((row, i) => (
                 <div key={i} className="flex items-baseline justify-between gap-3">
-                    <span className="text-slate-600 dark:text-slate-300">{row.label}</span>
+                    <span className="text-on-surface-variant">{row.label}</span>
                     {row.example !== "" && (
-                        <code className="text-miku font-mono text-[11px] whitespace-nowrap">
+                        <code className="whitespace-nowrap font-mono text-[11px] text-primary">
                             {row.example}
                         </code>
                     )}

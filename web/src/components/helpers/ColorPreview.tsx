@@ -12,7 +12,7 @@ export default function ColorPreview({ colorCode, size = 24, className = "" }: C
 
     return (
         <div
-            className={`rounded-full shadow-sm border border-black/10 ${className}`}
+            className={`rounded-full border border-outline-variant shadow-elev-1 ${className}`}
             style={{
                 backgroundColor: color,
                 width: size,

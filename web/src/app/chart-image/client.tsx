@@ -12,6 +12,8 @@ import {
 } from "@/lib/assets";
 import { fetchMasterData, fetchMasterDataForServer } from "@/lib/fetch";
 import { DIFFICULTY_COLORS, DIFFICULTY_NAMES, type MusicDifficultyType } from "@/types/music";
+import { Button, Icon, IconButton, LoadingState } from "@/components/md3";
+import { mdAdd, mdDownload, mdFitScreen, mdOpenInNew, mdRefresh, mdRemove } from "@/components/md3/icons";
 
 const VALID_DIFFICULTIES = new Set<string>(["easy", "normal", "hard", "expert", "master", "append"]);
 
@@ -250,13 +252,13 @@ function ChartImageInner() {
     const difficultyColor = DIFFICULTY_COLORS[difficulty] ?? "#9ca3af";
 
     return (
-        <div className="fixed inset-0 flex flex-col bg-white text-slate-700">
+        <div data-seed="21" data-theme="light" className="fixed inset-0 flex flex-col bg-surface text-on-surface">
             {/* Toolbar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 sm:px-5">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant bg-surface-container px-3 py-2 sm:px-5">
                 <div className="flex min-w-0 items-center gap-2 sm:gap-3">
-                    <h1 className="truncate text-sm font-bold sm:text-base">{musicTitle || `#${musicId}`}</h1>
+                    <h1 className="truncate type-title-s sm:type-title-m">{musicTitle || `#${musicId}`}</h1>
                     <span
-                        className="rounded-full px-2.5 py-0.5 text-xs font-bold text-white"
+                        className="rounded-full px-2.5 py-0.5 type-label-m text-white"
                         style={{ backgroundColor: difficultyColor }}
                     >
                         {DIFFICULTY_NAMES[difficulty] ?? difficulty.toUpperCase()}
@@ -264,83 +266,66 @@ function ChartImageInner() {
                     </span>
                 </div>
                 <div className="flex items-center gap-1 sm:gap-2">
-                    <button
-                        type="button"
-                        className="h-8 w-8 rounded-lg text-lg font-bold hover:bg-slate-100 disabled:opacity-40"
-                        title={t("page.chartImage.zoomOut")}
-                        aria-label={t("page.chartImage.zoomOut")}
+                    <IconButton
+                        icon={mdRemove}
+                        size="xs"
+                        label={t("page.chartImage.zoomOut")}
                         disabled={state.status !== "ready"}
                         onClick={() => setZoom((value) => Math.max(0.05, Math.round(value * 0.8 * 100) / 100))}
-                    >
-                        −
-                    </button>
-                    <span className="w-12 text-center font-mono text-xs tabular-nums">{Math.round(zoom * 100)}%</span>
-                    <button
-                        type="button"
-                        className="h-8 w-8 rounded-lg text-lg font-bold hover:bg-slate-100 disabled:opacity-40"
-                        title={t("page.chartImage.zoomIn")}
-                        aria-label={t("page.chartImage.zoomIn")}
+                    />
+                    <span className="w-12 text-center font-mono type-label-m tabular-nums">{Math.round(zoom * 100)}%</span>
+                    <IconButton
+                        icon={mdAdd}
+                        size="xs"
+                        label={t("page.chartImage.zoomIn")}
                         disabled={state.status !== "ready"}
                         onClick={() => setZoom((value) => Math.min(4, Math.round(value * 1.25 * 100) / 100))}
-                    >
-                        +
-                    </button>
-                    <button
-                        type="button"
-                        className="h-8 rounded-lg px-2 text-xs font-medium hover:bg-slate-100 disabled:opacity-40"
+                    />
+                    <Button
+                        variant="text"
+                        size="xs"
+                        icon={mdFitScreen}
                         disabled={state.status !== "ready"}
                         onClick={() => state.status === "ready" && applyFitZoom(state.height)}
                     >
                         {t("page.chartImage.zoomFit")}
-                    </button>
-                    <button
-                        type="button"
-                        className="h-8 rounded-lg px-2 text-xs font-medium hover:bg-slate-100 disabled:opacity-40"
-                        disabled={state.status !== "ready"}
-                        onClick={() => setZoom(1)}
-                    >
+                    </Button>
+                    <Button variant="text" size="xs" disabled={state.status !== "ready"} onClick={() => setZoom(1)}>
                         {t("page.chartImage.zoomReset")}
-                    </button>
-                    <div className="mx-1 hidden h-5 w-px bg-slate-200 sm:block" />
-                    <button
-                        type="button"
-                        className="h-8 rounded-lg border border-slate-300 px-3 text-xs font-medium hover:bg-slate-100 disabled:opacity-40"
+                    </Button>
+                    <div className="mx-1 hidden h-5 w-px bg-outline-variant sm:block" />
+                    <Button
+                        variant="filled"
+                        size="xs"
+                        icon={mdDownload}
                         disabled={state.status !== "ready" || isDownloading}
                         onClick={downloadPng}
                     >
                         {isDownloading ? "…" : t("page.chartImage.downloadPng")}
-                    </button>
+                    </Button>
                 </div>
             </div>
 
             {/* Canvas */}
-            <div ref={containerRef} className="flex-1 overflow-auto bg-white p-2">
-                {state.status === "loading" && (
-                    <div className="flex h-full flex-col items-center justify-center gap-3 text-slate-500">
-                        <div className="h-8 w-8 animate-spin rounded-full border-2 border-slate-300 border-t-slate-600" />
-                        <p className="text-sm">{t("page.chartImage.generating")}</p>
-                    </div>
-                )}
+            <div ref={containerRef} className="flex-1 overflow-auto bg-surface p-2">
+                {state.status === "loading" && <LoadingState label={t("page.chartImage.generating")} className="h-full min-h-0" />}
 
                 {state.status === "error" && (
                     <div className="flex h-full flex-col items-center justify-center gap-4 px-6 text-center">
-                        <p className="text-sm text-red-500">{state.message}</p>
+                        <p className="type-body-m text-error">{state.message}</p>
                         <div className="flex items-center gap-3">
-                            <button
-                                type="button"
-                                className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium hover:bg-slate-100"
-                                onClick={() => setReloadToken((token) => token + 1)}
-                            >
+                            <Button variant="outlined" icon={mdRefresh} onClick={() => setReloadToken((token) => token + 1)}>
                                 {t("common.action.retry")}
-                            </button>
+                            </Button>
                             {paramsValid && (
                                 <a
                                     href={getChartSvgUrl(musicId, difficulty)}
                                     target="_blank"
                                     rel="noopener noreferrer"
-                                    className="text-sm text-sky-600 underline underline-offset-2 hover:text-sky-700"
+                                    className="focus-ring inline-flex items-center gap-1 rounded-md3-xs type-label-l text-primary underline underline-offset-2"
                                 >
                                     {t("page.chartImage.openRawSvg")}
+                                    <Icon path={mdOpenInNew} size={16} />
                                 </a>
                             )}
                         </div>

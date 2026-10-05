@@ -1,0 +1,22 @@
+{
+    "zh-CN": {
+        "page.assetViewer.fileCountValue": "{count} 个文件",
+        "page.assetViewer.formats": "格式"
+    },
+    "zh-TW": {
+        "page.assetViewer.fileCountValue": "{count} 個檔案",
+        "page.assetViewer.formats": "格式"
+    },
+    "en-US": {
+        "page.assetViewer.fileCountValue": "{count} files",
+        "page.assetViewer.formats": "Formats"
+    },
+    "ja-JP": {
+        "page.assetViewer.fileCountValue": "{count} ファイル",
+        "page.assetViewer.formats": "形式"
+    },
+    "ko-KR": {
+        "page.assetViewer.fileCountValue": "파일 {count}개",
+        "page.assetViewer.formats": "형식"
+    }
+}

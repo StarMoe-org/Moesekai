@@ -11,6 +11,8 @@ import { getMusicScoreUrl, getMusicVocalAudioUrl, getMusicJacketUrl } from "@/li
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import MusicSelector from "@/components/deck-recommend/MusicSelector";
+import { Button, Chip, LoadingState, PageContainer, PageHeader, SectionCard, SegmentedButton, TextField } from "@/components/md3";
+import { mdArrowBack, mdHome, mdLink, mdMusicNote, mdPlayArrowFill } from "@/components/md3/icons";
 import type { IMusicInfo, IMusicVocalInfo, IMusicDifficultyInfo, MusicDifficultyType } from "@/types/music";
 
 const ChartPreviewPlayer = dynamic(
@@ -248,26 +250,20 @@ function ChartPreviewInner() {
     };
 
     const renderHeader = (showDescription = false) => (
-        <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.chartPreview.badge")}</span>
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                {t("page.chartPreview.title")} <span className="text-miku">{t("page.chartPreview.titleHighlight")}</span>
-            </h1>
-            {showDescription && (
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.chartPreview.description")}
-                </p>
-            )}
-        </div>
+        <PageHeader
+            align="center"
+            eyebrow={t("page.chartPreview.badge")}
+            title={t("page.chartPreview.title")}
+            highlight={t("page.chartPreview.titleHighlight")}
+            description={showDescription ? t("page.chartPreview.description") : undefined}
+        />
     );
 
     // URL mode: auto-start (legacy sus param)
     if (urlSus && previewActive) {
         return (
             <MainLayout immersiveMode={isPlayerFullscreen}>
-                <div className="container mx-auto px-4 sm:px-6 py-8">
+                <PageContainer>
                     {renderHeader()}
                     <ChartPreviewPlayer
                         susUrl={activeSusUrl!}
@@ -283,7 +279,7 @@ function ChartPreviewInner() {
                         arranger={activeArranger}
                         vocal={activeVocal}
                     />
-                </div>
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -293,43 +289,25 @@ function ChartPreviewInner() {
         const diffInfo = DIFFICULTIES.find((d) => d.value === selectedDifficulty);
         return (
             <MainLayout immersiveMode={isPlayerFullscreen}>
-                <div className="container mx-auto px-4 sm:px-6 py-8">
-                    <div className="flex items-center gap-2 mb-4">
+                <PageContainer>
+                    <div className="mb-4 flex items-center gap-2">
                         {urlFrom ? (
                             <>
-                                <button
-                                    onClick={() => router.back()}
-                                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 border-2 border-miku text-miku rounded-xl font-bold hover:bg-miku hover:text-white active:scale-95 transition-all text-sm"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                    </svg>
+                                <Button variant="tonal" icon={mdArrowBack} className="shrink-0" onClick={() => router.back()}>
                                     {t("page.chartPreview.backPrevious")}
-                                </button>
-                                <button
-                                    onClick={handleBack}
-                                    className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 border-2 border-slate-300 text-slate-600 rounded-xl font-bold hover:bg-slate-100 active:scale-95 transition-all text-sm"
-                                >
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-4 0h4" />
-                                    </svg>
+                                </Button>
+                                <Button variant="outlined" icon={mdHome} className="shrink-0" onClick={handleBack}>
                                     {t("page.chartPreview.previewHome")}
-                                </button>
+                                </Button>
                             </>
                         ) : (
-                            <button
-                                onClick={handleBack}
-                                className="shrink-0 inline-flex items-center gap-1.5 px-3 py-2 border-2 border-miku text-miku rounded-xl font-bold hover:bg-miku hover:text-white active:scale-95 transition-all text-sm"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                                </svg>
+                            <Button variant="tonal" icon={mdArrowBack} className="shrink-0" onClick={handleBack}>
                                 {t("page.chartPreview.back")}
-                            </button>
+                            </Button>
                         )}
                         {selectedMusic ? (
                             <>
-                                <div className="shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-lg overflow-hidden relative shadow-md">
+                                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-md3-sm shadow-elev-1 sm:h-14 sm:w-14">
                                     <Image
                                         src={getMusicJacketUrl(selectedMusic.assetbundleName, assetSource)}
                                         alt={selectedMusic.title}
@@ -339,20 +317,20 @@ function ChartPreviewInner() {
                                     />
                                 </div>
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="text-base sm:text-xl font-black text-primary-text truncate">
+                                    <h2 className="truncate type-title-m text-on-surface sm:type-title-l">
                                         {selectedMusic.title}
                                     </h2>
-                                    <div className="flex items-center gap-2 mt-0.5">
+                                    <div className="mt-0.5 flex items-center gap-2">
                                         {diffInfo && (
                                             <span
-                                                className="shrink-0 px-2 py-0.5 rounded-md text-[10px] font-bold text-white"
+                                                className="shrink-0 rounded-md3-xs px-2 py-0.5 type-label-s text-white"
                                                 style={{ backgroundColor: diffInfo.color }}
                                             >
                                                 {getDifficultyLabel(diffInfo.value)}
                                             </span>
                                         )}
                                         {selectedDiffInfo && (
-                                            <span className="text-xs text-slate-500 truncate">
+                                            <span className="truncate type-body-s text-on-surface-variant">
                                                 {t("page.chartPreview.levelLabel", { level: selectedDiffInfo.playLevel })} · {formatNoteCount(selectedDiffInfo.totalNoteCount)}
                                             </span>
                                         )}
@@ -360,30 +338,25 @@ function ChartPreviewInner() {
                                 </div>
                             </>
                         ) : (
-                            <h2 className="text-xl sm:text-2xl font-black text-primary-text truncate min-w-0 flex-1">
+                            <h2 className="min-w-0 flex-1 truncate type-title-l text-on-surface sm:type-headline-s">
                                 {selectedMusicId ? t("page.chartPreview.previewTitleWithId", { id: selectedMusicId }) : t("page.chartPreview.metadataTitle")}
                             </h2>
                         )}
                     </div>
                     {/* Vocal switcher in preview mode */}
                     {availableVocals.length > 1 && (
-                        <div className="flex items-center gap-2 mb-4 overflow-x-auto pb-1">
-                            <span className="shrink-0 text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t("page.chartPreview.vocalVersion")}</span>
-                            {availableVocals.map((v) => {
-                                const isActive = selectedVocal?.id === v.id;
-                                return (
-                                    <button
-                                        key={v.id}
-                                        onClick={() => setSelectedVocalId(v.id)}
-                                        className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${isActive
-                                                ? "bg-miku text-white shadow-sm"
-                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                            }`}
-                                    >
-                                        {v.caption}
-                                    </button>
-                                );
-                            })}
+                        <div className="mb-4 flex items-center gap-2 overflow-x-auto pb-1">
+                            <span className="shrink-0 type-label-m text-on-surface-variant">{t("page.chartPreview.vocalVersion")}</span>
+                            {availableVocals.map((v) => (
+                                <Chip
+                                    key={v.id}
+                                    className="shrink-0"
+                                    selected={selectedVocal?.id === v.id}
+                                    onClick={() => setSelectedVocalId(v.id)}
+                                >
+                                    {v.caption}
+                                </Chip>
+                            ))}
                         </div>
                     )}
                     <ChartPreviewPlayer
@@ -401,7 +374,7 @@ function ChartPreviewInner() {
                         arranger={activeArranger}
                         vocal={activeVocal}
                     />
-                </div>
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -409,40 +382,24 @@ function ChartPreviewInner() {
     // Selection UI
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Page Header */}
                 {renderHeader(true)}
 
                 {/* Mode Tabs */}
-                <div className="flex gap-2 mb-6 justify-center">
-                    <button
-                        onClick={() => setMode("song")}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-300 ${mode === "song"
-                                ? "bg-gradient-to-r from-miku to-miku-dark text-white shadow-lg shadow-miku/20"
-                                : "bg-white/60 text-slate-600 hover:bg-white/80 border border-slate-200/50"
-                            }`}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                        </svg>
-                        {t("page.chartPreview.selectSong")}
-                    </button>
-                    <button
-                        onClick={() => setMode("url")}
-                        className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-medium text-sm whitespace-nowrap transition-all duration-300 ${mode === "url"
-                                ? "bg-gradient-to-r from-miku to-miku-dark text-white shadow-lg shadow-miku/20"
-                                : "bg-white/60 text-slate-600 hover:bg-white/80 border border-slate-200/50"
-                            }`}
-                    >
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                        </svg>
-                        {t("page.chartPreview.customUrl")}
-                    </button>
+                <div className="mx-auto mb-6 max-w-md">
+                    <SegmentedButton
+                        value={mode}
+                        onValueChange={setMode}
+                        options={[
+                            { value: "song", label: t("page.chartPreview.selectSong"), icon: mdMusicNote },
+                            { value: "url", label: t("page.chartPreview.customUrl"), icon: mdLink },
+                        ]}
+                    />
                 </div>
 
                 {mode === "song" ? (
-                    <div className="max-w-3xl mx-auto space-y-6">
+                    <div className="mx-auto max-w-3xl space-y-6">
                         {/* Music Selector (reused from deck-recommend) */}
                         <MusicSelector
                             selectedMusicId={selectedMusicId}
@@ -452,38 +409,31 @@ function ChartPreviewInner() {
 
                         {/* Difficulty Selector */}
                         <div>
-                            <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 text-center">
+                            <div className="mb-2 text-center type-title-s text-on-surface-variant">
                                 {t("page.chartPreview.difficulty")}
-                            </label>
+                            </div>
                             {availableDifficulties.length > 0 ? (
-                                <div className="flex gap-2 flex-wrap justify-center">
+                                <div className="flex flex-wrap justify-center gap-2">
                                     {availableDifficulties.map((diff) => {
                                         const meta = DIFFICULTIES.find((d) => d.value === diff.musicDifficulty);
                                         if (!meta) return null;
+                                        const active = selectedDifficulty === diff.musicDifficulty;
                                         return (
                                             <button
                                                 key={diff.musicDifficulty}
+                                                type="button"
+                                                aria-pressed={active}
                                                 onClick={() => setSelectedDifficulty(diff.musicDifficulty)}
-                                                className={`flex flex-col items-center px-4 py-2 rounded-xl transition-all ${selectedDifficulty === diff.musicDifficulty
-                                                        ? "ring-2 shadow-lg bg-white"
-                                                        : "hover:bg-slate-50 border border-transparent"
+                                                className={`state-layer focus-ring flex flex-col items-center rounded-md3-md px-4 py-2 transition-colors duration-200 ease-md3-standard ${active
+                                                        ? "bg-surface-container-lowest shadow-elev-1"
+                                                        : "bg-transparent"
                                                     }`}
-                                                style={
-                                                    selectedDifficulty === diff.musicDifficulty
-                                                        ? { borderColor: meta.color, boxShadow: `0 0 0 2px ${meta.color}` }
-                                                        : {}
-                                                }
+                                                style={active ? { boxShadow: `0 0 0 2px ${meta.color}` } : undefined}
                                             >
-                                                <span
-                                                    className="text-[10px] font-bold uppercase"
-                                                    style={{ color: meta.color }}
-                                                >
+                                                <span className="type-label-s uppercase" style={{ color: meta.color }}>
                                                     {getDifficultyLabel(meta.value)}
                                                 </span>
-                                                <span
-                                                    className="text-lg font-black"
-                                                    style={{ color: meta.color }}
-                                                >
+                                                <span className="type-title-l type-emphasized" style={{ color: meta.color }}>
                                                     {diff.playLevel}
                                                 </span>
                                             </button>
@@ -491,29 +441,27 @@ function ChartPreviewInner() {
                                     })}
                                 </div>
                             ) : (
-                                <div className="flex gap-2 flex-wrap justify-center">
-                                    {DIFFICULTIES.map((d) => (
-                                        <button
-                                            key={d.value}
-                                            onClick={() => setSelectedDifficulty(d.value)}
-                                            className={`flex flex-col items-center px-4 py-2 rounded-xl transition-all ${selectedDifficulty === d.value
-                                                    ? "ring-2 shadow-lg bg-white"
-                                                    : "hover:bg-slate-50 border border-transparent"
-                                                }`}
-                                            style={
-                                                selectedDifficulty === d.value
-                                                    ? { borderColor: d.color, boxShadow: `0 0 0 2px ${d.color}` }
-                                                    : {}
-                                            }
-                                        >
-                                            <span
-                                                className="text-xs font-bold uppercase"
-                                                style={{ color: d.color }}
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {DIFFICULTIES.map((d) => {
+                                        const active = selectedDifficulty === d.value;
+                                        return (
+                                            <button
+                                                key={d.value}
+                                                type="button"
+                                                aria-pressed={active}
+                                                onClick={() => setSelectedDifficulty(d.value)}
+                                                className={`state-layer focus-ring flex flex-col items-center rounded-md3-md px-4 py-2 transition-colors duration-200 ease-md3-standard ${active
+                                                        ? "bg-surface-container-lowest shadow-elev-1"
+                                                        : "bg-transparent"
+                                                    }`}
+                                                style={active ? { boxShadow: `0 0 0 2px ${d.color}` } : undefined}
                                             >
-                                                {getDifficultyLabel(d.value)}
-                                            </span>
-                                        </button>
-                                    ))}
+                                                <span className="type-label-m uppercase" style={{ color: d.color }}>
+                                                    {getDifficultyLabel(d.value)}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>
@@ -521,97 +469,76 @@ function ChartPreviewInner() {
                         {/* Vocal Selector */}
                         {availableVocals.length > 1 && (
                             <div>
-                                <label className="block text-xs font-bold text-slate-600 uppercase tracking-wider mb-2 text-center">
+                                <div className="mb-2 text-center type-title-s text-on-surface-variant">
                                     {t("page.chartPreview.vocalVersion")}
-                                </label>
-                                <div className="flex gap-2 flex-wrap justify-center">
-                                    {availableVocals.map((v) => {
-                                        const isSelected = selectedVocal?.id === v.id;
-                                        return (
-                                            <button
-                                                key={v.id}
-                                                onClick={() => setSelectedVocalId(v.id)}
-                                                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${isSelected
-                                                        ? "bg-miku text-white shadow-sm"
-                                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                                                    }`}
-                                            >
-                                                {v.caption}
-                                            </button>
-                                        );
-                                    })}
+                                </div>
+                                <div className="flex flex-wrap justify-center gap-2">
+                                    {availableVocals.map((v) => (
+                                        <Chip
+                                            key={v.id}
+                                            selected={selectedVocal?.id === v.id}
+                                            onClick={() => setSelectedVocalId(v.id)}
+                                        >
+                                            {v.caption}
+                                        </Chip>
+                                    ))}
                                 </div>
                             </div>
                         )}
 
                         {/* Start Button */}
-                        <button
+                        <Button
+                            variant="filled"
+                            size="m"
+                            fullWidth
+                            icon={mdPlayArrowFill}
                             onClick={handleStartPreview}
                             disabled={!selectedMusicId}
-                            className="w-full py-3 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
                         >
                             {t("page.chartPreview.startPreview")}
                             {selectedMusicId && (
-                                <span className="ml-2 text-sm opacity-80">
+                                <span className="type-label-l opacity-80">
                                     {t("page.chartPreview.startPreviewSuffix", { id: selectedMusicId, difficulty: getDifficultyLabel(selectedDifficulty) })}
                                 </span>
                             )}
-                        </button>
+                        </Button>
                     </div>
                 ) : (
-                    <div className="max-w-2xl mx-auto">
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                                    </svg>
-                                    {t("page.chartPreview.customChartUrl")}
-                                </h2>
-                            </div>
-                            <div className="p-5 space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">SUS URL *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="https://..."
-                                        value={customSus}
-                                        onChange={(e) => setCustomSus(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("page.chartPreview.bgmUrlOptional")}</label>
-                                    <input
-                                        type="text"
-                                        placeholder="https://..."
-                                        value={customBgm}
-                                        onChange={(e) => setCustomBgm(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("page.chartPreview.offsetOptional")}</label>
-                                    <input
-                                        type="number"
-                                        placeholder="0"
-                                        value={customOffset}
-                                        onChange={(e) => setCustomOffset(e.target.value)}
-                                        className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku transition-all"
-                                    />
-                                </div>
-                                <button
-                                    onClick={handleStartPreview}
-                                    disabled={!customSus}
-                                    className="w-full py-3 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 disabled:hover:shadow-lg"
-                                >
-                                    {t("page.chartPreview.startPreview")}
-                                </button>
-                            </div>
-                        </div>
+                    <div className="mx-auto max-w-2xl">
+                        <SectionCard title={t("page.chartPreview.customChartUrl")} icon={mdLink} bodyClassName="space-y-4">
+                            <TextField
+                                label="SUS URL *"
+                                placeholder="https://..."
+                                value={customSus}
+                                onValueChange={setCustomSus}
+                            />
+                            <TextField
+                                label={t("page.chartPreview.bgmUrlOptional")}
+                                placeholder="https://..."
+                                value={customBgm}
+                                onValueChange={setCustomBgm}
+                            />
+                            <TextField
+                                type="number"
+                                label={t("page.chartPreview.offsetOptional")}
+                                placeholder="0"
+                                value={customOffset}
+                                onValueChange={setCustomOffset}
+                            />
+                            <Button
+                                variant="filled"
+                                size="m"
+                                fullWidth
+                                icon={mdPlayArrowFill}
+                                onClick={handleStartPreview}
+                                disabled={!customSus}
+                            >
+                                {t("page.chartPreview.startPreview")}
+                            </Button>
+                        </SectionCard>
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -621,17 +548,15 @@ function ChartPreviewFallback() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.chartPreview.badge")}</span>
-                    </div>
-                    <div className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.chartPreview.title")} <span className="text-miku">{t("page.chartPreview.titleHighlight")}</span>
-                    </div>
-                </div>
-                <div className="text-sm text-slate-400 py-8 text-center">{t("page.chartPreview.loading")}</div>
-            </div>
+            <PageContainer>
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.chartPreview.badge")}
+                    title={t("page.chartPreview.title")}
+                    highlight={t("page.chartPreview.titleHighlight")}
+                />
+                <LoadingState label={t("page.chartPreview.loading")} />
+            </PageContainer>
         </MainLayout>
     );
 }

@@ -11,6 +11,26 @@ import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
 import LocalizedLink from "@/components/LocalizedLink";
+import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, PageContainer, PageHeader, SegmentedButton, Surface } from "@/components/md3";
+import {
+    mdArticle,
+    mdAudioFile,
+    mdCheck,
+    mdChevronLeft,
+    mdContentCopy,
+    mdDescription,
+    mdDownload,
+    mdDraft,
+    mdFolderFill,
+    mdFolderOpen,
+    mdGridView,
+    mdHistory,
+    mdImage,
+    mdInventory2,
+    mdRefresh,
+    mdViewList,
+    mdVolumeUp,
+} from "@/components/md3/icons";
 
 // Type definitions for Bundle & Asset Browser APIs
 export interface BundleBrowseItem {
@@ -218,47 +238,23 @@ function groupBundleFiles(files: AssetBrowserItem[]): MergedAssetItem[] {
 function getFileIcon(name: string) {
     const ext = name.split(".").pop()?.toLowerCase();
     if (["png", "jpg", "jpeg", "webp", "gif", "svg", "ico"].includes(ext || "")) {
-        return (
-            <svg className="w-8 h-8 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909m-18 3.75h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v12a1.5 1.5 0 001.5 1.5zm10.5-11.25h.008v.008h-.008V8.25zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
-            </svg>
-        );
+        return <Icon path={mdImage} size={32} className="text-primary" />;
     }
     if (["mp3", "wav", "ogg", "m4a", "flac"].includes(ext || "")) {
-        return (
-            <svg className="w-8 h-8 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-            </svg>
-        );
+        return <Icon path={mdAudioFile} size={32} className="text-tertiary" />;
     }
     if (["json", "txt", "csv", "xml", "yaml", "yml"].includes(ext || "")) {
-        return (
-            <svg className="w-8 h-8 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
-        );
+        return <Icon path={mdArticle} size={32} className="text-secondary" />;
     }
-    return (
-        <svg className="w-8 h-8 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-        </svg>
-    );
+    return <Icon path={mdDraft} size={32} className="text-on-surface-variant" />;
 }
 
 function ArchiveBundleIcon() {
-    return (
-        <svg className="w-8 h-8 text-indigo-400 dark:text-indigo-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-        </svg>
-    );
+    return <Icon path={mdInventory2} size={32} className="text-secondary" />;
 }
 
 function FolderIcon() {
-    return (
-        <svg className="w-8 h-8 text-amber-400 dark:text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15a2.25 2.25 0 012.25 2.25v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-        </svg>
-    );
+    return <Icon path={mdFolderFill} size={32} className="text-tertiary" />;
 }
 
 function AssetViewerContent() {
@@ -856,102 +852,80 @@ function AssetViewerContent() {
     const modalHeaderActions = useMemo(() => {
         if (!activeFormat?.url) return null;
         return (
-            <div className="flex items-center gap-1.5">
-                <button
+            <div className="flex items-center gap-1">
+                <IconButton
+                    icon={copyFeedback ? mdCheck : mdContentCopy}
+                    size="xs"
                     onClick={() => handleCopyToClipboard(`${gatewayDomain}${activeFormat.url}`)}
-                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 island-pill-hover rounded-full transition-colors flex items-center justify-center animate-in fade-in duration-200"
-                    title={copyFeedback ? t("page.assetViewer.copied") : t("page.assetViewer.copyLink")}
-                >
-                    <span className="relative block w-4 h-4">
-                        <svg
-                            className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copyFeedback ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                            fill="none"
-                            viewBox="0 0 24 24"
-                            stroke="currentColor"
-                            strokeWidth={2}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                        </svg>
-                        <svg
-                            className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copyFeedback ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                        </svg>
-                    </span>
-                </button>
+                    label={copyFeedback ? t("page.assetViewer.copied") : t("page.assetViewer.copyLink")}
+                />
                 <ExternalLink
                     href={`${gatewayDomain}${activeFormat.url}`}
-                    className="p-1.5 text-slate-400 hover:text-miku island-pill-hover rounded-full transition-colors flex items-center justify-center"
+                    className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                     title={t("page.assetViewer.download")}
                 >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+                    <Icon path={mdDownload} size={20} />
                 </ExternalLink>
             </div>
         );
     }, [activeFormat, gatewayDomain, copyFeedback, t]);
 
+    const checkerboardClassName =
+        "bg-surface-container-high bg-[radial-gradient(var(--md-sys-color-outline-variant)_1px,transparent_1px)]";
+
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 ios-glass-card border-miku/30 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.assetViewer.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.assetViewer.title")} <span className="text-miku">{t("page.assetViewer.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto font-light text-sm sm:text-base">
-                    {t("page.assetViewer.descriptionPrefix")}
-                    <button
-                        onClick={() => setShowTos(true)}
-                        className="text-miku hover:underline font-medium mx-1 focus:outline-none"
-                    >
-                        {t("page.assetViewer.descriptionLink")}
-                    </button>
-                    {t("page.assetViewer.descriptionSuffix")}
-                </p>
-            </div>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.assetViewer.badge")}
+                title={t("page.assetViewer.title")}
+                highlight={t("page.assetViewer.titleHighlight")}
+                description={
+                    <>
+                        {t("page.assetViewer.descriptionPrefix")}
+                        <button
+                            type="button"
+                            onClick={() => setShowTos(true)}
+                            className="focus-ring mx-1 rounded-md3-xs text-primary hover:underline"
+                        >
+                            {t("page.assetViewer.descriptionLink")}
+                        </button>
+                        {t("page.assetViewer.descriptionSuffix")}
+                    </>
+                }
+            />
 
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {/* Breadcrumbs Navigation & Actions */}
-                <div className="flex flex-wrap items-center justify-between gap-3 mb-4 p-4 ios-glass-card rounded-2xl">
-                    <div className="flex items-center gap-2">
+                <Surface tone="low" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
+                    <div className="flex min-w-0 items-center gap-2">
                         {(prefix || bundlePath) && (
-                            <button
+                            <IconButton
+                                icon={mdChevronLeft}
+                                size="xs"
                                 onClick={handleGoBack}
-                                className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-primary-text transition-all duration-200"
-                                title={t("page.assetViewer.parentDir")}
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
+                                label={t("page.assetViewer.parentDir")}
+                            />
                         )}
-                        <div className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400">
+                        <div className="flex min-w-0 flex-wrap items-center gap-1.5 type-label-l text-on-surface-variant">
                             {breadcrumbs.map((bc, index) => (
                                 <div key={`${bc.path}-${index}`} className="flex items-center gap-1.5">
-                                    {index > 0 && <span className="text-slate-300 dark:text-slate-700">/</span>}
+                                    {index > 0 && <span className="text-outline">/</span>}
                                     {bc.isBundle ? (
-                                        <span className="text-miku font-bold flex items-center gap-1 bg-miku/10 px-2 py-0.5 rounded-lg border border-miku/20">
-                                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
-                                            </svg>
+                                        <span className="flex items-center gap-1 rounded-md3-sm bg-primary-container px-2 py-0.5 type-label-l text-on-primary-container">
+                                            <Icon path={mdInventory2} size={16} />
                                             {bc.name}
                                         </span>
                                     ) : (
                                         <button
+                                            type="button"
                                             onClick={() => handleBreadcrumbClick(bc)}
-                                            className={`hover:text-miku transition-colors ${
+                                            className={`focus-ring rounded-md3-xs transition-colors hover:text-primary ${
                                                 index === breadcrumbs.length - 1 && !bundlePath
-                                                    ? "text-primary-text font-bold"
+                                                    ? "type-title-s text-on-surface"
                                                     : ""
                                             }`}
                                         >
@@ -963,133 +937,107 @@ function AssetViewerContent() {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-1 bg-slate-100/50 dark:bg-slate-900/30 p-1 rounded-xl border border-slate-200/30 dark:border-slate-800/30">
-                            <button
-                                onClick={() => handleViewModeChange("grid")}
-                                className={`p-1.5 rounded-lg transition-all ${
-                                    viewMode === "grid"
-                                        ? "bg-white dark:bg-slate-800 text-miku shadow-sm"
-                                        : "text-slate-400 hover:text-primary-text"
-                                }`}
-                                title={t("page.assetViewer.viewGrid")}
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25a2.25 2.25 0 01-2.25 2.25h-2.25A2.25 2.25 0 0113.5 8V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
-                                </svg>
-                            </button>
-                            <button
-                                onClick={() => handleViewModeChange("list")}
-                                className={`p-1.5 rounded-lg transition-all ${
-                                    viewMode === "list"
-                                        ? "bg-white dark:bg-slate-800 text-miku shadow-sm"
-                                        : "text-slate-400 hover:text-primary-text"
-                                }`}
-                                title={t("page.assetViewer.viewList")}
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 5.25h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5m-16.5 4.5h16.5" />
-                                </svg>
-                            </button>
-                        </div>
+                    <div className="flex items-center gap-2">
+                        <SegmentedButton
+                            className="w-auto"
+                            density={-2}
+                            showCheckmark={false}
+                            aria-label={t("page.assetViewer.viewGrid")}
+                            value={viewMode}
+                            onValueChange={(mode) => handleViewModeChange(mode)}
+                            options={[
+                                { value: "grid", label: <span className="sr-only">{t("page.assetViewer.viewGrid")}</span>, icon: mdGridView },
+                                { value: "list", label: <span className="sr-only">{t("page.assetViewer.viewList")}</span>, icon: mdViewList },
+                            ]}
+                        />
 
                         <LocalizedLink
                             href={`/asset-versions?server=${server}`}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-primary-text transition-all duration-200"
+                            className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                             title={t("layout.nav.items.assetVersions")}
+                            aria-label={t("layout.nav.items.assetVersions")}
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+                            <Icon path={mdHistory} size={20} />
                         </LocalizedLink>
 
-                        <button
+                        <IconButton
+                            icon={mdRefresh}
+                            size="xs"
                             onClick={() => fetchCurrentView(true)}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-400 hover:text-primary-text transition-all duration-200"
-                            title={t("common.action.refresh")}
-                        >
-                            <svg className={`w-4 h-4 ${isLoading ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
-                            </svg>
-                        </button>
+                            label={t("common.action.refresh")}
+                            className={isLoading ? "[&_svg]:animate-spin" : undefined}
+                        />
                     </div>
-                </div>
+                </Surface>
 
                 {/* Active Bundle Details Banner */}
                 {bundlePath && activeBundleMeta && (
-                    <div className="mb-4 p-5 ios-glass-card border-miku/30 bg-gradient-to-r from-miku/5 via-transparent to-purple-500/5 rounded-2xl flex flex-wrap items-center justify-between gap-4">
-                        <div className="flex items-center gap-3.5">
-                            <div className="p-3 rounded-2xl bg-miku/10 text-miku border border-miku/20 shrink-0">
+                    <Surface tone="default" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-4 p-5">
+                        <div className="flex min-w-0 items-center gap-3.5">
+                            <div className="shrink-0 rounded-md3-lg bg-primary-container p-3 text-on-primary-container">
                                 <ArchiveBundleIcon />
                             </div>
-                            <div>
-                                <h2 className="text-lg font-bold text-primary-text truncate max-w-xs sm:max-w-md" title={activeBundleMeta.path}>
+                            <div className="min-w-0">
+                                <h2 className="max-w-xs truncate type-title-l text-on-surface sm:max-w-md" title={activeBundleMeta.path}>
                                     {activeBundleMeta.path.split("/").pop()}
                                 </h2>
-                                <p className="text-xs text-slate-400 font-mono mt-0.5 truncate max-w-sm" title={activeBundleMeta.fingerprint || ""}>
+                                <p className="mt-0.5 max-w-sm truncate font-mono type-body-s text-on-surface-variant" title={activeBundleMeta.fingerprint || ""}>
                                     {activeBundleMeta.fingerprint ? `FP: ${activeBundleMeta.fingerprint}` : activeBundleMeta.path}
                                 </p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4 text-xs">
+                        <div className="flex items-center gap-4 type-body-s">
                             <div className="text-right">
-                                <span className="block text-slate-400">{t("page.assetViewer.fileCount")}</span>
-                                <span className="font-bold text-primary-text">{formatNumber(activeBundleMeta.fileCount)}</span>
+                                <span className="block text-on-surface-variant">{t("page.assetViewer.fileCount")}</span>
+                                <span className="type-label-l text-on-surface">{formatNumber(activeBundleMeta.fileCount)}</span>
                             </div>
-                            <div className="w-px h-7 bg-slate-200 dark:bg-slate-800" />
+                            <div className="h-7 w-px bg-outline-variant" />
                             <div className="text-right">
-                                <span className="block text-slate-400">{t("page.assetViewer.totalSize")}</span>
-                                <span className="font-bold text-primary-text">{formatBytes(activeBundleMeta.totalSize)}</span>
+                                <span className="block text-on-surface-variant">{t("page.assetViewer.totalSize")}</span>
+                                <span className="type-label-l text-on-surface">{formatBytes(activeBundleMeta.totalSize)}</span>
                             </div>
                             {activeBundleMeta.source && (
                                 <>
-                                    <div className="w-px h-7 bg-slate-200 dark:bg-slate-800" />
+                                    <div className="h-7 w-px bg-outline-variant" />
                                     <div className="text-right">
-                                        <span className="block text-slate-400">{t("page.assetViewer.source")}</span>
-                                        <span className="font-bold text-purple-400 uppercase text-[10px] px-1.5 py-0.5 bg-purple-500/10 rounded-md border border-purple-500/20">
+                                        <span className="block text-on-surface-variant">{t("page.assetViewer.source")}</span>
+                                        <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s uppercase text-on-tertiary-container">
                                             {activeBundleMeta.source}
                                         </span>
                                     </div>
                                 </>
                             )}
                         </div>
-                    </div>
+                    </Surface>
                 )}
 
                 {/* Loader */}
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState />
                 ) : error ? (
-                    <div className="p-6 text-center ios-glass-card border-red-500/20 bg-red-500/5 rounded-2xl">
-                        <p className="text-red-500 font-bold mb-3">{t("page.assetViewer.loadFailed")}</p>
-                        <p className="text-slate-500 text-xs mb-4">{error}</p>
-                        <button
-                            onClick={() => fetchCurrentView(true)}
-                            className="ios-glass-btn ios-glass-btn-primary px-4 py-2 text-xs rounded-xl"
-                        >
-                            {t("common.action.retry")}
-                        </button>
-                    </div>
+                    <ErrorState
+                        title={t("page.assetViewer.loadFailed")}
+                        message={error}
+                        retryLabel={t("common.action.retry")}
+                        onRetry={() => fetchCurrentView(true)}
+                    />
                 ) : (bundlePath ? processedAssetFiles.length === 0 : processedBundleItems.length === 0) ? (
-                    <div className="p-12 text-center ios-glass-card rounded-2xl text-slate-400">
-                        <svg className="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-                        </svg>
-                        <p>{t("page.assetViewer.emptyFolder")}</p>
-                    </div>
+                    <Surface tone="low" radius="xl">
+                        <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
+                    </Surface>
                 ) : (
                     <>
                         {/* Directory & Bundles Tree View (Without redundant text badges) */}
                         {!bundlePath ? (
                             viewMode === "grid" ? (
-                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                                     {processedBundleItems.map((item, index) => {
                                         const isDir = item.type === "directory";
                                         return (
-                                            <div
+                                            <Card
                                                 key={`${item.path}-${index}`}
+                                                variant="filled"
+                                                radius="lg"
                                                 onClick={() => {
                                                     saveCurrentViewScroll();
                                                     if (isDir) {
@@ -1098,42 +1046,45 @@ function AssetViewerContent() {
                                                         setBundlePath(item.path);
                                                     }
                                                 }}
-                                                className="group ios-glass-card ios-glass-card-interactive p-4 rounded-2xl flex items-center gap-3 cursor-pointer select-none"
+                                                className="group select-none p-4"
                                             >
-                                                <div className="shrink-0 p-2.5 rounded-xl bg-slate-100/50 dark:bg-slate-900/30 group-hover:scale-105 transition-transform duration-200">
-                                                    {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
-                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="shrink-0 rounded-md3-md bg-surface-container-low p-2.5">
+                                                        {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
+                                                    </div>
 
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="text-sm font-bold text-primary-text truncate group-hover:text-miku transition-colors duration-200" title={item.name}>
-                                                        {item.name}
-                                                    </p>
-                                                    <div className="mt-0.5 text-[11px] text-slate-400 font-medium truncate">
-                                                        {!isDir && (
-                                                            <span>
-                                                                {formatBytes(item.totalSize)}
-                                                                {item.fileCount !== undefined && ` • ${item.fileCount} files`}
-                                                            </span>
-                                                        )}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                            {item.name}
+                                                        </p>
+                                                        <div className="mt-0.5 truncate type-label-s text-on-surface-variant">
+                                                            {!isDir && (
+                                                                <span>
+                                                                    {formatBytes(item.totalSize)}
+                                                                    {item.fileCount !== undefined && ` • ${t("page.assetViewer.fileCountValue", { count: item.fileCount })}`}
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
+                                            </Card>
                                         );
                                     })}
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center px-4 py-2.5 text-xs font-bold text-slate-400 dark:text-slate-500 border-b border-slate-200/10 mb-1 select-none">
+                                    <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
                                         <div className="w-10"></div>
-                                        <div className="flex-1 min-w-0">{t("common.form.uid")}</div>
+                                        <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
                                         <div className="w-24 text-right">{t("page.assetViewer.fileCount")}</div>
-                                        <div className="w-28 text-right hidden sm:block">{t("page.assetViewer.totalSize")}</div>
+                                        <div className="hidden w-28 text-right sm:block">{t("page.assetViewer.totalSize")}</div>
                                     </div>
                                     {processedBundleItems.map((item, index) => {
                                         const isDir = item.type === "directory";
                                         return (
-                                            <div
+                                            <Card
                                                 key={`${item.path}-${index}`}
+                                                variant="filled"
                                                 onClick={() => {
                                                     saveCurrentViewScroll();
                                                     if (isDir) {
@@ -1142,23 +1093,25 @@ function AssetViewerContent() {
                                                         setBundlePath(item.path);
                                                     }
                                                 }}
-                                                className="group ios-glass-card ios-glass-card-interactive p-3 rounded-2xl flex items-center gap-3 cursor-pointer select-none"
+                                                className="group select-none p-3"
                                             >
-                                                <div className="shrink-0 p-1.5 rounded-lg bg-slate-100/50 dark:bg-slate-900/30 group-hover:scale-105 transition-transform duration-200">
-                                                    {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
+                                                <div className="flex items-center gap-3">
+                                                    <div className="shrink-0 rounded-md3-sm bg-surface-container-low p-1.5">
+                                                        {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
+                                                    </div>
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                            {item.name}
+                                                        </p>
+                                                    </div>
+                                                    <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
+                                                        {isDir ? "-" : (item.fileCount !== undefined ? t("page.assetViewer.fileCountValue", { count: item.fileCount }) : "-")}
+                                                    </div>
+                                                    <div className="hidden w-28 shrink-0 truncate text-right font-mono type-label-m text-on-surface-variant sm:block">
+                                                        {isDir ? "-" : formatBytes(item.totalSize)}
+                                                    </div>
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-primary-text truncate group-hover:text-miku transition-colors duration-200" title={item.name}>
-                                                        {item.name}
-                                                    </p>
-                                                </div>
-                                                <div className="w-24 shrink-0 text-right text-xs text-slate-400 font-medium">
-                                                    {isDir ? "-" : (item.fileCount !== undefined ? `${item.fileCount} files` : "-")}
-                                                </div>
-                                                <div className="w-28 shrink-0 text-right text-xs font-mono text-slate-400 truncate hidden sm:block">
-                                                    {isDir ? "-" : formatBytes(item.totalSize)}
-                                                </div>
-                                            </div>
+                                            </Card>
                                         );
                                     })}
                                 </div>
@@ -1166,115 +1119,122 @@ function AssetViewerContent() {
                         ) : (
                             /* Files inside Bundle (with direct Image Previews & Merged PNG+WEBP formats) */
                             viewMode === "grid" ? (
-                                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
                                     {processedAssetFiles.map((item) => (
-                                        <div
+                                        <Card
                                             key={item.id}
+                                            variant="filled"
+                                            radius="lg"
                                             onClick={() => {
                                                 setSelectedFile(item);
                                                 setActiveFormatIndex(0);
                                             }}
-                                            className="group ios-glass-card ios-glass-card-interactive p-3 rounded-2xl flex flex-col cursor-pointer select-none overflow-hidden"
+                                            className="group select-none p-3"
                                         >
-                                            {/* Direct Thumbnail Preview for Images */}
-                                            {item.isImage && item.primaryUrl ? (
-                                                <div className="relative w-full aspect-square rounded-xl overflow-hidden mb-2.5 flex items-center justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:8px_8px] bg-slate-100/80 dark:bg-slate-900/60 border border-slate-200/50 dark:border-slate-800/50">
-                                                    <img
-                                                        src={`${gatewayDomain}${item.primaryUrl}`}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        className="w-full h-full object-contain p-1.5 group-hover:scale-105 transition-transform duration-200"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLElement).style.display = "none";
-                                                        }}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="relative w-full aspect-square rounded-xl mb-2.5 flex items-center justify-center bg-slate-100/50 dark:bg-slate-900/30 border border-slate-200/30 dark:border-slate-800/30">
-                                                    {getFileIcon(item.name)}
-                                                </div>
-                                            )}
-
-                                            <div className="min-w-0 flex-1 flex flex-col justify-between">
-                                                <p className="text-xs font-bold text-primary-text truncate group-hover:text-miku transition-colors duration-200" title={item.name}>
-                                                    {item.name}
-                                                </p>
-
-                                                <div className="flex items-center justify-between gap-1 mt-1.5">
-                                                    {/* Formats Pills */}
-                                                    <div className="flex items-center gap-1">
-                                                        {item.formats.map((f) => (
-                                                            <span
-                                                                key={f.ext}
-                                                                className="px-1.5 py-0.2 text-[9px] font-bold rounded-md uppercase bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300/40 dark:border-slate-700/40"
-                                                            >
-                                                                {f.ext}
-                                                            </span>
-                                                        ))}
+                                            <div className="flex flex-col">
+                                                {/* Direct Thumbnail Preview for Images */}
+                                                {item.isImage && item.primaryUrl ? (
+                                                    <div className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${checkerboardClassName}`}>
+                                                        <img
+                                                            src={`${gatewayDomain}${item.primaryUrl}`}
+                                                            alt={item.name}
+                                                            loading="lazy"
+                                                            className="h-full w-full object-contain p-1.5"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLElement).style.display = "none";
+                                                            }}
+                                                        />
                                                     </div>
-                                                    <span className="text-[10px] text-slate-400 font-medium">
-                                                        {formatBytes(item.totalSize)}
-                                                    </span>
+                                                ) : (
+                                                    <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center rounded-md3-md bg-surface-container-low">
+                                                        {getFileIcon(item.name)}
+                                                    </div>
+                                                )}
+
+                                                <div className="flex min-w-0 flex-1 flex-col justify-between">
+                                                    <p className="truncate type-label-l text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                        {item.name}
+                                                    </p>
+
+                                                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                                                        {/* Formats Pills */}
+                                                        <div className="flex items-center gap-1">
+                                                            {item.formats.map((f) => (
+                                                                <span
+                                                                    key={f.ext}
+                                                                    className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                                                >
+                                                                    {f.ext}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                        <span className="type-label-s text-on-surface-variant">
+                                                            {formatBytes(item.totalSize)}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </Card>
                                     ))}
                                 </div>
                             ) : (
                                 <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center px-4 py-2.5 text-xs font-bold text-slate-400 dark:text-slate-500 border-b border-slate-200/10 mb-1 select-none">
+                                    <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
                                         <div className="w-12"></div>
-                                        <div className="flex-1 min-w-0">{t("common.form.uid")}</div>
-                                        <div className="w-32 text-center font-normal">Formats</div>
+                                        <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
+                                        <div className="w-32 text-center">{t("page.assetViewer.formats")}</div>
                                         <div className="w-24 text-right">{t("page.assetViewer.size")}</div>
                                     </div>
                                     {processedAssetFiles.map((item) => (
-                                        <div
+                                        <Card
                                             key={item.id}
+                                            variant="filled"
                                             onClick={() => {
                                                 setSelectedFile(item);
                                                 setActiveFormatIndex(0);
                                             }}
-                                            className="group ios-glass-card ios-glass-card-interactive p-2.5 rounded-2xl flex items-center gap-3 cursor-pointer select-none"
+                                            className="group select-none p-2.5"
                                         >
-                                            {/* Thumbnail preview in list mode */}
-                                            <div className="shrink-0 w-10 h-10 rounded-lg overflow-hidden bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:6px_6px] bg-slate-100 dark:bg-slate-900 flex items-center justify-center border border-slate-200/50 dark:border-slate-800/50">
-                                                {item.isImage && item.primaryUrl ? (
-                                                    <img
-                                                        src={`${gatewayDomain}${item.primaryUrl}`}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        className="w-full h-full object-contain p-0.5 group-hover:scale-105 transition-transform duration-200"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLElement).style.display = "none";
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    getFileIcon(item.name)
-                                                )}
-                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {/* Thumbnail preview in list mode */}
+                                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md3-sm [background-size:6px_6px] ${checkerboardClassName}`}>
+                                                    {item.isImage && item.primaryUrl ? (
+                                                        <img
+                                                            src={`${gatewayDomain}${item.primaryUrl}`}
+                                                            alt={item.name}
+                                                            loading="lazy"
+                                                            className="h-full w-full object-contain p-0.5"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLElement).style.display = "none";
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        getFileIcon(item.name)
+                                                    )}
+                                                </div>
 
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-sm font-bold text-primary-text truncate group-hover:text-miku transition-colors duration-200" title={item.name}>
-                                                    {item.name}
-                                                </p>
-                                            </div>
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                        {item.name}
+                                                    </p>
+                                                </div>
 
-                                            <div className="w-32 shrink-0 flex items-center justify-center gap-1">
-                                                {item.formats.map((f) => (
-                                                    <span
-                                                        key={f.ext}
-                                                        className="px-1.5 py-0.2 text-[9px] font-bold rounded-md uppercase bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-300/40 dark:border-slate-700/40"
-                                                    >
-                                                        {f.ext}
-                                                    </span>
-                                                ))}
-                                            </div>
+                                                <div className="flex w-32 shrink-0 items-center justify-center gap-1">
+                                                    {item.formats.map((f) => (
+                                                        <span
+                                                            key={f.ext}
+                                                            className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                                        >
+                                                            {f.ext}
+                                                        </span>
+                                                    ))}
+                                                </div>
 
-                                            <div className="w-24 shrink-0 text-right text-xs text-slate-400 font-medium">
-                                                {formatBytes(item.totalSize)}
+                                                <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
+                                                    {formatBytes(item.totalSize)}
+                                                </div>
                                             </div>
-                                        </div>
+                                        </Card>
                                     ))}
                                 </div>
                             )
@@ -1283,28 +1243,29 @@ function AssetViewerContent() {
                         {/* Load Next Page Cursor */}
                         {nextCursor && (
                             <div className="mt-8 flex justify-center">
-                                <button
+                                <Button
+                                    variant="tonal"
+                                    size="m"
                                     onClick={fetchMore}
                                     disabled={isLoadingMore}
-                                    className="ios-glass-btn ios-glass-btn-primary px-8 py-3 font-bold rounded-2xl flex items-center gap-2"
                                 >
                                     {isLoadingMore ? (
-                                        <div className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                                        <CircularProgress size={20} />
                                     ) : (
                                         <>
                                             {t("page.assetViewer.loadMore")}
-                                            <span className="text-xs font-semibold opacity-75 bg-black/10 dark:bg-white/10 px-2 py-0.5 rounded-full">
+                                            <span className="type-label-l opacity-80">
                                                 {formatNumber(bundlePath ? mergedAssetFiles.length : bundleItems.length)}
                                             </span>
                                         </>
                                     )}
-                                </button>
+                                </Button>
                             </div>
                         )}
 
                         {/* All Loaded Message */}
                         {!nextCursor && (bundlePath ? processedAssetFiles.length > 0 : processedBundleItems.length > 0) && (
-                            <div className="mt-8 text-center text-slate-400 text-sm font-medium">
+                            <div className="mt-8 text-center type-body-m text-on-surface-variant">
                                 {t("page.assetViewer.allLoaded", { count: bundlePath ? processedAssetFiles.length : processedBundleItems.length })}
                             </div>
                         )}
@@ -1329,55 +1290,52 @@ function AssetViewerContent() {
                     <div className="space-y-6">
                         {/* Format Switcher Tabs (if multiple formats exist, e.g. WEBP + PNG) */}
                         {selectedFile.formats.length > 1 && (
-                            <div className="flex items-center justify-center gap-2 p-1.5 bg-slate-100 dark:bg-slate-900/60 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                                {selectedFile.formats.map((f, idx) => (
-                                    <button
-                                        key={f.ext}
-                                        onClick={() => {
-                                            setActiveFormatIndex(idx);
-                                            setPreviewText(null);
-                                        }}
-                                        className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
-                                            activeFormatIndex === idx
-                                                ? "bg-white dark:bg-slate-800 text-miku shadow-sm border border-slate-200/60 dark:border-slate-700/60"
-                                                : "text-slate-400 hover:text-primary-text"
-                                        }`}
-                                    >
-                                        <span className="uppercase">{f.ext}</span>
-                                        <span className="text-[10px] font-mono opacity-75">{formatBytes(f.size)}</span>
-                                    </button>
-                                ))}
-                            </div>
+                            <SegmentedButton
+                                value={String(activeFormatIndex)}
+                                onValueChange={(v) => {
+                                    setActiveFormatIndex(Number(v));
+                                    setPreviewText(null);
+                                }}
+                                options={selectedFile.formats.map((f, idx) => ({
+                                    value: String(idx),
+                                    label: (
+                                        <span className="flex items-center gap-2">
+                                            <span className="uppercase">{f.ext}</span>
+                                            <span className="font-mono type-label-s opacity-75">{formatBytes(f.size)}</span>
+                                        </span>
+                                    ),
+                                }))}
+                            />
                         )}
 
                         {/* File Details Grid */}
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/50 text-xs sm:text-sm space-y-2.5">
+                        <div className="space-y-2.5 rounded-md3-lg bg-surface-container p-4 type-body-s sm:type-body-m">
                             <div className="flex justify-between gap-4">
-                                <span className="text-slate-400 font-medium shrink-0">{t("page.assetViewer.size")}</span>
-                                <span className="text-primary-text font-bold text-right">{formatBytes(activeFormat.size)}</span>
+                                <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.size")}</span>
+                                <span className="text-right type-label-l text-on-surface">{formatBytes(activeFormat.size)}</span>
                             </div>
                             {selectedFile.version && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-slate-400 font-medium shrink-0">{t("page.assetViewer.version")}</span>
-                                    <span className="text-primary-text font-mono text-right">{selectedFile.version}</span>
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.version")}</span>
+                                    <span className="text-right font-mono text-on-surface">{selectedFile.version}</span>
                                 </div>
                             )}
                             {selectedFile.source && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-slate-400 font-medium shrink-0">{t("page.assetViewer.source")}</span>
-                                    <span className="text-primary-text capitalize text-right">{selectedFile.source}</span>
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.source")}</span>
+                                    <span className="text-right capitalize text-on-surface">{selectedFile.source}</span>
                                 </div>
                             )}
                             {activeFormat.fingerprint && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="text-slate-400 font-medium shrink-0">{t("page.assetViewer.fingerprint")}</span>
-                                    <span className="text-primary-text font-mono text-right truncate max-w-[200px]" title={activeFormat.fingerprint}>{activeFormat.fingerprint}</span>
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.fingerprint")}</span>
+                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={activeFormat.fingerprint}>{activeFormat.fingerprint}</span>
                                 </div>
                             )}
                             {activeFormat.sha256 && (
-                                <div className="flex flex-col gap-1 pt-1.5 border-t border-slate-200/40 dark:border-slate-800/40">
-                                    <span className="text-slate-400 font-medium">{t("page.assetViewer.sha256")}</span>
-                                    <span className="text-primary-text font-mono text-[10px] sm:text-xs select-all break-all">{activeFormat.sha256}</span>
+                                <div className="flex flex-col gap-1 border-t border-outline-variant pt-1.5">
+                                    <span className="text-on-surface-variant">{t("page.assetViewer.sha256")}</span>
+                                    <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">{activeFormat.sha256}</span>
                                 </div>
                             )}
                         </div>
@@ -1385,11 +1343,11 @@ function AssetViewerContent() {
                         {/* Inline Previews */}
                         <div className="flex flex-col items-center justify-center">
                             {selectedFile.isImage && activeFormat.url && (
-                                <div className="relative w-full max-h-72 flex justify-center bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:10px_10px] bg-slate-100/80 dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
+                                <div className={`relative flex max-h-72 w-full justify-center rounded-md3-lg p-4 [background-size:10px_10px] ${checkerboardClassName}`}>
                                     <img
                                         src={`${gatewayDomain}${activeFormat.url}`}
                                         alt={activeFormat.name}
-                                        className="max-h-64 object-contain rounded-lg"
+                                        className="max-h-64 rounded-md3-sm object-contain"
                                         onError={(e) => {
                                             (e.target as HTMLElement).style.display = "none";
                                         }}
@@ -1398,11 +1356,9 @@ function AssetViewerContent() {
                             )}
 
                             {selectedFile.isAudio && activeFormat.url && (
-                                <div className="w-full p-4 bg-slate-100/50 dark:bg-slate-900/30 rounded-2xl border border-slate-200/50 dark:border-slate-800/50">
-                                    <p className="text-xs text-slate-400 font-bold mb-2 flex items-center gap-1.5">
-                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" />
-                                        </svg>
+                                <div className="w-full rounded-md3-lg bg-surface-container p-4">
+                                    <p className="mb-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
+                                        <Icon path={mdVolumeUp} size={18} />
                                         {t("page.assetViewer.playAudio")}
                                     </p>
                                     <audio
@@ -1416,35 +1372,39 @@ function AssetViewerContent() {
                             {selectedFile.isText && activeFormat.url && (
                                 <div className="w-full">
                                     {previewText === null && !isPreviewTextLoading && !previewTextError && (
-                                        <button
+                                        <Button
+                                            variant="filled"
+                                            size="m"
+                                            fullWidth
+                                            icon={mdDescription}
                                             onClick={() => handleFetchPreviewText(activeFormat)}
-                                            className="w-full py-3 ios-glass-btn ios-glass-btn-primary font-bold rounded-2xl text-sm"
                                         >
                                             {t("page.assetViewer.previewText")}
-                                        </button>
+                                        </Button>
                                     )}
 
                                     {isPreviewTextLoading && (
                                         <div className="flex justify-center p-6">
-                                            <div className="loading-spinner loading-spinner-sm" />
+                                            <CircularProgress size={32} />
                                         </div>
                                     )}
 
                                     {previewTextError && (
-                                        <p className="text-xs text-red-500 text-center font-medium bg-red-500/5 p-3 rounded-xl border border-red-500/10">
-                                            {previewTextError}
-                                        </p>
+                                        <Banner tone="error">{previewTextError}</Banner>
                                     )}
 
                                     {previewText !== null && (
                                         <div className="relative w-full">
-                                            <button
+                                            <Button
+                                                variant="tonal"
+                                                size="xs"
+                                                icon={copyFeedback ? mdCheck : mdContentCopy}
+                                                className="absolute right-3 top-3"
                                                 onClick={() => handleCopyToClipboard(previewText)}
-                                                className="absolute right-3 top-3 px-2.5 py-1 text-[10px] font-bold bg-slate-800/80 hover:bg-slate-800 text-white rounded-lg transition-colors border border-slate-700"
                                             >
                                                 {copyFeedback ? t("page.assetViewer.copied") : t("common.action.copy")}
-                                            </button>
-                                            <pre className="w-full overflow-auto bg-slate-950 p-4 rounded-2xl text-[10px] sm:text-xs font-mono text-emerald-400 max-h-[35vh] border border-slate-800 whitespace-pre select-all custom-scrollbar">
+                                            </Button>
+                                            <pre className="custom-scrollbar max-h-[35vh] w-full select-all overflow-auto whitespace-pre rounded-md3-lg bg-surface-container-highest p-4 font-mono type-label-s text-on-surface sm:type-label-m">
                                                 <code>{previewText}</code>
                                             </pre>
                                         </div>
@@ -1458,7 +1418,7 @@ function AssetViewerContent() {
 
             {/* Terms of Service Overlay Modal */}
             <AssetTosModal open={showTos} onOpenChange={setShowTos} />
-        </div>
+        </PageContainer>
     );
 }
 
@@ -1467,7 +1427,7 @@ export default function AssetViewerClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.assetViewer.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState label={t("page.assetViewer.loadingFallback")} />}>
                 <AssetViewerContent />
             </Suspense>
         </MainLayout>

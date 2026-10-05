@@ -14,6 +14,20 @@ import { normalizeOffsetMs } from "@/lib/chart-preview/url";
 import { HudTimeline } from "@/lib/chart-preview/hudTimeline";
 import { generateOverlayV3BackgroundObjectUrl } from "@/lib/chart-preview/overlayBackgroundGen";
 import { MOE_LOGO_URL } from "@/lib/assets";
+import { Button, Chip, Icon, IconButton, LoadingIndicator } from "@/components/md3";
+import {
+    mdBookmark,
+    mdErrorFill,
+    mdFitScreen,
+    mdFullscreen,
+    mdFullscreenExit,
+    mdLock,
+    mdLockOpen,
+    mdPauseFill,
+    mdPlayArrowFill,
+    mdReplay,
+    mdStopFill,
+} from "@/components/md3/icons";
 import "./hud.css";
 
 const defaultConfig: PreviewRuntimeConfig = {
@@ -1536,24 +1550,20 @@ export default function ChartPreviewPlayer({
     const isCompactControls = isPseudoFullscreen;
     const fullscreenHeight = viewport.height > 0 ? `${viewport.height}px` : "100dvh";
     const wrapperClassName = isPseudoFullscreen
-        ? "fixed inset-0 z-[150] bg-black"
+        ? "fixed inset-0 z-[150] bg-scrim"
         : isNativeFullscreen
-            ? "h-full w-full bg-black"
+            ? "h-full w-full bg-scrim"
             : "flex flex-col gap-3 w-full";
-    const contentClassName = isFullscreen ? "relative h-full w-full bg-black" : "flex flex-col gap-3";
-    const panelClassName = `relative overflow-hidden bg-slate-900 ${isFullscreen ? "rounded-none" : "rounded-xl"}`;
+    const contentClassName = isFullscreen ? "relative h-full w-full bg-scrim" : "flex flex-col gap-3";
+    const panelClassName = `relative overflow-hidden bg-scrim ${isFullscreen ? "rounded-none" : "rounded-md3-lg"}`;
     const controlsClassName = isFullscreen
-        ? "absolute bottom-0 left-0 right-0 z-30 flex flex-col gap-2.5 border-t border-slate-800 bg-slate-950/92 px-4 pt-3 backdrop-blur-md transition-all duration-300"
-        : "flex flex-col gap-3 rounded-xl border border-slate-200 bg-white/80 p-4 backdrop-blur-sm";
-    const timeClassName = `${isCompactControls ? "text-[11px]" : "text-xs"} ml-auto font-mono shrink min-w-0 truncate text-right ${isFullscreen ? "text-slate-400" : "text-slate-500"}`;
-    const secondaryButtonClassName = `${isCompactControls ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm"} rounded-lg font-medium transition-colors ${isFullscreen ? "bg-slate-700 text-slate-200 hover:bg-slate-600" : "bg-slate-200 text-slate-700 hover:bg-slate-300"}`;
-    const chipClassName = isFullscreen
-        ? "border-slate-700 bg-slate-800/80 hover:bg-slate-700/80"
-        : "border-slate-200 bg-slate-50/60 hover:bg-slate-50";
-    const fieldTextClassName = `${isFullscreen ? "text-slate-300" : "text-slate-600"} ${isCompactControls ? "text-[11px]" : "text-xs"} font-bold`;
-    const fieldInputClassName = isFullscreen
-        ? "border-slate-700 bg-slate-800 text-slate-200"
-        : "border-slate-200 bg-white text-slate-700";
+        ? "absolute bottom-0 left-0 right-0 z-30 flex flex-col gap-2.5 border-t border-outline-variant bg-surface-container/95 px-4 pt-3 text-on-surface transition-opacity duration-300 ease-md3-standard"
+        : "flex flex-col gap-3 rounded-md3-xl bg-surface-container-low p-4 text-on-surface";
+    const timeClassName = `${isCompactControls ? "type-label-s" : "type-label-m"} ml-auto font-mono shrink min-w-0 truncate text-right text-on-surface-variant`;
+    const chipClassName = "border-outline-variant bg-surface-container-lowest";
+    const fieldTextClassName = `text-on-surface-variant ${isCompactControls ? "type-label-s" : "type-label-m"}`;
+    const fieldInputClassName = "border-outline-variant bg-surface-container-lowest text-on-surface";
+    const buttonSize = isCompactControls ? "xs" : "s";
 
     return (
         <div
@@ -1565,7 +1575,7 @@ export default function ChartPreviewPlayer({
         >
             <div className={contentClassName} style={isPseudoFullscreen ? { minHeight: fullscreenHeight } : undefined}>
                 <div
-                    className={isFullscreen ? "flex h-full w-full items-center justify-center bg-black" : "w-full"}
+                    className={isFullscreen ? "flex h-full w-full items-center justify-center bg-scrim" : "w-full"}
                     style={isPseudoFullscreen ? { paddingTop: "env(safe-area-inset-top)" } : isNativeFullscreen ? { padding: 16 } : undefined}
                 >
                     <div
@@ -1641,12 +1651,15 @@ export default function ChartPreviewPlayer({
                         </div>
 
                         {showStatus && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center backdrop-blur-[10px]" style={{ background: 'rgba(3, 7, 12, 0.28)' }}>
+                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-scrim/32">
                                 <div className={`flex flex-col items-center ${isCompactControls ? "gap-3 p-4" : "gap-4 p-6"}`}>
                                     {previewState !== "error" ? (
                                         <div
                                             className={`chart-preview-logo-fill ${isCompactControls ? "h-10 w-40" : "h-14 w-56 sm:h-16 sm:w-64"}`}
                                             style={{
+                                                backgroundImage:
+                                                    "linear-gradient(to right, var(--md-sys-color-primary-container) 33%, var(--md-sys-color-primary) 33%, rgba(255,255,255,0.15) 66%, var(--md-sys-color-primary-container) 66%)",
+                                                backgroundSize: "300% 100%",
                                                 maskImage: `url(${MOE_LOGO_URL})`,
                                                 maskSize: "contain",
                                                 maskPosition: "center",
@@ -1660,39 +1673,41 @@ export default function ChartPreviewPlayer({
                                             aria-label="Loading"
                                         />
                                     ) : (
-                                        <svg className={isCompactControls ? "h-8 w-8 text-red-400" : "h-10 w-10 text-red-400"} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
+                                        <Icon path={mdErrorFill} size={isCompactControls ? 32 : 40} className="text-error-container" />
                                     )}
                                     <div className="text-center">
-                                        <div className={`font-medium text-white ${isCompactControls ? "mb-0.5 text-xs" : "mb-1 text-sm"}`}>{statusTitle}</div>
-                                        <div className={`text-slate-400 ${isCompactControls ? "text-[10px]" : "text-xs"}`}>{statusText}</div>
+                                        {/* Text sits on the dark game playfield, so it stays light in both themes. */}
+                                        <div className={`text-white ${isCompactControls ? "mb-0.5 type-label-l" : "mb-1 type-title-s"}`}>{statusTitle}</div>
+                                        <div className={`text-white/70 ${isCompactControls ? "type-label-s" : "type-body-s"}`}>{statusText}</div>
                                     </div>
                                 </div>
                             </div>
                         )}
 
                         {requiresGesture && (
-                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-900/80 backdrop-blur-sm">
+                            <div className="absolute inset-0 z-20 flex items-center justify-center bg-scrim/80">
                                 <div className={`text-center ${isCompactControls ? "p-4" : "p-6"}`}>
-                                    <div className={`font-medium text-white ${isCompactControls ? "mb-1 text-sm" : "mb-2 text-lg"}`}>{t("page.chartPreview.player.audioGestureTitle")}</div>
-                                    {!isCompactControls && <div className="mb-4 text-sm text-slate-400">{t("page.chartPreview.player.audioGestureDescription")}</div>}
-                                    <button
-                                        type="button"
+                                    <div className={`text-white ${isCompactControls ? "mb-1 type-title-s" : "mb-2 type-title-l"}`}>{t("page.chartPreview.player.audioGestureTitle")}</div>
+                                    {!isCompactControls && <div className="mb-4 type-body-m text-white/70">{t("page.chartPreview.player.audioGestureDescription")}</div>}
+                                    <Button
+                                        variant="filled"
+                                        size={buttonSize}
+                                        icon={mdPlayArrowFill}
                                         onClick={handleUnlock}
-                                        className={`rounded-lg bg-miku text-white transition-colors hover:bg-miku/90 ${isCompactControls ? "mt-2 px-4 py-1.5 text-sm" : "px-6 py-2"}`}
+                                        className={isCompactControls ? "mt-2" : undefined}
                                     >
                                         {t("page.chartPreview.player.startAudio")}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
 
                         {bgmLoading && (
-                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm">
-                                <div className={`text-center ${isCompactControls ? "p-4" : "p-6"}`}>
-                                    <div className={`font-medium text-white ${isCompactControls ? "mb-1 text-sm" : "mb-2 text-lg"}`}>{t("page.chartPreview.player.loadingSongTitle")}</div>
-                                    <div className={isCompactControls ? "text-xs text-slate-400" : "text-sm text-slate-400"}>{t("page.chartPreview.player.loadingSongDescription")}</div>
+                            <div className="absolute inset-0 z-10 flex items-center justify-center bg-scrim/60">
+                                <div className={`flex flex-col items-center text-center ${isCompactControls ? "gap-1 p-4" : "gap-2 p-6"}`}>
+                                    <LoadingIndicator size={isCompactControls ? 32 : 48} />
+                                    <div className={`text-white ${isCompactControls ? "type-title-s" : "type-title-l"}`}>{t("page.chartPreview.player.loadingSongTitle")}</div>
+                                    <div className={`text-white/70 ${isCompactControls ? "type-body-s" : "type-body-m"}`}>{t("page.chartPreview.player.loadingSongDescription")}</div>
                                 </div>
                             </div>
                         )}
@@ -1701,25 +1716,15 @@ export default function ChartPreviewPlayer({
 
                 {/* Lock button — fullscreen only, always visible in top-right corner */}
                 {isFullscreen && (
-                    <button
-                        type="button"
+                    <IconButton
+                        icon={mdLockOpen}
+                        selectedIcon={mdLock}
+                        selected={controlsLocked}
+                        variant={controlsLocked ? "filled" : "tonal"}
                         onClick={handleControlsLockToggle}
-                        className={`absolute top-3 right-3 z-40 flex h-9 w-9 items-center justify-center rounded-full transition-all duration-300 ${controlsLocked
-                            ? "bg-miku/80 text-white shadow-lg"
-                            : "bg-slate-900/50 text-slate-300 hover:bg-slate-900/70"
-                            }`}
-                        title={controlsLocked ? t("page.chartPreview.player.unlockControls") : t("page.chartPreview.player.lockControls")}
-                    >
-                        {controlsLocked ? (
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                            </svg>
-                        ) : (
-                            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-                            </svg>
-                        )}
-                    </button>
+                        className="absolute top-3 right-3 z-40"
+                        label={controlsLocked ? t("page.chartPreview.player.unlockControls") : t("page.chartPreview.player.lockControls")}
+                    />
                 )}
 
                 <div
@@ -1732,69 +1737,60 @@ export default function ChartPreviewPlayer({
                         }
                         : undefined}
                 >
-                    <div className={isFullscreen ? "flex items-center justify-between" : "flex min-w-0 items-center gap-2"}>
+                    <div className={isFullscreen ? "flex items-center justify-between" : "flex min-w-0 flex-wrap items-center gap-2"}>
                         {/* Left buttons */}
                         <div className={isFullscreen ? "flex items-center gap-2" : "contents"}>
-                        <button
-                            type="button"
-                            onClick={handlePlayToggle}
-                            disabled={bgmLoading || previewState !== "ready"}
-                            title={isPlaying ? t("page.chartPreview.player.pause") : t("page.chartPreview.player.play")}
-                            className={`${isFullscreen ? "flex h-9 w-9 items-center justify-center rounded-full bg-miku text-white hover:bg-miku/90" : `${isCompactControls ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm"} shrink-0 rounded-lg bg-miku font-medium text-white hover:bg-miku/90`} transition-colors disabled:cursor-not-allowed disabled:opacity-50`}
-                        >
-                            {isPlaying ? (
-                                <svg className={isFullscreen ? "h-4 w-4" : "hidden"} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z" />
-                                </svg>
+                            {isFullscreen ? (
+                                <>
+                                    <IconButton
+                                        icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+                                        variant="filled"
+                                        onClick={handlePlayToggle}
+                                        disabled={bgmLoading || previewState !== "ready"}
+                                        label={isPlaying ? t("page.chartPreview.player.pause") : t("page.chartPreview.player.play")}
+                                    />
+                                    <IconButton icon={mdStopFill} variant="tonal" onClick={handleStop} label={t("page.chartPreview.player.stop")} />
+                                    <IconButton icon={mdBookmark} variant="tonal" onClick={handleMark} label={t("page.chartPreview.player.markCurrentTime")} />
+                                    <IconButton
+                                        icon={mdReplay}
+                                        variant={markedTime !== null && !markFlash ? "filled" : "tonal"}
+                                        onClick={handleJump}
+                                        disabled={markedTime === null}
+                                        label={markedTime !== null ? t("page.chartPreview.player.jumpToTime", { time: formatTime(markedTime) }) : t("page.chartPreview.player.noMarkedTime")}
+                                    />
+                                </>
                             ) : (
-                                <svg className={isFullscreen ? "h-4 w-4" : "hidden"} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M8 5v14l11-7z" />
-                                </svg>
+                                <>
+                                    <Button
+                                        variant="filled"
+                                        size={buttonSize}
+                                        icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+                                        className="shrink-0"
+                                        onClick={handlePlayToggle}
+                                        disabled={bgmLoading || previewState !== "ready"}
+                                        title={isPlaying ? t("page.chartPreview.player.pause") : t("page.chartPreview.player.play")}
+                                    >
+                                        {isPlaying ? t("page.chartPreview.player.pause") : t("page.chartPreview.player.play")}
+                                    </Button>
+                                    <Button variant="tonal" size={buttonSize} icon={mdStopFill} className="shrink-0" onClick={handleStop} title={t("page.chartPreview.player.stop")}>
+                                        {t("page.chartPreview.player.stop")}
+                                    </Button>
+                                    <Button variant="tonal" size={buttonSize} icon={mdBookmark} className="shrink-0" onClick={handleMark} title={t("page.chartPreview.player.markCurrentTime")}>
+                                        {t("page.chartPreview.player.mark")}
+                                    </Button>
+                                    <Button
+                                        variant={markedTime !== null && !markFlash ? "filled" : "tonal"}
+                                        size={buttonSize}
+                                        icon={mdReplay}
+                                        className="shrink-0"
+                                        onClick={handleJump}
+                                        disabled={markedTime === null}
+                                        title={markedTime !== null ? t("page.chartPreview.player.jumpToTime", { time: formatTime(markedTime) }) : t("page.chartPreview.player.noMarkedTime")}
+                                    >
+                                        {t("page.chartPreview.player.jump")}
+                                    </Button>
+                                </>
                             )}
-                            {!isFullscreen && (isPlaying ? t("page.chartPreview.player.pause") : t("page.chartPreview.player.play"))}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={handleStop}
-                            title={t("page.chartPreview.player.stop")}
-                            className={`${isFullscreen ? "flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600" : `${secondaryButtonClassName}`} shrink-0 transition-colors`}
-                        >
-                            {isFullscreen ? (
-                                <svg className="h-4 w-4" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M6 6h12v12H6z" />
-                                </svg>
-                            ) : t("page.chartPreview.player.stop")}
-                        </button>
-                        {/* Mark button */}
-                        <button
-                            type="button"
-                            onClick={handleMark}
-                            title={t("page.chartPreview.player.markCurrentTime")}
-                            className={`${isFullscreen ? "flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-slate-200 hover:bg-slate-600" : `${secondaryButtonClassName}`} shrink-0 transition-colors`}
-                        >
-                            {isFullscreen ? (
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z" />
-                                </svg>
-                            ) : t("page.chartPreview.player.mark")}
-                        </button>
-                        {/* Jump button */}
-                        <button
-                            type="button"
-                            onClick={handleJump}
-                            disabled={markedTime === null}
-                            title={markedTime !== null ? t("page.chartPreview.player.jumpToTime", { time: formatTime(markedTime) }) : t("page.chartPreview.player.noMarkedTime")}
-                            className={`${isFullscreen
-                                ? `flex h-9 w-9 items-center justify-center rounded-full transition-colors ${markedTime !== null ? `${markFlash ? "bg-slate-700 text-slate-400" : "bg-miku text-white hover:bg-miku/90"}` : "bg-slate-700 text-slate-500 cursor-not-allowed"}`
-                                : `${isCompactControls ? "px-3 py-1.5 text-xs" : "px-4 py-1.5 text-sm"} shrink-0 rounded-lg font-medium transition-colors ${markedTime !== null ? `${markFlash ? "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500" : "bg-miku text-white hover:bg-miku/90"}` : "bg-slate-200 text-slate-400 dark:bg-slate-700 dark:text-slate-500 cursor-not-allowed"}`
-                            }`}
-                        >
-                            {isFullscreen ? (
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z" />
-                                </svg>
-                            ) : t("page.chartPreview.player.jump")}
-                        </button>
                         </div>
                         {/* Non-fullscreen time (original position) */}
                         {!isFullscreen && (
@@ -1807,16 +1803,12 @@ export default function ChartPreviewPlayer({
                             <span className={timeClassName}>
                                 {formatTime(currentTime)} / {formatTime(duration)}
                             </span>
-                            <button
-                                type="button"
+                            <IconButton
+                                icon={mdFullscreenExit}
+                                variant="tonal"
                                 onClick={handleFullscreenToggle}
-                                title={t("page.chartPreview.player.exitFullscreen")}
-                                className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-700 text-slate-200 transition-colors hover:bg-slate-600"
-                            >
-                                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 9L9 4.5M9 9L4.5 9M9 9L3.75 3.75M9 15L9 19.5M9 15L4.5 15M9 15L3.75 20.25M15 9H19.5M15 9V4.5M15 9L20.25 3.75M15 15H19.5M15 15L15 19.5M15 15L20.25 20.25" />
-                                </svg>
-                            </button>
+                                label={t("page.chartPreview.player.exitFullscreen")}
+                            />
                         </div>
                     </div>
 
@@ -1827,12 +1819,12 @@ export default function ChartPreviewPlayer({
                         step={0.001}
                         value={Math.min(currentTime, duration || currentTime)}
                         onChange={handleSeek}
-                        className={`w-full cursor-pointer accent-miku ${isCompactControls ? "h-1.5" : "h-2"}`}
+                        className={`w-full cursor-pointer accent-primary ${isCompactControls ? "h-1.5" : "h-2"}`}
                     />
 
                     {!isFullscreen && (
                         <div className={`flex flex-wrap items-center ${isCompactControls ? "gap-1.5" : "gap-2"}`}>
-                            <label className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${chipClassName}`}>
+                            <label className={`flex h-10 items-center gap-1.5 rounded-md3-sm border px-3 ${chipClassName}`}>
                                 <span className={fieldTextClassName}>{t("page.chartPreview.player.speed")}</span>
                                 <input
                                     ref={speedInputRef}
@@ -1841,11 +1833,11 @@ export default function ChartPreviewPlayer({
                                     step={0.05}
                                     value={speedText}
                                     onChange={handleSpeedChange}
-                                    className={`${isCompactControls ? "w-14" : "w-16"} rounded-lg border px-1.5 py-0.5 text-center text-xs font-medium transition-colors ${speedError ? "border-red-400 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 dark:border-red-500 animate-pulse" : fieldInputClassName}`}
+                                    className={`${isCompactControls ? "w-14" : "w-16"} focus-ring rounded-md3-xs border px-1.5 py-0.5 text-center type-label-m transition-colors ${speedError ? "animate-pulse border-error bg-error-container text-on-error-container" : fieldInputClassName}`}
                                 />
                             </label>
 
-                            <label className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${chipClassName}`}>
+                            <label className={`flex h-10 items-center gap-1.5 rounded-md3-sm border px-3 ${chipClassName}`}>
                                 <span className={fieldTextClassName}>noteSpeed</span>
                                 <input
                                     type="number"
@@ -1854,11 +1846,11 @@ export default function ChartPreviewPlayer({
                                     step={0.1}
                                     value={noteSpeed || ""}
                                     onChange={handleNoteSpeedChange}
-                                    className={`${isCompactControls ? "w-12" : "w-14"} rounded-lg border px-1.5 py-0.5 text-center text-xs font-medium ${fieldInputClassName}`}
+                                    className={`${isCompactControls ? "w-12" : "w-14"} focus-ring rounded-md3-xs border px-1.5 py-0.5 text-center type-label-m ${fieldInputClassName}`}
                                 />
                             </label>
 
-                            <label className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${chipClassName}`}>
+                            <label className={`flex h-10 items-center gap-1.5 rounded-md3-sm border px-3 ${chipClassName}`}>
                                 <span className={fieldTextClassName}>{t("page.chartPreview.player.seVolume")}</span>
                                 <input
                                     type="range"
@@ -1867,12 +1859,12 @@ export default function ChartPreviewPlayer({
                                     step={1}
                                     value={Math.round(seVolume * 100)}
                                     onChange={handleSeVolumeChange}
-                                    className={`${isCompactControls ? "w-14" : "w-16"} cursor-pointer accent-miku`}
+                                    className={`${isCompactControls ? "w-14" : "w-16"} cursor-pointer accent-primary`}
                                 />
-                                <span className="text-[11px] tabular-nums text-slate-500">{Math.round(seVolume * 100)}%</span>
+                                <span className="type-label-s tabular-nums text-on-surface-variant">{Math.round(seVolume * 100)}%</span>
                             </label>
 
-                            <label className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${chipClassName}`}>
+                            <label className={`flex h-10 items-center gap-1.5 rounded-md3-sm border px-3 ${chipClassName}`}>
                                 <span className={fieldTextClassName}>{t("page.chartPreview.player.bgmVolume")}</span>
                                 <input
                                     type="range"
@@ -1881,39 +1873,27 @@ export default function ChartPreviewPlayer({
                                     step={1}
                                     value={Math.round(bgmVolume * 100)}
                                     onChange={handleBgmVolumeChange}
-                                    className={`${isCompactControls ? "w-14" : "w-16"} cursor-pointer accent-miku`}
+                                    className={`${isCompactControls ? "w-14" : "w-16"} cursor-pointer accent-primary`}
                                 />
-                                <span className="text-[11px] tabular-nums text-slate-500">{Math.round(bgmVolume * 100)}%</span>
+                                <span className="type-label-s tabular-nums text-on-surface-variant">{Math.round(bgmVolume * 100)}%</span>
                             </label>
 
-                            <button
-                                type="button"
-                                onClick={handleLowEffectsToggle}
-                                className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${lowEffects
-                                    ? "border-transparent bg-white text-slate-800 ring-2 ring-miku shadow-lg"
-                                    : `${chipClassName} text-slate-600`}`}
-                            >
-                                <span className={`${isCompactControls ? "text-[11px]" : "text-xs"} font-bold`}>{t("page.chartPreview.player.lowEffects")}</span>
-                                <div className={`flex h-4 w-4 items-center justify-center rounded-full border transition-colors ${lowEffects ? "border-miku bg-miku" : "border-slate-300 bg-white"}`}>
-                                    {lowEffects && (
-                                        <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                        </svg>
-                                    )}
-                                </div>
-                            </button>
+                            <Chip selected={lowEffects} onClick={handleLowEffectsToggle}>
+                                {t("page.chartPreview.player.lowEffects")}
+                            </Chip>
 
-                            <div className={`flex items-center gap-1.5 rounded-xl border px-3 py-1.5 transition-all ${chipClassName}`}>
-                                <span className={`${isCompactControls ? "text-[11px]" : "text-xs"} font-bold text-slate-600`}>{t("page.chartPreview.player.quality")}</span>
+                            <div className={`flex h-10 items-center gap-1.5 rounded-md3-sm border px-3 ${chipClassName}`}>
+                                <span className={fieldTextClassName}>{t("page.chartPreview.player.quality")}</span>
                                 <div className="flex gap-1">
                                     {RENDER_SCALE_OPTIONS.map((opt) => (
                                         <button
                                             key={opt.value}
                                             type="button"
+                                            aria-pressed={renderScale === opt.value}
                                             onClick={() => handleRenderScaleChange(opt.value)}
-                                            className={`rounded-md px-1.5 py-0.5 text-[11px] font-medium transition-all ${renderScale === opt.value
-                                                ? "bg-miku text-white shadow-sm"
-                                                : "text-slate-600 hover:text-slate-800"
+                                            className={`state-layer focus-ring rounded-full px-2 py-0.5 type-label-m transition-colors duration-150 ease-md3-standard ${renderScale === opt.value
+                                                ? "bg-primary text-on-primary"
+                                                : "text-on-surface-variant"
                                                 }`}
                                         >
                                             {opt.label}
@@ -1923,52 +1903,48 @@ export default function ChartPreviewPlayer({
                             </div>
 
                             <div className="ml-auto flex items-center gap-1.5">
-                                <button
-                                    type="button"
+                                <Button
+                                    variant="outlined"
+                                    size={buttonSize}
+                                    icon={mdFitScreen}
                                     onClick={handleWebFullscreenToggle}
                                     title={t("page.chartPreview.player.webFullscreenTitle")}
-                                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-1.5 transition-all hover:bg-slate-50"
                                 >
-                                    <span className="text-xs font-bold text-slate-600">{t("page.chartPreview.player.webFullscreen")}</span>
-                                    <svg className="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 2h10M7 22h10M2 7v10M22 7v10" />
-                                    </svg>
-                                </button>
-                                <button
-                                    type="button"
+                                    {t("page.chartPreview.player.webFullscreen")}
+                                </Button>
+                                <Button
+                                    variant="outlined"
+                                    size={buttonSize}
+                                    icon={mdFullscreen}
                                     onClick={handleFullscreenToggle}
                                     title={t("page.chartPreview.player.enterFullscreen")}
-                                    className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-1.5 transition-all hover:bg-slate-50"
                                 >
-                                    <span className="text-xs font-bold text-slate-600">{t("page.chartPreview.player.fullscreen")}</span>
-                                    <svg className="h-4 w-4 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3.75 3.75V8.25M3.75 3.75H8.25M3.75 3.75L9 9M3.75 20.25V15.75M3.75 20.25H8.25M3.75 20.25L9 15M20.25 3.75L15.75 3.75M20.25 3.75V8.25M20.25 3.75L15 9M20.25 20.25H15.75M20.25 20.25V15.75M20.25 20.25L15 15" />
-                                    </svg>
-                                </button>
+                                    {t("page.chartPreview.player.fullscreen")}
+                                </Button>
                             </div>
                         </div>
                     )}
 
-                    {warningMessage && <div className={isCompactControls ? "text-[10px] text-amber-500" : "text-xs text-amber-600"}>{warningMessage}</div>}
+                    {warningMessage && <div className={`text-tertiary ${isCompactControls ? "type-label-s" : "type-body-s"}`}>{warningMessage}</div>}
 
                     {!isFullscreen && isIOS && (
-                        <div className="text-[11px] text-slate-400 italic text-right space-y-0.5">
+                        <div className="space-y-0.5 text-right type-body-s italic text-on-surface-variant">
                             <div>{t("page.chartPreview.player.iosWebFullscreenTip")}</div>
                             <div>{t("page.chartPreview.player.iosQualityTip")}</div>
                         </div>
                     )}
 
                     {!isFullscreen && (
-                        <div className="text-xs text-slate-400">
+                        <div className="type-body-s text-on-surface-variant">
                             Adapted from{" "}
-                            <ExternalLink href="https://github.com/crash5band/MikuMikuWorld" className="text-miku hover:underline">
+                            <ExternalLink href="https://github.com/crash5band/MikuMikuWorld" className="text-primary hover:underline">
                                 MikuMikuWorld
                             </ExternalLink>{" "}
                             {t("page.chartPreview.player.creditMikuMikuWorldSuffix")} {t("page.chartPreview.player.creditSourcePrefix")}{" "}
-                            <ExternalLink href="https://github.com/watagashi-uni/" className="text-miku hover:underline">
+                            <ExternalLink href="https://github.com/watagashi-uni/" className="text-primary hover:underline">
                                 watagashi-uni
                             </ExternalLink>{t("page.chartPreview.player.creditSourceMiddle")}{" "}
-                            <ExternalLink href="https://github.com/watagashi-uni/sekai-mmw-preview-web" className="text-miku hover:underline">
+                            <ExternalLink href="https://github.com/watagashi-uni/sekai-mmw-preview-web" className="text-primary hover:underline">
                                 sekai-mmw-preview-web
                             </ExternalLink>
                             {t("page.chartPreview.player.creditSourceSuffix")}
