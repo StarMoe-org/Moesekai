@@ -27,6 +27,8 @@ import {
     type ScoreControlResult,
     type SmartRoutePlan,
 } from "@/lib/score-control/score-control-calculator";
+import { Banner, Button, CircularProgress, EmptyState, Icon, PageContainer, PageHeader, Switch } from "@/components/md3";
+import { mdAllInclusive, mdCalculate, mdCheckCircle, mdInfo, mdKeyboardArrowDown, mdListAlt, mdRoute, mdSettings, mdStop, mdStyle, mdTune } from "@/components/md3/icons";
 import "./score-control.css";
 
 const _DIFFICULTY_OPTIONS = [
@@ -850,7 +852,7 @@ export default function ScoreControlClient() {
 
         if (!masterCard) {
             return (
-                <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-slate-100 flex items-center justify-center text-slate-400 text-xs flex-shrink-0">
+                <div key={i} className="w-10 h-10 sm:w-12 sm:h-12 rounded bg-surface-container-high flex items-center justify-center text-on-surface-variant text-xs flex-shrink-0">
                     ?
                 </div>
             );
@@ -870,13 +872,13 @@ export default function ScoreControlClient() {
                         width={thumbWidth}
                     />
                     {i === 0 && (
-                        <div className="absolute bottom-0 right-0 bg-miku/90 text-white text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none backdrop-blur-[1px] z-10">L</div>
+                        <div className="absolute bottom-0 right-0 bg-primary text-on-primary text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none z-10">L</div>
                     )}
                 </Link>
-                <div className="text-[9px] sm:text-[10px] text-slate-500 font-mono leading-none flex items-center gap-0.5">
+                <div className="text-[9px] sm:text-[10px] text-on-surface-variant font-mono leading-none flex items-center gap-0.5">
                     <span>Lv.{level}</span>
                     {masterRank > 0 && (
-                        <span className="bg-slate-100 text-slate-600 rounded-full px-[3px] py-[1px] flex items-center gap-[1px] leading-none border border-slate-200">
+                        <span className="bg-surface-container-high text-on-surface-variant rounded-full px-[3px] py-[1px] flex items-center gap-[1px] leading-none border border-outline-variant">
                             <span className="text-[7px]">🔷</span>
                             <span className="text-[8px] font-bold">{masterRank}</span>
                         </span>
@@ -891,7 +893,7 @@ export default function ScoreControlClient() {
         <div className="overflow-x-auto">
             <table className="w-full text-sm">
                 <thead>
-                    <tr className="text-xs text-slate-400 border-b border-slate-50">
+                    <tr className="text-xs text-on-surface-variant border-b border-outline-variant">
                         <th className="text-left px-5 py-2.5 font-medium">{t("page.scoreControl.table.eventBonus")}</th>
                         <th className="text-left px-5 py-2.5 font-medium">{t("page.scoreControl.table.scoreMin")}</th>
                         <th className="text-left px-5 py-2.5 font-medium">{t("page.scoreControl.table.scoreMax")}</th>
@@ -902,41 +904,41 @@ export default function ScoreControlClient() {
                     {items.map((r, i) => {
                         const isAFK = r.scoreMin === 0;
                         return (
-                            <tr key={i} className={`sc-row border-b border-slate-50 last:border-0 ${isAFK ? "bg-emerald-50/50" : ""}`}>
+                            <tr key={i} className={`sc-row border-b border-outline-variant last:border-0 ${isAFK ? "bg-tertiary-container/30" : ""}`}>
                                 <td className="px-5 py-2.5">
                                     <span className="inline-flex items-center gap-1.5">
-                                        <span className={`w-2 h-2 rounded-full ${isAFK ? "bg-emerald-500" : "bg-miku"}`}></span>
-                                        <span className="font-bold text-primary-text">{r.eventBonus}%</span>
+                                        <span className={`w-2 h-2 rounded-full ${isAFK ? "bg-tertiary" : "bg-primary"}`}></span>
+                                        <span className="font-bold text-on-surface">{r.eventBonus}%</span>
                                         {isAFK && (
-                                            <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-1.5 py-0.5 rounded">
+                                            <span className="text-[10px] font-bold text-on-tertiary-container bg-tertiary-container px-1.5 py-0.5 rounded">
                                                 {t("page.scoreControl.table.afk")}
                                             </span>
                                         )}
                                     </span>
                                 </td>
-                                <td className="px-5 py-2.5 font-mono text-slate-600">
+                                <td className="px-5 py-2.5 font-mono text-on-surface-variant">
                                     {isAFK ? (
-                                        <span className="text-emerald-600 font-bold">0</span>
+                                        <span className="text-tertiary font-bold">0</span>
                                     ) : (
                                         formatNumber(r.scoreMin)
                                     )}
                                 </td>
-                                <td className="px-5 py-2.5 font-mono text-slate-600">
+                                <td className="px-5 py-2.5 font-mono text-on-surface-variant">
                                     {formatNumber(r.scoreMax)}
                                 </td>
                                 <td className="px-5 py-2.5">
                                     <div className="flex items-center gap-2">
                                         <div className="sc-score-bar flex-1 min-w-[60px] max-w-[120px]">
                                             <div
-                                                className={`sc-score-bar-fill ${isAFK ? "!bg-gradient-to-r !from-emerald-400 !to-emerald-500" : ""}`}
+                                                className={`sc-score-bar-fill ${isAFK ? "!bg-tertiary" : ""}`}
                                                 style={{
                                                     width: `${Math.min(100, ((r.scoreMax - r.scoreMin + 1) / 1000) * 100)}%`,
                                                 }}
                                             />
                                         </div>
-                                        <span className="text-xs text-slate-400 font-mono whitespace-nowrap">
+                                        <span className="text-xs text-on-surface-variant font-mono whitespace-nowrap">
                                             {isAFK ? (
-                                                <span className="text-emerald-500">{t("page.scoreControl.table.afkAvailable")}</span>
+                                                <span className="text-tertiary">{t("page.scoreControl.table.afkAvailable")}</span>
                                             ) : (
                                                 <>+/-{formatNumber(Math.floor((r.scoreMax - r.scoreMin) / 2))}</>
                                             )}
@@ -953,24 +955,19 @@ export default function ScoreControlClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-5xl">
-                {/* Page Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.scoreControl.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.scoreControl.title")}<span className="text-miku">{t("page.scoreControl.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 mt-2 max-w-2xl mx-auto text-sm sm:text-base">
-                        {t("page.scoreControl.description")}
-                    </p>
-                </div>
+            <PageContainer className="max-w-5xl">
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.scoreControl.badge")}
+                    title={t("page.scoreControl.title")}
+                    highlight={t("page.scoreControl.titleHighlight")}
+                    description={t("page.scoreControl.description")}
+                />
 
                 {/* Input Form */}
-                <div className="glass-card p-5 sm:p-6 rounded-2xl mb-6">
-                    <h2 className="text-lg font-bold text-primary-text mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-miku rounded-full"></span>
+                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                    <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
+                        <Icon path={mdTune} size={24} className="text-primary" />
                         {t("page.scoreControl.musicAndTarget")}
                     </h2>
 
@@ -984,22 +981,20 @@ export default function ScoreControlClient() {
                                 liveType="multi"
                             />
                             {musicId && selectedEventRate === null && (
-                                <p className="mt-1 text-xs text-amber-500">
+                                <p className="mt-1 text-xs text-tertiary">
                                     {t("page.scoreControl.noMetaForDifficulty", { difficulty: difficulty.toUpperCase() })}
                                 </p>
                             )}
                             {selectedEventRate !== null && (
-                                <p className="mt-1 text-xs text-slate-400">
+                                <p className="mt-1 text-xs text-on-surface-variant">
                                     {t("page.scoreControl.musicRate", { rate: selectedEventRate })}
                                 </p>
                             )}
                         </div>
                         <div className="flex items-end pb-2">
-                            <p className="text-xs text-slate-400">
+                            <p className="text-xs text-on-surface-variant">
                                 <span className="inline-flex items-center gap-1">
-                                    <svg className="w-3.5 h-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
+                                    <Icon path={mdInfo} size={16} className="text-on-surface-variant" />
                                     {t("page.scoreControl.difficultyIrrelevant")}
                                 </span>
                             </p>
@@ -1009,8 +1004,8 @@ export default function ScoreControlClient() {
                     {/* Target PT + Bonus Range */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                {t("page.scoreControl.targetPt")} <span className="text-red-400">*</span>
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
+                                {t("page.scoreControl.targetPt")} <span className="text-error">*</span>
                             </label>
                             <input
                                 type="number"
@@ -1018,14 +1013,14 @@ export default function ScoreControlClient() {
                                 onChange={(e) => setTargetPT(Number(e.target.value))}
                                 placeholder="698"
                                 min={1}
-                                className="sc-number-input w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
+                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
-                            <p className="mt-1 text-xs text-slate-400">
+                            <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.targetPtHint")}
                             </p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
                                 {t("page.scoreControl.minBonus")}
                             </label>
                             <input
@@ -1035,14 +1030,14 @@ export default function ScoreControlClient() {
                                 placeholder="5"
                                 min={0}
                                 max={435}
-                                className="sc-number-input w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
+                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
-                            <p className="mt-1 text-xs text-slate-400">
+                            <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.minBonusHint")}
                             </p>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
                                 {t("page.scoreControl.maxBonus")}
                             </label>
                             <input
@@ -1052,43 +1047,37 @@ export default function ScoreControlClient() {
                                 placeholder="200"
                                 min={0}
                                 max={435}
-                                className="sc-number-input w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
+                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
-                            <p className="mt-1 text-xs text-slate-400">
+                            <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.maxBonusHint")}
                             </p>
                         </div>
                     </div>
 
                     {/* ====== Deck Builder Toggle ====== */}
-                    <div className="mb-5 p-4 rounded-xl border border-slate-200/60 bg-slate-50/50">
+                    <div className="mb-5 p-4 rounded-md3-lg bg-surface-container">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                                <span className="text-sm font-bold text-primary-text">{t("page.scoreControl.deckBuilder")}</span>
-                                <span className="text-[10px] font-bold text-amber-600 bg-amber-100 px-2 py-0.5 rounded-full">{t("page.scoreControl.beta")}</span>
+                                <span className="type-title-s text-on-surface">{t("page.scoreControl.deckBuilder")}</span>
+                                <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm">{t("page.scoreControl.beta")}</span>
                             </div>
-                            <button
-                                onClick={() => setDeckBuilderEnabled(!deckBuilderEnabled)}
-                                className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${deckBuilderEnabled ? 'bg-miku' : 'bg-slate-200'}`}
-                            >
-                                <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${deckBuilderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                            </button>
+                            <Switch
+                                checked={deckBuilderEnabled}
+                                onCheckedChange={setDeckBuilderEnabled}
+                                aria-label={t("page.scoreControl.deckBuilder")}
+                            />
                         </div>
                         {deckBuilderEnabled && (
-                            <div className="mt-2 text-xs text-amber-600 flex items-start gap-1.5">
-                                <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                                </svg>
-                                <span>{t("page.scoreControl.deckBuilderWarning")}</span>
-                            </div>
+                            <Banner tone="warning" className="mt-3">{t("page.scoreControl.deckBuilderWarning")}</Banner>
                         )}
                     </div>
 
                     {/* ====== Deck Builder Expanded Options ====== */}
                     {deckBuilderEnabled && (
-                        <div className="mb-5 space-y-4 p-4 rounded-xl border border-miku/20 bg-miku/5">
-                            <h3 className="text-sm font-bold text-primary-text flex items-center gap-2">
-                                <span className="w-1 h-4 bg-miku rounded-full"></span>
+                        <div className="mb-5 space-y-4 p-4 rounded-md3-lg bg-surface-container">
+                            <h3 className="type-title-s text-on-surface flex items-center gap-2">
+                                <Icon path={mdSettings} size={20} className="text-primary" />
                                 {t("page.scoreControl.deckBuilderSettings")}
                             </h3>
 
@@ -1108,8 +1097,8 @@ export default function ScoreControlClient() {
                             />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        {t("page.scoreControl.userId")} <span className="text-red-400">*</span>
+                                    <label className="mb-1 block type-label-l text-on-surface-variant">
+                                        {t("page.scoreControl.userId")} <span className="text-error">*</span>
                                     </label>
                                     <input
                                         type="text"
@@ -1119,13 +1108,14 @@ export default function ScoreControlClient() {
                                             if (dbAllowSave) localStorage.setItem("deck_recommend_userid", e.target.value);
                                         }}
                                         placeholder={t("page.scoreControl.userIdPlaceholder")}
-                                        className="w-full px-4 py-2.5 rounded-lg border border-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku transition-all text-sm"
+                                        className="h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                                     />
                                     <div className="flex items-center justify-between mt-2 px-1">
-                                        <span className="text-xs text-slate-500">{t("page.scoreControl.saveLocally")}</span>
-                                        <button
-                                            onClick={() => {
-                                                const n = !dbAllowSave;
+                                        <span className="type-label-l text-on-surface-variant">{t("page.scoreControl.saveLocally")}</span>
+                                        <Switch
+                                            checked={dbAllowSave}
+                                            aria-label={t("page.scoreControl.saveLocally")}
+                                            onCheckedChange={(n) => {
                                                 setDbAllowSave(n);
                                                 if (n) {
                                                     localStorage.setItem("deck_recommend_userid", dbUserId);
@@ -1136,17 +1126,14 @@ export default function ScoreControlClient() {
                                                     localStorage.removeItem("deck_recommend_server");
                                                 }
                                             }}
-                                            className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${dbAllowSave ? 'bg-miku' : 'bg-slate-200'}`}
-                                        >
-                                            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${dbAllowSave ? 'translate-x-5' : 'translate-x-0'}`} />
-                                        </button>
+                                        />
                                     </div>
-                                    <p className="mt-1 text-xs text-slate-400">
-                                        {t("page.scoreControl.harukiHintStart")} <ExternalLink href="https://haruki.seiunx.com" className="text-miku hover:underline">{t("page.scoreControl.harukiToolbox")}</ExternalLink> {t("page.scoreControl.harukiHintEnd")}
+                                    <p className="mt-1 text-xs text-on-surface-variant">
+                                        {t("page.scoreControl.harukiHintStart")} <ExternalLink href="https://haruki.seiunx.com" className="text-primary hover:underline">{t("page.scoreControl.harukiToolbox")}</ExternalLink> {t("page.scoreControl.harukiHintEnd")}
                                     </p>
                                 </div>
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">{t("page.scoreControl.server")}</label>
+                                    <label className="mb-1 block type-label-l text-on-surface-variant">{t("page.scoreControl.server")}</label>
                                     <div className="flex flex-wrap gap-2">
                                         {SERVER_OPTIONS.map((s) => (
                                             <button
@@ -1155,9 +1142,9 @@ export default function ScoreControlClient() {
                                                     setDbServer(s.value);
                                                     if (dbAllowSave) localStorage.setItem("deck_recommend_server", s.value);
                                                 }}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all ${dbServer === s.value
-                                                    ? "bg-miku text-white shadow-md shadow-miku/20"
-                                                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                                className={`state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l transition-colors ${dbServer === s.value
+                                                    ? "bg-secondary-container text-on-secondary-container"
+                                                    : "border border-outline-variant text-on-surface-variant"
                                                     }`}
                                             >
                                                 {t(s.labelKey)}
@@ -1170,8 +1157,8 @@ export default function ScoreControlClient() {
                             {/* Event */}
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        {t("page.scoreControl.event")} <span className="text-red-400">*</span>
+                                    <label className="mb-1 block type-label-l text-on-surface-variant">
+                                        {t("page.scoreControl.event")} <span className="text-error">*</span>
                                     </label>
                                     <EventSelector
                                         selectedEventId={dbEventId}
@@ -1183,8 +1170,8 @@ export default function ScoreControlClient() {
                             {/* World Bloom chapter character */}
                             {dbEventType === "world_bloom" && (
                                 <div className="mt-4">
-                                    <label className="block text-sm font-medium text-slate-700 mb-1">
-                                        {t("page.scoreControl.wlChapterCharacter")} <span className="text-red-400">*</span>
+                                    <label className="mb-1 block type-label-l text-on-surface-variant">
+                                        {t("page.scoreControl.wlChapterCharacter")} <span className="text-error">*</span>
                                     </label>
                                     <CharacterSelector
                                         selectedCharacterId={dbSupportCharacterId}
@@ -1203,16 +1190,9 @@ export default function ScoreControlClient() {
                             <div>
                                 <button
                                     onClick={() => setDbShowCardConfig(!dbShowCardConfig)}
-                                    className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-miku transition-colors"
+                                    className="state-layer focus-ring -ml-2 flex h-10 items-center gap-2 rounded-full px-3 type-label-l text-on-surface-variant transition-colors hover:text-primary"
                                 >
-                                    <svg
-                                        className={`w-4 h-4 transition-transform ${dbShowCardConfig ? "rotate-180" : ""}`}
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke="currentColor"
-                                    >
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                    </svg>
+                                    <Icon path={mdKeyboardArrowDown} size={20} className={`transition-transform ${dbShowCardConfig ? "rotate-180" : ""}`} />
                                     {t("page.scoreControl.cardTrainingSettings")}
                                 </button>
                                 {dbShowCardConfig && (
@@ -1220,19 +1200,19 @@ export default function ScoreControlClient() {
                                         <table className="dr-config-table w-full text-sm">
                                             <thead>
                                                 <tr>
-                                                    <th className="text-left py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.rarity")}</th>
-                                                    <th className="py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.disable")}</th>
-                                                    <th className="py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.maxLevel")}</th>
-                                                    <th className="py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.episodes")}</th>
-                                                    <th className="py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.maxMaster")}</th>
-                                                    <th className="py-2 px-2 text-slate-500 font-medium">{t("page.scoreControl.cardConfigHeaders.maxSkill")}</th>
+                                                    <th className="text-left py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.rarity")}</th>
+                                                    <th className="py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.disable")}</th>
+                                                    <th className="py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.maxLevel")}</th>
+                                                    <th className="py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.episodes")}</th>
+                                                    <th className="py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.maxMaster")}</th>
+                                                    <th className="py-2 px-2 text-on-surface-variant font-medium">{t("page.scoreControl.cardConfigHeaders.maxSkill")}</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
                                                 {RARITY_CONFIG_KEYS.map((rk) => {
                                                     const cfg = dbCardConfig[rk.key];
                                                     return (
-                                                        <tr key={rk.key} className="border-t border-slate-100">
+                                                        <tr key={rk.key} className="border-t border-outline-variant">
                                                             <td className="py-2 px-2">
                                                                 <div className="flex items-center gap-0.5">
                                                                     {rk.key === "rarity_birthday" ? (
@@ -1273,39 +1253,27 @@ export default function ScoreControlClient() {
                             </div>
 
                             {/* Infinite Song Search Toggle */}
-                            <div className="mt-4 p-3 rounded-xl border border-orange-200/60 bg-orange-50/30">
+                            <div className="mt-4 p-3 rounded-md3-md bg-surface-container-high">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-sm font-bold text-primary-text">{t("page.scoreControl.infiniteSearch")}</span>
-                                        <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full">{t("page.scoreControl.experimental")}</span>
+                                        <span className="type-title-s text-on-surface">{t("page.scoreControl.infiniteSearch")}</span>
+                                        <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm">{t("page.scoreControl.experimental")}</span>
                                     </div>
-                                    <button
-                                        onClick={() => setInfiniteSearchEnabled(!infiniteSearchEnabled)}
-                                        className={`relative w-11 h-6 rounded-full transition-colors duration-200 ${infiniteSearchEnabled ? 'bg-orange-500' : 'bg-slate-200'}`}
-                                    >
-                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${infiniteSearchEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                                    </button>
+                                    <Switch
+                                        checked={infiniteSearchEnabled}
+                                        onCheckedChange={setInfiniteSearchEnabled}
+                                        aria-label={t("page.scoreControl.infiniteSearch")}
+                                    />
                                 </div>
                                 {infiniteSearchEnabled && (
                                     <div className="mt-2 space-y-2">
-                                        <div className="text-xs text-orange-600 flex items-start gap-1.5 bg-orange-100/60 rounded-lg p-2">
-                                            <svg className="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                                            </svg>
-                                            <span>{t("page.scoreControl.infiniteWarning")}</span>
-                                        </div>
-                                        <p className="text-[10px] text-slate-400">{t("page.scoreControl.searchRatesHint")}</p>
-                                        <p className="text-[10px] text-slate-500">{t("page.scoreControl.infiniteStartHint")}</p>
+                                        <Banner tone="warning">{t("page.scoreControl.infiniteWarning")}</Banner>
+                                        <p className="type-body-s text-on-surface-variant">{t("page.scoreControl.searchRatesHint")}</p>
+                                        <p className="type-body-s text-on-surface-variant">{t("page.scoreControl.infiniteStartHint")}</p>
                                         {infiniteSearchRunning && (
-                                            <button
-                                                onClick={handleCancelInfiniteSearch}
-                                                className="w-full px-4 py-2.5 bg-slate-600 text-white rounded-lg font-bold text-sm shadow-md hover:opacity-90 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
-                                            >
-                                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                                </svg>
+                                            <Button type="button" variant="outlined" color="error" size="s" fullWidth icon={mdStop} onClick={handleCancelInfiniteSearch}>
                                                 {t("page.scoreControl.stopSearch")}
-                                            </button>
+                                            </Button>
                                         )}
                                     </div>
                                 )}
@@ -1314,55 +1282,46 @@ export default function ScoreControlClient() {
                     )}
 
                     {/* Calculate Button */}
-                    <button
+                    <Button
+                        type="button"
+                        variant="filled"
+                        size="m"
+                        fullWidth
                         onClick={handleCalculate}
                         disabled={infiniteSearchEnabled && deckBuilderEnabled ? (infiniteSearchRunning || !dbUserId.trim() || !dbEventId.trim()) : (!selectedEventRate || isCalculating)}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-miku to-miku-dark text-white rounded-xl font-bold shadow-lg shadow-miku/20 hover:opacity-90 active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                    >
+                        >
                         {isCalculating || infiniteSearchRunning ? (
                             <>
-                                <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
+                                <CircularProgress size={20} strokeWidth={3} />
                                 {infiniteSearchRunning ? t("page.scoreControl.searching") : t("page.scoreControl.calculating")}
                             </>
                         ) : (
                             <>
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                                </svg>
+                                <Icon path={mdCalculate} size={24} />
                                 {infiniteSearchEnabled && deckBuilderEnabled ? t("page.scoreControl.infiniteSearchButton") : t("page.scoreControl.smartCalculate")}
                             </>
                         )}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Error Display */}
                 {error && (
-                    <div className="glass-card p-4 rounded-2xl mb-6 bg-red-50/80 border border-red-200/50">
-                        <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p className="text-sm font-medium text-red-700">{error}</p>
-                        </div>
-                    </div>
+                    <Banner tone="error" className="mb-6">{error}</Banner>
                 )}
 
                 {/* Deck Builder Duration & Upload Time - above results */}
                 {deckBuilderEnabled && !dbIsCalculating && (dbDuration !== null || dbUploadTime) && (
                     <div className="flex items-center gap-3 mb-3 flex-wrap">
-                        {dbDuration !== null && <span className="text-xs text-slate-400">{t("page.scoreControl.calculationDuration", { seconds: (dbDuration / 1000).toFixed(1) })}</span>}
-                        {dbUploadTime && <span className="text-xs text-slate-400">{t("page.scoreControl.dataTime", { time: formatDate(dbUploadTime * 1000, { dateStyle: "short", timeStyle: "short" }) })}</span>}
+                        {dbDuration !== null && <span className="text-xs text-on-surface-variant">{t("page.scoreControl.calculationDuration", { seconds: (dbDuration / 1000).toFixed(1) })}</span>}
+                        {dbUploadTime && <span className="text-xs text-on-surface-variant">{t("page.scoreControl.dataTime", { time: formatDate(dbUploadTime * 1000, { dateStyle: "short", timeStyle: "short" }) })}</span>}
                     </div>
                 )}
 
                 {/* Infinite Search Duration - above results */}
                 {infiniteSearchEnabled && deckBuilderEnabled && !infiniteSearchRunning && (infiniteSearchDuration !== null || infiniteSearchUploadTime) && (
                     <div className="flex items-center gap-3 mb-3 flex-wrap">
-                        {infiniteSearchDuration !== null && <span className="text-xs text-slate-400">{t("page.scoreControl.searchDuration", { seconds: (infiniteSearchDuration / 1000).toFixed(1) })}</span>}
-                        {infiniteSearchUploadTime && <span className="text-xs text-slate-400">{t("page.scoreControl.dataTime", { time: formatDate(infiniteSearchUploadTime * 1000, { dateStyle: "short", timeStyle: "short" }) })}</span>}
+                        {infiniteSearchDuration !== null && <span className="text-xs text-on-surface-variant">{t("page.scoreControl.searchDuration", { seconds: (infiniteSearchDuration / 1000).toFixed(1) })}</span>}
+                        {infiniteSearchUploadTime && <span className="text-xs text-on-surface-variant">{t("page.scoreControl.dataTime", { time: formatDate(infiniteSearchUploadTime * 1000, { dateStyle: "short", timeStyle: "short" }) })}</span>}
                     </div>
                 )}
 
@@ -1370,14 +1329,14 @@ export default function ScoreControlClient() {
                 {smartRoutes !== null && smartRoutes.length > 0 && (
                     <div className="sc-result-enter mb-6">
                         <div className="flex items-center gap-3 mb-4">
-                            <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                                <span className="w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-miku rounded-full"></span>
+                            <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                <Icon path={mdRoute} size={24} className="text-primary" />
                                 {t("page.scoreControl.smartRoutesTitle")}
                             </h2>
-                            <span className="px-2.5 py-1 bg-emerald-50 text-emerald-600 text-xs font-bold rounded-full">
+                            <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-container type-label-l rounded-md3-sm">
                                 {t("page.scoreControl.routeCount", { count: formatNumber(smartRoutes.length) })}
                             </span>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-on-surface-variant">
                                 {t("page.scoreControl.bonusRange", { min: minBonus, max: maxBonus })}
                             </span>
                         </div>
@@ -1386,75 +1345,73 @@ export default function ScoreControlClient() {
                             {smartRoutes.map((plan, idx) => {
                                 const isExpanded = expandedRoute === idx;
                                 return (
-                                    <div key={idx} className="glass-card rounded-2xl overflow-hidden">
+                                    <div key={idx} className="bg-surface-container-low rounded-md3-lg overflow-hidden">
                                         <button
                                             onClick={() => setExpandedRoute(isExpanded ? null : idx)}
-                                            className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-left"
+                                            className="state-layer focus-ring w-full px-5 py-4 flex items-center justify-between text-left"
                                         >
                                             <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                                                <span className="text-sm font-black text-primary-text whitespace-nowrap">
+                                                <span className="type-title-s text-on-surface whitespace-nowrap">
                                                     {t("page.scoreControl.routeLabel", { index: idx + 1 })}
                                                 </span>
                                                 {plan.isPureAFK ? (
-                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm whitespace-nowrap">
                                                         {t("page.scoreControl.pureAfk")}
                                                     </span>
                                                 ) : (
-                                                    <span className="text-[10px] font-bold text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    <span className="type-label-s text-on-secondary-container bg-secondary-container px-2 py-0.5 rounded-md3-sm whitespace-nowrap">
                                                         {t("page.scoreControl.afkAndControl")}
                                                     </span>
                                                 )}
-                                                <span className="text-xs text-slate-400 whitespace-nowrap">
+                                                <span className="text-xs text-on-surface-variant whitespace-nowrap">
                                                     {t("page.scoreControl.playCount", { count: formatNumber(plan.totalPlays) })}
                                                     {plan.afkCount > 0 && (
-                                                        <span className="text-emerald-500 ml-1">{t("page.scoreControl.afkPlayCount", { count: formatNumber(plan.afkCount) })}</span>
+                                                        <span className="text-tertiary ml-1">{t("page.scoreControl.afkPlayCount", { count: formatNumber(plan.afkCount) })}</span>
                                                     )}
                                                 </span>
-                                                <span className="text-xs font-bold text-orange-500 whitespace-nowrap">
+                                                <span className="type-label-l text-tertiary whitespace-nowrap">
                                                     = {plan.totalPT} PT
                                                 </span>
                                             </div>
-                                            <svg className={`w-5 h-5 text-slate-400 transition-transform flex-shrink-0 ml-2 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
+                                            <Icon path={mdKeyboardArrowDown} size={24} className={`text-on-surface-variant transition-transform flex-shrink-0 ml-2 ${isExpanded ? "rotate-180" : ""}`} />
                                         </button>
 
                                         {isExpanded && (
-                                            <div className="border-t border-slate-100 px-5 py-4 space-y-3">
+                                            <div className="border-t border-outline-variant px-5 py-4 space-y-3">
                                                 {plan.steps.map((step, si) => (
-                                                    <div key={si} className={`rounded-xl p-4 border ${step.isAFK ? "bg-emerald-50/60 border-emerald-200/50" : "bg-blue-50/60 border-blue-200/50"}`}>
+                                                    <div key={si} className={`rounded-md3-md p-4 ${step.isAFK ? "bg-tertiary-container/40" : "bg-secondary-container/40"}`}>
                                                         <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                            <span className={`text-xs font-bold px-2 py-0.5 rounded ${step.isAFK ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
+                                                            <span className={`type-label-l px-2 py-0.5 rounded-md3-sm ${step.isAFK ? "bg-tertiary-container text-on-tertiary-container" : "bg-secondary-container text-on-secondary-container"}`}>
                                                                 {step.isAFK ? t("page.scoreControl.stepAfk") : t("page.scoreControl.stepControl")}
                                                             </span>
-                                                            <span className="text-sm font-bold text-primary-text">x{step.count}</span>
-                                                            <span className="text-xs text-slate-400">{t("page.scoreControl.eachTimePt", { pt: formatNumber(step.pt) })}</span>
-                                                            <span className="text-xs text-slate-400">
-                                                                {t("page.scoreControl.subtotal")} <span className="font-bold text-primary-text">{formatNumber(step.pt * step.count)} PT</span>
+                                                            <span className="type-title-s text-on-surface">x{step.count}</span>
+                                                            <span className="text-xs text-on-surface-variant">{t("page.scoreControl.eachTimePt", { pt: formatNumber(step.pt) })}</span>
+                                                            <span className="text-xs text-on-surface-variant">
+                                                                {t("page.scoreControl.subtotal")} <span className="font-bold text-on-surface">{formatNumber(step.pt * step.count)} PT</span>
                                                             </span>
                                                         </div>
                                                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                                                             <div>
-                                                                <span className="text-slate-400">{t("page.scoreControl.fire")}</span>
-                                                                <div className="font-bold text-primary-text mt-0.5">{fireLabel(step.boost)} <span className="text-slate-400 font-normal">x{step.boostRate}</span></div>
+                                                                <span className="text-on-surface-variant">{t("page.scoreControl.fire")}</span>
+                                                                <div className="font-bold text-on-surface mt-0.5">{fireLabel(step.boost)} <span className="text-on-surface-variant font-normal">x{step.boostRate}</span></div>
                                                             </div>
                                                             <div>
-                                                                <span className="text-slate-400">{t("page.scoreControl.deckBonus")}</span>
-                                                                <div className="font-bold text-primary-text mt-0.5">{step.eventBonus}%</div>
+                                                                <span className="text-on-surface-variant">{t("page.scoreControl.deckBonus")}</span>
+                                                                <div className="font-bold text-on-surface mt-0.5">{step.eventBonus}%</div>
                                                             </div>
                                                             <div>
-                                                                <span className="text-slate-400">{t("page.scoreControl.scoreRange")}</span>
-                                                                <div className="font-bold text-primary-text mt-0.5 font-mono">
-                                                                    {step.isAFK ? <span className="text-emerald-600">0 ~ {formatNumber(step.scoreMax)}</span> : <span>{formatNumber(step.scoreMin)} ~ {formatNumber(step.scoreMax)}</span>}
+                                                                <span className="text-on-surface-variant">{t("page.scoreControl.scoreRange")}</span>
+                                                                <div className="font-bold text-on-surface mt-0.5 font-mono">
+                                                                    {step.isAFK ? <span className="text-tertiary">0 ~ {formatNumber(step.scoreMax)}</span> : <span>{formatNumber(step.scoreMin)} ~ {formatNumber(step.scoreMax)}</span>}
                                                                 </div>
                                                             </div>
                                                             <div>
-                                                                <span className="text-slate-400">{t("page.scoreControl.action")}</span>
+                                                                <span className="text-on-surface-variant">{t("page.scoreControl.action")}</span>
                                                                 <div className="font-bold mt-0.5">
                                                                     {step.isAFK ? (
-                                                                        <span className="text-emerald-600">{t("page.scoreControl.afkAction")}</span>
+                                                                        <span className="text-tertiary">{t("page.scoreControl.afkAction")}</span>
                                                                     ) : (
-                                                                        <span className="text-blue-600">
+                                                                        <span className="text-secondary">
                                                                             {step.scoreMin === step.scoreMax ? <>{t("page.scoreControl.targetScore", { score: formatNumber(step.scoreMin) })}</> : <>{t("page.scoreControl.controlToRange", { min: formatNumber(step.scoreMin), max: formatNumber(step.scoreMax) })}</>}
                                                                         </span>
                                                                     )}
@@ -1462,14 +1419,14 @@ export default function ScoreControlClient() {
                                                             </div>
                                                         </div>
                                                         {dbResultsByBonus && dbResultsByBonus[step.eventBonus] && (
-                                                            <div className="mt-2 pt-2 border-t border-slate-100/50">
-                                                                <div className="text-[10px] text-slate-400 mb-1 flex items-center justify-between">
+                                                            <div className="mt-2 pt-2 border-t border-outline-variant">
+                                                                <div className="text-[10px] text-on-surface-variant mb-1 flex items-center justify-between">
                                                                     <span>{t("page.scoreControl.recommendedDeckWithBonus", { bonus: step.eventBonus })}</span>
-                                                                    <span className="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{t("page.scoreControl.planCount", { count: formatNumber(dbResultsByBonus[step.eventBonus].length) })}</span>
+                                                                    <span className="bg-surface-container-high text-on-surface-variant px-1.5 py-0.5 rounded">{t("page.scoreControl.planCount", { count: formatNumber(dbResultsByBonus[step.eventBonus].length) })}</span>
                                                                 </div>
                                                                 <div className="space-y-2">
                                                                     {dbResultsByBonus[step.eventBonus].map((deck, deckIdx: number) => (
-                                                                        <div key={deckIdx} className="bg-white/50 rounded-lg p-2 border border-slate-100">
+                                                                        <div key={deckIdx} className="bg-surface-container-lowest rounded-md3-sm p-2 border border-outline-variant">
                                                                             <div className="flex gap-1 flex-wrap mb-1">
                                                                                 {deck.cards?.slice(0, 5).map((card: DeckCardInfo, i: number) => renderDeckCard(card, i))}
                                                                             </div>
@@ -1481,9 +1438,9 @@ export default function ScoreControlClient() {
                                                     </div>
                                                 ))}
                                                 <div className="flex items-center justify-end gap-2 pt-1">
-                                                    <span className="text-xs text-slate-400">{t("page.scoreControl.total")}</span>
-                                                    <span className="text-sm font-black text-orange-500 font-mono">{formatNumber(plan.steps.reduce((sum, s) => sum + s.pt * s.count, 0))} PT</span>
-                                                    <span className="text-emerald-500 text-xs font-bold">{t("page.scoreControl.exactlyAchieved")}</span>
+                                                    <span className="text-xs text-on-surface-variant">{t("page.scoreControl.total")}</span>
+                                                    <span className="type-title-s text-tertiary font-mono">{formatNumber(plan.steps.reduce((sum, s) => sum + s.pt * s.count, 0))} PT</span>
+                                                    <span className="text-tertiary type-label-l">{t("page.scoreControl.exactlyAchieved")}</span>
                                                 </div>
                                             </div>
                                         )}
@@ -1497,31 +1454,24 @@ export default function ScoreControlClient() {
                 {/* Fallback */}
                 {smartRoutes !== null && smartRoutes.length === 0 && fallbackResults !== null && (
                     <div className="sc-result-enter">
-                        <div className="glass-card p-4 rounded-2xl mb-4 bg-amber-50/80 border border-amber-200/50">
-                            <div className="flex items-start gap-3">
-                                <svg className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                <div>
-                                    <p className="text-sm font-medium text-amber-800">{t("page.scoreControl.fallbackNotice")}</p>
-                                    <p className="text-xs text-amber-600 mt-0.5">{t("page.scoreControl.fallbackSummary", { min: minBonus, max: maxBonus, target: formatNumber(targetPT) })}</p>
-                                </div>
-                            </div>
-                        </div>
+                        <Banner tone="warning" className="mb-4" title={t("page.scoreControl.fallbackNotice")}>
+                            {t("page.scoreControl.fallbackSummary", { min: minBonus, max: maxBonus, target: formatNumber(targetPT) })}
+                        </Banner>
                         {fallbackResults.length === 0 ? (
-                            <div className="glass-card p-8 rounded-2xl text-center">
-                                <p className="text-slate-500 font-medium">{t("page.scoreControl.noPlan")}</p>
-                                <p className="text-xs text-slate-400 mt-1">{t("page.scoreControl.noPlanHint")}</p>
+                            <div className="bg-surface-container-low rounded-md3-xl">
+                                <EmptyState title={t("page.scoreControl.noPlan")} description={t("page.scoreControl.noPlanHint")} className="py-10" />
                             </div>
                         ) : (
                             <>
-                                <div className="glass-card p-4 sm:p-5 rounded-2xl mb-4">
+                                <div className="bg-surface-container-low p-4 sm:p-5 rounded-md3-lg mb-4">
                                     <div className="flex items-center justify-between flex-wrap gap-2">
                                         <div className="flex items-center gap-3">
-                                            <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                                                <span className="w-1.5 h-6 bg-miku rounded-full"></span>{t("page.scoreControl.fallbackTitle")}
+                                            <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                                <Icon path={mdListAlt} size={24} className="text-primary" />{t("page.scoreControl.fallbackTitle")}
                                             </h2>
-                                            <span className="px-2.5 py-1 bg-miku/10 text-miku text-xs font-bold rounded-full">{t("page.scoreControl.planCount", { count: formatNumber(fallbackCount) })}</span>
+                                            <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-container type-label-l rounded-md3-sm">{t("page.scoreControl.planCount", { count: formatNumber(fallbackCount) })}</span>
                                         </div>
-                                        <div className="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
+                                        <div className="text-xs text-on-surface-variant flex items-center gap-2 flex-wrap">
                                             <span>{t("page.scoreControl.targetPtLabel", { target: formatNumber(targetPT) })}</span>
                                             <span>·</span>
                                             <span>{t("page.scoreControl.songRateLabel", { rate: selectedEventRate })}</span>
@@ -1530,29 +1480,29 @@ export default function ScoreControlClient() {
                                     </div>
                                 </div>
                                 {fallbackResults.map((group) => (
-                                    <div key={group.boost} className="glass-card rounded-2xl mb-4 overflow-hidden">
-                                        <div className="sc-boost-header px-5 py-3 border-b border-slate-100 flex items-center justify-between">
+                                    <div key={group.boost} className="bg-surface-container-low rounded-md3-lg mb-4 overflow-hidden">
+                                        <div className="sc-boost-header px-5 py-3 border-b border-outline-variant flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <span className="text-lg">{group.label}</span>
-                                                <span className="text-xs text-slate-400">{t("page.scoreControl.multiplier", { rate: group.boostRate })}</span>
+                                                <span className="text-xs text-on-surface-variant">{t("page.scoreControl.multiplier", { rate: group.boostRate })}</span>
                                             </div>
-                                            <span className="text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-full">{t("page.scoreControl.planCount", { count: formatNumber(group.results.length) })}</span>
+                                            <span className="type-label-m text-on-surface-variant bg-surface-container-highest px-2.5 py-1 rounded-md3-sm">{t("page.scoreControl.planCount", { count: formatNumber(group.results.length) })}</span>
                                         </div>
                                         {renderResultsTable(group.results)}
                                     </div>
                                 ))}
                                 {dbResults !== null && dbResults.length > 0 && (
-                                    <div className="glass-card p-4 sm:p-5 rounded-2xl mb-4">
+                                    <div className="bg-surface-container-low p-4 sm:p-5 rounded-md3-lg mb-4">
                                         <div className="flex items-center gap-2 mb-3">
-                                            <span className="w-1.5 h-6 bg-gradient-to-b from-emerald-400 to-miku rounded-full"></span>
-                                            <h3 className="text-sm font-bold text-primary-text">{t("page.scoreControl.recommendedDecks")}</h3>
+                                            <Icon path={mdStyle} size={20} className="text-primary" />
+                                            <h3 className="type-title-s text-on-surface">{t("page.scoreControl.recommendedDecks")}</h3>
                                         </div>
                                         {Object.entries(dbResultsByBonus).sort(([a], [b]) => Number(a) - Number(b)).map(([bonus, decks]) => (
                                             <div key={bonus} className="mb-3 last:mb-0">
-                                                <div className="text-[10px] font-bold text-miku mb-1.5">{t("page.scoreControl.recommendedDeckWithBonus", { bonus })}</div>
+                                                <div className="text-[10px] font-bold text-primary mb-1.5">{t("page.scoreControl.recommendedDeckWithBonus", { bonus })}</div>
                                                 <div className="space-y-2">
                                                     {decks.map((deck, deckIdx: number) => (
-                                                        <div key={deckIdx} className="bg-white/50 dark:bg-slate-800/50 rounded-lg p-2 border border-slate-100 dark:border-slate-700/50">
+                                                        <div key={deckIdx} className="bg-surface-container-lowest rounded-md3-sm p-2 border border-outline-variant">
                                                             <div className="flex gap-1 flex-wrap">
                                                                 {deck.cards?.slice(0, 5).map((card: DeckCardInfo, i: number) => renderDeckCard(card, i))}
                                                             </div>
@@ -1570,9 +1520,8 @@ export default function ScoreControlClient() {
 
                 {/* No results at all */}
                 {smartRoutes !== null && smartRoutes.length === 0 && fallbackResults === null && (
-                    <div className="glass-card p-8 rounded-2xl text-center sc-result-enter">
-                        <p className="text-slate-500 font-medium">{t("page.scoreControl.noPlan")}</p>
-                        <p className="text-xs text-slate-400 mt-1">{t("page.scoreControl.noPlanHint")}</p>
+                    <div className="bg-surface-container-low rounded-md3-xl sc-result-enter">
+                        <EmptyState title={t("page.scoreControl.noPlan")} description={t("page.scoreControl.noPlanHint")} className="py-10" />
                     </div>
                 )}
 
@@ -1580,17 +1529,14 @@ export default function ScoreControlClient() {
                 {deckBuilderEnabled && (
                     <div className="mb-6">
                         {dbIsCalculating && (
-                            <div className="glass-card p-6 rounded-2xl">
+                            <div className="bg-surface-container-low p-6 rounded-md3-lg">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <svg className="w-5 h-5 animate-spin text-miku flex-shrink-0" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
+                                    <CircularProgress size={20} strokeWidth={3} className="shrink-0 text-primary" />
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-primary-text">{t("page.scoreControl.searchingDecks")}</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">{t("page.scoreControl.deckBuilderProgressTask")}</p>
+                                        <p className="text-sm font-medium text-on-surface">{t("page.scoreControl.searchingDecks")}</p>
+                                        <p className="text-[10px] text-on-surface-variant mt-0.5">{t("page.scoreControl.deckBuilderProgressTask")}</p>
                                     </div>
-                                    <span className="text-xs font-bold text-miku tabular-nums">{Math.round(dbFakeProgress)}%</span>
+                                    <span className="type-label-l text-primary tabular-nums">{Math.round(dbFakeProgress)}%</span>
                                 </div>
                                 <div className="sc-fake-progress-track">
                                     <div className="sc-fake-progress-fill" style={{ width: `${dbFakeProgress}%` }} />
@@ -1598,17 +1544,11 @@ export default function ScoreControlClient() {
                             </div>
                         )}
                         {dbError && (
-                            <div className="glass-card p-4 rounded-2xl mb-4 bg-red-50/80 border border-red-200/50">
-                                <div className="flex items-start gap-3">
-                                    <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                                    <p className="text-sm font-medium text-red-700">{dbError}</p>
-                                </div>
-                            </div>
+                            <Banner tone="error" className="mb-4">{dbError}</Banner>
                         )}
                         {!dbIsCalculating && dbResults !== null && dbResults.length === 0 && (
-                            <div className="glass-card p-6 rounded-2xl text-center">
-                                <p className="text-slate-500 font-medium text-sm">{t("page.scoreControl.noMatchingDeck")}</p>
-                                <p className="text-xs text-slate-400 mt-1">{t("page.scoreControl.noMatchingDeckHint")}</p>
+                            <div className="bg-surface-container-low rounded-md3-xl">
+                                <EmptyState title={t("page.scoreControl.noMatchingDeck")} description={t("page.scoreControl.noMatchingDeckHint")} className="py-10" />
                             </div>
                         )}
                     </div>
@@ -1618,94 +1558,88 @@ export default function ScoreControlClient() {
                 {infiniteSearchEnabled && deckBuilderEnabled && (infiniteSearchRunning || infiniteSearchResults.length > 0) && (
                     <div className="mb-6 sc-result-enter">
                         {infiniteSearchRunning && infiniteSearchProgress && (
-                            <div className="glass-card p-5 rounded-2xl mb-4 border border-orange-200/50 bg-orange-50/30">
+                            <div className="p-5 rounded-md3-lg mb-4 bg-surface-container">
                                 <div className="flex items-center gap-3 mb-3">
-                                    <svg className="w-5 h-5 animate-spin text-orange-500" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                    </svg>
-                                    <span className="text-sm font-bold text-primary-text">{t("page.scoreControl.infiniteInProgress")}</span>
+                                    <CircularProgress size={20} strokeWidth={3} className="shrink-0 text-tertiary" />
+                                    <span className="type-title-s text-on-surface">{t("page.scoreControl.infiniteInProgress")}</span>
                                 </div>
                                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                                    <div><span className="text-slate-400">{t("page.scoreControl.currentRate")}</span><div className="font-bold text-orange-600 mt-0.5">{infiniteSearchProgress.currentRate}%</div></div>
-                                    <div><span className="text-slate-400">{t("page.scoreControl.checkedCount")}</span><div className="font-bold text-primary-text mt-0.5">{t("page.scoreControl.checkedSongs", { count: formatNumber(infiniteSearchProgress.totalChecked) })}</div></div>
-                                    <div><span className="text-slate-400">{t("page.scoreControl.foundCount")}</span><div className="font-bold text-emerald-600 mt-0.5">{infiniteSearchProgress.found} / 10</div></div>
-                                    <div><span className="text-slate-400">{t("page.scoreControl.currentSong")}</span><div className="font-bold text-primary-text mt-0.5 truncate">{infiniteSearchProgress.currentSongTitle}</div></div>
+                                    <div><span className="text-on-surface-variant">{t("page.scoreControl.currentRate")}</span><div className="font-bold text-tertiary mt-0.5">{infiniteSearchProgress.currentRate}%</div></div>
+                                    <div><span className="text-on-surface-variant">{t("page.scoreControl.checkedCount")}</span><div className="font-bold text-on-surface mt-0.5">{t("page.scoreControl.checkedSongs", { count: formatNumber(infiniteSearchProgress.totalChecked) })}</div></div>
+                                    <div><span className="text-on-surface-variant">{t("page.scoreControl.foundCount")}</span><div className="font-bold text-tertiary mt-0.5">{infiniteSearchProgress.found} / 10</div></div>
+                                    <div><span className="text-on-surface-variant">{t("page.scoreControl.currentSong")}</span><div className="font-bold text-on-surface mt-0.5 truncate">{infiniteSearchProgress.currentSongTitle}</div></div>
                                 </div>
-                                <div className="mt-3 w-full bg-slate-200 rounded-full h-1.5">
-                                    <div className="bg-gradient-to-r from-orange-400 to-red-500 h-1.5 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (VALID_EVENT_RATES.indexOf(infiniteSearchProgress.currentRate) + 1) / VALID_EVENT_RATES.length * 100)}%` }} />
+                                <div className="mt-3 w-full bg-surface-container-highest rounded-full h-1.5">
+                                    <div className="bg-tertiary h-1.5 rounded-full transition-all duration-300" style={{ width: `${Math.min(100, (VALID_EVENT_RATES.indexOf(infiniteSearchProgress.currentRate) + 1) / VALID_EVENT_RATES.length * 100)}%` }} />
                                 </div>
                                 {infiniteStepProgress > 0 && (
                                     <div className="mt-2 flex items-center gap-2">
-                                        <span className="text-[10px] text-slate-400 whitespace-nowrap">{t("page.scoreControl.currentStep")}</span>
+                                        <span className="text-[10px] text-on-surface-variant whitespace-nowrap">{t("page.scoreControl.currentStep")}</span>
                                         <div className="sc-fake-progress-track flex-1">
-                                            <div className="sc-fake-progress-fill !bg-gradient-to-r !from-orange-400 !to-red-400" style={{ width: `${infiniteStepProgress}%` }} />
+                                            <div className="sc-fake-progress-fill !bg-tertiary" style={{ width: `${infiniteStepProgress}%` }} />
                                         </div>
-                                        <span className="text-[10px] font-bold text-orange-500 tabular-nums w-8 text-right">{Math.round(infiniteStepProgress)}%</span>
+                                        <span className="text-[10px] font-bold text-tertiary tabular-nums w-8 text-right">{Math.round(infiniteStepProgress)}%</span>
                                     </div>
                                 )}
-                                <p className="mt-1.5 text-[10px] text-slate-400">{t("page.scoreControl.parallelWorkersShort", { count: Math.min(navigator.hardwareConcurrency || 4, 4) })}</p>
+                                <p className="mt-1.5 text-[10px] text-on-surface-variant">{t("page.scoreControl.parallelWorkersShort", { count: Math.min(navigator.hardwareConcurrency || 4, 4) })}</p>
                             </div>
                         )}
 
                         {!infiniteSearchRunning && infiniteSearchResults.length > 0 && (
-                            <div className="glass-card p-4 rounded-2xl mb-4 bg-emerald-50/80 border border-emerald-200/50">
+                            <div className="p-4 rounded-md3-lg mb-4 bg-tertiary-container text-on-tertiary-container">
                                 <div className="flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                    <span className="text-sm font-bold text-emerald-700">{t("page.scoreControl.infiniteComplete", { rateCount: formatNumber(infiniteSearchResults.length), songCount: formatNumber(infiniteSearchResults.reduce((s, r) => s + r.songs.length, 0)) })}</span>
+                                    <Icon path={mdCheckCircle} size={24} />
+                                    <span className="type-title-s">{t("page.scoreControl.infiniteComplete", { rateCount: formatNumber(infiniteSearchResults.length), songCount: formatNumber(infiniteSearchResults.reduce((s, r) => s + r.songs.length, 0)) })}</span>
                                 </div>
                             </div>
                         )}
 
                         {!infiniteSearchRunning && infiniteSearchResults.length === 0 && (
-                            <div className="glass-card p-6 rounded-2xl mb-4 text-center">
-                                <p className="text-slate-500 font-medium text-sm">{t("page.scoreControl.noInfiniteSongs")}</p>
-                                <p className="text-xs text-slate-400 mt-1">{t("page.scoreControl.noInfiniteSongsHint")}</p>
+                            <div className="bg-surface-container-low rounded-md3-xl mb-4">
+                                <EmptyState title={t("page.scoreControl.noInfiniteSongs")} description={t("page.scoreControl.noInfiniteSongsHint")} className="py-10" />
                             </div>
                         )}
 
                         {infiniteSearchResults.length > 0 && (
                             <div>
                                 <div className="flex items-center gap-3 mb-4">
-                                    <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                                        <span className="w-1.5 h-6 bg-gradient-to-b from-red-400 to-orange-500 rounded-full"></span>
+                                    <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                        <Icon path={mdAllInclusive} size={24} className="text-primary" />
                                         {t("page.scoreControl.infiniteResultsTitle")}
                                     </h2>
-                                    <span className="px-2.5 py-1 bg-red-50 text-red-600 text-xs font-bold rounded-full">{t("page.scoreControl.rateCount", { count: formatNumber(infiniteSearchResults.length) })}</span>
+                                    <span className="px-2.5 py-1 bg-secondary-container text-on-secondary-container type-label-l rounded-md3-sm">{t("page.scoreControl.rateCount", { count: formatNumber(infiniteSearchResults.length) })}</span>
                                 </div>
                                 <div className="space-y-3">
                                     {infiniteSearchResults.map((result, idx) => {
                                         const isExpanded = infiniteExpandedIdx === idx;
                                         return (
-                                            <div key={idx} className="glass-card rounded-2xl overflow-hidden">
-                                                <button onClick={() => setInfiniteExpandedIdx(isExpanded ? null : idx)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-slate-50/50 transition-colors text-left">
+                                            <div key={idx} className="bg-surface-container-low rounded-md3-lg overflow-hidden">
+                                                <button onClick={() => setInfiniteExpandedIdx(isExpanded ? null : idx)} className="state-layer focus-ring w-full px-5 py-4 flex items-center justify-between text-left">
                                                     <div className="flex items-center gap-2.5 flex-wrap min-w-0">
-                                                        <span className="text-sm font-black text-primary-text whitespace-nowrap">#{idx + 1}</span>
-                                                        <span className="text-[10px] font-bold text-orange-600 bg-orange-100 px-2 py-0.5 rounded-full whitespace-nowrap">{t("page.scoreControl.rateBadge", { rate: result.eventRate })}</span>
-                                                        <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full whitespace-nowrap">{t("page.scoreControl.pureAfk")}</span>
-                                                        <span className="text-xs text-slate-400 whitespace-nowrap">{t("page.scoreControl.songsAndRoutes", { songs: formatNumber(result.songs.length), routes: formatNumber(result.routes.length) })}</span>
+                                                        <span className="type-title-s text-on-surface whitespace-nowrap">#{idx + 1}</span>
+                                                        <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm whitespace-nowrap">{t("page.scoreControl.rateBadge", { rate: result.eventRate })}</span>
+                                                        <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm whitespace-nowrap">{t("page.scoreControl.pureAfk")}</span>
+                                                        <span className="text-xs text-on-surface-variant whitespace-nowrap">{t("page.scoreControl.songsAndRoutes", { songs: formatNumber(result.songs.length), routes: formatNumber(result.routes.length) })}</span>
                                                     </div>
-                                                    <svg className={`w-5 h-5 text-slate-400 transition-transform flex-shrink-0 ml-2 ${isExpanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                                    </svg>
+                                                    <Icon path={mdKeyboardArrowDown} size={24} className={`text-on-surface-variant transition-transform flex-shrink-0 ml-2 ${isExpanded ? "rotate-180" : ""}`} />
                                                 </button>
 
                                                 {isExpanded && (
-                                                    <div className="border-t border-slate-100 px-5 py-4 space-y-3">
+                                                    <div className="border-t border-outline-variant px-5 py-4 space-y-3">
                                                         {/* Songs with cover images */}
-                                                        <div className="rounded-xl p-3 border border-slate-200/50 bg-slate-50/50">
-                                                            <div className="text-[10px] text-slate-400 mb-1.5">{t("page.scoreControl.availableSongs", { count: formatNumber(result.songs.length) })}</div>
+                                                        <div className="rounded-md3-md p-3 border border-outline-variant bg-surface-container-low">
+                                                            <div className="text-[10px] text-on-surface-variant mb-1.5">{t("page.scoreControl.availableSongs", { count: formatNumber(result.songs.length) })}</div>
                                                             <div className="flex flex-wrap gap-2">
                                                                 {result.songs.map((song, si) => (
 
-                                                                    <Link key={si} href={`/music/${song.musicId}`} target="_blank" className="flex items-center gap-2 bg-white px-2 py-1.5 rounded-lg border border-slate-100 hover:border-miku/30 hover:shadow-sm transition-all group">
+                                                                    <Link key={si} href={`/music/${song.musicId}`} target="_blank" className="state-layer focus-ring flex items-center gap-2 bg-surface-container-lowest px-2 py-1.5 rounded-md3-sm border border-outline-variant transition-colors hover:border-primary group">
 
                                                                         {song.assetbundleName && result.songs.length < 5 && (
-                                                                            <div className="relative w-8 h-8 rounded overflow-hidden flex-shrink-0 ring-1 ring-slate-200">
+                                                                            <div className="relative w-8 h-8 rounded overflow-hidden flex-shrink-0 ring-1 ring-outline-variant">
                                                                                 <Image src={getMusicJacketUrl(song.assetbundleName, assetSource)} alt={song.musicTitle} fill className="object-cover" unoptimized />
                                                                             </div>
                                                                         )}
-                                                                        <span className="text-xs text-primary-text group-hover:text-miku transition-colors">{song.musicTitle}</span>
+                                                                        <span className="text-xs text-on-surface group-hover:text-primary transition-colors">{song.musicTitle}</span>
                                                                     </Link>
                                                                 ))}
                                                             </div>
@@ -1713,18 +1647,18 @@ export default function ScoreControlClient() {
 
                                                         {/* Routes */}
                                                         {result.routes.slice(0, 5).map((plan, pi) => (
-                                                            <div key={pi} className="rounded-xl p-4 border bg-emerald-50/60 border-emerald-200/50">
+                                                            <div key={pi} className="rounded-md3-md p-4 bg-tertiary-container/40">
                                                                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">{t("page.scoreControl.routeLabel", { index: pi + 1 })}</span>
-                                                                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-100 px-2 py-0.5 rounded-full">{t("page.scoreControl.pureAfk")}</span>
-                                                                    <span className="text-xs text-slate-400">{t("page.scoreControl.routeSummary", { plays: formatNumber(plan.totalPlays), pt: formatNumber(plan.totalPT) })}</span>
+                                                                    <span className="type-label-l px-2 py-0.5 rounded-md3-sm bg-tertiary-container text-on-tertiary-container">{t("page.scoreControl.routeLabel", { index: pi + 1 })}</span>
+                                                                    <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-2 py-0.5 rounded-md3-sm">{t("page.scoreControl.pureAfk")}</span>
+                                                                    <span className="text-xs text-on-surface-variant">{t("page.scoreControl.routeSummary", { plays: formatNumber(plan.totalPlays), pt: formatNumber(plan.totalPT) })}</span>
                                                                 </div>
                                                                 {plan.steps.map((step, si) => (
                                                                     <div key={si} className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mt-1">
-                                                                        <div><span className="text-slate-400">{t("page.scoreControl.step")}</span><div className="font-bold text-emerald-600 mt-0.5">{t("page.scoreControl.afkTimes", { count: formatNumber(step.count) })}</div></div>
-                                                                        <div><span className="text-slate-400">{t("page.scoreControl.fire")}</span><div className="font-bold text-primary-text mt-0.5">{fireLabel(step.boost)} <span className="text-slate-400 font-normal">x{step.boostRate}</span></div></div>
-                                                                        <div><span className="text-slate-400">{t("page.scoreControl.deckBonus")}</span><div className="font-bold text-primary-text mt-0.5">{step.eventBonus}%</div></div>
-                                                                        <div><span className="text-slate-400">{t("page.scoreControl.perPlayPt")}</span><div className="font-bold text-orange-500 mt-0.5">{step.pt} PT</div></div>
+                                                                        <div><span className="text-on-surface-variant">{t("page.scoreControl.step")}</span><div className="font-bold text-tertiary mt-0.5">{t("page.scoreControl.afkTimes", { count: formatNumber(step.count) })}</div></div>
+                                                                        <div><span className="text-on-surface-variant">{t("page.scoreControl.fire")}</span><div className="font-bold text-on-surface mt-0.5">{fireLabel(step.boost)} <span className="text-on-surface-variant font-normal">x{step.boostRate}</span></div></div>
+                                                                        <div><span className="text-on-surface-variant">{t("page.scoreControl.deckBonus")}</span><div className="font-bold text-on-surface mt-0.5">{step.eventBonus}%</div></div>
+                                                                        <div><span className="text-on-surface-variant">{t("page.scoreControl.perPlayPt")}</span><div className="font-bold text-tertiary mt-0.5">{step.pt} PT</div></div>
                                                                     </div>
                                                                 ))}
                                                                 {/* Matching decks with full card display */}
@@ -1737,14 +1671,14 @@ export default function ScoreControlClient() {
                                                                     });
                                                                     if (matchingDecks.length === 0) return null;
                                                                     return (
-                                                                        <div className="mt-2 pt-2 border-t border-emerald-200/50">
-                                                                            <div className="text-[10px] text-slate-400 mb-1">{t("page.scoreControl.recommendedDeck")}</div>
+                                                                        <div className="mt-2 pt-2 border-t border-tertiary/30">
+                                                                            <div className="text-[10px] text-on-surface-variant mb-1">{t("page.scoreControl.recommendedDeck")}</div>
                                                                             {matchingDecks.slice(0, 2).map((deck, di: number) => (
-                                                                                <div key={di} className="bg-white/50 rounded-lg p-2 border border-slate-100 mb-1">
+                                                                                <div key={di} className="bg-surface-container-lowest rounded-md3-sm p-2 border border-outline-variant mb-1">
                                                                                     <div className="flex gap-1 flex-wrap mb-1">
                                                                                         {deck.cards?.slice(0, 5).map((card: DeckCardInfo, ci: number) => renderDeckCard(card, ci, "sm"))}
                                                                                     </div>
-                                                                                    <span className="text-[10px] text-slate-400">{t("page.scoreControl.bonusLabel", { bonus: Math.round((deck.eventBonus ?? deck.score ?? 0) * 10) / 10 })}</span>
+                                                                                    <span className="text-[10px] text-on-surface-variant">{t("page.scoreControl.bonusLabel", { bonus: Math.round((deck.eventBonus ?? deck.score ?? 0) * 10) / 10 })}</span>
                                                                                 </div>
                                                                             ))}
                                                                         </div>
@@ -1764,10 +1698,10 @@ export default function ScoreControlClient() {
                 )}
 
                 {/* Footer */}
-                <div className="mt-12 text-center text-xs text-slate-400">
+                <div className="mt-12 text-center type-body-s text-on-surface-variant">
                     <p>{t("page.scoreControl.licenseNotice")}</p>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

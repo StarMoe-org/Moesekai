@@ -16,6 +16,8 @@ import {
     type CalculationResult,
     type PTResult,
 } from "@/lib/deck-comparator/calculator";
+import { Banner, Button, Icon, IconButton, PageContainer, PageHeader, Switch } from "@/components/md3";
+import { mdAnalytics, mdCalculate, mdClose, mdHistory, mdMusicNote, mdPerson, mdSave, mdWarning } from "@/components/md3/icons";
 import "./deck-comparator.css";
 
 const DIFFICULTY_OPTIONS = [
@@ -229,32 +231,22 @@ export default function DeckComparatorClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-5xl">
-                {/* Page Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.deckComparator.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.deckComparator.title")}<span className="text-miku">{t("page.deckComparator.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 mt-2 max-w-2xl mx-auto text-sm sm:text-base">
-                        {t("page.deckComparator.description")}
-                    </p>
-                </div>
+            <PageContainer className="max-w-5xl">
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.deckComparator.badge")}
+                    title={t("page.deckComparator.title")}
+                    highlight={t("page.deckComparator.titleHighlight")}
+                    description={t("page.deckComparator.description")}
+                />
 
                 {/* Mobile Info */}
-                <div className="dc-mobile-info ios-glass-card p-3 rounded-xl mb-6 flex items-center gap-2 text-sm text-blue-700 bg-blue-50/80 border border-blue-200/50">
-                    <svg className="w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    <span>{t("page.deckComparator.mobileInfo")}</span>
-                </div>
+                <Banner tone="info" className="dc-mobile-info mb-6">{t("page.deckComparator.mobileInfo")}</Banner>
 
                 {/* Input Form */}
-                <div className="ios-glass-card p-5 sm:p-6 rounded-2xl mb-6">
-                    <h2 className="text-lg font-bold text-primary-text mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-miku rounded-full"></span>
+                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                    <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
+                        <Icon path={mdMusicNote} size={24} className="text-primary" />
                         {t("page.deckComparator.musicAndDifficulty")}
                     </h2>
 
@@ -269,32 +261,33 @@ export default function DeckComparatorClient() {
                             />
                             {/* Meta availability hint */}
                             {musicId && !selectedMeta && (
-                                <p className="mt-1 text-xs text-amber-500">
-                                    ⚠️ {t("page.deckComparator.noMetaForDifficulty", { difficulty: difficulty.toUpperCase() })}
+                                <p className="mt-1 flex items-center gap-1 type-body-s text-tertiary">
+                                    <Icon path={mdWarning} size={16} />
+                                    {t("page.deckComparator.noMetaForDifficulty", { difficulty: difficulty.toUpperCase() })}
                                 </p>
                             )}
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">{t("page.deckComparator.difficulty")}</label>
+                            <label className="mb-1 block type-label-l text-on-surface-variant">{t("page.deckComparator.difficulty")}</label>
                             <div className="flex flex-wrap gap-2">
                                 {DIFFICULTY_OPTIONS.map((d) => {
                                     let activeClass = "";
                                     switch (d.value) {
-                                        case "easy": activeClass = "bg-blue-500 text-white shadow-blue-500/20"; break;
-                                        case "normal": activeClass = "bg-emerald-500 text-white shadow-emerald-500/20"; break;
-                                        case "hard": activeClass = "bg-orange-500 text-white shadow-orange-500/20"; break;
-                                        case "expert": activeClass = "bg-red-500 text-white shadow-red-500/20"; break;
-                                        case "master": activeClass = "bg-purple-500 text-white shadow-purple-500/20"; break;
-                                        case "append": activeClass = "bg-fuchsia-500 text-white shadow-fuchsia-500/20"; break;
-                                        default: activeClass = "bg-miku text-white shadow-miku/20";
+                                        case "easy": activeClass = "bg-[#5AC06E] text-white"; break;
+                                        case "normal": activeClass = "bg-[#56A4D4] text-white"; break;
+                                        case "hard": activeClass = "bg-[#EFAF28] text-white"; break;
+                                        case "expert": activeClass = "bg-[#E84D53] text-white"; break;
+                                        case "master": activeClass = "bg-[#BB58B8] text-white"; break;
+                                        case "append": activeClass = "bg-[#EE92BC] text-white"; break;
+                                        default: activeClass = "bg-primary text-on-primary";
                                     }
                                     return (
                                         <button
                                             key={d.value}
                                             onClick={() => setDifficulty(d.value)}
-                                            className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all shadow-md ${difficulty === d.value
+                                            className={`state-layer focus-ring h-9 px-3 rounded-md3-sm type-label-l transition-colors ${difficulty === d.value
                                                 ? activeClass
-                                                : "ios-glass-tab text-slate-600 hover:bg-white/60 shadow-none"
+                                                : "border border-outline-variant text-on-surface-variant"
                                                 }`}
                                         >
                                             {t(d.labelKey)}
@@ -307,28 +300,28 @@ export default function DeckComparatorClient() {
                 </div>
 
                 {/* User Config */}
-                <div className="ios-glass-panel p-5 sm:p-6 rounded-2xl mb-6">
-                    <h2 className="text-lg font-bold text-primary-text mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-6 bg-miku rounded-full"></span>
+                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                    <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
+                        <Icon path={mdPerson} size={24} className="text-primary" />
                         {t("page.deckComparator.playerConfig")}
                     </h2>
 
                     {/* User Power + Effectiveness + Deck Bonus */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
-                                {t("page.deckComparator.myPower")} <span className="text-red-400">*</span>
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
+                                {t("page.deckComparator.myPower")} <span className="text-error">*</span>
                             </label>
                             <input
                                 type="number"
                                 value={userPower}
                                 onChange={(e) => setUserPower(Number(e.target.value))}
                                 placeholder="280000"
-                                className="dc-number-input ios-glass-input w-full px-4 py-2.5 rounded-lg transition-all text-sm"
+                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
                                 {t("page.deckComparator.myEffectiveness")}
                             </label>
                             <input
@@ -336,11 +329,11 @@ export default function DeckComparatorClient() {
                                 value={userEffectiveness}
                                 onChange={(e) => setUserEffectiveness(Number(e.target.value))}
                                 placeholder="250"
-                                className="dc-number-input ios-glass-input w-full px-4 py-2.5 rounded-lg transition-all text-sm"
+                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
                                 {t("page.deckComparator.deckBonus")}
                             </label>
                             <input
@@ -348,57 +341,54 @@ export default function DeckComparatorClient() {
                                 value={deckBonus}
                                 onChange={(e) => setDeckBonus(Number(e.target.value))}
                                 placeholder="150"
-                                className="dc-number-input ios-glass-input w-full px-4 py-2.5 rounded-lg transition-all text-sm"
+                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
-                            <p className="mt-1 text-xs text-slate-400">{t("page.deckComparator.deckBonusHint")}</p>
+                            <p className="mt-1 text-xs text-on-surface-variant">{t("page.deckComparator.deckBonusHint")}</p>
                         </div>
                     </div>
 
                     {/* Teammate Config */}
                     <div className="mb-5">
                         <div className="flex items-center justify-between mb-3">
-                            <label className="text-sm font-medium text-slate-700">
+                            <label className="type-label-l text-on-surface-variant">
                                 {t("page.deckComparator.teammateConfig")}
                             </label>
                             <div className="flex items-center gap-2">
-                                <span className="text-xs text-slate-500">{t("page.deckComparator.wholeTeamSame")}</span>
-                                <button
-                                    onClick={() => setAllSameTeammate(!allSameTeammate)}
-                                    className={`dc-toggle relative w-11 h-6 rounded-full ${allSameTeammate ? 'bg-miku' : 'bg-slate-200'}`}
-                                >
-                                    <span
-                                        className={`dc-toggle-knob absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow ${allSameTeammate ? 'translate-x-5' : 'translate-x-0'}`}
-                                    />
-                                </button>
+                                <span className="type-label-l text-on-surface-variant">{t("page.deckComparator.wholeTeamSame")}</span>
+                                <Switch
+                                    checked={allSameTeammate}
+                                    onCheckedChange={setAllSameTeammate}
+                                    aria-label={t("page.deckComparator.wholeTeamSame")}
+                                />
                             </div>
                         </div>
 
                         {allSameTeammate ? (
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs text-slate-500 mb-1">{t("page.deckComparator.power")}</label>
+                                    <label className="mb-1 block type-label-m text-on-surface-variant">{t("page.deckComparator.power")}</label>
                                     <input
                                         type="number"
                                         value={teammatePower}
                                         onChange={(e) => setTeammatePower(Number(e.target.value))}
-                                        className="dc-number-input ios-glass-input w-full px-3 py-2 rounded-lg transition-all text-sm"
+                                        className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs text-slate-500 mb-1">{t("page.deckComparator.effectiveness")}</label>
+                                    <label className="mb-1 block type-label-m text-on-surface-variant">{t("page.deckComparator.effectiveness")}</label>
                                     <input
                                         type="number"
                                         value={teammateEffectiveness}
                                         onChange={(e) => setTeammateEffectiveness(Number(e.target.value))}
-                                        className="dc-number-input ios-glass-input w-full px-3 py-2 rounded-lg transition-all text-sm"
+                                        className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                     />
                                 </div>
                             </div>
                         ) : (
                             <div className="space-y-2">
                                 {teammates.map((tm, i) => (
-                                    <div key={i} className="dc-teammate-row grid grid-cols-[auto_1fr_1fr] gap-2 items-center p-2 rounded-lg border border-slate-200/20 bg-white/10 dark:bg-slate-900/10 backdrop-blur-md">
-                                        <span className="text-xs font-bold text-slate-400 w-6 text-center">
+                                    <div key={i} className="dc-teammate-row grid grid-cols-[auto_1fr_1fr] gap-2 items-center p-2 rounded-md3-md bg-surface-container">
+                                        <span className="type-label-l text-on-surface-variant w-6 text-center">
                                             P{i + 2}
                                         </span>
                                         <input
@@ -406,14 +396,14 @@ export default function DeckComparatorClient() {
                                             value={tm.power}
                                             onChange={(e) => updateTeammate(i, 'power', Number(e.target.value))}
                                             placeholder={t("page.deckComparator.powerPlaceholder")}
-                                            className="dc-number-input ios-glass-input w-full px-3 py-1.5 rounded-lg transition-all text-sm"
+                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                         />
                                         <input
                                             type="number"
                                             value={tm.effectiveness}
                                             onChange={(e) => updateTeammate(i, 'effectiveness', Number(e.target.value))}
                                             placeholder={t("page.deckComparator.effectivenessPlaceholder")}
-                                            className="dc-number-input ios-glass-input w-full px-3 py-1.5 rounded-lg transition-all text-sm"
+                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                         />
                                     </div>
                                 ))}
@@ -424,22 +414,22 @@ export default function DeckComparatorClient() {
                     {/* Skill6 Mode + Skill1-5 Strategy */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">{t("page.deckComparator.skill6Mode")}</label>
+                            <label className="mb-2 block type-label-l text-on-surface-variant">{t("page.deckComparator.skill6Mode")}</label>
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => setSkill6Mode(Skill6Mode.TEAM_AVERAGE)}
-                                    className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all ${skill6Mode === Skill6Mode.TEAM_AVERAGE
-                                        ? "ios-glass-tab-active text-white shadow-lg shadow-miku/20"
-                                        : "ios-glass-tab text-slate-600 hover:bg-white/60 border border-slate-200/50"
+                                    className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill6Mode === Skill6Mode.TEAM_AVERAGE
+                                        ? "bg-secondary-container text-on-secondary-container"
+                                        : "border border-outline-variant text-on-surface-variant"
                                         }`}
                                 >
                                     {t("page.deckComparator.skill6Modes.teamAverage")}
                                 </button>
                                 <button
                                     onClick={() => setSkill6Mode(Skill6Mode.HIGHEST_POWER)}
-                                    className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all ${skill6Mode === Skill6Mode.HIGHEST_POWER
-                                        ? "ios-glass-tab-active text-white shadow-lg shadow-miku/20"
-                                        : "ios-glass-tab text-slate-600 hover:bg-white/60 border border-slate-200/50"
+                                    className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill6Mode === Skill6Mode.HIGHEST_POWER
+                                        ? "bg-secondary-container text-on-secondary-container"
+                                        : "border border-outline-variant text-on-surface-variant"
                                         }`}
                                 >
                                     {t("page.deckComparator.skill6Modes.highestPower")}
@@ -447,7 +437,7 @@ export default function DeckComparatorClient() {
                             </div>
                         </div>
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-2">{t("page.deckComparator.skill15Strategy")}</label>
+                            <label className="mb-2 block type-label-l text-on-surface-variant">{t("page.deckComparator.skill15Strategy")}</label>
                             <div className="flex gap-2">
                                 {[
                                     { value: Skill15Strategy.EXPECTED, labelKey: "page.deckComparator.skill15Strategies.expected" },
@@ -457,9 +447,9 @@ export default function DeckComparatorClient() {
                                     <button
                                         key={s.value}
                                         onClick={() => setSkill15Strategy(s.value)}
-                                        className={`flex-1 px-3 py-2 rounded-xl text-xs font-medium transition-all ${skill15Strategy === s.value
-                                            ? "ios-glass-tab-active text-white shadow-lg shadow-miku/20"
-                                            : "ios-glass-tab text-slate-600 hover:bg-white/60 border border-slate-200/50"
+                                        className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill15Strategy === s.value
+                                            ? "bg-secondary-container text-on-secondary-container"
+                                            : "border border-outline-variant text-on-surface-variant"
                                             }`}
                                     >
                                         {t(s.labelKey)}
@@ -472,7 +462,7 @@ export default function DeckComparatorClient() {
                     {/* Fire Count */}
                     <div className="mb-5">
                         <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">
+                            <label className="mb-1 block type-label-l text-on-surface-variant">
                                 {t("page.deckComparator.fireCount")}
                             </label>
                             <div className="flex items-center gap-3">
@@ -482,9 +472,9 @@ export default function DeckComparatorClient() {
                                     min={0}
                                     max={10}
                                     onChange={(e) => setFires(Math.min(10, Math.max(0, Number(e.target.value) || 0)))}
-                                    className="dc-number-input ios-glass-input w-24 px-3 py-2 rounded-lg transition-all text-sm"
+                                    className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-24"
                                 />
-                                <span className="text-sm text-slate-500">
+                                <span className="text-sm text-on-surface-variant">
                                     {t("page.deckComparator.currentMultiplier", { rate: getBoostRate(fires) })}
                                 </span>
                             </div>
@@ -492,57 +482,45 @@ export default function DeckComparatorClient() {
                     </div>
 
                     {/* Calculate Button */}
-                    <button
+                    <Button
+                        type="button"
+                        variant="filled"
+                        size="m"
+                        fullWidth
+                        icon={mdCalculate}
                         onClick={handleCalculate}
                         disabled={!selectedMeta}
-                        className="w-full px-6 py-3 ios-glass-btn ios-glass-btn-primary rounded-xl font-bold shadow-lg shadow-miku/20 hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
-                        </svg>
                         {t("page.deckComparator.calculatePt")}
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Error Display */}
                 {error && (
-                    <div className="ios-glass-card p-4 rounded-2xl mb-6 border border-red-500/20 bg-red-500/5 backdrop-blur-md">
-                        <div className="flex items-start gap-3">
-                            <svg className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            <p className="text-sm font-medium text-red-600 dark:text-red-400">{error}</p>
-                        </div>
-                    </div>
+                    <Banner tone="error" className="mb-6">{error}</Banner>
                 )}
 
                 {/* Results */}
                 {result && (
-                    <div className="dc-score-enter ios-glass-card p-5 sm:p-6 rounded-2xl mb-6">
+                    <div className="dc-score-enter bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                                <span className="w-1.5 h-6 bg-miku rounded-full"></span>
+                            <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                <Icon path={mdAnalytics} size={24} className="text-primary" />
                                 {t("page.deckComparator.resultsTitle")}
                             </h2>
-                            <button
-                                onClick={handleSaveHistory}
-                                className="px-3 py-1.5 ios-glass-btn text-miku text-xs font-bold rounded-lg hover:bg-miku/10 active:scale-95 transition-all flex items-center gap-1.5"
-                            >
-                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                </svg>
+                            <Button type="button" variant="tonal" size="xs" icon={mdSave} onClick={handleSaveHistory}>
                                 {t("page.deckComparator.saveResult")}
-                            </button>
+                            </Button>
                         </div>
 
                         {/* Main PT */}
                         {ptResult && (
-                            <div className="text-center mb-6 pb-6 border-b border-slate-200/20">
-                                <div className="text-xs text-slate-400 uppercase tracking-widest mb-1">{t("page.deckComparator.result.eventPt")}</div>
-                                <div className="text-5xl sm:text-6xl font-black bg-gradient-to-r from-orange-500 to-red-500 bg-clip-text text-transparent font-mono">
+                            <div className="text-center mb-6 pb-6 border-b border-outline-variant">
+                                <div className="type-label-l text-on-surface-variant mb-1">{t("page.deckComparator.result.eventPt")}</div>
+                                <div className="type-display-m sm:type-display-l type-emphasized text-tertiary font-mono">
                                     {formatNumber(ptResult.pt)}
                                 </div>
-                                <div className="flex items-center justify-center gap-3 mt-2 text-xs text-slate-400">
+                                <div className="flex items-center justify-center gap-3 mt-2 text-xs text-on-surface-variant">
                                     <span>{t("page.deckComparator.result.basePt", { value: formatNumber(ptResult.basePT) })}</span>
                                     <span>·</span>
                                     <span>{t("page.deckComparator.result.musicRate", { value: ptResult.eventRate })}</span>
@@ -556,12 +534,12 @@ export default function DeckComparatorClient() {
 
                         {/* Main Score */}
                         <div className="text-center mb-6">
-                            <div className="text-xs text-slate-400 uppercase tracking-widest mb-1">{t("page.deckComparator.result.estimatedScore")}</div>
-                            <div className="text-4xl sm:text-5xl font-black text-miku font-mono">
+                            <div className="type-label-l text-on-surface-variant mb-1">{t("page.deckComparator.result.estimatedScore")}</div>
+                            <div className="type-display-s sm:type-display-m type-emphasized text-primary font-mono">
                                 {formatNumber(result.score)}
                             </div>
                             {ptResult && (
-                                <div className="text-xs text-slate-400 mt-1">
+                                <div className="text-xs text-on-surface-variant mt-1">
                                     {t("page.deckComparator.result.teammateTotalScore", { value: formatNumber(ptResult.otherScore) })}
                                 </div>
                             )}
@@ -611,12 +589,12 @@ export default function DeckComparatorClient() {
                                 { label: t("page.deckComparator.result.skill6"), value: result.skill6Part, color: breakdownColors.skill6 },
                                 { label: t("page.deckComparator.result.activeBonus"), value: result.activeBonus, color: breakdownColors.active },
                             ].map((item) => (
-                                <div key={item.label} className="ios-glass-card rounded-xl p-3 border border-slate-200/10">
+                                <div key={item.label} className="bg-surface-container rounded-md3-md p-3">
                                     <div className="flex items-center gap-1.5 mb-1">
                                         <div className="w-2 h-2 rounded-full" style={{ backgroundColor: item.color }} />
-                                        <span className="text-xs text-slate-500">{item.label}</span>
+                                        <span className="text-xs text-on-surface-variant">{item.label}</span>
                                     </div>
-                                    <div className="text-sm font-bold text-primary-text font-mono">
+                                    <div className="type-title-s text-on-surface font-mono">
                                         {formatNumber(item.value)}
                                     </div>
                                 </div>
@@ -625,21 +603,21 @@ export default function DeckComparatorClient() {
 
                         {/* Additional Info */}
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
-                            <div className="ios-glass-card rounded-xl p-3 border border-slate-200/10">
-                                <div className="text-xs text-slate-500 mb-1">{t("page.deckComparator.result.totalPower")}</div>
-                                <div className="text-sm font-bold text-primary-text font-mono">
+                            <div className="bg-surface-container rounded-md3-md p-3">
+                                <div className="text-xs text-on-surface-variant mb-1">{t("page.deckComparator.result.totalPower")}</div>
+                                <div className="type-title-s text-on-surface font-mono">
                                     {formatNumber(result.totalPower)}
                                 </div>
                             </div>
-                            <div className="ios-glass-card rounded-xl p-3 border border-slate-200/10">
-                                <div className="text-xs text-slate-500 mb-1">{t("page.deckComparator.result.skill6Effectiveness")}</div>
-                                <div className="text-sm font-bold text-primary-text font-mono">
+                            <div className="bg-surface-container rounded-md3-md p-3">
+                                <div className="text-xs text-on-surface-variant mb-1">{t("page.deckComparator.result.skill6Effectiveness")}</div>
+                                <div className="type-title-s text-on-surface font-mono">
                                     {result.skill6Effectiveness.toFixed(1)}%
                                 </div>
                             </div>
-                            <div className="ios-glass-card rounded-xl p-3 border border-slate-200/10 col-span-2 sm:col-span-1">
-                                <div className="text-xs text-slate-500 mb-1">{t("page.deckComparator.result.fluctuationRange")}</div>
-                                <div className="text-sm font-bold text-primary-text font-mono">
+                            <div className="bg-surface-container rounded-md3-md p-3 col-span-2 sm:col-span-1">
+                                <div className="text-xs text-on-surface-variant mb-1">{t("page.deckComparator.result.fluctuationRange")}</div>
+                                <div className="type-title-s text-on-surface font-mono">
                                     ±{formatNumber((result.details.scoreBest - result.details.scoreWorst) / 2)}
                                 </div>
                             </div>
@@ -647,15 +625,15 @@ export default function DeckComparatorClient() {
 
                         {/* Best / Worst Reference */}
                         <div className="grid grid-cols-2 gap-3">
-                            <div className="ios-glass-card rounded-xl p-3 border border-emerald-500/15 bg-emerald-500/5">
-                                <div className="text-xs text-emerald-600 dark:text-emerald-400 mb-1">{t("page.deckComparator.result.bestScore")}</div>
-                                <div className="text-sm font-bold text-emerald-700 dark:text-emerald-300 font-mono">
+                            <div className="rounded-md3-md p-3 bg-primary-container text-on-primary-container">
+                                <div className="type-label-m mb-1">{t("page.deckComparator.result.bestScore")}</div>
+                                <div className="type-title-s font-mono">
                                     {formatNumber(result.details.scoreBest)}
                                 </div>
                             </div>
-                            <div className="ios-glass-card rounded-xl p-3 border border-red-500/15 bg-red-500/5">
-                                <div className="text-xs text-red-500 dark:text-red-400 mb-1">{t("page.deckComparator.result.worstScore")}</div>
-                                <div className="text-sm font-bold text-red-600 dark:text-red-300 font-mono">
+                            <div className="rounded-md3-md p-3 bg-error-container text-on-error-container">
+                                <div className="type-label-m mb-1">{t("page.deckComparator.result.worstScore")}</div>
+                                <div className="type-title-s font-mono">
                                     {formatNumber(result.details.scoreWorst)}
                                 </div>
                             </div>
@@ -665,35 +643,35 @@ export default function DeckComparatorClient() {
 
                 {/* History List */}
                 {history.length > 0 && (
-                    <div className="ios-glass-card p-5 sm:p-6 rounded-2xl mb-6">
+                    <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
                         <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-bold text-primary-text flex items-center gap-2">
-                                <span className="w-1.5 h-6 bg-slate-400 rounded-full"></span>
+                            <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                <Icon path={mdHistory} size={24} className="text-primary" />
                                 {t("page.deckComparator.historyTitle")}
                             </h2>
-                            <span className="text-xs text-slate-400">
+                            <span className="text-xs text-on-surface-variant">
                                 {t("page.deckComparator.historyCount", { count: formatNumber(history.length) })}
                             </span>
                         </div>
 
                         <div className="space-y-3">
                             {history.map((item) => (
-                                <div key={item.id} className="relative group ios-glass-panel rounded-xl p-3 flex items-center gap-3 hover:shadow-md hover:scale-[1.01] active:scale-[0.99] transition-all">
+                                <div key={item.id} className="relative group bg-surface-container rounded-md3-md p-3 flex items-center gap-3">
                                     {/* Song Info */}
                                     <div className="flex-1 min-w-0">
                                         <div className="flex items-baseline gap-2 mb-1">
-                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">
+                                            <span className="type-title-s text-on-surface truncate">
                                                 {item.musicTitle}
                                             </span>
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${item.difficulty === 'master' ? 'bg-purple-500/15 text-purple-600 dark:text-purple-400' :
-                                                    item.difficulty === 'expert' ? 'bg-red-500/15 text-red-600 dark:text-red-400' :
-                                                        item.difficulty === 'append' ? 'bg-fuchsia-500/15 text-fuchsia-600 dark:text-fuchsia-400' :
-                                                            'bg-slate-500/15 text-slate-600 dark:text-slate-400'
+                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md3-xs uppercase ${item.difficulty === 'master' ? 'bg-[#BB58B8] text-white' :
+                                                    item.difficulty === 'expert' ? 'bg-[#E84D53] text-white' :
+                                                        item.difficulty === 'append' ? 'bg-[#EE92BC] text-white' :
+                                                            'bg-surface-container-highest text-on-surface-variant'
                                                 }`}>
                                                 {item.difficulty}
                                             </span>
                                         </div>
-                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-400">
+                                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-on-surface-variant">
                                             <span>{formatDate(item.timestamp, { dateStyle: "short", timeStyle: "short" })}</span>
                                             <span className="hidden sm:inline">·</span>
                                             <span>{t("page.deckComparator.historyPower", { power: `${(item.userPower / 10000).toFixed(1)}w` })}</span>
@@ -706,24 +684,24 @@ export default function DeckComparatorClient() {
 
                                     {/* Score Info */}
                                     <div className="text-right flex-shrink-0">
-                                        <div className="text-sm font-bold text-miku font-mono">
+                                        <div className="type-title-s text-primary font-mono">
                                             {formatNumber(item.pt)} PT
                                         </div>
-                                        <div className="text-xs text-slate-400 font-mono">
+                                        <div className="text-xs text-on-surface-variant font-mono">
                                             {formatNumber(item.score)}
                                         </div>
                                     </div>
 
                                     {/* Delete Button */}
-                                    <button
+                                    <IconButton
+                                        icon={mdClose}
+                                        label={t("page.deckComparator.deleteHistory")}
+                                        variant="tonal"
+                                        size="xs"
                                         onClick={() => handleDeleteHistory(item.id)}
-                                        className="absolute -top-2 -right-2 bg-red-100 dark:bg-red-950/80 text-red-500 rounded-full p-1 opacity-0 group-hover:opacity-100 transition-all shadow-sm hover:bg-red-200 dark:hover:bg-red-900 hover:scale-110"
+                                        className="absolute -top-2 -right-2 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                                         title={t("page.deckComparator.deleteHistory")}
-                                    >
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    </button>
+                                    />
                                 </div>
                             ))}
                         </div>
@@ -731,15 +709,15 @@ export default function DeckComparatorClient() {
                 )}
 
                 {/* Footer */}
-                <div className="mt-12 text-center text-xs text-slate-400">
+                <div className="mt-12 text-center type-body-s text-on-surface-variant">
                     <p className="mb-1">
-                        {t("page.deckComparator.sourceCreditPrefix")} <ExternalLink href="https://github.com/xfl03/sekai-calculator" target="_blank" rel="noopener noreferrer" className="text-slate-500 hover:text-miku hover:underline">sekai-calculator</ExternalLink>
+                        {t("page.deckComparator.sourceCreditPrefix")} <ExternalLink href="https://github.com/xfl03/sekai-calculator" target="_blank" rel="noopener noreferrer" className="text-on-surface-variant hover:text-primary hover:underline">sekai-calculator</ExternalLink>
                     </p>
                     <p>
                         {t("page.deckComparator.licenseNotice")}
                     </p>
                 </div>
-            </div>
+            </PageContainer>
 
         </MainLayout>
     );

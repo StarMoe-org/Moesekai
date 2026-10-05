@@ -76,7 +76,7 @@ function ItemIcon({ item }: { item: OverrideCatalogItem }) {
         }
     }
     return (
-        <div className="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-500 flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center text-xs text-on-surface-variant flex-shrink-0">
             ★
         </div>
     );
@@ -229,32 +229,32 @@ export default function DataOverridePanel({
                         key={tab.key}
                         type="button"
                         onClick={() => setSubSection(tab.key)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                        className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all flex items-center gap-1.5 whitespace-nowrap ${
                             subSection === tab.key
-                                ? "bg-white dark:bg-slate-800 text-miku font-bold shadow-xs border border-miku/30"
-                                : "bg-slate-100/80 dark:bg-slate-800/40 text-slate-600 dark:text-slate-400 hover:bg-slate-200/60"
+                                ? "bg-secondary-container text-on-secondary-container type-emphasized"
+                                : "bg-surface-container-high text-on-surface-variant state-layer"
                         }`}
                     >
                         <span>{tab.label}</span>
-                        {tab.count > 0 && <span className="w-1.5 h-1.5 rounded-full bg-miku" />}
+                        {tab.count > 0 && <span className="w-1.5 h-1.5 rounded-full bg-primary" />}
                     </button>
                 ))}
             </div>
 
             {/* 1. Characters Section */}
             {subSection === "characters" && (
-                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
+                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-3">
                     {/* Top Toolbar */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-200/60 dark:border-slate-800">
+                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <span className="type-title-s text-on-surface">
                                 {t("page.deckRecommend.config.dataOverrides.characterTitle")}
                             </span>
-                            <span className="text-[11px] text-slate-400 font-mono">(Max {maxRank})</span>
+                            <span className="text-[11px] text-on-surface-variant font-mono">(Max {maxRank})</span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                <span className="text-xs text-on-surface-variant whitespace-nowrap">
                                     {t("page.deckRecommend.config.dataOverrides.uniformSetting")}:
                                 </span>
                                 <input
@@ -264,14 +264,14 @@ export default function DataOverridePanel({
                                     value={values.characterRank}
                                     onChange={(e) => onChange({ characterRank: e.target.value })}
                                     placeholder={t("page.deckRecommend.config.dataOverrides.unset")}
-                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-2xs focus:border-miku focus:ring-2 focus:ring-miku/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-surface-container-lowest border-2 border-outline rounded-md3-sm focus:border-primary focus:ring-2 focus:ring-primary/30 text-on-surface placeholder:text-on-surface-variant"
                                 />
                             </div>
                             {maxRank > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => onChange({ characterRank: String(maxRank) })}
-                                    className="text-xs text-miku hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-primary px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.setAllMax")}
                                 </button>
@@ -280,7 +280,7 @@ export default function DataOverridePanel({
                                 <button
                                     type="button"
                                     onClick={() => onChange({ characterRank: "", characterRankOverrides: [] })}
-                                    className="text-xs text-red-500 hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-error px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.clear")}
                                 </button>
@@ -297,10 +297,10 @@ export default function DataOverridePanel({
                                 <div
                                     key={char.id}
                                     title={`${char.name} (Max ${char.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: char.current !== null ? char.current : "-" })})`}
-                                    className={`flex flex-col items-center p-1.5 rounded-xl border transition-all ${
+                                    className={`flex flex-col items-center p-1.5 rounded-md3-md border transition-all ${
                                         hasOverride
-                                            ? "bg-miku/10 border-2 border-miku/60 shadow-xs ring-1 ring-miku/20"
-                                            : "bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300"
+                                            ? "bg-secondary-container border-2 border-primary ring-1 ring-primary/30"
+                                            : "bg-surface-container-lowest border border-outline-variant hover:border-outline"
                                     }`}
                                 >
                                     <div className="relative mb-1">
@@ -314,7 +314,7 @@ export default function DataOverridePanel({
                                             <button
                                                 type="button"
                                                 onClick={() => setCharacterRank(char.id, "")}
-                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                 title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                             >
                                                 ×
@@ -328,10 +328,10 @@ export default function DataOverridePanel({
                                         value={hasOverride ? overrideVal : ""}
                                         onChange={(e) => setCharacterRank(char.id, e.target.value)}
                                         placeholder={values.characterRank || (char.current !== null ? String(char.current) : "-")}
-                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                             hasOverride
-                                                ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                         }`}
                                     />
                                 </div>
@@ -343,17 +343,17 @@ export default function DataOverridePanel({
 
             {/* 2. Gates Section */}
             {subSection === "gates" && (
-                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-200/60 dark:border-slate-800">
+                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <span className="type-title-s text-on-surface">
                                 {t("page.deckRecommend.config.dataOverrides.gateTitle")}
                             </span>
-                            <span className="text-[11px] text-slate-400 font-mono">(Max {maxGate})</span>
+                            <span className="text-[11px] text-on-surface-variant font-mono">(Max {maxGate})</span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                <span className="text-xs text-on-surface-variant whitespace-nowrap">
                                     {t("page.deckRecommend.config.dataOverrides.uniformSetting")}:
                                 </span>
                                 <input
@@ -363,14 +363,14 @@ export default function DataOverridePanel({
                                     value={values.mysekaiGateLevel}
                                     onChange={(e) => onChange({ mysekaiGateLevel: e.target.value })}
                                     placeholder={t("page.deckRecommend.config.dataOverrides.unset")}
-                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-2xs focus:border-miku focus:ring-2 focus:ring-miku/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-surface-container-lowest border-2 border-outline rounded-md3-sm focus:border-primary focus:ring-2 focus:ring-primary/30 text-on-surface placeholder:text-on-surface-variant"
                                 />
                             </div>
                             {maxGate > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => onChange({ mysekaiGateLevel: String(maxGate) })}
-                                    className="text-xs text-miku hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-primary px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.setAllMax")}
                                 </button>
@@ -379,7 +379,7 @@ export default function DataOverridePanel({
                                 <button
                                     type="button"
                                     onClick={() => onChange({ mysekaiGateLevel: "", mysekaiGateOverrides: [] })}
-                                    className="text-xs text-red-500 hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-error px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.clear")}
                                 </button>
@@ -395,10 +395,10 @@ export default function DataOverridePanel({
                                 <div
                                     key={gate.id}
                                     title={`${gate.name} (Max ${gate.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: gate.current !== null ? gate.current : "-" })})`}
-                                    className={`flex flex-col items-center justify-between p-2.5 rounded-xl border transition-all min-h-[92px] space-y-1.5 ${
+                                    className={`flex flex-col items-center justify-between p-2.5 rounded-md3-md border transition-all min-h-[92px] space-y-1.5 ${
                                         hasOverride
-                                            ? "bg-miku/10 border-2 border-miku/60 shadow-xs ring-1 ring-miku/20"
-                                            : "bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300"
+                                            ? "bg-secondary-container border-2 border-primary ring-1 ring-primary/30"
+                                            : "bg-surface-container-lowest border border-outline-variant hover:border-outline"
                                     }`}
                                 >
                                     <div className="relative">
@@ -407,7 +407,7 @@ export default function DataOverridePanel({
                                             <button
                                                 type="button"
                                                 onClick={() => setGateLevel(gate.id, "")}
-                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                 title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                             >
                                                 ×
@@ -421,10 +421,10 @@ export default function DataOverridePanel({
                                         value={hasOverride ? overrideVal : ""}
                                         onChange={(e) => setGateLevel(gate.id, e.target.value)}
                                         placeholder={values.mysekaiGateLevel || (gate.current !== null ? String(gate.current) : "-")}
-                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                             hasOverride
-                                                ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                         }`}
                                     />
                                 </div>
@@ -436,19 +436,19 @@ export default function DataOverridePanel({
 
             {/* 3. Fixtures Section */}
             {subSection === "fixtures" && (
-                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-200/60 dark:border-slate-800">
+                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <span className="type-title-s text-on-surface">
                                 {t("page.deckRecommend.config.dataOverrides.fixtureTitle")}
                             </span>
-                            <span className="text-[11px] text-slate-400">
+                            <span className="text-[11px] text-on-surface-variant">
                                 ({t("page.deckRecommend.config.dataOverrides.bonusRateUnit")})
                             </span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                <span className="text-xs text-on-surface-variant whitespace-nowrap">
                                     {t("page.deckRecommend.config.dataOverrides.uniformSetting")}:
                                 </span>
                                 <input
@@ -458,14 +458,14 @@ export default function DataOverridePanel({
                                     value={values.mysekaiFixtureBonusRate}
                                     onChange={(e) => onChange({ mysekaiFixtureBonusRate: e.target.value })}
                                     placeholder={t("page.deckRecommend.config.dataOverrides.unset")}
-                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-2xs focus:border-miku focus:ring-2 focus:ring-miku/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-surface-container-lowest border-2 border-outline rounded-md3-sm focus:border-primary focus:ring-2 focus:ring-primary/30 text-on-surface placeholder:text-on-surface-variant"
                                 />
                             </div>
                             {(values.mysekaiFixtureBonusRate || values.mysekaiFixtureOverrides.length > 0) && (
                                 <button
                                     type="button"
                                     onClick={() => onChange({ mysekaiFixtureBonusRate: "", mysekaiFixtureOverrides: [] })}
-                                    className="text-xs text-red-500 hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-error px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.clear")}
                                 </button>
@@ -481,10 +481,10 @@ export default function DataOverridePanel({
                                 <div
                                     key={char.id}
                                     title={`${char.name} (${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: char.current !== null ? `${char.current}%` : "-" })})`}
-                                    className={`flex flex-col items-center p-1.5 rounded-xl border transition-all ${
+                                    className={`flex flex-col items-center p-1.5 rounded-md3-md border transition-all ${
                                         hasOverride
-                                            ? "bg-miku/10 border-2 border-miku/60 shadow-xs ring-1 ring-miku/20"
-                                            : "bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300"
+                                            ? "bg-secondary-container border-2 border-primary ring-1 ring-primary/30"
+                                            : "bg-surface-container-lowest border border-outline-variant hover:border-outline"
                                     }`}
                                 >
                                     <div className="relative mb-1">
@@ -498,7 +498,7 @@ export default function DataOverridePanel({
                                             <button
                                                 type="button"
                                                 onClick={() => setFixtureRate(char.id, "")}
-                                                className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                 title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                             >
                                                 ×
@@ -512,10 +512,10 @@ export default function DataOverridePanel({
                                         value={hasOverride ? overrideVal : ""}
                                         onChange={(e) => setFixtureRate(char.id, e.target.value)}
                                         placeholder={values.mysekaiFixtureBonusRate || (char.current !== null ? String(char.current) : "-")}
-                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                        className={`w-12 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                             hasOverride
-                                                ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                         }`}
                                     />
                                 </div>
@@ -527,18 +527,18 @@ export default function DataOverridePanel({
 
             {/* 4. Area Items Section */}
             {subSection === "area" && (
-                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-4">
+                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-4">
                     {/* Top Toolbar */}
-                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-slate-200/60 dark:border-slate-800">
+                    <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-outline-variant">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                            <span className="type-title-s text-on-surface">
                                 {t("page.deckRecommend.config.dataOverrides.areaItemTitle")}
                             </span>
-                            <span className="text-[11px] text-slate-400 font-mono">(Max {maxArea})</span>
+                            <span className="text-[11px] text-on-surface-variant font-mono">(Max {maxArea})</span>
                         </div>
                         <div className="flex items-center gap-2 flex-wrap">
                             <div className="flex items-center gap-1.5">
-                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                <span className="text-xs text-on-surface-variant whitespace-nowrap">
                                     {t("page.deckRecommend.config.dataOverrides.uniformSetting")}:
                                 </span>
                                 <input
@@ -548,14 +548,14 @@ export default function DataOverridePanel({
                                     value={values.areaItemLevel}
                                     onChange={(e) => onChange({ areaItemLevel: e.target.value })}
                                     placeholder={t("page.deckRecommend.config.dataOverrides.unset")}
-                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-white dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-600 rounded-lg shadow-2xs focus:border-miku focus:ring-2 focus:ring-miku/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                                    className="w-16 px-2 py-1 text-xs text-center font-bold bg-surface-container-lowest border-2 border-outline rounded-md3-sm focus:border-primary focus:ring-2 focus:ring-primary/30 text-on-surface placeholder:text-on-surface-variant"
                                 />
                             </div>
                             {maxArea > 0 && (
                                 <button
                                     type="button"
                                     onClick={() => onChange({ areaItemLevel: String(maxArea) })}
-                                    className="text-xs text-miku hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-primary px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.setAllMax")}
                                 </button>
@@ -564,7 +564,7 @@ export default function DataOverridePanel({
                                 <button
                                     type="button"
                                     onClick={() => onChange({ areaItemLevel: "", areaItemOverrides: [] })}
-                                    className="text-xs text-red-500 hover:underline font-medium px-1.5 py-1"
+                                    className="state-layer focus-ring rounded-full type-label-m text-error px-2 py-1"
                                 >
                                     {t("page.deckRecommend.config.dataOverrides.clear")}
                                 </button>
@@ -576,7 +576,7 @@ export default function DataOverridePanel({
                         {/* 4.1 Attribute Area Items (Grouped by 5 attributes, matching unit style) */}
                         {attrAreaItems.length > 0 && (
                             <div>
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                                <span className="text-[11px] font-bold text-on-surface-variant block mb-1.5">
                                     {t("page.deckRecommend.config.dataOverrides.attrItems")}
                                 </span>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
@@ -586,7 +586,7 @@ export default function DataOverridePanel({
                                         return (
                                             <div
                                                 key={attr.value}
-                                                className="flex flex-col items-center justify-between p-2.5 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-2 shadow-2xs min-h-[92px]"
+                                                className="flex flex-col items-center justify-between p-2.5 bg-surface-container-lowest rounded-md3-md border border-outline-variant space-y-2 min-h-[92px]"
                                             >
                                                 <div className="w-7 h-7 relative flex-shrink-0">
                                                     <Image src={`/data/icon/${attr.icon}`} alt={attr.label} fill className="object-contain" unoptimized />
@@ -605,17 +605,17 @@ export default function DataOverridePanel({
                                                                     onChange={(e) => setAreaItemLevel(item.id, e.target.value)}
                                                                     placeholder={values.areaItemLevel || (item.current !== null ? String(item.current) : "-")}
                                                                     title={`${item.name} #${idx + 1} (Max ${item.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: item.current !== null ? item.current : "-" })})`}
-                                                                    className={`w-11 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                                                    className={`w-11 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                                                         hasOverride
-                                                                            ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                                            : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                                            ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                                            : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                                                     }`}
                                                                 />
                                                                 {hasOverride && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setAreaItemLevel(item.id, "")}
-                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                                        className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                                         title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                                                     >
                                                                         ×
@@ -635,7 +635,7 @@ export default function DataOverridePanel({
                         {/* 4.2 Unit Area Items (6 units) */}
                         {unitAreaItems.length > 0 && (
                             <div>
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                                <span className="text-[11px] font-bold text-on-surface-variant block mb-1.5">
                                     {t("page.deckRecommend.config.dataOverrides.unitItems")}
                                 </span>
                                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
@@ -645,7 +645,7 @@ export default function DataOverridePanel({
                                         return (
                                             <div
                                                 key={unit.value}
-                                                className={`flex flex-col items-center justify-between p-2.5 bg-white/80 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-slate-700/80 space-y-2 shadow-2xs min-h-[92px] ${
+                                                className={`flex flex-col items-center justify-between p-2.5 bg-surface-container-lowest rounded-md3-md border border-outline-variant space-y-2 min-h-[92px] ${
                                                     items.length > 2 ? "sm:col-span-2 lg:col-span-2" : ""
                                                 }`}
                                             >
@@ -666,17 +666,17 @@ export default function DataOverridePanel({
                                                                     onChange={(e) => setAreaItemLevel(item.id, e.target.value)}
                                                                     placeholder={values.areaItemLevel || (item.current !== null ? String(item.current) : "-")}
                                                                     title={`${item.name} #${idx + 1} (Max ${item.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: item.current !== null ? item.current : "-" })})`}
-                                                                    className={`w-11 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                                                    className={`w-11 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                                                         hasOverride
-                                                                            ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                                            : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                                            ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                                            : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                                                     }`}
                                                                 />
                                                                 {hasOverride && (
                                                                     <button
                                                                         type="button"
                                                                         onClick={() => setAreaItemLevel(item.id, "")}
-                                                                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                                        className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                                         title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                                                     >
                                                                         ×
@@ -696,7 +696,7 @@ export default function DataOverridePanel({
                         {/* 4.3 Character Area Items (26 characters) */}
                         {charAreaItems.length > 0 && (
                             <div>
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                                <span className="text-[11px] font-bold text-on-surface-variant block mb-1.5">
                                     {t("page.deckRecommend.config.dataOverrides.characterItems")}
                                 </span>
                                 <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-9 gap-2">
@@ -707,10 +707,10 @@ export default function DataOverridePanel({
                                             <div
                                                 key={item.id}
                                                 title={`${item.name} (Max ${item.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: item.current !== null ? item.current : "-" })})`}
-                                                className={`flex flex-col items-center p-1.5 rounded-xl border transition-all ${
+                                                className={`flex flex-col items-center p-1.5 rounded-md3-md border transition-all ${
                                                     hasOverride
-                                                        ? "bg-miku/10 border-2 border-miku/60 shadow-xs ring-1 ring-miku/20"
-                                                        : "bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300"
+                                                        ? "bg-secondary-container border-2 border-primary ring-1 ring-primary/30"
+                                                        : "bg-surface-container-lowest border border-outline-variant hover:border-outline"
                                                 }`}
                                             >
                                                 <div className="relative mb-1">
@@ -719,7 +719,7 @@ export default function DataOverridePanel({
                                                         <button
                                                             type="button"
                                                             onClick={() => setAreaItemLevel(item.id, "")}
-                                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                            className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                             title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                                         >
                                                             ×
@@ -733,10 +733,10 @@ export default function DataOverridePanel({
                                                     value={hasOverride ? overrideVal : ""}
                                                     onChange={(e) => setAreaItemLevel(item.id, e.target.value)}
                                                     placeholder={values.areaItemLevel || (item.current !== null ? String(item.current) : "-")}
-                                                    className={`w-12 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                                    className={`w-12 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                                         hasOverride
-                                                            ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                            : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                            ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                            : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                                     }`}
                                                 />
                                             </div>
@@ -749,7 +749,7 @@ export default function DataOverridePanel({
                         {/* 4.4 General Area Items (if any) */}
                         {generalAreaItems.length > 0 && (
                             <div>
-                                <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block mb-1.5">
+                                <span className="text-[11px] font-bold text-on-surface-variant block mb-1.5">
                                     {t("page.deckRecommend.config.dataOverrides.generalItems")}
                                 </span>
                                 <div className="grid grid-cols-4 sm:grid-cols-6 gap-2">
@@ -760,10 +760,10 @@ export default function DataOverridePanel({
                                             <div
                                                 key={item.id}
                                                 title={`${item.name} (Max ${item.max}, ${t("page.deckRecommend.config.dataOverrides.currentLabel", { value: item.current !== null ? item.current : "-" })})`}
-                                                className={`flex flex-col items-center p-1.5 rounded-xl border transition-all ${
+                                                className={`flex flex-col items-center p-1.5 rounded-md3-md border transition-all ${
                                                     hasOverride
-                                                        ? "bg-miku/10 border-2 border-miku/60 shadow-xs ring-1 ring-miku/20"
-                                                        : "bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 hover:border-slate-300"
+                                                        ? "bg-secondary-container border-2 border-primary ring-1 ring-primary/30"
+                                                        : "bg-surface-container-lowest border border-outline-variant hover:border-outline"
                                                 }`}
                                             >
                                                 <div className="relative mb-1">
@@ -772,7 +772,7 @@ export default function DataOverridePanel({
                                                         <button
                                                             type="button"
                                                             onClick={() => setAreaItemLevel(item.id, "")}
-                                                            className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
+                                                            className="absolute -top-1 -right-1 bg-error text-on-error rounded-full w-3.5 h-3.5 text-[9px] flex items-center justify-center font-bold"
                                                             title={t("page.deckRecommend.config.dataOverrides.resetOverride")}
                                                         >
                                                             ×
@@ -786,10 +786,10 @@ export default function DataOverridePanel({
                                                     value={hasOverride ? overrideVal : ""}
                                                     onChange={(e) => setAreaItemLevel(item.id, e.target.value)}
                                                     placeholder={values.areaItemLevel || (item.current !== null ? String(item.current) : "-")}
-                                                    className={`w-12 px-1 py-0.5 text-xs text-center rounded-lg transition-all ${
+                                                    className={`w-12 px-1 py-0.5 text-xs text-center rounded-md3-sm transition-all ${
                                                         hasOverride
-                                                            ? "border-2 border-miku bg-miku/15 text-miku font-extrabold shadow-sm ring-1 ring-miku/30"
-                                                            : "border-2 border-slate-200/90 dark:border-slate-700 bg-white/95 dark:bg-slate-800/95 text-slate-800 dark:text-slate-100 font-medium focus:border-miku focus:ring-1 focus:ring-miku/30 shadow-2xs"
+                                                            ? "border-2 border-primary bg-secondary-container text-primary font-extrabold ring-1 ring-primary/30"
+                                                            : "border-2 border-outline-variant bg-surface-container-lowest text-on-surface font-medium focus:border-primary focus:ring-1 focus:ring-primary/30"
                                                     }`}
                                                 />
                                             </div>

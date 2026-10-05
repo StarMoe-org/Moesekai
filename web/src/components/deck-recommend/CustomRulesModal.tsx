@@ -8,6 +8,8 @@ import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
 import { type ICardInfo, CARD_RARITY_MAX_LEVELS } from "@/types/types";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
+import { Button, Icon, Tabs } from "@/components/md3";
+import { mdCheck, mdClose, mdRestartAlt, mdVisibility } from "@/components/md3/icons";
 import DataOverridePanel, { type OverrideCatalogItem } from "./DataOverridePanel";
 import type {
     DeckSkillOrder,
@@ -122,21 +124,21 @@ function SingleCardOverrideRow({
     }, [master]);
 
     return (
-        <div className="p-3 bg-white/80 dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-slate-700 space-y-2.5 shadow-xs">
+        <div className="p-3 bg-surface-container-lowest rounded-md3-lg border border-outline-variant space-y-2.5">
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     {master ? (
                         <SekaiCardThumbnail card={master} trained={entry.masterRank !== undefined && entry.masterRank > 0} width={40} />
                     ) : (
-                        <div className="w-10 h-10 rounded bg-slate-200 dark:bg-slate-700 flex items-center justify-center text-xs text-slate-500">
+                        <div className="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-xs text-on-surface-variant">
                             #{entry.cardId}
                         </div>
                     )}
                     <div className="min-w-0">
-                        <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                        <div className="type-label-l text-on-surface truncate">
                             {master?.prefix ?? `#${entry.cardId}`}
                         </div>
-                        <div className="text-[10px] text-slate-400">
+                        <div className="text-[10px] text-on-surface-variant">
                             ID: {entry.cardId} · Max Lv.{maxLevel}
                         </div>
                     </div>
@@ -144,16 +146,16 @@ function SingleCardOverrideRow({
                 <button
                     type="button"
                     onClick={onRemove}
-                    className="text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30"
+                    className="state-layer focus-ring rounded-full px-3 py-1 type-label-l text-error"
                 >
                     {t("page.deckRecommend.config.singleCardRemove")}
                 </button>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 text-xs border-t border-slate-100 dark:border-slate-700/60">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 pt-1 text-xs border-t border-outline-variant">
                 {/* Level */}
-                <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                    <span className="text-slate-500 whitespace-nowrap">{t("page.deckRecommend.config.singleCardLevel")}:</span>
+                <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 rounded-md3-md">
+                    <span className="text-on-surface-variant whitespace-nowrap">{t("page.deckRecommend.config.singleCardLevel")}:</span>
                     <div className="flex items-center gap-1">
                         <input
                             type="number"
@@ -165,12 +167,12 @@ function SingleCardOverrideRow({
                                 level: e.target.value === "" ? undefined : Math.max(1, Math.min(maxLevel, parseInt(e.target.value, 10) || 1)),
                             })}
                             placeholder={t("page.deckRecommend.config.singleCardInherit")}
-                            className="w-16 px-1.5 py-1 text-xs ios-glass-input rounded-lg text-center"
+                            className="w-16 px-1.5 py-1 text-xs rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant rounded-md3-sm text-center"
                         />
                         <button
                             type="button"
                             onClick={() => onChange({ ...entry, level: maxLevel })}
-                            className="text-[11px] text-miku font-medium px-1 hover:underline whitespace-nowrap"
+                            className="text-[11px] text-primary font-medium px-1 hover:underline whitespace-nowrap"
                         >
                             {t("page.deckRecommend.config.singleCardLevelMax")}
                         </button>
@@ -178,8 +180,8 @@ function SingleCardOverrideRow({
                 </div>
 
                 {/* Master Rank */}
-                <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                    <span className="text-slate-500 whitespace-nowrap">{t("page.deckRecommend.config.singleCardMaster")}:</span>
+                <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 rounded-md3-md">
+                    <span className="text-on-surface-variant whitespace-nowrap">{t("page.deckRecommend.config.singleCardMaster")}:</span>
                     <div className="flex items-center gap-0.5">
                         {[0, 1, 2, 3, 4, 5].map((rank) => {
                             const isSelected = entry.masterRank === rank;
@@ -193,8 +195,8 @@ function SingleCardOverrideRow({
                                     })}
                                     className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all ${
                                         isSelected
-                                            ? "bg-miku text-white shadow-xs"
-                                            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                                            ? "bg-primary text-on-primary"
+                                            : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high"
                                     }`}
                                 >
                                     {rank}
@@ -205,8 +207,8 @@ function SingleCardOverrideRow({
                 </div>
 
                 {/* Skill Level */}
-                <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                    <span className="text-slate-500 whitespace-nowrap">{t("page.deckRecommend.config.singleCardSkill")}:</span>
+                <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 rounded-md3-md">
+                    <span className="text-on-surface-variant whitespace-nowrap">{t("page.deckRecommend.config.singleCardSkill")}:</span>
                     <div className="flex items-center gap-1">
                         {[1, 2, 3, 4].map((sl) => {
                             const isSelected = entry.skillLevel === sl;
@@ -220,8 +222,8 @@ function SingleCardOverrideRow({
                                     })}
                                     className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all ${
                                         isSelected
-                                            ? "bg-miku text-white shadow-xs"
-                                            : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200"
+                                            ? "bg-primary text-on-primary"
+                                            : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high"
                                     }`}
                                 >
                                     {sl}
@@ -232,8 +234,8 @@ function SingleCardOverrideRow({
                 </div>
 
                 {/* Episodes */}
-                <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                    <span className="text-slate-500 whitespace-nowrap">{t("page.deckRecommend.config.singleCardEpisodes")}:</span>
+                <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 rounded-md3-md">
+                    <span className="text-on-surface-variant whitespace-nowrap">{t("page.deckRecommend.config.singleCardEpisodes")}:</span>
                     <div className="flex items-center gap-1">
                         <button
                             type="button"
@@ -244,8 +246,8 @@ function SingleCardOverrideRow({
                             }}
                             className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
                                 (entry.episodeReadCount ?? 0) >= 1
-                                    ? "bg-miku text-white shadow-xs"
-                                    : "bg-white dark:bg-slate-800 text-slate-500"
+                                    ? "bg-primary text-on-primary"
+                                    : "bg-surface-container-lowest text-on-surface-variant"
                             }`}
                         >
                             {t("page.deckRecommend.config.singleCardEpisode1")}
@@ -259,8 +261,8 @@ function SingleCardOverrideRow({
                             }}
                             className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
                                 (entry.episodeReadCount ?? 0) === 2
-                                    ? "bg-miku text-white shadow-xs"
-                                    : "bg-white dark:bg-slate-800 text-slate-500"
+                                    ? "bg-primary text-on-primary"
+                                    : "bg-surface-container-lowest text-on-surface-variant"
                             }`}
                         >
                             {t("page.deckRecommend.config.singleCardEpisode2")}
@@ -269,8 +271,8 @@ function SingleCardOverrideRow({
                 </div>
 
                 {/* Canvas Bonus */}
-                <div className="flex items-center justify-between gap-2 bg-slate-50 dark:bg-slate-900/40 p-2 rounded-xl">
-                    <span className="text-slate-500 whitespace-nowrap">{t("page.deckRecommend.config.singleCardCanvas")}:</span>
+                <div className="flex items-center justify-between gap-2 bg-surface-container-low p-2 rounded-md3-md">
+                    <span className="text-on-surface-variant whitespace-nowrap">{t("page.deckRecommend.config.singleCardCanvas")}:</span>
                     <input
                         type="checkbox"
                         className="ds-checkbox"
@@ -378,7 +380,7 @@ export default function CustomRulesModal({
                             return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
                         })}
                         {excludedCards.length > 5 && (
-                            <span className="text-[10px] text-slate-400 font-mono">+{excludedCards.length - 5}</span>
+                            <span className="text-[10px] text-on-surface-variant font-mono">+{excludedCards.length - 5}</span>
                         )}
                     </div>
                 ),
@@ -531,7 +533,7 @@ export default function CustomRulesModal({
                             return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} /> : null;
                         })}
                         {singleCardOverrides.length > 5 && (
-                            <span className="text-[10px] text-slate-400 font-mono">+{singleCardOverrides.length - 5}</span>
+                            <span className="text-[10px] text-on-surface-variant font-mono">+{singleCardOverrides.length - 5}</span>
                         )}
                     </div>
                 ),
@@ -598,29 +600,20 @@ export default function CustomRulesModal({
         >
             <div className="flex flex-col space-y-4">
                 {/* Tabs Switcher */}
-                <div className="flex items-center gap-1.5 overflow-x-auto pb-1 border-b border-slate-200/60 dark:border-slate-800">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.key}
-                            type="button"
-                            onClick={() => setActiveTab(tab.key)}
-                            className={`px-3 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                                activeTab === tab.key
-                                    ? "bg-miku text-white shadow-sm"
-                                    : "bg-slate-100 dark:bg-slate-800/70 text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-700/70"
-                            }`}
-                        >
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2">
+                    <Tabs
+                        items={tabs.map((tab) => ({ value: tab.key, label: tab.label }))}
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        variant="secondary"
+                        scrollable
+                        className="min-w-0 flex-1"
+                        aria-label={t("page.deckRecommend.rules.modalTitle")}
+                    />
                     {activeRules.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={onResetAll}
-                            className="ml-auto text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 whitespace-nowrap"
-                        >
+                        <Button type="button" variant="text" color="error" size="xs" icon={mdRestartAlt} onClick={onResetAll} className="shrink-0">
                             {t("page.deckRecommend.rules.resetAll")}
-                        </button>
+                        </Button>
                     )}
                 </div>
 
@@ -632,13 +625,13 @@ export default function CustomRulesModal({
                             {/* Left Column: Fixed Characters + Designate Leader */}
                             <div className="space-y-4">
                                 {/* Fixed characters (Clean Avatar Multi-Selector) */}
-                                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                     <div className="flex items-center justify-between mb-2.5">
                                         <div className="flex items-center gap-1.5">
-                                            <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                            <label className="type-title-s text-on-surface">
                                                 {t("page.deckRecommend.config.fixedCharacters")}
                                             </label>
-                                            <span className="text-[11px] font-mono text-slate-400">
+                                            <span className="text-[11px] font-mono text-on-surface-variant">
                                                 ({fixedCharacters.length} / 5)
                                             </span>
                                         </div>
@@ -646,7 +639,7 @@ export default function CustomRulesModal({
                                             <button
                                                 type="button"
                                                 onClick={() => onChange({ fixedCharacters: [] })}
-                                                className="text-[11px] text-red-500 hover:underline font-medium"
+                                                className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-m text-error"
                                             >
                                                 {t("page.deckRecommend.config.filterClear")}
                                             </button>
@@ -670,16 +663,16 @@ export default function CustomRulesModal({
                                                     }}
                                                     className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 aspect-square rounded-full p-0.5 transition-all border relative flex items-center justify-center ${
                                                         active
-                                                            ? "ring-2 ring-miku shadow-sm border-miku bg-miku/15"
+                                                            ? "ring-2 ring-primary border-primary bg-secondary-container"
                                                             : full
-                                                                ? "opacity-30 cursor-not-allowed border-slate-200 dark:border-slate-800"
-                                                                : "border-slate-200 dark:border-slate-700 hover:border-miku/50 bg-white/50 dark:bg-slate-800/50"
+                                                                ? "opacity-30 cursor-not-allowed border-outline-variant"
+                                                                : "border-outline-variant hover:border-primary bg-surface-container-lowest"
                                                     }`}
                                                     title={getCharacterName(t, id, "full")}
                                                 >
                                                     <img src={getCharacterIconUrl(id)} alt="" className="w-full h-full rounded-full object-cover shrink-0 aspect-square pointer-events-none" loading="lazy" />
                                                     {active && (
-                                                        <span className="absolute -top-0.5 -right-0.5 bg-miku text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-xs shrink-0 aspect-square">
+                                                        <span className="absolute -top-0.5 -right-0.5 bg-primary text-on-primary rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shrink-0 aspect-square">
                                                             ✓
                                                         </span>
                                                     )}
@@ -690,16 +683,16 @@ export default function CustomRulesModal({
                                 </div>
 
                                 {/* Designate Leader (Exact Same Avatar Multi-grid Style) */}
-                                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                     <div className="flex items-center justify-between mb-2.5">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                        <label className="type-title-s text-on-surface">
                                             {t("page.deckRecommend.rules.designateLeader")}
                                         </label>
                                         {leaderCharacterId && (
                                             <button
                                                 type="button"
                                                 onClick={() => onChange({ leaderCharacterId: null })}
-                                                className="text-[11px] text-red-500 hover:underline font-medium"
+                                                className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-m text-error"
                                             >
                                                 {t("page.deckRecommend.config.filterClear")}
                                             </button>
@@ -717,14 +710,14 @@ export default function CustomRulesModal({
                                                     }}
                                                     className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 aspect-square rounded-full p-0.5 transition-all border relative flex items-center justify-center ${
                                                         active
-                                                            ? "ring-2 ring-miku shadow-sm border-miku bg-miku/15"
-                                                            : "border-slate-200 dark:border-slate-700 hover:border-miku/50 bg-white/50 dark:bg-slate-800/50"
+                                                            ? "ring-2 ring-primary border-primary bg-secondary-container"
+                                                            : "border-outline-variant hover:border-primary bg-surface-container-lowest"
                                                     }`}
                                                     title={getCharacterName(t, id, "full")}
                                                 >
                                                     <img src={getCharacterIconUrl(id)} alt="" className="w-full h-full rounded-full object-cover shrink-0 aspect-square pointer-events-none" loading="lazy" />
                                                     {active && (
-                                                        <span className="absolute -top-0.5 -right-0.5 bg-miku text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-xs shrink-0 aspect-square">
+                                                        <span className="absolute -top-0.5 -right-0.5 bg-primary text-on-primary rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shrink-0 aspect-square">
                                                             L
                                                         </span>
                                                     )}
@@ -738,10 +731,10 @@ export default function CustomRulesModal({
                             {/* Right Column: Other constraints */}
                             <div className="space-y-3.5">
                                 {/* Best Skill as Leader */}
-                                <label className="flex items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-xl p-3.5">
+                                <label className="flex items-center justify-between gap-3 text-xs text-on-surface cursor-pointer bg-surface-container-low border border-outline-variant rounded-md3-md p-3.5">
                                     <div>
                                         <span className="font-bold block">{t("page.deckRecommend.config.bestSkillAsLeader")}</span>
-                                        <span className="text-[11px] text-slate-400 block mt-0.5">{t("page.deckRecommend.rules.bestSkillAsLeaderHint")}</span>
+                                        <span className="text-[11px] text-on-surface-variant block mt-0.5">{t("page.deckRecommend.rules.bestSkillAsLeaderHint")}</span>
                                     </div>
                                     <input
                                         type="checkbox"
@@ -752,10 +745,10 @@ export default function CustomRulesModal({
                                 </label>
 
                                 {/* Use current deck */}
-                                <label className="flex items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-50/80 dark:bg-slate-900/40 border border-slate-200/60 dark:border-slate-800 rounded-xl p-3.5">
+                                <label className="flex items-center justify-between gap-3 text-xs text-on-surface cursor-pointer bg-surface-container-low border border-outline-variant rounded-md3-md p-3.5">
                                     <div>
                                         <span className="font-bold block">{t("page.deckRecommend.config.useCurrentDeck")}</span>
-                                        <span className="text-[11px] text-slate-400 block mt-0.5">{t("page.deckRecommend.config.useCurrentDeckHint")}</span>
+                                        <span className="text-[11px] text-on-surface-variant block mt-0.5">{t("page.deckRecommend.config.useCurrentDeckHint")}</span>
                                     </div>
                                     <input
                                         type="checkbox"
@@ -773,21 +766,21 @@ export default function CustomRulesModal({
                                 </label>
 
                                 {/* Fixed cards */}
-                                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                     <div className="flex items-center justify-between mb-2">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                        <label className="type-title-s text-on-surface">
                                             {t("page.deckRecommend.config.fixedCards")}
                                         </label>
                                         <button
                                             type="button"
                                             onClick={() => onOpenCardModal("fixed")}
-                                            className="text-xs text-miku font-bold hover:underline"
+                                            className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-l text-primary"
                                         >
                                             + {t("page.deckRecommend.config.addCard")}
                                         </button>
                                     </div>
                                     {fixedCards.length === 0 ? (
-                                        <p className="text-xs text-slate-400">{t("page.deckRecommend.config.noneSelected")}</p>
+                                        <p className="text-xs text-on-surface-variant">{t("page.deckRecommend.config.noneSelected")}</p>
                                     ) : (
                                         <div className="flex gap-2 flex-wrap">
                                             {fixedCards.map((cardId) => {
@@ -798,10 +791,10 @@ export default function CustomRulesModal({
                                                         type="button"
                                                         title={`${t("page.deckRecommend.config.singleCardRemove")}: ${master?.prefix ?? cardId}`}
                                                         onClick={() => onChange({ fixedCards: fixedCards.filter((v) => v !== cardId) })}
-                                                        className="relative rounded-lg overflow-hidden hover:opacity-75 transition-opacity"
+                                                        className="relative rounded-md3-sm overflow-hidden hover:opacity-75 transition-opacity"
                                                     >
                                                         {master ? <SekaiCardThumbnail card={master} trained={false} width={42} /> : <span className="text-xs">#{cardId}</span>}
-                                                        <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
+                                                        <span className="absolute top-0 right-0 bg-error text-on-error text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
                                                     </button>
                                                 );
                                             })}
@@ -810,21 +803,21 @@ export default function CustomRulesModal({
                                 </div>
 
                                 {/* Excluded cards */}
-                                <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                                <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                     <div className="flex items-center justify-between mb-2">
-                                        <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                        <label className="type-title-s text-on-surface">
                                             {t("page.deckRecommend.config.excludedCards")}
                                         </label>
                                         <button
                                             type="button"
                                             onClick={() => onOpenCardModal("excluded")}
-                                            className="text-xs text-miku font-bold hover:underline"
+                                            className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-l text-primary"
                                         >
                                             + {t("page.deckRecommend.config.addCard")}
                                         </button>
                                     </div>
                                     {excludedCards.length === 0 ? (
-                                        <p className="text-xs text-slate-400">{t("page.deckRecommend.config.noneSelected")}</p>
+                                        <p className="text-xs text-on-surface-variant">{t("page.deckRecommend.config.noneSelected")}</p>
                                     ) : (
                                         <div className="flex gap-2 flex-wrap">
                                             {excludedCards.map((cardId) => {
@@ -835,10 +828,10 @@ export default function CustomRulesModal({
                                                         type="button"
                                                         title={`${t("page.deckRecommend.config.singleCardRemove")}: ${master?.prefix ?? cardId}`}
                                                         onClick={() => onChange({ excludedCards: excludedCards.filter((v) => v !== cardId) })}
-                                                        className="relative rounded-lg overflow-hidden hover:opacity-75 transition-opacity"
+                                                        className="relative rounded-md3-sm overflow-hidden hover:opacity-75 transition-opacity"
                                                     >
                                                         {master ? <SekaiCardThumbnail card={master} trained={false} width={42} /> : <span className="text-xs">#{cardId}</span>}
-                                                        <span className="absolute top-0 right-0 bg-red-500 text-white text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
+                                                        <span className="absolute top-0 right-0 bg-error text-on-error text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
                                                     </button>
                                                 );
                                             })}
@@ -853,13 +846,13 @@ export default function CustomRulesModal({
                     {activeTab === "poolFilter" && (
                         <div className="space-y-4">
                             {/* Unit Filter (Icon-only) */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                    <label className="type-title-s text-on-surface">
                                         {t("page.deckRecommend.config.filterUnit")}
                                     </label>
                                     {unitFilter && (
-                                        <button type="button" onClick={() => onChange({ unitFilter: "" })} className="text-[11px] text-red-500 hover:underline">
+                                        <button type="button" onClick={() => onChange({ unitFilter: "" })} className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-m text-error">
                                             {t("page.deckRecommend.config.filterClear")}
                                         </button>
                                     )}
@@ -872,10 +865,10 @@ export default function CustomRulesModal({
                                                 key={unit.value}
                                                 type="button"
                                                 onClick={() => onChange({ unitFilter: isSelected ? "" : unit.value })}
-                                                className={`p-2 rounded-xl transition-all border ${
+                                                className={`p-2 rounded-md3-md transition-all border ${
                                                     isSelected
-                                                        ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                        : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                        ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                        : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                 }`}
                                                 title={t(unit.labelKey)}
                                             >
@@ -889,13 +882,13 @@ export default function CustomRulesModal({
                             </div>
 
                             {/* Attribute Filter (Icon-only) */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                 <div className="flex items-center justify-between mb-2">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                    <label className="type-title-s text-on-surface">
                                         {t("page.deckRecommend.config.filterAttr")}
                                     </label>
                                     {attrFilter && (
-                                        <button type="button" onClick={() => onChange({ attrFilter: "" })} className="text-[11px] text-red-500 hover:underline">
+                                        <button type="button" onClick={() => onChange({ attrFilter: "" })} className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-m text-error">
                                             {t("page.deckRecommend.config.filterClear")}
                                         </button>
                                     )}
@@ -908,10 +901,10 @@ export default function CustomRulesModal({
                                                 key={attr.value}
                                                 type="button"
                                                 onClick={() => onChange({ attrFilter: isSelected ? "" : attr.value })}
-                                                className={`p-2 rounded-xl transition-all border ${
+                                                className={`p-2 rounded-md3-md transition-all border ${
                                                     isSelected
-                                                        ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                        : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                        ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                        : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                 }`}
                                                 title={attr.label}
                                             >
@@ -925,13 +918,13 @@ export default function CustomRulesModal({
                             </div>
 
                             {/* Character pool filter (Clean Avatar Multi-Selector) */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                 <div className="flex items-center justify-between mb-2.5">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                    <label className="type-title-s text-on-surface">
                                         {t("page.deckRecommend.config.filterCharacter")}
                                     </label>
                                     {characterFilterIds.length > 0 && (
-                                        <button type="button" onClick={() => onChange({ characterFilterIds: [] })} className="text-[11px] text-red-500 hover:underline">
+                                        <button type="button" onClick={() => onChange({ characterFilterIds: [] })} className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-m text-error">
                                             {t("page.deckRecommend.config.filterClear")}
                                         </button>
                                     )}
@@ -952,14 +945,14 @@ export default function CustomRulesModal({
                                                 }}
                                                 className={`w-9 h-9 sm:w-10 sm:h-10 shrink-0 aspect-square rounded-full p-0.5 transition-all border relative flex items-center justify-center ${
                                                     active
-                                                        ? "ring-2 ring-miku shadow-sm border-miku bg-miku/15"
-                                                        : "border-slate-200 dark:border-slate-700 hover:border-miku/50 bg-white/50 dark:bg-slate-800/50"
+                                                        ? "ring-2 ring-primary border-primary bg-secondary-container"
+                                                        : "border-outline-variant hover:border-primary bg-surface-container-lowest"
                                                 }`}
                                                 title={getCharacterName(t, id, "full")}
                                             >
                                                 <img src={getCharacterIconUrl(id)} alt="" className="w-full h-full rounded-full object-cover shrink-0 aspect-square pointer-events-none" loading="lazy" />
                                                 {active && (
-                                                    <span className="absolute -top-0.5 -right-0.5 bg-miku text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-xs shrink-0 aspect-square">
+                                                    <span className="absolute -top-0.5 -right-0.5 bg-primary text-on-primary rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shrink-0 aspect-square">
                                                         ✓
                                                     </span>
                                                 )}
@@ -975,13 +968,13 @@ export default function CustomRulesModal({
                     {activeTab === "skillsAndMulti" && (
                         <div className="space-y-4">
                             {/* Multi live parameters */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-2">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
+                                <label className="type-title-s text-on-surface block mb-2">
                                     {t("page.deckRecommend.config.multiLiveTitle")}
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.teammatePower")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.teammatePower")}</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -992,7 +985,7 @@ export default function CustomRulesModal({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.teammateScoreUp")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.teammateScoreUp")}</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -1003,7 +996,7 @@ export default function CustomRulesModal({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.scoreUpLowerBound")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.scoreUpLowerBound")}</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -1017,19 +1010,19 @@ export default function CustomRulesModal({
                             </div>
 
                             {/* Skill orders and reference */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-3">
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">{t("page.deckRecommend.config.skillOrder")}</label>
+                                    <label className="type-title-s text-on-surface block mb-1.5">{t("page.deckRecommend.config.skillOrder")}</label>
                                     <div className="flex flex-wrap gap-2">
                                         {(["average", "max", "min", "specific"] as const).map((option) => (
                                             <button
                                                 key={option}
                                                 type="button"
                                                 onClick={() => onChange({ skillOrder: option })}
-                                                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                                className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all ${
                                                     skillOrder === option
-                                                        ? "bg-miku text-white shadow-sm"
-                                                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                                        ? "bg-primary text-on-primary"
+                                                        : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant"
                                                 }`}
                                             >
                                                 {t(`page.deckRecommend.config.skillOrders.${option}`)}
@@ -1050,17 +1043,17 @@ export default function CustomRulesModal({
                                 </div>
 
                                 <div>
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1.5">{t("page.deckRecommend.config.skillReference")}</label>
+                                    <label className="type-title-s text-on-surface block mb-1.5">{t("page.deckRecommend.config.skillReference")}</label>
                                     <div className="flex flex-wrap gap-2">
                                         {(["average", "max", "min"] as const).map((option) => (
                                             <button
                                                 key={option}
                                                 type="button"
                                                 onClick={() => onChange({ skillReference: option })}
-                                                className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all ${
+                                                className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all ${
                                                     skillReference === option
-                                                        ? "bg-miku text-white shadow-sm"
-                                                        : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                                        ? "bg-primary text-on-primary"
+                                                        : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant"
                                                 }`}
                                             >
                                                 {t(`page.deckRecommend.config.skillReferences.${option}`)}
@@ -1069,7 +1062,7 @@ export default function CustomRulesModal({
                                     </div>
                                 </div>
 
-                                <label className="flex items-center justify-between gap-3 text-xs text-slate-700 dark:text-slate-300 cursor-pointer pt-1">
+                                <label className="flex items-center justify-between gap-3 text-xs text-on-surface cursor-pointer pt-1">
                                     <span>{t("page.deckRecommend.config.keepAfterTrainingState")}</span>
                                     <input
                                         type="checkbox"
@@ -1081,13 +1074,13 @@ export default function CustomRulesModal({
                             </div>
 
                             {/* World Bloom Support */}
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-2">
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-1">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-2">
+                                <label className="type-title-s text-on-surface block mb-1">
                                     {t("page.deckRecommend.config.supportGroupTitle")}
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                                     {(["supportMasterMax", "supportSkillMax", "filterOtherUnit"] as const).map((typedKey) => (
-                                        <label key={typedKey} className="flex items-center justify-between gap-2 text-xs text-slate-600 dark:text-slate-300 cursor-pointer bg-white/60 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-xl px-3 py-2">
+                                        <label key={typedKey} className="flex items-center justify-between gap-2 text-xs text-on-surface-variant cursor-pointer bg-surface-container-lowest border border-outline-variant rounded-md3-md px-3 py-2">
                                             <span>{t(`page.deckRecommend.config.${typedKey}`)}</span>
                                             <input
                                                 type="checkbox"
@@ -1119,21 +1112,21 @@ export default function CustomRulesModal({
                     {/* 5. Single Card Overrides (Dedicated Top-Level Tab) */}
                     {activeTab === "singleCards" && (
                         <div className="space-y-3">
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800 space-y-3">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <label className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                                    <label className="type-title-s text-on-surface">
                                         {t("page.deckRecommend.config.singleCardTitle")}
                                     </label>
                                     <button
                                         type="button"
                                         onClick={() => onOpenCardModal("single")}
-                                        className="text-xs text-miku font-bold hover:underline"
+                                        className="state-layer focus-ring rounded-full px-2 py-0.5 type-label-l text-primary"
                                     >
                                         + {t("page.deckRecommend.config.singleCardAdd")}
                                     </button>
                                 </div>
                                 {singleCardOverrides.length === 0 ? (
-                                    <p className="text-xs text-slate-400">{t("page.deckRecommend.config.singleCardEmpty")}</p>
+                                    <p className="text-xs text-on-surface-variant">{t("page.deckRecommend.config.singleCardEmpty")}</p>
                                 ) : (
                                     <div className="space-y-2.5">
                                         {singleCardOverrides.map((entry) => {
@@ -1168,13 +1161,13 @@ export default function CustomRulesModal({
                     {/* 6. Engine Parameters */}
                     {activeTab === "engine" && (
                         <div className="space-y-4">
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-                                <label className="text-xs font-bold text-slate-700 dark:text-slate-200 block mb-2">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
+                                <label className="type-title-s text-on-surface block mb-2">
                                     {t("page.deckRecommend.config.advancedTitle")}
                                 </label>
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.advanced.limit")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.advanced.limit")}</label>
                                         <input
                                             type="number"
                                             min={1}
@@ -1185,7 +1178,7 @@ export default function CustomRulesModal({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.advanced.timeout")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.advanced.timeout")}</label>
                                         <input
                                             type="number"
                                             min={5}
@@ -1198,10 +1191,10 @@ export default function CustomRulesModal({
                                 </div>
                             </div>
 
-                            <div className="bg-slate-50/80 dark:bg-slate-900/40 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                            <div className="bg-surface-container-low p-3.5 rounded-md3-lg border border-outline-variant">
                                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.boost")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.boost")}</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -1213,7 +1206,7 @@ export default function CustomRulesModal({
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-[11px] text-slate-400 block mb-1">{t("page.deckRecommend.config.otherScore")}</label>
+                                        <label className="text-[11px] text-on-surface-variant block mb-1">{t("page.deckRecommend.config.otherScore")}</label>
                                         <input
                                             type="number"
                                             min={0}
@@ -1230,32 +1223,28 @@ export default function CustomRulesModal({
                 </div>
 
                 {/* Effect Preview - Sticky Bottom Panel */}
-                <div className="pt-3 border-t border-slate-200/60 dark:border-slate-800">
+                <div className="pt-3 border-t border-outline-variant">
                     <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-3.5 bg-miku rounded-full" />
-                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            <Icon path={mdVisibility} size={18} className="text-primary" />
+                            <span className="type-title-s text-on-surface">
                                 {t("page.deckRecommend.rules.previewTitle")}
                             </span>
                             {activeRules.length > 0 && (
-                                <span className="text-[10px] font-mono text-miku font-bold bg-miku/10 px-1.5 py-0.5 rounded-full">
+                                <span className="type-label-s font-mono bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded-md3-sm">
                                     {t("page.deckRecommend.rules.activeCount", { count: activeRules.length })}
                                 </span>
                             )}
                         </div>
                         {activeRules.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={onResetAll}
-                                className="text-[11px] text-red-500 hover:text-red-600 font-medium"
-                            >
+                            <Button type="button" variant="text" color="error" size="xs" onClick={onResetAll}>
                                 {t("page.deckRecommend.rules.resetAll")}
-                            </button>
+                            </Button>
                         )}
                     </div>
 
                     {activeRules.length === 0 ? (
-                        <p className="text-xs text-slate-400 italic py-1">
+                        <p className="text-xs text-on-surface-variant italic py-1">
                             {t("page.deckRecommend.rules.previewEmpty")}
                         </p>
                     ) : (
@@ -1263,17 +1252,18 @@ export default function CustomRulesModal({
                             {activeRules.map((rule) => (
                                 <div
                                     key={rule.key}
-                                    className="inline-flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-2 py-1 rounded-lg text-xs"
+                                    className="inline-flex h-8 items-center gap-1.5 rounded-md3-sm border border-outline-variant bg-surface-container-lowest pl-3 pr-1 type-label-l"
                                 >
-                                    <span className="text-slate-700 dark:text-slate-300 font-medium">{rule.label}</span>
+                                    <span className="text-on-surface font-medium">{rule.label}</span>
                                     {rule.detail}
                                     <button
                                         type="button"
                                         onClick={rule.onRemove}
-                                        className="text-slate-400 hover:text-red-500 font-bold ml-0.5"
+                                        className="state-layer focus-ring ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:text-error"
                                         title={t("page.deckRecommend.rules.removeRule")}
+                                        aria-label={t("page.deckRecommend.rules.removeRule")}
                                     >
-                                        ×
+                                        <Icon path={mdClose} size={16} />
                                     </button>
                                 </div>
                             ))}
@@ -1283,13 +1273,9 @@ export default function CustomRulesModal({
 
                 {/* Footer buttons */}
                 <div className="flex items-center justify-end gap-2 pt-2">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="ios-glass-btn ios-glass-btn-primary rounded-xl px-5 py-2 text-xs font-bold"
-                    >
+                    <Button type="button" variant="filled" size="s" icon={mdCheck} onClick={onClose}>
                         {t("page.deckRecommend.rules.applyAndClose")}
-                    </button>
+                    </Button>
                 </div>
             </div>
         </Modal>

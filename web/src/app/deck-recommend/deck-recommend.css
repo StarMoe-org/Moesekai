@@ -1,4 +1,4 @@
-/* Deck Studio Tool Styles */
+/* Deck Studio Tool Styles (Material 3) */
 
 /* Round checkbox */
 .ds-checkbox {
@@ -6,18 +6,17 @@
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
-    border: 2px solid #cbd5e1;
+    border: 2px solid var(--md-sys-color-on-surface-variant);
     border-radius: 50%;
     cursor: pointer;
-    background-color: white;
+    background-color: transparent;
     position: relative;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ds-checkbox:checked {
-    background-color: var(--color-miku);
-    border-color: var(--color-miku);
-    box-shadow: 0 0 0 3px rgba(51, 204, 187, 0.2);
+    background-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
 }
 
 .ds-checkbox::after {
@@ -27,11 +26,11 @@
     left: 50%;
     width: 6px;
     height: 10px;
-    border: solid white;
+    border: solid var(--md-sys-color-on-primary);
     border-width: 0 2px 2px 0;
     transform: translate(-50%, -60%) rotate(45deg) scale(0.5);
     opacity: 0;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ds-checkbox:checked::after {
@@ -40,43 +39,42 @@
 }
 
 .ds-checkbox:disabled {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
+    border-color: var(--md-sys-color-on-surface);
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.38;
 }
 
 .ds-checkbox:hover:not(:disabled):not(:checked) {
-    border-color: var(--color-miku);
-    background-color: rgba(51, 204, 187, 0.05);
+    border-color: var(--md-sys-color-on-surface);
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.ds-checkbox:focus-visible {
+    outline: 2px solid var(--md-sys-color-secondary);
+    outline-offset: 2px;
 }
 
 /* Config table */
 .ds-config-table th {
     font-size: 0.75rem;
     letter-spacing: 0.02em;
+    color: var(--md-sys-color-on-surface-variant);
 }
 
-/* Result row glass */
+.ds-config-table td {
+    border-color: var(--md-sys-color-outline-variant);
+}
+
+/* Result row */
 .ds-result-row {
-    background: rgba(255, 255, 255, 0.42);
-    backdrop-filter: blur(24px) saturate(210%);
-    -webkit-backdrop-filter: blur(24px) saturate(210%);
-    border: 1px solid rgba(255, 255, 255, 0.45);
-    box-shadow:
-        0 8px 32px 0 rgba(31, 38, 135, 0.04),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.65);
-    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    background: var(--md-sys-color-surface-container-low);
+    border: 1px solid var(--md-sys-color-outline-variant);
+    transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .ds-result-row:hover {
-    background: rgba(255, 255, 255, 0.55);
-    border-color: rgba(255, 255, 255, 0.6);
-    box-shadow:
-        0 16px 40px 0 rgba(31, 38, 135, 0.08),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.8),
-        0 0 12px 2px color-mix(in srgb, var(--color-miku) 12%, transparent);
-    transform: translateY(-1px) scale(1.005);
+    background: var(--md-sys-color-surface-container);
+    border-color: var(--md-sys-color-outline);
 }
 
 /* Card thumbnail hover */
@@ -102,21 +100,20 @@
     align-items: center;
     gap: 2px;
     padding: 6px 4px;
-    border-radius: 14px;
+    border-radius: 12px;
     border: 1.5px solid transparent;
     cursor: pointer;
-    transition: all 0.2s ease;
-    background: rgba(255, 255, 255, 0.35);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    background: var(--md-sys-color-surface-container);
 }
 
 .ds-char-cell:hover {
-    background: rgba(51, 204, 187, 0.08);
+    background: var(--md-sys-color-surface-container-high);
 }
 
 .ds-char-cell-active {
-    border-color: var(--color-miku);
-    background: rgba(51, 204, 187, 0.12);
-    box-shadow: 0 0 0 3px rgba(51, 204, 187, 0.15);
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-secondary-container);
 }
 
 /* Progress bar */
@@ -127,7 +124,7 @@
 .ds-progress-track {
     width: 100%;
     height: 6px;
-    background: #e2e8f0;
+    background: var(--md-sys-color-secondary-container);
     border-radius: 999px;
     overflow: hidden;
     position: relative;
@@ -135,31 +132,10 @@
 
 .ds-progress-bar {
     height: 100%;
-    background: linear-gradient(90deg, var(--color-miku), #2dd4bf);
+    background: var(--md-sys-color-primary);
     border-radius: 999px;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: width 0.3s cubic-bezier(0.2, 0, 0, 1);
     position: relative;
-}
-
-.ds-progress-bar::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: linear-gradient(
-        90deg,
-        transparent 0%,
-        rgba(255, 255, 255, 0.3) 50%,
-        transparent 100%
-    );
-    animation: ds-progress-shimmer 1.5s ease-in-out infinite;
-}
-
-@keyframes ds-progress-shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
 }
 
 @keyframes ds-spin {
@@ -172,87 +148,32 @@
     animation: ds-spin 0.8s linear infinite;
 }
 
-/* Dark mode */
-[data-theme="dark"] .ds-result-row {
-    background: rgba(15, 23, 42, 0.48);
-    border-color: rgba(148, 163, 184, 0.18);
-    box-shadow:
-        0 8px 32px 0 rgba(0, 0, 0, 0.35),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .ds-result-row:hover {
-    background: rgba(15, 23, 42, 0.65);
-    border-color: rgba(148, 163, 184, 0.28);
-    box-shadow:
-        0 16px 40px 0 rgba(0, 0, 0, 0.45),
-        inset 0 1px 0 0 rgba(255, 255, 255, 0.12),
-        0 0 12px 2px color-mix(in srgb, var(--color-miku) 18%, transparent);
-}
-
-[data-theme="dark"] .ds-config-table th {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-[data-theme="dark"] .ds-config-table td {
-    border-color: rgba(255, 255, 255, 0.06);
-}
-
-[data-theme="dark"] .ds-checkbox {
-    background-color: rgba(15, 23, 42, 0.6);
-}
-
-[data-theme="dark"] .ds-checkbox:disabled {
-    background-color: rgba(30, 41, 59, 0.8);
-}
-
-[data-theme="dark"] .ds-char-cell {
-    background: rgba(15, 23, 42, 0.4);
-}
-
-[data-theme="dark"] .ds-progress-track {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-[data-theme="dark"] .ds-progress-bar {
-    background: linear-gradient(90deg, var(--color-miku), #14b8a6);
-}
-
 /* 统一输入字段（进阶/专家配置） */
 .ds-field-input {
     width: 100%;
     padding: 0.5rem 0.75rem;
-    border-radius: 0.5rem;
+    border-radius: 4px;
     font-size: 0.875rem;
-    background: rgba(255, 255, 255, 0.65);
-    border: 1px solid rgba(203, 213, 225, 0.8);
-    color: #334455;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    background: transparent;
+    border: 1px solid var(--md-sys-color-outline);
+    color: var(--md-sys-color-on-surface);
+    transition: border-color 0.2s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.ds-field-input:hover:not(:disabled):not(:focus) {
+    border-color: var(--md-sys-color-on-surface);
 }
 
 .ds-field-input:focus {
     outline: none;
-    border-color: var(--color-miku);
-    box-shadow: 0 0 0 3px rgba(51, 204, 187, 0.15);
-}
-
-[data-theme="dark"] .ds-field-input {
-    background: rgba(15, 23, 42, 0.6);
-    border-color: rgba(71, 85, 105, 0.7);
-    color: #e2e8f0;
+    border-color: var(--md-sys-color-primary);
+    box-shadow: inset 0 0 0 1px var(--md-sys-color-primary);
 }
 
 /* Advanced settings sub-cards */
 .dr-group-card {
-    border: 1px solid rgba(203, 213, 225, 0.55);
-    border-radius: 1rem;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 12px;
     padding: 1rem 1rem 0.75rem;
-    background: rgba(255, 255, 255, 0.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-}
-
-[data-theme="dark"] .dr-group-card {
-    background: rgba(30, 41, 59, 0.35);
-    border-color: rgba(148, 163, 184, 0.15);
+    background: var(--md-sys-color-surface-container-low);
 }

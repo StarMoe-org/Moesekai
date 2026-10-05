@@ -70,9 +70,9 @@ export default function CharacterSelector({
                         <button
                             key={unit.id}
                             onClick={() => handleUnitClick(unit.id)}
-                            className={`p-1.5 rounded-xl transition-all ${isSelected
-                                ? "ring-2 ring-miku shadow-lg bg-white"
-                                : "hover:bg-slate-100 border border-transparent bg-slate-50"
+                            className={`state-layer focus-ring p-1.5 rounded-md3-md transition-colors ${isSelected
+                                ? "ring-2 ring-primary bg-secondary-container"
+                                : "border border-transparent bg-surface-container"
                                 }`}
                             title={unitLabel}
                         >
@@ -98,13 +98,13 @@ export default function CharacterSelector({
                         <button
                             key={charId}
                             onClick={() => onSelect(charId)}
-                            className={`relative transition-all ${selectedCharacterId === charId
-                                ? "ring-2 ring-miku scale-110 z-10 rounded-full"
-                                : "ring-2 ring-transparent hover:ring-slate-200 rounded-full opacity-80 hover:opacity-100"
+                            className={`focus-ring relative transition-[opacity,box-shadow] ${selectedCharacterId === charId
+                                ? "ring-2 ring-primary z-10 rounded-full"
+                                : "ring-2 ring-transparent hover:ring-outline-variant rounded-full opacity-80 hover:opacity-100"
                                 }`}
                             title={characterName}
                         >
-                            <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-100">
+                            <div className="w-10 h-10 rounded-full overflow-hidden bg-surface-container-high">
                                 <Image
                                     src={getCharacterIconUrl(charId)}
                                     alt={characterName}

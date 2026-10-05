@@ -55,6 +55,8 @@ import {
     resolveDeckAccount,
 } from "@/lib/deck-recommend/planner-args";
 import { useDeckEngine } from "@/lib/deck-recommend/use-deck-engine";
+import { Banner, Button, CircularProgress, EmptyState, Icon, PageContainer, PageHeader, Switch } from "@/components/md3";
+import { mdAccountCircle, mdCheck, mdContentCopy, mdDelete, mdKeyboardArrowDown, mdLeaderboard, mdPlayArrow, mdSave } from "@/components/md3/icons";
 import "./deck-recommend.css";
 
 type RawRow = Record<string, unknown>;
@@ -273,7 +275,7 @@ const DIFFICULTY_COLORS: Record<string, string> = {
     hard: "bg-amber-500",
     expert: "bg-red-500",
     master: "bg-purple-500",
-    append: "bg-slate-800 dark:bg-slate-200",
+    append: "bg-[#EE92BC]",
 };
 
 const LIVE_TYPE_OPTIONS = ["multi", "solo", "auto"] as const;
@@ -341,8 +343,8 @@ function ProgressBar({ percent, stageLabel }: { percent: number; stageLabel: str
     return (
         <div className="ds-progress-container">
             <div className="flex justify-between items-center mb-1.5">
-                <span className="text-xs text-slate-500 dark:text-slate-400">{stageLabel}</span>
-                <span className="text-xs font-mono text-miku font-bold">{Math.round(displayPercent)}%</span>
+                <span className="text-xs text-on-surface-variant">{stageLabel}</span>
+                <span className="text-xs font-mono text-primary font-bold">{Math.round(displayPercent)}%</span>
             </div>
             <div className="ds-progress-track">
                 <div className="ds-progress-bar" style={{ width: `${displayPercent}%` }} />
@@ -353,15 +355,15 @@ function ProgressBar({ percent, stageLabel }: { percent: number; stageLabel: str
 
 function SectionTitle({ text }: { text: string }) {
     return (
-        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{text}</label>
+        <label className="mb-2 block type-title-s text-on-surface">{text}</label>
     );
 }
 
 function usePillClass() {
     return useCallback((active: boolean) =>
-        `px-4 py-2.5 rounded-xl font-medium text-sm transition-all duration-300 ${active
-            ? "ios-glass-tab-active text-white shadow-lg shadow-miku/20"
-            : "ios-glass-tab text-slate-600 dark:text-slate-300 hover:bg-white/60 border border-slate-200/50"}`, []);
+        `state-layer focus-ring inline-flex h-10 items-center justify-center gap-2 px-4 rounded-md3-sm type-label-l transition-colors duration-200 ease-md3-standard ${active
+            ? "bg-secondary-container text-on-secondary-container"
+            : "border border-outline-variant text-on-surface-variant"}`, []);
 }
 
 // ==================== Character multi-select grid ====================
@@ -388,16 +390,16 @@ function CharacterMultiGrid({
                         onClick={() => onToggle(id)}
                         className={`w-10 h-10 rounded-full p-0.5 transition-all border relative ${
                             active
-                                ? "ring-2 ring-miku shadow-md border-miku bg-miku/15"
+                                ? "ring-2 ring-primary border-primary bg-secondary-container"
                                 : full
-                                    ? "opacity-30 cursor-not-allowed border-slate-200 dark:border-slate-800"
-                                    : "border-slate-200 dark:border-slate-700 hover:border-miku/50 bg-white/50 dark:bg-slate-800/50"
+                                    ? "opacity-30 cursor-not-allowed border-outline-variant"
+                                    : "border-outline-variant hover:border-primary bg-surface-container-lowest"
                         }`}
                         title={getCharacterName(t, id, "full")}
                     >
                         <img src={getCharacterIconUrl(id)} alt="" className="w-full h-full rounded-full object-contain" loading="lazy" />
                         {active && (
-                            <span className="absolute -top-0.5 -right-0.5 bg-miku text-white rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold shadow-xs">
+                            <span className="absolute -top-0.5 -right-0.5 bg-primary text-on-primary rounded-full w-4 h-4 text-[9px] flex items-center justify-center font-bold">
                                 ✓
                             </span>
                         )}
@@ -422,16 +424,16 @@ function SongRankingPanel({
 }) {
     const { t } = useI18n();
     if (loading) {
-        return <p className="text-xs text-slate-400 py-2">{t("page.deckRecommend.result.songRankingLoading")}</p>;
+        return <p className="text-xs text-on-surface-variant py-2">{t("page.deckRecommend.result.songRankingLoading")}</p>;
     }
     if (!rows || rows.length === 0) {
-        return <p className="text-xs text-slate-400 py-2">{t("page.deckRecommend.result.songRankingEmpty")}</p>;
+        return <p className="text-xs text-on-surface-variant py-2">{t("page.deckRecommend.result.songRankingEmpty")}</p>;
     }
     return (
         <div className="overflow-x-auto mt-2">
             <table className="w-full text-xs">
                 <thead>
-                    <tr className="text-slate-400">
+                    <tr className="text-on-surface-variant">
                         <th className="text-left py-1 px-1">#</th>
                         <th className="text-left py-1 px-1">{t("page.deckRecommend.result.colSong")}</th>
                         <th className="text-left py-1 px-1">{t("page.deckRecommend.result.colDifficulty")}</th>
@@ -442,14 +444,14 @@ function SongRankingPanel({
                 <tbody>
                     {rows.slice(0, 20).map((row, i) => {
                         return (
-                            <tr key={`${row.musicId}-${row.difficulty}`} className="border-t border-slate-50 dark:border-slate-800/60">
-                                <td className="py-1.5 px-1 font-bold text-slate-400">{i + 1}</td>
-                                <td className="py-1.5 px-1 text-slate-600 dark:text-slate-300">
+                            <tr key={`${row.musicId}-${row.difficulty}`} className="border-t border-outline-variant">
+                                <td className="py-1.5 px-1 font-bold text-on-surface-variant">{i + 1}</td>
+                                <td className="py-1.5 px-1 text-on-surface-variant">
                                     {songTitles.get(row.musicId) ?? `#${row.musicId}`}
                                 </td>
-                                <td className="py-1.5 px-1 font-mono uppercase text-slate-500">{row.difficulty}</td>
-                                <td className="py-1.5 px-1 text-right font-mono text-slate-600 dark:text-slate-300">{formatScoreValue(row.liveScore)}</td>
-                                <td className="py-1.5 px-1 text-right font-bold text-miku">{row.eventPoint !== undefined ? formatScoreValue(row.eventPoint) : "-"}</td>
+                                <td className="py-1.5 px-1 font-mono uppercase text-on-surface-variant">{row.difficulty}</td>
+                                <td className="py-1.5 px-1 text-right font-mono text-on-surface-variant">{formatScoreValue(row.liveScore)}</td>
+                                <td className="py-1.5 px-1 text-right font-bold text-primary">{row.eventPoint !== undefined ? formatScoreValue(row.eventPoint) : "-"}</td>
                             </tr>
                         );
                     })}
@@ -502,36 +504,34 @@ function DeckRow({
     }, [deck, scoreLabel, showBonus, eventBonus, totalPower, formatNumber, masterById]);
 
     return (
-        <div className="ds-result-row rounded-2xl mb-3 overflow-hidden">
+        <div className="ds-result-row rounded-md3-lg mb-3 overflow-hidden">
             <button
                 type="button"
                 onClick={() => setExpanded((prev) => !prev)}
-                className="w-full flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 p-3 sm:p-4 text-left"
+                className="state-layer focus-ring w-full flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-4 p-3 sm:p-4 text-left"
             >
                 <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto min-w-0">
                     <div className="flex-shrink-0 w-8 sm:w-9 text-center">
-                        <div className={`ds-rank text-lg sm:text-xl font-black ${deck.rank === 1 ? "text-miku" : "text-slate-400 dark:text-slate-500"}`}>
+                        <div className={`ds-rank type-title-l sm:type-headline-s ${deck.rank === 1 ? "text-primary" : "text-on-surface-variant"}`}>
                             #{deck.rank}
                         </div>
                     </div>
                     <div className="flex-1 min-w-0">
                         <div className="flex items-baseline gap-2 flex-wrap">
-                            <span className="text-xl sm:text-2xl font-black text-primary-text dark:text-slate-100 font-mono">
+                            <span className="type-headline-s sm:type-headline-m type-emphasized text-on-surface font-mono">
                                 {formatScoreValue(deck.score)}
                             </span>
-                            <span className="text-xs text-slate-400">{scoreLabel}</span>
+                            <span className="text-xs text-on-surface-variant">{scoreLabel}</span>
                         </div>
-                        <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+                        <div className="flex items-center gap-2 sm:gap-3 mt-0.5 text-[11px] sm:text-xs text-on-surface-variant flex-wrap">
                             {showBonus && (
-                                <span className="font-bold text-amber-500">{formatBonusValue(eventBonus)}%</span>
+                                <span className="font-bold text-tertiary">{formatBonusValue(eventBonus)}%</span>
                             )}
                             <span>{t("page.deckRecommend.result.power")}: {formatNumber(totalPower)}</span>
                             <span>{t("page.deckRecommend.result.effectiveSkill")}: {formatBonusValue(deck.effectiveSkill)}%</span>
                         </div>
                     </div>
-                    <svg className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 sm:hidden ml-auto ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                    <Icon path={mdKeyboardArrowDown} size={20} className={`text-on-surface-variant transition-transform flex-shrink-0 sm:hidden ml-auto ${expanded ? "rotate-180" : ""}`} />
                 </div>
 
                 <div className="flex gap-1.5 overflow-x-auto no-scrollbar justify-between sm:justify-end sm:ml-auto w-full sm:w-auto pt-1 sm:pt-0">
@@ -544,7 +544,7 @@ function DeckRow({
                         const showTrained = (card.rarity === "rarity_3" || card.rarity === "rarity_4") && !isBirthday;
                         if (!masterCard) {
                             return (
-                                <div key={i} className="ds-card-thumb w-11 h-11 sm:w-12 sm:h-12 rounded bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-xs flex-shrink-0">?</div>
+                                <div key={i} className="ds-card-thumb w-11 h-11 sm:w-12 sm:h-12 rounded bg-surface-container-high flex items-center justify-center text-on-surface-variant text-xs flex-shrink-0">?</div>
                             );
                         }
                         return (
@@ -554,13 +554,13 @@ function DeckRow({
                                         <SekaiCardThumbnail card={masterCard} trained={showTrained} mastery={masterRank} width={48} />
                                     </span>
                                     {i === 0 && (
-                                        <div className="absolute bottom-0 right-0 bg-miku/90 text-white text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none backdrop-blur-[1px] z-10">L</div>
+                                        <div className="absolute bottom-0 right-0 bg-primary text-on-primary text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none z-10">L</div>
                                     )}
                                 </Link>
-                                <div className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-mono leading-none flex items-center gap-0.5">
+                                <div className="text-[9px] sm:text-[10px] text-on-surface-variant font-mono leading-none flex items-center gap-0.5">
                                     <span>Lv.{level}</span>
                                     {masterRank > 0 && (
-                                        <span className="bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-full px-[3px] py-[1px] flex items-center gap-[1px] leading-none border border-slate-200 dark:border-slate-700">
+                                        <span className="bg-surface-container-high text-on-surface-variant rounded-full px-[3px] py-[1px] flex items-center gap-[1px] leading-none border border-outline-variant">
                                             <span className="text-[8px] font-bold">{masterRank}</span>
                                         </span>
                                     )}
@@ -569,21 +569,19 @@ function DeckRow({
                         );
                     })}
                 </div>
-                <svg className={`w-4 h-4 text-slate-400 transition-transform flex-shrink-0 hidden sm:block ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+                <Icon path={mdKeyboardArrowDown} size={20} className={`text-on-surface-variant transition-transform flex-shrink-0 hidden sm:block ${expanded ? "rotate-180" : ""}`} />
             </button>
             {expanded && (
-                <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="py-2.5 flex flex-wrap items-center gap-2 sm:gap-3 text-xs border-b border-slate-100 dark:border-slate-800">
-                        <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-lg px-2.5 py-1.5">
-                            <span className="text-slate-500 dark:text-slate-400 font-medium">{t("page.deckRecommend.result.liveScore")}:</span>
-                            <span className="font-mono font-bold text-primary-text dark:text-slate-100">{formatNumber(deck.liveScore)}</span>
+                <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-outline-variant">
+                    <div className="py-2.5 flex flex-wrap items-center gap-2 sm:gap-3 text-xs border-b border-outline-variant">
+                        <div className="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant rounded-md3-sm px-2.5 py-1.5">
+                            <span className="text-on-surface-variant font-medium">{t("page.deckRecommend.result.liveScore")}:</span>
+                            <span className="font-mono font-bold text-on-surface">{formatNumber(deck.liveScore)}</span>
                         </div>
                         {deck.eventPoint !== undefined && (
-                            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/60 rounded-lg px-2.5 py-1.5">
-                                <span className="text-slate-500 dark:text-slate-400 font-medium">{t("page.deckRecommend.result.eventPoint")}:</span>
-                                <span className="font-mono font-bold text-primary-text dark:text-slate-100">{formatNumber(deck.eventPoint)}</span>
+                            <div className="flex items-center gap-1.5 bg-surface-container-low border border-outline-variant rounded-md3-sm px-2.5 py-1.5">
+                                <span className="text-on-surface-variant font-medium">{t("page.deckRecommend.result.eventPoint")}:</span>
+                                <span className="font-mono font-bold text-on-surface">{formatNumber(deck.eventPoint)}</span>
                             </div>
                         )}
                         <button
@@ -592,15 +590,17 @@ function DeckRow({
                                 setShowRanking((prev) => !prev);
                                 if (!showRanking && musicRows === null && !musicLoading) onRequestMusic();
                             }}
-                            className="ios-glass-btn rounded-lg px-3 py-1.5 text-xs font-medium text-miku"
+                            className="inline-flex h-8 items-center justify-center gap-1.5 bg-secondary-container text-on-secondary-container state-layer focus-ring rounded-full px-3 type-label-l"
                         >
+                            <Icon path={mdLeaderboard} size={18} />
                             {t("page.deckRecommend.result.songRanking")}
                         </button>
                         <button
                             type="button"
                             onClick={copySummary}
-                            className="ios-glass-btn rounded-lg px-3 py-1.5 text-xs font-medium text-miku"
+                            className="inline-flex h-8 items-center justify-center gap-1.5 bg-secondary-container text-on-secondary-container state-layer focus-ring rounded-full px-3 type-label-l"
                         >
+                            <Icon path={mdContentCopy} size={18} />
                             {t("page.deckRecommend.result.copy")}
                         </button>
                     </div>
@@ -610,7 +610,7 @@ function DeckRow({
                     <div className="overflow-x-auto">
                         <table className="w-full text-xs mt-2">
                             <thead>
-                                <tr className="text-slate-400">
+                                <tr className="text-on-surface-variant">
                                     <th className="text-left py-1 px-1">{t("page.deckRecommend.result.leader")}</th>
                                     <th className="text-left py-1 px-1">{t("page.deckRecommend.result.cardId")}</th>
                                     <th className="text-left py-1 px-1">{t("page.deckRecommend.result.cardName")}</th>
@@ -624,14 +624,14 @@ function DeckRow({
                                     const masterCard = masterById.get(card.cardId);
                                     const cardName = masterCard?.prefix ?? getCharacterName(t, card.characterId, "short") ?? `ID:${card.characterId}`;
                                     return (
-                                        <tr key={i} className="border-t border-slate-50 dark:border-slate-800/60">
-                                            <td className="py-1.5 px-1 font-bold text-slate-500">{i === 0 ? t("page.deckRecommend.result.leader") : `#${i + 1}`}</td>
-                                            <td className="py-1.5 px-1 font-mono text-slate-600 dark:text-slate-300">{card.cardId}</td>
-                                            <td className="py-1.5 px-1 text-slate-600 dark:text-slate-300">{cardName}</td>
-                                            <td className="py-1.5 px-1 text-right font-mono text-slate-600 dark:text-slate-300">{formatNumber(card.power)}</td>
-                                            <td className="py-1.5 px-1 text-right text-miku font-bold">{formatBonusValue(card.skillScoreUp)}%</td>
+                                        <tr key={i} className="border-t border-outline-variant">
+                                            <td className="py-1.5 px-1 font-bold text-on-surface-variant">{i === 0 ? t("page.deckRecommend.result.leader") : `#${i + 1}`}</td>
+                                            <td className="py-1.5 px-1 font-mono text-on-surface-variant">{card.cardId}</td>
+                                            <td className="py-1.5 px-1 text-on-surface-variant">{cardName}</td>
+                                            <td className="py-1.5 px-1 text-right font-mono text-on-surface-variant">{formatNumber(card.power)}</td>
+                                            <td className="py-1.5 px-1 text-right text-primary font-bold">{formatBonusValue(card.skillScoreUp)}%</td>
                                             {showBonus && (
-                                                <td className="py-1.5 px-1 text-right font-bold text-amber-600">
+                                                <td className="py-1.5 px-1 text-right font-bold text-tertiary">
                                                     {card.eventBonus > 0 ? `${formatBonusValue(card.eventBonus)}%` : "-"}
                                                 </td>
                                             )}
@@ -1051,34 +1051,29 @@ export default function DeckRecommendClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8 max-w-5xl">
-                {/* Header */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.deckRecommend.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text dark:text-slate-100">
-                        {t("page.deckRecommend.title")}<span className="text-miku">{t("page.deckRecommend.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 dark:text-slate-400 mt-2 max-w-2xl mx-auto text-sm sm:text-base">
-                        {t("page.deckRecommend.description")}
-                    </p>
-                </div>
+            <PageContainer className="max-w-5xl">
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.deckRecommend.badge")}
+                    title={t("page.deckRecommend.title")}
+                    highlight={t("page.deckRecommend.titleHighlight")}
+                    description={t("page.deckRecommend.description")}
+                />
 
                 {/* Account Card */}
-                <div className="ios-glass-card p-5 sm:p-6 rounded-2xl mb-6">
+                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                        <h2 className="text-lg font-bold text-primary-text dark:text-slate-100 flex items-center gap-2">
-                            <span className="w-1.5 h-6 bg-miku rounded-full" />
+                        <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                            <Icon path={mdAccountCircle} size={24} className="text-primary" />
                             {t("page.deckRecommend.account.title")}
                         </h2>
                         <div className="flex gap-2">
-                            <button type="button" onClick={handleSaveConfig} className="ios-glass-btn rounded-lg px-3 py-1.5 text-xs font-medium text-miku">
+                            <Button type="button" variant="tonal" size="xs" icon={savedHint ? mdCheck : mdSave} onClick={handleSaveConfig}>
                                 {savedHint ? t("page.deckRecommend.config.saved") : t("page.deckRecommend.config.save")}
-                            </button>
-                            <button type="button" onClick={handleClearConfig} className="ios-glass-btn rounded-lg px-3 py-1.5 text-xs font-medium text-slate-400">
+                            </Button>
+                            <Button type="button" variant="text" size="xs" icon={mdDelete} onClick={handleClearConfig}>
                                 {t("page.deckRecommend.config.clear")}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                     <AccountSelector
@@ -1120,9 +1115,9 @@ export default function DeckRecommendClient() {
                                     localStorage.setItem(USER_ID_STORAGE_KEY, e.target.value);
                                 }}
                                 placeholder={t("page.deckRecommend.account.userIdPlaceholder")}
-                                className="ios-glass-input w-full px-4 py-2.5 rounded-lg transition-all text-sm"
+                                className="h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
-                            <p className="text-xs text-slate-400 mt-1.5">{t("page.deckRecommend.account.userIdHint")}</p>
+                            <p className="text-xs text-on-surface-variant mt-1.5">{t("page.deckRecommend.account.userIdHint")}</p>
                         </div>
                     </div>
                 </div>
@@ -1134,7 +1129,7 @@ export default function DeckRecommendClient() {
                             key={option.value}
                             type="button"
                             onClick={() => patch({ mode: option.value })}
-                            className={`${pill(mode === option.value)} text-center px-2 sm:px-4 py-2 sm:py-1.5 text-xs sm:text-sm font-semibold whitespace-nowrap`}
+                            className={`${pill(mode === option.value)} text-center px-2 sm:px-4 whitespace-nowrap`}
                         >
                             {t(`page.deckRecommend.modes.${option.value}`)}
                         </button>
@@ -1142,7 +1137,7 @@ export default function DeckRecommendClient() {
                 </div>
 
                 {/* Config card */}
-                <div className="ios-glass-card p-5 sm:p-6 rounded-2xl mb-6">
+                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
                     {/* Active Rules Summary Panel */}
                     <ActiveRulesSummary
                         state={customRulesState}
@@ -1179,22 +1174,20 @@ export default function DeckRecommendClient() {
                             <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
                                 <SectionTitle text={t("page.deckRecommend.config.eventTitle")} />
                                 <div className="flex items-center gap-2">
-                                    <span className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                    <span className="type-label-l text-on-surface-variant">
                                         {t("page.deckRecommend.config.simulateTitle")}
                                     </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => patch({ simulateEnabled: !simulateEnabled })}
-                                        className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${simulateEnabled ? "bg-miku" : "bg-slate-200 dark:bg-slate-700"}`}
+                                    <Switch
+                                        checked={simulateEnabled}
+                                        onCheckedChange={(checked) => patch({ simulateEnabled: checked })}
                                         title={t("page.deckRecommend.config.simulateDesc")}
-                                    >
-                                        <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${simulateEnabled ? "translate-x-5" : ""}`} />
-                                    </button>
+                                        aria-label={t("page.deckRecommend.config.simulateTitle")}
+                                    />
                                 </div>
                             </div>
                             {simulateEnabled ? (
-                                <div className="border border-miku/30 bg-miku/5 rounded-xl p-4">
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 mb-3">{t("page.deckRecommend.config.simulateDesc")}</p>
+                                <div className="rounded-md3-lg bg-surface-container p-4">
+                                    <p className="text-xs text-on-surface-variant mb-3">{t("page.deckRecommend.config.simulateDesc")}</p>
                                     <SectionTitle text={t("page.deckRecommend.config.simulateType")} />
                                     <div className="flex flex-wrap gap-2 mb-3">
                                         {SIM_EVENT_TYPE_OPTIONS.map((option) => (
@@ -1224,10 +1217,10 @@ export default function DeckRecommendClient() {
                                                                     key={unit.value}
                                                                     type="button"
                                                                     onClick={() => patch({ simUnit: unit.value })}
-                                                                    className={`p-2 rounded-xl transition-all border ${
+                                                                    className={`p-2 rounded-md3-md transition-all border ${
                                                                         isSelected
-                                                                            ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                                            : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                                            ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                                            : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                                     }`}
                                                                     title={t(unit.labelKey)}
                                                                 >
@@ -1273,10 +1266,10 @@ export default function DeckRecommendClient() {
                                                                     key={unit.value}
                                                                     type="button"
                                                                     onClick={() => patch({ simUnit: isSelected ? "" : unit.value })}
-                                                                    className={`p-2 rounded-xl transition-all border ${
+                                                                    className={`p-2 rounded-md3-md transition-all border ${
                                                                         isSelected
-                                                                            ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                                            : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                                            ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                                            : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                                     }`}
                                                                     title={t(unit.labelKey)}
                                                                 >
@@ -1291,7 +1284,7 @@ export default function DeckRecommendClient() {
                                             ) : (
                                                 <div className="mb-3">
                                                     <SectionTitle text={t("page.deckRecommend.config.simulateCharacter")} />
-                                                    <p className="text-xs text-slate-400 mb-2">{t("page.deckRecommend.config.customCharactersHint")}</p>
+                                                    <p className="text-xs text-on-surface-variant mb-2">{t("page.deckRecommend.config.customCharactersHint")}</p>
                                                     <CharacterMultiGrid
                                                         selected={simCharacterIds}
                                                         onToggle={(id) => {
@@ -1313,7 +1306,7 @@ export default function DeckRecommendClient() {
                                                             {simCharacterIds.filter((id) => id >= VIRTUAL_SINGER_ID_MIN).map((id) => (
                                                                 <div key={id} className="flex items-center gap-2 flex-wrap">
                                                                     <img src={getCharacterIconUrl(id)} alt="" className="w-7 h-7 rounded-full object-contain" loading="lazy" />
-                                                                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium w-24 truncate">
+                                                                    <span className="text-xs text-on-surface-variant font-medium w-24 truncate">
                                                                         {getCharacterName(t, id, "short")}
                                                                     </span>
                                                                     <div className="flex flex-wrap gap-1.5">
@@ -1331,10 +1324,10 @@ export default function DeckRecommendClient() {
                                                                                             return { ...prev, simCharacterUnits: units };
                                                                                         })
                                                                                     }
-                                                                                    className={`p-1.5 rounded-lg transition-all border ${
+                                                                                    className={`p-1.5 rounded-md3-sm transition-all border ${
                                                                                         isSelected
-                                                                                            ? "ring-2 ring-miku shadow-xs bg-white border-transparent dark:bg-miku/20 dark:border-miku/40"
-                                                                                            : "bg-slate-100 dark:bg-slate-800 border-transparent hover:bg-slate-200"
+                                                                                            ? "ring-2 ring-primary bg-surface-container-lowest border-transparent"
+                                                                                            : "bg-surface-container-high border-transparent hover:bg-surface-container-high"
                                                                                     }`}
                                                                                     title={t(unit.labelKey)}
                                                                                 >
@@ -1360,10 +1353,10 @@ export default function DeckRecommendClient() {
                                                             key={attr.value}
                                                             type="button"
                                                             onClick={() => patch({ simAttr: isSelected ? "" : attr.value })}
-                                                            className={`p-2 rounded-xl transition-all border ${
+                                                            className={`p-2 rounded-md3-md transition-all border ${
                                                                 isSelected
-                                                                    ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                                    : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                                    ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                                    : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                             }`}
                                                             title={attr.label}
                                                         >
@@ -1386,7 +1379,7 @@ export default function DeckRecommendClient() {
                                         onBonusCharactersChange={handleBonusCharacters}
                                     />
                                     {selectedWl3Simulation && (
-                                        <p className="text-xs text-miku mt-2 font-medium">
+                                        <p className="text-xs text-primary mt-2 font-medium">
                                             {t("page.deckRecommend.config.wl3Hint", { group: String(selectedWl3Simulation.groupId) })}
                                         </p>
                                     )}
@@ -1430,11 +1423,7 @@ export default function DeckRecommendClient() {
                     {/* 最弱组卡 */}
                     {mode === "weakest" && (
                         <div className="mb-5">
-                            <div className="border border-miku/30 bg-miku/5 rounded-xl p-4">
-                                <p className="text-sm text-slate-600 dark:text-slate-300">
-                                    {t("page.deckRecommend.config.weakestHint")}
-                                </p>
-                            </div>
+                            <Banner tone="info">{t("page.deckRecommend.config.weakestHint")}</Banner>
                         </div>
                     )}
 
@@ -1461,10 +1450,10 @@ export default function DeckRecommendClient() {
                                                     key={unit.value}
                                                     type="button"
                                                     onClick={() => patch({ customUnit: unit.value })}
-                                                    className={`p-2 rounded-xl transition-all border ${
+                                                    className={`p-2 rounded-md3-md transition-all border ${
                                                         isSelected
-                                                            ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                            : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                            ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                            : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                     }`}
                                                     title={t(unit.labelKey)}
                                                 >
@@ -1479,7 +1468,7 @@ export default function DeckRecommendClient() {
                             ) : (
                                 <div>
                                     <SectionTitle text={t("page.deckRecommend.config.customCharacters")} />
-                                    <p className="text-xs text-slate-400 mb-2">{t("page.deckRecommend.config.customCharactersHint")}</p>
+                                    <p className="text-xs text-on-surface-variant mb-2">{t("page.deckRecommend.config.customCharactersHint")}</p>
                                     <CharacterMultiGrid
                                         selected={customCharacterIds}
                                         onToggle={(id) => {
@@ -1501,7 +1490,7 @@ export default function DeckRecommendClient() {
                                             {customCharacterIds.filter((id) => id >= VIRTUAL_SINGER_ID_MIN).map((id) => (
                                                 <div key={id} className="flex items-center gap-2 flex-wrap">
                                                     <img src={getCharacterIconUrl(id)} alt="" className="w-7 h-7 rounded-full object-contain" loading="lazy" />
-                                                    <span className="text-xs text-slate-500 dark:text-slate-400 font-medium w-24 truncate">
+                                                    <span className="text-xs text-on-surface-variant font-medium w-24 truncate">
                                                         {getCharacterName(t, id, "short")}
                                                     </span>
                                                     <div className="flex flex-wrap gap-1.5">
@@ -1519,10 +1508,10 @@ export default function DeckRecommendClient() {
                                                                             return { ...prev, customCharacterUnits: units };
                                                                         })
                                                                     }
-                                                                    className={`p-1.5 rounded-lg transition-all border ${
+                                                                    className={`p-1.5 rounded-md3-sm transition-all border ${
                                                                         isSelected
-                                                                            ? "ring-2 ring-miku shadow-xs bg-white border-transparent dark:bg-miku/20 dark:border-miku/40"
-                                                                            : "bg-slate-100 dark:bg-slate-800 border-transparent hover:bg-slate-200"
+                                                                            ? "ring-2 ring-primary bg-surface-container-lowest border-transparent"
+                                                                            : "bg-surface-container-high border-transparent hover:bg-surface-container-high"
                                                                     }`}
                                                                     title={t(unit.labelKey)}
                                                                 >
@@ -1549,10 +1538,10 @@ export default function DeckRecommendClient() {
                                                 key={attr.value}
                                                 type="button"
                                                 onClick={() => patch({ customAttr: isSelected ? "" : attr.value })}
-                                                className={`p-2 rounded-xl transition-all border ${
+                                                className={`p-2 rounded-md3-md transition-all border ${
                                                     isSelected
-                                                        ? "ring-2 ring-miku shadow-md bg-white border-transparent dark:bg-miku/15 dark:border-miku/40"
-                                                        : "bg-white/70 dark:bg-slate-800 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100"
+                                                        ? "ring-2 ring-primary shadow-elev-1 bg-surface-container-lowest border-transparent"
+                                                        : "bg-surface-container-lowest border-outline-variant hover:bg-surface-container-high"
                                                 }`}
                                                 title={attr.label}
                                             >
@@ -1622,9 +1611,9 @@ export default function DeckRecommendClient() {
                                         value={bonusTargets}
                                         onChange={(e) => patch({ bonusTargets: e.target.value })}
                                         placeholder={t("page.deckRecommend.config.bonusTargetsPlaceholder")}
-                                        className="ios-glass-input w-full max-w-sm px-3 py-2 rounded-lg text-sm"
+                                        className="h-12 w-full max-w-sm rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                                     />
-                                    <p className="text-xs text-slate-400 mt-1.5">{t("page.deckRecommend.config.bonusTargetsHint")}</p>
+                                    <p className="text-xs text-on-surface-variant mt-1.5">{t("page.deckRecommend.config.bonusTargetsHint")}</p>
                                 </div>
                             )}
                         </div>
@@ -1641,9 +1630,9 @@ export default function DeckRecommendClient() {
                                         key={option}
                                         type="button"
                                         onClick={() => patch({ difficulty: option })}
-                                        className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${difficulty === option
-                                            ? `${DIFFICULTY_COLORS[option]} text-white shadow-lg`
-                                            : "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200"}`}
+                                        className={`state-layer focus-ring h-9 px-3 rounded-md3-sm type-label-l transition-colors ${difficulty === option
+                                            ? `${DIFFICULTY_COLORS[option]} text-white`
+                                            : "border border-outline-variant text-on-surface-variant"}`}
                                     >
                                         {option.toUpperCase()}
                                     </button>
@@ -1658,7 +1647,7 @@ export default function DeckRecommendClient() {
                             <div className="overflow-x-auto">
                                 <table className="ds-config-table w-full text-sm">
                                     <thead>
-                                        <tr className="text-slate-400">
+                                        <tr className="text-on-surface-variant">
                                             <th className="text-left py-2 px-2">{t("page.deckRecommend.config.training.rarity")}</th>
                                             <th className="text-center py-2 px-2">{t("page.deckRecommend.config.training.disable")}</th>
                                             <th className="text-center py-2 px-2">{t("page.deckRecommend.config.training.level")}</th>
@@ -1669,7 +1658,7 @@ export default function DeckRecommendClient() {
                                     </thead>
                                     <tbody>
                                         {RARITY_CONFIG_KEYS.map(({ key, color }) => (
-                                            <tr key={key} className="border-t border-slate-100 dark:border-slate-800">
+                                            <tr key={key} className="border-t border-outline-variant">
                                                 <td className="py-2 px-2">
                                                     <span className="font-bold" style={{ color }}>{t(`page.deckRecommend.config.training.rarities.${key}`)}</span>
                                                 </td>
@@ -1700,25 +1689,17 @@ export default function DeckRecommendClient() {
                 {/* Calculate Button & Progress */}
                 <div className="mb-6">
                     {isCalculating ? (
-                        <button
-                            type="button"
-                            onClick={handleCancel}
-                            className="w-full ios-glass-btn rounded-xl py-3.5 font-bold text-red-500 border border-red-200/50"
-                        >
-                            <span className="inline-block w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full ds-spinner mr-2 align-[-2px]" />
+                        <Button type="button" variant="outlined" color="error" size="m" fullWidth onClick={handleCancel}>
+                            <CircularProgress size={20} strokeWidth={3} />
                             {t("page.deckRecommend.cancel")}
-                        </button>
+                        </Button>
                     ) : (
-                        <button
-                            type="button"
-                            onClick={handleCalculate}
-                            className="w-full ios-glass-btn ios-glass-btn-primary rounded-xl py-3.5 font-bold shadow-lg shadow-miku/20"
-                        >
+                        <Button type="button" variant="filled" size="m" fullWidth icon={mdPlayArrow} onClick={handleCalculate}>
                             {t("page.deckRecommend.calculate")}
-                        </button>
+                        </Button>
                     )}
                     {isCalculating && (
-                        <div className="ios-glass-panel p-4 rounded-2xl mt-4">
+                        <div className="bg-surface-container-low p-4 rounded-md3-lg mt-4">
                             <ProgressBar percent={progressPercent} stageLabel={progressLabel} />
                         </div>
                     )}
@@ -1726,21 +1707,19 @@ export default function DeckRecommendClient() {
 
                 {/* Error */}
                 {error && (
-                    <div className="ios-glass-card p-4 rounded-2xl mb-6 bg-red-50/80 border border-red-200/50">
-                        <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
-                    </div>
+                    <Banner tone="error" className="mb-6">{error}</Banner>
                 )}
 
                 {/* Results */}
                 {results && results.length > 0 && (
-                    <div className="ios-glass-panel p-5 sm:p-6 rounded-2xl mb-6 [overflow-anchor:none]">
+                    <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6 [overflow-anchor:none]">
                         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                            <h2 className="text-lg font-bold text-primary-text dark:text-slate-100 flex items-center gap-2">
-                                <span className="w-1.5 h-6 bg-miku rounded-full" />
+                            <h2 className="type-title-l text-on-surface flex items-center gap-2">
+                                <Icon path={mdLeaderboard} size={24} className="text-primary" />
                                 {t("page.deckRecommend.result.title")}
                             </h2>
                             {duration !== null && (
-                                <span className="text-xs text-slate-400 font-mono">
+                                <span className="text-xs text-on-surface-variant font-mono">
                                     {t("page.deckRecommend.result.duration", { ms: formatNumber(Math.round(duration)) })}
                                 </span>
                             )}
@@ -1763,11 +1742,11 @@ export default function DeckRecommendClient() {
                     </div>
                 )}
                 {results && results.length === 0 && !error && (
-                    <div className="ios-glass-card p-6 rounded-2xl mb-6 text-center">
-                        <p className="text-sm text-slate-400">{t("page.deckRecommend.result.empty")}</p>
+                    <div className="bg-surface-container-low rounded-md3-xl mb-6">
+                        <EmptyState title={t("page.deckRecommend.result.empty")} className="py-10" />
                     </div>
                 )}
-            </div>
+            </PageContainer>
 
             {/* 自定义规则弹窗 */}
             <CustomRulesModal

@@ -5,6 +5,8 @@ import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl } from "@/lib/assets";
 import type { ICardInfo } from "@/types/types";
+import { Button, Icon } from "@/components/md3";
+import { mdClose, mdRestartAlt, mdTune } from "@/components/md3/icons";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import { UNIT_BONUS_OPTIONS, ATTR_OPTIONS, type CustomRulesState } from "./CustomRulesModal";
 
@@ -104,7 +106,7 @@ export default function ActiveRulesSummary({
                             return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
                         })}
                         {excludedCards.length > 5 && (
-                            <span className="text-[10px] text-slate-400 font-mono">+{excludedCards.length - 5}</span>
+                            <span className="text-[10px] text-on-surface-variant font-mono">+{excludedCards.length - 5}</span>
                         )}
                     </div>
                 ),
@@ -257,7 +259,7 @@ export default function ActiveRulesSummary({
                             return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} /> : null;
                         })}
                         {singleCardOverrides.length > 5 && (
-                            <span className="text-[10px] text-slate-400 font-mono">+{singleCardOverrides.length - 5}</span>
+                            <span className="text-[10px] text-on-surface-variant font-mono">+{singleCardOverrides.length - 5}</span>
                         )}
                     </div>
                 ),
@@ -293,15 +295,15 @@ export default function ActiveRulesSummary({
     ]);
 
     return (
-        <div className="mb-5 bg-white/40 dark:bg-slate-900/40 border border-slate-200/70 dark:border-slate-800/80 rounded-2xl p-4 transition-all">
+        <div className="mb-5 rounded-md3-lg border border-outline-variant bg-surface-container-low p-4">
             <div className="flex items-center justify-between gap-2 flex-wrap mb-2.5">
                 <div className="flex items-center gap-2">
-                    <span className="w-1.5 h-4 bg-miku rounded-full" />
-                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                    <Icon path={mdTune} size={20} className="text-primary" />
+                    <span className="type-title-s text-on-surface">
                         {t("page.deckRecommend.rules.title")}
                     </span>
                     {activeRules.length > 0 && (
-                        <span className="text-xs font-mono font-bold text-miku bg-miku/10 border border-miku/20 px-2 py-0.5 rounded-full">
+                        <span className="type-label-m rounded-md3-sm bg-secondary-container px-2 py-0.5 font-mono text-on-secondary-container">
                             {t("page.deckRecommend.rules.activeCount", { count: activeRules.length })}
                         </span>
                     )}
@@ -309,52 +311,43 @@ export default function ActiveRulesSummary({
 
                 <div className="flex items-center gap-2">
                     {activeRules.length > 0 && (
-                        <button
-                            type="button"
-                            onClick={onResetAll}
-                            className="text-xs text-red-500 hover:text-red-600 font-medium px-2 py-1 rounded hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
-                        >
+                        <Button type="button" variant="text" color="error" size="xs" icon={mdRestartAlt} onClick={onResetAll}>
                             {t("page.deckRecommend.rules.resetAll")}
-                        </button>
+                        </Button>
                     )}
-                    <button
-                        type="button"
-                        onClick={onOpenModal}
-                        className="ios-glass-btn rounded-xl px-3.5 py-1.5 text-xs font-bold text-miku hover:border-miku/40 transition-all flex items-center gap-1.5 shadow-xs"
-                    >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                        </svg>
-                        <span>{activeRules.length > 0 ? t("page.deckRecommend.rules.editButton") : t("page.deckRecommend.rules.addButton")}</span>
-                    </button>
+                    <Button type="button" variant="tonal" size="xs" icon={mdTune} onClick={onOpenModal}>
+                        {activeRules.length > 0 ? t("page.deckRecommend.rules.editButton") : t("page.deckRecommend.rules.addButton")}
+                    </Button>
                 </div>
             </div>
 
             {activeRules.length === 0 ? (
-                <div
+                <button
+                    type="button"
                     onClick={onOpenModal}
-                    className="p-3 bg-slate-50/60 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700/80 text-center cursor-pointer hover:border-miku/50 transition-all group"
+                    className="state-layer focus-ring w-full rounded-md3-md border border-dashed border-outline-variant p-3 text-center text-on-surface-variant transition-colors hover:border-primary hover:text-primary"
                 >
-                    <p className="text-xs text-slate-500 dark:text-slate-400 group-hover:text-miku transition-colors">
+                    <span className="type-body-s">
                         {t("page.deckRecommend.rules.emptyHint")}
-                    </p>
-                </div>
+                    </span>
+                </button>
             ) : (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                     {activeRules.map((rule) => (
                         <div
                             key={rule.key}
-                            className="inline-flex items-center gap-1.5 bg-white/80 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 px-2.5 py-1.5 rounded-xl text-xs shadow-xs"
+                            className="inline-flex h-8 items-center gap-1.5 rounded-md3-sm border border-outline-variant bg-surface-container-lowest pl-3 pr-1 type-label-l text-on-surface-variant"
                         >
-                            <span className="text-slate-700 dark:text-slate-300 font-medium">{rule.label}</span>
+                            <span className="text-on-surface">{rule.label}</span>
                             {rule.detail}
                             <button
                                 type="button"
                                 onClick={rule.onRemove}
-                                className="text-slate-400 hover:text-red-500 font-bold ml-1"
+                                className="state-layer focus-ring ml-0.5 flex h-6 w-6 items-center justify-center rounded-full text-on-surface-variant hover:text-error"
                                 title={t("page.deckRecommend.rules.removeRule")}
+                                aria-label={t("page.deckRecommend.rules.removeRule")}
                             >
-                                ×
+                                <Icon path={mdClose} size={16} />
                             </button>
                         </div>
                     ))}

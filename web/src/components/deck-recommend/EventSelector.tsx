@@ -11,6 +11,8 @@ import { getCharacterName } from "@/lib/i18n";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import SelectorModal from "./SelectorModal";
+import { Icon, LoadingState } from "@/components/md3";
+import { mdCalendarMonth, mdImage, mdUnfoldMore } from "@/components/md3/icons";
 import EventFilters, { type EventUnitFilterId } from "@/components/events/EventFilters";
 import { IActionSet, IEventStory, buildEventRawUnitMap, rawUnitToFilterId, buildEventBannerCharMap } from "@/lib/eventUnit";
 import { type Wl3SimulationGroup, getWl3SimulationGroupByEventId } from "@/lib/world-bloom-simulation";
@@ -40,7 +42,7 @@ function Wl3SimulationMemberAvatars({
                 return (
                     <div
                         key={characterId}
-                        className="rounded-full ring-2 ring-white shadow-sm overflow-hidden bg-slate-100"
+                        className="rounded-full ring-2 ring-surface-container-lowest overflow-hidden bg-surface-container-high"
                         title={characterName}
                         style={{ width: size, height: size }}
                     >
@@ -322,17 +324,17 @@ export default function EventSelector({
 
     return (
         <div className="w-full">
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-                {t("page.deckRecommend.selector.eventId")} <span className="text-red-400">*</span>
+            <label className="mb-1 block type-label-l text-on-surface-variant">
+                {t("page.deckRecommend.selector.eventId")} <span className="text-error">*</span>
             </label>
 
             <button
                 onClick={() => setModalOpen(true)}
-                className="w-full flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl hover:border-miku/50 transition-all text-left shadow-sm group"
+                className="state-layer focus-ring group flex w-full items-center gap-3 rounded-md3-md border border-outline bg-surface-container-lowest p-3 text-left transition-colors hover:border-on-surface"
             >
                 {selectedEvent ? (
                     <>
-                        <div className="relative w-16 aspect-video bg-slate-100 rounded-lg overflow-hidden flex-shrink-0 border border-slate-100">
+                        <div className="relative w-16 aspect-video bg-surface-container-high rounded-md3-sm overflow-hidden flex-shrink-0">
                             <Image
                                 src={selectedEventThumbnail}
                                 alt={selectedEvent.name}
@@ -343,18 +345,18 @@ export default function EventSelector({
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-mono text-slate-400 bg-slate-100 px-1.5 rounded-md">
+                                <span className="type-label-s font-mono text-on-surface-variant bg-surface-container-high px-1.5 rounded-md3-xs">
                                     #{selectedEvent.id}
                                 </span>
-                                <span className="text-xs text-slate-400">
+                                <span className="type-label-s text-on-surface-variant">
                                     {formatDate(selectedEvent.startAt)}
                                 </span>
                             </div>
-                            <div className="text-sm font-bold text-slate-700 truncate group-hover:text-miku transition-colors">
+                            <div className="type-title-s text-on-surface truncate group-hover:text-primary transition-colors">
                                 {selectedEvent.name}
                             </div>
                             {translations?.events?.name?.[selectedEvent.name] && (
-                                <div className="text-xs text-slate-400 truncate">
+                                <div className="type-body-s text-on-surface-variant truncate">
                                     {translations.events.name[selectedEvent.name]}
                                 </div>
                             )}
@@ -362,19 +364,19 @@ export default function EventSelector({
                     </>
                 ) : selectedWl3Simulation ? (
                     <>
-                        <div className="w-16 aspect-video rounded-lg flex-shrink-0 border border-emerald-200 bg-gradient-to-br from-emerald-400 via-teal-400 to-cyan-500 flex items-center justify-center shadow-sm">
-                            <span className="text-white text-sm font-black tracking-wide">WL3</span>
+                        <div className="w-16 aspect-video rounded-md3-sm flex-shrink-0 bg-tertiary flex items-center justify-center">
+                            <span className="text-on-tertiary type-label-l type-emphasized tracking-wide">WL3</span>
                         </div>
                         <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 mb-0.5">
-                                <span className="text-xs font-mono text-emerald-600 bg-emerald-50 px-1.5 rounded-md">
+                                <span className="type-label-s font-mono text-on-tertiary-container bg-tertiary-container px-1.5 rounded-md3-xs">
                                     #{selectedWl3Simulation.eventId}
                                 </span>
-                                <span className="text-xs text-emerald-600 bg-emerald-50 px-1.5 rounded-md">
+                                <span className="type-label-s text-on-tertiary-container bg-tertiary-container px-1.5 rounded-md3-xs">
                                     {t("page.deckRecommend.selector.simulation")}
                                 </span>
                             </div>
-                            <div className="text-sm font-bold text-slate-700 truncate group-hover:text-miku transition-colors">
+                            <div className="type-title-s text-on-surface truncate group-hover:text-primary transition-colors">
                                 {t("page.deckRecommend.selector.wl3SimulationTitle", { title: selectedWl3GroupTitle })}
                             </div>
                             <div className="mt-2">
@@ -384,19 +386,13 @@ export default function EventSelector({
                     </>
                 ) : (
                     <>
-                        <div className="w-16 aspect-video bg-slate-100 rounded-lg flex items-center justify-center text-slate-300">
-                            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                        <div className="w-16 aspect-video bg-surface-container-high rounded-md3-sm flex items-center justify-center text-on-surface-variant">
+                            <Icon path={mdImage} size={24} />
                         </div>
-                        <span className="text-slate-400 text-sm">{t("page.deckRecommend.selector.selectEventPlaceholder")}</span>
+                        <span className="type-body-m text-on-surface-variant">{t("page.deckRecommend.selector.selectEventPlaceholder")}</span>
                     </>
                 )}
-                <div className="text-slate-300">
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 9l4-4 4 4m0 6l-4 4-4-4" />
-                    </svg>
-                </div>
+                <Icon path={mdUnfoldMore} size={20} className="shrink-0 text-on-surface-variant" />
             </button>
 
             <SelectorModal
@@ -435,7 +431,7 @@ export default function EventSelector({
                     />
 
                     {loading ? (
-                        <div className="py-20 text-center text-slate-400">{t("common.state.loading")}</div>
+                        <LoadingState label={t("common.state.loading")} className="min-h-[30vh]" />
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                             {filteredEvents.slice(0, 50).map(event => (
@@ -450,7 +446,7 @@ export default function EventSelector({
                                 />
                             ))}
                             {filteredEvents.length > 50 && (
-                                <div className="col-span-full py-4 text-center text-slate-400 text-sm">
+                                <div className="col-span-full py-4 text-center type-body-m text-on-surface-variant">
                                     {t("page.deckRecommend.selector.first50Only")}
                                 </div>
                             )}
@@ -492,14 +488,14 @@ function EventSelectionItem({
             onClick={onClick}
             className="group block cursor-pointer"
         >
-            <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden transition-all duration-300 hover:shadow-xl hover:-translate-y-1 hover:ring-miku/30">
+            <div className="state-layer overflow-hidden rounded-md3-md bg-surface-container-low shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
                 {/* Event Thumbnail */}
-                <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100 overflow-hidden">
+                <div className="relative aspect-[16/9] bg-surface-container-high overflow-hidden">
                     <Image
                         src={thumbnailUrl}
                         alt={event.name}
                         fill
-                        className={`object-contain transition-transform duration-300 group-hover:scale-105 ${hasEventStoryBanner ? "" : "p-4"}`}
+                        className={`object-contain ${hasEventStoryBanner ? "" : "p-4"}`}
                         unoptimized
                     />
 
@@ -521,7 +517,7 @@ function EventSelectionItem({
 
                     {/* Spoiler Badge */}
                     {isSpoiler && (
-                        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 sm:px-2 py-0.5 bg-orange-500 rounded-full text-[10px] sm:text-xs font-bold text-white shadow">
+                        <div className="absolute bottom-1.5 right-1.5 sm:bottom-2 sm:right-2 px-1.5 sm:px-2 py-0.5 bg-error rounded-full text-[10px] sm:text-xs font-bold text-on-error">
                             {t("common.badge.spoiler")}
                         </div>
                     )}
@@ -531,12 +527,12 @@ function EventSelectionItem({
                 <div className="p-2.5 sm:p-4">
                     {/* ID Badge + Unit Badge */}
                     <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
-                        <span className="px-1.5 sm:px-2 py-0.5 bg-slate-100 text-slate-500 text-[10px] sm:text-xs font-mono rounded-full">
+                        <span className="px-1.5 sm:px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] sm:text-xs font-mono rounded-md3-sm">
                             #{event.id}
                         </span>
                         {unitType && (
                             EVENT_UNIT_ICON[unitType] ? (
-                                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center" title={t(EVENT_UNIT_ICON[unitType].labelKey)}>
+                                <div className="w-5 h-5 rounded-full bg-surface-container-high flex items-center justify-center" title={t(EVENT_UNIT_ICON[unitType].labelKey)}>
                                     <Image
                                         src={`/data/icon/${EVENT_UNIT_ICON[unitType].icon}`}
                                         alt={t(EVENT_UNIT_ICON[unitType].labelKey)}
@@ -547,7 +543,7 @@ function EventSelectionItem({
                                     />
                                 </div>
                             ) : (
-                                <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[10px] font-bold rounded-full" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
+                                <span className="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded-md3-sm" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
                             )
                         )}
                         {bonusAttr && ATTR_ICON_PATHS[bonusAttr as keyof typeof ATTR_ICON_PATHS] && (
@@ -565,22 +561,20 @@ function EventSelectionItem({
                     </div>
 
                     {/* Event Name */}
-                    <h3 className="font-bold text-slate-800 text-xs sm:text-sm mb-1.5 sm:mb-2 group-hover:text-miku transition-colors">
+                    <h3 className="type-title-s text-on-surface mb-1.5 sm:mb-2 group-hover:text-primary transition-colors">
                         <TranslatedText
                             original={event.name}
                             category="events"
                             field="name"
                             originalClassName=""
-                            translationClassName="text-xs font-medium text-slate-400 mt-0.5"
+                            translationClassName="type-body-s text-on-surface-variant mt-0.5"
                         />
                     </h3>
 
                     {/* Date Range */}
-                    <div className="text-[10px] sm:text-xs text-slate-500 space-y-0.5 hidden sm:block">
+                    <div className="type-body-s text-on-surface-variant space-y-0.5 hidden sm:block">
                         <div className="flex items-center gap-1">
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
+                            <Icon path={mdCalendarMonth} size={14} />
                             <span>{formatDate(event.startAt, { year: "numeric", month: "short", day: "numeric" })}</span>
                             <span>~</span>
                             <span>{formatDate(event.aggregateAt, { year: "numeric", month: "short", day: "numeric" })}</span>

@@ -1,4 +1,4 @@
-/* Score Control Calculator Styles */
+/* Score Control Calculator Styles (Material 3) */
 
 /* Number input styling */
 .sc-number-input {
@@ -14,9 +14,8 @@
 
 /* Result card */
 .sc-result-card {
-    background: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(8px);
-    transition: all 0.2s ease;
+    background: var(--md-sys-color-surface-container-low);
+    transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 /* Score pop animation */
@@ -40,20 +39,25 @@
     animation: sc-result-pop 0.3s ease-out;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .sc-result-enter {
+        animation: none;
+    }
+}
+
 /* Boost group header */
 .sc-boost-header {
     position: sticky;
     top: 0;
     z-index: 5;
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(8px);
+    background: var(--md-sys-color-surface-container-high);
 }
 
 /* Score range bar */
 .sc-score-bar {
     height: 4px;
     border-radius: 2px;
-    background: #e2e8f0;
+    background: var(--md-sys-color-secondary-container);
     position: relative;
     overflow: hidden;
 }
@@ -61,35 +65,17 @@
 .sc-score-bar-fill {
     height: 100%;
     border-radius: 2px;
-    background: linear-gradient(90deg, #33ccbb, #2bb5a6);
+    background: var(--md-sys-color-primary);
     transition: width 0.4s ease;
 }
 
 /* Table row hover */
 .sc-row {
-    transition: all 0.15s ease;
+    transition: background-color 0.15s ease;
 }
 
 .sc-row:hover {
-    background: rgba(51, 204, 187, 0.04);
-}
-
-/* Dark mode overrides */
-[data-theme="dark"] .sc-result-card {
-    background: rgba(30, 30, 45, 0.6);
-    border-color: rgba(255, 255, 255, 0.08);
-}
-
-[data-theme="dark"] .sc-boost-header {
-    background: rgba(20, 20, 35, 0.95);
-}
-
-[data-theme="dark"] .sc-row:hover {
-    background: rgba(51, 204, 187, 0.06);
-}
-
-[data-theme="dark"] .sc-score-bar {
-    background: rgba(255, 255, 255, 0.1);
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent);
 }
 
 /* ==========================================================================
@@ -102,18 +88,17 @@
     -webkit-appearance: none;
     width: 20px;
     height: 20px;
-    border: 2px solid #cbd5e1;
+    border: 2px solid var(--md-sys-color-on-surface-variant);
     border-radius: 50%;
     cursor: pointer;
-    background-color: white;
+    background-color: transparent;
     position: relative;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.2s cubic-bezier(0.2, 0, 0, 1), border-color 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .dr-checkbox:checked {
-    background-color: var(--color-miku);
-    border-color: var(--color-miku);
-    box-shadow: 0 0 0 3px rgba(51, 204, 187, 0.2);
+    background-color: var(--md-sys-color-primary);
+    border-color: var(--md-sys-color-primary);
 }
 
 .dr-checkbox::after {
@@ -123,11 +108,11 @@
     left: 50%;
     width: 6px;
     height: 10px;
-    border: solid white;
+    border: solid var(--md-sys-color-on-primary);
     border-width: 0 2px 2px 0;
     transform: translate(-50%, -60%) rotate(45deg) scale(0.5);
     opacity: 0;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
 }
 
 .dr-checkbox:checked::after {
@@ -136,29 +121,30 @@
 }
 
 .dr-checkbox:disabled {
-    background-color: #f1f5f9;
-    border-color: #cbd5e1;
+    border-color: var(--md-sys-color-on-surface);
     cursor: not-allowed;
-    opacity: 0.6;
+    opacity: 0.38;
 }
 
 .dr-checkbox:hover:not(:disabled):not(:checked) {
-    border-color: var(--color-miku);
-    background-color: rgba(51, 204, 187, 0.05);
+    border-color: var(--md-sys-color-on-surface);
+    background-color: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent);
+}
+
+.dr-checkbox:focus-visible {
+    outline: 2px solid var(--md-sys-color-secondary);
+    outline-offset: 2px;
 }
 
 /* Config table */
 .dr-config-table th {
     font-size: 0.75rem;
     letter-spacing: 0.02em;
+    color: var(--md-sys-color-on-surface-variant);
 }
 
-[data-theme="dark"] .dr-config-table th {
-    color: rgba(255, 255, 255, 0.5);
-}
-
-[data-theme="dark"] .dr-config-table td {
-    border-color: rgba(255, 255, 255, 0.06);
+.dr-config-table td {
+    border-color: var(--md-sys-color-outline-variant);
 }
 
 /* Fake progress bar */
@@ -166,17 +152,13 @@
     width: 100%;
     height: 6px;
     border-radius: 3px;
-    background: #e2e8f0;
+    background: var(--md-sys-color-secondary-container);
     overflow: hidden;
 }
 
 .sc-fake-progress-fill {
     height: 100%;
     border-radius: 3px;
-    background: linear-gradient(90deg, #33ccbb, #2bb5a6);
+    background: var(--md-sys-color-primary);
     transition: width 0.3s ease-out;
-}
-
-[data-theme="dark"] .sc-fake-progress-track {
-    background: rgba(255, 255, 255, 0.1);
 }

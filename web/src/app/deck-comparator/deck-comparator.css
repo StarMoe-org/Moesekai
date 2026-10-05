@@ -1,4 +1,4 @@
-/* Deck Comparator Tool Styles */
+/* Deck Comparator Tool Styles (Material 3) */
 
 /* Number input styling */
 .dc-number-input {
@@ -33,13 +33,19 @@
     animation: dc-score-pop 0.3s ease-out;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .dc-score-enter {
+        animation: none;
+    }
+}
+
 /* Teammate row */
 .dc-teammate-row {
-    transition: all 0.2s ease;
+    transition: background-color 0.2s ease;
 }
 
 .dc-teammate-row:hover {
-    background: rgba(51, 204, 187, 0.03);
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 6%, transparent);
 }
 
 /* Breakdown bar */
@@ -47,7 +53,7 @@
     height: 6px;
     border-radius: 3px;
     overflow: hidden;
-    background: #f1f5f9;
+    background: var(--md-sys-color-surface-container-highest);
 }
 
 .dc-breakdown-segment {
@@ -62,15 +68,6 @@
 
 .dc-toggle-knob {
     transition: transform 0.2s ease;
-}
-
-/* Dark mode overrides */
-[data-theme="dark"] .dc-teammate-row:hover {
-    background: rgba(51, 204, 187, 0.05);
-}
-
-[data-theme="dark"] .dc-breakdown-bar {
-    background: rgba(255, 255, 255, 0.1);
 }
 
 /* Mobile warning - hide on desktop */
