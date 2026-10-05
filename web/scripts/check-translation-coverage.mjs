@@ -261,7 +261,9 @@ assert.match(lyricsClient, /getLyricsDisplayLines\(lyrics, activeVersion(?:, [^)
 assert.match(lyricText, /performers\.map\(\(performer\)/);
 assert.match(lyricText, /<ruby/);
 assert.match(lyricText, /<rt/);
-assert.match(lyricText, /--performer-light/);
-assert.match(lyricText, /--performer-dark/);
+assert.match(lyricText, /--performer-color/);
+assert.match(lyricText, /--performer-gradient/);
+assert.match(lyricText, /getLyricsPerformerColors\(id, surface\)/);
+assert.match(lyricText, /attributeFilter: \["data-theme", "data-seed"\]/);
 
 console.log(`Translation coverage source validation OK (${translationCategories.length} translation categories, ${renderedMasterdataFamilies.length} rendered masterdata families, ${storyFamilies.length} story families, ${coverage.entries.length} entries).`);

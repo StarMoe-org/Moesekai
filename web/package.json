@@ -21,6 +21,8 @@
     "generate:metadata": "node scripts/generate-metadata-map.mjs",
     "start": "next start",
     "lint": "eslint",
+    "lint:md3": "node scripts/check-md3-migration.mjs",
+    "test:md3": "node --test tests/md3-primitives.test.mjs && bun test tests/md3-design-tokens.test.mjs",
     "lint:i18n": "node scripts/check-i18n-keys.mjs && node scripts/scan-hardcoded-ui-text.mjs && node scripts/check-seo-routes.mjs && node scripts/check-translation-coverage.mjs",
     "lint:i18n-usage": "node scripts/check-i18n-usage.mjs",
     "test:ssr-localized-links": "npm run build:next && node scripts/check-localized-link-ssr.mjs",

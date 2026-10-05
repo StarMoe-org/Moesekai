@@ -48,7 +48,13 @@ export default function MainLayout({
 }: MainLayoutProps) {
     const router = useRouter();
     const pathname = usePathname();
-    const isHomeRoute = stripRouteLocale(pathname) === "/";
+    const routePath = stripRouteLocale(pathname);
+    const isHomeRoute = routePath === "/";
+    const isLegacyGameRoute = /^\/(?:guess-who|guess-jacket|goods-gacha)(?:\/|$)/.test(routePath);
+    useEffect(() => {
+        document.documentElement.dataset.legacyGame = String(isLegacyGameRoute);
+        return () => { delete document.documentElement.dataset.legacyGame; };
+    }, [isLegacyGameRoute]);
     const detailSeoSummary = useDetailSeoSummary();
     const { useTrainedThumbnail, setUseTrainedThumbnail } = useTheme();
     const pageContentRef = useRef<HTMLDivElement>(null);

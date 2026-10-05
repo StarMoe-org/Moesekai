@@ -21,6 +21,18 @@ import {
     getRoomSkinFloorTexturePaths,
     getRoomSkinWallTexturePaths,
 } from "./assets";
+import {
+    mdArrowDownward,
+    mdArrowUpward,
+    mdCenterFocusStrong,
+    mdFullscreen,
+    mdFullscreenExit,
+    mdLock,
+    mdLockOpen,
+    mdPause,
+    mdPlayArrow,
+    mdRefresh,
+} from "@/components/md3/icons";
 import type {
     ExtractedMysekaiEntry,
     MysekaiCustomFixtureMaster,
@@ -2734,7 +2746,7 @@ export class MysekaiScenePreviewRuntime {
         this.controlsOverlay = overlay;
 
         const panel = document.createElement("div");
-        panel.className = "pointer-events-auto absolute right-3 top-3 flex flex-wrap items-center justify-end gap-2 rounded-2xl border border-white/30 bg-white/75 p-2 text-[11px] font-black text-slate-700 shadow-lg backdrop-blur";
+        panel.className = "pointer-events-auto absolute right-3 top-3 flex flex-wrap items-center justify-end gap-2 rounded-md3-lg border border-outline-variant bg-surface-container-high p-2 type-label-s text-on-surface shadow-elev-2";
         panel.style.pointerEvents = "auto";
         panel.style.zIndex = "120";
         panel.style.touchAction = "manipulation";
@@ -2751,17 +2763,17 @@ export class MysekaiScenePreviewRuntime {
         panel.append(freeButton, fixedButton, this.cycleSiteButton, this.bgmButton, this.pointerLockButton, this.fullscreenButton);
 
         const bgmPanel = document.createElement("div");
-        bgmPanel.className = "pointer-events-auto absolute right-3 top-[4.35rem] flex max-w-[min(360px,calc(100%-1.5rem))] items-center gap-2 rounded-2xl border border-white/30 bg-slate-950/45 px-3 py-2 text-[11px] font-bold text-white shadow-lg backdrop-blur";
+        bgmPanel.className = "pointer-events-auto absolute right-3 top-[4.35rem] flex max-w-[min(360px,calc(100%-1.5rem))] items-center gap-2 rounded-md3-lg border border-outline-variant bg-inverse-surface px-3 py-2 type-label-s text-inverse-on-surface shadow-elev-2";
         bgmPanel.style.pointerEvents = "auto";
         bgmPanel.style.zIndex = "110";
         this.bgmInfoElement = document.createElement("div");
-        this.bgmInfoElement.className = "min-w-0 flex-1 truncate";
+        this.bgmInfoElement.className = "min-w-0 flex-1 truncate type-label-s";
         this.bgmVolumeInput = document.createElement("input");
         this.bgmVolumeInput.type = "range";
         this.bgmVolumeInput.min = "0";
         this.bgmVolumeInput.max = "100";
         this.bgmVolumeInput.value = String(Math.round(this.bgmVolume * 100));
-        this.bgmVolumeInput.className = "w-20 accent-miku";
+        this.bgmVolumeInput.className = "h-10 w-24 accent-primary focus-ring";
         this.bgmVolumeInput.title = this.options.messages.bgmVolume;
         this.bgmVolumeInput.setAttribute("aria-label", this.options.messages.bgmVolume);
         this.bgmVolumeInput.addEventListener("pointerdown", (event) => event.stopPropagation());
@@ -2771,14 +2783,14 @@ export class MysekaiScenePreviewRuntime {
         overlay.appendChild(bgmPanel);
 
         const hint = document.createElement("div");
-        hint.className = "pointer-events-none absolute left-3 top-3 max-w-[min(360px,calc(100%-1.5rem))] rounded-2xl border border-white/30 bg-slate-950/45 px-3 py-2 text-[11px] font-bold leading-relaxed text-white shadow-lg backdrop-blur";
+        hint.className = "pointer-events-none absolute left-3 top-3 max-w-[min(360px,calc(100%-1.5rem))] rounded-md3-md border border-outline-variant bg-inverse-surface px-3 py-2 type-label-s leading-relaxed text-inverse-on-surface shadow-elev-2";
         hint.textContent = this.options.messages.shortcutHint;
         this.hintElement = hint;
         overlay.appendChild(hint);
 
         const crosshair = document.createElement("div");
-        crosshair.className = "pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-3xl font-light leading-none text-white drop-shadow-[0_1px_6px_rgba(15,23,42,0.85)]";
-        crosshair.textContent = "+";
+        crosshair.className = "pointer-events-none absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 text-on-surface";
+        crosshair.innerHTML = this.materialIconSvg(mdCenterFocusStrong, 28);
         this.crosshairElement = crosshair;
         overlay.appendChild(crosshair);
 
@@ -2786,14 +2798,14 @@ export class MysekaiScenePreviewRuntime {
         mobileControls.className = "pointer-events-none absolute inset-0 hidden touch-none";
         mobileControls.style.zIndex = "20";
         mobileControls.innerHTML = `
-            <div data-mysekai-joystick style="position:absolute;left:1.5rem;bottom:2rem;width:7rem;height:7rem;border-radius:9999px;border:1px solid rgba(255,255,255,.3);background:rgba(15,23,42,.25);box-shadow:0 10px 24px rgba(15,23,42,.25);backdrop-filter:blur(8px);pointer-events:auto;touch-action:none;">
-                <div data-mysekai-joystick-knob style="position:absolute;left:50%;top:50%;width:3rem;height:3rem;margin-left:-1.5rem;margin-top:-1.5rem;border-radius:9999px;border:1px solid rgba(255,255,255,.5);background:rgba(255,255,255,.7);box-shadow:0 10px 18px rgba(15,23,42,.24);transform:translate(0px,0px);"></div>
+            <div data-mysekai-joystick class="pointer-events-auto absolute bottom-8 left-6 h-28 w-28 touch-none rounded-full border border-outline-variant bg-surface-container-high/80 shadow-elev-2">
+                <div data-mysekai-joystick-knob class="absolute left-1/2 top-1/2 -ml-6 -mt-6 h-12 w-12 rounded-full border border-outline bg-primary shadow-elev-1" style="transform:translate(0px,0px);"></div>
             </div>
-            <div style="position:absolute;right:1.5rem;bottom:2rem;display:flex;flex-direction:column;gap:.75rem;pointer-events:auto;touch-action:none;z-index:60;">
-                <button data-mysekai-mobile-up type="button" aria-label="${this.options.messages.mobileUp}" style="width:3.75rem;height:3.75rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;border:1px solid rgba(255,255,255,.42);background:rgba(255,255,255,.72);color:#0f172a;box-shadow:0 10px 24px rgba(15,23,42,.24);backdrop-filter:blur(8px);touch-action:none;"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5"/><path d="m5 12 7-7 7 7"/></svg></button>
-                <button data-mysekai-mobile-down type="button" aria-label="${this.options.messages.mobileDown}" style="width:3.75rem;height:3.75rem;display:flex;align-items:center;justify-content:center;border-radius:9999px;border:1px solid rgba(255,255,255,.42);background:rgba(255,255,255,.72);color:#0f172a;box-shadow:0 10px 24px rgba(15,23,42,.24);backdrop-filter:blur(8px);touch-action:none;"><svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 5v14"/><path d="m19 12-7 7-7-7"/></svg></button>
+            <div class="pointer-events-auto absolute bottom-8 right-6 z-[60] flex touch-none flex-col gap-3">
+                <button data-mysekai-mobile-up type="button" aria-label="${this.options.messages.mobileUp}" class="state-layer focus-ring flex h-14 w-14 touch-none items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-on-surface shadow-elev-2 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard active:rounded-md3-sm">${this.materialIconSvg(mdArrowUpward, 26)}</button>
+                <button data-mysekai-mobile-down type="button" aria-label="${this.options.messages.mobileDown}" class="state-layer focus-ring flex h-14 w-14 touch-none items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-on-surface shadow-elev-2 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard active:rounded-md3-sm">${this.materialIconSvg(mdArrowDownward, 26)}</button>
             </div>
-            <div data-mysekai-look-zone class="pointer-events-auto absolute bottom-0 right-0 top-0 w-[58%]" style="z-index:10;"></div>
+            <div data-mysekai-look-zone class="pointer-events-auto absolute bottom-0 right-0 top-0 z-10 w-[58%]"></div>
         `;
         this.mobileControlsElement = mobileControls;
         const joystick = mobileControls.querySelector<HTMLElement>("[data-mysekai-joystick]");
@@ -2827,7 +2839,9 @@ export class MysekaiScenePreviewRuntime {
         const button = document.createElement("button");
         button.type = "button";
         button.textContent = label;
-        button.className = "rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:bg-white active:scale-95";
+        button.title = label;
+        button.setAttribute("aria-label", label);
+        button.className = "state-layer focus-ring min-h-10 rounded-full border border-outline-variant bg-surface-container-high px-3 py-2 type-label-l text-on-surface shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard hover:bg-surface-container-highest active:rounded-md3-sm";
         button.style.touchAction = "manipulation";
         button.addEventListener("pointerdown", (event) => {
             event.stopPropagation();
@@ -2846,7 +2860,7 @@ export class MysekaiScenePreviewRuntime {
         button.innerHTML = svg;
         button.title = label;
         button.setAttribute("aria-label", label);
-        button.className = "flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-700 shadow-sm transition hover:bg-white active:scale-95 [&_svg]:h-4 [&_svg]:w-4";
+        button.className = "state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-on-surface-variant shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard hover:bg-surface-container-highest active:rounded-md3-sm disabled:opacity-38 [&_svg]:h-5 [&_svg]:w-5";
         button.style.touchAction = "manipulation";
         button.addEventListener("pointerdown", (event) => {
             event.stopPropagation();
@@ -2859,34 +2873,40 @@ export class MysekaiScenePreviewRuntime {
         return button;
     }
 
+    private materialIconSvg(path: string, size = 24): string {
+        return `<svg viewBox="0 -960 960 960" width="${size}" height="${size}" fill="currentColor" aria-hidden="true" focusable="false"><path d="${path}"/></svg>`;
+    }
+
     private pointerLockIconSvg(active: boolean): string {
-        return active
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 10V8a6 6 0 0 1 11.2-3"/><rect x="4" y="10" width="16" height="10" rx="2"/><path d="m3 3 18 18"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="3" width="14" height="18" rx="7"/><path d="M12 7v4"/><path d="M12 14h.01"/></svg>`;
+        return this.materialIconSvg(active ? mdLock : mdLockOpen);
     }
 
     private fullscreenIconSvg(active: boolean): string {
-        return active
-            ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3v5H3"/><path d="M16 3v5h5"/><path d="M8 21v-5H3"/><path d="M16 21v-5h5"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H3v5"/><path d="M16 3h5v5"/><path d="M8 21H3v-5"/><path d="M16 21h5v-5"/></svg>`;
+        return this.materialIconSvg(active ? mdFullscreenExit : mdFullscreen);
     }
 
     private bgmIconSvg(active: boolean): string {
-        return active
-            ? `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M6 5h4v14H6z"/><path d="M14 5h4v14h-4z"/></svg>`
-            : `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5.14v13.72a1 1 0 0 0 1.55.83l10.28-6.86a1 1 0 0 0 0-1.66L9.55 4.31A1 1 0 0 0 8 5.14Z"/><path d="M4 5h2v14H4z" opacity=".65"/></svg>`;
+        return this.materialIconSvg(active ? mdPause : mdPlayArrow);
     }
 
     private cycleSiteIconSvg(): string {
-        return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h18"/><path d="M7 3v4"/><path d="M17 3v4"/><rect x="4" y="7" width="16" height="14" rx="2"/><path d="m9 14 2 2 4-4"/></svg>`;
+        return this.materialIconSvg(mdRefresh);
     }
 
     private refreshOverlayTexts() {
         if (!this.controlsOverlay) return;
         const freeButton = this.controlsOverlay.querySelector<HTMLButtonElement>('[data-view-mode-button="free"]');
         const fixedButton = this.controlsOverlay.querySelector<HTMLButtonElement>('[data-view-mode-button="fixed"]');
-        if (freeButton) freeButton.textContent = this.options.messages.freeView;
-        if (fixedButton) fixedButton.textContent = this.options.messages.fixedView;
+        if (freeButton) {
+            freeButton.textContent = this.options.messages.freeView;
+            freeButton.title = this.options.messages.freeView;
+            freeButton.setAttribute("aria-label", this.options.messages.freeView);
+        }
+        if (fixedButton) {
+            fixedButton.textContent = this.options.messages.fixedView;
+            fixedButton.title = this.options.messages.fixedView;
+            fixedButton.setAttribute("aria-label", this.options.messages.fixedView);
+        }
         if (this.bgmVolumeInput) {
             this.bgmVolumeInput.title = this.options.messages.bgmVolume;
             this.bgmVolumeInput.setAttribute("aria-label", this.options.messages.bgmVolume);
@@ -2895,7 +2915,9 @@ export class MysekaiScenePreviewRuntime {
         const mobileUpButton = this.mobileControlsElement?.querySelector<HTMLButtonElement>("[data-mysekai-mobile-up]");
         const mobileDownButton = this.mobileControlsElement?.querySelector<HTMLButtonElement>("[data-mysekai-mobile-down]");
         mobileUpButton?.setAttribute("aria-label", this.options.messages.mobileUp);
+        mobileUpButton?.setAttribute("title", this.options.messages.mobileUp);
         mobileDownButton?.setAttribute("aria-label", this.options.messages.mobileDown);
+        mobileDownButton?.setAttribute("title", this.options.messages.mobileDown);
     }
 
     private refreshBgmOverlayState() {
@@ -2914,8 +2936,8 @@ export class MysekaiScenePreviewRuntime {
             this.bgmButton.title = title;
             this.bgmButton.setAttribute("aria-label", title);
             this.bgmButton.className = this.bgmPlaying
-                ? "flex h-9 w-9 items-center justify-center rounded-xl border border-miku/40 bg-miku text-white shadow-sm transition active:scale-95 disabled:opacity-45 [&_svg]:h-4 [&_svg]:w-4"
-                : "flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-45 [&_svg]:h-4 [&_svg]:w-4";
+                ? "state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-on-primary shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard active:rounded-md3-sm disabled:opacity-38 [&_svg]:h-5 [&_svg]:w-5"
+                : "state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-on-surface-variant shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard hover:bg-surface-container-highest active:rounded-md3-sm disabled:opacity-38 [&_svg]:h-5 [&_svg]:w-5";
         }
         if (this.bgmInfoElement) {
             this.bgmInfoElement.textContent = this.bgmError
@@ -2938,8 +2960,9 @@ export class MysekaiScenePreviewRuntime {
         for (const button of Array.from(this.controlsOverlay.querySelectorAll<HTMLButtonElement>("[data-view-mode-button]"))) {
             const active = button.dataset.viewModeButton === this.viewMode;
             button.className = active
-                ? "rounded-xl border border-miku/40 bg-miku px-3 py-2 text-[11px] font-black text-white shadow-sm transition active:scale-95"
-                : "rounded-xl border border-slate-200 bg-white/85 px-3 py-2 text-[11px] font-black text-slate-700 shadow-sm transition hover:bg-white active:scale-95";
+                ? "state-layer focus-ring min-h-10 rounded-full border border-primary bg-primary px-3 py-2 type-label-l text-on-primary shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard active:rounded-md3-sm"
+                : "state-layer focus-ring min-h-10 rounded-full border border-outline-variant bg-surface-container-high px-3 py-2 type-label-l text-on-surface shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard hover:bg-surface-container-highest active:rounded-md3-sm";
+            button.setAttribute("aria-pressed", String(active));
         }
         if (this.pointerLockButton) {
             this.pointerLockButton.disabled = this.viewMode !== "free" || touchDevice;
@@ -2948,8 +2971,8 @@ export class MysekaiScenePreviewRuntime {
             this.pointerLockButton.setAttribute("aria-label", this.pointerLockButton.title);
             this.pointerLockButton.style.display = touchDevice ? "none" : "flex";
             this.pointerLockButton.className = this.pointerLocked
-                ? "flex h-9 w-9 items-center justify-center rounded-xl border border-miku/40 bg-miku text-white shadow-sm transition active:scale-95 [&_svg]:h-4 [&_svg]:w-4"
-                : "flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white/85 text-slate-700 shadow-sm transition hover:bg-white active:scale-95 disabled:opacity-45 [&_svg]:h-4 [&_svg]:w-4";
+                ? "state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-primary bg-primary text-on-primary shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard active:rounded-md3-sm [&_svg]:h-5 [&_svg]:w-5"
+                : "state-layer focus-ring flex h-10 w-10 items-center justify-center rounded-full border border-outline-variant bg-surface-container-high text-on-surface-variant shadow-elev-1 transition-[background-color,border-color,box-shadow,color] duration-200 ease-md3-standard hover:bg-surface-container-highest active:rounded-md3-sm disabled:opacity-38 [&_svg]:h-5 [&_svg]:w-5";
         }
         if (this.fullscreenButton) {
             this.fullscreenButton.innerHTML = this.fullscreenIconSvg(this.isFullscreen);
@@ -2977,7 +3000,7 @@ export class MysekaiScenePreviewRuntime {
             host.style.height = "100dvh";
             host.style.minHeight = "100dvh";
             host.style.borderRadius = "0";
-            host.style.background = "#0f172a";
+            host.style.background = "var(--md-sys-color-surface-container-lowest)";
         } else if (!this.isPseudoFullscreen) {
             host.style.width = "";
             host.style.height = "";
@@ -3104,7 +3127,7 @@ export class MysekaiScenePreviewRuntime {
         Object.assign(host.style, { position: "fixed", inset: "0", zIndex: "9999",             width: "100vw",
             height: "100dvh",
             minHeight: "100dvh",
-            borderRadius: "0", background: "#0f172a" });
+            borderRadius: "0", background: "var(--md-sys-color-surface-container-lowest)" });
         this.isPseudoFullscreen = true;
         this.isFullscreen = true;
         this.refreshOverlayState();

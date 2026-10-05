@@ -2,7 +2,7 @@
  * MD3 Dynamic Color scheme generator
  *
  * 读取 src/lib/theme-seeds.json（角色主题色种子），用 @material/material-color-utilities
- * 以 SchemeFidelity（2025 spec，primary-container 保留角色原色）为每个种子生成 light / dark 两套
+ * 以 SchemeFidelity（2025 spec，主容器尽量保留角色色并按对比度调整 tone）生成 light / dark 两套
  * 完整的 MD3 color roles，输出为 src/styles/md3-schemes.css。
  *
  * 运行时只需要在 <html> 上设置 data-seed="<charId>" 与 data-theme="light|dark"，
@@ -54,7 +54,7 @@ const ROLES = [
 ];
 
 /**
- * Neutral-variant reference tones exported for the legacy bridge
+ * Neutral-variant reference tones exported only for the unmodified mini-games
  * (Tailwind slate-50..950 → MD3 neutral-variant palette). Mirrored in dark mode.
  */
 const NEUTRAL_TONES = [6, 10, 20, 30, 40, 50, 60, 80, 90, 95, 98];
@@ -72,12 +72,12 @@ function buildScheme(hex, isDark) {
         lines.push(`--md-sys-color-${kebab(role)}: ${hexFromArgb(argb)};`);
     }
     for (const role of ["primary", "onSurface", "surface", "shadow", "scrim"]) {
-        lines.push(`--md-sys-color-${kebab(role)}-rgb: ${rgbTriplet(MaterialDynamicColors[role].getArgb(scheme))};`);
+        lines.push(`--md-sys-color-${kebab(role)}-rgb: ${rgbTriplet(MaterialDynamicColors[role].getArgb(scheme)).replaceAll(",", "")};`);
     }
     for (const tone of NEUTRAL_TONES) {
         lines.push(`--md-ref-palette-neutral-variant-${tone}: ${hexFromArgb(scheme.neutralVariantPalette.tone(tone))};`);
     }
-    // Legacy accent (bridge for --color-miku / --color-luka): a mid tone that reads both as a
+    // Mini-game-only accent aliases: a mid tone that reads both as a
     // fill under white text and as text over the surface, in each mode.
     const accents = {
         accent: scheme.primaryPalette.tone(isDark ? 50 : 40),

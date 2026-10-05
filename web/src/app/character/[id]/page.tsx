@@ -1,9 +1,10 @@
 import MainLayout from "@/components/MainLayout";
 import { defineCharacterDetailClientPage } from "@/lib/seo-detail-metadata";
 import CharacterDetailClient from "./client";
+import { LoadingState } from "@/components/md3/Patterns";
 
 const Page = defineCharacterDetailClientPage(CharacterDetailClient, {
-    fallback: <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">Loading character details...</div>,
+    fallback: <LoadingState className="h-[50vh]" />,
     wrap: (children) => <MainLayout>{children}</MainLayout>,
 });
 

@@ -329,7 +329,7 @@ export default function DesignSystemClient() {
                     </div>
                     <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
                         {SURFACE_ROLES.map((role) => (
-                            <div key={role.name} className={`flex h-20 items-end rounded-md3-lg border border-outline-variant p-3 text-on-surface ${role.bg}`}>
+                            <div key={role.name} className={`flex h-20 items-end rounded-md3-lg border border-outline-variant p-3 ${role.name === "inverse-surface" ? "text-inverse-on-surface" : "text-on-surface"} ${role.bg}`}>
                                 <span className="type-label-m">{role.name}</span>
                             </div>
                         ))}
@@ -543,7 +543,6 @@ export default function DesignSystemClient() {
                         <LoadingIndicator contained aria-label={t("common.md3.loading")} />
                         <CircularProgress aria-label={t("common.md3.loading")} />
                         <CircularProgress value={volume / 100} aria-label={t("page.designSystem.sliderLabel")} />
-                        <div className="loading-spinner" />
                         <div className="w-full space-y-4">
                             <LinearProgress aria-label={t("common.md3.loading")} />
                             <LinearProgress value={volume / 100} aria-label={t("page.designSystem.sliderLabel")} />

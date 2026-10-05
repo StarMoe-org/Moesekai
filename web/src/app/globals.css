@@ -1,7 +1,7 @@
 @import "tailwindcss";
 @import "../styles/md3-schemes.css";
 @import "../styles/md3-tokens.css";
-@import "../styles/md3-legacy-bridge.css";
+@import "../styles/legacy-games.css";
 
 /* Layout rails shared by MainLayout / Sidebar / FilterDrawer (MD3 docked panes).
    The navigation drawer and the filter side sheet sit flush against each other
@@ -11,19 +11,9 @@
   --sidebar-w: 18rem;
   --filter-drawer-w: 20rem;
   --sidebar-edge: var(--sidebar-w);
-  --island-gap: 0rem;
   --beside-sidebar: var(--sidebar-w);
   --dual-rail-w: calc(var(--sidebar-w) + var(--filter-drawer-w));
 
-  /* Legacy motion vars still read by a few components; mapped to MD3 motion. */
-  --ease-spring: var(--ease-md3-spatial-fast);
-  --ease-out-soft: var(--ease-md3-emphasized-decelerate);
-  --ease-out-snappy: var(--ease-md3-standard);
-  --duration-instant: var(--md-sys-motion-duration-short2);
-  --duration-fast: var(--md-sys-motion-duration-short4);
-  --duration-base: var(--md-sys-motion-duration-medium2);
-  --duration-slow: var(--md-sys-motion-duration-medium4);
-  --press-scale: 1;
 }
 
 @theme {
@@ -66,16 +56,7 @@ body {
   animation-play-state: paused !important;
 }
 
-:root.theme-switching .liquid-glass-modal,
-:root.theme-switching .glass-card,
-:root.theme-switching [class*="backdrop-blur"] {
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
 
-:root[data-theme="dark"] body {
-  color: var(--text-body);
-}
 
 :root[data-show-ads="false"] .moesekai-ad-slot {
   display: none !important;
@@ -83,8 +64,6 @@ body {
 
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-float-blob-1,
-  .animate-float-blob-2,
   .animate-fade-in,
   .animate-shimmer,
   .animate-pulse-fast {
@@ -98,165 +77,12 @@ body {
   }
 }
 
-/* Background Animated Blobs */
-@keyframes float-blob-1 {
-  0%, 100% { transform: translate(0px, 0px) scale(1) rotate(0deg); }
-  33% { transform: translate(40px, -60px) scale(1.15) rotate(120deg); }
-  66% { transform: translate(-30px, 30px) scale(0.9) rotate(240deg); }
-}
-
-@keyframes float-blob-2 {
-  0%, 100% { transform: translate(0px, 0px) scale(1.05) rotate(0deg); }
-  50% { transform: translate(-50px, 50px) scale(1.2) rotate(-180deg); }
-}
-
-.animate-float-blob-1 {
-  animation: float-blob-1 20s ease-in-out infinite;
-}
-
-.animate-float-blob-2 {
-  animation: float-blob-2 25s ease-in-out infinite;
-}
-
-
 
 :root[data-theme="dark"] {
   color-scheme: dark;
 }
 
-:root[data-theme="dark"] .bg-white {
-  background-color: var(--surface-base) !important;
-}
 
-:root[data-theme="dark"] .bg-white\/95,
-:root[data-theme="dark"] .bg-white\/90,
-:root[data-theme="dark"] .bg-white\/80,
-:root[data-theme="dark"] .bg-white\/70,
-:root[data-theme="dark"] .bg-white\/60,
-:root[data-theme="dark"] .bg-white\/50,
-:root[data-theme="dark"] .bg-white\/40 {
-  background-color: color-mix(in srgb, var(--surface-base) 88%, transparent) !important;
-}
-
-:root[data-theme="dark"] .bg-slate-50,
-:root[data-theme="dark"] .bg-slate-50\/70,
-:root[data-theme="dark"] .bg-slate-50\/50,
-:root[data-theme="dark"] .bg-slate-50\/30 {
-  background-color: var(--surface-soft) !important;
-}
-
-:root[data-theme="dark"] .bg-slate-100 {
-  background-color: var(--surface-muted) !important;
-}
-
-:root[data-theme="dark"] .bg-slate-200,
-:root[data-theme="dark"] .bg-slate-300 {
-  background-color: var(--surface-strong) !important;
-}
-
-:root[data-theme="dark"] .text-black,
-:root[data-theme="dark"] .text-slate-900,
-:root[data-theme="dark"] .text-slate-800 {
-  color: var(--text-strong) !important;
-}
-
-:root[data-theme="dark"] .text-primary-text {
-  color: var(--text-body) !important;
-}
-
-:root[data-theme="dark"] .text-slate-700,
-:root[data-theme="dark"] .text-slate-600 {
-  color: var(--text-body) !important;
-}
-
-:root[data-theme="dark"] .text-slate-500,
-:root[data-theme="dark"] .text-slate-400,
-:root[data-theme="dark"] .text-slate-300 {
-  color: var(--text-muted) !important;
-}
-
-:root[data-theme="dark"] .border-slate-50,
-:root[data-theme="dark"] .border-slate-100,
-:root[data-theme="dark"] .border-slate-100\/50,
-:root[data-theme="dark"] .border-slate-200,
-:root[data-theme="dark"] .border-slate-200\/60,
-:root[data-theme="dark"] .border-slate-200\/50,
-:root[data-theme="dark"] .border-slate-300 {
-  border-color: var(--border-soft) !important;
-}
-
-:root[data-theme="dark"] .ring-slate-100,
-:root[data-theme="dark"] .ring-slate-200,
-:root[data-theme="dark"] .ring-slate-200\/60,
-:root[data-theme="dark"] .ring-slate-200\/50,
-:root[data-theme="dark"] .ring-slate-300 {
-  --tw-ring-color: var(--ring-soft) !important;
-}
-
-:root[data-theme="dark"] .hover\:bg-white:hover,
-:root[data-theme="dark"] .hover\:bg-white\/80:hover,
-:root[data-theme="dark"] .hover\:bg-white\/70:hover,
-:root[data-theme="dark"] .hover\:bg-white\/20:hover,
-:root[data-theme="dark"] .hover\:bg-slate-50:hover,
-:root[data-theme="dark"] .hover\:bg-slate-50\/50:hover,
-:root[data-theme="dark"] .hover\:bg-slate-100:hover,
-:root[data-theme="dark"] .hover\:bg-slate-200:hover,
-:root[data-theme="dark"] .hover\:bg-slate-300:hover,
-:root[data-theme="dark"] .hover\:bg-slate-700:hover,
-:root[data-theme="dark"] .hover\:bg-slate-700\/50:hover {
-  background-color: color-mix(in srgb, var(--surface-strong) 88%, transparent) !important;
-}
-
-:root[data-theme="dark"] .hover\:text-slate-900:hover,
-:root[data-theme="dark"] .hover\:text-slate-800:hover,
-:root[data-theme="dark"] .hover\:text-slate-700:hover,
-:root[data-theme="dark"] .hover\:text-slate-600:hover {
-  color: var(--text-strong) !important;
-}
-
-:root[data-theme="dark"] .hover\:border-slate-300:hover,
-:root[data-theme="dark"] .hover\:border-slate-200:hover {
-  border-color: var(--border-strong) !important;
-}
-
-:root[data-theme="dark"] .from-slate-50,
-:root[data-theme="dark"] .from-slate-100,
-:root[data-theme="dark"] .from-slate-300,
-:root[data-theme="dark"] .from-slate-400 {
-  --tw-gradient-from: var(--surface-soft) var(--tw-gradient-from-position) !important;
-  --tw-gradient-to: color-mix(in srgb, var(--surface-soft) 0%, transparent) var(--tw-gradient-to-position) !important;
-  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from), var(--tw-gradient-to)) !important;
-}
-
-:root[data-theme="dark"] .to-slate-50,
-:root[data-theme="dark"] .to-slate-100,
-:root[data-theme="dark"] .to-slate-200,
-:root[data-theme="dark"] .to-slate-400,
-:root[data-theme="dark"] .to-slate-500 {
-  --tw-gradient-to: var(--surface-muted) var(--tw-gradient-to-position) !important;
-}
-
-:root[data-theme="dark"] .shadow-2xl,
-:root[data-theme="dark"] .shadow-xl,
-:root[data-theme="dark"] .shadow-lg {
-  box-shadow: var(--shadow-elev-3) !important;
-}
-
-:root[data-theme="dark"] .shadow-md,
-:root[data-theme="dark"] .shadow-sm {
-  box-shadow: var(--shadow-elev-1) !important;
-}
-
-/* Loading animation keyframes */
-@keyframes miku-load-fast {
-  0% {
-    width: 0%;
-  }
-
-  100% {
-    width: 90%;
-  }
-}
 
 @keyframes shimmer {
   0% {
@@ -284,20 +110,6 @@ body {
   animation: fade-in 0.5s ease-out forwards;
 }
 
-@keyframes breadcrumb-dropdown-in {
-  from {
-    opacity: 0;
-    transform: translateY(-3px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.animate-breadcrumb-dropdown {
-  animation: breadcrumb-dropdown-in 0.12s ease-out forwards;
-}
 
 [data-shortcut-focused="true"] {
   outline: 3px solid var(--md-sys-color-secondary);
@@ -340,29 +152,6 @@ button[data-shortcut-load-more="true"]::after {
 
 
 
-@keyframes scroll-top-icon-tap {
-  0% {
-    transform: translateY(0) scale(1);
-  }
-
-  45% {
-    transform: translateY(-1px) scale(0.9);
-  }
-
-  100% {
-    transform: translateY(-4px) scale(1.08);
-  }
-}
-
-.scroll-top-icon-tap {
-  animation: scroll-top-icon-tap 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .scroll-top-icon-tap {
-    animation: none;
-  }
-}
 
 /* Hide scrollbar for horizontal scroll containers */
 .scrollbar-hide {
@@ -416,15 +205,10 @@ button[data-shortcut-load-more="true"]::after {
 
 .chart-preview-logo-fill {
   animation: logo-fill-right 2.4s ease-in-out infinite;
-  background: linear-gradient(to right, var(--color-miku) 33%, var(--color-miku-dark) 33%, rgba(255,255,255,0.15) 66%, var(--color-miku) 66%);
+  background: linear-gradient(to right, var(--md-sys-color-primary) 33%, var(--md-sys-color-secondary) 33%, color-mix(in srgb, var(--md-sys-color-on-surface) 15%, transparent) 66%, var(--md-sys-color-primary) 66%);
   background-size: 300% 100%;
 }
 
-/* Freeze continuously animating background layers while a top-level overlay is open. */
-:root[data-overlay-open="true"] .animate-float-blob-1,
-:root[data-overlay-open="true"] .animate-float-blob-2 {
-  animation-play-state: paused;
-}
 
 /* ==========================================================================
    Theme cursors
@@ -461,9 +245,7 @@ button[data-shortcut-load-more="true"]::after {
       cursor: var(--theme-cursor-default, default);
     }
 
-    /* Anything that activates on click. Includes the project's own
-       interactive primitives (`pressable`, `ios-glass-btn`, `island-chip`) so
-       filter chips and glass buttons are not left with the arrow. */
+    /* Semantic interactive elements and MD3 controls keep the themed pointer. */
     & a,
     & button,
     & summary,
@@ -477,9 +259,6 @@ button[data-shortcut-load-more="true"]::after {
     & [role="menuitem"],
     & [role="option"],
     & .cursor-pointer,
-    & .pressable,
-    & .ios-glass-btn,
-    & .island-chip,
     & input[type="checkbox"],
     & input[type="radio"],
     & input[type="submit"],
@@ -538,9 +317,7 @@ button[data-shortcut-load-more="true"]::after {
       cursor: var(--theme-cursor-default, default);
     }
 
-    /* Refusal outranks everything above: a disabled button is usually also an
-       `a`/`button`/`.pressable`, so without `!important` it would keep the
-       hand and read as clickable. */
+    /* Disabled controls override the themed pointer and retain their native feedback. */
     & :disabled,
     & [aria-disabled="true"],
     & .cursor-not-allowed {

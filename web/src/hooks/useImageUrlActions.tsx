@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { IconButton } from "@/components/md3/Button";
+import { mdCheck, mdContentCopy, mdDownload, mdRefresh } from "@/components/md3/icons";
 import { copyImageFromUrl, saveImageFromUrl } from "@/lib/imageActions";
 
 interface UseImageUrlActionsOptions {
@@ -114,78 +116,29 @@ export function useImageUrlActions({
         }
     }, [fileName, imageUrl, t]);
 
+    const copyLabel = isCopying ? t("common.imageActions.copying") : copySuccess ? t("common.imageActions.copySuccess") : t("common.imageActions.copyImage");
+    const saveLabel = isSaving ? t("common.imageActions.downloading") : saveSuccess ? t("common.imageActions.downloadSuccess") : t("common.imageActions.downloadImage");
     const headerActions = (
         <>
-            <button
+            <IconButton
                 onClick={handleCopy}
                 disabled={isCopying || isSaving}
-                className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={t("common.imageActions.copyImage")}
-                title={isCopying ? t("common.imageActions.copying") : copySuccess ? t("common.imageActions.copySuccess") : t("common.imageActions.copyImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${isCopying || copySuccess ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 animate-spin transition-all duration-200 ${isCopying ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <circle cx="12" cy="12" r="9" strokeWidth="2" className="opacity-30" />
-                        <path d="M12 3a9 9 0 019 9" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${copySuccess && !isCopying ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                </span>
-            </button>
-            <button
+                icon={isCopying ? mdRefresh : copySuccess ? mdCheck : mdContentCopy}
+                label={copyLabel}
+                aria-busy={isCopying}
+                className={`min-h-12 min-w-12 motion-reduce:transition-none ${copySuccess ? "text-primary" : ""} ${isCopying ? "motion-safe:[&_svg]:animate-spin" : ""}`}
+            />
+            <IconButton
                 onClick={handleSave}
                 disabled={isSaving || isCopying}
-                className="p-1.5 text-slate-400 hover:text-miku hover:bg-slate-100 rounded-lg transition-colors disabled:opacity-50"
-                aria-label={t("common.imageActions.downloadImage")}
-                title={isSaving ? t("common.imageActions.downloading") : saveSuccess ? t("common.imageActions.downloadSuccess") : t("common.imageActions.downloadImage")}
-            >
-                <span className="relative block w-4 h-4">
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${isSaving || saveSuccess ? "opacity-0 scale-75" : "opacity-100 scale-100"}`}
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 animate-spin transition-all duration-200 ${isSaving ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <circle cx="12" cy="12" r="9" strokeWidth="2" className="opacity-30" />
-                        <path d="M12 3a9 9 0 019 9" strokeWidth="2" strokeLinecap="round" />
-                    </svg>
-                    <svg
-                        className={`absolute inset-0 w-4 h-4 transition-all duration-200 ${saveSuccess && !isSaving ? "opacity-100 scale-100" : "opacity-0 scale-75"}`}
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                </span>
-            </button>
+                icon={isSaving ? mdRefresh : saveSuccess ? mdCheck : mdDownload}
+                label={saveLabel}
+                aria-busy={isSaving}
+                className={`min-h-12 min-w-12 motion-reduce:transition-none ${saveSuccess ? "text-primary" : ""} ${isSaving ? "motion-safe:[&_svg]:animate-spin" : ""}`}
+            />
+            <span className="sr-only" role="status" aria-live="polite">
+                {isCopying || copySuccess ? copyLabel : isSaving || saveSuccess ? saveLabel : ""}
+            </span>
         </>
     );
 

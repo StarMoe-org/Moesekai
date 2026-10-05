@@ -38,7 +38,7 @@ import {
   resolveUiLocale,
 } from "@/lib/i18n";
 import { BACKGROUND_ANIMATION_BUDGET_STORAGE_KEY } from "@/lib/backgroundAnimation";
-import { isRouteLocale, routeLocaleToUiLocale } from "@/lib/locale-routing";
+import { isRouteLocale, routeLocaleToUiLocale, SUPPORTED_ROUTE_LOCALES } from "@/lib/locale-routing";
 import { buildGoogleTagBootstrapScript } from "@/lib/googleTag";
 import { serializeJsonLd } from "@/lib/json-ld";
 
@@ -80,6 +80,9 @@ export default async function RootLayout({
   // Inline script to apply theme color before React hydration
   const themeScript = `
     (function() {
+      var routeSegments = window.location.pathname.split('/').filter(Boolean);
+      var pageSegment = ${JSON.stringify(SUPPORTED_ROUTE_LOCALES)}.indexOf((routeSegments[0] || '').toLowerCase()) >= 0 ? routeSegments[1] : routeSegments[0];
+      document.documentElement.dataset.legacyGame = ['guess-who', 'guess-jacket', 'goods-gacha'].indexOf(pageSegment) >= 0 ? 'true' : 'false';
       var adsFeatureEnabled = ${ADS_FEATURE_ENABLED ? "true" : "false"};
       var showAds = ${DEFAULT_SHOW_ADS ? "true" : "false"};
 

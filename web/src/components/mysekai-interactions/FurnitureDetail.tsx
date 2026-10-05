@@ -3,6 +3,9 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
+import { Button } from "@/components/md3/Button";
+import { Icon } from "@/components/md3/Icon";
+import { mdArrowForward, mdChevronRight, mdOpenInNew, mdRefresh, mdShare, mdViewInAr } from "@/components/md3/icons";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
@@ -61,11 +64,17 @@ export default function FurnitureDetail({ fixture, data, snapshot, runtimeEntry,
             {fixture.flavorText && fixture.flavorText !== fixture.name && <p className="workspace-flavor">{fixture.flavorText}</p>}
         </div>
         <div className="workspace-detail-actions">
-            <button className="interaction-button interaction-primary" data-action="play-selected" disabled={!canPlay || preparing} onClick={play}>
-                <svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true"><path d="m10 2 7 4v8l-7 4-7-4V6l7-4Z M3 6l7 4 7-4 M10 10v8" /></svg>
+            <Button
+                variant="filled"
+                icon={mdViewInAr}
+                data-action="play-selected"
+                disabled={!canPlay || preparing}
+                onClick={play}
+                className="interaction-primary min-w-0"
+            >
                 {t(`page.mysekaiWorkspace.${preparing ? "preparing" : "inspectScene"}`)}
-            </button>
-            <button className="interaction-button" onClick={share}>{t("common.action.share")}</button>
+            </Button>
+            <Button variant="outlined" icon={mdShare} onClick={share}>{t("common.action.share")}</Button>
         </div>
         {!snapshot?.available || !runtimeEntry?.available ? <p className="workspace-inline-note">{t("page.mysekaiWorkspace.readingAvailable")}</p>
             : <p className="workspace-inline-note">{t("page.mysekaiWorkspace.explicitDownload")}</p>}
@@ -74,21 +83,21 @@ export default function FurnitureDetail({ fixture, data, snapshot, runtimeEntry,
             .map(tag => <span key={tag.id}>{getMysekaiTagDisplayName(tag.name, t)}</span>)}</div>
         {snapshot && relation && relation.characters.length > 0 && <section className="workspace-related-cast">
             <h3>{t("page.mysekaiWorkspace.participants")}</h3>
-            <div className="workspace-cast-grid">{relation.characters.map(person => <button key={person.id} onClick={() => character(person.id)} className="workspace-person" title={person.name}>
+            <div className="workspace-cast-grid">{relation.characters.map(person => <button key={person.id} type="button" onClick={() => character(person.id)} className="workspace-person state-layer focus-ring" title={person.name}>
                 <SdPortrait snapshot={snapshot} unit={person.id} name={person.name} size={58} /><span>{person.name}</span>
             </button>)}</div>
         </section>}
         {snapshot && relation && ([{ tab: "performances" as const, entries: relation.talks }, { tab: "activities" as const, entries: relation.activities }]).map(group => group.entries.length > 0 && <section className="workspace-related-section" key={group.tab}>
             <div className="workspace-section-title"><h3>{t(`page.mysekaiWorkspace.${group.tab === "performances" ? "conversations" : "activities"}`)} <span>{group.entries.length}</span></h3>
-                <button className="interaction-text-button" onClick={() => related(fixture.id, group.tab)}>{t("page.mysekaiWorkspace.seeAll")}</button></div>
-            <div className="workspace-related-list">{group.entries.slice(0, 4).map(entry => <button key={entry.key} onClick={() => select(entry.key)} data-related-key={entry.key}>
+                <Button variant="text" size="xs" trailingIcon={mdArrowForward} onClick={() => related(fixture.id, group.tab)}>{t("page.mysekaiWorkspace.seeAll")}</Button></div>
+            <div className="workspace-related-list">{group.entries.slice(0, 4).map(entry => <button key={entry.key} type="button" onClick={() => select(entry.key)} data-related-key={entry.key} className="state-layer focus-ring text-on-surface">
                 <ContentArtwork entry={entry} snapshot={snapshot} />
-                <span><strong>{entry.title}</strong><small>{entry.characters.map(person => person.name).join(" · ")}</small></span><span aria-hidden="true">›</span>
+                <span><strong>{entry.title}</strong><small>{entry.characters.map(person => person.name).join(" · ")}</small></span><span aria-hidden="true"><Icon path={mdChevronRight} size={20} /></span>
             </button>)}</div>
         </section>)}
         <section className="workspace-materials">
             <h3>{t("page.mysekai.detail.materialCost")}</h3>
-            {materials.failed ? <p className="workspace-inline-notice">{t("common.state.loadingFailed")} <button className="interaction-text-button" onClick={() => setRetry(value => value + 1)}>{t("common.action.retry")}</button></p>
+            {materials.failed ? <p className="workspace-inline-notice">{t("common.state.loadingFailed")} <Button variant="text" size="xs" icon={mdRefresh} onClick={() => setRetry(value => value + 1)}>{t("common.action.retry")}</Button></p>
                 : !materials.data ? <p className="workspace-inline-note" role="status">{t("common.state.loading")}</p>
                     : !costs.length ? <p className="workspace-inline-note">{t("page.mysekaiWorkspace.noRecipe")}</p>
                         : <div className="workspace-material-grid">{costs.map(cost => {
@@ -107,7 +116,9 @@ export default function FurnitureDetail({ fixture, data, snapshot, runtimeEntry,
                 <div><dt>{t("page.mysekai.detail.fields.siteType")}</dt><dd>{fixture.mysekaiSettableSiteType}</dd></div>
                 <div><dt>{t("page.mysekai.detail.fields.assetBundleName")}</dt><dd>{fixture.assetbundleName}</dd></div>
             </dl>
-            <Link className="interaction-text-button" href={mysekaiDatabaseHref(data.region, fixture.id)}>{t("page.mysekaiWorkspace.permanentPage")} ↗</Link>
+            <Link className="state-layer focus-ring inline-flex min-h-10 items-center gap-2 rounded-full px-3 py-2 type-label-l text-primary" href={mysekaiDatabaseHref(data.region, fixture.id)}>
+                {t("page.mysekaiWorkspace.permanentPage")} <Icon path={mdOpenInNew} size={18} />
+            </Link>
         </details>
     </section>;
 }

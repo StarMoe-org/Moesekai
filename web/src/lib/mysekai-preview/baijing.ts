@@ -123,8 +123,8 @@ export function getTabTypeLabel(tabType?: string, t?: BaijingTranslationFn) {
 }
 
 export function getRankTone(rank: number) {
-    if (rank === 1) return "bg-gradient-to-br from-amber-300 via-yellow-200 to-orange-300 text-amber-950 shadow-amber-300/30";
-    if (rank === 2) return "bg-gradient-to-br from-slate-200 via-white to-slate-300 text-slate-700 shadow-slate-300/30";
-    if (rank === 3) return "bg-gradient-to-br from-orange-300 via-amber-200 to-yellow-100 text-orange-950 shadow-orange-300/30";
-    return "border border-miku/20 bg-miku/10 text-miku shadow-miku/10";
+    if (rank === 1) return "bg-tertiary-container text-on-tertiary-container shadow-elev-1";
+    if (rank === 2) return "bg-surface-container-highest text-on-surface shadow-elev-1";
+    if (rank === 3) return "bg-secondary-container text-on-secondary-container shadow-elev-1";
+    return "border border-outline-variant bg-primary-container text-on-primary-container shadow-elev-1";
 }

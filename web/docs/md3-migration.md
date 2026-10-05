@@ -7,10 +7,10 @@
 | 层 | 位置 | 说明 |
 |---|---|---|
 | 种子色 | `src/lib/theme-seeds.json` | 26 位角色主题色，`defaultSeedId = 21`（Miku）。`CHAR_COLORS` 由此派生 |
-| 配色生成 | `scripts/generate-md3-schemes.mjs` → `src/styles/md3-schemes.css` | `SchemeFidelity`（spec 2025，primary-container = 角色原色），每个种子输出 light/dark 全部 color roles；运行时只切换 `<html data-seed data-theme>` |
+| 配色生成 | `scripts/generate-md3-schemes.mjs` → `src/styles/md3-schemes.css` | `SchemeFidelity`（spec 2025，主容器尽量保留角色色并按标准对比度调整 tone），每个种子输出 light/dark 全部 color roles；运行时只切换 `<html data-seed data-theme>` |
 | 图标生成 | `scripts/generate-material-symbols.mjs` → `src/components/md3/icons.generated.ts` | 扫描源码中 `from "@/components/md3/icons"` 的导入，只打包用到的 Material Symbols Rounded |
 | Token | `src/styles/md3-tokens.css` | Tailwind `@theme`：颜色、形状、阴影、动效、字体层级、`state-layer`、`focus-ring`、`dark:` 变体（基于 `data-theme`） |
-| 兼容层 | `src/styles/md3-legacy-bridge.css` | **@deprecated**：把 slate / glass / island / `--color-miku` 映射到 MD3。阶段 5 删除 |
+| 游戏例外 | `src/styles/legacy-games.css` | 仅为 guess-who / guess-jacket / goods-gacha 保留旧样式，选择器由 `<html data-legacy-game="true">` 限定；全站兼容层已删除 |
 | 组件原语 | `src/components/md3/*` | `import { Button, Card, … } from "@/components/md3"` |
 | 动效 | `src/lib/motion.ts` | `md3SpatialFast/Default/Slow`、`md3EffectsFast/Default/Slow`、MD3 easing |
 
@@ -88,5 +88,5 @@ rg -nP "slate-|gray-|bg-white|text-white|dark:|glass|island-|material-(thin|regu
 结果只允许出现第 2.1 条中的游戏数据色例外。然后运行：
 
 ```bash
-bun run generate:md3 && npx tsc --noEmit -p . && bun run lint && bun run lint:i18n && bun run lint:i18n-usage
+bun run generate:md3 && bun run lint:md3 && bun run test:md3 && npx tsc --noEmit -p . && bun run lint && bun run lint:i18n && bun run lint:i18n-usage
 ```

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import type { CSSProperties } from "react";
 
 import { useI18n } from "@/contexts/I18nContext";
@@ -25,17 +26,15 @@ interface LyricTextProps {
 }
 
 type PerformerStyle = CSSProperties & {
-    "--performer-light"?: string;
-    "--performer-dark"?: string;
-    "--performer-gradient-light"?: string;
-    "--performer-gradient-dark"?: string;
+    "--performer-color"?: string;
+    "--performer-gradient"?: string;
 };
 
 interface PerformerDescriptor {
     id: LyricsPerformerID;
     name: string;
     avatarUrl?: string;
-    colors?: { base: string; light: string; dark: string };
+    colors?: { base: string; foreground: string };
 }
 
 function samePerformerGroup(left: LyricsPerformerID[], right: LyricsPerformerID[]): boolean {
@@ -55,27 +54,28 @@ function linePerformerGroups(segments: ILyricsDisplaySegment[], trailingPerforme
     return groups;
 }
 
+function readLyricsSurface(): string {
+    if (typeof document === "undefined") return "#ffffff";
+    const styles = getComputedStyle(document.documentElement);
+    return styles.getPropertyValue("--md-sys-color-surface-container-low").trim()
+        || styles.getPropertyValue("--md-sys-color-surface").trim()
+        || "#ffffff";
+}
+
 function segmentStyle(performers: PerformerDescriptor[]): { className: string; style?: PerformerStyle } {
     const colored = performers.filter((performer) => performer.colors);
     if (performers.length === 1 && colored.length === 1) {
         const colors = colored[0].colors as NonNullable<PerformerDescriptor["colors"]>;
         return {
-            className: "text-[var(--performer-light)] dark:text-[var(--performer-dark)]",
-            style: {
-                "--performer-light": colors.light,
-                "--performer-dark": colors.dark,
-            },
+            className: "text-[var(--performer-color)]",
+            style: { "--performer-color": colors.foreground },
         };
     }
     if (performers.length > 1 && colored.length === performers.length) {
-        const light = `linear-gradient(90deg, ${performers.map((performer) => performer.colors?.light).join(", ")})`;
-        const dark = `linear-gradient(90deg, ${performers.map((performer) => performer.colors?.dark).join(", ")})`;
+        const gradient = `linear-gradient(90deg, ${performers.map((performer) => performer.colors?.foreground).join(", ")})`;
         return {
-            className: "bg-[image:var(--performer-gradient-light)] bg-clip-text text-transparent dark:bg-[image:var(--performer-gradient-dark)]",
-            style: {
-                "--performer-gradient-light": light,
-                "--performer-gradient-dark": dark,
-            },
+            className: "bg-[image:var(--performer-gradient)] bg-clip-text text-transparent",
+            style: { "--performer-gradient": gradient },
         };
     }
     return { className: "text-on-surface" };
@@ -104,6 +104,17 @@ export default function LyricText({
     showPerformerAvatars = true,
 }: LyricTextProps) {
     const { t } = useI18n();
+    const [surface, setSurface] = useState("#ffffff");
+
+    useEffect(() => {
+        const root = document.documentElement;
+        const updateSurface = () => setSurface(readLyricsSurface());
+        updateSurface();
+        const observer = new MutationObserver(updateSurface);
+        observer.observe(root, { attributes: true, attributeFilter: ["data-theme", "data-seed"] });
+        return () => observer.disconnect();
+    }, []);
+
     const displaySegments: ILyricsDisplaySegment[] = segments ?? [{
         text,
         performerIds,
@@ -112,7 +123,7 @@ export default function LyricText({
 
     const performer = (id: LyricsPerformerID): PerformerDescriptor | null => {
         if (typeof id === "number") {
-            const colors = getLyricsPerformerColors(id);
+            const colors = getLyricsPerformerColors(id, surface);
             if (!colors) return null;
             const external = getExternalLyricsPerformer(id);
             return {
@@ -129,9 +140,8 @@ export default function LyricText({
         const sourceColor = source.color ?? external?.color;
         const colors = sourceColor ? {
             base: sourceColor,
-            light: adjustHexForContrast(sourceColor, "#ffffff"),
-            dark: adjustHexForContrast(sourceColor, "#0f172a"),
-        } : characterId ? getLyricsPerformerColors(characterId) : undefined;
+            foreground: adjustHexForContrast(sourceColor, surface),
+        } : characterId ? getLyricsPerformerColors(characterId, surface) : undefined;
         const avatarUrl = characterId ? getCharacterIconUrl(characterId) : external?.avatarUrl;
         return {
             id,

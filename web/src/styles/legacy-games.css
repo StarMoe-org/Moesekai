@@ -1,0 +1,214 @@
+/* The three unmodified mini-games are the only remaining legacy UI consumers.
+   MainLayout marks their routes (including localized URLs) on <html>, which also
+   scopes styles used by game portals. No rewritten page depends on these aliases. */
+@theme inline {
+    --color-miku: var(--legacy-game-primary);
+    --color-miku-dark: var(--legacy-game-primary-deep);
+    --color-primary-text: var(--md-sys-color-on-surface);
+    --color-slate-50: var(--md-ref-palette-neutral-variant-98);
+    --color-slate-100: var(--md-ref-palette-neutral-variant-95);
+    --color-slate-200: var(--md-ref-palette-neutral-variant-90);
+    --color-slate-300: var(--md-ref-palette-neutral-variant-80);
+    --color-slate-400: var(--md-ref-palette-neutral-variant-60);
+    --color-slate-500: var(--md-ref-palette-neutral-variant-50);
+    --color-slate-600: var(--md-ref-palette-neutral-variant-40);
+    --color-slate-700: var(--md-ref-palette-neutral-variant-30);
+    --color-slate-800: var(--md-ref-palette-neutral-variant-20);
+    --color-slate-900: var(--md-ref-palette-neutral-variant-10);
+    --color-slate-950: var(--md-ref-palette-neutral-variant-6);
+}
+
+:root[data-legacy-game="true"] {
+    --legacy-game-primary: var(--md-ext-accent);
+    --legacy-game-primary-deep: var(--md-ext-accent-deep);
+    --color-miku: var(--legacy-game-primary);
+    --color-miku-dark: var(--legacy-game-primary-deep);
+    --color-miku-rgb: var(--md-ext-accent-rgb);
+    --theme-light: var(--md-sys-color-surface-container-low);
+    --surface-base: var(--md-sys-color-surface-container-lowest);
+    --surface-soft: var(--md-sys-color-surface-container-low);
+    --surface-muted: var(--md-sys-color-surface-container);
+    --surface-strong: var(--md-sys-color-surface-container-highest);
+    --text-strong: var(--md-sys-color-on-surface);
+    --text-body: var(--md-sys-color-on-surface);
+    --text-muted: var(--md-sys-color-on-surface-variant);
+    --border-soft: var(--md-sys-color-outline-variant);
+    --border-strong: var(--md-sys-color-outline);
+    --ring-soft: var(--md-sys-color-outline-variant);
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] {
+    --surface-base: var(--md-sys-color-surface-container-low);
+    --surface-soft: var(--md-sys-color-surface-container);
+    --surface-muted: var(--md-sys-color-surface-container-high);
+}
+
+:root[data-legacy-game="true"] .ios-glass-card {
+    background: var(--md-sys-color-surface-container-low);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+:root[data-legacy-game="true"] .ios-glass-panel {
+    background: var(--md-sys-color-surface-container);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid transparent;
+}
+:root[data-legacy-game="true"] .ios-glass-btn {
+    background: var(--md-sys-color-surface-container-high);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid transparent;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+:root[data-legacy-game="true"] .ios-glass-btn:hover {
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 8%, var(--md-sys-color-surface-container-high));
+}
+:root[data-legacy-game="true"] .ios-glass-btn-primary {
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
+}
+:root[data-legacy-game="true"] .ios-glass-btn-primary:hover {
+    background: color-mix(in srgb, var(--md-sys-color-on-primary) 8%, var(--md-sys-color-primary));
+}
+:root[data-legacy-game="true"] .ios-glass-input {
+    background: var(--md-sys-color-surface-container-highest);
+    color: var(--md-sys-color-on-surface);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+:root[data-legacy-game="true"] .ios-glass-input:focus {
+    border-color: var(--md-sys-color-primary);
+    box-shadow: inset 0 0 0 1px var(--md-sys-color-primary);
+    outline: none;
+}
+:root[data-legacy-game="true"] .ios-glass-tab {
+    background: transparent;
+    color: var(--md-sys-color-on-surface-variant);
+    border: 1px solid var(--md-sys-color-outline-variant);
+}
+:root[data-legacy-game="true"] .ios-glass-tab-active {
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
+    border-color: transparent;
+}
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white {
+  background-color: var(--surface-base) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/95,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/90,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/80,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/70,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/60,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/50,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-white\/40 {
+  background-color: color-mix(in srgb, var(--surface-base) 88%, transparent) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-50,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-50\/70,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-50\/50,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-50\/30 {
+  background-color: var(--surface-soft) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-100 {
+  background-color: var(--surface-muted) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-200,
+:root[data-legacy-game="true"][data-theme="dark"] .bg-slate-300 {
+  background-color: var(--surface-strong) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .text-black,
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-900,
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-800 {
+  color: var(--text-strong) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .text-primary-text {
+  color: var(--text-body) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-700,
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-600 {
+  color: var(--text-body) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-500,
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-400,
+:root[data-legacy-game="true"][data-theme="dark"] .text-slate-300 {
+  color: var(--text-muted) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-50,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-100,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-100\/50,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-200,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-200\/60,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-200\/50,
+:root[data-legacy-game="true"][data-theme="dark"] .border-slate-300 {
+  border-color: var(--border-soft) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .ring-slate-100,
+:root[data-legacy-game="true"][data-theme="dark"] .ring-slate-200,
+:root[data-legacy-game="true"][data-theme="dark"] .ring-slate-200\/60,
+:root[data-legacy-game="true"][data-theme="dark"] .ring-slate-200\/50,
+:root[data-legacy-game="true"][data-theme="dark"] .ring-slate-300 {
+  --tw-ring-color: var(--ring-soft) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-white:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-white\/80:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-white\/70:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-white\/20:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-50:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-50\/50:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-100:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-200:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-300:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-700:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:bg-slate-700\/50:hover {
+  background-color: color-mix(in srgb, var(--surface-strong) 88%, transparent) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:text-slate-900:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:text-slate-800:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:text-slate-700:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:text-slate-600:hover {
+  color: var(--text-strong) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:border-slate-300:hover,
+:root[data-legacy-game="true"][data-theme="dark"] .hover\:border-slate-200:hover {
+  border-color: var(--border-strong) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .from-slate-50,
+:root[data-legacy-game="true"][data-theme="dark"] .from-slate-100,
+:root[data-legacy-game="true"][data-theme="dark"] .from-slate-300,
+:root[data-legacy-game="true"][data-theme="dark"] .from-slate-400 {
+  --tw-gradient-from: var(--surface-soft) var(--tw-gradient-from-position) !important;
+  --tw-gradient-to: color-mix(in srgb, var(--surface-soft) 0%, transparent) var(--tw-gradient-to-position) !important;
+  --tw-gradient-stops: var(--tw-gradient-via-stops, var(--tw-gradient-position), var(--tw-gradient-from), var(--tw-gradient-to)) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .to-slate-50,
+:root[data-legacy-game="true"][data-theme="dark"] .to-slate-100,
+:root[data-legacy-game="true"][data-theme="dark"] .to-slate-200,
+:root[data-legacy-game="true"][data-theme="dark"] .to-slate-400,
+:root[data-legacy-game="true"][data-theme="dark"] .to-slate-500 {
+  --tw-gradient-to: var(--surface-muted) var(--tw-gradient-to-position) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .shadow-2xl,
+:root[data-legacy-game="true"][data-theme="dark"] .shadow-xl,
+:root[data-legacy-game="true"][data-theme="dark"] .shadow-lg {
+  box-shadow: var(--shadow-elev-3) !important;
+}
+
+:root[data-legacy-game="true"][data-theme="dark"] .shadow-md,
+:root[data-legacy-game="true"][data-theme="dark"] .shadow-sm {
+  box-shadow: var(--shadow-elev-1) !important;
+}

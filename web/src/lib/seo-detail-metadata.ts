@@ -28,6 +28,7 @@ import {
 import { formatExchangeShopSuffix, formatJpAdvancePrefix, formatMysekaiFlavorSuffix } from "@/lib/seo-keywords";
 import { getSeoAssetSource } from "@/lib/seo-metadata";
 import { CHARACTER_NAMES } from "@/types/types";
+import { LoadingIndicator } from "@/components/md3/Progress";
 
 type DetailPreset<T> = Omit<CreateDynamicDetailMetadataOptions<T>, "params">;
 
@@ -36,7 +37,7 @@ type DetailPageRender<T = unknown> = (props: { params?: Promise<{ id: string }>;
 const DETAIL_LOADING_FALLBACK = createElement(
     "div",
     { className: "min-h-screen flex items-center justify-center" },
-    createElement("div", { className: "loading-spinner" }),
+    createElement(LoadingIndicator),
 );
 
 function defineDetailPreset<T>(preset: DetailPreset<T>) {

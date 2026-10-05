@@ -144,7 +144,7 @@ function toLiteral(obj, indent, step) {
     return lines;
 }
 
-function rootStartFor(src, file, locale) {
+function rootStartFor(src, file, _locale) {
     let m;
     if (file.endsWith("index.ts")) m = src.match(/export const \w+Messages = \{/);
     else m = src.match(/export const \w+ = \{/);

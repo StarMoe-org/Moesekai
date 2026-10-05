@@ -1,13 +1,24 @@
 import { getExternalLyricsPerformer } from "@/lib/lyrics-performers";
 import { CHAR_COLORS } from "@/types/types";
 
-function parseHex(hex: string): [number, number, number] {
-    const normalized = hex.replace("#", "");
-    return [
-        Number.parseInt(normalized.slice(0, 2), 16),
-        Number.parseInt(normalized.slice(2, 4), 16),
-        Number.parseInt(normalized.slice(4, 6), 16),
-    ];
+function parseHex(color: string): [number, number, number] {
+    const normalized = color.trim().replace(/^#/, "");
+    if (/^[\da-f]{3}$/i.test(normalized)) {
+        return normalized.split("").map((channel) => Number.parseInt(`${channel}${channel}`, 16)) as [number, number, number];
+    }
+    if (/^[\da-f]{6}$/i.test(normalized)) {
+        return [
+            Number.parseInt(normalized.slice(0, 2), 16),
+            Number.parseInt(normalized.slice(2, 4), 16),
+            Number.parseInt(normalized.slice(4, 6), 16),
+        ];
+    }
+    const rgb = color.match(/^rgba?\(\s*([\d.]+)(%)?\s*,\s*([\d.]+)(%)?\s*,\s*([\d.]+)(%)?/i);
+    if (rgb) {
+        const channel = (value: string, percent?: string) => Math.round(Number(value) * (percent ? 2.55 : 1));
+        return [channel(rgb[1], rgb[2]), channel(rgb[3], rgb[4]), channel(rgb[5], rgb[6])];
+    }
+    return [0, 0, 0];
 }
 
 function channelLuminance(channel: number): number {
@@ -47,12 +58,18 @@ export function adjustHexForContrast(color: string, background: string, minimumR
     return backgroundIsLight ? "#000000" : "#ffffff";
 }
 
-export function getLyricsPerformerColors(characterId: number): { base: string; light: string; dark: string } | null {
+export interface LyricsPerformerColors {
+    /** The source/masterdata performer color, kept unchanged for content identity. */
+    base: string;
+    /** A readable content color adjusted against the active MD3 surface. */
+    foreground: string;
+}
+
+export function getLyricsPerformerColors(characterId: number, background = "#ffffff"): LyricsPerformerColors | null {
     const base = CHAR_COLORS[String(characterId)] ?? getExternalLyricsPerformer(characterId)?.color;
     if (!base) return null;
     return {
         base,
-        light: adjustHexForContrast(base, "#ffffff"),
-        dark: adjustHexForContrast(base, "#0f172a"),
+        foreground: adjustHexForContrast(base, background),
     };
 }

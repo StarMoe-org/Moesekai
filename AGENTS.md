@@ -20,7 +20,7 @@
 - 规范与迁移规则：`web/docs/md3-migration.md`；组件目录与示例：`/design-system`（`web/src/app/design-system/client.tsx`）。
 - 配色为 MD3 Dynamic Color：角色主题色作种子（`web/src/lib/theme-seeds.json`），由 `bun run generate:md3` 生成 `src/styles/md3-schemes.css`；运行时只切换 `<html data-seed data-theme>`。
 - 页面代码只用语义 token：`bg-surface-container*`、`text-on-surface(-variant)`、`bg-primary text-on-primary`、`border-outline-variant` 等；形状 `rounded-md3-*`；字体 `type-{display|headline|title|body|label}-{l|m|s}`；交互 `state-layer focus-ring`。
-- 禁止新增 `slate-*` / `white` / `dark:` / `miku` / glass / island / `backdrop-blur` 类；`src/styles/md3-legacy-bridge.css` 仅为过渡兼容层。
+- 禁止新增 `slate-*` / `white` / `dark:` / `miku` / glass / island / `backdrop-blur` 类；全站兼容层已删除，仅 `src/styles/legacy-games.css` 为三个未迁移游戏保留作用域限定的旧样式。运行 `bun run --cwd web lint:md3` 防止旧 token 回流。
 - 图标：`import { mdSearch } from "@/components/md3/icons"` + `<Icon path={mdSearch} />`（Material Symbols Rounded，生成脚本按导入自动打包）。
 
 
