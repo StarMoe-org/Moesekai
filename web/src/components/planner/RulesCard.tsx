@@ -1,6 +1,8 @@
 "use client";
 import React, { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { Banner, Button, Chip, SegmentedButton, Surface } from "@/components/md3";
+import { mdKeyboardArrowDown, mdKeyboardArrowUp, mdRefresh } from "@/components/md3/icons";
 import { getCharacterName } from "@/lib/i18n";
 import type {
     ColorfulPass,
@@ -29,10 +31,10 @@ const SOURCE_KEYS: Record<RuleSource, string> = {
 };
 
 const SOURCE_STYLES: Record<RuleSource, string> = {
-    masterdata: "bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700",
-    official: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
-    secondary: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
-    user: "bg-miku/10 text-miku border-miku/30",
+    masterdata: "bg-surface-container-high text-on-surface-variant border-outline-variant",
+    official: "bg-secondary-container text-on-secondary-container border-transparent",
+    secondary: "bg-tertiary-container text-on-tertiary-container border-transparent",
+    user: "bg-primary-container text-on-primary-container border-transparent",
 };
 
 const PASS_OPTIONS: ReadonlyArray<{ value: ColorfulPass; key: string }> = [
@@ -77,30 +79,18 @@ function pickChapterCharacter(rules: EventRules, chapters: WorldBloomChapterRow[
 
 function SegmentButton({ active, onClick, children }: { active: boolean; onClick(): void; children: React.ReactNode }) {
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            aria-pressed={active}
-            className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all border whitespace-nowrap ${active
-                ? "bg-miku text-white border-miku shadow-sm shadow-miku/30"
-                : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                }`}
-        >
+        <Chip selected={active} showCheckmark={false} onClick={onClick}>
             {children}
-        </button>
+        </Chip>
     );
 }
 
 function ResetButton({ onClick }: { onClick(): void }) {
     const { t } = useI18n();
     return (
-        <button
-            type="button"
-            onClick={onClick}
-            className="-my-1 px-1 py-1.5 rounded-md text-[11px] font-bold text-miku hover:underline whitespace-nowrap"
-        >
+        <Button variant="text" size="xs" icon={mdRefresh} onClick={onClick}>
             {t("page.predictionPlanner.rules.controls.reset")}
-        </button>
+        </Button>
     );
 }
 
@@ -108,11 +98,11 @@ function SourceBadge({ source, sourceRef }: { source: RuleSource; sourceRef?: st
     const { t } = useI18n();
     return (
         <span className="inline-flex flex-wrap items-center gap-1 min-w-0">
-            <span className={`inline-block px-1.5 py-0.5 rounded-md border text-[10px] font-bold leading-none whitespace-nowrap ${SOURCE_STYLES[source]}`}>
+            <span className={`inline-block px-2 py-1 rounded-md3-sm border type-label-s whitespace-nowrap ${SOURCE_STYLES[source]}`}>
                 {t(SOURCE_KEYS[source])}
             </span>
             {sourceRef && (
-                <span className="text-[10px] font-mono text-slate-400 dark:text-slate-500 break-all">{sourceRef}</span>
+                <span className="type-label-s font-mono text-on-surface-variant break-all">{sourceRef}</span>
             )}
         </span>
     );
@@ -129,10 +119,10 @@ function RuleRow({ label, source, control, children }: RuleRowProps) {
     return (
         <div className="py-2.5 flex flex-col gap-1 min-w-0">
             <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
-                <dt className="text-xs font-bold text-slate-600 dark:text-slate-300">{label}</dt>
+                <dt className="type-label-l text-on-surface-variant">{label}</dt>
                 {source && <SourceBadge source={source.source} sourceRef={source.ref} />}
             </div>
-            <dd className="text-sm text-slate-800 dark:text-slate-100 break-words min-w-0">{children}</dd>
+            <dd className="type-body-m text-on-surface break-words min-w-0">{children}</dd>
             {control && <div className="flex flex-wrap items-center gap-2">{control}</div>}
         </div>
     );
@@ -202,29 +192,29 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
     const passChanged = overrides.pass !== undefined && overrides.pass !== "none";
 
     return (
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm">
+        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
-                <h2 className="min-w-0 text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">
+                <h2 className="min-w-0 type-title-l text-on-surface">
                     {t("page.predictionPlanner.rules.title")}
                 </h2>
-                <button
-                    type="button"
+                <Button
+                    variant="tonal"
+                    color="secondary"
+                    size="xs"
                     onClick={() => setExpanded((v) => !v)}
                     aria-expanded={expanded}
-                    className="shrink-0 inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-miku bg-miku/10 hover:bg-miku/20 transition-colors"
+                    trailingIcon={expanded ? mdKeyboardArrowUp : mdKeyboardArrowDown}
+                    className="shrink-0"
                 >
-                    <span>{expanded ? t("page.predictionPlanner.rules.collapse") : t("page.predictionPlanner.rules.expand")}</span>
-                    <svg className={`w-3.5 h-3.5 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+                    {expanded ? t("page.predictionPlanner.rules.collapse") : t("page.predictionPlanner.rules.expand")}
+                </Button>
             </div>
 
             {warnings.length > 0 && (
                 <ul className="mt-3 space-y-1.5">
                     {warnings.map((text, i) => (
-                        <li key={i} className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs break-words">
-                            {text}
+                        <li key={i}>
+                            <Banner tone="warning" className="break-words">{text}</Banner>
                         </li>
                     ))}
                 </ul>
@@ -233,36 +223,42 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
             <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2.5">
                 {showScope && (
                     <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-0.5">
+                        <span className="type-label-l text-on-surface-variant mr-0.5">
                             {t("page.predictionPlanner.rules.controls.scope")}
                         </span>
-                        <SegmentButton active={scope.kind === "chapter"} onClick={selectChapterScope}>
-                            {t("page.predictionPlanner.rules.controls.scopeChapter")}
-                        </SegmentButton>
-                        <SegmentButton active={scope.kind === "overall"} onClick={() => onScopeChange({ kind: "overall" })}>
-                            {t("page.predictionPlanner.rules.controls.scopeOverall")}
-                        </SegmentButton>
+                        <SegmentedButton
+                            value={scope.kind}
+                            onValueChange={(kind) => kind === "chapter" ? selectChapterScope() : onScopeChange({ kind: "overall" })}
+                            options={[
+                                { value: "chapter", label: t("page.predictionPlanner.rules.controls.scopeChapter") },
+                                { value: "overall", label: t("page.predictionPlanner.rules.controls.scopeOverall") },
+                            ]}
+                            aria-label={t("page.predictionPlanner.rules.controls.scope")}
+                            showCheckmark={false}
+                            density={-2}
+                            className="w-auto"
+                        />
                     </div>
                 )}
                 <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-0.5">
+                    <span className="type-label-l text-on-surface-variant mr-0.5">
                         {t("page.predictionPlanner.rules.controls.pass")}
                     </span>
-                    {PASS_OPTIONS.map((option) => (
-                        <SegmentButton
-                            key={option.value}
-                            active={rules.pass === option.value}
-                            onClick={() => patchOverrides({ pass: option.value })}
-                        >
-                            {t(option.key)}
-                        </SegmentButton>
-                    ))}
+                    <SegmentedButton
+                        value={rules.pass}
+                        onValueChange={(pass) => patchOverrides({ pass })}
+                        options={PASS_OPTIONS.map((option) => ({ value: option.value, label: t(option.key) }))}
+                        aria-label={t("page.predictionPlanner.rules.controls.pass")}
+                        showCheckmark={false}
+                        density={-2}
+                        className="w-auto"
+                    />
                     {passChanged && <ResetButton onClick={() => clearOverride("pass")} />}
                 </div>
             </div>
 
             {expanded && (
-                <dl className="mt-3 pt-1 border-t border-slate-100 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
+                <dl className="mt-3 pt-1 border-t border-outline-variant divide-y divide-outline-variant">
                     <RuleRow
                         label={t("page.predictionPlanner.rules.items.chapters")}
                         source={rules.chapters.length > 0 ? { source: "masterdata", ref: "worldBlooms" } : undefined}
@@ -300,7 +296,7 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
                         source={rules.breakGaugeConfigured ? sourceOf(rules.breakGauge) : undefined}
                         control={rules.breakGaugeConfigured ? (
                             <>
-                                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("page.predictionPlanner.rules.controls.gauge")}</span>
+                                <span className="type-label-m text-on-surface-variant">{t("page.predictionPlanner.rules.controls.gauge")}</span>
                                 <SegmentButton active={gaugeOn} onClick={() => patchOverrides({ breakGaugeEnabled: true })}>{onText}</SegmentButton>
                                 <SegmentButton active={!gaugeOn} onClick={() => patchOverrides({ breakGaugeEnabled: false })}>{offText}</SegmentButton>
                                 {overrides.breakGaugeEnabled !== undefined && <ResetButton onClick={() => clearOverride("breakGaugeEnabled")} />}
@@ -321,7 +317,7 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
                         source={sourceOf(rules.auto)}
                         control={(
                             <>
-                                <span className="text-[11px] text-slate-500 dark:text-slate-400">{t("page.predictionPlanner.rules.controls.autoMeasure")}</span>
+                                <span className="type-label-m text-on-surface-variant">{t("page.predictionPlanner.rules.controls.autoMeasure")}</span>
                                 <SegmentButton active={specialMeasure} onClick={() => patchOverrides({ autoSpecialMeasure: true })}>{onText}</SegmentButton>
                                 <SegmentButton active={!specialMeasure} onClick={() => patchOverrides({ autoSpecialMeasure: false })}>{offText}</SegmentButton>
                                 {overrides.autoSpecialMeasure !== undefined && <ResetButton onClick={() => clearOverride("autoSpecialMeasure")} />}
@@ -358,7 +354,7 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
                     </RuleRow>
                     <RuleRow label={t("page.predictionPlanner.rules.items.editionNotes")}>
                         {rules.editionNotes.length === 0 ? none : (
-                            <ul className="space-y-1.5 text-xs sm:text-sm text-slate-700 dark:text-slate-200 leading-relaxed">
+                            <ul className="space-y-1.5 type-body-m text-on-surface">
                                 {rules.editionNotes.map((raw) => (
                                     <li key={raw}>{t(lookupKey(NOTE_KEYS, raw))}</li>
                                 ))}
@@ -367,6 +363,6 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
                     </RuleRow>
                 </dl>
             )}
-        </section>
+        </Surface>
     );
 }

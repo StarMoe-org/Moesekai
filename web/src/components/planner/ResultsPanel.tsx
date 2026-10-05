@@ -1,5 +1,6 @@
 "use client";
 import { useI18n } from "@/contexts/I18nContext";
+import { List, Surface } from "@/components/md3";
 import { getCharacterName } from "@/lib/i18n";
 import type { EventRules } from "@/lib/event-rules/types";
 import type { Feasibility, PlannerResult, SongComparison } from "@/lib/goal-planner/types";
@@ -13,27 +14,27 @@ export interface ResultsPanelProps {
 const FEASIBILITY: Record<Feasibility, { key: string; badge: string; value: string; tile: string }> = {
     comfortable: {
         key: "page.predictionPlanner.results.feasibility.comfortable",
-        badge: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
-        value: "text-emerald-600 dark:text-emerald-400",
-        tile: "border-emerald-200/70 bg-emerald-50/40 dark:border-emerald-900/50 dark:bg-emerald-950/20",
+        badge: "bg-secondary-container text-on-secondary-container border-transparent",
+        value: "text-on-secondary-container",
+        tile: "border-transparent bg-secondary-container text-on-secondary-container",
     },
     achievable: {
         key: "page.predictionPlanner.results.feasibility.achievable",
-        badge: "bg-miku/10 text-miku border-miku/30",
-        value: "text-miku",
-        tile: "border-miku/30 bg-miku/5",
+        badge: "bg-primary-container text-on-primary-container border-transparent",
+        value: "text-on-primary-container",
+        tile: "border-transparent bg-primary-container text-on-primary-container",
     },
     hard: {
         key: "page.predictionPlanner.results.feasibility.hard",
-        badge: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
-        value: "text-amber-600 dark:text-amber-400",
-        tile: "border-amber-200/70 bg-amber-50/40 dark:border-amber-900/50 dark:bg-amber-950/20",
+        badge: "bg-tertiary-container text-on-tertiary-container border-transparent",
+        value: "text-on-tertiary-container",
+        tile: "border-transparent bg-tertiary-container text-on-tertiary-container",
     },
     impossible: {
         key: "page.predictionPlanner.results.feasibility.impossible",
-        badge: "bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
-        value: "text-red-600 dark:text-red-400",
-        tile: "border-red-200/70 bg-red-50/40 dark:border-red-900/50 dark:bg-red-950/20",
+        badge: "bg-error-container text-on-error-container border-transparent",
+        value: "text-on-error-container",
+        tile: "border-transparent bg-error-container text-on-error-container",
     },
 };
 
@@ -55,13 +56,13 @@ const SAME_HOURS = 1e-6;
 /** Below this many hours left the panel drops per-day figures (D3). */
 const DAY_HOURS = 24;
 
-const TILE = "p-3.5 rounded-xl border min-w-0";
-const NEUTRAL_TILE = "bg-slate-50 dark:bg-slate-800/60 border-slate-100 dark:border-slate-800";
-const TILE_LABEL = "block text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-1";
-const TILE_VALUE = "block text-base sm:text-lg font-black font-mono break-words";
+const TILE = "p-3.5 rounded-md3-md border min-w-0";
+const NEUTRAL_TILE = "bg-surface-container-highest text-on-surface border-outline-variant";
+const TILE_LABEL = "block type-label-m mb-1";
+const TILE_VALUE = "block type-title-m type-emphasized font-mono break-words";
 /** Values that mix CJK text with numbers read better in the body font. */
-const TILE_TEXT_VALUE = "block text-base sm:text-lg font-black tabular-nums break-words";
-const TILE_SUB = "block mt-1 text-xs text-slate-500 dark:text-slate-400 break-words";
+const TILE_TEXT_VALUE = "block type-title-m type-emphasized tabular-nums break-words";
+const TILE_SUB = "block mt-1 type-body-s break-words";
 
 export default function ResultsPanel({ result, comparison, rules }: ResultsPanelProps) {
     const { t, formatNumber } = useI18n();
@@ -148,13 +149,13 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
     const showChapters = result != null && !reached && rules.group === "wl_overall" && result.perChapter.length > 0;
 
     return (
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between gap-3">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-6 space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <h2 className="type-title-l text-on-surface">
                     {t("page.predictionPlanner.results.title")}
                 </h2>
                 {style && result && (
-                    <span className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold ${style.badge}`}>
+                    <span className={`shrink-0 inline-flex items-center gap-1.5 px-3 py-1 rounded-md3-sm border type-label-l ${style.badge}`}>
                         <span className="w-1.5 h-1.5 rounded-full bg-current" />
                         {t(style.key)}
                     </span>
@@ -162,13 +163,13 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
             </div>
 
             {!result ? (
-                <p className="text-sm font-mono text-slate-400">—</p>
+                <p className="type-body-m font-mono text-on-surface-variant">—</p>
             ) : (
                 <>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <div className={`${TILE} ${NEUTRAL_TILE}`}>
                             <span className={TILE_LABEL}>{t("page.predictionPlanner.results.gap")}</span>
-                            <span className={`${TILE_VALUE} ${reached ? "text-emerald-600 dark:text-emerald-400" : "text-slate-800 dark:text-slate-100"}`}>
+                            <span className={`${TILE_VALUE} ${reached ? "text-tertiary" : "text-on-surface"}`}>
                                 {reached ? t("page.predictionPlanner.results.reached") : formatNumber(result.gap)}
                             </span>
                             <span className={TILE_SUB}>
@@ -226,7 +227,7 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
                         {!reached && (
                             <div className={`${TILE} ${NEUTRAL_TILE} sm:col-span-2`}>
                                 <span className={TILE_LABEL}>{t("page.predictionPlanner.results.stamina")}</span>
-                                <span className={`${TILE_TEXT_VALUE} text-amber-600 dark:text-amber-400`}>
+                                <span className={`${TILE_TEXT_VALUE} text-tertiary`}>
                                     {t("page.predictionPlanner.results.staminaValue", {
                                         stamina: formatNumber(result.stamina),
                                         drinks: formatNumber(result.bigDrinks),
@@ -242,16 +243,16 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
 
                     {showChapters && (
                         <div>
-                            <h3 className="text-sm font-bold text-slate-700 dark:text-slate-200 mb-2">
+                            <h3 className="type-title-s text-on-surface mb-2">
                                 {t("page.predictionPlanner.results.perChapter")}
                             </h3>
-                            <ul className="divide-y divide-slate-100 dark:divide-slate-800 rounded-xl border border-slate-100 dark:border-slate-800">
+                            <List className="divide-y divide-outline-variant rounded-md3-md border border-outline-variant">
                                 {result.perChapter.map((chapter) => {
                                     const capped = chapter.gaugeCapHours != null && chapter.manualHours >= chapter.gaugeCapHours - 0.05;
                                     return (
                                         <li
                                             key={chapter.chapterNo}
-                                            className={`px-3 py-2 text-xs break-words ${capped ? "text-amber-700 dark:text-amber-300" : "text-slate-600 dark:text-slate-300"}`}
+                                            className={`px-3 py-2 type-body-m break-words ${capped ? "bg-tertiary-container text-on-tertiary-container" : "text-on-surface-variant"}`}
                                         >
                                             {t("page.predictionPlanner.results.chapterRow", {
                                                 no: chapter.chapterNo,
@@ -262,12 +263,12 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
                                         </li>
                                     );
                                 })}
-                            </ul>
+                            </List>
                         </div>
                     )}
 
                     {!reached && tips.length > 0 && (
-                        <div className="space-y-1.5 text-xs leading-relaxed text-slate-600 dark:text-slate-300">
+                        <div className="space-y-1.5 type-body-s text-on-surface-variant">
                             {tips.map((tip) => (
                                 <p key={`${tip.kind}:${tip.key}`}>{tipText(tip)}</p>
                             ))}
@@ -275,6 +276,6 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
                     )}
                 </>
             )}
-        </section>
+        </Surface>
     );
 }

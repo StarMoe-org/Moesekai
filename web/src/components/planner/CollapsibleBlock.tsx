@@ -1,6 +1,8 @@
 "use client";
 import React, { useId, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { Button } from "@/components/md3";
+import { mdKeyboardArrowDown, mdKeyboardArrowUp } from "@/components/md3/icons";
 
 interface CollapsibleBlockProps {
     title: React.ReactNode;
@@ -15,19 +17,19 @@ export default function CollapsibleBlock({ title, children }: CollapsibleBlockPr
     return (
         <div>
             <div className={`flex items-center justify-between gap-2 ${open ? "mb-2" : ""}`}>
-                <h3 className="min-w-0 text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider">{title}</h3>
-                <button
-                    type="button"
+                <h3 className="min-w-0 type-title-s text-on-surface">{title}</h3>
+                <Button
+                    variant="tonal"
+                    color="secondary"
+                    size="xs"
                     onClick={() => setOpen((v) => !v)}
                     aria-expanded={open}
                     aria-controls={contentId}
-                    className="shrink-0 inline-flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-miku bg-miku/10 hover:bg-miku/20 transition-colors"
+                    trailingIcon={open ? mdKeyboardArrowUp : mdKeyboardArrowDown}
+                    className="shrink-0"
                 >
-                    <span>{open ? t("page.predictionPlanner.pt.sectionCollapse") : t("page.predictionPlanner.pt.sectionExpand")}</span>
-                    <svg className={`w-3 h-3 transition-transform ${open ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                </button>
+                    {open ? t("page.predictionPlanner.pt.sectionCollapse") : t("page.predictionPlanner.pt.sectionExpand")}
+                </Button>
             </div>
             <div id={contentId} hidden={!open}>
                 {children}

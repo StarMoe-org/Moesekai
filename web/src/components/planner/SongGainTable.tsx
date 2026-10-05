@@ -2,6 +2,8 @@
 import React, { useMemo, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import CollapsibleBlock from "./CollapsibleBlock";
+import { Button, Icon } from "@/components/md3";
+import { mdKeyboardArrowDown } from "@/components/md3/icons";
 
 export interface SongGainView {
     key: string;
@@ -26,12 +28,12 @@ interface SongGainTableProps {
 }
 
 export const DIFFICULTY_BADGE_COLORS: Record<string, string> = {
-    easy: "bg-blue-500 text-white",
-    normal: "bg-green-500 text-white",
-    hard: "bg-amber-500 text-white",
-    expert: "bg-red-500 text-white",
-    master: "bg-purple-500 text-white",
-    append: "bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900",
+    easy: "bg-surface-container-high text-on-surface",
+    normal: "bg-secondary-container text-on-secondary-container",
+    hard: "bg-tertiary-container text-on-tertiary-container",
+    expert: "bg-error-container text-on-error-container",
+    master: "bg-tertiary text-on-tertiary",
+    append: "bg-error text-on-error",
 };
 
 /** Splits off the last word (a trailing Latin/digit run, else the last character) so the sort arrow can stay on its line. */
@@ -68,12 +70,12 @@ export default function SongGainTable({ rows, selectedKey, onUse, limit = 10 }: 
         const sorted = sortKey === key;
         const [head, tail] = splitLastWord(label);
         return (
-            <th className={`${width} h-px p-0 text-right align-bottom font-medium`}>
+            <th className={`${width} h-px p-0 text-right align-bottom type-label-m`} aria-sort={sorted ? "descending" : "none"}>
                 <button
                     type="button"
                     onClick={() => setSortKey(key)}
                     aria-pressed={sorted}
-                    className={`flex h-full min-h-10 sm:min-h-0 w-full items-end justify-end py-1.5 pl-1 ${last ? "pr-2" : ""} text-right leading-tight whitespace-normal ${sorted ? "text-miku font-bold" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"}`}
+                    className={`state-layer focus-ring relative flex h-full min-h-10 sm:min-h-0 w-full items-end justify-end rounded-md3-xs py-1.5 pl-1 ${last ? "pr-2" : ""} text-right type-label-m leading-tight whitespace-normal ${sorted ? "text-primary type-emphasized" : "text-on-surface-variant"}`}
                 >
                     {sorted ? (
                         // The arrow flows inline after the label, kept on one line with the last word.
@@ -81,9 +83,7 @@ export default function SongGainTable({ rows, selectedKey, onUse, limit = 10 }: 
                             {head}
                             <span className="whitespace-nowrap">
                                 {tail}
-                                <svg className="inline-block w-3 h-3 ml-0.5 align-[-2px]" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                </svg>
+                                <Icon path={mdKeyboardArrowDown} size={14} className="inline-block ml-0.5 align-[-2px]" />
                             </span>
                         </span>
                     ) : (
@@ -96,11 +96,11 @@ export default function SongGainTable({ rows, selectedKey, onUse, limit = 10 }: 
 
     return (
         <CollapsibleBlock title={t("page.predictionPlanner.pt.songGain.title")}>
-            <div className="overflow-x-auto rounded-xl border border-slate-100 dark:border-slate-800">
-                <table className="w-full table-fixed text-[11px]">
-                    <thead className="bg-slate-50 dark:bg-slate-800/60">
+            <div className="overflow-x-auto rounded-md3-md border border-outline-variant bg-surface-container-lowest text-on-surface">
+                <table className="w-full table-fixed type-body-s">
+                    <thead className="bg-surface-container-high">
                         <tr>
-                            <th className="py-1.5 px-2 text-left align-bottom font-medium text-slate-400">
+                            <th className="py-1.5 px-2 text-left align-bottom type-label-m text-on-surface-variant">
                                 {t("page.predictionPlanner.pt.songGain.columns.song")}
                             </th>
                             {header("ptPerPlay", t("page.predictionPlanner.pt.songGain.columns.ptPerPlay"), "w-[3.6rem] sm:w-24")}
@@ -115,37 +115,33 @@ export default function SongGainTable({ rows, selectedKey, onUse, limit = 10 }: 
                             return (
                                 <tr
                                     key={row.key}
-                                    className={`border-t border-slate-100 dark:border-slate-800 ${selected ? "bg-miku/5 dark:bg-miku/10" : ""}`}
+                                    className={`border-t border-outline-variant ${selected ? "bg-secondary-container text-on-secondary-container" : "text-on-surface"}`}
                                 >
                                     <td className="py-1.5 px-2 align-top min-w-0">
-                                        <div className={`truncate font-bold ${selected ? "text-miku" : "text-slate-700 dark:text-slate-200"}`} title={row.title}>
+                                        <div className="truncate type-label-l" title={row.title}>
                                             {row.title}
                                         </div>
                                         {row.subtitle && (
-                                            <div className="truncate text-[10px] text-slate-400" title={row.subtitle}>{row.subtitle}</div>
+                                            <div className={`truncate type-body-s ${selected ? "text-on-secondary-container" : "text-on-surface-variant"}`} title={row.subtitle}>{row.subtitle}</div>
                                         )}
                                         <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                            <span className={`px-1 rounded text-[9px] font-bold uppercase leading-4 ${DIFFICULTY_BADGE_COLORS[row.difficulty] ?? "bg-slate-400 text-white"}`}>
+                                            <span className={`px-1.5 py-0.5 rounded-md3-xs type-label-s uppercase ${DIFFICULTY_BADGE_COLORS[row.difficulty] ?? "bg-surface-container-high text-on-surface"}`}>
                                                 {row.difficulty}
                                             </span>
                                             {!selected && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => onUse(row.key)}
-                                                    className="-my-1.5 -mx-1.5 px-1.5 py-1.5 rounded-md text-[10px] font-bold text-miku hover:underline whitespace-nowrap"
-                                                >
+                                                <Button variant="text" size="xs" onClick={() => onUse(row.key)}>
                                                     {t("page.predictionPlanner.pt.songGain.use")}
-                                                </button>
+                                                </Button>
                                             )}
                                         </div>
                                     </td>
-                                    <td className="py-1.5 pl-1 text-right align-top font-mono text-slate-600 dark:text-slate-300">
+                                    <td className="py-1.5 pl-1 text-right align-top font-mono tabular-nums">
                                         {formatNumber(Math.round(row.ptPerPlay))}
                                     </td>
-                                    <td className="py-1.5 pl-1 text-right align-top font-mono font-bold text-slate-700 dark:text-slate-200">
+                                    <td className="py-1.5 pl-1 text-right align-top type-label-l font-mono tabular-nums">
                                         {formatNumber(Math.round(row.ptPerHour))}
                                     </td>
-                                    <td className="py-1.5 pl-1 pr-2 text-right align-top font-mono text-slate-600 dark:text-slate-300">
+                                    <td className="py-1.5 pl-1 pr-2 text-right align-top font-mono tabular-nums">
                                         {row.ptPerStamina === null ? "-" : formatNumber(Math.round(row.ptPerStamina))}
                                     </td>
                                 </tr>

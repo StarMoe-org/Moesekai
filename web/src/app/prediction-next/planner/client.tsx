@@ -2,6 +2,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
+import { Banner, EmptyState, LoadingIndicator, PageContainer, PageHeader } from "@/components/md3";
 import PredictionEventPicker from "@/components/prediction/PredictionEventPicker";
 import RulesCard from "@/components/planner/RulesCard";
 import PtSourcePanel from "@/components/planner/PtSourcePanel";
@@ -207,27 +208,27 @@ function PlannerContent() {
     const waitingForRules = selectedEventId != null && !rules && !rulesError;
 
     return (
-        <div className="container mx-auto max-w-5xl px-4 sm:px-6 py-8">
-            <div className="text-center mb-8">
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">{t("page.predictionPlanner.title")}</h1>
-                <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">{t("page.predictionPlanner.subtitle")}</p>
-            </div>
+        <PageContainer className="[&]:max-w-5xl">
+            <PageHeader
+                align="center"
+                title={t("page.predictionPlanner.title")}
+                description={t("page.predictionPlanner.subtitle")}
+            />
 
             <PredictionEventPicker state={state} />
 
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">{error}</div>
+                <Banner tone="error" className="mb-6 break-words">{error}</Banner>
             )}
             {rulesError && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm break-words">
-                    {t("common.state.loadingFailed")}
-                    <span className="block mt-1 text-xs font-mono text-red-500/80">{rulesError}</span>
-                </div>
+                <Banner tone="error" title={t("common.state.loadingFailed")} className="mb-6 break-words">
+                    <span className="block mt-1 type-body-s font-mono">{rulesError}</span>
+                </Banner>
             )}
 
             {selectedEventId == null ? (
                 !state.eventsLoading && (
-                    <p className="py-16 text-center text-sm text-slate-400">{t("page.predictionPlanner.noEvent")}</p>
+                    <EmptyState title={t("page.predictionPlanner.noEvent")} />
                 )
             ) : waitingForRules ? (
                 <LoadingBlock label={t("page.predictionPlanner.loading")} />
@@ -269,7 +270,7 @@ function PlannerContent() {
                     <ResultsPanel result={result} comparison={comparison} rules={rules} />
                 </div>
             )}
-        </div>
+        </PageContainer>
     );
 }
 
@@ -277,8 +278,8 @@ function LoadingBlock({ label }: { label: string }) {
     return (
         <div className="flex items-center justify-center py-16">
             <div className="flex flex-col items-center gap-3">
-                <div className="loading-spinner" />
-                <span className="text-sm text-slate-500">{label}</span>
+                <LoadingIndicator size={40} aria-label={label || undefined} />
+                <span className="type-body-m text-on-surface-variant">{label}</span>
             </div>
         </div>
     );

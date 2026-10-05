@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { Chip, Surface } from "@/components/md3";
 import { estimateRank } from "@/lib/goal-planner/core";
 import type { RankEstimate, TierPoint } from "@/lib/goal-planner/types";
 
@@ -85,13 +86,11 @@ const RANK_KEYS = {
 } as const;
 
 const INPUT_CLASS =
-    "w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku";
-const LABEL_CLASS = "block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5";
+    "focus-ring h-12 w-full px-4 bg-surface-container-highest border border-outline rounded-md3-xs type-body-l font-mono text-on-surface caret-primary focus:border-primary transition-colors duration-150 ease-md3-standard";
+const LABEL_CLASS = "block type-label-l text-on-surface-variant mb-1.5";
 /** Chips share the row on phones so each keeps a usable tap size in the half-width column. */
 const CHIP_ROW_CLASS = "mt-1.5 flex gap-1.5";
-const CHIP_CLASS = "flex-1 min-w-0 max-w-16 sm:flex-none px-1 sm:px-2.5 py-1.5 sm:py-1 rounded-md text-xs font-mono transition-colors";
-const CHIP_ON = "bg-miku/20 text-miku font-bold border border-miku/40";
-const CHIP_OFF = "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-transparent hover:text-slate-700 dark:hover:text-slate-200";
+const CHIP_CLASS = "flex-1 min-w-0 sm:flex-none [&>button]:w-full [&>button]:min-w-0 [&>button]:justify-center [&>button]:px-2 [&>button]:font-mono";
 
 const HOUR_CHIPS = [2, 4, 6, 8, 12, 16, 24];
 /** Seven hour chips wrap to two rows of four in the half-width phone column. */
@@ -182,9 +181,9 @@ export default function TargetPanel({
     const autoChips = [...new Set([0, Math.min(10, autoDailyLimit), autoDailyLimit])];
 
     return (
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-6 space-y-5">
+        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-6 space-y-5">
             <div className="space-y-4">
-                <h2 className="text-base sm:text-lg font-bold text-slate-800 dark:text-slate-100">
+                <h2 className="type-title-l text-on-surface">
                     {t("page.predictionPlanner.target.title")}
                 </h2>
 
@@ -195,38 +194,35 @@ export default function TargetPanel({
                             const selected = value.targetTier === rank;
                             const reached = reachedTier === rank;
                             return (
-                                <button
+                                <Chip
                                     key={rank}
-                                    type="button"
-                                    aria-pressed={selected}
+                                    selected={selected}
+                                    showCheckmark={false}
                                     onClick={() => selectTier(rank)}
-                                    className={`py-1.5 px-1 rounded-lg text-xs font-bold font-mono transition-all border ${selected
-                                        ? `bg-miku text-white border-miku shadow-sm shadow-miku/30${reached ? " ring-2 ring-emerald-400 ring-offset-1 dark:ring-offset-slate-900" : ""}`
-                                        : reached
-                                            ? "bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700"
-                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700"
+                                    className={`min-w-0 [&>button]:w-full [&>button]:min-w-0 [&>button]:justify-center [&>button]:px-1 [&>button]:font-mono ${reached
+                                        ? selected
+                                            ? "rounded-md3-sm ring-2 ring-tertiary"
+                                            : "[&>button]:bg-tertiary-container [&>button]:text-on-tertiary-container [&>button]:border-tertiary"
+                                        : ""
                                         }`}
                                 >
                                     {t("page.predictionPlanner.target.tierOption", { rank })}
-                                </button>
+                                </Chip>
                             );
                         })}
-                        <button
-                            type="button"
-                            aria-pressed={value.targetTier == null}
+                        <Chip
+                            selected={value.targetTier == null}
+                            showCheckmark={false}
                             onClick={() => onChange({ ...value, targetTier: null })}
-                            className={`col-span-2 py-1.5 px-2 rounded-lg text-xs font-bold transition-all border ${value.targetTier == null
-                                ? "bg-miku text-white border-miku shadow-sm shadow-miku/30"
-                                : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-transparent hover:bg-slate-200 dark:hover:bg-slate-700"
-                                }`}
+                            className="col-span-2 min-w-0 [&>button]:w-full [&>button]:justify-center"
                         >
                             {t("page.predictionPlanner.target.custom")}
-                        </button>
+                        </Chip>
                     </div>
 
                     {value.targetTier != null ? (
                         value.targetScore > 0 && (
-                            <p className="mt-2 text-xs font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                            <p className="mt-2 type-label-l tabular-nums text-tertiary">
                                 {t("page.predictionPlanner.target.predictedFinal", { score: formatNumber(value.targetScore) })}
                             </p>
                         )
@@ -241,10 +237,10 @@ export default function TargetPanel({
                                 emptyWhenZero
                                 placeholder={t("page.predictionPlanner.target.customPlaceholder")}
                                 onValueChange={(targetScore) => onChange({ ...value, targetScore })}
-                                className={`${INPUT_CLASS} text-amber-600 dark:text-amber-400`}
+                                className={`${INPUT_CLASS} text-tertiary`}
                             />
                             {predictedEstimate && (
-                                <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                                <p className="mt-1.5 type-body-s text-on-surface-variant">
                                     {rankLine(predictedEstimate, "predicted")}
                                 </p>
                             )}
@@ -261,7 +257,7 @@ export default function TargetPanel({
                         value={value.currentScore}
                         onValueChange={(currentScore) => onChange({ ...value, currentScore, currentScoreEdited: true })}
                     />
-                    <p className="mt-1.5 text-xs text-slate-500 dark:text-slate-400">
+                    <p className="mt-1.5 type-body-s text-on-surface-variant">
                         {currentEstimate
                             ? rankLine(currentEstimate, "current")
                             : t("page.predictionPlanner.target.noBorderData")}
@@ -269,8 +265,8 @@ export default function TargetPanel({
                 </div>
             </div>
 
-            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-3">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">{t("page.predictionPlanner.time.title")}</h3>
+            <div className="pt-4 border-t border-outline-variant space-y-3">
+                <h3 className="type-title-m text-on-surface">{t("page.predictionPlanner.time.title")}</h3>
                 <div className="grid grid-cols-2 gap-3">
                     <div className="min-w-0">
                         <label htmlFor="planner-daily-hours" className={LABEL_CLASS}>
@@ -284,20 +280,21 @@ export default function TargetPanel({
                                 onValueChange={(hours) => onTimeChange({ dailyManualHours: clamp(hours, 0, 24), dailyAutoRuns })}
                                 className={`${INPUT_CLASS} pr-12`}
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 pointer-events-none">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 type-label-m text-on-surface-variant pointer-events-none">
                                 {t("page.predictionPlanner.time.hoursUnit")}
                             </span>
                         </div>
                         <div className={HOUR_CHIP_ROW_CLASS}>
                             {HOUR_CHIPS.map((hours) => (
-                                <button
+                                <Chip
                                     key={hours}
-                                    type="button"
+                                    selected={dailyManualHours === hours}
+                                    showCheckmark={false}
                                     onClick={() => onTimeChange({ dailyManualHours: hours, dailyAutoRuns })}
-                                    className={`${CHIP_CLASS} ${dailyManualHours === hours ? CHIP_ON : CHIP_OFF}`}
+                                    className={CHIP_CLASS}
                                 >
                                     {formatNumber(hours)}
-                                </button>
+                                </Chip>
                             ))}
                         </div>
                     </div>
@@ -312,28 +309,29 @@ export default function TargetPanel({
                                 onValueChange={(runs) => onTimeChange({ dailyManualHours, dailyAutoRuns: clamp(Math.round(runs), 0, autoDailyLimit) })}
                                 className={`${INPUT_CLASS} pr-10`}
                             />
-                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400 pointer-events-none">
+                            <span className="absolute right-3 top-1/2 -translate-y-1/2 type-label-m text-on-surface-variant pointer-events-none">
                                 {t("page.predictionPlanner.time.autoUnit")}
                             </span>
                         </div>
                         <div className={CHIP_ROW_CLASS}>
                             {autoChips.map((runs) => (
-                                <button
+                                <Chip
                                     key={runs}
-                                    type="button"
+                                    selected={dailyAutoRuns === runs}
+                                    showCheckmark={false}
                                     onClick={() => onTimeChange({ dailyManualHours, dailyAutoRuns: runs })}
-                                    className={`${CHIP_CLASS} ${dailyAutoRuns === runs ? CHIP_ON : CHIP_OFF}`}
+                                    className={CHIP_CLASS}
                                 >
                                     {formatNumber(runs)}
-                                </button>
+                                </Chip>
                             ))}
                         </div>
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="mt-1 type-body-s text-on-surface-variant">
                             {t("page.predictionPlanner.time.autoLimit", { count: autoDailyLimit })}
                         </p>
                     </div>
                 </div>
             </div>
-        </section>
+        </Surface>
     );
 }

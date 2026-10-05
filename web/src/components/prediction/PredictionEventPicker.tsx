@@ -1,6 +1,8 @@
 "use client";
 import React from "react";
 import Image from "next/image";
+import { Chip, Icon, SegmentedButton, Surface } from "@/components/md3";
+import { mdGroups, mdKidStar } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
@@ -29,26 +31,16 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
     return (
         <div className="flex flex-col sm:flex-row gap-4 mb-8 items-center sm:items-stretch">
             {/* Server Toggle */}
-            <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-                <button
-                    onClick={() => setServer("cn")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${server === "cn"
-                        ? "bg-miku text-white shadow-md"
-                        : "text-slate-600 hover:bg-slate-50"
-                        }`}
-                >
-                    {t("page.prediction.servers.cn")}
-                </button>
-                <button
-                    onClick={() => setServer("jp")}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${server === "jp"
-                        ? "bg-miku text-white shadow-md"
-                        : "text-slate-600 hover:bg-slate-50"
-                        }`}
-                >
-                    {t("page.prediction.servers.jp")}
-                </button>
-            </div>
+            <SegmentedButton
+                value={server}
+                onValueChange={setServer}
+                options={[
+                    { value: "cn", label: t("page.prediction.servers.cn") },
+                    { value: "jp", label: t("page.prediction.servers.jp") },
+                ]}
+                showCheckmark={false}
+                className="max-w-xs shrink-0 sm:w-auto"
+            />
 
             {/* Event Selector */}
             <div className="flex-1">
@@ -56,7 +48,8 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
                     value={selectedEventId || ""}
                     onChange={(e) => setSelectedEventId(Number(e.target.value))}
                     disabled={eventsLoading || events.length === 0}
-                    className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku disabled:opacity-50"
+                    aria-label={t("page.prediction.title")}
+                    className="focus-ring h-10 w-full px-4 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary disabled:opacity-38 disabled:cursor-not-allowed"
                 >
                     {eventsLoading ? (
                         <option>{t("page.prediction.events.loading")}</option>
@@ -93,13 +86,13 @@ export function PredictionWlChapterBar({ state }: PredictionEventPickerProps) {
     const activeWlChapter = findActiveWlChapter(eventWorldBlooms, selectedWlChapter);
 
     return (
-        <div className="sm:sticky sm:top-[5.5rem] z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md rounded-2xl border border-slate-200/90 dark:border-slate-700/90 p-3 shadow-md mb-6 transition-all">
+        <Surface as="aside" tone="default" radius="lg" elevation={1} className="sm:sticky sm:top-[5.5rem] z-20 p-3 mb-6">
             <div className="flex items-center justify-between mb-2.5 px-1">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>🌸</span>
+                <span className="type-title-s text-on-surface flex items-center gap-1.5">
+                    <Icon path={mdGroups} size={20} className="text-primary" />
                     <span>{t("page.prediction.wl.chapters")}</span>
                 </span>
-                <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
+                <span className="type-label-m text-on-surface-variant tabular-nums">
                     {selectedWlChapter === "overall"
                         ? t("page.prediction.wl.overall")
                         : activeWlChapter
@@ -109,18 +102,15 @@ export function PredictionWlChapterBar({ state }: PredictionEventPickerProps) {
             </div>
             <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
                 {/* Overall Button */}
-                <button
-                    type="button"
+                <Chip
+                    selected={selectedWlChapter === "overall"}
+                    showCheckmark={false}
+                    icon={mdKidStar}
                     onClick={() => setSelectedWlChapter("overall")}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 border ${
-                        selectedWlChapter === "overall"
-                            ? "bg-miku text-white border-miku shadow-sm shadow-miku/30"
-                            : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                    }`}
+                    className="shrink-0"
                 >
-                    <span>🌟</span>
-                    <span>{t("page.prediction.wl.overall")}</span>
-                </button>
+                    {t("page.prediction.wl.overall")}
+                </Chip>
 
                 {/* Character Chapter Buttons */}
                 {eventWorldBlooms.map((wb) => {
@@ -130,47 +120,46 @@ export function PredictionWlChapterBar({ state }: PredictionEventPickerProps) {
                     const statusKey = isOngoing ? "ongoing" : isEnded ? "ended" : "upcoming";
 
                     return (
-                        <button
+                        <Chip
                             key={wb.gameCharacterId}
-                            type="button"
+                            selected={isSelected}
+                            showCheckmark={false}
                             onClick={() => setSelectedWlChapter(wb.gameCharacterId)}
-                            className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 border ${
-                                isSelected
-                                    ? "bg-miku text-white border-miku shadow-sm shadow-miku/30"
-                                    : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                            }`}
+                            className="shrink-0"
+                            avatar={(
+                                <span className="relative block w-6 h-6 rounded-full overflow-hidden">
+                                    <Image
+                                        src={getCharacterIconUrl(wb.gameCharacterId)}
+                                        alt={getCharacterName(t, wb.gameCharacterId)}
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                </span>
+                            )}
                         >
-                            <div className="relative w-4 h-4 rounded-full overflow-hidden shrink-0 border border-white/40">
-                                <Image
-                                    src={getCharacterIconUrl(wb.gameCharacterId)}
-                                    alt={getCharacterName(t, wb.gameCharacterId)}
-                                    fill
-                                    className="object-cover"
-                                    unoptimized
-                                />
-                            </div>
-                            <span>
-                                {t("page.prediction.wl.chapterItem", {
-                                    no: wb.chapterNo,
-                                    name: getCharacterName(t, wb.gameCharacterId)
-                                })}
-                            </span>
-                            <span className={`text-[10px] px-1.5 rounded font-medium ${
-                                isSelected
-                                    ? "bg-white/20 text-white"
-                                    : isOngoing
-                                        ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+                            <span className="inline-flex items-center gap-2">
+                                <span>
+                                    {t("page.prediction.wl.chapterItem", {
+                                        no: wb.chapterNo,
+                                        name: getCharacterName(t, wb.gameCharacterId)
+                                    })}
+                                </span>
+                                <span className={`type-label-s px-1.5 py-0.5 rounded-md3-xs ${
+                                    isOngoing
+                                        ? "bg-tertiary-container text-on-tertiary-container"
                                         : isEnded
-                                            ? "bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400"
-                                            : "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300"
-                            }`}>
-                                {t(`page.prediction.wl.chapterStatus.${statusKey}`)}
+                                            ? "bg-surface-container-high text-on-surface-variant"
+                                            : "bg-secondary-container text-on-secondary-container"
+                                }`}>
+                                    {t(`page.prediction.wl.chapterStatus.${statusKey}`)}
+                                </span>
                             </span>
-                        </button>
+                        </Chip>
                     );
                 })}
             </div>
-        </div>
+        </Surface>
     );
 }
 

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
+import { Card } from "@/components/md3";
 import CollapsibleBlock from "./CollapsibleBlock";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import type { ICardInfo } from "@/types/types";
@@ -50,52 +51,49 @@ export default function DeckPicker({ options, selectedRank, onSelect }: DeckPick
                 {options.map((option) => {
                     const selected = option.rank === selectedRank;
                     return (
-                        <button
+                        <Card
                             key={option.rank}
-                            type="button"
+                            variant={selected ? "filled" : "outlined"}
                             role="radio"
                             aria-checked={selected}
                             onClick={() => onSelect(option.rank)}
-                            className={`w-full text-left rounded-xl border p-3 transition-all ${selected
-                                ? "border-miku bg-miku/5 dark:bg-miku/10 shadow-sm shadow-miku/20"
-                                : "border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 hover:border-miku/50"
-                                }`}
+                            className={`p-3 ${selected ? "ring-2 ring-primary" : ""}`}
                         >
                             <div className="flex items-center gap-2 min-w-0">
                                 <span
                                     aria-hidden="true"
-                                    className={`w-4 h-4 shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? "border-miku" : "border-slate-300 dark:border-slate-600"}`}
+                                    className={`w-5 h-5 shrink-0 rounded-full border-2 flex items-center justify-center ${selected ? "border-primary" : "border-outline"}`}
                                 >
-                                    {selected && <span className="w-2 h-2 rounded-full bg-miku" />}
+                                    {selected && <span className="w-2 h-2 rounded-full bg-primary" />}
                                 </span>
-                                <span className={`text-sm font-black ${option.rank === 1 ? "text-miku" : "text-slate-400 dark:text-slate-500"}`}>
+                                <span className={`type-label-l tabular-nums ${option.rank === 1 ? "text-tertiary" : "text-on-surface-variant"}`}>
                                     #{option.rank}
                                 </span>
-                                <span className="text-base font-black font-mono text-slate-800 dark:text-slate-100 truncate">
+                                <span className="type-title-m type-emphasized font-mono text-on-surface truncate">
                                     {formatNumber(option.eventPoint)}
                                 </span>
-                                <span className="text-[10px] text-slate-400 whitespace-nowrap">
+                                <span className="type-label-s text-on-surface-variant whitespace-nowrap">
                                     {t("page.predictionPlanner.pt.deck.columns.ptPerPlay")}
                                 </span>
-                                <span className={`ml-auto shrink-0 text-[11px] font-bold px-2 py-0.5 rounded-md whitespace-nowrap ${selected
-                                    ? "bg-miku text-white"
-                                    : "bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700"
+                                <span className={`ml-auto shrink-0 type-label-m px-2 py-1 rounded-md3-sm whitespace-nowrap ${selected
+                                    ? "bg-secondary-container text-on-secondary-container"
+                                    : "bg-surface-container-low text-on-surface-variant border border-outline-variant"
                                     }`}>
                                     {selected ? t("page.predictionPlanner.pt.deck.selected") : t("page.predictionPlanner.pt.deck.select")}
                                 </span>
                             </div>
-                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-slate-500 dark:text-slate-400 pl-6">
+                            <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 type-body-s text-on-surface-variant pl-7">
                                 <span>
                                     {t("page.predictionPlanner.pt.deck.columns.power")}{" "}
-                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{formatNumber(option.totalPower)}</span>
+                                    <span className="type-label-m font-mono text-on-surface">{formatNumber(option.totalPower)}</span>
                                 </span>
                                 <span>
                                     {t("page.predictionPlanner.pt.deck.columns.bonus")}{" "}
-                                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{formatPercent(option.eventBonus)}%</span>
+                                    <span className="type-label-m font-mono text-tertiary">{formatPercent(option.eventBonus)}%</span>
                                 </span>
                                 <span>
                                     {t("page.predictionPlanner.pt.deck.columns.effectiveSkill")}{" "}
-                                    <span className="font-mono font-bold text-slate-700 dark:text-slate-200">{formatPercent(option.effectiveSkill)}%</span>
+                                    <span className="type-label-m font-mono text-on-surface">{formatPercent(option.effectiveSkill)}%</span>
                                 </span>
                             </div>
                             <div className="mt-2 flex gap-1.5 pl-6">
@@ -108,16 +106,16 @@ export default function DeckPicker({ options, selectedRank, onSelect }: DeckPick
                                             {master ? (
                                                 <SekaiCardThumbnail card={master} trained={trained} mastery={card.masterRank} width={40} />
                                             ) : (
-                                                <span className="flex w-10 h-10 rounded bg-slate-100 dark:bg-slate-800 items-center justify-center text-[10px] text-slate-400">?</span>
+                                                <span className="flex w-10 h-10 rounded-md3-xs bg-surface-container-high items-center justify-center type-label-s text-on-surface-variant">?</span>
                                             )}
                                             {i === 0 && (
-                                                <span className="absolute bottom-0 right-0 bg-miku/90 text-white text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none">L</span>
+                                                <span className="absolute bottom-0 right-0 bg-primary text-on-primary type-label-s px-1 py-0.5 rounded-tl-md3-xs leading-none">L</span>
                                             )}
                                         </span>
                                     );
                                 })}
                             </div>
-                        </button>
+                        </Card>
                     );
                 })}
             </div>

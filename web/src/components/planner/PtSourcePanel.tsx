@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import Link from "@/components/LocalizedLink";
+import { Banner, Button, Checkbox, Chip, LinearProgress, List, ListItem, LoadingIndicator, SegmentedButton, Surface, TextField } from "@/components/md3";
+import { mdCalculate, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
 import { loadTranslations } from "@/lib/translations";
@@ -110,8 +111,7 @@ const DECK_RESULT_LIMIT = 5;
 /** Effective skill of five cards with equal skill: 1 + 4 x 0.2 times one card's skill. */
 const EFFECTIVE_SKILL_PER_CARD = 1.8;
 
-const INPUT_CLASS = "w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-mono font-bold text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku";
-const LABEL_CLASS = "block text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1";
+const LABEL_CLASS = "block type-label-l text-on-surface-variant mb-1.5";
 
 function parseNumberInput(raw: string): number | null {
     const cleaned = raw.replace(/[,\s]/g, "");
@@ -189,34 +189,31 @@ function buildSongData(server: string, musics: IMusicInfo[], metas: IMusicMeta[]
 
 function SegmentButton({ active, onClick, children, disabled }: { active: boolean; onClick(): void; children: React.ReactNode; disabled?: boolean }) {
     return (
-        <button
-            type="button"
+        <Chip
+            selected={active}
+            showCheckmark={false}
             onClick={onClick}
             disabled={disabled}
-            aria-pressed={active}
-            className={`px-2 sm:px-3 py-2 rounded-xl text-xs font-bold leading-tight break-keep transition-all border disabled:opacity-50 ${active
-                ? "bg-miku text-white border-miku shadow-sm shadow-miku/30"
-                : "bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
-                }`}
+            className="min-w-0 [&>button]:w-full [&>button]:justify-center [&>button]:px-2"
         >
             {children}
-        </button>
+        </Chip>
     );
 }
 
 function NumberField({ label, value, onChange, placeholder }: { label: string; value: string; onChange(v: string): void; placeholder?: string }) {
     return (
-        <label className="block min-w-0">
-            <span className={LABEL_CLASS}>{label}</span>
-            <input
-                type="text"
-                inputMode="decimal"
-                value={value}
-                placeholder={placeholder}
-                onChange={(e) => onChange(e.target.value)}
-                className={INPUT_CLASS}
-            />
-        </label>
+        <TextField
+            variant="filled"
+            dense
+            label={label}
+            type="text"
+            inputMode="decimal"
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+            className="min-w-0"
+        />
     );
 }
 
@@ -621,44 +618,45 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
     // Rendered right under the calculate row of the deck and manual modes.
     const statTiles = mode !== "direct" && plan ? (
         <div className={`grid grid-cols-2 sm:grid-cols-3 gap-2 transition-opacity ${gainsPending ? "opacity-60" : ""}`}>
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 min-w-0">
-                <span className="text-[11px] font-bold text-slate-400 block mb-0.5">{t("page.predictionPlanner.pt.direct.manualPt")}</span>
-                <span className="text-base font-black font-mono text-slate-800 dark:text-slate-100">{formatNumber(plan.manualPtPerPlay)}</span>
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 min-w-0">
-                <span className="text-[11px] font-bold text-slate-400 block mb-0.5">{t("page.predictionPlanner.pt.direct.playsPerHour")}</span>
-                <span className="text-base font-black font-mono text-slate-800 dark:text-slate-100">{formatNumber(plan.playsPerHour, { maximumFractionDigits: 1 })}</span>
-            </div>
-            <div className="col-span-2 sm:col-span-1 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-slate-800 min-w-0">
-                <span className="text-[11px] font-bold text-slate-400 flex flex-wrap items-center gap-1.5 mb-0.5">
+            <Surface tone="highest" radius="md" className="p-3 min-w-0">
+                <span className="type-label-m text-on-surface-variant block mb-0.5">{t("page.predictionPlanner.pt.direct.manualPt")}</span>
+                <span className="type-title-m type-emphasized font-mono text-on-surface">{formatNumber(plan.manualPtPerPlay)}</span>
+            </Surface>
+            <Surface tone="highest" radius="md" className="p-3 min-w-0">
+                <span className="type-label-m text-on-surface-variant block mb-0.5">{t("page.predictionPlanner.pt.direct.playsPerHour")}</span>
+                <span className="type-title-m type-emphasized font-mono text-on-surface">{formatNumber(plan.playsPerHour, { maximumFractionDigits: 1 })}</span>
+            </Surface>
+            <Surface tone="highest" radius="md" className="col-span-2 sm:col-span-1 p-3 min-w-0">
+                <span className="type-label-m text-on-surface-variant flex flex-wrap items-center gap-1.5 mb-0.5">
                     <span>{t("page.predictionPlanner.pt.direct.autoPt")}</span>
                     {plan.autoIsLowerBound && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 text-[10px] leading-none">
+                        <span className="px-1.5 py-0.5 rounded-md3-sm bg-tertiary-container text-on-tertiary-container type-label-s">
                             {t("page.predictionPlanner.pt.autoLowerBound")}
                         </span>
                     )}
                 </span>
-                <span className="text-base font-black font-mono text-slate-800 dark:text-slate-100">{formatNumber(plan.autoPtPerPlay)}</span>
+                <span className="type-title-m type-emphasized font-mono text-on-surface">{formatNumber(plan.autoPtPerPlay)}</span>
                 {autoSongLabel && (
-                    <span className="block text-[10px] text-slate-400 truncate" title={autoSongLabel}>
+                    <span className="block type-label-s text-on-surface-variant truncate" title={autoSongLabel}>
                         {t("page.predictionPlanner.pt.live.auto")} · {autoSongLabel}
                     </span>
                 )}
-            </div>
+            </Surface>
         </div>
     ) : null;
 
     return (
-        <section className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-4 sm:p-5 shadow-sm space-y-4">
+        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <h2 className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100">{t("page.predictionPlanner.pt.title")}</h2>
-                <div className="grid grid-cols-3 gap-1.5 sm:flex">
-                    {MODES.map((m) => (
-                        <SegmentButton key={m.value} active={mode === m.value} onClick={() => setModeChoice(m.value)}>
-                            {t(m.key)}
-                        </SegmentButton>
-                    ))}
-                </div>
+                <h2 className="type-title-l text-on-surface">{t("page.predictionPlanner.pt.title")}</h2>
+                <SegmentedButton
+                    value={mode}
+                    onValueChange={setModeChoice}
+                    options={MODES.map((m) => ({ value: m.value, label: t(m.key) }))}
+                    aria-label={t("page.predictionPlanner.pt.title")}
+                    showCheckmark={false}
+                    className="sm:w-auto"
+                />
             </div>
 
             {mode !== "direct" && (
@@ -684,48 +682,48 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                     <div>
                         <span className={LABEL_CLASS}>{t("page.predictionPlanner.pt.song")}</span>
                         {songsLoading ? (
-                            <div className="flex items-center gap-2 py-2 text-xs text-slate-400">
-                                <span className="loading-spinner" aria-hidden="true" />
+                            <div className="flex items-center gap-2 py-2 text-on-surface-variant">
+                                <LoadingIndicator size={24} aria-label={t("page.predictionPlanner.loading")} />
                             </div>
                         ) : song ? (
-                            <div className="mb-2 px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 min-w-0">
+                            <Surface tone="highest" radius="md" className="mb-2 px-3 py-2 min-w-0">
                                 <div className="flex items-center gap-2 min-w-0">
-                                    <span className="text-[10px] font-mono text-slate-400 shrink-0">#{song.musicId}</span>
-                                    <span className="text-sm font-bold text-slate-800 dark:text-slate-100 truncate">{song.title}</span>
+                                    <span className="type-label-s font-mono text-on-surface-variant shrink-0">#{song.musicId}</span>
+                                    <span className="type-title-s text-on-surface truncate">{song.title}</span>
                                     {songSeconds !== null && (
-                                        <span className="ml-auto text-[10px] font-mono text-slate-400 shrink-0">{formatNumber(songSeconds, { maximumFractionDigits: 1 })}s</span>
+                                        <span className="ml-auto type-label-s font-mono text-on-surface-variant shrink-0">{formatNumber(songSeconds, { maximumFractionDigits: 1 })}s</span>
                                     )}
                                 </div>
-                                {song.subtitle && <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{song.subtitle}</div>}
-                            </div>
+                                {song.subtitle && <div className="type-body-s text-on-surface-variant truncate">{song.subtitle}</div>}
+                            </Surface>
                         ) : null}
                         <div className="relative">
-                            <input
+                            <TextField
+                                variant="filled"
+                                dense
+                                icon={mdSearch}
                                 type="search"
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 placeholder={t("page.predictionPlanner.pt.songSearch")}
                                 aria-label={t("page.predictionPlanner.pt.songSearch")}
-                                className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-miku/30 focus:border-miku"
                             />
                             {searchMatches.length > 0 && (
-                                <ul className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg">
+                                <List className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-surface-container-high text-on-surface border border-outline-variant rounded-md3-md shadow-elev-2">
                                     {searchMatches.map((entry) => (
-                                        <li key={entry.musicId}>
-                                            <button
-                                                type="button"
-                                                onClick={() => pickSong(entry)}
-                                                className="w-full text-left px-3 py-2 hover:bg-slate-50 dark:hover:bg-slate-800 min-w-0"
-                                            >
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <span className="text-[10px] font-mono text-slate-400 shrink-0">#{entry.musicId}</span>
-                                                    <span className="text-sm font-bold text-slate-700 dark:text-slate-200 truncate">{entry.title}</span>
-                                                </div>
-                                                {entry.subtitle && <div className="text-xs text-slate-500 dark:text-slate-400 truncate">{entry.subtitle}</div>}
-                                            </button>
-                                        </li>
+                                        <ListItem
+                                            key={entry.musicId}
+                                            onClick={() => pickSong(entry)}
+                                            headline={(
+                                                <span className="flex items-center gap-2 min-w-0">
+                                                    <span className="type-label-s font-mono text-on-surface-variant shrink-0">#{entry.musicId}</span>
+                                                    <span className="type-title-s text-on-surface truncate">{entry.title}</span>
+                                                </span>
+                                            )}
+                                            supportingText={entry.subtitle}
+                                        />
                                     ))}
-                                </ul>
+                                </List>
                             )}
                         </div>
                     </div>
@@ -740,9 +738,9 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                                         type="button"
                                         onClick={() => setDifficultyChoice(d)}
                                         aria-pressed={difficulty === d}
-                                        className={`px-2.5 py-1.5 rounded-lg text-[11px] font-bold uppercase transition-all ${difficulty === d
-                                            ? `${DIFFICULTY_BADGE_COLORS[d] ?? "bg-miku text-white"} shadow-md`
-                                            : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700"
+                                        className={`state-layer focus-ring relative px-3 py-2 rounded-md3-sm type-label-l uppercase transition-colors duration-150 ease-md3-standard ${difficulty === d
+                                            ? DIFFICULTY_BADGE_COLORS[d] ?? "bg-secondary-container text-on-secondary-container"
+                                            : "bg-surface-container-highest text-on-surface-variant"
                                             }`}
                                     >
                                         {d}
@@ -760,7 +758,7 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                     <select
                         value={fire}
                         onChange={(e) => setFire(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/30"
+                        className="focus-ring h-12 w-full px-3 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary"
                     >
                         {fireOptions.map(({ count, m }) => (
                             <option key={count} value={count}>{t("page.predictionPlanner.pt.fireOption", { count, multiplier: m })}</option>
@@ -772,7 +770,7 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                     <select
                         value={autoFire}
                         onChange={(e) => setAutoFireChoice(Number(e.target.value))}
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-miku/30"
+                        className="focus-ring h-12 w-full px-3 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary"
                     >
                         {fireOptions.filter(({ count }) => count >= minAutoFire && count <= maxAutoFire).map(({ count, m }) => (
                             <option key={count} value={count}>{t("page.predictionPlanner.pt.fireOption", { count, multiplier: m })}</option>
@@ -790,17 +788,12 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                         placeholder={String(DEFAULT_GAP_SECONDS[liveType])}
                     />
                     {liveChoice === "coop" && (
-                        <label className="flex items-start gap-2 cursor-pointer select-none sm:pb-2">
-                            <input
-                                type="checkbox"
-                                checked={customRoom}
-                                onChange={(e) => setCustomRoom(e.target.checked)}
-                                className="mt-0.5 w-4 h-4 shrink-0 accent-miku"
-                            />
-                            <span className="text-xs text-slate-600 dark:text-slate-300">
-                                {t("page.predictionPlanner.pt.customRoom", { percent: formatNumber(CUSTOM_ROOM_PT_FACTOR * 100, { maximumFractionDigits: 1 }) })}
-                            </span>
-                        </label>
+                        <Checkbox
+                            checked={customRoom}
+                            onCheckedChange={setCustomRoom}
+                            className="sm:pb-2"
+                            label={t("page.predictionPlanner.pt.customRoom", { percent: formatNumber(CUSTOM_ROOM_PT_FACTOR * 100, { maximumFractionDigits: 1 }) })}
+                        />
                     )}
                 </div>
             )}
@@ -808,49 +801,42 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
             {mode === "deck" && (
                 <div className="space-y-3">
                     {!account ? (
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700">
-                            <span className="text-xs text-slate-600 dark:text-slate-300">{t("page.predictionPlanner.pt.deck.needAccount")}</span>
-                            <Link
-                                href="/deck-recommend/"
-                                className="inline-flex items-center justify-center px-3 py-1.5 rounded-lg bg-miku text-white text-xs font-bold shadow-sm shadow-miku/30 hover:opacity-90 shrink-0"
-                            >
+                        <Surface tone="highest" radius="md" className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-3 py-3">
+                            <span className="type-body-m text-on-surface-variant">{t("page.predictionPlanner.pt.deck.needAccount")}</span>
+                            <Button href="/deck-recommend/" className="shrink-0">
                                 {t("page.predictionPlanner.pt.deck.goToDeck")}
-                            </Link>
-                        </div>
+                            </Button>
+                        </Surface>
                     ) : (
                         <>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                <span className="text-xs text-slate-500 dark:text-slate-400 font-mono break-all">
+                                <span className="type-body-s text-on-surface-variant font-mono break-all">
                                     {t("page.predictionPlanner.pt.deck.account", { userId: account.userId, server: account.server.toUpperCase() })}
                                 </span>
                                 {running ? (
                                     <div className="flex items-center gap-2">
-                                        <span className="text-xs font-bold text-miku">
+                                        <span className="type-label-l text-primary">
                                             {t("page.predictionPlanner.pt.deck.calculating", { percent: progressPercent })}
                                         </span>
-                                        <button
-                                            type="button"
-                                            onClick={cancelDeck}
-                                            className="px-3 py-1.5 rounded-lg text-xs font-bold border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-                                        >
+                                        <Button variant="outlined" size="xs" onClick={cancelDeck}>
                                             {t("page.predictionPlanner.pt.deck.cancel")}
-                                        </button>
+                                        </Button>
                                     </div>
                                 ) : (
-                                    <button
-                                        type="button"
+                                    <Button
+                                        icon={mdCalculate}
                                         onClick={calculateDeck}
                                         disabled={musicId === null}
-                                        className="px-4 py-2 rounded-xl bg-miku text-white text-xs font-bold shadow-sm shadow-miku/30 hover:opacity-90 disabled:opacity-50"
                                     >
                                         {t("page.predictionPlanner.pt.deck.calculate")}
-                                    </button>
+                                    </Button>
                                 )}
                             </div>
                             {running && (
-                                <div className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                                    <div className="h-full bg-miku transition-all" style={{ width: `${progressPercent}%` }} />
-                                </div>
+                                <LinearProgress
+                                    value={progressPercent / 100}
+                                    aria-label={t("page.predictionPlanner.pt.deck.calculating", { percent: progressPercent })}
+                                />
                             )}
                         </>
                     )}
@@ -859,9 +845,9 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
 
                     {hasEngineGap && (
                         <div className="space-y-2">
-                            <p className="px-3 py-2 rounded-lg border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-300 text-xs break-words">
+                            <Banner tone="warning" className="break-words">
                                 {t("page.predictionPlanner.rules.warnings.engineGap", { tables: rules.engineCoverageGaps.join(", ") })}
-                            </p>
+                            </Banner>
                             {selectedOption && (
                                 <NumberField
                                     label={t("page.predictionPlanner.pt.manual.bonus")}
@@ -887,14 +873,13 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                         <NumberField label={t("page.predictionPlanner.pt.manual.effectiveSkill")} value={manualEffectiveSkill} onChange={setManualEffectiveSkill} placeholder="0" />
                     </div>
                     <div className="flex justify-end">
-                        <button
-                            type="button"
+                        <Button
+                            icon={mdCalculate}
                             onClick={calculateManual}
                             disabled={musicId === null || !(parseNumberInput(manualPower) ?? 0)}
-                            className="px-4 py-2 rounded-xl bg-miku text-white text-xs font-bold shadow-sm shadow-miku/30 hover:opacity-90 disabled:opacity-50"
                         >
                             {t("page.predictionPlanner.pt.manual.calculate")}
-                        </button>
+                        </Button>
                     </div>
                     {statTiles}
                 </div>
@@ -917,8 +902,8 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
             {errors.length > 0 && (
                 <ul className="space-y-1.5">
                     {errors.map((text, i) => (
-                        <li key={i} className="px-3 py-2 rounded-lg bg-red-50 border border-red-200 text-red-600 dark:bg-red-950/40 dark:border-red-900 dark:text-red-300 text-xs break-words">
-                            {text}
+                        <li key={i}>
+                            <Banner tone="error" className="break-words">{text}</Banner>
                         </li>
                     ))}
                 </ul>
@@ -927,6 +912,6 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
             {mode !== "direct" && views.length > 0 && (
                 <SongGainTable rows={views} selectedKey={selectedKey} onUse={switchSong} />
             )}
-        </section>
+        </Surface>
     );
 }
