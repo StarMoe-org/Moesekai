@@ -1,7 +1,9 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { Button, Icon, LoadingState, PageContainer, Surface } from "@/components/md3";
+import { mdFormatListBulleted, mdOpenInNew } from "@/components/md3/icons";
+import { ServerSourceBadge, StoryBadge, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
 import { StoryTranslationSourceBadge } from "@/components/story/StoryTranslationSourceBadge";
@@ -134,66 +136,63 @@ export default function StoryCardReaderClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {card && (
-                    <Link href={`/cards/${card.id}`} className="flex items-center gap-4 mb-8 p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-miku/50 hover:shadow-sm transition-all group">
-                        <img src={getCardThumbnailUrl(card.characterId, card.assetbundleName, false, assetSource)} alt={card.prefix} className="w-24 h-12 object-cover rounded-lg shrink-0" />
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm text-slate-500">{charaName}</p>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <h1 className="font-bold text-slate-900 dark:text-slate-100 group-hover:text-miku transition-colors">{card.prefix}</h1>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                    serverSource === "cn"
-                                        ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700/50"
-                                        : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/50"
-                                }`}>{t(`page.story.serverSource.${serverSource}`)}</span>
-                            </div>
-                            {card.gachaPhrase && card.gachaPhrase !== "-" && (
-                                <p className="text-xs text-slate-400 mt-1 italic">「{card.gachaPhrase}」</p>
-                            )}
-                        </div>
-                        <svg className="w-5 h-5 text-slate-300 group-hover:text-miku transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
-                    </Link>
+                    <StoryReaderHeader
+                        href={`/cards/${card.id}`}
+                        className="mb-8"
+                        media={
+                            <img
+                                src={getCardThumbnailUrl(card.characterId, card.assetbundleName, false, assetSource)}
+                                alt={card.prefix}
+                                className="h-12 w-24 rounded-md3-sm object-cover"
+                            />
+                        }
+                        eyebrow={charaName}
+                        title={<span className="transition-colors group-hover:text-primary">{card.prefix}</span>}
+                        badges={<ServerSourceBadge serverSource={serverSource} />}
+                        footer={
+                            card.gachaPhrase && card.gachaPhrase !== "-" ? (
+                                <p className="mt-1 type-body-s italic text-on-surface-variant">「{card.gachaPhrase}」</p>
+                            ) : undefined
+                        }
+                        trailing={<Icon path={mdOpenInNew} size={20} className="text-on-surface-variant" />}
+                    />
                 )}
 
-                {isLoading && (
-                    <div className="flex flex-col items-center justify-center py-16">
-                        <div className="w-12 h-12 border-4 border-miku/30 border-t-miku rounded-full animate-spin mb-4" />
-                        <p className="text-slate-500">{t("page.story.reader.loading")}</p>
-                    </div>
-                )}
+                {isLoading && <LoadingState label={t("page.story.reader.loading")} />}
 
                 {!isLoading && (
-                    <div className="max-w-4xl mx-auto">
-                        <div className="mb-6 p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <span className="text-sm text-slate-500 mr-2">{t("page.story.card.tableOfContents")}</span>
-                                <button
-                                    onClick={() => document.getElementById("part-episode-1")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                                    className="px-3 py-1.5 text-sm font-medium text-miku hover:bg-miku/10 rounded-lg transition-colors"
-                                >
-                                    {t("page.story.card.part1")}
-                                </button>
-                                <span className="text-slate-300 dark:text-slate-600">|</span>
-                                <button
-                                    onClick={() => document.getElementById("part-episode-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
-                                    className="px-3 py-1.5 text-sm font-medium text-miku hover:bg-miku/10 rounded-lg transition-colors"
-                                >
-                                    {t("page.story.card.part2")}
-                                </button>
-                            </div>
-                        </div>
+                    <div className="mx-auto max-w-4xl">
+                        <Surface tone="low" radius="lg" className="mb-6 flex flex-wrap items-center gap-2 p-3">
+                            <span className="mr-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
+                                <Icon path={mdFormatListBulleted} size={20} />
+                                {t("page.story.card.tableOfContents")}
+                            </span>
+                            <Button
+                                variant="tonal"
+                                size="xs"
+                                onClick={() => document.getElementById("part-episode-1")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                            >
+                                {t("page.story.card.part1")}
+                            </Button>
+                            <Button
+                                variant="tonal"
+                                size="xs"
+                                onClick={() => document.getElementById("part-episode-2")?.scrollIntoView({ behavior: "smooth", block: "start" })}
+                            >
+                                {t("page.story.card.part2")}
+                            </Button>
+                        </Surface>
 
                         <div className="space-y-10">
                             {parts.map(({ key, title, data, missing, err, source }) => {
                                 const label = key === "1" ? t("page.story.card.part1") : t("page.story.card.part2");
                                 return (
                                     <div key={key} id={`part-episode-${key}`} className="scroll-mt-32">
-                                        <div className="flex items-center gap-3 mb-4">
-                                            <span className="px-3 py-1 bg-miku/10 text-miku text-sm font-bold rounded-full border border-miku/20">{label}</span>
-                                            {title && <h2 className="font-bold text-slate-800 dark:text-slate-200">{title}</h2>}
+                                        <div className="mb-4 flex items-center gap-3">
+                                            <StoryBadge tone="primary">{label}</StoryBadge>
+                                            {title && <h2 className="type-title-l text-on-surface">{title}</h2>}
                                             {source && <StoryTranslationSourceBadge source={source} />}
                                         </div>
                                         <StoryReader
@@ -211,7 +210,7 @@ export default function StoryCardReaderClient() {
                         </div>
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

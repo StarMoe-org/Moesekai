@@ -6,6 +6,35 @@ import { getCharacterIconUrl } from "@/lib/assets";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { UNIT_FIELD_TO_ID, UNIT_ICON_FILES } from "@/types/types";
+import { Button, IconButton, cn } from "@/components/md3";
+import { mdImage, mdPauseFill, mdPlayArrowFill } from "@/components/md3/icons";
+
+/* --------------------------------------------------------------------------
+   Shared snippet chrome
+   -------------------------------------------------------------------------- */
+
+type SnippetTone = "primary" | "secondary" | "tertiary" | "neutral" | "inverse" | "error";
+
+const TAG_TONE: Record<SnippetTone, string> = {
+    primary: "bg-primary-container text-on-primary-container",
+    secondary: "bg-secondary-container text-on-secondary-container",
+    tertiary: "bg-tertiary-container text-on-tertiary-container",
+    neutral: "bg-surface-container-highest text-on-surface-variant",
+    inverse: "border border-inverse-primary/40 text-inverse-primary",
+    error: "bg-error-container text-on-error-container",
+};
+
+function SnippetTag({ tone, children }: { tone: SnippetTone; children: React.ReactNode }) {
+    return <span className={cn("inline-flex h-6 items-center rounded-md3-sm px-2 type-label-m", TAG_TONE[tone])}>{children}</span>;
+}
+
+function SnippetBox({ className, children }: { className?: string; children: React.ReactNode }) {
+    return <div className={cn("my-3 rounded-md3-lg p-4", className)}>{children}</div>;
+}
+
+/* --------------------------------------------------------------------------
+   Talk (dialogue bubble)
+   -------------------------------------------------------------------------- */
 
 interface TalkSnippetProps {
     characterId: number;
@@ -23,17 +52,17 @@ interface TalkSnippetProps {
     progress?: number;
 }
 
-export function TalkSnippet({ 
-    characterId, 
-    characterName, 
-    text, 
-    voiceUrl, 
-    cnText, 
-    cnDisplayName, 
+export function TalkSnippet({
+    characterId,
+    characterName,
+    text,
+    voiceUrl,
+    cnText,
+    cnDisplayName,
     translatedText,
     translatedDisplayName,
-    translationSource: _translationSource, 
-    unitName: _unitName, 
+    translationSource: _translationSource,
+    unitName: _unitName,
     unitField,
     active = false,
     progress = 0
@@ -66,32 +95,31 @@ export function TalkSnippet({
     const badgeIcon = badgeUnitId ? UNIT_ICON_FILES[badgeUnitId] : null;
 
     return (
-        <div 
-            className={`ios-glass-card rounded-xl p-4 my-3 relative border-none shadow-sm overflow-hidden transition-all duration-300 ${
-                active 
-                    ? "ring-2 ring-miku shadow-[0_0_20px_rgba(51,204,187,0.3)] scale-[1.01] z-10" 
-                    : ""
-            }`}
+        <div
+            className={cn(
+                "relative my-3 overflow-hidden rounded-md3-lg bg-surface-container-lowest p-4 transition-shadow duration-300 ease-md3-standard",
+                active && "z-10 shadow-elev-2 ring-2 ring-primary",
+            )}
         >
-            {/* Smooth linear frosted brand progress bar */}
+            {/* Playback progress */}
             {active && (
-                <div 
-                    className="absolute top-0 left-0 h-[3px] bg-gradient-to-r from-miku to-cyan-400 transition-all duration-100 shadow-[0_0_8px_var(--color-miku)]" 
-                    style={{ width: `${progress}%` }} 
+                <div
+                    className="absolute left-0 top-0 h-[3px] bg-primary transition-[width] duration-100"
+                    style={{ width: `${progress}%` }}
                 />
             )}
             <div className="flex items-start gap-3">
                 {/* Character Avatar */}
-                <div className="shrink-0 relative">
+                <div className="relative shrink-0">
                     {iconUrl ? (
                         <>
                             <img
                                 src={iconUrl}
                                 alt={characterName}
-                                className="w-12 h-12 rounded-full object-cover bg-slate-100 dark:bg-slate-700 border-2 border-miku/30"
+                                className="h-12 w-12 rounded-full bg-surface-container-high object-cover"
                             />
                             {badgeIcon && (
-                                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center">
+                                <div className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full bg-surface-container-highest shadow-elev-1">
                                     <Image
                                         src={`/data/icon/${badgeIcon}`}
                                         alt=""
@@ -104,49 +132,47 @@ export function TalkSnippet({
                             )}
                         </>
                     ) : (
-                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-slate-300 to-slate-400 dark:from-slate-600 dark:to-slate-700 flex items-center justify-center border-2 border-slate-300 dark:border-slate-600">
-                            <span className="text-white text-sm font-bold">
-                                {characterName.charAt(0)}
-                            </span>
+                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-surface-container-highest">
+                            <span className="type-title-m text-on-surface-variant">{characterName.charAt(0)}</span>
                         </div>
                     )}
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 min-w-0">
-                    {/* Character Name Badge */}
-                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                        <span className="inline-block px-2.5 py-0.5 bg-miku/10 text-miku text-sm font-medium rounded-full border border-miku/20">
+                <div className="min-w-0 flex-1">
+                    {/* Character name */}
+                    <div className="mb-1.5 flex flex-wrap items-center gap-2">
+                        <span className="inline-flex h-7 items-center rounded-md3-sm bg-secondary-container px-2.5 type-label-l text-on-secondary-container">
                             {characterName}
                         </span>
                         {showTranslatedDisplayName && (
-                            <span className="inline-block px-2.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 text-sm font-medium rounded-full border border-slate-200 dark:border-slate-600">
+                            <span className="inline-flex h-7 items-center rounded-md3-sm bg-surface-container-high px-2.5 type-label-l text-on-surface-variant">
                                 {displayNameTranslation}
                             </span>
                         )}
                     </div>
 
-                    {/* Dialogue Text */}
-                    <p className="text-primary-text text-base leading-relaxed whitespace-pre-wrap">
-                        {text}
-                    </p>
+                    {/* Dialogue text */}
+                    <p className="whitespace-pre-wrap type-body-l leading-7! text-on-surface">{text}</p>
 
-                    {/* CN Translation */}
+                    {/* Translation */}
                     {showTranslatedText && (
-                        <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed whitespace-pre-wrap mt-1.5 pt-1.5 border-t border-slate-200/50 dark:border-slate-700/50">
+                        <p className="mt-2 whitespace-pre-wrap border-t border-outline-variant pt-2 type-body-m leading-6! text-on-surface-variant">
                             {displayTranslation}
                         </p>
                     )}
                 </div>
 
                 {/* Voice Button */}
-                {voiceUrl && (
-                    <AudioPlayButton url={voiceUrl} />
-                )}
+                {voiceUrl && <AudioPlayButton url={voiceUrl} />}
             </div>
         </div>
     );
 }
+
+/* --------------------------------------------------------------------------
+   Special effects
+   -------------------------------------------------------------------------- */
 
 interface SpecialEffectSnippetProps {
     seType: string;
@@ -171,185 +197,147 @@ export function SpecialEffectSnippet({ seType, text, resource }: SpecialEffectSn
     switch (seType) {
         case "FullScreenText":
             return (
-                <div className="ios-glass-panel rounded-2xl p-6 my-4 shadow-xl border border-purple-500/30 dark:border-purple-500/20 relative overflow-hidden backdrop-blur-3xl bg-slate-950/75 dark:bg-slate-950/85">
-                    {/* Decorative glow */}
-                    <div className="absolute -top-10 -right-10 w-24 h-24 bg-purple-500/20 rounded-full blur-2xl pointer-events-none" />
-                    <div className="flex items-center gap-2 mb-3 relative z-10">
-                        <span className="px-2.5 py-0.5 bg-purple-500/20 text-purple-300 text-xs font-semibold rounded-full border border-purple-500/30 tracking-wider shadow-sm">
-                            {t("page.story.snippet.fullScreenText")}
-                        </span>
+                <SnippetBox className="my-4 bg-inverse-surface p-6 text-inverse-on-surface">
+                    <div className="mb-3 flex items-center gap-2">
+                        <SnippetTag tone="inverse">{t("page.story.snippet.fullScreenText")}</SnippetTag>
                     </div>
-                    <p className="text-white text-lg sm:text-xl font-light leading-relaxed text-center whitespace-pre-wrap my-4 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] relative z-10">
+                    <p className="my-4 whitespace-pre-wrap text-center type-title-l font-normal leading-8!">
                         {text?.trimStart()}
                     </p>
                     {resource && (
-                        <div className="flex justify-center mt-3 relative z-10">
-                            <AudioPlayButton url={resource} className="shadow-[0_0_15px_rgba(168,85,247,0.4)] bg-purple-500/20 text-purple-300 border border-purple-500/30 hover:bg-purple-500/30" />
+                        <div className="mt-3 flex justify-center">
+                            <AudioPlayButton url={resource} inverse />
                         </div>
                     )}
-                </div>
+                </SnippetBox>
             );
 
         case "Telop":
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-amber-500/30 dark:border-amber-500/20 bg-gradient-to-r from-amber-50/50 to-orange-50/50 dark:from-amber-950/40 dark:to-orange-950/40 relative overflow-hidden">
-                    {/* Subtle warm decorative glow */}
-                    <div className="absolute -bottom-8 -left-8 w-20 h-20 bg-amber-500/10 rounded-full blur-xl pointer-events-none" />
-                    <div className="flex items-center gap-2 mb-2 relative z-10">
-                        <span className="px-2.5 py-0.5 bg-amber-500/20 text-amber-600 dark:text-amber-300 text-xs font-semibold rounded-full border border-amber-500/30 tracking-wider shadow-sm">
-                            {t("page.story.snippet.telop")}
-                        </span>
+                <SnippetBox className="bg-tertiary-container text-on-tertiary-container">
+                    <div className="mb-2 flex items-center gap-2">
+                        <SnippetTag tone="tertiary">{t("page.story.snippet.telop")}</SnippetTag>
                     </div>
-                    <p className="text-amber-900 dark:text-amber-100 text-base leading-relaxed text-center font-medium whitespace-pre-wrap relative z-10">
-                        {text?.trimStart()}
-                    </p>
-                </div>
+                    <p className="whitespace-pre-wrap text-center type-body-l type-emphasized leading-7!">{text?.trimStart()}</p>
+                </SnippetBox>
             );
 
         case "PlaceInfo":
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-blue-500/30 dark:border-blue-500/20 bg-blue-50/20 dark:bg-blue-950/20">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-0.5 bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.placeInfo")}
-                        </span>
+                <SnippetBox className="bg-surface-container-low">
+                    <div className="mb-2 flex items-center gap-2">
+                        <SnippetTag tone="secondary">{t("page.story.snippet.placeInfo")}</SnippetTag>
                     </div>
-                    <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed font-medium">
-                        {t("page.story.snippet.placeText", { place: text })}
-                    </p>
-                </div>
+                    <p className="type-body-l text-on-surface">{t("page.story.snippet.placeText", { place: text })}</p>
+                </SnippetBox>
             );
 
-        case "ChangeBackground":
+        case "ChangeBackground": {
             //case "ChangeBackgroundStill":
             const isCg = isCgImage(text || '');
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-emerald-500/30 dark:border-emerald-500/20 bg-emerald-50/10 dark:bg-emerald-950/10">
-                    <div className="flex items-center gap-2 mb-3">
-                        <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-medium rounded-full">
+                <SnippetBox className="bg-surface-container-low">
+                    <div className="mb-3 flex items-center gap-2">
+                        <SnippetTag tone="primary">
                             {isCg ? t("page.story.snippet.cgInsert") : t("page.story.snippet.backgroundChange")}
-                        </span>
+                        </SnippetTag>
                     </div>
 
                     {isImageOpen && resource ? (
-                        <div
-                            className="cursor-pointer overflow-hidden rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300"
+                        <button
+                            type="button"
+                            className="state-layer focus-ring block w-full cursor-pointer overflow-hidden rounded-md3-md"
                             onClick={() => window.open(resource, "_blank")}
                         >
-                            <img
-                                src={resource}
-                                alt="Background"
-                                className="w-full rounded-lg hover:scale-[1.02] transition-transform duration-500"
-                            />
-                        </div>
-                    ) : (
-                        <button
-                            onClick={() => setIsImageOpen(true)}
-                            className="ios-glass-btn px-4 py-2 text-sm font-medium rounded-lg text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/10"
-                        >
-                            {isCg ? t("page.story.snippet.showCg") : t("page.story.snippet.showBackground")}
+                            <img src={resource} alt="Background" className="w-full rounded-md3-md" />
                         </button>
+                    ) : (
+                        <Button variant="tonal" size="s" icon={mdImage} onClick={() => setIsImageOpen(true)}>
+                            {isCg ? t("page.story.snippet.showCg") : t("page.story.snippet.showBackground")}
+                        </Button>
                     )}
-                </div>
+                </SnippetBox>
             );
+        }
 
         case "FlashbackIn":
             return (
-                <div className="ios-glass-card rounded-xl p-3 my-3 border border-yellow-500/30 dark:border-yellow-500/20 bg-yellow-500/10">
-                    <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.flashbackIn")}
-                        </span>
-                    </div>
-                </div>
+                <SnippetBox className="bg-surface-container-low p-3">
+                    <SnippetTag tone="tertiary">{t("page.story.snippet.flashbackIn")}</SnippetTag>
+                </SnippetBox>
             );
 
         case "FlashbackOut":
             return (
-                <div className="ios-glass-card rounded-xl p-3 my-3 border border-yellow-500/30 dark:border-yellow-500/20 bg-yellow-500/10">
-                    <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 bg-yellow-500/20 text-yellow-700 dark:text-yellow-400 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.flashbackOut")}
-                        </span>
-                    </div>
-                </div>
+                <SnippetBox className="bg-surface-container-low p-3">
+                    <SnippetTag tone="tertiary">{t("page.story.snippet.flashbackOut")}</SnippetTag>
+                </SnippetBox>
             );
 
         case "BlackOut":
             return (
-                <div className="ios-glass-card rounded-xl p-3 my-3 border border-slate-600/30 bg-black/40">
-                    <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 bg-slate-600/30 text-slate-300 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.blackOut")}
-                        </span>
-                    </div>
-                </div>
+                <SnippetBox className="bg-inverse-surface p-3">
+                    <SnippetTag tone="inverse">{t("page.story.snippet.blackOut")}</SnippetTag>
+                </SnippetBox>
             );
 
         case "WhiteOut":
             return (
-                <div className="ios-glass-card rounded-xl p-3 my-3 border border-white/30 bg-white/40">
-                    <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 bg-white/30 text-slate-700 dark:text-slate-300 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.whiteOut")}
-                        </span>
-                    </div>
-                </div>
+                <SnippetBox className="border border-outline-variant bg-surface-container-lowest p-3">
+                    <SnippetTag tone="neutral">{t("page.story.snippet.whiteOut")}</SnippetTag>
+                </SnippetBox>
             );
 
         case "SimpleSelectable":
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-indigo-500/30 dark:border-indigo-500/20 bg-indigo-500/10">
-                    <div className="flex items-center gap-2 mb-2">
-                        <span className="px-2.5 py-0.5 bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.choice")}
-                        </span>
+                <SnippetBox className="bg-primary-container text-on-primary-container">
+                    <div className="mb-2 flex items-center gap-2">
+                        <SnippetTag tone="primary">{t("page.story.snippet.choice")}</SnippetTag>
                     </div>
-                    <p className="text-indigo-800 dark:text-indigo-200 text-base leading-relaxed text-center font-medium whitespace-pre-wrap">
-                        {text?.trimStart()}
-                    </p>
-                </div>
+                    <p className="whitespace-pre-wrap text-center type-body-l type-emphasized leading-7!">{text?.trimStart()}</p>
+                </SnippetBox>
             );
 
         case "Movie":
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-red-500/30 dark:border-red-500/20 bg-red-950/20">
+                <SnippetBox className="bg-surface-container-low">
                     <div className="flex items-center gap-2">
-                        <span className="px-2.5 py-0.5 bg-red-500/20 text-red-400 text-xs font-medium rounded-full">
-                            {t("page.story.snippet.movie")}
-                        </span>
-                        <span className="text-slate-700 dark:text-slate-300 text-sm font-medium">{text}</span>
+                        <SnippetTag tone="error">{t("page.story.snippet.movie")}</SnippetTag>
+                        <span className="type-body-m text-on-surface">{text}</span>
                     </div>
-                </div>
+                </SnippetBox>
             );
 
-        case "PlayMV":
+        case "PlayMV": {
             // resource format: "id:name" or just "id"
             const mvParts = resource?.split(':') || [];
             const mvId = mvParts[0] || '';
             const mvName = mvParts[1] || '';
-            
+
             return (
-                <div className="ios-glass-card rounded-xl p-4 my-3 border border-purple-500/30 dark:border-purple-500/20 bg-gradient-to-r from-purple-500/10 to-pink-500/10">
+                <SnippetBox className="bg-tertiary-container text-on-tertiary-container">
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center gap-2">
-                            <span className="px-2.5 py-0.5 bg-purple-500/20 text-purple-600 dark:text-purple-300 text-xs font-semibold rounded-full border border-purple-500/20">
-                                {t("page.story.snippet.playMv")}
-                            </span>
+                            <SnippetTag tone="tertiary">{t("page.story.snippet.playMv")}</SnippetTag>
                         </div>
                         {mvName ? (
-                            <p className="text-purple-700 dark:text-purple-300 text-base font-semibold">{mvName}</p>
+                            <p className="type-title-m">{mvName}</p>
                         ) : (
-                            <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">MV ID: {mvId}</p>
+                            <p className="type-body-m">MV ID: {mvId}</p>
                         )}
                     </div>
-                </div>
+                </SnippetBox>
             );
+        }
 
         default:
             return null;
     }
 }
+
+/* --------------------------------------------------------------------------
+   Sound
+   -------------------------------------------------------------------------- */
 
 interface SoundSnippetProps {
     hasBgm: boolean;
@@ -362,17 +350,14 @@ export function SoundSnippet({ hasBgm, hasSe, audioUrl }: SoundSnippetProps) {
     const { t } = useI18n();
 
     return (
-        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-3 my-2 border border-slate-200/50 dark:border-slate-700/50">
-            <div className="flex items-center gap-3">
-                <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${hasBgm
-                    ? "bg-green-500/20 text-green-600 dark:text-green-400"
-                    : "bg-orange-500/20 text-orange-600 dark:text-orange-400"
-                    }`}>
+        <div className="my-2 rounded-md3-md bg-surface-container px-3 py-2">
+            <div className="flex min-h-10 items-center gap-3">
+                <SnippetTag tone={hasBgm ? "primary" : "secondary"}>
                     {hasBgm ? "BGM" : hasSe ? "SE" : t("page.story.snippet.soundEffect")}
-                </span>
+                </SnippetTag>
 
                 {isNoSound ? (
-                    <span className="text-slate-400 text-sm">{t("page.story.snippet.silent")}</span>
+                    <span className="type-body-m text-on-surface-variant">{t("page.story.snippet.silent")}</span>
                 ) : audioUrl ? (
                     <AudioPlayButton url={audioUrl} />
                 ) : null}
@@ -381,13 +366,17 @@ export function SoundSnippet({ hasBgm, hasSe, audioUrl }: SoundSnippetProps) {
     );
 }
 
-// Simple audio play button component
+/* --------------------------------------------------------------------------
+   Audio play button
+   -------------------------------------------------------------------------- */
+
 interface AudioPlayButtonProps {
     url: string;
-    className?: string;
+    /** Render on an inverse surface (full screen text). */
+    inverse?: boolean;
 }
 
-function AudioPlayButton({ url, className = "" }: AudioPlayButtonProps) {
+function AudioPlayButton({ url, inverse = false }: AudioPlayButtonProps) {
     const [isPlaying, setIsPlaying] = useState(false);
     const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
     const { t } = useI18n();
@@ -408,29 +397,21 @@ function AudioPlayButton({ url, className = "" }: AudioPlayButtonProps) {
     };
 
     return (
-        <button
+        <IconButton
+            icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+            label={isPlaying ? t("page.story.snippet.stopAudio") : t("page.story.snippet.playAudio")}
+            variant={inverse ? "standard" : "tonal"}
+            selected={isPlaying}
             onClick={handlePlay}
-            className={`p-2 rounded-full transition-colors ${isPlaying
-                ? "bg-miku/20 text-miku"
-                : "bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 hover:bg-miku/10 hover:text-miku"
-                } ${className}`}
-            title={isPlaying ? t("page.story.snippet.stopAudio") : t("page.story.snippet.playAudio")}
-        >
-            {isPlaying ? (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="5" width="4" height="14" rx="1" />
-                    <rect x="14" y="5" width="4" height="14" rx="1" />
-                </svg>
-            ) : (
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M8 5.14v14l11-7-11-7z" />
-                </svg>
-            )}
-        </button>
+            className={inverse ? "text-inverse-primary" : undefined}
+        />
     );
 }
 
-// Main snippet renderer
+/* --------------------------------------------------------------------------
+   Main snippet renderer
+   -------------------------------------------------------------------------- */
+
 interface StorySnippetProps {
     action: IProcessedAction;
     index?: number;
@@ -440,7 +421,7 @@ interface StorySnippetProps {
 
 export function StorySnippet({ action, index, activeIndex, playbackProgress }: StorySnippetProps) {
     const active = index !== undefined && activeIndex !== undefined && index === activeIndex;
-    
+
     switch (action.type) {
         case SnippetAction.Talk:
             return (

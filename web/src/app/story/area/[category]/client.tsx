@@ -1,7 +1,9 @@
 "use client";
+import { Card, ErrorState, Icon, LoadingState, PageContainer } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
+import { StoryBackButton, StoryBadge } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect, useMemo } from "react";
 import { useParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { fetchMasterData } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
@@ -116,21 +118,18 @@ export default function StoryAreaDetailClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <Link href="/story/area" className="inline-flex items-center gap-2 text-slate-500 hover:text-miku transition-colors mb-6">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    {t("page.story.area.backToCategories")}
-                </Link>
+            <PageContainer>
+                <StoryBackButton href="/story/area">{t("page.story.area.backToCategories")}</StoryBackButton>
 
                 <div className="mb-6">
-                    <h1 className="text-xl font-black text-primary-text">{pageTitle}</h1>
-                    {!isLoading && !error && <p className="text-sm text-slate-500 mt-1">{t("page.story.area.dialogueCount", { count: actions.length })}</p>}
+                    <h1 className="type-headline-s text-on-surface sm:type-headline-m">{pageTitle}</h1>
+                    {!isLoading && !error && (
+                        <p className="mt-1 type-body-m text-on-surface-variant">{t("page.story.area.dialogueCount", { count: actions.length })}</p>
+                    )}
                 </div>
 
-                {isLoading && <div className="flex justify-center py-16"><div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin" /></div>}
-                {error && <div className="text-red-500 text-center py-8">{error}</div>}
+                {isLoading && <LoadingState label={t("common.state.loading")} />}
+                {error && <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
                 {!isLoading && !error && (
                     <div className="space-y-2">
@@ -147,12 +146,13 @@ export default function StoryAreaDetailClient() {
                             )].sort((a, b) => a - b);
 
                             return (
-                                <Link
+                                <Card
                                     key={action.id}
                                     href={`/story/area/${encodeURIComponent(areaIdParam)}/${encodeURIComponent(action.scenarioId ?? "")}`}
-                                    className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-miku/50 hover:shadow-sm transition-all group"
+                                    variant="filled"
+                                    className="group flex items-center justify-between p-4"
                                 >
-                                    <div className="flex items-center gap-3 min-w-0">
+                                    <div className="flex min-w-0 items-center gap-3">
                                         {/* Character avatars */}
                                         {gameCharaIds.length > 0 ? (
                                             <div className="flex shrink-0 -space-x-2">
@@ -161,32 +161,32 @@ export default function StoryAreaDetailClient() {
                                                         key={charaId}
                                                         src={getCharacterIconUrl(charaId)}
                                                         alt=""
-                                                        className="w-8 h-8 rounded-full border-2 border-white dark:border-slate-800 object-cover"
+                                                        className="h-8 w-8 rounded-full border-2 border-surface-container-highest object-cover"
                                                     />
                                                 ))}
                                             </div>
                                         ) : (
-                                            <span className="shrink-0 w-8 h-8 flex items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                                            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-secondary-container type-label-m text-on-secondary-container">
                                                 {idx + 1}
                                             </span>
                                         )}
                                         <div className="min-w-0">
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-miku transition-colors">{areaName}</span>
-                                                {typeLabel && <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-500 rounded">{typeLabel}</span>}
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="type-title-s text-on-surface transition-colors group-hover:text-primary">{areaName}</span>
+                                                {typeLabel && <StoryBadge tone="neutral">{typeLabel}</StoryBadge>}
                                             </div>
-                                            <p className="text-xs text-slate-400 mt-0.5">ID: {action.id}:{action.scenarioId}</p>
+                                            <p className="mt-0.5 type-body-s text-on-surface-variant">
+                                                ID: {action.id}:{action.scenarioId}
+                                            </p>
                                         </div>
                                     </div>
-                                    <svg className="w-4 h-4 text-slate-300 group-hover:text-miku transition-colors shrink-0 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                    </svg>
-                                </Link>
+                                    <Icon path={mdChevronRight} size={20} className="ml-2 text-on-surface-variant" />
+                                </Card>
                             );
                         })}
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

@@ -1,53 +1,43 @@
 "use client";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { STORY_TYPES } from "@/lib/storyTypes";
+import { Card, Icon, PageContainer, PageHeader } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
 
 export default function StoryIndexClient() {
     const { t } = useI18n();
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <div className="text-center mb-10">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.story.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.story.title")} <span className="text-miku">{t("page.story.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 mt-2">{t("page.story.description")}</p>
-                </div>
+            <PageContainer>
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.story.badge")}
+                    title={t("page.story.title")}
+                    highlight={t("page.story.titleHighlight")}
+                    description={t("page.story.description")}
+                />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 max-w-4xl mx-auto">
+                <div className="mx-auto grid max-w-4xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {STORY_TYPES.map((storyType) => (
-                        <Link
-                            key={storyType.href}
-                            href={storyType.href}
-                            className="ios-glass-card ios-glass-card-interactive group relative overflow-hidden rounded-2xl border-none"
-                        >
-                            <div className={`absolute inset-0 bg-gradient-to-br ${storyType.color} opacity-0 group-hover:opacity-[0.06] transition-opacity duration-300`} />
-                            <div className="p-6 flex items-start gap-4">
-                                <div className={`shrink-0 w-14 h-14 rounded-xl bg-gradient-to-br ${storyType.color} flex items-center justify-center text-white shadow-md transition-transform group-hover:scale-110 duration-300`}>
-                                    {storyType.icon}
+                        <Card key={storyType.href} href={storyType.href} variant="filled" radius="lg" className="group">
+                            <div className="flex items-start gap-4 p-5">
+                                <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md3-lg bg-primary-container text-on-primary-container">
+                                    <Icon path={storyType.icon} size={28} />
                                 </div>
-                                <div className="flex-1 min-w-0">
-                                    <h2 className="font-bold text-lg text-slate-800 dark:text-slate-100 group-hover:text-miku transition-colors">
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="type-title-m text-on-surface transition-colors group-hover:text-primary">
                                         {t(storyType.nameKey)}
                                     </h2>
-                                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
-                                        {t(storyType.descKey)}
-                                    </p>
+                                    <p className="mt-1 type-body-m text-on-surface-variant">{t(storyType.descKey)}</p>
                                 </div>
-                                <svg className="w-5 h-5 text-slate-300 group-hover:text-miku transition-all group-hover:translate-x-1 shrink-0 self-center" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
+                                <Icon path={mdChevronRight} className="shrink-0 self-center text-on-surface-variant" />
                             </div>
-                        </Link>
+                        </Card>
                     ))}
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

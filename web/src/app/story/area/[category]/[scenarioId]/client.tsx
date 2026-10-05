@@ -1,7 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import { PageContainer } from "@/components/md3";
+import { ServerSourceBadge, StoryBackButton, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
 import { StoryTranslationSourceBadge } from "@/components/story/StoryTranslationSourceBadge";
@@ -117,29 +118,21 @@ export default function StoryAreaTalkClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <Link
-                    href={`/story/area/${encodeURIComponent(areaIdParam)}`}
-                    className="inline-flex items-center gap-2 text-miku hover:text-miku-dark transition-colors mb-6"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    {t("page.story.area.backToDialogueList")}
-                </Link>
+            <PageContainer>
+                <StoryBackButton href={`/story/area/${encodeURIComponent(areaIdParam)}`}>{t("page.story.area.backToDialogueList")}</StoryBackButton>
 
-                <div className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm rounded-xl p-4 mb-6 border border-slate-200 dark:border-slate-700">
-                    <div className="flex items-center gap-2 flex-wrap">
-                        <h1 className="font-bold text-slate-900 dark:text-slate-100">{areaName || t("page.story.area.dialogueFallback", { id: scenarioId })}</h1>
-                        <span className="text-xs text-slate-400">ID: {actionSet?.id}:{scenarioId}</span>
-                        {translationSource && <StoryTranslationSourceBadge source={translationSource} />}
-                        <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                            serverSource === "cn"
-                                ? "bg-rose-100 text-rose-700 border-rose-200 dark:bg-rose-900/30 dark:text-rose-300 dark:border-rose-700/50"
-                                : "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/50"
-                        }`}>{t(`page.story.serverSource.${serverSource}`)}</span>
-                    </div>
-                </div>
+                <StoryReaderHeader
+                    title={areaName || t("page.story.area.dialogueFallback", { id: scenarioId })}
+                    badges={
+                        <>
+                            <span className="type-label-m text-on-surface-variant">
+                                ID: {actionSet?.id}:{scenarioId}
+                            </span>
+                            {translationSource && <StoryTranslationSourceBadge source={translationSource} />}
+                            <ServerSourceBadge serverSource={serverSource} />
+                        </>
+                    }
+                />
 
                 <StoryReader
                     scenarioData={displayedScenario}
@@ -150,7 +143,7 @@ export default function StoryAreaTalkClient() {
                     translationSource={translationSource}
                     storyType="area"
                 />
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

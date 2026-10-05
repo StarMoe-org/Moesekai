@@ -1,6 +1,7 @@
 "use client";
+import { Card, ErrorState, Icon, LoadingState, PageContainer, TextField } from "@/components/md3";
+import { mdChevronRight, mdKeyboardArrowDown, mdSearch } from "@/components/md3/icons";
 import { useState, useEffect, useMemo } from "react";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { fetchMasterData } from "@/lib/fetch";
 import { IEventInfo } from "@/types/events";
@@ -121,27 +122,27 @@ export default function StoryAreaListClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 <StoryPageHeader storyKey="area" />
 
-                <input
+                <TextField
                     data-shortcut-search="true"
                     type="text"
+                    icon={mdSearch}
                     placeholder={t("page.story.area.searchPlaceholder")}
+                    aria-label={t("page.story.area.searchPlaceholder")}
                     value={searchQuery}
-                    onChange={e => setSearchQuery(e.target.value)}
-                    className="w-full mb-6 px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:ring-2 focus:ring-miku/30"
+                    onValueChange={setSearchQuery}
+                    clearable
+                    clearLabel={t("common.md3.clear")}
+                    containerClassName="mb-6"
                 />
 
-                {isLoading && (
-                    <div className="flex justify-center py-16">
-                        <div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin"></div>
-                    </div>
-                )}
-                {error && <div className="text-red-500 text-center py-8">{error}</div>}
+                {isLoading && <LoadingState label={t("common.state.loading")} />}
+                {error && <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
                 {!isLoading && !error && (
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                         {(grouped.gradeCats.length > 0 || grouped.theaterCats.length > 0) && (
                             <Section title={t("page.story.area.dailySectionTitle")} storageKey="grade_theater">
                                 {[...grouped.gradeCats, ...grouped.theaterCats].map(cat => (
@@ -172,7 +173,7 @@ export default function StoryAreaListClient() {
                         )}
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -192,18 +193,22 @@ function Section({ title, storageKey, children }: { title: string; storageKey: s
     };
 
     return (
-        <div>
-            <button onClick={toggle} className="flex items-center gap-1.5 mb-3 group">
-                <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider group-hover:text-miku transition-colors">{title}</h2>
-                <svg
-                    className={`w-4 h-4 text-slate-400 group-hover:text-miku transition-transform ${open ? "rotate-0" : "-rotate-90"}`}
-                    fill="none" viewBox="0 0 24 24" stroke="currentColor"
-                >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
+        <section>
+            <button
+                type="button"
+                onClick={toggle}
+                aria-expanded={open}
+                className="state-layer focus-ring group -ml-2 mb-3 flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-on-surface"
+            >
+                <Icon
+                    path={mdKeyboardArrowDown}
+                    size={20}
+                    className={`text-on-surface-variant transition-transform duration-200 ease-md3-standard ${open ? "rotate-0" : "-rotate-90"}`}
+                />
+                <h2 className="type-title-m">{title}</h2>
             </button>
             {open && <div className="space-y-1.5">{children}</div>}
-        </div>
+        </section>
     );
 }
 
@@ -212,14 +217,9 @@ function CategoryLink({ cat, eventMap, translations, areaMap }: { cat: AreaCateg
     const label = categoryLabel(cat, eventMap, translations, t, areaMap);
     const urlParam = categoryToUrlParam(cat);
     return (
-        <Link
-            href={`/story/area/${encodeURIComponent(urlParam)}`}
-            className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-miku/50 hover:shadow-sm transition-all group"
-        >
-            <span className="text-sm font-medium text-slate-700 dark:text-slate-300 group-hover:text-miku transition-colors">{label}</span>
-            <svg className="w-4 h-4 text-slate-300 group-hover:text-miku transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-        </Link>
+        <Card href={`/story/area/${encodeURIComponent(urlParam)}`} variant="filled" className="group flex items-center justify-between p-3 pl-4">
+            <span className="type-body-l text-on-surface transition-colors group-hover:text-primary">{label}</span>
+            <Icon path={mdChevronRight} size={20} className="text-on-surface-variant" />
+        </Card>
     );
 }

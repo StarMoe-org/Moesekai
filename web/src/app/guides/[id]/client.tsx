@@ -2,13 +2,14 @@
 import { useState, useEffect, Suspense } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { localizePathForBrowser } from "@/lib/localized-path";
-import Link from "@/components/LocalizedLink";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import MainLayout from "@/components/MainLayout";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
 import ExternalLink from "@/components/ExternalLink";
 import { useI18n } from "@/contexts/I18nContext";
+import { Button, ErrorState, Icon, LoadingState, PageContainer, Surface } from "@/components/md3";
+import { mdArrowBack, mdOpenInNew, mdPerson } from "@/components/md3/icons";
 import {
     fetchGuidesIndex,
     fetchGuideContent,
@@ -17,87 +18,93 @@ import {
     type GuidesIndex,
 } from "@/lib/guides";
 
-// Category badge colors (same as list page)
-const categoryColors: Record<string, string> = {
-    gacha: "bg-amber-100 text-amber-700 border-amber-200",
-    event: "bg-blue-100 text-blue-700 border-blue-200",
-    team: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    beginner: "bg-purple-100 text-purple-700 border-purple-200",
-    system: "bg-slate-100 text-slate-600 border-slate-200",
+// Category tag tones (same as list page)
+const categoryTones: Record<string, string> = {
+    gacha: "bg-tertiary-container text-on-tertiary-container",
+    event: "bg-primary-container text-on-primary-container",
+    team: "bg-secondary-container text-on-secondary-container",
+    beginner: "bg-primary text-on-primary",
+    system: "bg-surface-container-highest text-on-surface-variant",
 };
 
-// Custom markdown component mapping for Tailwind styling
+// Markdown → MD3 typography mapping
 const markdownComponents = {
     h1: ({ children, ...props }: React.ComponentProps<"h1">) => (
-        <h1 className="text-2xl font-black text-primary-text mt-8 mb-4 first:mt-0" {...props}>{children}</h1>
+        <h1 className="mb-4 mt-8 type-headline-s text-on-surface first:mt-0" {...props}>{children}</h1>
     ),
     h2: ({ children, ...props }: React.ComponentProps<"h2">) => (
-        <h2 className="text-xl font-bold text-primary-text mt-8 mb-3 pb-2 border-b border-slate-100" {...props}>{children}</h2>
+        <h2 className="mb-3 mt-8 border-b border-outline-variant pb-2 type-title-l text-on-surface first:mt-0" {...props}>{children}</h2>
     ),
     h3: ({ children, ...props }: React.ComponentProps<"h3">) => (
-        <h3 className="text-lg font-bold text-primary-text mt-6 mb-2" {...props}>{children}</h3>
+        <h3 className="mb-2 mt-6 type-title-m text-on-surface" {...props}>{children}</h3>
     ),
     p: ({ children, ...props }: React.ComponentProps<"p">) => (
-        <p className="text-slate-600 leading-relaxed mb-4 last:mb-0" {...props}>{children}</p>
+        <p className="mb-4 type-body-l leading-7! text-on-surface-variant last:mb-0" {...props}>{children}</p>
     ),
     a: ({ href, children, ...props }: React.ComponentProps<"a">) => (
         <ExternalLink
             href={href ?? "#"}
-            className="text-miku font-medium hover:underline decoration-miku/30 underline-offset-2"
+            className="font-medium text-primary underline decoration-primary/40 underline-offset-2 hover:decoration-primary"
             {...props}
         >
             {children}
         </ExternalLink>
     ),
     strong: ({ children, ...props }: React.ComponentProps<"strong">) => (
-        <strong className="font-bold text-primary-text" {...props}>{children}</strong>
+        <strong className="font-semibold text-on-surface" {...props}>{children}</strong>
     ),
     em: ({ children, ...props }: React.ComponentProps<"em">) => (
-        <em className="text-slate-500" {...props}>{children}</em>
+        <em className="text-on-surface-variant" {...props}>{children}</em>
     ),
     blockquote: ({ children, ...props }: React.ComponentProps<"blockquote">) => (
-        <blockquote className="border-l-4 border-miku/30 pl-4 py-1 my-4 text-slate-500 italic bg-miku/5 rounded-r-lg" {...props}>
+        <blockquote
+            className="my-4 rounded-r-md3-md border-l-4 border-primary bg-surface-container-high py-2 pl-4 pr-3 italic text-on-surface-variant"
+            {...props}
+        >
             {children}
         </blockquote>
     ),
     ul: ({ children, ...props }: React.ComponentProps<"ul">) => (
-        <ul className="list-disc list-inside space-y-1 mb-4 text-slate-600" {...props}>{children}</ul>
+        <ul className="mb-4 list-inside list-disc space-y-1 type-body-l text-on-surface-variant marker:text-primary" {...props}>{children}</ul>
     ),
     ol: ({ children, ...props }: React.ComponentProps<"ol">) => (
-        <ol className="list-decimal list-inside space-y-1 mb-4 text-slate-600" {...props}>{children}</ol>
+        <ol className="mb-4 list-inside list-decimal space-y-1 type-body-l text-on-surface-variant marker:text-primary" {...props}>{children}</ol>
     ),
     li: ({ children, ...props }: React.ComponentProps<"li">) => (
-        <li className="leading-relaxed" {...props}>{children}</li>
+        <li className="leading-7" {...props}>{children}</li>
     ),
     table: ({ children, ...props }: React.ComponentProps<"table">) => (
-        <div className="overflow-x-auto my-4 rounded-xl border border-slate-200">
-            <table className="w-full text-sm" {...props}>{children}</table>
+        <div className="my-4 overflow-x-auto rounded-md3-md border border-outline-variant">
+            <table className="w-full type-body-m" {...props}>{children}</table>
         </div>
     ),
     thead: ({ children, ...props }: React.ComponentProps<"thead">) => (
-        <thead className="bg-slate-50" {...props}>{children}</thead>
+        <thead className="bg-surface-container-high" {...props}>{children}</thead>
     ),
     th: ({ children, ...props }: React.ComponentProps<"th">) => (
-        <th className="px-4 py-2.5 text-left font-bold text-slate-700 border-b border-slate-200" {...props}>{children}</th>
+        <th className="border-b border-outline-variant px-4 py-2.5 text-left type-title-s text-on-surface" {...props}>{children}</th>
     ),
     td: ({ children, ...props }: React.ComponentProps<"td">) => (
-        <td className="px-4 py-2.5 text-slate-600 border-b border-slate-100" {...props}>{children}</td>
+        <td className="border-b border-outline-variant px-4 py-2.5 text-on-surface-variant" {...props}>{children}</td>
     ),
     hr: (props: React.ComponentProps<"hr">) => (
-        <hr className="my-6 border-slate-200" {...props} />
+        <hr className="my-6 border-outline-variant" {...props} />
     ),
     code: ({ children, className, ...props }: React.ComponentProps<"code">) => {
         // Inline code vs code block
         const isBlock = className?.includes("language-");
         if (isBlock) {
             return (
-                <code className={`block bg-slate-800 text-slate-100 rounded-xl p-4 overflow-x-auto text-sm my-4 ${className ?? ""}`} {...props}>
+                <code
+                    className={`my-4 block overflow-x-auto rounded-md3-md bg-surface-container-highest p-4 font-mono type-body-m text-on-surface ${className ?? ""}`}
+                    {...props}
+                >
                     {children}
                 </code>
             );
         }
         return (
-            <code className="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-sm font-mono" {...props}>
+            <code className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 font-mono text-[0.875em] text-on-surface" {...props}>
                 {children}
             </code>
         );
@@ -148,67 +155,45 @@ function GuideDetailContent() {
     }, [guideId, t]);
 
     if (isLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[50vh]">
-                <div className="loading-spinner loading-spinner-sm" />
-            </div>
-        );
+        return <LoadingState label={t("common.state.loading")} className="min-h-[50vh]" />;
     }
 
     if (error || !guide) {
         return (
-            <div className="container mx-auto px-4 sm:px-6 py-12 text-center">
-                <div className="mb-6 p-6 bg-red-50 border border-red-200 rounded-xl text-red-600 inline-block">
-                    <p className="font-bold text-lg mb-1">{t("page.guides.loadFailed")}</p>
-                    <p className="text-sm">{error ?? t("page.guides.unknownError")}</p>
-                </div>
-                <div>
-                    <button
-                        onClick={() => router.push(localizePathForBrowser("/guides/"))}
-                        className="px-6 py-2 bg-miku text-white rounded-lg font-bold hover:opacity-90 transition-all"
-                    >
+            <PageContainer className="max-w-3xl">
+                <ErrorState title={t("page.guides.loadFailed")} message={error ?? t("page.guides.unknownError")} />
+                <div className="mt-6 flex justify-center">
+                    <Button variant="filled" icon={mdArrowBack} onClick={() => router.push(localizePathForBrowser("/guides/"))}>
                         {t("page.guides.backToList")}
-                    </button>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         );
     }
 
     const categoryLabel = categories[guide.category] ?? guide.category;
-    const colorClass = categoryColors[guide.category] ?? "bg-slate-100 text-slate-600 border-slate-200";
+    const toneClass = categoryTones[guide.category] ?? categoryTones.system;
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8 max-w-4xl">
+        <PageContainer className="max-w-4xl">
             {/* Back Button */}
-            <Link
-                href="/guides/"
-                className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-400 hover:text-miku transition-colors mb-6"
-            >
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
+            <Button variant="text" icon={mdArrowBack} href="/guides/" className="-ml-3 mb-4">
                 {t("page.guides.backToList")}
-            </Link>
+            </Button>
 
             {/* Article Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-2 mb-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${colorClass}`}>
-                        {categoryLabel}
-                    </span>
-                    <span className="text-xs text-slate-400">{guide.date}</span>
+            <header className="mb-8">
+                <div className="mb-3 flex items-center gap-2">
+                    <span className={`inline-flex h-6 items-center rounded-md3-sm px-2 type-label-m ${toneClass}`}>{categoryLabel}</span>
+                    <span className="type-body-s text-on-surface-variant">{guide.date}</span>
                 </div>
 
-                <h1 className="text-2xl sm:text-3xl font-black text-primary-text mb-4">
-                    {guide.title}
-                </h1>
+                <h1 className="mb-4 type-headline-m text-on-surface sm:type-headline-l">{guide.title}</h1>
 
                 {/* Meta info */}
-                <div className="flex flex-wrap items-center gap-3 text-sm text-slate-500">
+                <div className="flex flex-wrap items-center gap-3 type-body-m text-on-surface-variant">
                     <span className="flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                        </svg>
+                        <Icon path={mdPerson} size={18} />
                         {guide.author.group}
                         {guide.author.supervisor && t("page.guides.supervisor", { name: guide.author.supervisor })}
                     </span>
@@ -216,11 +201,9 @@ function GuideDetailContent() {
                     {guide.source && (
                         <ExternalLink
                             href={guide.source}
-                            className="flex items-center gap-1 text-miku hover:underline"
+                            className="state-layer focus-ring flex items-center gap-1 rounded-full px-2 py-1 type-label-l text-primary"
                         >
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
+                            <Icon path={mdOpenInNew} size={18} />
                             {t("page.guides.viewOriginal")}
                         </ExternalLink>
                     )}
@@ -228,57 +211,44 @@ function GuideDetailContent() {
 
                 {/* Tags */}
                 {guide.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-3">
+                    <div className="mt-3 flex flex-wrap gap-1.5">
                         {guide.tags.map((tag) => (
                             <span
                                 key={tag}
-                                className="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-50 text-slate-400 border border-slate-100"
+                                className="inline-flex h-6 items-center rounded-md3-sm border border-outline-variant px-2 type-label-m text-on-surface-variant"
                             >
                                 {tag}
                             </span>
                         ))}
                     </div>
                 )}
-            </div>
+            </header>
 
             {/* Markdown Content */}
-            <div className="bg-white rounded-2xl shadow ring-1 ring-slate-200 p-6 sm:p-8">
-                <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={markdownComponents}
-                >
+            <Surface tone="lowest" radius="xl" as="article" className="p-6 sm:p-8">
+                <ReactMarkdown remarkPlugins={[remarkGfm]} components={markdownComponents}>
                     {content}
                 </ReactMarkdown>
-            </div>
+            </Surface>
 
-            <div className="mt-8 max-w-xl mx-auto">
+            <div className="mx-auto mt-8 max-w-xl">
                 <DetailPageAdCard />
             </div>
 
             {/* Bottom Back Button */}
             <div className="mt-8 text-center">
-                <Link
-                    href="/guides/"
-                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-100 text-slate-600 rounded-lg font-medium hover:bg-slate-200 transition-colors"
-                >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
+                <Button variant="tonal" icon={mdArrowBack} href="/guides/">
                     {t("page.guides.backToList")}
-                </Link>
+                </Button>
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 function GuideDetailLoadingFallback() {
     const { t } = useI18n();
 
-    return (
-        <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-            {t("page.guides.loadingFallback")}
-        </div>
-    );
+    return <LoadingState label={t("page.guides.loadingFallback")} />;
 }
 
 export default function GuideDetailClient() {

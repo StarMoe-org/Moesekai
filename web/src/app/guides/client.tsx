@@ -1,7 +1,8 @@
 "use client";
+import { Banner, Card, EmptyState, ErrorState, Icon, LoadMore, LoadingState, PageContainer, PageHeader, cardClassName } from "@/components/md3";
+import { mdChevronRight, mdHandyman, mdMenuBook, mdOpenInNew } from "@/components/md3/icons";
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
 import ExternalLink from "@/components/ExternalLink";
@@ -10,13 +11,13 @@ import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { fetchGuidesIndex, type GuideEntry, type GuidesIndex } from "@/lib/guides";
 
-// Category badge color mapping
-const categoryColors: Record<string, string> = {
-    gacha: "bg-amber-100 text-amber-700 border-amber-200",
-    event: "bg-blue-100 text-blue-700 border-blue-200",
-    team: "bg-emerald-100 text-emerald-700 border-emerald-200",
-    beginner: "bg-purple-100 text-purple-700 border-purple-200",
-    system: "bg-slate-100 text-slate-600 border-slate-200",
+// Category tag tone mapping (MD3 tonal containers)
+const categoryTones: Record<string, string> = {
+    gacha: "bg-tertiary-container text-on-tertiary-container",
+    event: "bg-primary-container text-on-primary-container",
+    team: "bg-secondary-container text-on-secondary-container",
+    beginner: "bg-primary text-on-primary",
+    system: "bg-surface-container-highest text-on-surface-variant",
 };
 
 function GuidesContent() {
@@ -174,70 +175,49 @@ function GuidesContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.guides.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.guides.title")} <span className="text-miku">{t("page.guides.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.guides.description")}
-                </p>
-                <div className="mt-3 inline-flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-500 bg-amber-500/5 border border-amber-500/10 dark:border-amber-500/20 rounded-xl px-3 py-1.5 mx-auto">
-                    <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-amber-550/10 dark:bg-amber-500/10 text-[9px] font-bold">!</span>
-                    <span>{t("page.guides.machineTranslationNotice")}</span>
-                </div>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.guides.badge")}
+                title={t("page.guides.title")}
+                highlight={t("page.guides.titleHighlight")}
+                description={t("page.guides.description")}
+            />
+
+            <Banner tone="warning" className="mx-auto -mt-2 mb-6 max-w-2xl">
+                {t("page.guides.machineTranslationNotice")}
+            </Banner>
 
             {/* Tool Site Card */}
-            <div className="mb-8 max-w-2xl mx-auto">
+            <div className="mx-auto mb-8 max-w-2xl">
                 <ExternalLink
                     href="https://sekaitools.exmeaning.com/"
-                    className="block p-4 rounded-xl bg-gradient-to-r from-miku/5 to-luka/5 border border-miku/20 hover:border-miku/40 hover:shadow-lg transition-all group"
+                    className={`${cardClassName({ variant: "filled", radius: "lg", interactive: true })} group p-4`}
                 >
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-miku to-miku-dark flex items-center justify-center text-white flex-shrink-0">
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md3-md bg-primary text-on-primary">
+                            <Icon path={mdHandyman} size={22} />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <div className="text-sm font-bold text-primary-text group-hover:text-miku transition-colors">
-                                {t("page.guides.toolSiteTitle")}
-                            </div>
-                            <div className="text-xs text-slate-400">
-                                {t("page.guides.toolSiteDescription")}
-                            </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="type-title-s text-on-surface transition-colors group-hover:text-primary">{t("page.guides.toolSiteTitle")}</div>
+                            <div className="type-body-s text-on-surface-variant">{t("page.guides.toolSiteDescription")}</div>
                         </div>
-                        <svg className="w-5 h-5 text-slate-300 group-hover:text-miku transition-colors flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                        </svg>
+                        <Icon path={mdOpenInNew} size={20} className="text-on-surface-variant" />
                     </div>
                 </ExternalLink>
             </div>
 
             {/* Error State */}
-            {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("page.guides.loadFailed")}</p>
-                    <p>{error}</p>
-                </div>
-            )}
+            {error && <ErrorState className="mb-6" title={t("page.guides.loadFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {isLoading ? (
-                    <div className="flex items-center justify-center min-h-[40vh]">
-                        <div className="loading-spinner loading-spinner-sm" />
-                    </div>
+                    <LoadingState label={t("common.state.loading")} />
                 ) : (
                     <>
-                        <div className="space-y-4">
+                        <div className="space-y-3">
                             {displayedGuides.map((guide) => (
                                 <GuideCard
                                     key={guide.id}
@@ -248,103 +228,62 @@ function GuidesContent() {
                         </div>
 
                         {/* Empty State */}
-                        {filteredGuides.length === 0 && !isLoading && (
-                            <div className="text-center py-16 text-slate-400">
-                                <svg className="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                </svg>
-                                <p className="text-sm">{t("page.guides.noResult")}</p>
-                            </div>
-                        )}
+                        {filteredGuides.length === 0 && !isLoading && <EmptyState icon={mdMenuBook} title={t("page.guides.noResult")} />}
 
-                        {/* Load More */}
-                        {displayedGuides.length < filteredGuides.length && (
-                            <div className="mt-8 flex justify-center">
-                                <button
-                                    onClick={loadMore}
-                                    data-shortcut-load-more="true"
-                                    className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                                >
-                                    {t("page.guides.loadMore")}
-                                    <span className="ml-2 text-sm opacity-80">
-                                        ({displayedGuides.length} / {filteredGuides.length})
-                                    </span>
-                                </button>
-                            </div>
-                        )}
-
-                        {/* All loaded */}
-                        {displayedGuides.length > 0 && displayedGuides.length >= filteredGuides.length && (
-                            <div className="mt-8 text-center text-slate-400 text-sm">
-                                {t("page.guides.allLoaded", { count: filteredGuides.length })}
-                            </div>
-                        )}
+                        <LoadMore
+                            label={t("page.guides.loadMore")}
+                            shown={displayedGuides.length}
+                            total={filteredGuides.length}
+                            onLoadMore={loadMore}
+                            allLoadedLabel={t("page.guides.allLoaded", { count: filteredGuides.length })}
+                        />
                     </>
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 function GuideCard({ guide, categoryLabel }: { guide: GuideEntry; categoryLabel: string }) {
-    const colorClass = categoryColors[guide.category] ?? "bg-slate-100 text-slate-600 border-slate-200";
+    const toneClass = categoryTones[guide.category] ?? categoryTones.system;
 
     return (
-        <Link
-            href={`/guides/${guide.id}/`}
-            data-shortcut-item="true"
-            className="block group"
-        >
-            <div className="bg-white rounded-xl shadow ring-1 ring-slate-200 overflow-hidden hover:ring-miku hover:shadow-lg transition-all p-5">
-                <div className="flex items-start justify-between gap-3">
-                    <div className="flex-1 min-w-0">
-                        {/* Category + Date */}
-                        <div className="flex items-center gap-2 mb-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold border ${colorClass}`}>
-                                {categoryLabel}
-                            </span>
-                            <span className="text-xs text-slate-400">{guide.date}</span>
-                        </div>
-
-                        {/* Title */}
-                        <h3 className="text-base font-bold text-slate-700 group-hover:text-miku transition-colors line-clamp-2">
-                            {guide.title}
-                        </h3>
-
-                        {/* Tags + Author */}
-                        <div className="mt-2 flex items-center gap-2 flex-wrap">
-                            {guide.tags.slice(0, 4).map((tag) => (
-                                <span
-                                    key={tag}
-                                    className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-50 text-slate-400 border border-slate-100"
-                                >
-                                    {tag}
-                                </span>
-                            ))}
-                            <span className="text-[11px] text-slate-400 ml-auto flex-shrink-0">
-                                {guide.author.group}
-                            </span>
-                        </div>
+        <Card href={`/guides/${guide.id}/`} data-shortcut-item="true" variant="filled" className="group p-5">
+            <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                    {/* Category + Date */}
+                    <div className="mb-2 flex items-center gap-2">
+                        <span className={`inline-flex h-6 items-center rounded-md3-sm px-2 type-label-m ${toneClass}`}>{categoryLabel}</span>
+                        <span className="type-body-s text-on-surface-variant">{guide.date}</span>
                     </div>
 
-                    {/* Arrow */}
-                    <svg className="w-5 h-5 text-slate-300 group-hover:text-miku transition-colors flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
+                    {/* Title */}
+                    <h3 className="line-clamp-2 type-title-m text-on-surface transition-colors group-hover:text-primary">{guide.title}</h3>
+
+                    {/* Tags + Author */}
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                        {guide.tags.slice(0, 4).map((tag) => (
+                            <span
+                                key={tag}
+                                className="inline-flex h-5 items-center rounded-md3-xs border border-outline-variant px-1.5 type-label-s text-on-surface-variant"
+                            >
+                                {tag}
+                            </span>
+                        ))}
+                        <span className="ml-auto shrink-0 type-label-m text-on-surface-variant">{guide.author.group}</span>
+                    </div>
                 </div>
+
+                <Icon path={mdChevronRight} size={20} className="mt-1 text-on-surface-variant" />
             </div>
-        </Link>
+        </Card>
     );
 }
 
 function GuidesLoadingFallback() {
     const { t } = useI18n();
 
-    return (
-        <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">
-            {t("page.guides.loadingFallback")}
-        </div>
-    );
+    return <LoadingState label={t("page.guides.loadingFallback")} />;
 }
 
 export default function GuidesClient() {

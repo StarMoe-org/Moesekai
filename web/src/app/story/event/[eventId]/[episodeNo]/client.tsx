@@ -1,7 +1,8 @@
 "use client";
+import { PageContainer } from "@/components/md3";
+import { ServerSourceBadge, StoryBackButton, StoryBadge, StoryEpisodeNav, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
 import { useStoryAsset } from "@/hooks/useStoryAsset";
@@ -100,52 +101,43 @@ export default function StoryEventReaderClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <Link 
-                    href={`/story/event/${eventId}`} 
-                    className="ios-glass-btn border-none hover:bg-miku/10 px-4 py-2 rounded-xl inline-flex items-center gap-2 text-slate-500 hover:text-miku transition-colors mb-6"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    {t("page.story.unit.backToChapters")}
-                </Link>
+            <PageContainer>
+                <StoryBackButton href={`/story/event/${eventId}`}>{t("page.story.unit.backToChapters")}</StoryBackButton>
 
-                {/* Header */}
-                <div className="ios-glass-card border-none rounded-xl p-4 mb-6">
-                    <div className="flex items-center gap-4">
-                        {eventStory && (
-                            <img src={getEventLogoUrl(eventStory.assetbundleName, assetSource)} alt="" className="w-16 h-16 object-contain hidden sm:block bg-white/5 p-1 rounded-xl" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{eventInfo?.name ?? t("page.story.event.fallbackEventName", { id: eventId })}</p>
-                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                <h1 className="font-extrabold text-slate-900 dark:text-slate-100 text-base sm:text-lg">
-                                    <span className="text-miku">{t("page.story.event.episodeLabel", { episode: episodeNo })}</span>
-                                    {displayTitle && ` — ${displayTitle}`}
-                                </h1>
-                                {useLLMTranslation && translationSource && (
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                        translationSource === "official_cn"
-                                            ? "bg-amber-100/50 text-amber-800 border-amber-200/20 dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-700/30"
-                                            : translationSource === "human"
-                                            ? "bg-emerald-100/50 text-emerald-800 border-emerald-200/20 dark:bg-emerald-900/20 dark:text-emerald-300 dark:border-emerald-700/30"
-                                            : "bg-slate-100/50 text-slate-600 border-slate-200/20 dark:bg-slate-800/20 dark:text-slate-400 dark:border-slate-700/30"
-                                    }`}>
-                                        {translationSource === "official_cn" ? t("page.story.reader.translationSources.officialCn") : translationSource === "human" ? (eventId <= 198 ? t("page.story.reader.translationSources.aiPolishedShort") : t("page.story.reader.translationSources.human")) : t("page.story.reader.translationSources.ai")}
-                                    </span>
-                                )}
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                    serverSource === "cn"
-                                        ? "bg-rose-105/50 text-rose-600 border-rose-500/20 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-700/30"
-                                        : "bg-blue-105/50 text-blue-600 border-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700/30"
-                                }`}>
-                                    {t(`page.story.serverSource.${serverSource}`)}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <StoryReaderHeader
+                    media={
+                        eventStory && (
+                            <img
+                                src={getEventLogoUrl(eventStory.assetbundleName, assetSource)}
+                                alt=""
+                                className="h-16 w-16 rounded-md3-md bg-surface-container-high object-contain p-1"
+                            />
+                        )
+                    }
+                    eyebrow={eventInfo?.name ?? t("page.story.event.fallbackEventName", { id: eventId })}
+                    title={
+                        <>
+                            <span className="text-primary">{t("page.story.event.episodeLabel", { episode: episodeNo })}</span>
+                            {displayTitle && ` — ${displayTitle}`}
+                        </>
+                    }
+                    badges={
+                        <>
+                            {useLLMTranslation && translationSource && (
+                                <StoryBadge tone={translationSource === "official_cn" ? "tertiary" : translationSource === "human" ? "primary" : "neutral"}>
+                                    {translationSource === "official_cn"
+                                        ? t("page.story.reader.translationSources.officialCn")
+                                        : translationSource === "human"
+                                          ? eventId <= 198
+                                              ? t("page.story.reader.translationSources.aiPolishedShort")
+                                              : t("page.story.reader.translationSources.human")
+                                          : t("page.story.reader.translationSources.ai")}
+                                </StoryBadge>
+                            )}
+                            <ServerSourceBadge serverSource={serverSource} />
+                        </>
+                    }
+                />
 
                 <StoryReader
                     scenarioData={scenarioData}
@@ -159,34 +151,12 @@ export default function StoryEventReaderClient() {
                 />
 
                 {!isLoading && !masterLoading && (
-                    <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 max-w-4xl mx-auto gap-4">
-                        {prevEpisode ? (
-                            <Link 
-                                href={`/story/event/${eventId}/${prevEpisode.episodeNo}`} 
-                                className="ios-glass-card ios-glass-card-interactive border-none flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-primary-text hover:text-miku transition-colors max-w-[45%]"
-                            >
-                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                                <div className="text-left min-w-0">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t("page.story.navigation.previousEpisode")}</div>
-                                    <div className="text-xs font-extrabold truncate">{prevEpisode.title}</div>
-                                </div>
-                            </Link>
-                        ) : <div />}
-                        {nextEpisode ? (
-                            <Link 
-                                href={`/story/event/${eventId}/${nextEpisode.episodeNo}`} 
-                                className="ios-glass-card ios-glass-card-interactive border-none flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-primary-text hover:text-miku transition-colors max-w-[45%] text-right justify-end"
-                            >
-                                <div className="text-right min-w-0">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t("page.story.navigation.nextEpisode")}</div>
-                                    <div className="text-xs font-extrabold truncate">{nextEpisode.title}</div>
-                                </div>
-                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            </Link>
-                        ) : <div />}
-                    </div>
+                    <StoryEpisodeNav
+                        prev={prevEpisode ? { href: `/story/event/${eventId}/${prevEpisode.episodeNo}`, title: prevEpisode.title } : null}
+                        next={nextEpisode ? { href: `/story/event/${eventId}/${nextEpisode.episodeNo}`, title: nextEpisode.title } : null}
+                    />
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

@@ -1,7 +1,8 @@
 "use client";
+import { PageContainer } from "@/components/md3";
+import { ServerSourceBadge, StoryBackButton, StoryEpisodeNav, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
 import { useStoryAsset } from "@/hooks/useStoryAsset";
@@ -77,36 +78,20 @@ export default function StoryUnitReaderClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                <Link 
-                    href={`/story/unit/${unitId}`} 
-                    className="ios-glass-btn border-none hover:bg-miku/10 px-4 py-2 rounded-xl inline-flex items-center gap-2 text-slate-500 hover:text-miku transition-colors mb-6"
-                >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                    {t("page.story.unit.backToChapters")}
-                </Link>
+            <PageContainer>
+                <StoryBackButton href={`/story/unit/${unitId}`}>{t("page.story.unit.backToChapters")}</StoryBackButton>
 
-                <div className="ios-glass-card border-none rounded-xl p-4 mb-6">
-                    <div className="flex items-center gap-3">
-                        {logoUrl && <img src={logoUrl} alt="" className="w-16 h-8 object-contain hidden sm:block bg-white/5 p-1 rounded" />}
-                        <div className="flex-1 min-w-0">
-                            <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">{profile?.unitName ?? t("page.story.unit.fallbackUnitName", { id: unitId })}</p>
-                            <div className="flex items-center gap-2 flex-wrap mt-0.5">
-                                <h1 className="font-extrabold text-slate-900 dark:text-slate-100 text-base sm:text-lg">
-                                    {currentEp && <span className="text-miku">{currentEp.episodeNoLabel} — </span>}
-                                    {currentEp?.title ?? episodeId}
-                                </h1>
-                                <span className={`text-[10px] px-1.5 py-0.5 rounded border ${
-                                    serverSource === "cn"
-                                        ? "bg-rose-105/50 text-rose-600 border-rose-500/20 dark:bg-rose-900/20 dark:text-rose-300 dark:border-rose-700/30"
-                                        : "bg-blue-105/50 text-blue-600 border-blue-500/20 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-700/30"
-                                }`}>{t(`page.story.serverSource.${serverSource}`)}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <StoryReaderHeader
+                    media={logoUrl && <img src={logoUrl} alt="" className="h-8 w-16 rounded-md3-xs bg-surface-container-high object-contain p-1" />}
+                    eyebrow={profile?.unitName ?? t("page.story.unit.fallbackUnitName", { id: unitId })}
+                    title={
+                        <>
+                            {currentEp && <span className="text-primary">{currentEp.episodeNoLabel} — </span>}
+                            {currentEp?.title ?? episodeId}
+                        </>
+                    }
+                    badges={<ServerSourceBadge serverSource={serverSource} />}
+                />
 
                 <StoryReader
                     scenarioData={scenarioData}
@@ -117,34 +102,12 @@ export default function StoryUnitReaderClient() {
                 />
 
                 {!isLoading && !masterLoading && (
-                    <div className="flex justify-between items-center mt-8 pt-6 border-t border-slate-200/50 dark:border-slate-700/50 max-w-4xl mx-auto gap-4">
-                        {prevEp ? (
-                            <Link 
-                                href={`/story/unit/${unitId}/${encodeURIComponent(prevEp.scenarioId)}`} 
-                                className="ios-glass-card ios-glass-card-interactive border-none flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-primary-text hover:text-miku transition-colors max-w-[45%]"
-                            >
-                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-                                <div className="text-left min-w-0">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t("page.story.navigation.previousEpisode")}</div>
-                                    <div className="text-xs font-extrabold truncate">{prevEp.title}</div>
-                                </div>
-                            </Link>
-                        ) : <div />}
-                        {nextEp ? (
-                            <Link 
-                                href={`/story/unit/${unitId}/${encodeURIComponent(nextEp.scenarioId)}`} 
-                                className="ios-glass-card ios-glass-card-interactive border-none flex items-center gap-2.5 px-4 py-2.5 rounded-xl text-primary-text hover:text-miku transition-colors max-w-[45%] text-right justify-end"
-                            >
-                                <div className="text-right min-w-0">
-                                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{t("page.story.navigation.nextEpisode")}</div>
-                                    <div className="text-xs font-extrabold truncate">{nextEp.title}</div>
-                                </div>
-                                <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-                            </Link>
-                        ) : <div />}
-                    </div>
+                    <StoryEpisodeNav
+                        prev={prevEp ? { href: `/story/unit/${unitId}/${encodeURIComponent(prevEp.scenarioId)}`, title: prevEp.title } : null}
+                        next={nextEp ? { href: `/story/unit/${unitId}/${encodeURIComponent(nextEp.scenarioId)}`, title: nextEp.title } : null}
+                    />
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

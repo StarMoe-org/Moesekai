@@ -1,4 +1,5 @@
 "use client";
+import { ErrorState, LoadMore, LoadingState, PageContainer } from "@/components/md3";
 import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
@@ -223,36 +224,28 @@ function StoryCardContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             <StoryPageHeader storyKey="card" />
 
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p><p>{error}</p>
-                </div>
+                <ErrorState className="mb-6" title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 <CardGrid cards={displayedCards} isLoading={isLoading} hrefPrefix="/story/card" />
-                {!isLoading && displayedCards.length < filteredCards.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            data-shortcut-load-more="true"
-                            onClick={loadMore}
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.story.card.loadMore")}
-                            <span className="ml-2 text-sm opacity-80">({displayedCards.length} / {filteredCards.length})</span>
-                        </button>
-                    </div>
-                )}
-                {!isLoading && displayedCards.length > 0 && displayedCards.length >= filteredCards.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">{t("page.story.card.allLoaded", { count: filteredCards.length })}</div>
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.story.card.loadMore")}
+                        shown={displayedCards.length}
+                        total={filteredCards.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.story.card.allLoaded", { count: filteredCards.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -261,7 +254,7 @@ export default function StoryCardListClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.story.card.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState label={t("page.story.card.loadingFallback")} />}>
                 <StoryCardContent />
             </Suspense>
         </MainLayout>

@@ -1,6 +1,6 @@
 "use client";
+import { Card, ErrorState, LoadingState, PageContainer } from "@/components/md3";
 import { useState, useEffect } from "react";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { fetchMasterData } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
@@ -50,47 +50,44 @@ export default function StorySelfListClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 <StoryPageHeader storyKey="self" />
 
-                {isLoading && (
-                    <div className="flex justify-center py-16">
-                        <div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin"></div>
-                    </div>
-                )}
-                {error && <div className="text-red-500 text-center py-8">{error}</div>}
+                {isLoading && <LoadingState label={t("common.state.loading")} />}
+                {error && <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
                 {!isLoading && !error && (
                     <div className="space-y-8">
                         {unitGroups.map(({ unit, labelKey, charas: unitCharas }) => (
-                            <div key={unit}>
-                                <h2 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 text-center">{labelKey ? t(labelKey) : unit}</h2>
+                            <section key={unit}>
+                                <h2 className="mb-3 text-center type-title-m text-on-surface-variant">{labelKey ? t(labelKey) : unit}</h2>
                                 <div className="flex flex-wrap justify-center gap-3">
                                     {unitCharas.map(c => {
                                         const charaName = `${c.firstName ?? ""}${c.givenName}`;
                                         return (
-                                            <Link
+                                            <Card
                                                 key={c.id}
                                                 href={`/story/self/${c.id}`}
-                                                className="group flex flex-col items-center gap-2 p-3 w-[calc(50%-6px)] sm:w-28 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-miku/50 hover:shadow-md transition-all"
+                                                variant="filled"
+                                                className="group flex w-[calc(50%-6px)] flex-col items-center gap-2 p-3 sm:w-28"
                                             >
                                                 <img
                                                     src={getCharacterIconUrl(c.id)}
                                                     alt={charaName}
-                                                    className="w-14 h-14 rounded-full object-cover border-2 border-slate-200 dark:border-slate-600 group-hover:border-miku/50 transition-colors"
+                                                    className="h-14 w-14 rounded-full bg-surface-container-high object-cover"
                                                 />
-                                                <span className="text-xs font-medium text-slate-700 dark:text-slate-300 group-hover:text-miku transition-colors text-center leading-tight">
+                                                <span className="text-center type-label-l text-on-surface transition-colors group-hover:text-primary">
                                                     {charaName}
                                                 </span>
-                                            </Link>
+                                            </Card>
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </section>
                         ))}
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

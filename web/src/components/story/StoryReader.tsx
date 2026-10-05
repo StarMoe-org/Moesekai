@@ -1,4 +1,6 @@
 "use client";
+import { Banner, Button, ErrorState, Icon, IconButton, LinearProgress, LoadingState, Surface } from "@/components/md3";
+import { mdClose, mdGraphicEq, mdLandscape, mdMyLocation, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious } from "@/components/md3/icons";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { StorySnippet } from "@/components/story/StorySnippet";
 import { useI18n } from "@/contexts/I18nContext";
@@ -318,122 +320,91 @@ export function StoryReader({
     };
 
     if (isLoading) {
-        return (
-            <div className="flex flex-col items-center justify-center py-16">
-                <div className="loading-spinner mb-4" />
-                <p className="text-slate-500 font-semibold">{t("page.story.reader.loading")}</p>
-            </div>
-        );
+        return <LoadingState label={t("page.story.reader.loading")} className="min-h-[30vh]" />;
     }
 
     if (missingPaths && missingPaths.length > 0) {
         return (
-            <div className="p-5 ios-glass-panel border-none rounded-xl text-sm">
-                <p className="font-bold text-amber-800 dark:text-amber-300 mb-2">{t("page.story.reader.assetMissingTitle")}</p>
-                <p className="text-amber-700 dark:text-amber-400 mb-3">
-                    {t("page.story.reader.assetMissingDescription")}
-                </p>
+            <Banner tone="warning" title={t("page.story.reader.assetMissingTitle")}>
+                <p className="mb-3">{t("page.story.reader.assetMissingDescription")}</p>
                 <ul className="space-y-1">
                     {missingPaths.map((p) => (
-                        <li key={p} className="font-mono text-xs bg-amber-100/30 dark:bg-amber-900/20 px-3 py-1.5 rounded break-all text-amber-900 dark:text-amber-200">
+                        <li key={p} className="break-all rounded-md3-xs bg-surface-container-highest px-3 py-1.5 font-mono type-body-s text-on-surface">
                             {p}
                         </li>
                     ))}
                 </ul>
-            </div>
+            </Banner>
         );
     }
 
     if (error) {
-        return (
-            <div className="p-4 ios-glass-panel border-none rounded-xl text-red-600 dark:text-red-400 text-sm">
-                <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                <p>{error}</p>
-                <button
-                    onClick={() => window.location.reload()}
-                    className="mt-3 px-4 py-2 ios-glass-btn border-none hover:bg-miku/10 text-miku text-xs rounded-xl"
-                >
-                    {t("common.action.retry")}
-                </button>
-            </div>
-        );
+        return <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />;
     }
 
     if (!scenarioData) return null;
 
     return (
-        <div className="max-w-4xl mx-auto relative pb-20">
-            {/* Ambient Immersion Blurred Background Layer */}
+        <div className="relative mx-auto max-w-4xl pb-24">
+            {/* Ambient immersion background layer */}
             {activeBgUrl && immersionMode && (
-                <div className="fixed inset-0 z-0 pointer-events-none transition-opacity duration-1000 ease-in-out opacity-25 dark:opacity-20">
-                    <img 
-                        src={activeBgUrl} 
-                        alt="" 
-                        className="w-full h-full object-cover blur-md scale-[1.03]" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-100/40 to-slate-100/90 dark:via-slate-950/40 dark:to-slate-950/90" />
+                <div className="pointer-events-none fixed inset-0 z-0 opacity-25 transition-opacity duration-1000 ease-in-out">
+                    <img src={activeBgUrl} alt="" className="h-full w-full scale-[1.03] object-cover blur-md" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-surface/40 to-surface/90" />
                 </div>
             )}
 
-            {/* Top Autoplay Onboarding Header Banner */}
+            {/* Autoplay onboarding banner */}
             {activeIndex === -1 && (
-                <div className="ios-glass-card rounded-2xl p-5 mb-6 border-none flex flex-col sm:flex-row items-center justify-between gap-4 animate-fade-in relative z-10">
-                    <div>
-                        <h3 className="font-extrabold text-slate-800 dark:text-white flex items-center gap-2">
-                            <span className="w-2.5 h-2.5 rounded-full bg-miku animate-pulse" />
-                            {t("page.story.reader.autoplay")} Mode
+                <Surface tone="default" radius="xl" className="relative z-10 mb-6 flex animate-fade-in flex-col items-center justify-between gap-4 p-5 sm:flex-row">
+                    <div className="min-w-0">
+                        <h3 className="flex items-center gap-2 type-title-m text-on-surface">
+                            <Icon path={mdGraphicEq} size={20} className="text-primary" />
+                            {t("page.story.reader.autoplay")}
                         </h3>
-                        <p className="text-xs text-slate-500 mt-1 leading-relaxed">
-                            {t("page.story.reader.autoplayHint")}
-                        </p>
+                        <p className="mt-1 type-body-s text-on-surface-variant">{t("page.story.reader.autoplayHint")}</p>
                     </div>
-                    <button
-                        onClick={togglePlay}
-                        className="ios-glass-btn-primary border-none hover:bg-miku font-black text-sm px-6 py-2.5 rounded-xl flex items-center gap-2 shrink-0 shadow-lg active:scale-95 transition-transform"
-                    >
-                        <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                            <path d="M8 5.14v14l11-7-11-7z" />
-                        </svg>
+                    <Button variant="filled" icon={mdPlayArrowFill} onClick={togglePlay} className="shrink-0">
                         {t("page.story.reader.autoplay")}
-                    </button>
-                </div>
+                    </Button>
+                </Surface>
             )}
 
             {scenarioData.characters.length > 0 && (
-                <div className="mb-6 p-4 ios-glass-panel border-none rounded-2xl relative z-10 shadow-sm">
-                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-3">{t("page.story.reader.charactersTitle")}</h3>
+                <Surface tone="low" radius="lg" className="relative z-10 mb-6 p-4">
+                    <h3 className="mb-3 type-title-s text-on-surface-variant">{t("page.story.reader.charactersTitle")}</h3>
                     <div className="flex flex-wrap gap-2">
                         {scenarioData.characters.map((char) => (
                             <span
                                 key={char.id}
-                                className="px-3.5 py-1 ios-glass-tab border-none text-miku text-xs font-bold rounded-full"
+                                className="inline-flex h-8 items-center rounded-md3-sm bg-secondary-container px-3 type-label-l text-on-secondary-container"
                             >
                                 {char.name}
                             </span>
                         ))}
                     </div>
-                </div>
+                </Surface>
             )}
 
             {/* Dialogue list with IDs to anchor scroll tracking */}
-            <div className="space-y-2 relative z-10">
+            <div className="relative z-10 space-y-2">
                 {scenarioData.actions.map((action, index) => (
                     <div key={index} id={`snippet-${index}`}>
-                        <StorySnippet 
-                            action={action} 
-                            index={index} 
-                            activeIndex={activeIndex} 
-                            playbackProgress={playbackProgress} 
+                        <StorySnippet
+                            action={action}
+                            index={index}
+                            activeIndex={activeIndex}
+                            playbackProgress={playbackProgress}
                         />
                     </div>
                 ))}
             </div>
 
             {scenarioData.actions.length > 0 && (
-                <div className="text-center py-10 text-slate-400 relative z-10">
-                    <p>— {endLabel ?? t("page.story.reader.defaultEndLabel")} —</p>
+                <div className="relative z-10 py-10 text-center text-on-surface-variant">
+                    <p className="type-title-s">— {endLabel ?? t("page.story.reader.defaultEndLabel")} —</p>
                     {useLLMTranslation && (translationSource === "llm" || translationSource === "human") && (
-                        <p className="text-xs mt-2.5 italic">
+                        <p className="mt-2.5 type-body-s italic">
                             {t("page.story.reader.translationCredit", {
                                 source: translationSource === "human"
                                     ? (storyType === "event" && storyId !== undefined && storyId <= 198
@@ -446,113 +417,68 @@ export function StoryReader({
                 </div>
             )}
 
-            {/* iOS 26 Premium Frosted Glass Floating Dialogue Audio Player */}
+            {/* Floating autoplay control bar */}
             {activeIndex >= 0 && (
-                <div className="fixed bottom-6 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:w-[480px] z-50 animate-fade-in">
-                    <div className="ios-glass-panel border-none rounded-2xl py-3 px-4 shadow-xl flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-1.5">
-                            {/* Prev */}
-                            <button
-                                onClick={handlePrev}
-                                disabled={activeIndex <= 0}
-                                className="p-2 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/10 dark:hover:bg-black/10 rounded-full transition-colors"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                                </svg>
-                            </button>
+                <div className="fixed bottom-6 left-4 right-4 z-50 animate-fade-in sm:left-1/2 sm:right-auto sm:w-[520px] sm:-translate-x-1/2">
+                    <Surface tone="default" radius="xl" elevation={3} className="overflow-hidden">
+                        <LinearProgress
+                            value={(activeIndex + 1) / scenarioData.actions.length}
+                            aria-label={t("page.story.reader.lineProgress", { current: activeIndex + 1, total: scenarioData.actions.length })}
+                        />
+                        <div className="flex items-center justify-between gap-2 px-3 py-2">
+                            <div className="flex items-center gap-1">
+                                <IconButton icon={mdSkipPrevious} label={t("common.md3.previous")} onClick={handlePrev} disabled={activeIndex <= 0} />
+                                <IconButton
+                                    icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+                                    label={isPlaying ? t("page.story.reader.pause") : t("page.story.reader.play")}
+                                    variant="filled"
+                                    onClick={togglePlay}
+                                />
+                                <IconButton
+                                    icon={mdSkipNext}
+                                    label={t("common.md3.next")}
+                                    onClick={handleNext}
+                                    disabled={activeIndex >= scenarioData.actions.length - 1}
+                                />
+                            </div>
 
-                            {/* Play/Pause */}
-                            <button
-                                onClick={togglePlay}
-                                className="w-10 h-10 bg-miku hover:bg-miku-dark text-white rounded-full flex items-center justify-center shadow-md shadow-miku/20 active:scale-95 transition-transform shrink-0"
-                            >
-                                {isPlaying ? (
-                                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                                        <rect x="6" y="5" width="4" height="14" rx="1" />
-                                        <rect x="14" y="5" width="4" height="14" rx="1" />
-                                    </svg>
-                                ) : (
-                                    <svg className="w-5 h-5 fill-current ml-0.5" viewBox="0 0 24 24">
-                                        <path d="M8 5.14v14l11-7-11-7z" />
-                                    </svg>
-                                )}
-                            </button>
+                            {/* Line position */}
+                            <div className="min-w-0 flex-1 px-1 text-center">
+                                <span className="block truncate type-label-s text-primary">{t("page.story.reader.autoplay")}</span>
+                                <span className="mt-0.5 block truncate type-label-m text-on-surface">
+                                    {t("page.story.reader.lineProgress", { current: activeIndex + 1, total: scenarioData.actions.length })}
+                                </span>
+                            </div>
 
-                            {/* Next */}
-                            <button
-                                onClick={handleNext}
-                                disabled={activeIndex >= scenarioData.actions.length - 1}
-                                className="p-2 text-slate-600 dark:text-slate-300 disabled:opacity-30 disabled:pointer-events-none hover:bg-white/10 dark:hover:bg-black/10 rounded-full transition-colors"
-                            >
-                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </button>
-                        </div>
-
-                        {/* Player Metadata & mini-scroller */}
-                        <div className="flex-1 min-w-0 text-center px-1">
-                            <span className="text-[10px] text-miku font-bold tracking-widest uppercase">Voicing Playback</span>
-                            <div className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate mt-0.5">
-                                Dialogue Line {activeIndex + 1} / {scenarioData.actions.length}
+                            <div className="flex shrink-0 items-center gap-1">
+                                <Button
+                                    variant="text"
+                                    size="xs"
+                                    onClick={toggleSpeed}
+                                    title={t("page.story.reader.speed")}
+                                    aria-label={`${t("page.story.reader.speed")} ${speed}x`}
+                                    className="min-w-12 px-2"
+                                >
+                                    {speed}x
+                                </Button>
+                                <IconButton
+                                    icon={mdMyLocation}
+                                    label={t("page.story.reader.autoScroll")}
+                                    variant="standard"
+                                    selected={isScrollLocked}
+                                    onClick={() => setIsScrollLocked(prev => !prev)}
+                                />
+                                <IconButton
+                                    icon={mdLandscape}
+                                    label={t("page.story.reader.immersionMode")}
+                                    variant="standard"
+                                    selected={immersionMode}
+                                    onClick={() => setImmersionMode(prev => !prev)}
+                                />
+                                <IconButton icon={mdClose} label={t("page.story.reader.close")} onClick={handleStop} />
                             </div>
                         </div>
-
-                        {/* Side Player Modifiers */}
-                        <div className="flex items-center gap-1.5 shrink-0">
-                            {/* Speed */}
-                            <button
-                                onClick={toggleSpeed}
-                                className="px-2 py-1 ios-glass-tab border-none hover:bg-miku/15 hover:text-miku text-[10px] font-black rounded-lg transition-colors"
-                                title="Playback Speed"
-                            >
-                                {speed}x
-                            </button>
-
-                            {/* Scroll Lock */}
-                            <button
-                                onClick={() => setIsScrollLocked(prev => !prev)}
-                                className={`p-2 rounded-lg transition-all ${
-                                    isScrollLocked 
-                                        ? "bg-miku/10 text-miku border border-miku/20 shadow-sm" 
-                                        : "text-slate-400 hover:bg-white/10 dark:hover:bg-black/10 border border-transparent"
-                                }`}
-                                title={t("page.story.reader.autoScroll")}
-                            >
-                                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                                </svg>
-                            </button>
-
-                            {/* Immersion Mode */}
-                            <button
-                                onClick={() => setImmersionMode(prev => !prev)}
-                                className={`p-2 rounded-lg transition-all ${
-                                    immersionMode 
-                                        ? "bg-purple-500/15 text-purple-500 border border-purple-500/20 shadow-sm" 
-                                        : "text-slate-400 hover:bg-white/10 dark:hover:bg-black/10 border border-transparent"
-                                }`}
-                                title={t("page.story.reader.immersionMode")}
-                            >
-                                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                            </button>
-
-                            {/* Close Stop */}
-                            <button
-                                onClick={handleStop}
-                                className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Close Player"
-                            >
-                                <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                    </div>
+                    </Surface>
                 </div>
             )}
         </div>

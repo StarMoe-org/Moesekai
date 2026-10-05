@@ -1,4 +1,5 @@
 "use client";
+import { ErrorState, LoadMore, LoadingState, PageContainer } from "@/components/md3";
 import { Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
@@ -58,15 +59,16 @@ function StoryEventListContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
+        <PageContainer>
             <StoryPageHeader storyKey="event" />
 
             {data.error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{data.error}</p>
-                    <button onClick={() => window.location.reload()} className="mt-2 text-red-500 underline hover:no-underline">{t("common.action.retry")}</button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={data.error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Filters live in the global FilterDrawer (registered above via
@@ -81,27 +83,17 @@ function StoryEventListContent() {
                     eventBonusAttrMap={data.eventBonusAttrMap}
                     eventStoryIds={data.eventStoryIds}
                 />
-                {!data.isLoading && data.displayedEvents.length < data.filteredEvents.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={data.loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.story.event.loadMore")}
-                            <span className="ml-2 text-sm opacity-80">
-                                ({data.displayedEvents.length} / {data.filteredEvents.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-                {!data.isLoading && data.displayedEvents.length > 0 && data.displayedEvents.length >= data.filteredEvents.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.story.event.allLoaded", { count: data.filteredEvents.length })}
-                    </div>
+                {!data.isLoading && (
+                    <LoadMore
+                        label={t("page.story.event.loadMore")}
+                        shown={data.displayedEvents.length}
+                        total={data.filteredEvents.length}
+                        onLoadMore={data.loadMore}
+                        allLoadedLabel={t("page.story.event.allLoaded", { count: data.filteredEvents.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
@@ -110,7 +102,7 @@ export default function StoryEventListClient() {
 
     return (
         <MainLayout>
-            <Suspense fallback={<div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.story.event.loadingFallback")}</div>}>
+            <Suspense fallback={<LoadingState label={t("page.story.event.loadingFallback")} />}>
                 <StoryEventListContent />
             </Suspense>
         </MainLayout>

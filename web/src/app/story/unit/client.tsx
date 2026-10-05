@@ -1,6 +1,5 @@
 "use client";
 import { useState, useEffect } from "react";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { fetchMasterData } from "@/lib/fetch";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -8,6 +7,7 @@ import { IUnitProfile } from "@/types/types";
 import { useSimpleScrollRestore } from "@/hooks/useSimpleScrollRestore";
 import { StoryPageHeader } from "@/components/story/StoryPageHeader";
 import { useI18n } from "@/contexts/I18nContext";
+import { Card, ErrorState, LoadingState, PageContainer } from "@/components/md3";
 
 interface IUnitStoryChapterEpisode {
     episodeNo: number;
@@ -71,46 +71,41 @@ export default function StoryUnitListClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 <StoryPageHeader storyKey="unit" />
 
-                {isLoading && (
-                    <div className="flex justify-center py-16">
-                        <div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin"></div>
-                    </div>
-                )}
-                {error && <div className="text-red-500 text-center py-8">{error}</div>}
+                {isLoading && <LoadingState label={t("common.state.loading")} />}
+                {error && <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
                 {!isLoading && !error && (
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                         {units.map(({ profile, story }) => {
                             const logoUrl = getUnitOutlineLogoUrl(profile.unit, serverSource);
                             const episodeCount = story.chapters[0]?.episodes.length ?? 0;
                             return (
-                                <Link
+                                <Card
                                     key={profile.seq}
                                     href={`/story/unit/${profile.seq}`}
-                                    className="ios-glass-card ios-glass-card-interactive border-none p-5 flex flex-col items-center gap-3 text-center group"
+                                    variant="filled"
+                                    className="group flex flex-col items-center gap-3 p-5 text-center"
                                 >
-                                    <div className="w-full h-14 flex items-center justify-center transition-transform group-hover:scale-105 duration-300">
-                                        <img
-                                            src={logoUrl}
-                                            alt={profile.unitName}
-                                            className="max-w-full max-h-full object-contain"
-                                        />
+                                    <div className="flex h-14 w-full items-center justify-center">
+                                        <img src={logoUrl} alt={profile.unitName} className="max-h-full max-w-full object-contain" />
                                     </div>
                                     <div>
-                                        <h2 className="text-sm font-bold text-slate-800 dark:text-slate-100 group-hover:text-miku transition-colors leading-tight">
+                                        <h2 className="type-title-s text-on-surface transition-colors group-hover:text-primary">
                                             {profile.unitName}
                                         </h2>
-                                        <p className="text-xs text-slate-400 mt-0.5">{t("page.story.unit.episodeCount", { count: episodeCount })}</p>
+                                        <p className="mt-0.5 type-body-s text-on-surface-variant">
+                                            {t("page.story.unit.episodeCount", { count: episodeCount })}
+                                        </p>
                                     </div>
-                                </Link>
+                                </Card>
                             );
                         })}
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }

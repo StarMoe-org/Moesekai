@@ -1,6 +1,7 @@
 "use client";
+import { Card, ErrorState, Icon, LoadingState, PageContainer } from "@/components/md3";
+import { mdChevronRight } from "@/components/md3/icons";
 import { useState, useEffect } from "react";
-import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import { fetchMasterData } from "@/lib/fetch";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -52,39 +53,29 @@ export default function StorySpecialListClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 <StoryPageHeader storyKey="special" />
 
-                {isLoading && (
-                    <div className="flex justify-center py-16">
-                        <div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin"></div>
-                    </div>
-                )}
-                {error && <div className="text-red-500 text-center py-8">{error}</div>}
+                {isLoading && <LoadingState label={t("common.state.loading")} />}
+                {error && <ErrorState title={t("common.state.loadingFailed")} message={error} retryLabel={t("common.action.retry")} />}
 
                 {!isLoading && !error && (
                     <div className="space-y-2">
                         {stories.map(s => (
-                            <Link
-                                key={s.id}
-                                href={`/story/special/${s.id}`}
-                                className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-miku/50 hover:shadow-sm transition-all group"
-                            >
-                                <div>
-                                    <span className="text-xs text-miku font-medium">SP{s.id}</span>
-                                    <p className="font-medium text-slate-800 dark:text-slate-200 group-hover:text-miku transition-colors mt-0.5">
-                                        {getTitle(s)}
+                            <Card key={s.id} href={`/story/special/${s.id}`} variant="filled" className="group flex items-center justify-between gap-3 p-4">
+                                <div className="min-w-0">
+                                    <span className="type-label-m text-primary">SP{s.id}</span>
+                                    <p className="mt-0.5 type-title-m text-on-surface transition-colors group-hover:text-primary">{getTitle(s)}</p>
+                                    <p className="mt-0.5 type-body-s text-on-surface-variant">
+                                        {t("page.story.special.episodeCount", { count: s.episodes.length })}
                                     </p>
-                                    <p className="text-xs text-slate-400 mt-0.5">{t("page.story.special.episodeCount", { count: s.episodes.length })}</p>
                                 </div>
-                                <svg className="w-5 h-5 text-slate-300 group-hover:text-miku transition-colors shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                </svg>
-                            </Link>
+                                <Icon path={mdChevronRight} className="text-on-surface-variant" />
+                            </Card>
                         ))}
                     </div>
                 )}
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
