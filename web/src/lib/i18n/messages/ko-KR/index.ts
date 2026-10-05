@@ -1,6 +1,23 @@
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
     common: {
+        md3: {
+            close: "닫기",
+            clear: "지우기",
+            expand: "펼치기",
+            collapse: "접기",
+            more: "더보기",
+            selected: "선택됨",
+            openNavigation: "탐색 열기",
+            closeNavigation: "탐색 닫기",
+            dragHandle: "드래그하여 시트 조정",
+            dismiss: "닫기",
+            previous: "이전",
+            next: "다음",
+            loading: "로딩 중",
+            showPassword: "내용 표시",
+            required: "필수",
+        },
         action: {
             close: "닫기",
             cancel: "취소",

@@ -3,6 +3,23 @@ import type { MessageTree } from "../types";
 
 export const zhCNMessages = {
     common: {
+        md3: {
+            close: "关闭",
+            clear: "清除",
+            expand: "展开",
+            collapse: "收起",
+            more: "更多选项",
+            selected: "已选择",
+            openNavigation: "打开导航",
+            closeNavigation: "关闭导航",
+            dragHandle: "拖动以调整面板",
+            dismiss: "关闭提示",
+            previous: "上一项",
+            next: "下一项",
+            loading: "加载中",
+            showPassword: "显示内容",
+            required: "必填",
+        },
         action: {
             close: "关闭",
             cancel: "取消",

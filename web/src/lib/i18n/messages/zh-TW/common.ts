@@ -1,6 +1,23 @@
 import type { MessageTree } from "../types";
 
 export const zhTWCommon = {
+    md3: {
+        close: "關閉",
+        clear: "清除",
+        expand: "展開",
+        collapse: "收合",
+        more: "更多選項",
+        selected: "已選取",
+        openNavigation: "開啟導覽",
+        closeNavigation: "關閉導覽",
+        dragHandle: "拖曳以調整面板",
+        dismiss: "關閉提示",
+        previous: "上一項",
+        next: "下一項",
+        loading: "載入中",
+        showPassword: "顯示內容",
+        required: "必填",
+    },
     action: {
         close: "關閉",
         cancel: "取消",

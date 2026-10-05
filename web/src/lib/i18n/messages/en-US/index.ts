@@ -3,6 +3,23 @@ import type { MessageTree } from "../types";
 
 export const enUSMessages = {
     common: {
+        md3: {
+            close: "Close",
+            clear: "Clear",
+            expand: "Expand",
+            collapse: "Collapse",
+            more: "More options",
+            selected: "Selected",
+            openNavigation: "Open navigation",
+            closeNavigation: "Close navigation",
+            dragHandle: "Drag to resize sheet",
+            dismiss: "Dismiss",
+            previous: "Previous",
+            next: "Next",
+            loading: "Loading",
+            showPassword: "Show content",
+            required: "Required",
+        },
         action: {
             close: "Close",
             cancel: "Cancel",

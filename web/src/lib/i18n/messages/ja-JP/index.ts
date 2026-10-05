@@ -3,6 +3,23 @@ import type { MessageTree } from "../types";
 
 export const jaJPMessages = {
   common: {
+    md3: {
+      close: "閉じる",
+      clear: "クリア",
+      expand: "展開",
+      collapse: "折りたたむ",
+      more: "その他のオプション",
+      selected: "選択済み",
+      openNavigation: "ナビゲーションを開く",
+      closeNavigation: "ナビゲーションを閉じる",
+      dragHandle: "ドラッグしてシートを調整",
+      dismiss: "閉じる",
+      previous: "前へ",
+      next: "次へ",
+      loading: "読み込み中",
+      showPassword: "内容を表示",
+      required: "必須",
+    },
     action: {
       close: '閉じる',
       cancel: 'キャンセル',
