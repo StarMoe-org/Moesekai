@@ -7,6 +7,8 @@ import Modal from "@/components/common/Modal";
 import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import MainLayout from "@/components/MainLayout";
+import { EmptyState as Md3EmptyState, ErrorState as Md3ErrorState, Icon, LoadingIndicator, PageContainer, PageHeader, cn } from "@/components/md3";
+import { mdArticle, mdCalendarMonth, mdDescription, mdSchedule } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "@/contexts/TranslationContext";
@@ -17,8 +19,6 @@ import {
     fetchInformationList,
     getInformationBannerUrl,
     getInformationStatus,
-    getInformationStatusTone,
-    getInformationTagTone,
     resolveInformationPath,
     normalizeInformationServer,
 } from "@/lib/information";
@@ -37,21 +37,52 @@ function getMessageFallback(t: (key: string) => string, key: string, fallback: s
     return value === key ? fallback : value;
 }
 
+/** Announcement tag colors (content category data colors; neutral/info tags use MD3 roles). */
+function getTagToneClass(tag?: string) {
+    switch (tag) {
+        case "event":
+            return "bg-pink-600 text-white";
+        case "gacha":
+            return "bg-purple-600 text-white";
+        case "music":
+            return "bg-sky-600 text-white";
+        case "campaign":
+            return "bg-amber-600 text-white";
+        case "bug":
+            return "bg-error text-on-error";
+        case "update":
+            return "bg-emerald-600 text-white";
+        case "information":
+            return "bg-primary text-on-primary";
+        default:
+            return "bg-inverse-surface text-inverse-on-surface";
+    }
+}
+
+function getStatusToneClass(status: InformationStatus) {
+    switch (status) {
+        case "upcoming":
+            return "bg-tertiary-container text-on-tertiary-container";
+        case "ongoing":
+            return "bg-primary-container text-on-primary-container";
+        case "ended":
+            return "bg-surface-container-highest text-on-surface-variant";
+        case "permanent":
+        default:
+            return "bg-secondary-container text-on-secondary-container";
+    }
+}
+
 function EmptyState() {
     const { t } = useI18n();
 
     return (
-        <div className="rounded-[2rem] border border-dashed border-slate-300/70 bg-white/45 p-10 text-center shadow-lg shadow-slate-900/5 backdrop-blur-xl dark:border-slate-700/70 dark:bg-slate-900/35">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-miku/10 text-miku ring-1 ring-miku/15">
-                <svg className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5A3.375 3.375 0 0 0 10.125 2.25H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                </svg>
-            </div>
-            <h3 className="mt-4 text-lg font-black text-slate-700 dark:text-slate-200">{t("page.information.emptyTitle")}</h3>
-            <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-slate-500 dark:text-slate-400">
-                {t("page.information.emptyDescription")}
-            </p>
-        </div>
+        <Md3EmptyState
+            icon={mdDescription}
+            title={t("page.information.emptyTitle")}
+            description={t("page.information.emptyDescription")}
+            className="rounded-md3-xl bg-surface-container-low"
+        />
     );
 }
 
@@ -59,21 +90,12 @@ function ErrorState({ message, onRetry }: { message: string; onRetry: () => void
     const { t } = useI18n();
 
     return (
-        <div className="rounded-[2rem] border border-red-200/70 bg-red-50/80 p-6 shadow-lg shadow-red-900/5 backdrop-blur-xl dark:border-red-500/20 dark:bg-red-950/25">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h3 className="text-lg font-black text-red-700 dark:text-red-300">{t("page.information.loadFailedTitle")}</h3>
-                    <p className="mt-1 text-sm text-red-600/80 dark:text-red-300/80">{message}</p>
-                </div>
-                <button
-                    type="button"
-                    onClick={onRetry}
-                    className="rounded-2xl bg-red-500 px-5 py-2.5 text-sm font-black text-white shadow-lg shadow-red-500/20 transition hover:-translate-y-0.5 hover:shadow-xl active:scale-95"
-                >
-                    {t("common.action.retry")}
-                </button>
-            </div>
-        </div>
+        <Md3ErrorState
+            title={t("page.information.loadFailedTitle")}
+            message={message}
+            retryLabel={t("common.action.retry")}
+            onRetry={onRetry}
+        />
     );
 }
 
@@ -81,12 +103,12 @@ function InformationSkeleton() {
     return (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {Array.from({ length: 12 }).map((_, index) => (
-                <div key={index} className="ios-glass-card overflow-hidden rounded-2xl border-none">
-                    <div className="aspect-[16/7] animate-pulse bg-slate-200/30 dark:bg-slate-800/50" />
+                <div key={index} className="overflow-hidden rounded-md3-md bg-surface-container-low">
+                    <div className="aspect-[16/7] animate-pulse bg-surface-container-highest" />
                     <div className="space-y-3 p-4">
-                        <div className="h-4 w-20 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
-                        <div className="h-4 w-5/6 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
-                        <div className="h-3 w-2/3 animate-pulse rounded-full bg-slate-200/40 dark:bg-slate-800/70" />
+                        <div className="h-4 w-20 animate-pulse rounded-full bg-surface-container-highest" />
+                        <div className="h-4 w-5/6 animate-pulse rounded-full bg-surface-container-highest" />
+                        <div className="h-3 w-2/3 animate-pulse rounded-full bg-surface-container-highest" />
                     </div>
                 </div>
             ))}
@@ -96,13 +118,10 @@ function InformationSkeleton() {
 
 function BannerPlaceholder({ tagLabel }: { tagLabel: string }) {
     return (
-        <div className="flex h-full w-full items-center justify-center bg-[radial-gradient(circle_at_20%_20%,rgba(var(--color-miku-rgb),0.28),transparent_34%),linear-gradient(135deg,rgba(var(--color-miku-rgb),0.15),rgba(var(--color-comp-rgb),0.18))] text-miku">
+        <div className="flex h-full w-full items-center justify-center bg-primary-container text-on-primary-container">
             <div className="flex flex-col items-center gap-2 opacity-80">
-                <svg className="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.5 6.75A2.25 2.25 0 0 1 6.75 4.5h10.5a2.25 2.25 0 0 1 2.25 2.25v10.5a2.25 2.25 0 0 1-2.25 2.25H6.75a2.25 2.25 0 0 1-2.25-2.25V6.75Z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 8.5h8M8 12h8M8 15.5h5" />
-                </svg>
-                <span className="text-xs font-black uppercase tracking-[0.2em]">{tagLabel}</span>
+                <Icon path={mdArticle} size={40} />
+                <span className="type-label-l">{tagLabel}</span>
             </div>
         </div>
     );
@@ -145,70 +164,66 @@ function InformationCard({
             type="button"
             onClick={() => onOpen(item)}
             data-shortcut-item="true"
-            className="group block h-full w-full cursor-pointer rounded-2xl text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-miku/70 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-slate-950"
+            className="group block h-full w-full cursor-pointer rounded-md3-md text-left focus-ring"
         >
-            <article className="ios-glass-card ios-glass-card-interactive flex h-full flex-col overflow-hidden rounded-2xl border-none">
-                <div className="relative aspect-[16/7] overflow-hidden bg-slate-100 dark:bg-slate-900/70">
+            <article className="state-layer relative flex h-full flex-col overflow-hidden rounded-md3-md bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+                <div className="relative aspect-[16/7] overflow-hidden bg-surface-container-high">
                     {bannerUrl && !imageFailed ? (
                         <img
                             src={bannerUrl}
                             alt={item.title}
                             loading="lazy"
-                            className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
+                            className="h-full w-full object-cover"
                             onError={() => setImageFailed(true)}
                         />
                     ) : (
                         <BannerPlaceholder tagLabel={tagLabel} />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10 opacity-80" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-scrim/45 via-transparent to-scrim/10 opacity-80" />
                     <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black shadow-lg ${getInformationTagTone(item.informationTag)}`}>
+                        <span className={cn("rounded-full px-2.5 py-1 type-label-s shadow-elev-1", getTagToneClass(item.informationTag))}>
                             {tagLabel}
                         </span>
-                        <span className="rounded-full bg-black/45 px-2.5 py-1 text-[10px] font-black text-white shadow-lg backdrop-blur-md">
+                        <span className="rounded-full bg-inverse-surface/80 px-2.5 py-1 type-label-s text-inverse-on-surface shadow-elev-1">
                             {platformLabel}
                         </span>
                     </div>
                     <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-                        <span className="rounded-full bg-black/50 px-2.5 py-1 text-[10px] font-mono font-black text-white backdrop-blur-md">
+                        <span className="rounded-full bg-inverse-surface/80 px-2.5 py-1 type-label-s font-mono text-inverse-on-surface">
                             #{item.id}
                         </span>
-                        <span className={`rounded-full px-2.5 py-1 text-[10px] font-black ring-1 backdrop-blur-md ${getInformationStatusTone(status)}`}>
+                        <span className={cn("rounded-full px-2.5 py-1 type-label-s", getStatusToneClass(status))}>
                             {statusLabel}
                         </span>
                     </div>
                 </div>
 
                 <div className="flex flex-1 flex-col p-4">
-                    <div className="mb-2 flex flex-wrap items-center gap-1.5 text-[10px] font-black text-slate-400 dark:text-slate-500">
-                        <span className="rounded-full bg-slate-100/75 px-2 py-0.5 ring-1 ring-slate-200/60 dark:bg-slate-800/70 dark:ring-slate-700/70">{typeLabel}</span>
-                        <span className="rounded-full bg-slate-100/75 px-2 py-0.5 ring-1 ring-slate-200/60 dark:bg-slate-800/70 dark:ring-slate-700/70">{browseLabel}</span>
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5 type-label-s text-on-surface-variant">
+                        <span className="rounded-md3-xs bg-surface-container-high px-2 py-0.5">{typeLabel}</span>
+                        <span className="rounded-md3-xs bg-surface-container-high px-2 py-0.5">{browseLabel}</span>
                         {item.channels && (
-                            <span className="line-clamp-1 rounded-full bg-miku/10 px-2 py-0.5 text-miku ring-1 ring-miku/20">{item.channels}</span>
+                            <span className="line-clamp-1 rounded-md3-xs bg-secondary-container px-2 py-0.5 text-on-secondary-container">{item.channels}</span>
                         )}
                     </div>
 
-                    <h3 className="min-h-[3.5rem] text-sm font-black leading-snug text-primary-text transition group-hover:text-miku sm:text-base">
+                    <h3 className="min-h-[3.5rem] type-title-s text-on-surface transition-colors group-hover:text-primary sm:type-title-m">
                         <TranslatedText
                             original={item.title}
                             category="information"
                             field="title"
                             originalClassName="line-clamp-2"
-                            translationClassName="line-clamp-1 text-xs font-bold text-slate-400 dark:text-slate-500 mt-0.5"
+                            translationClassName="line-clamp-1 type-body-s text-on-surface-variant mt-0.5"
                         />
                     </h3>
 
-                    <div className="mt-3 space-y-1.5 text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                    <div className="mt-3 space-y-1.5 type-label-m text-on-surface-variant">
                         <div className="flex items-center gap-2">
-                            <svg className="h-3.5 w-3.5 shrink-0 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />
-                            </svg>
+                            <Icon path={mdSchedule} size={14} className="text-primary" />
                             <span className="truncate">{formatInfoDate(item.startAt)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                            <svg className="h-3.5 w-3.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.75 3v2.25M17.25 3v2.25M3.75 18.75V7.5A2.25 2.25 0 0 1 6 5.25h12a2.25 2.25 0 0 1 2.25 2.25v11.25m-16.5 0A2.25 2.25 0 0 0 6 21h12a2.25 2.25 0 0 0 2.25-2.25m-16.5 0h16.5" />
-                            </svg>
+                            <Icon path={mdCalendarMonth} size={14} />
                             <span className="truncate">{formatInfoDate(item.endAt)}</span>
                         </div>
                     </div>
@@ -245,10 +260,10 @@ function AnnouncementModal({
             size="xl"
         >
             {frameUrl ? (
-                <div className="relative h-[72vh] min-h-[28rem] overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-inner shadow-slate-900/5 dark:border-slate-700 dark:bg-slate-950">
+                <div className="relative h-[72vh] min-h-[28rem] overflow-hidden rounded-md3-lg border border-outline-variant bg-surface-container-lowest">
                     {!isFrameLoaded && (
-                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-white/80 text-sm font-bold text-slate-500 backdrop-blur-sm dark:bg-slate-950/80 dark:text-slate-400">
-                            <div className="h-8 w-8 animate-spin rounded-full border-4 border-miku/20 border-t-miku" />
+                        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 bg-surface-container-lowest/90 type-body-m text-on-surface-variant">
+                            <LoadingIndicator size={40} />
                             <span>{t("page.information.loadingAnnouncement")}</span>
                         </div>
                     )}
@@ -263,7 +278,7 @@ function AnnouncementModal({
                     />
                 </div>
             ) : (
-                <div className="rounded-2xl border border-dashed border-slate-300/70 bg-slate-50/80 p-8 text-center text-sm font-bold text-slate-500 dark:border-slate-700 dark:bg-slate-900/45 dark:text-slate-400">
+                <div className="rounded-md3-lg border border-dashed border-outline-variant bg-surface-container p-8 text-center type-body-m text-on-surface-variant">
                     {t("page.information.emptyAnnouncementUrl")}
                 </div>
             )}
@@ -389,19 +404,14 @@ export default function InformationClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto max-w-[96rem] px-4 py-8 sm:px-6 sm:py-10">
-                <div className="mb-8 text-center">
-                    <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-miku/30 bg-miku/5 px-4 py-2">
-                        <span className="text-xs font-bold uppercase tracking-widest text-miku">{t("page.information.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl font-black text-primary-text sm:text-4xl">
-                        {t("page.information.title")} <span className="text-miku">{t("page.information.titleHighlight")}</span>
-                    </h1>
-                    <p className="mx-auto mt-2 max-w-2xl text-sm leading-7 text-slate-500 dark:text-slate-400 sm:text-base">
-                        {t("page.information.description")}
-                    </p>
-                </div>
-
+            <PageContainer wide>
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.information.badge")}
+                    title={t("page.information.title")}
+                    highlight={t("page.information.titleHighlight")}
+                    description={t("page.information.description")}
+                />
 
                 <div className="grid gap-6 lg:grid-cols-[18rem_minmax(0,1fr)] xl:grid-cols-[20rem_minmax(0,1fr)]">
                     <aside className="lg:sticky lg:top-24 lg:self-start">
@@ -487,7 +497,7 @@ export default function InformationClient() {
                         )}
                     </section>
                 </div>
-            </div>
+            </PageContainer>
             <AnnouncementModal
                 item={selectedItem}
                 server={server}

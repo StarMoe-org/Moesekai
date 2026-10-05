@@ -12,6 +12,7 @@ import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 
 function GachaContent() {
     const { t } = useI18n();
@@ -266,32 +267,22 @@ function GachaContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.gacha.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.gacha.title")} <span className="text-miku">{t("page.gacha.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.gacha.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.gacha.badge")}
+                title={t("page.gacha.title")}
+                highlight={t("page.gacha.titleHighlight")}
+                description={t("page.gacha.description")}
+            />
 
-            {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 text-red-500 underline hover:no-underline"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Gacha Grid. Filters live in the global FilterDrawer (registered
@@ -299,36 +290,23 @@ function GachaContent() {
             <div className="min-w-0">
                 <GachaGrid gachas={displayedGachas} isLoading={isLoading} />
 
-                {/* Load More Button */}
-                {!isLoading && displayedGachas.length < filteredGachas.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.gacha.loadMore")}
-                            <span className="ml-2 text-sm opacity-80 type-caption">
-                                ({displayedGachas.length} / {filteredGachas.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded indicator */}
-                {!isLoading && displayedGachas.length > 0 && displayedGachas.length >= filteredGachas.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.gacha.allLoaded", { count: filteredGachas.length })}
-                    </div>
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.gacha.loadMore")}
+                        shown={displayedGachas.length}
+                        total={filteredGachas.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.gacha.allLoaded", { count: filteredGachas.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 function GachaLoadingFallback() {
     const { t } = useI18n();
-    return <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.gacha.loadingFallback")}</div>;
+    return <LoadingState label={t("page.gacha.loadingFallback")} />;
 }
 
 export default function GachaClient() {

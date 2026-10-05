@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from "react";
-import Link from "@/components/LocalizedLink";
+import { Card } from "@/components/md3";
 import Image from "next/image";
 import { IGachaInfo } from "@/types/types";
 import { getGachaLogoUrl } from "@/lib/assets";
@@ -27,10 +27,10 @@ export default function GachaItem({ gacha }: GachaItemProps) {
     });
 
     return (
-        <Link href={`/gacha/${gacha.id}`} className="group pressable block" data-shortcut-item="true">
-            <div className="relative rounded-xl overflow-hidden ios-glass-card ios-glass-card-interactive">
+        <Card href={`/gacha/${gacha.id}`} variant="elevated" className="group h-full" data-shortcut-item="true">
+            <div className="relative">
                 {/* Logo Image */}
-                <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
+                <div className="relative aspect-[16/9] bg-surface-container-high">
                     <Image
                         src={logoUrl}
                         alt={gacha.name}
@@ -46,12 +46,12 @@ export default function GachaItem({ gacha }: GachaItemProps) {
                     {/* Status Badges */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1">
                         {isUnreleased && isShowSpoiler && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-500 text-white rounded-full">
+                            <span className="px-2 py-0.5 type-label-s bg-tertiary text-on-tertiary rounded-full shadow-elev-1">
                                 {t("common.badge.spoiler")}
                             </span>
                         )}
                         {isOngoing && (
-                            <span className="px-2 py-0.5 text-[10px] font-bold bg-green-500 text-white rounded-full animate-pulse">
+                            <span className="px-2 py-0.5 type-label-s bg-primary text-on-primary rounded-full shadow-elev-1">
                                 {t("common.badge.ongoing")}
                             </span>
                         )}
@@ -59,7 +59,7 @@ export default function GachaItem({ gacha }: GachaItemProps) {
 
                     {/* ID Badge */}
                     <div className="absolute bottom-2 left-2">
-                        <span className="px-2 py-0.5 text-[10px] font-mono bg-black/50 text-white rounded-full backdrop-blur-sm">
+                        <span className="px-2 py-0.5 type-label-s font-mono bg-inverse-surface/80 text-inverse-on-surface rounded-full">
                             #{gacha.id}
                         </span>
                     </div>
@@ -67,20 +67,20 @@ export default function GachaItem({ gacha }: GachaItemProps) {
 
                 {/* Content */}
                 <div className="p-3">
-                    <h3 className="text-sm font-bold text-primary-text group-hover:text-miku transition-colors">
+                    <h3 className="type-title-s text-on-surface group-hover:text-primary transition-colors">
                         <TranslatedText
                             original={gacha.name}
                             category="gacha"
                             field="name"
                             originalClassName="block"
-                            translationClassName="text-xs font-medium text-slate-400 block"
+                            translationClassName="type-body-s text-on-surface-variant block"
                         />
                     </h3>
-                    <div className="mt-1 text-xs text-slate-400 space-y-0.5">
+                    <div className="mt-1 type-label-m text-on-surface-variant space-y-0.5">
                         <p>{formatDate(gacha.startAt)} ~ {formatDate(gacha.endAt)}</p>
                     </div>
                 </div>
             </div>
-        </Link>
+        </Card>
     );
 }

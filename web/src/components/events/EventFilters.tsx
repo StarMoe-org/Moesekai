@@ -5,6 +5,7 @@ import CharacterFilter from "@/components/common/CharacterFilter";
 import { EventType, EVENT_TYPE_COLORS } from "@/types/events";
 import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, CardAttribute, ATTR_NAMES, ATTR_ICON_PATHS, ATTR_COLORS } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
+import { cn } from "@/components/md3";
 
 /** Filter IDs for event unit (group) filter */
 export type EventUnitFilterId = "ln" | "mmj" | "vbs" | "ws" | "25ji" | "vs" | "mixed";
@@ -148,7 +149,7 @@ export default function EventFilters({
                             <button
                                 key={unit.id}
                                 onClick={() => toggleEventUnit(unit.id)}
-                                className={`p-1.5 rounded-xl transition-all ${getFilterIconStateClasses(selectedEventUnits.includes(unit.id))}`}
+                                className={`!p-1.5 ${getFilterIconStateClasses(selectedEventUnits.includes(unit.id))}`}
                                 title={getEventUnitName(unit)}
                             >
                                 {unit.icon ? (
@@ -162,8 +163,8 @@ export default function EventFilters({
                                         />
                                     </div>
                                 ) : (
-                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${selectedEventUnits.includes(unit.id) ? "bg-miku/12 dark:bg-miku/20" : "bg-slate-100 dark:bg-slate-800"}`}>
-                                        <span className={`text-xs font-bold ${selectedEventUnits.includes(unit.id) ? "text-miku dark:text-slate-100" : "text-slate-500 dark:text-slate-300"}`}>{t("common.badge.mixed")}</span>
+                                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-surface-container-high">
+                                        <span className="type-label-s">{t("common.badge.mixed")}</span>
                                     </div>
                                 )}
                             </button>
@@ -191,10 +192,9 @@ export default function EventFilters({
                         <button
                             key={type}
                             onClick={() => toggleType(type)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedTypes.includes(type)
-                                ? "text-white shadow-md ring-1 ring-white/30 dark:ring-white/10"
-                                : getFilterChipStateClasses(false)
-                                }`}
+                            className={selectedTypes.includes(type)
+                                ? cn(getFilterChipStateClasses(true), "text-white shadow-elev-1")
+                                : getFilterChipStateClasses(false)}
                             style={selectedTypes.includes(type) ? { backgroundColor: EVENT_TYPE_COLORS[type] } : {}}
                         >
                             {t(`common.eventTypes.${type}`)}
@@ -222,7 +222,7 @@ export default function EventFilters({
                             <button
                                 key={attr}
                                 onClick={() => onBonusAttrChange(selectedBonusAttr === attr ? null : attr)}
-                                className={`p-1.5 rounded-xl transition-all flex items-center gap-1.5 ${getFilterIconStateClasses(selectedBonusAttr === attr, "shadow-lg bg-white border border-transparent dark:bg-miku/12 dark:border-miku/40", "bg-slate-50 border border-transparent hover:bg-slate-100 dark:bg-slate-800/80 dark:border-slate-700 dark:hover:bg-slate-700/80 dark:hover:border-slate-600")}`}
+                                className={`!p-1.5 ${getFilterIconStateClasses(selectedBonusAttr === attr)}`}
                                 style={selectedBonusAttr === attr ? { boxShadow: `0 0 0 2px ${ATTR_COLORS[attr]}` } : {}}
                                 title={ATTR_NAMES[attr]}
                             >

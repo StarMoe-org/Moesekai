@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useI18n } from '@/contexts/I18nContext';
 import { KLinePoint } from '@/types/prediction';
+import { useMd3ChartColors } from './useMd3ChartColors';
 
 interface PGAIChartProps {
     globalKline: KLinePoint[];
@@ -16,6 +17,7 @@ interface TooltipParam {
 export default function PGAIChart({ globalKline, height: _height = 300 }: PGAIChartProps) {
     const { t, formatNumber } = useI18n();
     const hasData = globalKline.length > 0;
+    const c = useMd3ChartColors();
     const latestPoint = globalKline[globalKline.length - 1];
     const prevPoint = globalKline[globalKline.length - 2];
 
@@ -54,16 +56,16 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
             tooltip: {
                 trigger: 'axis',
                 axisPointer: { type: 'cross' },
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderColor: '#e2e8f0',
+                backgroundColor: c.surfaceContainerHigh,
+                borderColor: c.outlineVariant,
                 borderWidth: 1,
-                textStyle: { color: '#334155' },
+                textStyle: { color: c.onSurface },
                 formatter: (params: TooltipParam[]) => {
                     const idx = params[0].dataIndex;
                     const item = globalKline[idx];
                     return `
-             <div class="font-bold text-slate-700 mb-1">${times[idx]}</div>
-             <div class="text-xs text-slate-500">
+             <div style="font-weight:600;margin-bottom:4px">${times[idx]}</div>
+             <div style="font-size:12px;color:${c.onSurfaceVariant}">
                ${t("page.prediction.pgai.tooltipOpen")}: ${formatNumber(item.o)} <br/>
                ${t("page.prediction.pgai.tooltipClose")}: ${formatNumber(item.c)} <br/>
                ${t("page.prediction.pgai.tooltipHigh")}: ${formatNumber(item.h)} <br/>
@@ -82,8 +84,8 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
                     type: 'category',
                     data: times,
                     boundaryGap: true,
-                    axisLine: { lineStyle: { color: '#e2e8f0' } },
-                    axisLabel: { color: '#94a3b8', rotate: 45, fontSize: 9 },
+                    axisLine: { lineStyle: { color: c.outlineVariant } },
+                    axisLabel: { color: c.onSurfaceVariant, rotate: 45, fontSize: 9 },
                     axisTick: { show: false },
                     splitLine: { show: false }
                 },
@@ -103,8 +105,8 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
                     scale: true,
                     axisLine: { show: false },
                     axisTick: { show: false },
-                    splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
-                    axisLabel: { color: '#94a3b8' }
+                    splitLine: { lineStyle: { color: c.outlineVariant, type: 'dashed' } },
+                    axisLabel: { color: c.onSurfaceVariant }
                 },
                 {
                     scale: true,
@@ -131,8 +133,8 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
                     end: 100,
                     height: 15,
                     bottom: 5,
-                    borderColor: '#e2e8f0',
-                    backgroundColor: '#f8fafc',
+                    borderColor: c.outlineVariant,
+                    backgroundColor: c.surfaceContainer,
                     fillerColor: 'rgba(51, 204, 187, 0.1)',
                 }
             ],
@@ -155,30 +157,30 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
                 }
             ]
         };
-    }, [formatNumber, globalKline, t]);
+    }, [c, formatNumber, globalKline, t]);
 
     return (
-        <div className="bg-white rounded-xl border border-slate-100 p-6 h-full flex flex-col">
+        <div className="bg-surface-container-low text-on-surface rounded-md3-xl p-6 h-full flex flex-col">
             <div className="flex justify-between items-start gap-4 mb-6">
                 <div>
-                    <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                    <h3 className="type-title-l text-on-surface flex items-center gap-2">
                         {t("page.prediction.pgai.title")}
-                        <span className="bg-red-50 text-red-500 text-[10px] px-1.5 py-0.5 rounded font-bold uppercase">beta</span>
+                        <span className="bg-tertiary-container text-on-tertiary-container type-label-s px-1.5 py-0.5 rounded-md3-xs uppercase">beta</span>
                     </h3>
-                    <p className="text-xs text-slate-400 mt-1">{t("page.prediction.pgai.subtitle")}</p>
+                    <p className="type-body-s text-on-surface-variant mt-1">{t("page.prediction.pgai.subtitle")}</p>
                 </div>
                 {hasData ? (
                     <div className="text-right">
-                        <div className={`text-4xl font-black ${changePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        <div className={`type-display-s tabular-nums ${changePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                             {formatNumber(currentIndex)}
                         </div>
-                        <div className={`text-sm font-bold flex items-center justify-end gap-1 ${changePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        <div className={`type-label-l flex items-center justify-end gap-1 ${changePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                             <span>{changePct >= 0 ? '▲' : '▼'}</span>
                             {Math.abs(changePct).toFixed(2)}%
                         </div>
                     </div>
                 ) : (
-                    <div className="text-4xl font-black text-slate-400">—</div>
+                    <div className="type-display-s text-on-surface-variant">—</div>
                 )}
             </div>
 

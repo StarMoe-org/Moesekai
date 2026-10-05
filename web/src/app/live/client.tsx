@@ -12,6 +12,7 @@ import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 
 function VirtualLiveContent() {
     const { t } = useI18n();
@@ -217,32 +218,22 @@ function VirtualLiveContent() {
     ]);
 
     return (
-        <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* Page Header */}
-            <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                    <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.live.badge")}</span>
-                </div>
-                <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                    {t("page.live.title")} <span className="text-miku">{t("page.live.titleHighlight")}</span>
-                </h1>
-                <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                    {t("page.live.description")}
-                </p>
-            </div>
+        <PageContainer>
+            <PageHeader
+                align="center"
+                eyebrow={t("page.live.badge")}
+                title={t("page.live.title")}
+                highlight={t("page.live.titleHighlight")}
+                description={t("page.live.description")}
+            />
 
-            {/* Error State */}
             {error && (
-                <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                    <p className="font-bold">{t("common.state.loadingFailed")}</p>
-                    <p>{error}</p>
-                    <button
-                        onClick={() => window.location.reload()}
-                        className="mt-2 text-red-500 underline hover:no-underline"
-                    >
-                        {t("common.action.retry")}
-                    </button>
-                </div>
+                <ErrorState
+                    className="mb-6"
+                    title={t("common.state.loadingFailed")}
+                    message={error}
+                    retryLabel={t("common.action.retry")}
+                />
             )}
 
             {/* Virtual Live Grid. Filters live in the global FilterDrawer (registered
@@ -250,36 +241,23 @@ function VirtualLiveContent() {
             <div className="min-w-0">
                 <VirtualLiveGrid virtualLives={displayedVirtualLives} isLoading={isLoading} />
 
-                {/* Load More Button */}
-                {!isLoading && displayedVirtualLives.length < filteredVirtualLives.length && (
-                    <div className="mt-8 flex justify-center">
-                        <button
-                            onClick={loadMore}
-                            data-shortcut-load-more="true"
-                            className="pressable px-8 py-3 ios-glass-btn ios-glass-btn-primary rounded-full font-bold"
-                        >
-                            {t("page.live.loadMore")}
-                            <span className="ml-2 text-sm opacity-80 type-caption">
-                                ({displayedVirtualLives.length} / {filteredVirtualLives.length})
-                            </span>
-                        </button>
-                    </div>
-                )}
-
-                {/* All loaded indicator */}
-                {!isLoading && displayedVirtualLives.length > 0 && displayedVirtualLives.length >= filteredVirtualLives.length && (
-                    <div className="mt-8 text-center text-slate-400 text-sm">
-                        {t("page.live.allLoaded", { count: filteredVirtualLives.length })}
-                    </div>
+                {!isLoading && (
+                    <LoadMore
+                        label={t("page.live.loadMore")}
+                        shown={displayedVirtualLives.length}
+                        total={filteredVirtualLives.length}
+                        onLoadMore={loadMore}
+                        allLoadedLabel={t("page.live.allLoaded", { count: filteredVirtualLives.length })}
+                    />
                 )}
             </div>
-        </div>
+        </PageContainer>
     );
 }
 
 function VirtualLiveLoadingFallback() {
     const { t } = useI18n();
-    return <div className="flex h-[50vh] w-full items-center justify-center text-slate-500">{t("page.live.loadingFallback")}</div>;
+    return <LoadingState label={t("page.live.loadingFallback")} />;
 }
 
 export default function VirtualLiveClient() {

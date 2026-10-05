@@ -33,6 +33,18 @@ import { useI18n } from "@/contexts/I18nContext";
 import type { IMaterialInfo } from "@/types/material";
 import type { IHonorGroup, IHonorInfo } from "@/types/honor";
 import DegreeImage from "@/components/honor/DegreeImage";
+import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, cn } from "@/components/md3";
+import {
+    mdArrowBack,
+    mdEvent,
+    mdEventBusy,
+    mdInfo,
+    mdKeyboardArrowDown,
+    mdQueueMusic,
+    mdRedeem,
+    mdSchedule,
+    mdZoomIn,
+} from "@/components/md3/icons";
 
 interface IMusic {
     id: number;
@@ -601,12 +613,9 @@ export default function VirtualLiveDetailClient() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("common.state.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -614,28 +623,18 @@ export default function VirtualLiveDetailClient() {
     if (error || !virtualLive) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                            {t("page.live.notFoundTitle", { id: virtualLiveId })}
-                        </h2>
-                        <p className="text-slate-500 mb-6">{t("page.live.notFoundDesc")}</p>
-                        <Link
-                            href="/live"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.live.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdEventBusy}
+                        title={t("page.live.notFoundTitle", { id: virtualLiveId })}
+                        description={t("page.live.notFoundDesc")}
+                        action={
+                            <Button href="/live" variant="filled" size="m" icon={mdArrowBack}>
+                                {t("page.live.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -655,33 +654,33 @@ export default function VirtualLiveDetailClient() {
                 fileName={`live_${virtualLive.id}_banner.png`}
             />
 
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="inline-flex items-center h-7 px-3 rounded-md3-sm bg-surface-container-high type-label-m font-mono text-on-surface-variant">
                             ID: {virtualLive.id}
                         </span>
                         <span
-                            className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit"
+                            className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: VIRTUAL_LIVE_TYPE_COLORS[virtualLive.virtualLiveType as VirtualLiveType] || "#9E9E9E" }}
                         >
                             {t(`common.virtualLiveTypes.${virtualLive.virtualLiveType}`)}
                         </span>
                         <span
-                            className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit"
+                            className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: statusDisplay.color }}
                         >
                             {t("common.status." + status)}
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800">
+                    <h1 className="type-headline-m sm:type-headline-l text-on-surface">
                         <TranslatedText
                             original={virtualLive.name}
                             category="virtualLive"
                             field="name"
                             originalClassName=""
-                            translationClassName="block text-lg font-medium text-slate-400 mt-1"
+                            translationClassName="block type-title-m text-on-surface-variant mt-1"
                         />
                     </h1>
                 </div>
@@ -690,12 +689,12 @@ export default function VirtualLiveDetailClient() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* LEFT Column: Banner */}
                     <div>
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden lg:sticky lg:top-24">
-                            <div className="px-4 py-3 bg-slate-50 border-b border-slate-100">
-                                <span className="text-sm font-bold text-slate-600">{t("page.live.bannerTitle")}</span>
+                        <div className="bg-surface-container-low rounded-md3-xl overflow-hidden lg:sticky lg:top-24">
+                            <div className="px-4 py-3 border-b border-outline-variant">
+                                <span className="type-title-s text-on-surface-variant">{t("page.live.bannerTitle")}</span>
                             </div>
                             <div
-                                className="relative aspect-[16/5] bg-gradient-to-br from-slate-50 to-slate-100 cursor-zoom-in"
+                                className="relative aspect-[16/5] bg-surface-container cursor-zoom-in"
                                 onClick={() => setImageViewerOpen(true)}
                             >
                                 <Image
@@ -706,10 +705,8 @@ export default function VirtualLiveDetailClient() {
                                     unoptimized
                                     priority
                                 />
-                                <div className="absolute bottom-3 right-3 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                    </svg>
+                                <div className="absolute bottom-3 right-3 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                    <Icon path={mdZoomIn} size={16} />
                                     {t("page.live.clickExpand")}
                                 </div>
                             </div>
@@ -719,16 +716,8 @@ export default function VirtualLiveDetailClient() {
                     {/* RIGHT Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.live.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <SectionCard icon={mdInfo} title={t("page.live.basicInfo")} bodyClassName="p-0 pb-2">
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label="ID" value={`#${virtualLive.id}`} />
                                 <InfoRow
                                     label={t("common.field.name")}
@@ -738,7 +727,7 @@ export default function VirtualLiveDetailClient() {
                                             category="virtualLive"
                                             field="name"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-s text-on-surface-variant mt-0.5"
                                         />
                                     }
                                 />
@@ -753,10 +742,10 @@ export default function VirtualLiveDetailClient() {
                                 <InfoRow label={t("page.live.endTimeLabel")} value={formatDate(virtualLive.endAt)} />
                                 <InfoRow
                                     label={t("page.live.assetNameLabel")}
-                                    value={<span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{virtualLive.assetbundleName}</span>}
+                                    value={<span className="font-mono type-label-m bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{virtualLive.assetbundleName}</span>}
                                 />
                             </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Rewards Card */}
                         {resolvedRewardBoxes.length > 0 && (
@@ -778,73 +767,55 @@ export default function VirtualLiveDetailClient() {
 
                         {/* Related Event Card */}
                         {relatedEvent && (
-                            <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                        </svg>
-                                        {t("page.live.relatedEventTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-0">
-                                    <Link href={`/events/${relatedEvent.id}`} className="block group">
-                                        <div className="relative aspect-[2/1] w-full">
-                                            <Image
-                                                src={getEventBannerUrl(relatedEvent.assetbundleName, assetSource)}
-                                                alt={relatedEvent.name}
-                                                fill
-                                                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                                unoptimized
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-                                            <div className="absolute bottom-0 left-0 w-full p-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-white/20 text-white px-2 py-0.5 rounded backdrop-blur-sm">
-                                                        Event #{relatedEvent.id}
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-white font-bold text-lg leading-tight truncate">
-                                                    <TranslatedText
-                                                        original={relatedEvent.name}
-                                                        category="events"
-                                                        field="name"
-                                                        originalClassName="truncate block"
-                                                        translationClassName="text-sm font-medium text-white/90 truncate block mt-0.5"
-                                                    />
-                                                </h3>
+                            <SectionCard icon={mdEvent} title={t("page.live.relatedEventTitle")}>
+                                <Link href={`/events/${relatedEvent.id}`} className="group block overflow-hidden rounded-md3-lg focus-ring">
+                                    <div className="relative aspect-[2/1] w-full">
+                                        <Image
+                                            src={getEventBannerUrl(relatedEvent.assetbundleName, assetSource)}
+                                            alt={relatedEvent.name}
+                                            fill
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                        <div className="absolute bottom-0 left-0 w-full p-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="type-label-s font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
+                                                    Event #{relatedEvent.id}
+                                                </span>
                                             </div>
+                                            <h3 className="text-white type-title-m truncate">
+                                                <TranslatedText
+                                                    original={relatedEvent.name}
+                                                    category="events"
+                                                    field="name"
+                                                    originalClassName="truncate block"
+                                                    translationClassName="type-body-s text-white/90 truncate block mt-0.5"
+                                                />
+                                            </h3>
                                         </div>
-                                    </Link>
-                                </div>
-                            </div>
+                                    </div>
+                                </Link>
+                            </SectionCard>
                         )}
 
                         {/* Setlist Card */}
                         {setlistWithMusic.length > 0 && (
-                            <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                        </svg>
-                                        {t("page.live.setlistTitle", { count: setlistWithMusic.length })}
-                                    </h2>
-                                </div>
-                                <div className="divide-y divide-slate-50">
+                            <SectionCard icon={mdQueueMusic} title={t("page.live.setlistTitle", { count: setlistWithMusic.length })} bodyClassName="p-0 pb-2">
+                                <div className="divide-y divide-outline-variant">
                                     {setlistWithMusic.map((item, index) => (
-                                        <div key={item.id} className="p-4 hover:bg-slate-50 transition-colors">
+                                        <div key={item.id} className="px-4 py-3">
                                             <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-sm font-bold text-slate-500">
+                                                <div className="w-8 h-8 shrink-0 rounded-full bg-surface-container-high flex items-center justify-center type-label-l text-on-surface-variant">
                                                     {index + 1}
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     {item.virtualLiveSetlistType === "music" && item.music ? (
                                                         <Link
                                                             href={`/music/${item.music.id}`}
-                                                            className="flex items-center gap-3 group"
+                                                            className="flex items-center gap-3 group rounded-md3-sm focus-ring"
                                                         >
-                                                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-200 shrink-0 shadow-sm">
+                                                            <div className="w-10 h-10 rounded-md3-sm overflow-hidden bg-surface-container-high shrink-0">
                                                                 <Image
                                                                     src={getMusicJacketUrl(item.music.assetbundleName, assetSource)}
                                                                     alt={item.music.title}
@@ -854,34 +825,34 @@ export default function VirtualLiveDetailClient() {
                                                                     unoptimized
                                                                 />
                                                             </div>
-                                                            <div>
-                                                                <p className="font-bold text-slate-800 group-hover:text-miku transition-colors">
+                                                            <div className="min-w-0">
+                                                                <p className="type-title-s text-on-surface group-hover:text-primary transition-colors">
                                                                     <TranslatedText
                                                                         original={item.music.title}
                                                                         category="music"
                                                                         field="title"
                                                                         originalClassName="truncate block"
-                                                                        translationClassName="text-xs text-slate-500 truncate block font-normal"
+                                                                        translationClassName="type-body-s text-on-surface-variant truncate block"
                                                                     />
                                                                 </p>
-                                                                <p className="text-xs text-slate-500">{t("page.live.setlistMusicLabel")}</p>
+                                                                <p className="type-body-s text-on-surface-variant">{t("page.live.setlistMusicLabel")}</p>
                                                             </div>
                                                         </Link>
                                                     ) : item.virtualLiveSetlistType === "mc" ? (
                                                         <div>
-                                                            <p className="font-medium text-slate-700">{t("page.live.setlistMcLabel")}</p>
-                                                            <p className="text-xs text-slate-400 font-mono">{item.assetbundleName}</p>
+                                                            <p className="type-body-m text-on-surface">{t("page.live.setlistMcLabel")}</p>
+                                                            <p className="type-label-s text-on-surface-variant font-mono">{item.assetbundleName}</p>
                                                         </div>
                                                     ) : (
                                                         <div>
-                                                            <p className="font-medium text-slate-700">{item.virtualLiveSetlistType}</p>
-                                                            <p className="text-xs text-slate-400 font-mono">{item.assetbundleName}</p>
+                                                            <p className="type-body-m text-on-surface">{item.virtualLiveSetlistType}</p>
+                                                            <p className="type-label-s text-on-surface-variant font-mono">{item.assetbundleName}</p>
                                                         </div>
                                                     )}
                                                 </div>
-                                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${item.virtualLiveSetlistType === "music"
-                                                    ? "bg-miku/10 text-miku"
-                                                    : "bg-slate-100 text-slate-500"
+                                                <span className={`px-2 py-0.5 rounded-md3-sm type-label-m ${item.virtualLiveSetlistType === "music"
+                                                    ? "bg-primary-container text-on-primary-container"
+                                                    : "bg-surface-container-high text-on-surface-variant"
                                                     }`}>
                                                     {item.virtualLiveSetlistType === "music" ? t("page.live.setlistTypeMusic") : t("page.live.setlistTypeMc")}
                                                 </span>
@@ -889,7 +860,7 @@ export default function VirtualLiveDetailClient() {
                                         </div>
                                     ))}
                                 </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         <DetailPageAdCard />
@@ -898,17 +869,11 @@ export default function VirtualLiveDetailClient() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Link
-                        href="/live"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                    <Button href="/live" variant="tonal" size="m" icon={mdArrowBack}>
                         {t("page.live.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
     );
 }
@@ -928,23 +893,15 @@ function VirtualLiveRewardsCard({
     const totalRewards = rewardBoxes.reduce((total, box) => total + box.details.length, 0);
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12v10H4V12m16 0H4m16 0h1V8h-5.5M4 12H3V8h5.5m7 0H12m3.5 0C17 6.5 17 4 15 4s-3 2-3 4m3.5 0H12m-3.5 0H12m-3.5 0C7 6.5 7 4 9 4s3 2 3 4" />
-                    </svg>
-                    {t("page.live.rewardsTitle", { count: totalRewards })}
-                </h2>
-            </div>
-            <div className="divide-y divide-slate-100">
+        <SectionCard icon={mdRedeem} title={t("page.live.rewardsTitle", { count: totalRewards })} bodyClassName="p-0 pb-2">
+            <div className="divide-y divide-outline-variant">
                 {rewardBoxes.map((box) => (
                     <div key={`${box.reward.virtualLiveType}-${box.reward.resourceBoxId}`} className="p-4">
                         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-                            <span className="inline-flex items-center rounded-full bg-miku/10 px-2.5 py-1 text-xs font-bold text-miku">
+                            <span className="inline-flex items-center rounded-md3-sm bg-secondary-container px-2.5 py-1 type-label-m text-on-secondary-container">
                                 {getConditionLabel(box.reward.virtualLiveType)}
                             </span>
-                            <span className="font-mono text-xs text-slate-400">
+                            <span className="font-mono type-label-s text-on-surface-variant">
                                 {t("page.live.rewardBoxLabel", { id: box.reward.resourceBoxId })}
                             </span>
                         </div>
@@ -961,14 +918,14 @@ function VirtualLiveRewardsCard({
                                 ))}
                             </div>
                         ) : (
-                            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-500">
+                            <p className="rounded-md3-md bg-surface-container px-3 py-2 type-body-m text-on-surface-variant">
                                 {t("page.live.rewardEmpty")}
                             </p>
                         )}
                     </div>
                 ))}
             </div>
-        </div>
+        </SectionCard>
     );
 }
 
@@ -987,20 +944,20 @@ function VirtualLiveRewardItem({
         <>
             <VirtualLiveRewardThumbnail detail={detail} assetSource={assetSource} />
             <div className="min-w-0 flex-1">
-                <p className="line-clamp-2 text-sm font-bold text-slate-800 group-hover:text-miku transition-colors">
+                <p className="line-clamp-2 type-title-s text-on-surface group-hover:text-primary transition-colors">
                     {detail.name}
                 </p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                     {detail.subtitle && (
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">
+                        <span className="rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant">
                             {detail.subtitle}
                         </span>
                     )}
                     {typeof detail.resourceId === "number" && (
-                        <span className="font-mono text-[10px] text-slate-400">ID: {detail.resourceId}</span>
+                        <span className="font-mono type-label-s text-on-surface-variant">ID: {detail.resourceId}</span>
                     )}
                     {showQuantity && (
-                        <span className="rounded bg-miku/10 px-1.5 py-0.5 text-[10px] font-bold text-miku">
+                        <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
                             {t("page.live.rewardQuantity", { count: formatNumber(detail.quantity) })}
                         </span>
                     )}
@@ -1009,7 +966,10 @@ function VirtualLiveRewardItem({
         </>
     );
 
-    const className = "group flex min-h-[84px] items-center gap-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3 transition-all hover:border-miku/40 hover:bg-white hover:shadow-sm";
+    const className = cn(
+        "group flex min-h-[84px] items-center gap-3 rounded-md3-lg bg-surface-container p-3",
+        detail.linkHref && "state-layer focus-ring",
+    );
 
     return detail.linkHref ? (
         <Link href={detail.linkHref} className={className}>
@@ -1044,7 +1004,7 @@ function VirtualLiveRewardThumbnail({
 
     if (detail.imageUrl) {
         return (
-            <div className="relative h-14 w-14 shrink-0 rounded-xl bg-white shadow-sm ring-1 ring-slate-200 overflow-hidden">
+            <div className="relative h-14 w-14 shrink-0 rounded-md3-md bg-surface-container-lowest ring-1 ring-outline-variant overflow-hidden">
                 <Image
                     src={detail.imageUrl}
                     alt={detail.name}
@@ -1058,7 +1018,7 @@ function VirtualLiveRewardThumbnail({
     }
 
     return (
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-white text-xs font-black text-slate-400 shadow-sm ring-1 ring-slate-200">
+        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md3-md bg-surface-container-lowest type-label-m text-on-surface-variant ring-1 ring-outline-variant">
             {detail.typeLabel.slice(0, 2).toUpperCase()}
         </div>
     );
@@ -1067,9 +1027,9 @@ function VirtualLiveRewardThumbnail({
 // Info Row Component
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold text-right max-w-[60%]">{value}</span>
+        <div className="px-5 py-3 flex items-center justify-between gap-4 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="text-on-surface font-medium text-right max-w-[60%]">{value}</span>
         </div>
     );
 }
@@ -1092,79 +1052,64 @@ function SchedulesCard({ schedules, formatShortDate }: { schedules: ISchedule[],
     const hasMiddleSchedules = middleSchedules.length > 0;
 
     return (
-        <div className="bg-white rounded-2xl shadow-lg ring-1 ring-slate-200 overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    {t("page.live.schedulesTitle", { count: schedules.length })}
-                </h2>
+        <SectionCard icon={mdSchedule} title={t("page.live.schedulesTitle", { count: schedules.length })} bodyClassName="p-4 pt-3 space-y-3">
+            {/* First Schedule */}
+            <div className="p-3 bg-primary-container text-on-primary-container rounded-md3-lg">
+                <div className="flex items-center gap-2 mb-1">
+                    <span className="type-label-l">{t("page.live.scheduleFirst")}</span>
+                    <span className="type-label-m opacity-80">{t("page.live.scheduleSeq", { seq: firstSchedule.seq })}</span>
+                </div>
+                <div className="type-body-m font-medium">
+                    {formatShortDate(firstSchedule.startAt)}
+                </div>
+                <div className="type-body-s opacity-80">
+                    ~ {formatShortDate(firstSchedule.endAt)}
+                </div>
             </div>
-            <div className="p-4 space-y-3">
-                {/* First Schedule */}
-                <div className="p-3 bg-miku/5 rounded-xl border border-miku/20">
+
+            {/* Middle Schedules (Collapsible) */}
+            {hasMiddleSchedules && (
+                <>
+                    <Button
+                        variant="tonal"
+                        fullWidth
+                        icon={mdKeyboardArrowDown}
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className={isExpanded ? "[&>svg:first-child]:rotate-180" : undefined}
+                    >
+                        {isExpanded ? t("page.live.scheduleMiddleCollapse") : t("page.live.scheduleMiddleExpand", { count: middleSchedules.length })}
+                    </Button>
+
+                    {isExpanded && (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                            {middleSchedules.map((schedule) => (
+                                <div key={schedule.id} className="p-2 bg-surface-container rounded-md3-sm">
+                                    <div className="type-label-s text-on-surface-variant mb-0.5">{t("page.live.scheduleSeq", { seq: schedule.seq })}</div>
+                                    <div className="type-body-s font-medium text-on-surface">
+                                        {formatShortDate(schedule.startAt)}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </>
+            )}
+
+            {/* Last Schedule (if different from first) */}
+            {schedules.length > 1 && (
+                <div className="p-3 bg-tertiary-container text-on-tertiary-container rounded-md3-lg">
                     <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-bold text-miku">{t("page.live.scheduleFirst")}</span>
-                        <span className="text-xs text-slate-500">{t("page.live.scheduleSeq", { seq: firstSchedule.seq })}</span>
+                        <span className="type-label-l">{t("page.live.scheduleLast")}</span>
+                        <span className="type-label-m opacity-80">{t("page.live.scheduleSeq", { seq: lastSchedule.seq })}</span>
                     </div>
-                    <div className="text-sm font-medium text-slate-700">
-                        {formatShortDate(firstSchedule.startAt)}
+                    <div className="type-body-m font-medium">
+                        {formatShortDate(lastSchedule.startAt)}
                     </div>
-                    <div className="text-xs text-slate-400">
-                        ~ {formatShortDate(firstSchedule.endAt)}
+                    <div className="type-body-s opacity-80">
+                        ~ {formatShortDate(lastSchedule.endAt)}
                     </div>
                 </div>
-
-                {/* Middle Schedules (Collapsible) */}
-                {hasMiddleSchedules && (
-                    <>
-                        <button
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className="w-full py-2 px-3 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors flex items-center justify-center gap-2 text-sm text-slate-600"
-                        >
-                            <svg
-                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                            </svg>
-                            {isExpanded ? t("page.live.scheduleMiddleCollapse") : t("page.live.scheduleMiddleExpand", { count: middleSchedules.length })}
-                        </button>
-
-                        {isExpanded && (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
-                                {middleSchedules.map((schedule) => (
-                                    <div key={schedule.id} className="p-2 bg-slate-50 rounded-lg">
-                                        <div className="text-xs text-slate-500 mb-0.5">{t("page.live.scheduleSeq", { seq: schedule.seq })}</div>
-                                        <div className="text-xs font-medium text-slate-700">
-                                            {formatShortDate(schedule.startAt)}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {/* Last Schedule (if different from first) */}
-                {schedules.length > 1 && (
-                    <div className="p-3 bg-orange-50 rounded-xl border border-orange-200">
-                        <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-orange-600">{t("page.live.scheduleLast")}</span>
-                            <span className="text-xs text-slate-500">{t("page.live.scheduleSeq", { seq: lastSchedule.seq })}</span>
-                        </div>
-                        <div className="text-sm font-medium text-slate-700">
-                            {formatShortDate(lastSchedule.startAt)}
-                        </div>
-                        <div className="text-xs text-slate-400">
-                            ~ {formatShortDate(lastSchedule.endAt)}
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+            )}
+        </SectionCard>
     );
 }

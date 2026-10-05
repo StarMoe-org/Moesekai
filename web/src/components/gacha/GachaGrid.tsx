@@ -3,6 +3,8 @@ import React from "react";
 import GachaItem from "./GachaItem";
 import { IGachaInfo } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
+import { EmptyState } from "@/components/md3";
+import { mdDeployedCode } from "@/components/md3/icons";
 
 interface GachaGridProps {
     gachas: IGachaInfo[];
@@ -12,11 +14,11 @@ interface GachaGridProps {
 // Skeleton component for loading state
 function GachaSkeleton() {
     return (
-        <div className="rounded-xl overflow-hidden bg-white border border-slate-100 animate-pulse">
-            <div className="aspect-[16/9] bg-slate-100" />
+        <div className="rounded-md3-md overflow-hidden bg-surface-container-low animate-pulse">
+            <div className="aspect-[16/9] bg-surface-container-highest" />
             <div className="p-3 space-y-2">
-                <div className="h-4 bg-slate-100 rounded w-3/4" />
-                <div className="h-3 bg-slate-100 rounded w-1/2" />
+                <div className="h-4 bg-surface-container-highest rounded-md3-xs w-3/4" />
+                <div className="h-3 bg-surface-container-highest rounded-md3-xs w-1/2" />
             </div>
         </div>
     );
@@ -36,15 +38,7 @@ export default function GachaGrid({ gachas, isLoading = false }: GachaGridProps)
     }
 
     if (gachas.length === 0) {
-        return (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                <svg className="w-16 h-16 mb-4 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-                <p className="font-bold">{t("page.gacha.noResult")}</p>
-                <p className="text-sm">{t("page.gacha.noResultHint")}</p>
-            </div>
-        );
+        return <EmptyState icon={mdDeployedCode} title={t("page.gacha.noResult")} description={t("page.gacha.noResultHint")} />;
     }
 
     return (

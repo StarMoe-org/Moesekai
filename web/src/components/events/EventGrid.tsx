@@ -3,6 +3,8 @@ import EventItem from "./EventItem";
 import { IEventInfo } from "@/types/events";
 import { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { EmptyState } from "@/components/md3";
+import { mdCalendarMonth } from "@/components/md3/icons";
 
 interface EventGridProps {
     events: IEventInfo[];
@@ -17,12 +19,12 @@ interface EventGridProps {
 // Skeleton loading component
 function EventSkeleton() {
     return (
-        <div className="ios-glass-card rounded-2xl overflow-hidden animate-pulse border-none">
-            <div className="aspect-[16/9] bg-slate-200/20 dark:bg-slate-700/20" />
+        <div className="overflow-hidden rounded-md3-md bg-surface-container-low animate-pulse">
+            <div className="aspect-[16/9] bg-surface-container-highest" />
             <div className="p-4 space-y-3">
-                <div className="h-4 bg-slate-200/20 dark:bg-slate-700/20 rounded w-16" />
-                <div className="h-4 bg-slate-200/20 dark:bg-slate-700/20 rounded w-3/4" />
-                <div className="h-3 bg-slate-200/20 dark:bg-slate-700/20 rounded w-1/2" />
+                <div className="h-4 w-16 rounded-md3-xs bg-surface-container-highest" />
+                <div className="h-4 w-3/4 rounded-md3-xs bg-surface-container-highest" />
+                <div className="h-3 w-1/2 rounded-md3-xs bg-surface-container-highest" />
             </div>
         </div>
     );
@@ -45,17 +47,7 @@ export default function EventGrid({ events, isLoading = false, basePath = "/even
 
     // Empty state
     if (events.length === 0) {
-        return (
-            <div className="text-center py-16">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-slate-100 flex items-center justify-center">
-                    <svg className="w-12 h-12 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                </div>
-                <h3 className="text-lg font-bold text-slate-600 mb-2">{t("page.events.noResult")}</h3>
-                <p className="text-slate-500 text-sm">{t("page.events.noResultHint")}</p>
-            </div>
-        );
+        return <EmptyState icon={mdCalendarMonth} title={t("page.events.noResult")} description={t("page.events.noResultHint")} />;
     }
 
     return (

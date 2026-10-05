@@ -17,25 +17,24 @@ function StatBlock({ title, data, type }: StatBlockProps) {
     const { t, formatNumber } = useI18n();
 
     return (
-        <div className="bg-white rounded-xl border border-slate-100 p-3 sm:p-4 flex-1 flex flex-col justify-between">
+        <div className="bg-surface-container-low text-on-surface rounded-md3-xl p-3 sm:p-4 flex-1 flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
-                <h3 className="font-bold text-slate-700 text-xs sm:text-sm uppercase">{title}</h3>
+                <h3 className="type-title-s text-on-surface">{title}</h3>
             </div>
             <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
                 {data.map((tier) => {
                     const index = tier.CurrentIndex == null ? '—' : formatNumber(tier.CurrentIndex);
                     return (
-                    // The site's dark theme is data-theme="dark" on <html>; Tailwind's dark: variant follows the OS setting.
-                    <div key={tier.Rank} className={`p-2 sm:p-3 rounded-lg text-center border ${type === 'active' ? 'bg-red-50/50 border-red-100 [:root[data-theme=dark]_&]:bg-red-500/10 [:root[data-theme=dark]_&]:border-red-500/20' : 'bg-slate-50/50 border-slate-100'}`}>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">{t("page.prediction.activityStats.rank", { rank: tier.Rank })}</div>
-                        <div className="text-sm sm:text-base md:text-lg font-black text-slate-800 tabular-nums leading-tight mb-1 truncate" title={index}>
+                    <div key={tier.Rank} className={`p-2 sm:p-3 rounded-md3-md text-center border ${type === 'active' ? 'bg-error-container/40 border-error-container' : 'bg-surface-container border-outline-variant'}`}>
+                        <div className="type-label-s text-on-surface-variant mb-1">{t("page.prediction.activityStats.rank", { rank: tier.Rank })}</div>
+                        <div className="type-title-s sm:type-title-m text-on-surface tabular-nums leading-tight mb-1 truncate" title={index}>
                             {index}
                         </div>
 
-                        <div className={`text-[11px] sm:text-xs font-bold ${tier.ChangePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                        <div className={`type-label-m ${tier.ChangePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                             {tier.ChangePct > 0 ? '+' : ''}{tier.ChangePct.toFixed(1)}%
                         </div>
-                        <div className="text-[9px] sm:text-[10px] text-slate-400 font-mono mt-0.5 truncate">
+                        <div className="type-label-s text-on-surface-variant font-mono mt-0.5 truncate">
                             ({formatNumber(tier.Speed)}/h)
                         </div>
                     </div>

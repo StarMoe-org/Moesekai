@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { useI18n } from '@/contexts/I18nContext';
 import { RankChart } from '@/types/prediction';
+import { useMd3ChartColors } from './useMd3ChartColors';
 
 interface PredictionChartProps {
     data: RankChart;
@@ -14,6 +15,7 @@ interface PredictionChartProps {
 
 export default function PredictionChart({ data, height, className, showPredictionAtAllRanks = false }: PredictionChartProps) {
     const { t, formatNumber } = useI18n();
+    const c = useMd3ChartColors();
     const showPrediction = showPredictionAtAllRanks || data.Rank <= 10000;
     const actualScoreLabel = t("page.prediction.chart.actualScore");
     const predictedScoreLabel = t("page.prediction.chart.predictedScore");
@@ -57,10 +59,10 @@ export default function PredictionChart({ data, height, className, showPredictio
         return {
             tooltip: {
                 trigger: 'axis',
-                backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                borderColor: '#e2e8f0',
+                backgroundColor: c.surfaceContainerHigh,
+                borderColor: c.outlineVariant,
                 borderWidth: 1,
-                textStyle: { color: '#334155' },
+                textStyle: { color: c.onSurface },
                 formatter: (params: { seriesName: string; value: number | null; axisValue: string }[]) => {
                     let result = `<div style="font-weight: 600; margin-bottom: 4px;">${params[0]?.axisValue}</div>`;
                     params.forEach(p => {
@@ -77,7 +79,7 @@ export default function PredictionChart({ data, height, className, showPredictio
             legend: {
                 data: showPrediction ? [actualScoreLabel, predictedScoreLabel] : [actualScoreLabel],
                 top: 0,
-                textStyle: { color: '#64748b' }
+                textStyle: { color: c.onSurfaceVariant }
             },
             grid: {
                 left: '3%',
@@ -89,9 +91,9 @@ export default function PredictionChart({ data, height, className, showPredictio
             xAxis: {
                 type: 'category',
                 data: allTimes,
-                axisLine: { lineStyle: { color: '#e2e8f0' } },
+                axisLine: { lineStyle: { color: c.outlineVariant } },
                 axisLabel: {
-                    color: '#94a3b8',
+                    color: c.onSurfaceVariant,
                     rotate: 45,
                     fontSize: 10
                 },
@@ -101,9 +103,9 @@ export default function PredictionChart({ data, height, className, showPredictio
                 type: 'value',
                 axisLine: { show: false },
                 axisTick: { show: false },
-                splitLine: { lineStyle: { color: '#f1f5f9', type: 'dashed' } },
+                splitLine: { lineStyle: { color: c.outlineVariant, type: 'dashed' } },
                 axisLabel: {
-                    color: '#94a3b8',
+                    color: c.onSurfaceVariant,
                     formatter: (value: number) => {
                         if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`;
                         if (value >= 1000) return `${(value / 1000).toFixed(0)}K`;
@@ -123,8 +125,8 @@ export default function PredictionChart({ data, height, className, showPredictio
                     end: 100,
                     height: 20,
                     bottom: 0,
-                    borderColor: '#e2e8f0',
-                    backgroundColor: '#f8fafc',
+                    borderColor: c.outlineVariant,
+                    backgroundColor: c.surfaceContainer,
                     fillerColor: 'rgba(51, 204, 187, 0.1)',
                     handleStyle: { color: '#33CCBB' }
                 }
@@ -170,29 +172,29 @@ export default function PredictionChart({ data, height, className, showPredictio
                 }] : [])
             ]
         };
-    }, [actualScoreLabel, data, formatNumber, predictedScoreLabel, showPrediction]);
+    }, [actualScoreLabel, c, data, formatNumber, predictedScoreLabel, showPrediction]);
 
     return (
         <div
-            className={`w-full bg-white rounded-xl border border-slate-100 p-4 flex flex-col ${className || ''}`}
+            className={`w-full bg-surface-container-low text-on-surface rounded-md3-xl p-4 flex flex-col ${className || ''}`}
             style={height ? { height: `${height}px` } : undefined}
         >
             <div className="flex-none flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                    <span className="text-2xl font-bold text-miku">T{data.Rank}</span>
-                    <div className="text-sm">
-                        <div className="text-slate-500">{t("page.prediction.table.currentScore")}</div>
-                        <div className="font-bold text-slate-700">{formatNumber(data.CurrentScore)}</div>
+                    <span className="type-headline-s text-primary">T{data.Rank}</span>
+                    <div className="type-body-m">
+                        <div className="text-on-surface-variant">{t("page.prediction.table.currentScore")}</div>
+                        <div className="type-title-s text-on-surface tabular-nums">{formatNumber(data.CurrentScore)}</div>
                     </div>
                 </div>
                 {showPrediction && (
                     <div className="text-right">
-                        <div className="text-sm text-slate-500">{t("page.prediction.table.predictedScore")}</div>
-                        <div className="text-lg font-bold text-amber-500">
+                        <div className="type-body-m text-on-surface-variant">{t("page.prediction.table.predictedScore")}</div>
+                        <div className="type-title-m tabular-nums text-amber-500">
                             {data.PredictedScore > 0 ? formatNumber(data.PredictedScore) : '-'}
                         </div>
                         {data.PredictedScoreP10 != null && data.PredictedScoreP90 != null && (
-                            <div className="text-[10px] text-slate-400 font-mono">
+                            <div className="type-label-s text-on-surface-variant font-mono">
                                 80% CI: {formatNumber(data.PredictedScoreP10)} ~ {formatNumber(data.PredictedScoreP90)}
                             </div>
                         )}

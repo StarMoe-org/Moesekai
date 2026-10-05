@@ -73,10 +73,9 @@ export default function VirtualLiveFilters({
                         <button
                             key={type}
                             onClick={() => toggleType(type)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${selectedTypes.includes(type)
-                                ? "text-white shadow-md ring-1 ring-white/30 dark:ring-white/10"
-                                : getFilterChipStateClasses(false)
-                                }`}
+                            className={selectedTypes.includes(type)
+                                ? `${getFilterChipStateClasses(true)} text-white shadow-elev-1`
+                                : getFilterChipStateClasses(false)}
                             style={selectedTypes.includes(type) ? { backgroundColor: VIRTUAL_LIVE_TYPE_COLORS[type] } : {}}
                         >
                             {t(`common.virtualLiveTypes.${type}`)}

@@ -15,6 +15,11 @@ import { IEventInfo, getEventStatus, EVENT_STATUS_DISPLAY } from "@/types/events
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchMasterData } from "@/lib/fetch";
 import { getEventBannerUrl, getEventLogoUrl } from "@/lib/assets";
+import { Banner, EmptyState, ErrorState, Icon, LoadingState, PageContainer, PageHeader, SegmentedButton, cn } from "@/components/md3";
+import { mdBarChart, mdInfo } from "@/components/md3/icons";
+
+const PREDICTION_SELECT_CLS =
+    "h-12 w-full px-4 bg-surface border border-outline rounded-md3-xs type-body-l text-on-surface outline-none focus:border-primary focus:shadow-[inset_0_0_0_1px_var(--md-sys-color-primary)] disabled:opacity-38";
 
 interface LegacyTierKline {
     rank: number;
@@ -31,7 +36,7 @@ const RANK_TIERS = [50, 100, 200, 300, 400, 500, 1000, 2000, 3000, 5000, 10000];
 
 export default function PredictionClient() {
     const { t, formatDate, formatNumber } = useI18n();
-    const { assetSource, themeColor, serverSource } = useTheme();
+    const { assetSource, serverSource } = useTheme();
     const [server, setServer] = useState<ServerType>(() => (serverSource === "jp" ? "jp" : "cn"));
     const hasManualServerOverride = useRef(false);
     const [events, setEvents] = useState<EventListItem[]>([]);
@@ -269,51 +274,35 @@ export default function PredictionClient() {
 
     return (
         <MainLayout>
-            <div className="container mx-auto px-4 sm:px-6 py-8">
-                {/* Page Header - matching events page style */}
-                <div className="text-center mb-8">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4">
-                        <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.prediction.badge")}</span>
-                    </div>
-                    <h1 className="text-3xl sm:text-4xl font-black text-primary-text">
-                        {t("page.prediction.title")} <span className="text-miku">{t("page.prediction.titleHighlight")}</span>
-                    </h1>
-                    <p className="text-slate-500 mt-2 max-w-2xl mx-auto">
-                        {t("page.prediction.description")}
-                    </p>
-                </div>
+            <PageContainer>
+                <PageHeader
+                    align="center"
+                    eyebrow={t("page.prediction.badge")}
+                    title={t("page.prediction.title")}
+                    highlight={t("page.prediction.titleHighlight")}
+                    description={t("page.prediction.description")}
+                />
 
                 {/* Controls */}
                 <div className="flex flex-col sm:flex-row gap-4 mb-8 items-center sm:items-stretch">
                     {/* Server Toggle */}
-                    <div className="flex bg-white rounded-xl border border-slate-200 p-1">
-                        <button
-                            onClick={() => handleServerChange('cn')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${server === 'cn'
-                                ? 'bg-miku text-white shadow-md'
-                                : 'text-slate-600 hover:bg-slate-50'
-                                }`}
-                        >
-                            {t("page.prediction.servers.cn")}
-                        </button>
-                        <button
-                            onClick={() => handleServerChange('jp')}
-                            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${server === 'jp'
-                                ? 'bg-miku text-white shadow-md'
-                                : 'text-slate-600 hover:bg-slate-50'
-                                }`}
-                        >
-                            {t("page.prediction.servers.jp")}
-                        </button>
-                    </div>
+                    <SegmentedButton
+                        options={[
+                            { value: "cn" as const, label: t("page.prediction.servers.cn") },
+                            { value: "jp" as const, label: t("page.prediction.servers.jp") },
+                        ]}
+                        value={server}
+                        onValueChange={(v) => handleServerChange(v)}
+                        className="shrink-0 self-center"
+                    />
 
                     {/* Event Selector */}
-                    <div className="flex-1">
+                    <div className="flex-1 w-full">
                         <select
                             value={selectedEventId || ''}
                             onChange={(e) => handleEventChange(Number(e.target.value))}
                             disabled={eventsLoading || events.length === 0}
-                            className="w-full px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-miku/20 focus:border-miku disabled:opacity-50"
+                            className={PREDICTION_SELECT_CLS}
                         >
                             {eventsLoading ? (
                                 <option>{t("page.prediction.events.loading")}</option>
@@ -331,25 +320,18 @@ export default function PredictionClient() {
                     {isWorldBloomEvent && (
                         <button
                             onClick={() => setIsWlNoticeOpen(true)}
-                            className="inline-flex w-full sm:w-auto items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-700 transition-colors hover:bg-amber-100 shrink-0"
+                            className="state-layer focus-ring inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-tertiary-container px-5 type-label-l text-on-tertiary-container shrink-0"
                         >
-                            <svg className="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-                            </svg>
+                            <Icon path={mdInfo} size={18} />
                             {t("page.prediction.wl.noticeButton")}
                         </button>
                     )}
                     {/* Warning for >99% progress */}
                     {eventState && eventState.isActive && eventState.banner.progressPercent >= 99 && (
-                        <div className="flex items-center gap-2 px-4 py-2 rounded-full border shadow-sm w-full sm:w-auto justify-center sm:justify-start shrink-0"
-                            style={{
-                                borderColor: `${themeColor}40`,
-                                backgroundColor: `${themeColor}10`,
-                            }}>
+                        <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-primary-container text-on-primary-container w-full sm:w-auto justify-center sm:justify-start shrink-0">
                             <div
-                                className="w-6 h-6 shrink-0"
+                                className="w-6 h-6 shrink-0 bg-primary"
                                 style={{
-                                    backgroundColor: themeColor,
                                     maskImage: `url(/miku.webp)`,
                                     maskSize: 'contain',
                                     maskRepeat: 'no-repeat',
@@ -360,7 +342,7 @@ export default function PredictionClient() {
                                     WebkitMaskPosition: 'center',
                                 }}
                             />
-                            <span className="text-sm font-medium whitespace-nowrap" style={{ color: themeColor }}>
+                            <span className="type-label-l whitespace-nowrap">
                                 {t("page.prediction.stopPredictionNotice")}
                             </span>
                         </div>
@@ -369,20 +351,11 @@ export default function PredictionClient() {
 
                 {/* Error Message */}
                 {error && (
-                    <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
-                        {error}
-                    </div>
+                    <ErrorState className="mb-6" title={t("common.state.loadingFailed")} message={error} />
                 )}
 
                 {/* Loading State */}
-                {loading && (
-                    <div className="flex items-center justify-center py-20">
-                        <div className="flex flex-col items-center gap-3">
-                            <div className="w-10 h-10 border-4 border-miku/30 border-t-miku rounded-full animate-spin" />
-                            <span className="text-slate-500">{t("page.prediction.loading")}</span>
-                        </div>
-                    </div>
-                )}
+                {loading && <LoadingState label={t("page.prediction.loading")} className="min-h-0 py-20" />}
 
                 {/* Main Content */}
                 {!loading && predictionData && (
@@ -395,10 +368,8 @@ export default function PredictionClient() {
                             const resolvedStatusLabel = statusLabel === `common.status.${banner.status}` ? fallbackStatusLabel : statusLabel;
                             return (
                                 <>
-                                    <Link href={`/events/${banner.mockEvent.id}`} className="block group mb-6">
-                                        <div className="relative flex h-32 md:h-36 rounded-2xl overflow-hidden glass-card border border-white/40 bg-white shadow-sm transition-transform hover:scale-[1.01] active:scale-[0.99] hover:shadow-md cursor-pointer">
-                                            {/* Link wrapper could be added here if needed */}
-
+                                    <Link href={`/events/${banner.mockEvent.id}`} className="block group mb-6 rounded-md3-xl focus-ring">
+                                        <div className="state-layer relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow group-hover:shadow-elev-2 cursor-pointer">
                                             {/* Left Side: Background & Logo */}
                                             <div className="w-[45%] relative overflow-hidden">
                                                 {banner.hasBanner ? (
@@ -411,7 +382,7 @@ export default function PredictionClient() {
                                                                 className="object-cover"
                                                                 unoptimized
                                                             />
-                                                            <div className="absolute inset-0 bg-black/50" />
+                                                            <div className="absolute inset-0 bg-scrim/50" />
                                                         </div>
                                                         <div className="absolute inset-0 flex items-center justify-center p-2">
                                                             <div className="relative w-full h-full max-h-20 sm:max-h-24">
@@ -426,7 +397,7 @@ export default function PredictionClient() {
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    <div className="absolute inset-0 bg-gradient-to-br from-miku to-blue-400 flex items-center justify-center text-white/20 font-bold text-4xl">
+                                                    <div className="absolute inset-0 bg-primary-container flex items-center justify-center text-on-primary-container/40 type-headline-m">
                                                         NO IMAGE
                                                     </div>
                                                 )}
@@ -437,45 +408,41 @@ export default function PredictionClient() {
                                                 {/* Progress Overlay */}
                                                 {banner.status === "ongoing" && (
                                                     <div
-                                                        className="absolute inset-y-0 left-0 transition-all duration-500 ease-out z-0 pointer-events-none"
-                                                        style={{
-                                                            width: `${banner.progressPercent}%`,
-                                                            backgroundColor: themeColor,
-                                                            opacity: 0.12
-                                                        }}
+                                                        className="absolute inset-y-0 left-0 bg-primary/12 transition-all duration-500 ease-out z-0 pointer-events-none"
+                                                        style={{ width: `${banner.progressPercent}%` }}
                                                     />
                                                 )}
 
                                                 <div className="space-y-1 relative z-20">
                                                     <div className="flex items-center gap-2 mb-1.5">
                                                         <span
-                                                            className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded text-white shadow-sm"
+                                                            className="type-label-s px-2 py-0.5 rounded-md3-xs text-white"
                                                             style={{ backgroundColor: banner.statusDisplay.color }}
                                                         >
                                                             {resolvedStatusLabel}
                                                         </span>
-                                                        <span className="text-[10px] font-bold text-slate-400">
+                                                        <span className="type-label-s text-on-surface-variant">
                                                             {banner.eventTypeName}
                                                         </span>
                                                     </div>
-                                                    <h3 className="font-bold text-primary-text text-sm sm:text-base leading-tight line-clamp-1" title={banner.mockEvent.name}>
+                                                    <h3 className="type-title-s sm:type-title-m text-on-surface line-clamp-1" title={banner.mockEvent.name}>
                                                         {banner.mockEvent.name}
                                                     </h3>
-                                                    <div className="pt-2 text-[10px] sm:text-xs text-slate-400 font-mono flex flex-col sm:flex-row sm:gap-2">
+                                                    <div className="pt-2 type-label-m text-on-surface-variant font-mono flex flex-col sm:flex-row sm:gap-2">
                                                         <span>{banner.formatEventDate(banner.mockEvent.startAt)}</span>
                                                         <span className="hidden sm:inline">-</span>
                                                         <span>{banner.formatEventDate(banner.mockEvent.aggregateAt)}</span>
                                                     </div>
                                                     {banner.updateTime && (
-                                                        <div className="text-[10px] sm:text-xs text-slate-500/80 font-mono mt-0.5">
+                                                        <div className="type-label-m text-on-surface-variant font-mono mt-0.5">
                                                             {t("page.prediction.dataUpdate", { time: banner.updateTime })}
                                                         </div>
                                                     )}
                                                 </div>
 
                                                 {banner.status === "ongoing" && (
-                                                    <div className="absolute bottom-0 right-2 text-4xl sm:text-5xl font-black text-slate-800 dark:text-slate-100 select-none z-10 tracking-tighter">
-                                                        {Math.floor(banner.progressPercent)}<span className="text-2xl ml-1">%</span>
+                                                    <div className="absolute bottom-0 right-2 type-display-s text-on-surface select-none z-10 tabular-nums">
+                                                        {Math.floor(banner.progressPercent)}<span className="type-headline-s ml-1">%</span>
                                                     </div>
                                                 )}
                                             </div>
@@ -503,25 +470,25 @@ export default function PredictionClient() {
                                     )}
 
                                     {/* Row 2: Prediction List / Table */}
-                                    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden mb-6">
-                                        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                                            <h3 className="font-bold text-slate-700">
+                                    <div className="bg-surface-container-low rounded-md3-xl overflow-hidden mb-6">
+                                        <div className="px-6 py-4 border-b border-outline-variant flex justify-between items-center gap-4">
+                                            <h3 className="type-title-l text-on-surface">
                                                 {isActive ? t("page.prediction.table.activeTitle") : t("page.prediction.table.finalTitle")}
                                             </h3>
-                                            {isActive && <span className="text-xs text-slate-400">{t("page.prediction.table.detailHint")}</span>}
+                                            {isActive && <span className="type-body-s text-on-surface-variant">{t("page.prediction.table.detailHint")}</span>}
                                         </div>
                                         <div className="overflow-x-auto">
-                                            <table className="w-full text-sm">
-                                                <thead className="bg-slate-50">
+                                            <table className="w-full type-body-m">
+                                                <thead className="bg-surface-container">
                                                     <tr>
-                                                        <th className="px-4 py-3 text-left text-slate-500 font-medium w-24">{t("page.prediction.table.tier")}</th>
-                                                        <th className="px-4 py-3 text-right text-slate-500 font-medium">
+                                                        <th className="px-4 py-3 text-left type-title-s text-on-surface-variant w-24">{t("page.prediction.table.tier")}</th>
+                                                        <th className="px-4 py-3 text-right type-title-s text-on-surface-variant">
                                                             {isActive ? t("page.prediction.table.currentScore") : t("page.prediction.table.finalScore")}
                                                         </th>
-                                                        {isActive && <th className="px-4 py-3 text-right text-slate-500 font-medium">{t("page.prediction.table.predictedScore")}</th>}
-                                                        {isActive && <th className="px-4 py-3 text-right text-slate-500 font-medium">{t("page.prediction.table.gap")}</th>}
-                                                        {isActive && <th className="px-4 py-3 text-right text-slate-500 font-medium">{t("page.prediction.table.speed")}</th>}
-                                                        {isActive && <th className="px-4 py-3 text-center text-slate-500 font-medium w-32">{t("page.prediction.table.trend")}</th>}
+                                                        {isActive && <th className="px-4 py-3 text-right type-title-s text-on-surface-variant">{t("page.prediction.table.predictedScore")}</th>}
+                                                        {isActive && <th className="px-4 py-3 text-right type-title-s text-on-surface-variant">{t("page.prediction.table.gap")}</th>}
+                                                        {isActive && <th className="px-4 py-3 text-right type-title-s text-on-surface-variant">{t("page.prediction.table.speed")}</th>}
+                                                        {isActive && <th className="px-4 py-3 text-center type-title-s text-on-surface-variant w-32">{t("page.prediction.table.trend")}</th>}
                                                     </tr>
                                                 </thead>
                                                 <tbody>
@@ -558,27 +525,27 @@ export default function PredictionClient() {
                                                         return (
                                                             <tr
                                                                 key={chart.Rank}
-                                                                className={`border-t border-slate-50 hover:bg-slate-50/50 cursor-pointer transition-colors ${isActive && chart.Rank === selectedRank ? 'bg-miku/5' : ''
+                                                                className={`border-t border-outline-variant cursor-pointer transition-colors hover:bg-on-surface/[0.04] ${isActive && chart.Rank === selectedRank ? 'bg-secondary-container/60' : ''
                                                                     }`}
                                                                 onClick={() => isActive && setSelectedRank(chart.Rank)}
                                                             >
-                                                                <td className="px-4 py-3 font-bold text-miku">T{chart.Rank}</td>
-                                                                <td className="px-4 py-3 text-right text-slate-700 font-mono font-bold">
+                                                                <td className="px-4 py-3 font-medium text-primary">T{chart.Rank}</td>
+                                                                <td className="px-4 py-3 text-right text-on-surface font-mono font-medium">
                                                                     {formatNumber(chart.CurrentScore)}
                                                                 </td>
                                                                 {isActive && (
                                                                     <>
-                                                                        <td className="px-4 py-3 text-right text-amber-600 font-mono font-bold">
+                                                                        <td className="px-4 py-3 text-right text-tertiary font-mono font-medium">
                                                                             {chart.Rank > 10000 ? '-' : formatNumber(chart.PredictedScore)}
                                                                         </td>
-                                                                        <td className="px-4 py-3 text-right text-slate-500 font-mono">
+                                                                        <td className="px-4 py-3 text-right text-on-surface-variant font-mono">
                                                                             {chart.Rank > 10000 ? '-' : `+${formatNumber(chart.PredictedScore - chart.CurrentScore)}`}
                                                                         </td>
                                                                         <td className="px-4 py-3 text-right font-mono">
                                                                             {tierStats ? (
                                                                                 <div className="flex flex-col items-end">
-                                                                                    <span className="text-slate-700">{tierStats.Speed != null ? formatNumber(tierStats.Speed) : '-'} /h</span>
-                                                                                    <span className={`text-[10px] ${tierStats.ChangePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
+                                                                                    <span className="text-on-surface">{tierStats.Speed != null ? formatNumber(tierStats.Speed) : '-'} /h</span>
+                                                                                    <span className={`type-label-s ${tierStats.ChangePct >= 0 ? 'text-red-500' : 'text-emerald-500'}`}>
                                                                                         {tierStats.ChangePct >= 0 ? '+' : ''}{tierStats.ChangePct?.toFixed(1) ?? '0'}%
                                                                                     </span>
                                                                                 </div>
@@ -609,9 +576,9 @@ export default function PredictionClient() {
                                     {/* Row 3: Large Detailed Chart (Only if Active) */}
                                     {isActive && (
                                         <div id="detailed-chart" className="scroll-mt-24 mb-6">
-                                            <div className="bg-white rounded-xl border border-slate-200 p-6">
+                                            <div className="bg-surface-container-low rounded-md3-xl p-6">
                                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                                                    <h3 className="text-lg font-bold text-slate-800 shrink-0">
+                                                    <h3 className="type-title-l text-on-surface shrink-0">
                                                         {t("page.prediction.chart.detailTitle", { rank: selectedRank })}
                                                     </h3>
                                                     {/* Rank Selector for Chart */}
@@ -620,10 +587,12 @@ export default function PredictionClient() {
                                                             <button
                                                                 key={rank}
                                                                 onClick={() => setSelectedRank(rank)}
-                                                                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all whitespace-nowrap flex-shrink-0 snap-start ${selectedRank === rank
-                                                                    ? 'bg-miku text-white shadow-lg shadow-miku/20'
-                                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                                                                    }`}
+                                                                className={cn(
+                                                                    "state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l whitespace-nowrap flex-shrink-0 snap-start border transition-colors",
+                                                                    selectedRank === rank
+                                                                        ? "bg-secondary-container text-on-secondary-container border-transparent"
+                                                                        : "border-outline-variant text-on-surface-variant"
+                                                                )}
                                                             >
                                                                 T{rank}
                                                             </button>
@@ -632,9 +601,9 @@ export default function PredictionClient() {
                                                 </div>
 
                                                 {currentChart ? (
-                                                    <PredictionChart data={currentChart} className="h-[350px] sm:h-[450px]" />
+                                                    <PredictionChart data={currentChart} className="h-[350px] sm:h-[450px] !p-0" />
                                                 ) : (
-                                                    <div className="h-[350px] sm:h-[450px] flex items-center justify-center text-slate-400 bg-slate-50/50 rounded-xl">
+                                                    <div className="h-[350px] sm:h-[450px] flex items-center justify-center type-body-m text-on-surface-variant bg-surface-container rounded-md3-lg">
                                                         {t("page.prediction.chart.noTierData", { rank: selectedRank })}
                                                     </div>
                                                 )}
@@ -642,7 +611,7 @@ export default function PredictionClient() {
                                         </div>
                                     )}
                                     {/* Footer Sources */}
-                                    <div className="text-center text-xs text-slate-400 pb-8 space-y-1">
+                                    <div className="text-center type-body-s text-on-surface-variant pb-8 space-y-1">
                                         <p>{t("page.prediction.sources.tier")}</p>
                                         <p>{t("page.prediction.sources.prediction")}</p>
                                     </div>
@@ -656,15 +625,10 @@ export default function PredictionClient() {
                 {/* Empty State */}
                 {
                     !loading && !predictionData && !error && selectedEventId && (
-                        <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-                            <svg className="w-16 h-16 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                            </svg>
-                            <p>{t("page.prediction.empty")}</p>
-                        </div>
+                        <EmptyState icon={mdBarChart} title={t("page.prediction.empty")} />
                     )
                 }
-            </div >
+            </PageContainer>
             <Modal
                 isOpen={isWlNoticeOpen}
                 onClose={() => setIsWlNoticeOpen(false)}
@@ -672,12 +636,8 @@ export default function PredictionClient() {
                 size="sm"
                 syncHistory={false}
             >
-                <div>
-                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
-                        {t("page.prediction.wl.description")}
-                    </div>
-                </div>
+                <Banner tone="warning">{t("page.prediction.wl.description")}</Banner>
             </Modal>
-        </MainLayout >
+        </MainLayout>
     );
 }

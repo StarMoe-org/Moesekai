@@ -16,6 +16,27 @@ import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import CardSelectorModal from "@/components/cards/CardSelectorModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { getGachaInfoTranslation, loadGachaInfoTranslations, resolveGachaInfoText, type GachaInfoField, type GachaInfoTranslations } from "@/lib/gachaInfoTranslations";
+import { Button, EmptyState, Icon, IconButton, LoadingState, PageContainer, SectionCard, Tabs } from "@/components/md3";
+import {
+    mdArrowBack,
+    mdBarChart,
+    mdCasino,
+    mdCheck,
+    mdDescription,
+    mdEventBusy,
+    mdGridView,
+    mdInfo,
+    mdKeyboardArrowDown,
+    mdKidStar,
+    mdPlayArrowFill,
+    mdStarFill,
+    mdTranslate,
+    mdWandStars,
+    mdZoomIn,
+} from "@/components/md3/icons";
+
+const CARD_TILE_BASE = "rounded-md3-sm overflow-hidden bg-surface-container-lowest transition-shadow";
+const CARD_TILE_IDLE = "ring-1 ring-outline-variant group-hover:ring-2 group-hover:ring-primary";
 
 // Gacha Simulator Types
 interface GachaStatistic {
@@ -662,12 +683,9 @@ export default function GachaDetailClient() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("common.state.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -675,26 +693,18 @@ export default function GachaDetailClient() {
     if (error || !gacha) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">{t("page.gacha.notFoundTitle", { id: gachaId })}</h2>
-                        <p className="text-slate-500 mb-6">{t("page.gacha.notFoundDesc")}</p>
-                        <Link
-                            href="/gacha"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.gacha.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdEventBusy}
+                        title={t("page.gacha.notFoundTitle", { id: gachaId })}
+                        description={t("page.gacha.notFoundDesc")}
+                        action={
+                            <Button href="/gacha" variant="filled" size="m" icon={mdArrowBack}>
+                                {t("page.gacha.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -737,30 +747,30 @@ export default function GachaDetailClient() {
                 fileName={`gacha_${gacha.id}_${activeImageTab}.png`}
             />
 
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="inline-flex items-center h-7 px-3 rounded-md3-sm bg-surface-container-high type-label-m font-mono text-on-surface-variant">
                             ID: {gacha.id}
                         </span>
-                        <span className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit bg-purple-500">
+                        <span className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m bg-tertiary-container text-on-tertiary-container">
                             {gachaTypeLabel}
                         </span>
                         <span
-                            className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit"
+                            className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: status.color }}
                         >
                             {status.label}
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800">
+                    <h1 className="type-headline-m sm:type-headline-l text-on-surface">
                         <TranslatedText
                             original={gacha.name}
                             category="gacha"
                             field="name"
                             originalClassName=""
-                            translationClassName="block text-lg font-medium text-slate-400 mt-1"
+                            translationClassName="block type-title-m text-on-surface-variant mt-1"
                         />
                     </h1>
                 </div>
@@ -773,61 +783,42 @@ export default function GachaDetailClient() {
                             /* Screenshot Mode: Show all images in flat layout */
                             <div className="space-y-4">
                                 {/* Logo */}
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">Logo</span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
-                                        <Image
-                                            src={logoUrl}
-                                            alt={`${gacha.name} Logo`}
-                                            fill
-                                            className="object-contain p-6"
-                                            unoptimized
-                                            priority
-                                        />
-                                    </div>
-                                </div>
+                                <ScreenshotImageCard label="Logo">
+                                    <Image
+                                        src={logoUrl}
+                                        alt={`${gacha.name} Logo`}
+                                        fill
+                                        className="object-contain p-6"
+                                        unoptimized
+                                        priority
+                                    />
+                                </ScreenshotImageCard>
                                 {/* Background */}
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">{t("page.gacha.imageTabs.bg")}</span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
-                                        <Image
-                                            src={bgUrl}
-                                            alt={`${gacha.name} Background`}
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                    </div>
-                                </div>
+                                <ScreenshotImageCard label={t("page.gacha.imageTabs.bg")}>
+                                    <Image
+                                        src={bgUrl}
+                                        alt={`${gacha.name} Background`}
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                </ScreenshotImageCard>
                             </div>
                         ) : (
                             /* Normal Mode: Tabs */
-                            <div className="ios-glass-card rounded-2xl overflow-hidden lg:sticky lg:top-24">
+                            <div className="bg-surface-container-low rounded-md3-xl overflow-hidden lg:sticky lg:top-24">
                                 {/* Tabs */}
-                                <div className="flex border-b border-slate-200">
-                                    {[
-                                        { key: "logo", label: "Logo" },
-                                        { key: "bg", label: t("page.gacha.imageTabs.bg") },
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.key}
-                                            onClick={() => setActiveImageTab(tab.key as "logo" | "bg")}
-                                            className={`flex-1 py-3 px-4 text-sm font-bold transition-colors ${activeImageTab === tab.key
-                                                ? "text-miku border-b-2 border-miku bg-miku/5"
-                                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                                                }`}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                <Tabs
+                                    items={[
+                                        { value: "logo" as const, label: "Logo" },
+                                        { value: "bg" as const, label: t("page.gacha.imageTabs.bg") },
+                                    ]}
+                                    value={activeImageTab}
+                                    onValueChange={(v) => setActiveImageTab(v)}
+                                />
                                 {/* Image Content */}
                                 <div
-                                    className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100 cursor-zoom-in group"
+                                    className="relative aspect-[16/9] bg-surface-container cursor-zoom-in group"
                                     onClick={() => setImageViewerOpen(true)}
                                 >
                                     {activeImageTab === "logo" && (
@@ -849,10 +840,8 @@ export default function GachaDetailClient() {
                                             unoptimized
                                         />
                                     )}
-                                    <div className="absolute bottom-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                        </svg>
+                                    <div className="absolute bottom-3 right-3 z-10 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                        <Icon path={mdZoomIn} size={16} />
                                         {t("page.gacha.clickExpand")}
                                     </div>
                                 </div>
@@ -863,16 +852,8 @@ export default function GachaDetailClient() {
                     {/* RIGHT Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.gacha.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <SectionCard icon={mdInfo} title={t("page.gacha.basicInfo")} bodyClassName="p-0 pb-2">
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label={t("page.gacha.idLabel")} value={`#${gacha.id}`} />
                                 <InfoRow
                                     label={t("page.gacha.nameLabel")}
@@ -882,7 +863,7 @@ export default function GachaDetailClient() {
                                             category="gacha"
                                             field="name"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-s text-on-surface-variant mt-0.5"
                                         />
                                     }
                                 />
@@ -891,197 +872,150 @@ export default function GachaDetailClient() {
                                 <InfoRow label={t("page.gacha.endTimeLabel")} value={formatTimestamp(gacha.endAt)} />
                                 <InfoRow
                                     label={t("page.gacha.assetNameLabel")}
-                                    value={<span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{gacha.assetbundleName}</span>}
+                                    value={<span className="font-mono type-label-m bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{gacha.assetbundleName}</span>}
                                 />
                             </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Gacha Summary & Tagline Card */}
                         {(gacha.gachaInformation?.summary || gacha.gachaInformation?.bubbleText) && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex items-center justify-between">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {t("page.gacha.summaryTitle")}
-                                    </h2>
-                                    {gacha.gachaInformation.summary && (
-                                        <button
-                                            type="button"
+                            <SectionCard
+                                icon={mdInfo}
+                                title={t("page.gacha.summaryTitle")}
+                                bodyClassName="space-y-4"
+                                actions={
+                                    gacha.gachaInformation.summary ? (
+                                        <Button
+                                            variant="text"
+                                            size="xs"
+                                            trailingIcon={mdKeyboardArrowDown}
                                             onClick={() => setIsSummaryExpanded(prev => !prev)}
-                                            className="text-xs font-bold text-miku hover:text-miku-dark transition-colors flex items-center gap-1"
+                                            className={isSummaryExpanded ? "[&>svg:last-child]:rotate-180" : undefined}
                                         >
                                             {isSummaryExpanded ? t("page.gacha.showLessSummary") : t("page.gacha.showMoreSummary")}
-                                            <svg
-                                                className={`w-4 h-4 transition-transform duration-200 ${isSummaryExpanded ? "rotate-180" : ""}`}
-                                                fill="none"
-                                                viewBox="0 0 24 24"
-                                                stroke="currentColor"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </button>
-                                    )}
-                                </div>
-                                <div className="p-5 space-y-4">
-                                    {gacha.gachaInformation.bubbleText && (
-                                        <div className="px-4 py-3 bg-gradient-to-r from-pink-500/10 via-purple-500/10 to-miku/10 border border-pink-200/50 rounded-xl flex items-start gap-3">
-                                            <span className="shrink-0 px-2 py-0.5 bg-pink-500 text-white text-xs font-bold rounded-md shadow-sm">
-                                                {t("page.gacha.bubbleTitle")}
-                                            </span>
-                                            <p className="text-sm font-medium text-slate-700 leading-snug">
-                                                {bubbleTextView.text}
-                                            </p>
-                                            {bubbleTextView.canToggle && (
+                                        </Button>
+                                    ) : undefined
+                                }
+                            >
+                                {gacha.gachaInformation.bubbleText && (
+                                    <div className="px-4 py-3 bg-tertiary-container text-on-tertiary-container rounded-md3-lg flex items-start gap-3">
+                                        <span className="shrink-0 px-2 py-0.5 bg-tertiary text-on-tertiary type-label-m rounded-md3-xs">
+                                            {t("page.gacha.bubbleTitle")}
+                                        </span>
+                                        <p className="type-body-m">
+                                            {bubbleTextView.text}
+                                        </p>
+                                        {bubbleTextView.canToggle && (
+                                            <GachaInfoOriginalToggle
+                                                className="ml-auto shrink-0"
+                                                showingTranslation={bubbleTextView.showingTranslation}
+                                                onToggle={() => toggleGachaInfoOriginal("bubbleText")}
+                                            />
+                                        )}
+                                    </div>
+                                )}
+                                {gacha.gachaInformation.summary && (
+                                    <div>
+                                        {summaryView.canToggle && (
+                                            <div className="flex justify-end mb-2">
                                                 <GachaInfoOriginalToggle
-                                                    className="ml-auto shrink-0"
-                                                    showingTranslation={bubbleTextView.showingTranslation}
-                                                    onToggle={() => toggleGachaInfoOriginal("bubbleText")}
+                                                    showingTranslation={summaryView.showingTranslation}
+                                                    onToggle={() => toggleGachaInfoOriginal("summary")}
                                                 />
-                                            )}
-                                        </div>
-                                    )}
-                                    {gacha.gachaInformation.summary && (
-                                        <div>
-                                            {summaryView.canToggle && (
-                                                <div className="flex justify-end mb-2">
-                                                    <GachaInfoOriginalToggle
-                                                        showingTranslation={summaryView.showingTranslation}
-                                                        onToggle={() => toggleGachaInfoOriginal("summary")}
-                                                    />
-                                                </div>
-                                            )}
-                                            <div className={`text-sm text-slate-600 leading-relaxed whitespace-pre-line bg-slate-50/50 p-4 rounded-xl border border-slate-100 ${!isSummaryExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
-                                                {summaryView.text}
-                                                {!isSummaryExpanded && (
-                                                    <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-slate-50 to-transparent pointer-events-none" />
-                                                )}
                                             </div>
+                                        )}
+                                        <div className={`type-body-m text-on-surface-variant whitespace-pre-line bg-surface-container p-4 rounded-md3-lg ${!isSummaryExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
+                                            {summaryView.text}
                                             {!isSummaryExpanded && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsSummaryExpanded(true)}
-                                                    className="mt-3 w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold rounded-xl transition-colors border border-slate-200/60"
-                                                >
-                                                    {t("page.gacha.showMoreSummary")}
-                                                </button>
+                                                <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-surface-container to-transparent pointer-events-none" />
                                             )}
                                         </div>
-                                    )}
-                                </div>
-                            </div>
+                                        {!isSummaryExpanded && (
+                                            <Button variant="tonal" fullWidth className="mt-3" onClick={() => setIsSummaryExpanded(true)}>
+                                                {t("page.gacha.showMoreSummary")}
+                                            </Button>
+                                        )}
+                                    </div>
+                                )}
+                            </SectionCard>
                         )}
 
                         {/* Gacha Detailed Description & Rules Card */}
                         {gacha.gachaInformation?.description && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex items-center justify-between">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                        </svg>
-                                        {t("page.gacha.descriptionTitle")}
-                                    </h2>
-                                    <button
-                                        type="button"
+                            <SectionCard
+                                icon={mdDescription}
+                                title={t("page.gacha.descriptionTitle")}
+                                actions={
+                                    <Button
+                                        variant="text"
+                                        size="xs"
+                                        trailingIcon={mdKeyboardArrowDown}
                                         onClick={() => setIsDescriptionExpanded(prev => !prev)}
-                                        className="text-xs font-bold text-miku hover:text-miku-dark transition-colors flex items-center gap-1"
+                                        className={isDescriptionExpanded ? "[&>svg:last-child]:rotate-180" : undefined}
                                     >
                                         {isDescriptionExpanded ? t("page.gacha.showLessDescription") : t("page.gacha.showMoreDescription")}
-                                        <svg
-                                            className={`w-4 h-4 transition-transform duration-200 ${isDescriptionExpanded ? "rotate-180" : ""}`}
-                                            fill="none"
-                                            viewBox="0 0 24 24"
-                                            stroke="currentColor"
-                                        >
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                                        </svg>
-                                    </button>
-                                </div>
-                                <div className="p-5">
-                                    {descriptionView.canToggle && (
-                                        <div className="flex justify-end mb-2">
-                                            <GachaInfoOriginalToggle
-                                                showingTranslation={descriptionView.showingTranslation}
-                                                onToggle={() => toggleGachaInfoOriginal("description")}
-                                            />
-                                        </div>
-                                    )}
-                                    <div className={`text-xs text-slate-600 leading-relaxed whitespace-pre-line ${!isDescriptionExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
-                                        {descriptionView.text}
-                                        {!isDescriptionExpanded && (
-                                            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-                                        )}
+                                    </Button>
+                                }
+                            >
+                                {descriptionView.canToggle && (
+                                    <div className="flex justify-end mb-2">
+                                        <GachaInfoOriginalToggle
+                                            showingTranslation={descriptionView.showingTranslation}
+                                            onToggle={() => toggleGachaInfoOriginal("description")}
+                                        />
                                     </div>
+                                )}
+                                <div className={`type-body-s text-on-surface-variant whitespace-pre-line ${!isDescriptionExpanded ? "max-h-36 overflow-hidden relative" : ""}`}>
+                                    {descriptionView.text}
                                     {!isDescriptionExpanded && (
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsDescriptionExpanded(true)}
-                                            className="mt-3 w-full py-2 bg-slate-50 hover:bg-slate-100 text-slate-600 text-xs font-bold rounded-xl transition-colors border border-slate-200/60"
-                                        >
-                                            {t("page.gacha.showMoreDescription")}
-                                        </button>
+                                        <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-surface-container-low to-transparent pointer-events-none" />
                                     )}
                                 </div>
-                            </div>
+                                {!isDescriptionExpanded && (
+                                    <Button variant="tonal" fullWidth className="mt-3" onClick={() => setIsDescriptionExpanded(true)}>
+                                        {t("page.gacha.showMoreDescription")}
+                                    </Button>
+                                )}
+                            </SectionCard>
                         )}
 
                         {/* Gacha Rates Card */}
                         {gacha.gachaCardRarityRates && gacha.gachaCardRarityRates.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                                        </svg>
-                                        {t("page.gacha.ratesTitle")}
-                                    </h2>
-                                </div>
-                                <div className="divide-y divide-slate-100">
+                            <SectionCard icon={mdBarChart} title={t("page.gacha.ratesTitle")} bodyClassName="p-0 pb-2">
+                                <div className="divide-y divide-outline-variant">
                                     {gacha.gachaCardRarityRates.map((rate, idx) => {
                                         const rarityLabel = rate.cardRarityType === "rarity_birthday"
                                             ? t("page.gacha.birthdayLabel")
                                             : t("page.gacha.starLabel", { star: rate.cardRarityType.replace("rarity_", "") });
                                         return (
-                                            <div key={rate.id ? `rate-${rate.id}-${idx}` : `${rate.cardRarityType}-${idx}`} className="px-5 py-3 flex items-center justify-between text-sm">
-                                                <span className="text-slate-500 font-medium">{rarityLabel}</span>
-                                                <span className="text-miku font-bold">{rate.rate}%</span>
+                                            <div key={rate.id ? `rate-${rate.id}-${idx}` : `${rate.cardRarityType}-${idx}`} className="px-5 py-3 flex items-center justify-between type-body-m">
+                                                <span className="text-on-surface-variant">{rarityLabel}</span>
+                                                <span className="text-primary font-medium">{rate.rate}%</span>
                                             </div>
                                         );
                                     })}
                                 </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         {/* Pickup Cards */}
                         {pickupCards.length > 0 && (
                             <div className="space-y-4">
                                 {isWishPickGacha && (
-                                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                        <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                                                </svg>
-                                                {t("page.gacha.wishSelectTitle")}
-                                            </h2>
-                                            {fullCardPool.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsCardSelectorModalOpen(true)}
-                                                    className="px-3 py-1.5 bg-miku/10 hover:bg-miku hover:text-white text-miku text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012 2v2M7 7h10" />
-                                                    </svg>
+                                    <SectionCard
+                                        icon={mdKidStar}
+                                        title={t("page.gacha.wishSelectTitle")}
+                                        bodyClassName="p-4 pt-3 space-y-4"
+                                        actions={
+                                            fullCardPool.length > 0 ? (
+                                                <Button variant="tonal" size="xs" icon={mdGridView} onClick={() => setIsCardSelectorModalOpen(true)}>
                                                     {t("page.gacha.viewFullCardPool", { count: fullCardPool.length })}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="p-4 space-y-4">
+                                                </Button>
+                                            ) : undefined
+                                        }
+                                    >
                                             <div className="space-y-2">
-                                                <h3 className="text-sm font-bold text-slate-800">
+                                                <h3 className="type-title-s text-on-surface">
                                                     {t("page.gacha.fixedPuCardsTitle", { count: fixedWishCards.length })}
                                                 </h3>
                                                 <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-6 gap-1.5">
@@ -1091,38 +1025,22 @@ export default function GachaDetailClient() {
                                                         const isPulled = pullCount > 0;
 
                                                         return (
-                                                            <Link key={card.id} href={`/cards/${card.id}`} className="group block">
-                                                                <div className={`rounded-lg overflow-hidden bg-white hover:shadow-lg transition-all ${isPulled ? 'ring-2 ring-green-400' : 'ring-1 ring-slate-200 hover:ring-miku'}`}>
+                                                            <Link key={card.id} href={`/cards/${card.id}`} className="group block rounded-md3-sm focus-ring">
+                                                                <div className={`${CARD_TILE_BASE} ${isPulled ? 'ring-2 ring-primary' : CARD_TILE_IDLE}`}>
                                                                     <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
-                                                                    {isPulled && (
-                                                                        <div className="flex items-center justify-center gap-0.5 bg-gradient-to-r from-green-500 to-green-400 text-white text-[8px] font-black py-0.5 leading-none">
-                                                                            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                            {pullCount > 1 && <span>×{pullCount}</span>}
-                                                                        </div>
-                                                                    )}
+                                                                    {isPulled && <PulledBadge count={pullCount} />}
                                                                 </div>
                                                             </Link>
                                                         );
                                                     })}
                                                 </div>
                                             </div>
-                                            <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
+                                            <div className="rounded-md3-lg bg-surface-container p-3 sm:p-4">
                                                 <div className="flex items-center justify-between gap-3">
-                                                    <div>
-                                                        <h3 className="text-sm font-bold text-slate-800">{t("page.gacha.wishSelectSubTitle")}</h3>
-                                                    </div>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setIsWishModalOpen(true)}
-                                                        className="px-3.5 py-1.5 bg-miku hover:bg-miku-dark text-white text-xs font-bold rounded-xl transition-all shadow-sm flex items-center gap-1.5"
-                                                    >
-                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                                        </svg>
+                                                    <h3 className="type-title-s text-on-surface">{t("page.gacha.wishSelectSubTitle")}</h3>
+                                                    <Button variant="filled" size="xs" icon={mdKidStar} onClick={() => setIsWishModalOpen(true)}>
                                                         {t("page.gacha.wishSelectSubTitle")} ({selectedWishCardIds.length}/{dreamPickSelectionLimit})
-                                                    </button>
+                                                    </Button>
                                                 </div>
                                             </div>
                                             {selectedWishCards.length > 0 && (
@@ -1136,51 +1054,33 @@ export default function GachaDetailClient() {
                                                             <Link
                                                                 key={card.id}
                                                                 href={`/cards/${card.id}`}
-                                                                className="group block"
+                                                                className="group block rounded-md3-sm focus-ring"
                                                             >
-                                                                <div className={`rounded-lg overflow-hidden bg-white hover:shadow-lg transition-all ${isPulled ? 'ring-2 ring-green-400' : 'ring-1 ring-slate-200 hover:ring-miku'}`}>
+                                                                <div className={`${CARD_TILE_BASE} ${isPulled ? 'ring-2 ring-primary' : CARD_TILE_IDLE}`}>
                                                                     <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
-                                                                    {isPulled && (
-                                                                        <div className="flex items-center justify-center gap-0.5 bg-gradient-to-r from-green-500 to-green-400 text-white text-[8px] font-black py-0.5 leading-none">
-                                                                            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                            </svg>
-                                                                            {pullCount > 1 && <span>×{pullCount}</span>}
-                                                                        </div>
-                                                                    )}
+                                                                    {isPulled && <PulledBadge count={pullCount} />}
                                                                 </div>
                                                             </Link>
                                                         );
                                                     })}
                                                 </div>
                                             )}
-                                        </div>
-                                    </div>
+                                    </SectionCard>
                                 )}
 
                                 {!isWishPickGacha && (
-                                    <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                        <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                                            <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                                <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                                                </svg>
-                                                {t("page.gacha.pickupCardsTitle", { count: pickupCards.length })}
-                                            </h2>
-                                            {fullCardPool.length > 0 && (
-                                                <button
-                                                    type="button"
-                                                    onClick={() => setIsCardSelectorModalOpen(true)}
-                                                    className="px-3 py-1.5 bg-miku/10 hover:bg-miku hover:text-white text-miku text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shrink-0"
-                                                >
-                                                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                                    </svg>
+                                    <SectionCard
+                                        icon={mdKidStar}
+                                        title={t("page.gacha.pickupCardsTitle", { count: pickupCards.length })}
+                                        bodyClassName="p-4 pt-3"
+                                        actions={
+                                            fullCardPool.length > 0 ? (
+                                                <Button variant="tonal" size="xs" icon={mdGridView} onClick={() => setIsCardSelectorModalOpen(true)}>
                                                     {t("page.gacha.viewFullCardPool", { count: fullCardPool.length })}
-                                                </button>
-                                            )}
-                                        </div>
-                                        <div className="p-4">
+                                                </Button>
+                                            ) : undefined
+                                        }
+                                    >
                                             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-4 xl:grid-cols-6 gap-2">
                                             {pickupCards.map(card => {
                                                 const showTrained = getCardDefaultTrainedStatus(card) || (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday");
@@ -1191,32 +1091,24 @@ export default function GachaDetailClient() {
                                                     <Link
                                                         key={card.id}
                                                         href={`/cards/${card.id}`}
-                                                        className="group block"
+                                                        className="group block rounded-md3-sm focus-ring"
                                                     >
-                                                        <div className={`rounded-lg overflow-hidden bg-white hover:shadow-lg transition-all ${isPulled ? 'ring-2 ring-green-400' : 'ring-1 ring-slate-200 hover:ring-miku'}`}>
+                                                        <div className={`${CARD_TILE_BASE} ${isPulled ? 'ring-2 ring-primary' : CARD_TILE_IDLE}`}>
                                                             <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
-                                                            {isPulled && (
-                                                                <div className="flex items-center justify-center gap-0.5 bg-gradient-to-r from-green-500 to-green-400 text-white text-[8px] font-black py-0.5 leading-none">
-                                                                    <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
-                                                                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                                                    </svg>
-                                                                    {pullCount > 1 && <span>×{pullCount}</span>}
-                                                                </div>
-                                                            )}
+                                                            {isPulled && <PulledBadge count={pullCount} />}
                                                         </div>
                                                     </Link>
                                                 );
                                             })}
                                             </div>
-                                        </div>
-                                    </div>
+                                    </SectionCard>
                                 )}
                             </div>
                         )}
 
                         {/* No pickup cards message */}
                         {pickupCards.length === 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden p-6 text-center text-slate-400">
+                            <div className="bg-surface-container-low rounded-md3-xl p-6 text-center type-body-m text-on-surface-variant">
                                 <p>{t("page.gacha.noPickupCards")}</p>
                             </div>
                         )}
@@ -1231,16 +1123,7 @@ export default function GachaDetailClient() {
                         />
 
                         {/* Consolidated Simulator & Statistics (Sidebar Mode) */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.gacha.simulatorTitle")}
-                                </h2>
-                            </div>
-                            <div className="p-5 flex flex-col gap-6">
+                        <SectionCard icon={mdCasino} title={t("page.gacha.simulatorTitle")} bodyClassName="flex flex-col gap-6">
                                 {/* Controls */}
                                 <div className="flex flex-col gap-4 items-center">
                                     <div className="flex flex-wrap gap-3 justify-center w-full">
@@ -1257,20 +1140,22 @@ export default function GachaDetailClient() {
                                                     ? t("page.gacha.spinSingle") 
                                                     : t("page.gacha.spinMulti", { count: behavior.spinCount });
                                                 return (
-                                                    <button
+                                                    <Button
                                                         key={idx}
+                                                        variant="filled"
+                                                        size="m"
                                                         onClick={() => doGacha(behavior)}
-                                                        className="flex-1 py-3 bg-miku hover:bg-miku-dark text-white font-bold rounded-xl transition-all shadow-sm hover:shadow active:scale-95"
+                                                        className="flex-1"
                                                     >
                                                         {label}
-                                                    </button>
+                                                    </Button>
                                                 );
                                             });
                                         })()}
 
                                         {/* Custom Spin Count Input */}
-                                        <div className="flex items-center gap-2 bg-slate-100 rounded-xl p-1 pl-3 w-full sm:w-auto mt-2 sm:mt-0">
-                                            <span className="text-xs font-bold text-slate-500 whitespace-nowrap">{t("page.gacha.customSpinCountLabel")}</span>
+                                        <div className="flex items-center gap-2 bg-surface-container-high rounded-full p-1 pl-4 w-full sm:w-auto mt-2 sm:mt-0">
+                                            <span className="type-label-l text-on-surface-variant whitespace-nowrap">{t("page.gacha.customSpinCountLabel")}</span>
                                             <input
                                                 type="number"
                                                 min="1"
@@ -1282,10 +1167,13 @@ export default function GachaDetailClient() {
                                                         setCustomSpinCount(val);
                                                     }
                                                 }}
-                                                className="w-16 bg-transparent text-sm font-bold text-slate-800 focus:outline-none text-center"
+                                                className="w-16 bg-transparent type-title-s text-on-surface outline-none text-center"
                                                 placeholder="MAX"
                                             />
-                                            <button
+                                            <IconButton
+                                                variant="filled"
+                                                icon={mdPlayArrowFill}
+                                                label={t("page.gacha.customSpinCountLabel")}
                                                 onClick={() => {
                                                     const count = parseInt(customSpinCount);
                                                     if (count && count > 0 && count <= 1000) {
@@ -1300,48 +1188,39 @@ export default function GachaDetailClient() {
                                                     }
                                                 }}
                                                 disabled={!customSpinCount}
-                                                className="p-2 bg-slate-200 hover:bg-miku hover:text-white text-slate-500 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                            >
-                                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                                </svg>
-                                            </button>
+                                            />
                                         </div>
                                     </div>
                                     <div className="flex items-center justify-between w-full px-1">
-                                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wider">{t("page.gacha.totalSpinCount")} <span className="text-lg text-slate-800 ml-1">{statistic.spinCount}</span></div>
-                                        <button
-                                            onClick={resetGacha}
-                                            className="text-slate-400 hover:text-slate-600 text-sm hover:underline transition-colors"
-                                        >
+                                        <div className="type-label-l text-on-surface-variant">{t("page.gacha.totalSpinCount")} <span className="type-title-l text-on-surface ml-1">{statistic.spinCount}</span></div>
+                                        <Button variant="text" size="xs" onClick={resetGacha}>
                                             {t("page.gacha.resetData")}
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
 
                                 {/* Divider */}
-                                <div className="h-px bg-slate-100 w-full"></div>
+                                <div className="h-px bg-outline-variant w-full"></div>
 
                                 {/* Statistics Table */}
-                                <div className="overflow-hidden rounded-xl border border-slate-100">
-                                    <table className="w-full text-sm">
+                                <div className="overflow-hidden rounded-md3-md border border-outline-variant">
+                                    <table className="w-full type-body-m">
                                         <thead>
-                                            <tr className="bg-slate-50 border-b border-slate-100">
-                                                <th className="text-left py-2 px-3 font-bold text-slate-600">{t("page.gacha.thRarity")}</th>
-                                                <th className="text-center py-2 px-3 font-bold text-slate-600">{t("page.gacha.thCount")}</th>
-                                                <th className="text-center py-2 px-3 font-bold text-slate-600">{t("page.gacha.thProbability")}</th>
+                                            <tr className="bg-surface-container border-b border-outline-variant">
+                                                <th className="text-left py-2 px-3 type-title-s text-on-surface-variant">{t("page.gacha.thRarity")}</th>
+                                                <th className="text-center py-2 px-3 type-title-s text-on-surface-variant">{t("page.gacha.thCount")}</th>
+                                                <th className="text-center py-2 px-3 type-title-s text-on-surface-variant">{t("page.gacha.thProbability")}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {/* UP Rate Row */}
-                                            <tr className="border-b border-slate-100 last:border-0 hover:bg-pink-50/50 transition-colors bg-pink-50/30">
-                                                <td className="py-2 px-3 font-bold text-pink-500 flex items-center gap-1">
-                                                    <span className="bg-pink-500 text-white text-[10px] px-1 rounded">{t("page.gacha.upLabel")}</span>
+                                            <tr className="border-b border-outline-variant last:border-0 bg-tertiary-container/40">
+                                                <td className="py-2 px-3 font-medium text-tertiary flex items-center gap-1">
+                                                    <span className="bg-tertiary text-on-tertiary type-label-s px-1 rounded-md3-xs">{t("page.gacha.upLabel")}</span>
                                                     {isWishPickGacha ? t("page.gacha.dreamPickPuLabel") : t("page.gacha.memberLabel")}
                                                 </td>
-                                                <td className="text-center py-2 px-3 text-slate-600">{statistic.pickupCount || 0}</td>
-                                                <td className="text-center py-2 px-3 text-pink-500 font-bold">
+                                                <td className="text-center py-2 px-3 text-on-surface-variant">{statistic.pickupCount || 0}</td>
+                                                <td className="text-center py-2 px-3 text-tertiary font-medium">
                                                     {statistic.spinCount > 0 ? (((statistic.pickupCount || 0) / statistic.spinCount) * 100).toFixed(2) : "0.00"}%
                                                 </td>
                                             </tr>
@@ -1358,31 +1237,21 @@ export default function GachaDetailClient() {
                                                     ? ((count / statistic.spinCount) * 100).toFixed(2)
                                                     : "0.00";
                                                 return (
-                                                    <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/50 transition-colors">
-                                                        <td className="py-2 px-3 font-bold text-slate-700">{rarityLabel}</td>
-                                                        <td className="text-center py-2 px-3 text-slate-600">{count}</td>
-                                                        <td className="text-center py-2 px-3 text-miku font-bold">{percentage}%</td>
+                                                    <tr key={idx} className="border-b border-outline-variant last:border-0">
+                                                        <td className="py-2 px-3 font-medium text-on-surface">{rarityLabel}</td>
+                                                        <td className="text-center py-2 px-3 text-on-surface-variant">{count}</td>
+                                                        <td className="text-center py-2 px-3 text-primary font-medium">{percentage}%</td>
                                                     </tr>
                                                 );
                                             })}
                                         </tbody>
                                     </table>
                                 </div>
-                            </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Current Gacha Result */}
                         {currentGachaResult.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
-                                        </svg>
-                                        {t("page.gacha.recentResultsTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-4">
+                            <SectionCard icon={mdWandStars} title={t("page.gacha.recentResultsTitle")} bodyClassName="p-4 pt-3">
                                     <div className="grid grid-cols-5 gap-2">
                                         {currentGachaResult.map((detail, idx) => {
                                             const card = cards.find(c => c.id === detail.cardId);
@@ -1396,17 +1265,17 @@ export default function GachaDetailClient() {
                                                 <Link
                                                     key={idx}
                                                     href={`/cards/${card.id}`}
-                                                    className="group block"
+                                                    className="group block rounded-md3-sm focus-ring"
                                                 >
-                                                    <div className={`rounded-lg overflow-hidden bg-white hover:shadow-lg transition-all ${isPickup
-                                                        ? 'ring-2 ring-pink-400'
+                                                    <div className={`${CARD_TILE_BASE} ${isPickup
+                                                        ? 'ring-2 ring-tertiary'
                                                         : is4Star
                                                             ? 'ring-2 ring-yellow-400'
-                                                            : 'ring-1 ring-slate-200 hover:ring-miku'
+                                                            : CARD_TILE_IDLE
                                                         }`}>
                                                         <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
                                                         {(isPickup || is4Star) && (
-                                                            <div className={`text-center text-white text-[8px] sm:text-[9px] font-black py-0.5 leading-none ${isPickup ? 'bg-gradient-to-r from-pink-500 to-pink-400' : 'bg-gradient-to-r from-yellow-400 to-yellow-300'}`}>
+                                                            <div className={`text-center type-label-s py-0.5 leading-none ${isPickup ? 'bg-tertiary text-on-tertiary' : 'bg-yellow-400 text-black/80'}`}>
                                                                 {isPickup ? t("page.gacha.upLabel") : t("page.gacha.star4Label")}
                                                             </div>
                                                         )}
@@ -1415,22 +1284,12 @@ export default function GachaDetailClient() {
                                             );
                                         })}
                                     </div>
-                                </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         {/* History 4-Star Results */}
                         {history4Stars.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                                        </svg>
-                                        {t("page.gacha.history4StarsTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-4">
+                            <SectionCard icon={mdStarFill} title={t("page.gacha.history4StarsTitle")} bodyClassName="p-4 pt-3">
                                     <div className="grid grid-cols-5 gap-2">
                                         {history4Stars.map((detail, idx) => {
                                             const card = cards.find(c => c.id === detail.cardId);
@@ -1444,25 +1303,25 @@ export default function GachaDetailClient() {
                                             const olderDetail = history4Stars[idx + 1];
                                             const prevPullIndex = olderDetail ? (olderDetail.pullIndex || 0) : 0;
                                             const pityCount = currentPullIndex - prevPullIndex;
-                                            const pityColorClass = pityCount <= 50 ? "bg-green-500" : pityCount >= 100 ? "bg-orange-500" : "bg-miku";
+                                            const pityColorClass = pityCount <= 50 ? "bg-green-600 text-white" : pityCount >= 100 ? "bg-error text-on-error" : "bg-primary text-on-primary";
 
                                             return (
                                                 <Link
                                                     key={idx}
                                                     href={`/cards/${card.id}`}
-                                                    className="group block"
+                                                    className="group block rounded-md3-sm focus-ring"
                                                 >
-                                                    <div className={`rounded-lg overflow-hidden bg-white hover:shadow-lg transition-all ${isPickup
-                                                        ? 'ring-2 ring-pink-400'
+                                                    <div className={`${CARD_TILE_BASE} ${isPickup
+                                                        ? 'ring-2 ring-tertiary'
                                                         : is4Star
                                                             ? 'ring-2 ring-yellow-400'
-                                                            : 'ring-1 ring-slate-200 hover:ring-miku'
+                                                            : CARD_TILE_IDLE
                                                         }`}>
                                                         <SekaiCardThumbnail card={card} trained={showTrained} className="w-full" />
-                                                        <div className={`flex items-center justify-between text-white text-[8px] sm:text-[9px] font-black py-0.5 px-1 leading-none ${isPickup ? 'bg-gradient-to-r from-pink-500 to-pink-400' : 'bg-gradient-to-r from-yellow-400 to-yellow-300'}`}>
+                                                        <div className={`flex items-center justify-between type-label-s py-0.5 px-1 leading-none ${isPickup ? 'bg-tertiary text-on-tertiary' : 'bg-yellow-400 text-black/80'}`}>
                                                             <span>{isPickup ? t("page.gacha.upLabel") : t("page.gacha.star4Label")}</span>
                                                             {pityCount > 0 && (
-                                                                <span className={`px-1 py-0.5 rounded text-[8px] sm:text-[9px] font-bold ${pityColorClass} text-white`}>
+                                                                <span className={`px-1 py-0.5 rounded-md3-xs text-[9px] font-bold ${pityColorClass}`}>
                                                                     {t("page.gacha.pityPull", { count: pityCount })}
                                                                 </span>
                                                             )}
@@ -1472,8 +1331,7 @@ export default function GachaDetailClient() {
                                             );
                                         })}
                                     </div>
-                                </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         <DetailPageAdCard hidden={isScreenshotMode} />
@@ -1482,17 +1340,11 @@ export default function GachaDetailClient() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Link
-                        href="/gacha"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                    <Button href="/gacha" variant="tonal" size="m" icon={mdArrowBack}>
                         {t("page.gacha.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
 
             {/* Wish PU Card Selector Modal */}
             <CardSelectorModal
@@ -1514,32 +1366,45 @@ export default function GachaDetailClient() {
                     });
                 }}
             />
-        </MainLayout >
+        </MainLayout>
+    );
+}
+
+function ScreenshotImageCard({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="bg-surface-container-low rounded-md3-xl overflow-hidden">
+            <div className="px-4 py-2 border-b border-outline-variant">
+                <span className="type-title-s text-on-surface-variant">{label}</span>
+            </div>
+            <div className="relative aspect-[16/9] bg-surface-container">{children}</div>
+        </div>
+    );
+}
+
+function PulledBadge({ count }: { count: number }) {
+    return (
+        <div className="flex items-center justify-center gap-0.5 bg-primary text-on-primary type-label-s py-0.5 leading-none">
+            <Icon path={mdCheck} size={12} />
+            {count > 1 && <span>×{count}</span>}
+        </div>
     );
 }
 
 function GachaInfoOriginalToggle({ showingTranslation, onToggle, className = "" }: { showingTranslation: boolean; onToggle: () => void; className?: string }) {
     const { t } = useI18n();
     return (
-        <button
-            type="button"
-            onClick={onToggle}
-            className={`inline-flex items-center gap-1 text-[11px] font-bold text-slate-400 hover:text-miku transition-colors ${className}`}
-        >
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
-            </svg>
+        <Button variant="text" size="xs" icon={mdTranslate} onClick={onToggle} className={className}>
             {showingTranslation ? t("page.gacha.showOriginalText") : t("page.gacha.showTranslatedText")}
-        </button>
+        </Button>
     );
 }
 
 // Info Row Component (same as events page)
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold text-right max-w-[60%]">{value}</span>
+        <div className="px-5 py-3 flex items-center justify-between gap-4 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="text-on-surface font-medium text-right max-w-[60%]">{value}</span>
         </div>
     );
 }

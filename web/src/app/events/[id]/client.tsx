@@ -27,6 +27,24 @@ import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import { fetchMasterData, fetchMasterDataForServer } from "@/lib/fetch";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
+import { Button, Card, EmptyState, Icon, IconButton, LoadingState, PageContainer, SectionCard, Slider, Tabs } from "@/components/md3";
+import {
+    mdArrowBack,
+    mdChevronRight,
+    mdDownload,
+    mdEventBusy,
+    mdForum,
+    mdInfo,
+    mdLibraryMusic,
+    mdLiveTv,
+    mdMenuBook,
+    mdMusicNote,
+    mdPauseFill,
+    mdPlayArrowFill,
+    mdStyle,
+    mdTrendingUp,
+    mdZoomIn,
+} from "@/components/md3/icons";
 
 // Asset URL helpers - Now imported from @/lib/assets
 
@@ -273,12 +291,9 @@ export default function EventDetailPage() {
     if (isLoading) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="flex flex-col items-center justify-center min-h-[50vh]">
-                        <div className="loading-spinner"></div>
-                        <p className="mt-4 text-slate-500">{t("common.state.loading")}</p>
-                    </div>
-                </div>
+                <PageContainer>
+                    <LoadingState label={t("common.state.loading")} />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -286,30 +301,18 @@ export default function EventDetailPage() {
     if (error || !event) {
         return (
             <MainLayout>
-                <div className="container mx-auto px-4 py-16">
-                    <div className="max-w-md mx-auto text-center">
-                        <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-amber-100 flex items-center justify-center">
-                            <svg className="w-12 h-12 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h2 className="text-2xl font-bold text-slate-800 mb-2">
-                            {t("page.events.notFoundTitle", { id: eventId })}
-                        </h2>
-                        <p className="text-slate-500 mb-6">
-                            {t("page.events.notFoundDesc")}
-                        </p>
-                        <Link
-                            href="/events"
-                            className="inline-flex items-center gap-2 px-6 py-3 bg-miku text-white font-bold rounded-xl hover:bg-miku-dark transition-colors"
-                        >
-                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            {t("page.events.backToList")}
-                        </Link>
-                    </div>
-                </div>
+                <PageContainer>
+                    <EmptyState
+                        icon={mdEventBusy}
+                        title={t("page.events.notFoundTitle", { id: eventId })}
+                        description={t("page.events.notFoundDesc")}
+                        action={
+                            <Button href="/events" variant="filled" size="m" icon={mdArrowBack}>
+                                {t("page.events.backToList")}
+                            </Button>
+                        }
+                    />
+                </PageContainer>
             </MainLayout>
         );
     }
@@ -347,33 +350,33 @@ export default function EventDetailPage() {
                 fileName={`event_${event.id}_${activeImageTab}.png`}
             />
 
-            <div className="container mx-auto px-4 sm:px-6 py-8">
+            <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
-                        <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-mono text-slate-500 w-fit">
+                    <div className="flex flex-wrap items-center gap-2 mb-3">
+                        <span className="inline-flex items-center h-7 px-3 rounded-md3-sm bg-surface-container-high type-label-m font-mono text-on-surface-variant">
                             ID: {event.id}
                         </span>
                         <span
-                            className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit"
+                            className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: EVENT_TYPE_COLORS[event.eventType as EventType] }}
                         >
                             {t("common.eventTypes." + event.eventType)}
                         </span>
                         <span
-                            className="px-3 py-1 text-xs font-bold rounded-full text-white w-fit"
+                            className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: statusDisplay.color }}
                         >
                             {t("common.status." + status)}
                         </span>
                     </div>
-                    <h1 className="text-2xl sm:text-3xl font-black text-slate-800">
+                    <h1 className="type-headline-m sm:type-headline-l text-on-surface">
                         <TranslatedText
                             original={event.name}
                             category="events"
                             field="name"
                             originalClassName=""
-                            translationClassName="block text-lg font-medium text-slate-400 mt-1"
+                            translationClassName="block type-title-m text-on-surface-variant mt-1"
                         />
                     </h1>
                 </div>
@@ -387,13 +390,7 @@ export default function EventDetailPage() {
                             <div className="space-y-4">
                                 {/* Event Story Banner (Logo) — only for events with story */}
                                 {showEventStoryBannerTab && (
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">
-                                            {t("page.events.imageTabs.event_story_banner")}
-                                        </span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
+                                    <ScreenshotImageCard label={t("page.events.imageTabs.event_story_banner")}>
                                         <Image
                                             src={eventStoryBannerUrl}
                                             alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.event_story_banner") })}
@@ -402,52 +399,31 @@ export default function EventDetailPage() {
                                             unoptimized
                                             priority
                                         />
-                                    </div>
-                                </div>
+                                    </ScreenshotImageCard>
                                 )}
                                 {/* Title Logo */}
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">
-                                            {t("page.events.imageTabs.logo")}
-                                        </span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
-                                        <Image
-                                            src={logoUrl}
-                                            alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.logo") })}
-                                            fill
-                                            className="object-contain p-6"
-                                            unoptimized
-                                        />
-                                    </div>
-                                </div>
+                                <ScreenshotImageCard label={t("page.events.imageTabs.logo")}>
+                                    <Image
+                                        src={logoUrl}
+                                        alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.logo") })}
+                                        fill
+                                        className="object-contain p-6"
+                                        unoptimized
+                                    />
+                                </ScreenshotImageCard>
                                 {/* Banner */}
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">
-                                            {t("page.events.imageTabs.banner")}
-                                        </span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
-                                        <Image
-                                            src={bannerUrl}
-                                            alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.banner") })}
-                                            fill
-                                            className="object-cover"
-                                            unoptimized
-                                        />
-                                    </div>
-                                </div>
+                                <ScreenshotImageCard label={t("page.events.imageTabs.banner")}>
+                                    <Image
+                                        src={bannerUrl}
+                                        alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.banner") })}
+                                        fill
+                                        className="object-cover"
+                                        unoptimized
+                                    />
+                                </ScreenshotImageCard>
                                 {/* Character */}
                                 {showCharacterTab && (
-                                <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                    <div className="px-4 py-2 bg-slate-50 border-b border-slate-100">
-                                        <span className="text-sm font-bold text-slate-600">
-                                            {t("page.events.imageTabs.character")}
-                                        </span>
-                                    </div>
-                                    <div className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100">
+                                    <ScreenshotImageCard label={t("page.events.imageTabs.character")}>
                                         <Image
                                             src={characterUrl}
                                             alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.character") })}
@@ -455,36 +431,26 @@ export default function EventDetailPage() {
                                             className="object-contain"
                                             unoptimized
                                         />
-                                    </div>
-                                </div>
+                                    </ScreenshotImageCard>
                                 )}
                             </div>
                         ) : (
                             /* Normal Mode: Tabs */
-                            <div className="ios-glass-card rounded-2xl overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
+                            <div className="bg-surface-container-low rounded-md3-xl overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
                                 {/* Tabs */}
-                                <div className="flex border-b border-slate-200">
-                                    {[
-                                        ...(showEventStoryBannerTab ? [{ key: "event_story_banner", label: t("page.events.imageTabs.event_story_banner") }] : []),
-                                        { key: "logo", label: t("page.events.imageTabs.logo") },
-                                        { key: "banner", label: t("page.events.imageTabs.banner") },
-                                        ...(showCharacterTab ? [{ key: "character", label: t("page.events.imageTabs.character") }] : []),
-                                    ].map((tab) => (
-                                        <button
-                                            key={tab.key}
-                                            onClick={() => setActiveImageTab(tab.key as "event_story_banner" | "logo" | "banner" | "character")}
-                                            className={`flex-1 py-3 px-4 text-sm font-bold transition-colors ${effectiveTab === tab.key
-                                                ? "text-miku border-b-2 border-miku bg-miku/5"
-                                                : "text-slate-500 hover:text-slate-700 hover:bg-slate-50"
-                                                }`}
-                                        >
-                                            {tab.label}
-                                        </button>
-                                    ))}
-                                </div>
+                                <Tabs
+                                    items={[
+                                        ...(showEventStoryBannerTab ? [{ value: "event_story_banner" as const, label: t("page.events.imageTabs.event_story_banner") }] : []),
+                                        { value: "logo" as const, label: t("page.events.imageTabs.logo") },
+                                        { value: "banner" as const, label: t("page.events.imageTabs.banner") },
+                                        ...(showCharacterTab ? [{ value: "character" as const, label: t("page.events.imageTabs.character") }] : []),
+                                    ]}
+                                    value={effectiveTab}
+                                    onValueChange={(v) => setActiveImageTab(v)}
+                                />
                                 {/* Image Content */}
                                 <div
-                                    className="relative aspect-[16/9] bg-gradient-to-br from-slate-50 to-slate-100 cursor-zoom-in group"
+                                    className="relative aspect-[16/9] bg-surface-container cursor-zoom-in group"
                                     onClick={() => setImageViewerOpen(true)}
                                 >
                                     {effectiveTab === "event_story_banner" && (
@@ -525,10 +491,8 @@ export default function EventDetailPage() {
                                             unoptimized
                                         />
                                     )}
-                                    <div className="absolute bottom-3 right-3 z-10 bg-black/50 backdrop-blur-sm text-white text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
-                                        </svg>
+                                    <div className="absolute bottom-3 right-3 z-10 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                        <Icon path={mdZoomIn} size={16} />
                                         {t("page.events.clickExpand")}
                                     </div>
                                 </div>
@@ -539,16 +503,8 @@ export default function EventDetailPage() {
                     {/* RIGHT Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    {t("page.events.basicInfo")}
-                                </h2>
-                            </div>
-                            <div className="divide-y divide-slate-100">
+                        <SectionCard icon={mdInfo} title={t("page.events.basicInfo")} bodyClassName="p-0 pb-2">
+                            <div className="divide-y divide-outline-variant">
                                 <InfoRow label="ID" value={`#${event.id}`} />
                                 <InfoRow
                                     label={t("page.events.nameLabel")}
@@ -558,7 +514,7 @@ export default function EventDetailPage() {
                                             category="events"
                                             field="name"
                                             originalClassName=""
-                                            translationClassName="block text-xs font-normal text-slate-400 mt-0.5"
+                                            translationClassName="block type-body-s text-on-surface-variant mt-0.5"
                                         />
                                     }
                                 />
@@ -587,268 +543,177 @@ export default function EventDetailPage() {
                                 <InfoRow label={t("page.events.endTimeLabel")} value={formatDate(event.aggregateAt)} />
                                 <InfoRow
                                     label={t("page.events.assetNameLabel")}
-                                    value={<span className="font-mono text-xs bg-slate-100 px-2 py-0.5 rounded">{event.assetbundleName}</span>}
+                                    value={<span className="font-mono type-label-m bg-surface-container-high px-2 py-0.5 rounded-md3-xs">{event.assetbundleName}</span>}
                                 />
                             </div>
-                        </div>
+                        </SectionCard>
 
                         {/* Event Theme Song Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                    </svg>
-                                    {t("page.events.bgmTitle")}
-                                </h2>
-                            </div>
+                        <SectionCard icon={mdMusicNote} title={t("page.events.bgmTitle")} bodyClassName="p-0">
                             <EventBgmPlayer event={event} assetSource={assetSource} />
-                        </div>
+                        </SectionCard>
 
                         {/* Bonus Info Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                    <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-                                    </svg>
-                                    {t("page.events.bonusTitle")}
-                                </h2>
-                            </div>
-                            <div className="p-5 space-y-4">
-                                {bonusAttr && (
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-slate-500 font-medium">{t("page.events.bonusAttrLabel")}</span>
-                                        <div className="flex items-center gap-2">
-                                            <Image
-                                                src={LOCAL_ATTR_ICONS[bonusAttr] || LOCAL_ATTR_ICONS.cool}
-                                                alt={bonusAttr}
-                                                width={28}
-                                                height={28}
-                                                unoptimized
-                                            />
-                                            <span className="text-sm font-bold text-slate-700">
-                                                {ATTR_NAMES[bonusAttr] || bonusAttr}
-                                            </span>
-                                        </div>
+                        <SectionCard icon={mdTrendingUp} title={t("page.events.bonusTitle")} bodyClassName="space-y-4">
+                            {bonusAttr && (
+                                <div className="flex items-center justify-between">
+                                    <span className="type-body-m text-on-surface-variant">{t("page.events.bonusAttrLabel")}</span>
+                                    <div className="flex items-center gap-2">
+                                        <Image
+                                            src={LOCAL_ATTR_ICONS[bonusAttr] || LOCAL_ATTR_ICONS.cool}
+                                            alt={bonusAttr}
+                                            width={28}
+                                            height={28}
+                                            unoptimized
+                                        />
+                                        <span className="type-title-s text-on-surface">
+                                            {ATTR_NAMES[bonusAttr] || bonusAttr}
+                                        </span>
                                     </div>
-                                )}
-                                {bonusCharacters.length > 0 && (
-                                    <div>
-                                        <span className="text-sm text-slate-500 font-medium block mb-2">{t("page.events.bonusCharLabel")}</span>
-                                        <div className="flex flex-wrap gap-2">
-                                            {bonusCharacters.map(({ charId, unitId, displayName }) => (
-                                                <div
-                                                    key={unitId}
-                                                    className="flex items-center gap-1.5 px-2 py-1 bg-slate-50 rounded-full"
-                                                    title={displayName}
-                                                >
-                                                    <div className="w-6 h-6 rounded-full overflow-hidden bg-white ring-1 ring-slate-200">
-                                                        <Image
-                                                            src={getCharacterIconUrl(charId)}
-                                                            alt={displayName}
-                                                            width={24}
-                                                            height={24}
-                                                            className="w-full h-full object-cover"
-                                                            unoptimized
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs font-medium text-slate-600">
-                                                        {displayName}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Theme Songs Card */}
-                        {themeSongs.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                        </svg>
-                                        {t("page.events.relatedSongsTitle", { count: themeSongs.length })}
-                                    </h2>
                                 </div>
-                                <div className="p-0">
-                                    {themeSongs.map((music) => (
-                                        <div key={music.id} className="p-5 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition-colors">
-                                            <Link
-                                                href={`/music/${music.id}`}
-                                                className="flex items-center gap-3 p-3 bg-slate-100 rounded-xl hover:bg-miku/10 transition-colors group"
+                            )}
+                            {bonusCharacters.length > 0 && (
+                                <div>
+                                    <span className="type-body-m text-on-surface-variant block mb-2">{t("page.events.bonusCharLabel")}</span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {bonusCharacters.map(({ charId, unitId, displayName }) => (
+                                            <div
+                                                key={unitId}
+                                                className="flex items-center gap-1.5 h-8 pl-1 pr-3 rounded-md3-sm bg-surface-container-high"
+                                                title={displayName}
                                             >
-                                                <div className="w-12 h-12 rounded-lg overflow-hidden bg-slate-200 shrink-0 shadow-sm">
+                                                <div className="w-6 h-6 rounded-full overflow-hidden bg-surface-container-lowest">
                                                     <Image
-                                                        src={getMusicJacketUrl(music.assetbundleName, assetSource)}
-                                                        alt={music.title}
-                                                        width={48}
-                                                        height={48}
+                                                        src={getCharacterIconUrl(charId)}
+                                                        alt={displayName}
+                                                        width={24}
+                                                        height={24}
                                                         className="w-full h-full object-cover"
                                                         unoptimized
                                                     />
                                                 </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-bold text-slate-800 truncate group-hover:text-miku transition-colors">
-                                                        <TranslatedText
-                                                            original={music.title}
-                                                            category="music"
-                                                            field="title"
-                                                            originalClassName="truncate block"
-                                                            translationClassName="text-xs text-slate-500 truncate block font-normal"
-                                                        />
-                                                    </p>
-                                                    <p className="text-xs text-slate-500 font-mono">ID: {music.id}</p>
-                                                </div>
-                                                <svg className="w-5 h-5 text-slate-400 group-hover:text-miku transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                                </svg>
-                                            </Link>
-                                        </div>
-                                    ))}
+                                                <span className="type-label-l text-on-surface">
+                                                    {displayName}
+                                                </span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
-                            </div>
+                            )}
+                        </SectionCard>
+
+                        {/* Theme Songs Card */}
+                        {themeSongs.length > 0 && (
+                            <SectionCard icon={mdLibraryMusic} title={t("page.events.relatedSongsTitle", { count: themeSongs.length })} bodyClassName="space-y-2">
+                                {themeSongs.map((music) => (
+                                    <Link
+                                        key={music.id}
+                                        href={`/music/${music.id}`}
+                                        className="state-layer focus-ring flex items-center gap-3 p-3 bg-surface-container rounded-md3-lg group"
+                                    >
+                                        <div className="w-12 h-12 rounded-md3-sm overflow-hidden bg-surface-container-high shrink-0">
+                                            <Image
+                                                src={getMusicJacketUrl(music.assetbundleName, assetSource)}
+                                                alt={music.title}
+                                                width={48}
+                                                height={48}
+                                                className="w-full h-full object-cover"
+                                                unoptimized
+                                            />
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="type-title-s text-on-surface truncate group-hover:text-primary transition-colors">
+                                                <TranslatedText
+                                                    original={music.title}
+                                                    category="music"
+                                                    field="title"
+                                                    originalClassName="truncate block"
+                                                    translationClassName="type-body-s text-on-surface-variant truncate block"
+                                                />
+                                            </p>
+                                            <p className="type-label-m text-on-surface-variant font-mono">ID: {music.id}</p>
+                                        </div>
+                                        <Icon path={mdChevronRight} className="text-on-surface-variant" />
+                                    </Link>
+                                ))}
+                            </SectionCard>
                         )}
 
                         {/* Event Story Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden group">
-                            <Link href={`/story/event/${event.id}`} className="block">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-pink-500/10 to-transparent group-hover:from-pink-500/20 transition-colors">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                        {t("page.events.storyTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-5 flex items-center justify-between group-hover:bg-pink-50/30 transition-colors">
-                                    <div>
-                                        <p className="font-bold text-slate-800 group-hover:text-pink-600 transition-colors">
-                                            {t("page.events.storyReadBtn")}
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            {t("page.events.storyReadDesc")}
-                                        </p>
-                                    </div>
-                                    <div className="w-8 h-8 rounded-full bg-pink-100 flex items-center justify-center group-hover:bg-pink-200 transition-colors">
-                                        <svg className="w-4 h-4 text-pink-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </Link>
-                        </div>
+                        <EventLinkCard
+                            href={`/story/event/${event.id}`}
+                            icon={mdMenuBook}
+                            title={t("page.events.storyTitle")}
+                            action={t("page.events.storyReadBtn")}
+                            description={t("page.events.storyReadDesc")}
+                        />
 
                         {/* Event Area Conversations Card */}
-                        <div className="ios-glass-card rounded-2xl overflow-hidden group">
-                            <Link href={`/story/area/event_${event.id}`} className="block">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-sky-500/10 to-transparent group-hover:from-sky-500/20 transition-colors">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-sky-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                                        </svg>
-                                        {t("page.events.areaTalkTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-5 flex items-center justify-between group-hover:bg-sky-50/30 transition-colors">
-                                    <div>
-                                        <p className="font-bold text-slate-800 group-hover:text-sky-600 transition-colors">
-                                            {t("page.events.areaTalkReadBtn")}
-                                        </p>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            {t("page.events.areaTalkReadDesc")}
-                                        </p>
-                                    </div>
-                                    <div className="w-8 h-8 rounded-full bg-sky-100 flex items-center justify-center group-hover:bg-sky-200 transition-colors">
-                                        <svg className="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                                        </svg>
-                                    </div>
-                                </div>
-                            </Link>
-                        </div>
+                        <EventLinkCard
+                            href={`/story/area/event_${event.id}`}
+                            icon={mdForum}
+                            title={t("page.events.areaTalkTitle")}
+                            action={t("page.events.areaTalkReadBtn")}
+                            description={t("page.events.areaTalkReadDesc")}
+                        />
 
                         {/* Virtual Live Card */}
                         {virtualLive && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-purple-500/10 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        {t("page.events.virtualLiveTitle")}
-                                    </h2>
-                                </div>
-                                <div className="p-0">
-                                    <Link href={`/live/${virtualLive.id}`} className="block group">
-                                        <div className="relative aspect-[16/5] w-full">
-                                            <Image
-                                                src={getVirtualLiveBannerUrl(virtualLive.assetbundleName, assetSource)}
-                                                alt={virtualLive.name}
-                                                fill
-                                                className="object-cover transition-transform duration-500 group-hover:scale-105"
-                                                unoptimized
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-                                            <div className="absolute bottom-0 left-0 w-full p-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-white/20 text-white px-2 py-0.5 rounded backdrop-blur-sm">
-                                                        Live #{virtualLive.id}
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-white font-bold text-lg leading-tight truncate">
-                                                    <TranslatedText
-                                                        original={virtualLive.name}
-                                                        category="virtualLive"
-                                                        field="name"
-                                                        originalClassName="truncate block"
-                                                        translationClassName="text-sm font-medium text-white/90 truncate block mt-0.5"
-                                                    />
-                                                </h3>
+                            <SectionCard icon={mdLiveTv} title={t("page.events.virtualLiveTitle")}>
+                                <Link href={`/live/${virtualLive.id}`} className="group block overflow-hidden rounded-md3-lg focus-ring">
+                                    <div className="relative aspect-[16/5] w-full">
+                                        <Image
+                                            src={getVirtualLiveBannerUrl(virtualLive.assetbundleName, assetSource)}
+                                            alt={virtualLive.name}
+                                            fill
+                                            className="object-cover"
+                                            unoptimized
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                        <div className="absolute bottom-0 left-0 w-full p-4">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <span className="type-label-s font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
+                                                    Live #{virtualLive.id}
+                                                </span>
                                             </div>
+                                            <h3 className="text-white type-title-m truncate">
+                                                <TranslatedText
+                                                    original={virtualLive.name}
+                                                    category="virtualLive"
+                                                    field="name"
+                                                    originalClassName="truncate block"
+                                                    translationClassName="type-body-s text-white/90 truncate block mt-0.5"
+                                                />
+                                            </h3>
                                         </div>
-                                    </Link>
-                                </div>
-                            </div>
+                                    </div>
+                                </Link>
+                            </SectionCard>
                         )}
 
                         {/* Event Cards - Now in Right Column */}
                         {eventCardsWithInfo.length > 0 && (
-                            <div className="ios-glass-card rounded-2xl overflow-hidden">
-                                <div className="px-5 py-4 border-b border-slate-100 bg-gradient-to-r from-miku/5 to-transparent">
-                                    <h2 className="font-bold text-slate-800 flex items-center gap-2">
-                                        <svg className="w-5 h-5 text-miku" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                        </svg>
-                                        {t("page.events.cardsTitle", { count: eventCardsWithInfo.length })}
-                                    </h2>
-                                </div>
-                                <div className="p-4">
-                                    <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 gap-1.5">
-                                        {eventCardsWithInfo.map(({ cardId, card }) => {
-                                            const cardInfo = card as unknown as ICardInfo;
-                                            const showTrained = getCardDefaultTrainedStatus(cardInfo) ||
-                                                (useTrainedThumbnail && isTrainableCard(cardInfo));
+                            <SectionCard icon={mdStyle} title={t("page.events.cardsTitle", { count: eventCardsWithInfo.length })}>
+                                <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-6 xl:grid-cols-8 gap-1.5">
+                                    {eventCardsWithInfo.map(({ cardId, card }) => {
+                                        const cardInfo = card as unknown as ICardInfo;
+                                        const showTrained = getCardDefaultTrainedStatus(cardInfo) ||
+                                            (useTrainedThumbnail && isTrainableCard(cardInfo));
 
-                                            return (
-                                                <Link
-                                                    key={cardId}
-                                                    href={`/cards/${cardId}`}
-                                                    className="group block"
-                                                >
-                                                    <div className="relative rounded-lg overflow-hidden bg-white ring-1 ring-slate-200 hover:ring-miku hover:shadow-lg transition-all">
-                                                        <SekaiCardThumbnail card={card as unknown as ICardInfo} trained={showTrained} className="w-full" />
-                                                    </div>
-                                                </Link>
-                                            );
-                                        })}
-                                    </div>
+                                        return (
+                                            <Link
+                                                key={cardId}
+                                                href={`/cards/${cardId}`}
+                                                className="group block rounded-md3-sm focus-ring"
+                                            >
+                                                <div className="relative rounded-md3-sm overflow-hidden bg-surface-container-lowest ring-1 ring-outline-variant group-hover:ring-2 group-hover:ring-primary transition-shadow">
+                                                    <SekaiCardThumbnail card={card as unknown as ICardInfo} trained={showTrained} className="w-full" />
+                                                </div>
+                                            </Link>
+                                        );
+                                    })}
                                 </div>
-                            </div>
+                            </SectionCard>
                         )}
 
                         <DetailPageAdCard hidden={isScreenshotMode} />
@@ -857,18 +722,55 @@ export default function EventDetailPage() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Link
-                        href="/events"
-                        className="inline-flex items-center gap-2 px-6 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors"
-                    >
-                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
+                    <Button href="/events" variant="tonal" size="m" icon={mdArrowBack}>
                         {t("page.events.backToList")}
-                    </Link>
+                    </Button>
                 </div>
-            </div>
+            </PageContainer>
         </MainLayout>
+    );
+}
+
+function ScreenshotImageCard({ label, children }: { label: string; children: React.ReactNode }) {
+    return (
+        <div className="bg-surface-container-low rounded-md3-xl overflow-hidden">
+            <div className="px-4 py-2 border-b border-outline-variant">
+                <span className="type-title-s text-on-surface-variant">{label}</span>
+            </div>
+            <div className="relative aspect-[16/9] bg-surface-container">{children}</div>
+        </div>
+    );
+}
+
+function EventLinkCard({
+    href,
+    icon,
+    title,
+    action,
+    description,
+}: {
+    href: string;
+    icon: string;
+    title: string;
+    action: string;
+    description: string;
+}) {
+    return (
+        <Card href={href} variant="filled" radius="xl" className="group bg-surface-container-low">
+            <div className="flex items-center gap-3 px-5 pt-4">
+                <Icon path={icon} className="text-primary" />
+                <h2 className="type-title-l text-on-surface">{title}</h2>
+            </div>
+            <div className="p-5 pt-3 flex items-center justify-between gap-4">
+                <div>
+                    <p className="type-title-s text-on-surface group-hover:text-primary transition-colors">{action}</p>
+                    <p className="type-body-s text-on-surface-variant mt-1">{description}</p>
+                </div>
+                <span className="w-10 h-10 shrink-0 rounded-full bg-secondary-container text-on-secondary-container flex items-center justify-center">
+                    <Icon path={mdChevronRight} />
+                </span>
+            </div>
+        </Card>
     );
 }
 
@@ -908,8 +810,7 @@ function EventBgmPlayer({ event, assetSource }: { event: IEventInfo; assetSource
         }
     };
 
-    const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const time = parseFloat(e.target.value);
+    const handleSeek = (time: number) => {
         setProgress(time);
         if (audioRef.current) {
             audioRef.current.currentTime = time;
@@ -946,61 +847,50 @@ function EventBgmPlayer({ event, assetSource }: { event: IEventInfo; assetSource
     }, [audioUrl]);
 
     return (
-        <div className="px-5 py-4 hover:bg-slate-50 transition-colors group">
+        <div className="px-5 py-4">
             <div className="flex items-center gap-4">
                 {/* Play Button */}
-                <button
+                <IconButton
+                    variant="filled"
+                    size="m"
+                    icon={isPlaying ? mdPauseFill : mdPlayArrowFill}
+                    label={isPlaying ? t("common.action.pause") : t("common.action.play")}
                     onClick={togglePlay}
-                    className={`shrink-0 w-12 h-12 rounded-full flex items-center justify-center transition-all ${isPlaying
-                        ? "bg-slate-800 text-white"
-                        : "bg-miku text-white shadow-md shadow-miku/20 hover:scale-105 active:scale-95"
-                        }`}
-                >
-                    {isPlaying ? (
-                        <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                        </svg>
-                    ) : (
-                        <svg className="w-6 h-6 translate-x-0.5" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M8 5v14l11-7z" />
-                        </svg>
-                    )}
-                </button>
+                    className="shrink-0"
+                />
 
                 <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between gap-2 mb-2">
-                        <div className="text-sm font-bold text-slate-700 truncate">
-                            <span className="mr-2">{t("page.events.themeSongLabel")}</span>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="type-title-s text-on-surface truncate">
+                            {t("page.events.themeSongLabel")}
                         </div>
-                        <div className="flex items-center gap-2">
-                            {/* Download Button */}
-                            <a
-                                href={audioUrl}
-                                download={`${event.assetbundleName}_top.mp3`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="p-1.5 text-slate-400 hover:text-miku hover:bg-miku/5 rounded-lg transition-colors"
-                                title={t("page.events.downloadAudio")}
-                                onClick={(e) => e.stopPropagation()}
-                            >
-                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                </svg>
-                            </a>
-                        </div>
+                        {/* Download Button */}
+                        <a
+                            href={audioUrl}
+                            download={`${event.assetbundleName}_top.mp3`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="state-layer focus-ring inline-flex h-10 w-10 items-center justify-center rounded-full text-on-surface-variant"
+                            title={t("page.events.downloadAudio")}
+                            aria-label={t("page.events.downloadAudio")}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <Icon path={mdDownload} size={22} />
+                        </a>
                     </div>
 
                     {/* Progress Bar & Time */}
                     <div className="flex items-center gap-3">
-                        <input
-                            type="range"
-                            min="0"
+                        <Slider
+                            min={0}
                             max={duration || 100}
+                            step={0.1}
                             value={progress}
-                            onChange={handleSeek}
-                            className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-miku hover:bg-slate-300 transition-colors"
+                            onValueChange={handleSeek}
+                            aria-label={t("page.events.themeSongLabel")}
+                            className="flex-1"
                         />
-                        <span className="text-[10px] font-mono text-slate-400 shrink-0 min-w-[60px] text-right">
+                        <span className="type-label-s font-mono text-on-surface-variant shrink-0 min-w-[60px] text-right">
                             {formatTime(progress)} / {formatTime(duration)}
                         </span>
                     </div>
@@ -1013,9 +903,9 @@ function EventBgmPlayer({ event, assetSource }: { event: IEventInfo; assetSource
 // Info Row Component
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
     return (
-        <div className="px-5 py-3 flex items-center justify-between text-sm">
-            <span className="text-slate-500 font-medium">{label}</span>
-            <span className="text-slate-800 font-bold text-right max-w-[60%]">{value}</span>
+        <div className="px-5 py-3 flex items-center justify-between gap-4 type-body-m">
+            <span className="text-on-surface-variant">{label}</span>
+            <span className="text-on-surface font-medium text-right max-w-[60%]">{value}</span>
         </div>
     );
 }
