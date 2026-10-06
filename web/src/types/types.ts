@@ -196,6 +196,7 @@ export interface ISkillEffectDetail {
     level: number;
     activateEffectDuration: number;
     activateEffectValue: number;
+    activateEffectValue2?: number | null;
 }
 
 export interface ISkillEffect {

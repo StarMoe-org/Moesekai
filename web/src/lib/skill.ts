@@ -141,11 +141,14 @@ export function formatSkillDescription(
         const id2 = Number(id2Str);
 
         // Helper to get effect value at current level
-        const getEffectValue = (effectId: number) => {
+        const getEffectValue = (effectId: number, preferValue2 = false) => {
             const effect = skill.skillEffects.find(e => e.id === effectId);
             if (!effect) return 0;
             const detail = effect.skillEffectDetails.find(d => d.level === skillLevel);
-            return detail ? detail.activateEffectValue : 0;
+            if (!detail) return 0;
+            return preferValue2 && detail.activateEffectValue2 != null
+                ? detail.activateEffectValue2
+                : detail.activateEffectValue;
         };
 
         const val1 = getEffectValue(id1);
@@ -157,12 +160,13 @@ export function formatSkillDescription(
 
         switch (type) {
             case "u": // Unit Scaling (Base + Max Bonus)
-            case "o": // Option/Other (Base + Bonus)
             case "s": // Score (Base + Rank Bonus)
             case "v": // Value (Base + Rank Bonus)
                 // For these, we sum the two values to get the total/max
                 return String(val1 + val2);
 
+            case "o":
+                return String(getEffectValue(id1, true) + getEffectValue(id2, true));
             case "r": // Rank requirement range?
                 // Logic usually checks if rank is within range.
                 // For static display, we might just want to show the value of the secondary ID 
