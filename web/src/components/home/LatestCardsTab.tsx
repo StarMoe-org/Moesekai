@@ -62,7 +62,7 @@ export default function LatestCardsTab() {
 
     if (cards.length === 0) {
         return (
-            <div className="p-8 text-center text-on-surface-variant bg-surface-container-low rounded-md3-xl">
+            <div className="p-8 text-center text-on-surface-variant bg-surface-card border border-outline-variant/70 rounded-md3-xl">
                 <p className="type-body-l">{t("page.home.latestCards.noData")}</p>
             </div>
         );

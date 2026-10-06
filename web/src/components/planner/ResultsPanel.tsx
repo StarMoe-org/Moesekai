@@ -149,7 +149,7 @@ export default function ResultsPanel({ result, comparison, rules }: ResultsPanel
     const showChapters = result != null && !reached && rules.group === "wl_overall" && result.perChapter.length > 0;
 
     return (
-        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-6 space-y-4">
+        <Surface as="section" tone="card" radius="lg" className="p-4 sm:p-6 space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="type-title-l text-on-surface">
                     {t("page.predictionPlanner.results.title")}

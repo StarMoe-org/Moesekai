@@ -968,7 +968,7 @@ export default function ScoreControlClient() {
                 />
 
                 {/* Input Form */}
-                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                     <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
                         <Icon path={mdTune} size={24} className="text-primary" />
                         {t("page.scoreControl.musicAndTarget")}
@@ -1348,7 +1348,7 @@ export default function ScoreControlClient() {
                             {smartRoutes.map((plan, idx) => {
                                 const isExpanded = expandedRoute === idx;
                                 return (
-                                    <div key={idx} className="bg-surface-container-low rounded-md3-lg overflow-hidden">
+                                    <div key={idx} className="bg-surface-card border border-outline-variant/70 rounded-md3-lg overflow-hidden">
                                         <button
                                             onClick={() => setExpandedRoute(isExpanded ? null : idx)}
                                             className="state-layer focus-ring w-full px-5 py-4 flex items-center justify-between text-left"
@@ -1461,12 +1461,12 @@ export default function ScoreControlClient() {
                             {t("page.scoreControl.fallbackSummary", { min: minBonus, max: maxBonus, target: formatNumber(targetPT) })}
                         </Banner>
                         {fallbackResults.length === 0 ? (
-                            <div className="bg-surface-container-low rounded-md3-xl">
+                            <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl">
                                 <EmptyState title={t("page.scoreControl.noPlan")} description={t("page.scoreControl.noPlanHint")} className="py-10" />
                             </div>
                         ) : (
                             <>
-                                <div className="bg-surface-container-low p-4 sm:p-5 rounded-md3-lg mb-4">
+                                <div className="bg-surface-card border border-outline-variant/70 p-4 sm:p-5 rounded-md3-lg mb-4">
                                     <div className="flex items-center justify-between flex-wrap gap-2">
                                         <div className="flex items-center gap-3">
                                             <h2 className="type-title-l text-on-surface flex items-center gap-2">
@@ -1483,7 +1483,7 @@ export default function ScoreControlClient() {
                                     </div>
                                 </div>
                                 {fallbackResults.map((group) => (
-                                    <div key={group.boost} className="bg-surface-container-low rounded-md3-lg mb-4 overflow-hidden">
+                                    <div key={group.boost} className="bg-surface-card border border-outline-variant/70 rounded-md3-lg mb-4 overflow-hidden">
                                         <div className="sc-boost-header px-5 py-3 border-b border-outline-variant flex items-center justify-between">
                                             <div className="flex items-center gap-3">
                                                 <span className="text-lg">{group.label}</span>
@@ -1495,7 +1495,7 @@ export default function ScoreControlClient() {
                                     </div>
                                 ))}
                                 {dbResults !== null && dbResults.length > 0 && (
-                                    <div className="bg-surface-container-low p-4 sm:p-5 rounded-md3-lg mb-4">
+                                    <div className="bg-surface-card border border-outline-variant/70 p-4 sm:p-5 rounded-md3-lg mb-4">
                                         <div className="flex items-center gap-2 mb-3">
                                             <Icon path={mdStyle} size={20} className="text-primary" />
                                             <h3 className="type-title-s text-on-surface">{t("page.scoreControl.recommendedDecks")}</h3>
@@ -1523,7 +1523,7 @@ export default function ScoreControlClient() {
 
                 {/* No results at all */}
                 {smartRoutes !== null && smartRoutes.length === 0 && fallbackResults === null && (
-                    <div className="bg-surface-container-low rounded-md3-xl sc-result-enter">
+                    <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl sc-result-enter">
                         <EmptyState title={t("page.scoreControl.noPlan")} description={t("page.scoreControl.noPlanHint")} className="py-10" />
                     </div>
                 )}
@@ -1532,7 +1532,7 @@ export default function ScoreControlClient() {
                 {deckBuilderEnabled && (
                     <div className="mb-6">
                         {dbIsCalculating && (
-                            <div className="bg-surface-container-low p-6 rounded-md3-lg">
+                            <div className="bg-surface-card border border-outline-variant/70 p-6 rounded-md3-lg">
                                 <div className="flex items-center gap-3 mb-3">
                                     <CircularProgress size={20} strokeWidth={3} className="shrink-0 text-primary" />
                                     <div className="flex-1 min-w-0">
@@ -1550,7 +1550,7 @@ export default function ScoreControlClient() {
                             <Banner tone="error" className="mb-4">{dbError}</Banner>
                         )}
                         {!dbIsCalculating && dbResults !== null && dbResults.length === 0 && (
-                            <div className="bg-surface-container-low rounded-md3-xl">
+                            <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl">
                                 <EmptyState title={t("page.scoreControl.noMatchingDeck")} description={t("page.scoreControl.noMatchingDeckHint")} className="py-10" />
                             </div>
                         )}
@@ -1598,7 +1598,7 @@ export default function ScoreControlClient() {
                         )}
 
                         {!infiniteSearchRunning && infiniteSearchResults.length === 0 && (
-                            <div className="bg-surface-container-low rounded-md3-xl mb-4">
+                            <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl mb-4">
                                 <EmptyState title={t("page.scoreControl.noInfiniteSongs")} description={t("page.scoreControl.noInfiniteSongsHint")} className="py-10" />
                             </div>
                         )}
@@ -1616,7 +1616,7 @@ export default function ScoreControlClient() {
                                     {infiniteSearchResults.map((result, idx) => {
                                         const isExpanded = infiniteExpandedIdx === idx;
                                         return (
-                                            <div key={idx} className="bg-surface-container-low rounded-md3-lg overflow-hidden">
+                                            <div key={idx} className="bg-surface-card border border-outline-variant/70 rounded-md3-lg overflow-hidden">
                                                 <button onClick={() => setInfiniteExpandedIdx(isExpanded ? null : idx)} className="state-layer focus-ring w-full px-5 py-4 flex items-center justify-between text-left">
                                                     <div className="flex items-center gap-2.5 flex-wrap min-w-0">
                                                         <span className="type-title-s text-on-surface whitespace-nowrap">#{idx + 1}</span>

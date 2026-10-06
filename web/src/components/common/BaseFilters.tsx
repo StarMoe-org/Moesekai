@@ -354,7 +354,7 @@ export default function BaseFilters({
 
     // 2. Standalone Card variant (For in-page static layouts like Information page)
     return (
-        <div data-shortcut-filters="true" className="overflow-hidden rounded-md3-xl bg-surface-container-low text-on-surface">
+        <div data-shortcut-filters="true" className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 text-on-surface">
             {/* Header — clickable on mobile to toggle collapse */}
             <div
                 className="flex cursor-pointer select-none items-center justify-between gap-2 px-5 py-4 lg:cursor-default"

@@ -24,7 +24,7 @@ export default function MainFooter() {
     const { t } = useI18n();
     return (
         <footer className="relative z-[5] mt-auto w-full px-3 pb-4 sm:px-4 sm:pb-6">
-            <div className="rounded-md3-xl bg-surface-container-low px-6 py-10 text-on-surface sm:px-8">
+            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 px-6 py-10 text-on-surface sm:px-8">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 lg:gap-12">
                     {/* Column 1: Brand & Description */}
                     <div className="lg:col-span-4 space-y-3">

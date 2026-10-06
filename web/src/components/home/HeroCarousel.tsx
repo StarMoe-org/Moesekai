@@ -222,7 +222,7 @@ export default function HeroCarousel() {
 
     if (slides.length === 0) {
         return (
-            <div className="w-full h-[180px] lg:h-[260px] rounded-md3-xl bg-surface-container-low flex items-center justify-center text-on-surface-variant">
+            <div className="w-full h-[180px] lg:h-[260px] rounded-md3-xl bg-surface-card border border-outline-variant/70 flex items-center justify-center text-on-surface-variant">
                 <p className="type-body-l">{t("page.home.hero.noContent")}</p>
             </div>
         );

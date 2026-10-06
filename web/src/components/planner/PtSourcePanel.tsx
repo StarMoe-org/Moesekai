@@ -647,7 +647,7 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
     ) : null;
 
     return (
-        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-5 space-y-4">
+        <Surface as="section" tone="card" radius="lg" className="p-4 sm:p-5 space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <h2 className="type-title-l text-on-surface">{t("page.predictionPlanner.pt.title")}</h2>
                 <SegmentedButton

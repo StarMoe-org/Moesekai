@@ -1558,7 +1558,7 @@ export default function ChartPreviewPlayer({
     const panelClassName = `relative overflow-hidden bg-scrim ${isFullscreen ? "rounded-none" : "rounded-md3-lg"}`;
     const controlsClassName = isFullscreen
         ? "absolute bottom-0 left-0 right-0 z-30 flex flex-col gap-2.5 border-t border-outline-variant bg-surface-container/95 px-4 pt-3 text-on-surface transition-opacity duration-300 ease-md3-standard"
-        : "flex flex-col gap-3 rounded-md3-xl bg-surface-container-low p-4 text-on-surface";
+        : "flex flex-col gap-3 rounded-md3-xl bg-surface-card border border-outline-variant/70 p-4 text-on-surface";
     const timeClassName = `${isCompactControls ? "type-label-s" : "type-label-m"} ml-auto font-mono shrink min-w-0 truncate text-right text-on-surface-variant`;
     const chipClassName = "border-outline-variant bg-surface-container-lowest";
     const fieldTextClassName = `text-on-surface-variant ${isCompactControls ? "type-label-s" : "type-label-m"}`;

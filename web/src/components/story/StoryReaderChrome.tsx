@@ -83,7 +83,7 @@ export function StoryReaderHeader({
         );
     }
     return (
-        <Surface tone="low" radius="lg" className={cn("mb-6", className)}>
+        <Surface tone="card" radius="lg" className={cn("mb-6", className)}>
             {body}
         </Surface>
     );

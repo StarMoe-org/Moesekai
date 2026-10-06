@@ -17,7 +17,7 @@ function StatBlock({ title, data, type }: StatBlockProps) {
     const { t, formatNumber } = useI18n();
 
     return (
-        <div className="bg-surface-container-low text-on-surface rounded-md3-xl p-3 sm:p-4 flex-1 flex flex-col justify-between">
+        <div className="bg-surface-card border border-outline-variant/70 text-on-surface rounded-md3-xl p-3 sm:p-4 flex-1 flex flex-col justify-between">
             <div className="flex items-center gap-2 mb-2 sm:mb-3">
                 <h3 className="type-title-s text-on-surface">{title}</h3>
             </div>

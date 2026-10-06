@@ -584,7 +584,7 @@ function MusicMetaContent() {
 
     // PSPI Explanation Section
     const PSPIExplanation = () => (
-        <div className="mt-12 p-6 bg-surface-container-low rounded-md3-xl">
+        <div className="mt-12 p-6 bg-surface-card border border-outline-variant/70 rounded-md3-xl">
             <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
                 <Icon path={mdHelp} size={24} className="text-primary" />
                 {t("page.musicMeta.pspi.title")}

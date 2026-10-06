@@ -88,7 +88,7 @@ export default function PrivacyPolicyClient() {
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
     return (
-        <Surface as="section" tone="low" className="p-5 sm:p-6">
+        <Surface as="section" tone="card" className="p-5 sm:p-6">
             <h2 className="mb-3 type-title-l text-on-surface">{title}</h2>
             <div className="type-body-l text-on-surface-variant">{children}</div>
         </Surface>

@@ -978,7 +978,7 @@ function RealtimeRankingContent() {
                 />
 
                 {(worldLinkAvailable || isWorldBloomEvent) && (
-                    <Surface tone="low" radius="lg" className="mb-6 p-4">
+                    <Surface tone="card" radius="lg" className="mb-6 p-4">
                         <div className="flex flex-wrap items-center gap-2">
                             <Chip selected={boardMode === "overall"} onClick={() => setBoardMode("overall")}>
                                 {t("page.realtimeRanking.board.overall")}

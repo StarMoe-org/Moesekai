@@ -46,7 +46,7 @@ function MissingParamsState() {
     return (
         <MainLayout>
             <PageContainer className="max-w-4xl">
-                <div className="rounded-md3-xl bg-surface-container-low">
+                <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70">
                     <EmptyState
                         title={t("page.mysekaiPreview.ranking.missingParamsTitle")}
                         description={t("page.mysekaiPreview.ranking.missingParamsDescription")}
@@ -141,7 +141,7 @@ function RankingPreviewInner() {
                     </Button>
                 </div>
 
-                <section className="mb-6 overflow-hidden rounded-md3-xl bg-surface-container-low p-5 sm:p-6 lg:p-7">
+                <section className="mb-6 overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 p-5 sm:p-6 lg:p-7">
                     <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-center">
                         <div className="min-w-0">
                             <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -194,7 +194,7 @@ function RankingPreviewInner() {
                     </div>
                 </section>
 
-                <section className="overflow-hidden rounded-md3-xl bg-surface-container-low p-4 sm:p-5">
+                <section className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 p-4 sm:p-5">
                     <MysekaiScenePreview
                         key={`${server}-${competitionId}-${rank}`}
                         defaultLayoutUrl={roomUrl}

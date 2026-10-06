@@ -207,7 +207,7 @@ export default function AnnouncementSection() {
             {isLoading ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="overflow-hidden rounded-md3-lg bg-surface-container-low">
+                        <div key={i} className="overflow-hidden rounded-md3-lg bg-surface-card border border-outline-variant/70">
                             <div className="aspect-[16/7] animate-pulse bg-surface-container-high" />
                             <div className="space-y-3 p-4">
                                 <div className="h-4 w-20 animate-pulse rounded-full bg-surface-container-highest" />
@@ -228,7 +228,7 @@ export default function AnnouncementSection() {
                 <EmptyState
                     icon={mdArticle}
                     title={t("page.home.announcements.noData")}
-                    className="rounded-md3-xl bg-surface-container-low py-10"
+                    className="rounded-md3-xl bg-surface-card border border-outline-variant/70 py-10"
                 />
             ) : (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

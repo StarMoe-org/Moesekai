@@ -39,7 +39,7 @@ export default function ConnectClient() {
     return (
         <MainLayout>
             <PageContainer className="max-w-3xl">
-                <Surface tone="low" className="p-6 text-center sm:p-8">
+                <Surface tone="card" className="p-6 text-center sm:p-8">
                     <PageHeader align="center" eyebrow={t("page.oauth2.connect.badge")} title={t("page.oauth2.connect.title")} description={t("page.oauth2.connect.description")} className="mb-0 sm:mb-0" />
                     {errorMessage ? (
                         <Banner tone="error" title={t("page.oauth2.connect.errorTitle")} className="mt-6 text-left">

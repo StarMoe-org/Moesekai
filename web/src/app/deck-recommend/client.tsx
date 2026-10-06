@@ -1068,7 +1068,7 @@ export default function DeckRecommendClient() {
                 />
 
                 {/* Account Card */}
-                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                     <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                         <h2 className="type-title-l text-on-surface flex items-center gap-2">
                             <Icon path={mdAccountCircle} size={24} className="text-primary" />
@@ -1144,7 +1144,7 @@ export default function DeckRecommendClient() {
                 </div>
 
                 {/* Config card */}
-                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                     {/* Active Rules Summary Panel */}
                     <ActiveRulesSummary
                         state={customRulesState}
@@ -1707,7 +1707,7 @@ export default function DeckRecommendClient() {
                         </Button>
                     )}
                     {isCalculating && (
-                        <div className="bg-surface-container-low p-4 rounded-md3-lg mt-4">
+                        <div className="bg-surface-card border border-outline-variant/70 p-4 rounded-md3-lg mt-4">
                             <ProgressBar percent={progressPercent} stageLabel={progressLabel} />
                         </div>
                     )}
@@ -1727,7 +1727,7 @@ export default function DeckRecommendClient() {
                     </p>
                 )}
                 {results && results.length > 0 && (
-                    <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6 [overflow-anchor:none]">
+                    <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6 [overflow-anchor:none]">
                         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
                             <h2 className="type-title-l text-on-surface flex items-center gap-2">
                                 <Icon path={mdLeaderboard} size={24} className="text-primary" />
@@ -1757,7 +1757,7 @@ export default function DeckRecommendClient() {
                     </div>
                 )}
                 {results && results.length === 0 && !error && (
-                    <div className="bg-surface-container-low rounded-md3-xl mb-6">
+                    <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl mb-6">
                         <EmptyState title={t("page.deckRecommend.result.empty")} className="py-10" />
                     </div>
                 )}

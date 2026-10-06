@@ -166,7 +166,7 @@ export default function CallbackClient() {
     return (
         <MainLayout>
             <PageContainer className="max-w-3xl">
-                <Surface tone="low" className="p-6 sm:p-8">
+                <Surface tone="card" className="p-6 sm:p-8">
                     <PageHeader eyebrow={t("page.oauth2.callback.badge")} title={t("page.oauth2.callback.title")} className="mb-4 sm:mb-4" />
                     {loading ? (
                         <div className="space-y-2 type-body-m text-on-surface-variant">

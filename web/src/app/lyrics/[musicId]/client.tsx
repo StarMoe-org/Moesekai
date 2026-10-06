@@ -525,7 +525,7 @@ export default function LyricsDetailClient() {
                 <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(260px,0.72fr)_minmax(0,1.28fr)]">
                     <aside className="space-y-6 lg:sticky lg:top-24 lg:self-start">
                         {/* Music Jacket Card */}
-                        <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                        <div className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70">
                             <div className="relative aspect-square bg-surface-container">
                                 <Image
                                     src={getMusicJacketUrl(music.assetbundleName, assetSource)}
@@ -566,7 +566,7 @@ export default function LyricsDetailClient() {
 
                         {/* Vocal Versions Audio Player Card */}
                         {vocals.length > 0 && (
-                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70">
                                 <SectionTitle icon={mdMic}>{t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}</SectionTitle>
                                 <div className="divide-y divide-outline-variant max-h-80 overflow-y-auto">
                                     {vocals.map((vocal) => (
@@ -586,7 +586,7 @@ export default function LyricsDetailClient() {
 
                         {/* Attribution Card */}
                         {lyrics && (
-                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70">
                                 <SectionTitle icon={mdInfo}>{t("page.lyrics.attribution")}</SectionTitle>
                                 <div className="p-5 pt-2">
                                     {lyrics.version === 1 ? (
@@ -683,7 +683,7 @@ export default function LyricsDetailClient() {
 
                     <section className="min-w-0">
                         {!lyrics ? (
-                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low p-8 sm:p-12 text-center">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 p-8 sm:p-12 text-center">
                                 <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-md3-xl bg-primary-container text-on-primary-container">
                                     <Icon path={mdEditNote} size={40} />
                                 </div>
@@ -702,7 +702,7 @@ export default function LyricsDetailClient() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="overflow-hidden rounded-md3-xl bg-surface-container-low">
+                            <div className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70">
                                 <div className="flex flex-col gap-3 border-b border-outline-variant px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                                 <h2 className="flex shrink-0 items-center gap-3 type-title-l text-on-surface">
                                     <Icon path={mdLyrics} size={24} className="text-primary" />

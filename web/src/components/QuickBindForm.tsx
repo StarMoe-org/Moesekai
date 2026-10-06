@@ -81,7 +81,7 @@ export default function QuickBindForm({
     }, [returnTo, t]);
 
     return (
-        <Surface tone="low" radius="xl" className="p-6 sm:p-8">
+        <Surface tone="card" radius="xl" className="p-6 sm:p-8">
             <div className="mb-6 text-center">
                 <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
                     {icon || <DefaultIcon />}

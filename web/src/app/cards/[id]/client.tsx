@@ -481,7 +481,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             <div className="space-y-4">
                                 {/* Normal Image */}
                                 {!cardDefaultTrained && (
-                                    <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                    <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                         <div className="px-4 py-2 border-b border-outline-variant">
                                             <span className="type-title-s text-on-surface-variant">{t("page.cards.viewNormal")}</span>
                                         </div>
@@ -499,7 +499,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                 )}
                                 {/* Trained Image */}
                                 {(cardDefaultTrained || (trainable && !isBirthday)) && (
-                                    <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                                    <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                         <div className="px-4 py-2 border-b border-outline-variant">
                                             <span className="type-title-s text-on-surface-variant">{t("page.cards.viewTrained")}</span>
                                         </div>
@@ -517,7 +517,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             </div>
                         ) : (
                             /* Normal Mode: Tabs and switchable view */
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 {/* Image Toggle (only for trainable non-birthday cards that have both images) */}
                                 {trainable && !isBirthday && !cardDefaultTrained && (
                                     <div className="p-3 border-b border-outline-variant">
@@ -600,7 +600,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                     {/* Right: Card Info */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdInfo}>{t("page.cards.basicInfo")}</SectionTitle>
                             <div className="divide-y divide-outline-variant">
                                 <InfoRow label={t("page.cards.cardIdLabel")} value={`#${card.id}`} />
@@ -724,7 +724,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
 
                         {/* Stats Card */}
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdBarChart}>{t("page.cards.powerLabel")}</SectionTitle>
 
                             {/* Level Slider - Compact */}
@@ -756,7 +756,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
 
                         {/* Skill Card */}
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdBolt}>{t("page.cards.skillTitle")}</SectionTitle>
                             <div className="p-5">
                                 {/* Skill Level Slider */}
@@ -836,7 +836,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Costumes Card */}
                         {relatedCostumes.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdApparel}>{t("page.cards.costumeTitle")}</SectionTitle>
                                 <div className="p-5">
                                     <CostumeGrid costumes={relatedCostumes} assetSource={assetSource} />
@@ -871,7 +871,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Related Event Card */}
                         {relatedEvent && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdCalendarMonth}>{t("page.cards.relatedEventTitle")}</SectionTitle>
                                 <div className="p-4 pt-2">
                                     <Link href={`/events/${relatedEvent.id}`} className="focus-ring block group rounded-md3-lg overflow-hidden">
@@ -908,7 +908,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Related Gacha Card */}
                         {relatedGachas.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdPaid}>{t("page.cards.relatedGachaTitle")}</SectionTitle>
                                 <div className="p-4 pt-2 grid grid-cols-1 gap-3">
                                     {relatedGachas.map((gacha) => (

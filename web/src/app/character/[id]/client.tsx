@@ -160,7 +160,7 @@ export default function CharacterDetailClient() {
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                 {/* Left Column: Character Image */}
                 <div className="lg:col-span-5 xl:col-span-4">
-                    <Surface tone="low" className="sticky top-24 overflow-hidden">
+                    <Surface tone="card" className="sticky top-24 overflow-hidden">
                         <div className="p-3">
                             <SegmentedButton
                                 density={-1}

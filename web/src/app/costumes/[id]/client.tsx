@@ -302,7 +302,7 @@ export default function CostumeDetailClient() {
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:gap-8">
                     {/* LEFT Column: Visuals */}
                     <div>
-                        <Surface tone="low" className="overflow-hidden lg:sticky lg:top-24">
+                        <Surface tone="card" className="overflow-hidden lg:sticky lg:top-24">
                             {/* Grid of Parts */}
                             <div className="grid grid-cols-4 gap-0.5 bg-outline-variant">
                                 {displayItems.map((item) => {

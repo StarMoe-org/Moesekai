@@ -89,7 +89,7 @@ function CharacterListContent() {
                         const iconName = UNIT_FIELD_ICONS[unitId] || "vs.webp";
 
                         return (
-                            <Surface as="section" tone="low" key={unitId} className="overflow-hidden">
+                            <Surface as="section" tone="card" key={unitId} className="overflow-hidden">
                                 {/* Unit Header */}
                                 <div className="flex items-center gap-4 border-b border-outline-variant px-5 py-4">
                                     <div className="relative h-12 w-12 shrink-0">

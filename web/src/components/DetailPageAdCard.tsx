@@ -18,7 +18,7 @@ export default function DetailPageAdCard({ hidden = false }: DetailPageAdCardPro
     if (hidden || !showAds) return null;
 
     return (
-        <div className="moesekai-ad-slot overflow-hidden rounded-md3-xl bg-surface-container-low">
+        <div className="moesekai-ad-slot overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70">
             <div className="flex items-center gap-2 px-5 pb-2 pt-4">
                 <Icon path={mdCampaign} size={20} className="text-tertiary" />
                 <h2 className="type-title-m text-on-surface">{t("settings.ads.title")}</h2>

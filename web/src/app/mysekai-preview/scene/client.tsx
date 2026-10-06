@@ -368,7 +368,7 @@ export default function MysekaiPreviewSceneClient() {
                         </div>
                     </div>
 
-                    <section className="overflow-hidden rounded-md3-xl bg-surface-container-low p-4 sm:p-5">
+                    <section className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 p-4 sm:p-5">
                         <MysekaiScenePreview
                             key={previewState.layoutKey}
                             defaultLayoutUrl={layoutSource}
@@ -409,7 +409,7 @@ export default function MysekaiPreviewSceneClient() {
                 )}
 
                 {mode === "uid" ? (
-                    <form onSubmit={handleUidSubmit} className="mx-auto mt-6 max-w-3xl rounded-md3-xl bg-surface-container-low p-5 sm:p-6">
+                    <form onSubmit={handleUidSubmit} className="mx-auto mt-6 max-w-3xl rounded-md3-xl bg-surface-card border border-outline-variant/70 p-5 sm:p-6">
                         <div className="mb-5">
                             <h2 className="type-title-l text-on-surface">{t("page.mysekaiPreview.scene.uidForm.title")}</h2>
                             <p className="mt-1 type-body-m text-on-surface-variant">{t("page.mysekaiPreview.scene.uidForm.description")}</p>
@@ -458,7 +458,7 @@ export default function MysekaiPreviewSceneClient() {
                         </Button>
                     </form>
                 ) : (
-                    <form onSubmit={handleJsonSubmit} className="mx-auto mt-6 max-w-3xl rounded-md3-xl bg-surface-container-low p-5 sm:p-6">
+                    <form onSubmit={handleJsonSubmit} className="mx-auto mt-6 max-w-3xl rounded-md3-xl bg-surface-card border border-outline-variant/70 p-5 sm:p-6">
                         <div className="mb-5">
                             <h2 className="type-title-l text-on-surface">{t("page.mysekaiPreview.scene.jsonForm.title")}</h2>
                             <p className="mt-1 type-body-m text-on-surface-variant">

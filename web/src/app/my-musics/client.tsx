@@ -867,7 +867,7 @@ function MyMusicsContent() {
 
             {/* Progress Bar */}
             {!isLoading && !isFetchingUser && userMusicResults.size > 0 && progressStats && (
-                <Surface tone="low" radius="lg" className="mb-6 p-4">
+                <Surface tone="card" radius="lg" className="mb-6 p-4">
                     <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <span className="type-title-s text-on-surface">
@@ -899,7 +899,7 @@ function MyMusicsContent() {
 
             {/* Best30 Card */}
             {!isLoading && !isFetchingUser && best30Data && best30Data.entries.length > 0 && (
-                <Surface tone="low" radius="lg" className="mb-6 overflow-hidden">
+                <Surface tone="card" radius="lg" className="mb-6 overflow-hidden">
                     <div className="flex items-center justify-between gap-2 p-2 pl-2">
                         <button
                             type="button"

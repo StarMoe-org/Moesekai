@@ -65,7 +65,7 @@ export default function LatestMusicTab() {
 
     if (musics.length === 0) {
         return (
-            <EmptyState icon={mdMusicNote} title={t("page.home.latestMusic.noData")} className="rounded-md3-xl bg-surface-container-low py-8" />
+            <EmptyState icon={mdMusicNote} title={t("page.home.latestMusic.noData")} className="rounded-md3-xl bg-surface-card border border-outline-variant/70 py-8" />
         );
     }
 

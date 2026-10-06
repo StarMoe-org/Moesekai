@@ -82,7 +82,7 @@ export default function AccountSelectorBar({
 
     return (
         <div className="mb-6">
-            <Surface tone="low" radius="lg" className="p-4">
+            <Surface tone="card" radius="lg" className="p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="type-title-s text-on-surface">{t("common.account.selectAccount")}</span>
                     <div className="flex items-center gap-1">

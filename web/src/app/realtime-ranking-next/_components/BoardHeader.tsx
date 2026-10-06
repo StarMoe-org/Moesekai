@@ -108,7 +108,7 @@ export default function BoardHeader({
             </div>
 
             {/* Status Bar */}
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md3-lg bg-surface-container-low px-4 py-2 type-body-s text-on-surface-variant">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-md3-lg bg-surface-card border border-outline-variant/70 px-4 py-2 type-body-s text-on-surface-variant">
                 {eventId != null && (
                     <span className="inline-flex items-center gap-1.5">
                         <span>{t("page.realtimeRankingNext.eventId")}</span>

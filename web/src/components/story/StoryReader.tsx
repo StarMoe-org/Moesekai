@@ -445,7 +445,7 @@ export function StoryReader({
             )}
 
             {scenarioData.characters.length > 0 && (
-                <Surface tone="low" radius="lg" className="relative z-10 mb-6 p-4">
+                <Surface tone="card" radius="lg" className="relative z-10 mb-6 p-4">
                     <h3 className="mb-3 type-title-s text-on-surface-variant">{t("page.story.reader.charactersTitle")}</h3>
                     <div className="flex flex-wrap gap-2">
                         {scenarioData.characters.map((char) => (

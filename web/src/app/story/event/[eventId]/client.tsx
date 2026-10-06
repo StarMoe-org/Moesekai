@@ -374,7 +374,7 @@ export default function StoryEventDetailClient() {
     <MainLayout>
       <PageContainer>
         {/* Banner */}
-        <div className="relative mb-8 flex min-h-[200px] items-center overflow-hidden rounded-md3-xl bg-surface-container-low sm:min-h-[250px]">
+        <div className="relative mb-8 flex min-h-[200px] items-center overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 sm:min-h-[250px]">
           <div className="absolute inset-0 z-0">
             <Image
               src={getEventBannerUrl(eventInfo.assetbundleName, assetSource)}

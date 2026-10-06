@@ -73,6 +73,15 @@ body {
   display: none;
 }
 
+/* Outlined text field labels mask the outline with the nearest container's fill. */
+.bg-surface { --md3-tf-label-bg: var(--md-sys-color-surface); }
+.bg-surface-card { --md3-tf-label-bg: var(--md-sys-color-surface-card); }
+.bg-surface-container-lowest { --md3-tf-label-bg: var(--md-sys-color-surface-container-lowest); }
+.bg-surface-container-low { --md3-tf-label-bg: var(--md-sys-color-surface-container-low); }
+.bg-surface-container { --md3-tf-label-bg: var(--md-sys-color-surface-container); }
+.bg-surface-container-high { --md3-tf-label-bg: var(--md-sys-color-surface-container-high); }
+.bg-surface-container-highest { --md3-tf-label-bg: var(--md-sys-color-surface-container-highest); }
+
 :root.theme-switching,
 :root.theme-switching *,
 :root.theme-switching *::before,

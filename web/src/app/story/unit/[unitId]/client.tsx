@@ -178,7 +178,7 @@ export default function StoryUnitDetailClient() {
                     {t("page.story.unit.backToUnitList")}
                 </Button>
 
-                <Surface tone="low" className="mb-8 flex items-center gap-5 p-5">
+                <Surface tone="card" className="mb-8 flex items-center gap-5 p-5">
                     <div className="flex h-12 w-24 shrink-0 items-center justify-center rounded-md3-md bg-surface-container-high p-1.5">
                         <img src={logoUrl} alt={profile.unitName} className="max-h-full max-w-full shrink-0 object-contain" />
                     </div>
@@ -204,7 +204,7 @@ export default function StoryUnitDetailClient() {
                                         {group.name}
                                     </h2>
                                     {group.outline && (
-                                        <div className="mt-2.5 rounded-md3-lg bg-surface-container-low p-4 type-body-m text-on-surface-variant">
+                                        <div className="mt-2.5 rounded-md3-lg bg-surface-card border border-outline-variant/70 p-4 type-body-m text-on-surface-variant">
                                             {group.outline}
                                         </div>
                                     )}

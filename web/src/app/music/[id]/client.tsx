@@ -495,7 +495,7 @@ export default function MusicDetailPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* Left Column: Jacket Image */}
                     <div className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             {/* Jacket Image */}
                             <div
                                 className="relative aspect-square bg-surface-container cursor-zoom-in"
@@ -520,7 +520,7 @@ export default function MusicDetailPage() {
                     {/* Right Column: Info Cards */}
                     <div className="space-y-6">
                         {/* Basic Info Card */}
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdInfo}>{t("page.music.basicInfo")}</SectionTitle>
                             <div className="divide-y divide-outline-variant">
                                 <InfoRow label="ID" value={`#${music.id}`} />
@@ -612,7 +612,7 @@ export default function MusicDetailPage() {
 
                         {/* Ranking Card */}
                         {rankings && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdBarChart}>{t("page.music.metaRanking")}</SectionTitle>
 
                                 {/* Category Tabs */}
@@ -667,7 +667,7 @@ export default function MusicDetailPage() {
                         )}
 
                         {/* Difficulty Card */}
-                        <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdLibraryMusic}>{t("page.music.difficultyInfo")}</SectionTitle>
 
                             {/* Difficulty Grid */}
@@ -757,7 +757,7 @@ export default function MusicDetailPage() {
 
                         {/* Vocals Card */}
                         {vocals.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdMic}>{t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}</SectionTitle>
                                 <div className="divide-y divide-outline-variant max-h-96 overflow-y-auto">
                                     {vocals.map((vocal) => (
@@ -777,7 +777,7 @@ export default function MusicDetailPage() {
 
                         {/* Related Events Card */}
                         {relatedEvents.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-container-low overflow-hidden">
+                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdCalendarMonth}>{t("page.music.relatedEvents")}</SectionTitle>
                                 <div className="p-4 pt-2 space-y-3">
                                     {relatedEvents.map((event) => (

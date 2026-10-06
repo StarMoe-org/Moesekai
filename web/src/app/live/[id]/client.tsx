@@ -689,7 +689,7 @@ export default function VirtualLiveDetailClient() {
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                     {/* LEFT Column: Banner */}
                     <div>
-                        <div className="bg-surface-container-low rounded-md3-xl overflow-hidden lg:sticky lg:top-24">
+                        <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl overflow-hidden lg:sticky lg:top-24">
                             <div className="px-4 py-3 border-b border-outline-variant">
                                 <span className="type-title-s text-on-surface-variant">{t("page.live.bannerTitle")}</span>
                             </div>

@@ -31,7 +31,7 @@ function LeavePageContent() {
     if (!target) {
         return (
             <div className="flex min-h-[80vh] flex-col items-center justify-center p-4">
-                <Surface tone="low" className="w-full max-w-md p-8 text-center">
+                <Surface tone="card" className="w-full max-w-md p-8 text-center">
                     <h1 className="mb-4 type-headline-s text-on-surface">
                         {t("page.leave.missingTitle")}
                     </h1>
@@ -48,7 +48,7 @@ function LeavePageContent() {
 
     return (
         <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-4">
-            <Surface tone="low" elevation={1} className="relative w-full max-w-lg overflow-hidden p-8 md:p-10">
+            <Surface tone="card" elevation={1} className="relative w-full max-w-lg overflow-hidden p-8 md:p-10">
                 {/* Decorative accent bar */}
                 <div className="absolute left-0 top-0 h-1.5 w-full bg-primary" />
 

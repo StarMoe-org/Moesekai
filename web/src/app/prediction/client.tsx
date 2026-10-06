@@ -462,7 +462,7 @@ export default function PredictionClient() {
                                     )}
 
                                     {/* Row 2: Prediction List / Table */}
-                                    <div className="bg-surface-container-low rounded-md3-xl overflow-hidden mb-6">
+                                    <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl overflow-hidden mb-6">
                                         <div className="px-6 py-4 border-b border-outline-variant flex justify-between items-center gap-4">
                                             <h3 className="type-title-l text-on-surface">
                                                 {isActive ? t("page.prediction.table.activeTitle") : t("page.prediction.table.finalTitle")}
@@ -568,7 +568,7 @@ export default function PredictionClient() {
                                     {/* Row 3: Large Detailed Chart (Only if Active) */}
                                     {isActive && (
                                         <div id="detailed-chart" className="scroll-mt-24 mb-6">
-                                            <div className="bg-surface-container-low rounded-md3-xl p-6">
+                                            <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl p-6">
                                                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                                                     <h3 className="type-title-l text-on-surface shrink-0">
                                                         {t("page.prediction.chart.detailTitle", { rank: selectedRank })}

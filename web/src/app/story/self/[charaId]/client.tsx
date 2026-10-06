@@ -94,7 +94,7 @@ export default function StorySelfReaderClient() {
 
                 {!isLoading && (
                     <div className="mx-auto max-w-4xl">
-                        <Surface tone="low" radius="lg" className="mb-6 flex flex-wrap items-center gap-2 p-3">
+                        <Surface tone="card" radius="lg" className="mb-6 flex flex-wrap items-center gap-2 p-3">
                             <span className="mr-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
                                 <Icon path={mdFormatListBulleted} size={20} />
                                 {t("page.story.self.tableOfContents")}

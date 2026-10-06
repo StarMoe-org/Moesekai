@@ -192,7 +192,7 @@ export default function RulesCard({ rules, overrides, onOverridesChange, scope, 
     const passChanged = overrides.pass !== undefined && overrides.pass !== "none";
 
     return (
-        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-5">
+        <Surface as="section" tone="card" radius="lg" className="p-4 sm:p-5">
             <div className="flex items-center justify-between gap-3">
                 <h2 className="min-w-0 type-title-l text-on-surface">
                     {t("page.predictionPlanner.rules.title")}

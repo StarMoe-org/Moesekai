@@ -600,7 +600,7 @@ function AssetVersionsContent() {
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {/* Toolbar */}
-                <Surface tone="low" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
+                <Surface tone="card" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
                     <div className="flex min-w-0 items-center gap-2">
                         {isDiffView && (
                             <IconButton
@@ -659,7 +659,7 @@ function AssetVersionsContent() {
                             onRetry={fetchVersions}
                         />
                     ) : versions.length === 0 ? (
-                        <Surface tone="low" radius="xl">
+                        <Surface tone="card" radius="xl">
                             <EmptyState icon={mdHistory} title={t("page.assetVersions.emptyVersions")} />
                         </Surface>
                     ) : (
@@ -742,7 +742,7 @@ function AssetVersionsContent() {
                     /* ==================== Single Version Diff View ==================== */
                     <>
                         {/* Version summary card */}
-                        <Surface tone="low" radius="xl" className="mb-4 p-4 sm:p-5">
+                        <Surface tone="card" radius="xl" className="mb-4 p-4 sm:p-5">
                             {isDiffLoading && !diffMeta ? (
                                 <div className="flex items-center gap-3 type-body-m text-on-surface-variant">
                                     <CircularProgress size={20} />
@@ -793,7 +793,7 @@ function AssetVersionsContent() {
                                 onRetry={fetchDiff}
                             />
                         ) : processedDiffItems.length === 0 ? (
-                            <Surface tone="low" radius="xl">
+                            <Surface tone="card" radius="xl">
                                 <EmptyState icon={mdFolderOff} title={t("page.assetVersions.emptyDiff")} />
                             </Surface>
                         ) : (

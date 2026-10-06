@@ -626,7 +626,7 @@ export default function StickerMakerContent() {
                                 />
                             </div>
                         ) : (
-                            <Surface tone="low" radius="xl" className="sticker-editor-container grid grid-cols-1 gap-6 p-6 text-on-surface md:grid-cols-2 lg:p-8">
+                            <Surface tone="card" radius="xl" className="sticker-editor-container grid grid-cols-1 gap-6 p-6 text-on-surface md:grid-cols-2 lg:p-8">
                                 {/* Canvas Area */}
                                 <div className="order-2 mb-4 mt-4 flex flex-col items-center gap-6 md:order-1 md:col-span-2 md:mb-8 md:mt-0">
                                     <div className="group relative">

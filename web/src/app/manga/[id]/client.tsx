@@ -131,7 +131,7 @@ export default function MangaDetailClient() {
         <MainLayout>
             <PageContainer className="relative max-w-4xl">
                 {/* Top Navigation Bar: Prev / Jump / Next */}
-                <Surface tone="low" className="mb-6 flex items-center justify-between gap-2 px-3 py-3 sm:px-4">
+                <Surface tone="card" className="mb-6 flex items-center justify-between gap-2 px-3 py-3 sm:px-4">
                     {/* Prev */}
                     {prevManga ? (
                         <Button variant="text" icon={mdChevronLeft} href={`/manga/${prevManga.id}`} className="pl-2">

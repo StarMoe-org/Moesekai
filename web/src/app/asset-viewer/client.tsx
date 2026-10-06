@@ -901,7 +901,7 @@ function AssetViewerContent() {
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {/* Breadcrumbs Navigation & Actions */}
-                <Surface tone="low" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
+                <Surface tone="card" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
                     <div className="flex min-w-0 items-center gap-2">
                         {(prefix || bundlePath) && (
                             <IconButton
@@ -1023,7 +1023,7 @@ function AssetViewerContent() {
                         onRetry={() => fetchCurrentView(true)}
                     />
                 ) : (bundlePath ? processedAssetFiles.length === 0 : processedBundleItems.length === 0) ? (
-                    <Surface tone="low" radius="xl">
+                    <Surface tone="card" radius="xl">
                         <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
                     </Surface>
                 ) : (

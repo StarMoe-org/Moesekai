@@ -40,14 +40,14 @@ export default function RankingList({
 
     if (entries.length === 0) {
         return (
-            <div className="rounded-md3-lg bg-surface-container-low">
+            <div className="rounded-md3-lg bg-surface-card border border-outline-variant/70">
                 <EmptyState title={t("page.realtimeRanking.list.empty")} />
             </div>
         );
     }
 
     return (
-        <div className="overflow-hidden rounded-md3-lg bg-surface-container-low">
+        <div className="overflow-hidden rounded-md3-lg bg-surface-card border border-outline-variant/70">
             {/* Table header */}
             <div className="flex items-center border-b border-outline-variant bg-surface-container px-3 py-2.5 type-label-m text-on-surface-variant">
                 <div className="w-12 shrink-0 text-center sm:w-14">{t("page.realtimeRanking.list.rank")}</div>

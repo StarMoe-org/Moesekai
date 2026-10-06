@@ -160,7 +160,7 @@ export default function PGAIChart({ globalKline, height: _height = 300 }: PGAICh
     }, [c, formatNumber, globalKline, t]);
 
     return (
-        <div className="bg-surface-container-low text-on-surface rounded-md3-xl p-6 h-full flex flex-col">
+        <div className="bg-surface-card border border-outline-variant/70 text-on-surface rounded-md3-xl p-6 h-full flex flex-col">
             <div className="flex justify-between items-start gap-4 mb-6">
                 <div>
                     <h3 className="type-title-l text-on-surface flex items-center gap-2">

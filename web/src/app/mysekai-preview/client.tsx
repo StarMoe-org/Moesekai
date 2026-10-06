@@ -25,7 +25,7 @@ function RankingSkeleton() {
     return (
         <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
             {Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="overflow-hidden rounded-md3-xl bg-surface-container-low p-3">
+                <div key={index} className="overflow-hidden rounded-md3-xl bg-surface-card border border-outline-variant/70 p-3">
                     <div className="aspect-[4/3] animate-pulse rounded-md3-lg bg-surface-container-high" />
                     <div className="mt-4 space-y-2 px-1 pb-2">
                         <div className="h-4 w-2/3 animate-pulse rounded-full bg-surface-container-high" />
@@ -42,7 +42,7 @@ function PreviewEmptyState({ server }: { server: BaijingServer }) {
     const { t } = useI18n();
 
     return (
-        <div className="rounded-md3-xl bg-surface-container-low">
+        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70">
             <EmptyState
                 icon={mdHome}
                 title={t("page.mysekaiPreview.top.emptyTitle", { server: t(SERVER_LABEL_KEYS[server]) })}
@@ -211,7 +211,7 @@ export default function MysekaiPreviewClient() {
 
                 <Banner tone="info" className="mb-6">{t("page.mysekaiPreview.top.disclaimer")}</Banner>
 
-                <Surface tone="low" className="mb-6 p-3 sm:p-4">
+                <Surface tone="card" className="mb-6 p-3 sm:p-4">
                     <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
                         <div className="flex flex-wrap items-center gap-2">
                             <span className="rounded-md3-md bg-primary px-4 py-2 type-label-l text-on-primary">
@@ -246,7 +246,7 @@ export default function MysekaiPreviewClient() {
                         rankings.map((snapshot) => {
                             const entries = snapshot.top100 || [];
                             return (
-                                <Surface key={snapshot.competition.id} tone="low" className="p-4 sm:p-5">
+                                <Surface key={snapshot.competition.id} tone="card" className="p-4 sm:p-5">
                                     <div className="mb-5 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                                         <div>
                                             <div className="flex flex-wrap items-center gap-2">

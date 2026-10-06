@@ -1319,7 +1319,7 @@ function SoundtrackContent() {
 
                     {/* Left Column: Music Player */}
                     <div className="w-full lg:col-span-5">
-                        <Surface tone="low" className="relative overflow-hidden p-6 sm:p-8">
+                        <Surface tone="card" className="relative overflow-hidden p-6 sm:p-8">
 
                             {/* Accent line in the category color */}
                             <div
@@ -1660,7 +1660,7 @@ function SoundtrackContent() {
                         </div>
 
                         {/* Search and Sort Toolbar */}
-                        <Surface tone="low" radius="lg" className="flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
+                        <Surface tone="card" radius="lg" className="flex flex-col items-center justify-between gap-4 p-4 sm:flex-row">
 
                             {/* Fuzzy Search Box */}
                             <TextField
@@ -1693,7 +1693,7 @@ function SoundtrackContent() {
                         </Surface>
 
                         {/* Playlist Box */}
-                        <Surface tone="low" className="relative flex max-h-[560px] min-h-[420px] flex-1 flex-col overflow-hidden">
+                        <Surface tone="card" className="relative flex max-h-[560px] min-h-[420px] flex-1 flex-col overflow-hidden">
 
                             {/* Inner Scroll container */}
                             <div className="custom-playlist-scrollbar flex-1 overflow-y-auto p-3" onScroll={handlePlaylistScroll}>

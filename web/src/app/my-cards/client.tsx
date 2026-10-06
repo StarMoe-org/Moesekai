@@ -586,7 +586,7 @@ function MyCardsContent() {
 
             {/* Progress Bar */}
             {!isLoading && !isFetchingUser && userCards.size > 0 && (
-                <Surface tone="low" radius="lg" className="mb-6 p-4">
+                <Surface tone="card" radius="lg" className="mb-6 p-4">
                     <div className="mb-2 flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <span className="type-title-s text-on-surface">{t("common.progress.collectionProgress")}</span>

@@ -174,7 +174,7 @@ function UserDetailContent() {
                         {/* Left column (desktop) */}
                         <div className="contents lg:col-span-7 lg:block">
                             {/* Player card */}
-                            <div className="order-1 bg-surface-container-low rounded-md3-xl p-5">
+                            <div className="order-1 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5">
                                 <div className="flex items-start gap-4">
                                     <div className="w-20 shrink-0 sm:w-24">
                                         {leaderCard ? (
@@ -217,25 +217,25 @@ function UserDetailContent() {
                             </div>
 
                             {/* Speed gauge */}
-                            <div className="order-2 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                            <div className="order-2 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5 lg:mt-6">
                                 <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.speedTitle")}</h2>
                                 <SpeedGauge churnEntry={data.selfChurn} />
                             </div>
 
                             {/* Heatmap */}
-                            <div className="order-5 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                            <div className="order-5 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5 lg:mt-6">
                                 <ChurnHeatmap hourlyChurn={data.selfChurn?.hourly_churn ?? []} churn48h={data.selfChurn?.churn_48h} />
                             </div>
 
                             {/* Score curve */}
-                            <div className="order-6 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                            <div className="order-6 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5 lg:mt-6">
                                 <h2 className="mb-2 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.curveTitle")}</h2>
                                 <ScoreLineChart series={series} height={300} />
                             </div>
 
                             {/* Parking periods */}
                             {data.selfChurn?.parking_periods && data.selfChurn.parking_periods.length > 0 && (
-                                <div className="order-8 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                                <div className="order-8 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5 lg:mt-6">
                                     <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.parkingTitle")}</h2>
                                     <div className="space-y-1.5">
                                         {data.selfChurn.parking_periods.slice(-8).reverse().map((p, i) => {
@@ -260,7 +260,7 @@ function UserDetailContent() {
                         {/* Right column (desktop) */}
                         <div className="contents lg:col-span-5 lg:block">
                             {/* Nearby ranking */}
-                            <div className="order-3 bg-surface-container-low rounded-md3-xl p-4">
+                            <div className="order-3 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-4">
                                 <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.nearbyTitle")}</h2>
                                 {data.nearby.length === 0 ? (
                                     <div className="rounded-md3-md border border-dashed border-outline-variant px-3 py-6 text-center type-body-s text-on-surface-variant">
@@ -276,7 +276,7 @@ function UserDetailContent() {
                             </div>
 
                             {/* Tier gradient */}
-                            <div className="order-4 bg-surface-container-low rounded-md3-xl p-4 lg:mt-6">
+                            <div className="order-4 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-4 lg:mt-6">
                                 <h2 className="mb-3 type-title-m text-on-surface">{t("page.realtimeRankingNext.detail.gradientTitle")}</h2>
                                 {data.tierGradient.every((g) => g.score == null) ? (
                                     <div className="rounded-md3-md border border-dashed border-outline-variant px-3 py-6 text-center type-body-s text-on-surface-variant">
@@ -311,7 +311,7 @@ function UserDetailContent() {
                             </div>
 
                             {/* Recent score changes (live scrolling feed) */}
-                            <div className="order-7 bg-surface-container-low rounded-md3-xl p-5 lg:mt-6">
+                            <div className="order-7 bg-surface-card border border-outline-variant/70 rounded-md3-xl p-5 lg:mt-6">
                                 <RecentChangesFeed changes={data.selfChurn?.recent_score_changes ?? []} />
                             </div>
                         </div>

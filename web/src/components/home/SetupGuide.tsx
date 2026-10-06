@@ -675,7 +675,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                   </p>
                 </div>
 
-                <div className="flex flex-col bg-surface-container-low rounded-md3-lg divide-y divide-outline-variant">
+                <div className="flex flex-col bg-surface-card border border-outline-variant/70 rounded-md3-lg divide-y divide-outline-variant">
                   {/* Spoiler toggle */}
                   <Switch
                     className="p-4"

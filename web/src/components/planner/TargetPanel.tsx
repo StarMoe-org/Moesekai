@@ -181,7 +181,7 @@ export default function TargetPanel({
     const autoChips = [...new Set([0, Math.min(10, autoDailyLimit), autoDailyLimit])];
 
     return (
-        <Surface as="section" tone="low" radius="lg" className="p-4 sm:p-6 space-y-5">
+        <Surface as="section" tone="card" radius="lg" className="p-4 sm:p-6 space-y-5">
             <div className="space-y-4">
                 <h2 className="type-title-l text-on-surface">
                     {t("page.predictionPlanner.target.title")}

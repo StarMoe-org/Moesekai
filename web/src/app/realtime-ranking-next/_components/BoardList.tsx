@@ -53,7 +53,7 @@ export default function BoardList({
     return (
         <motion.div
             layout
-            className="bg-surface-container-low overflow-hidden rounded-md3-lg divide-y divide-outline-variant"
+            className="bg-surface-card border border-outline-variant/70 overflow-hidden rounded-md3-lg divide-y divide-outline-variant"
         >
             {entries.map((entry) => {
                 const key = entryKey(entry.rank, entry.userId, entry.isTierLine);

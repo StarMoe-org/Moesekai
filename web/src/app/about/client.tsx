@@ -37,7 +37,7 @@ export default function AboutClient() {
                 <PageHeader title={t("page.about.title")} description={t("page.about.description")} className="animate-fade-in-up" />
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-2")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-2")}>
                         <div className="mb-4 flex items-center gap-4">
                             <div className="flex h-12 w-12 items-center justify-center rounded-md3-lg bg-primary-container text-on-primary-container">
                                 <Icon path={mdFavoriteFill} size={28} />
@@ -96,7 +96,7 @@ export default function AboutClient() {
                         </div>
                     </ExternalLink>
 
-                    <Surface tone="low" className={panelCls}>
+                    <Surface tone="card" className={panelCls}>
                         <p className={panelTitleCls}>{t("page.about.techStack.title")}</p>
                         <div className="flex flex-grow flex-wrap content-start gap-2">
                             {techStack.map((name) => (
@@ -111,7 +111,7 @@ export default function AboutClient() {
                         </p>
                     </Surface>
 
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-2")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-2")}>
                         <p className={panelTitleCls}>{t("page.about.credits.title")}</p>
                         <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
                             <div>
@@ -150,7 +150,7 @@ export default function AboutClient() {
                         </div>
                     </Surface>
 
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-3")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.policies.title")}</p>
                         <p className="mb-4 type-body-l text-on-surface-variant">
                             {t("page.about.policies.description")}
@@ -167,21 +167,21 @@ export default function AboutClient() {
                         </div>
                     </Surface>
 
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-3")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.sponsors.title")}</p>
                         <p className="text-justify type-body-l text-on-surface-variant">
                             {t("page.about.sponsors.list")}
                         </p>
                     </Surface>
 
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-3")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.specialThanks.title")}</p>
                         <p className="text-justify type-body-l text-on-surface-variant">
                             {t("page.about.specialThanks.list")}
                         </p>
                     </Surface>
 
-                    <Surface tone="low" className={cn(panelCls, "md:col-span-3")}>
+                    <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.teams.title")}</p>
                         <div className="space-y-4 type-body-l text-on-surface-variant">
                             <div>

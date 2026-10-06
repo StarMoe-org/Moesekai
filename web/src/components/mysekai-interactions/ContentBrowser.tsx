@@ -82,7 +82,7 @@ export default function ContentBrowser({
 
             {/* Results Grid */}
             {results.length === 0 ? (
-                <div className="rounded-md3-lg bg-surface-container-low">
+                <div className="rounded-md3-lg bg-surface-card border border-outline-variant/70">
                     <EmptyState
                         title={t("page.mysekaiInteractions.noResults")}
                         action={

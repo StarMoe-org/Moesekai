@@ -244,7 +244,7 @@ export default function DeckComparatorClient() {
                 <Banner tone="info" className="dc-mobile-info mb-6">{t("page.deckComparator.mobileInfo")}</Banner>
 
                 {/* Input Form */}
-                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                     <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
                         <Icon path={mdMusicNote} size={24} className="text-primary" />
                         {t("page.deckComparator.musicAndDifficulty")}
@@ -300,7 +300,7 @@ export default function DeckComparatorClient() {
                 </div>
 
                 {/* User Config */}
-                <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                     <h2 className="type-title-l text-on-surface mb-4 flex items-center gap-2">
                         <Icon path={mdPerson} size={24} className="text-primary" />
                         {t("page.deckComparator.playerConfig")}
@@ -502,7 +502,7 @@ export default function DeckComparatorClient() {
 
                 {/* Results */}
                 {result && (
-                    <div className="dc-score-enter bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                    <div className="dc-score-enter bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="type-title-l text-on-surface flex items-center gap-2">
                                 <Icon path={mdAnalytics} size={24} className="text-primary" />
@@ -643,7 +643,7 @@ export default function DeckComparatorClient() {
 
                 {/* History List */}
                 {history.length > 0 && (
-                    <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6">
+                    <div className="bg-surface-card border border-outline-variant/70 p-5 sm:p-6 rounded-md3-xl mb-6">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="type-title-l text-on-surface flex items-center gap-2">
                                 <Icon path={mdHistory} size={24} className="text-primary" />

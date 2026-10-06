@@ -436,7 +436,7 @@ export default function EventDetailPage() {
                             </div>
                         ) : (
                             /* Normal Mode: Tabs */
-                            <div className="bg-surface-container-low rounded-md3-xl overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
+                            <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl overflow-hidden lg:sticky lg:top-24 lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
                                 {/* Tabs */}
                                 <Tabs
                                     items={[
@@ -733,7 +733,7 @@ export default function EventDetailPage() {
 
 function ScreenshotImageCard({ label, children }: { label: string; children: React.ReactNode }) {
     return (
-        <div className="bg-surface-container-low rounded-md3-xl overflow-hidden">
+        <div className="bg-surface-card border border-outline-variant/70 rounded-md3-xl overflow-hidden">
             <div className="px-4 py-2 border-b border-outline-variant">
                 <span className="type-title-s text-on-surface-variant">{label}</span>
             </div>

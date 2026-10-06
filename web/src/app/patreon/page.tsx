@@ -14,7 +14,7 @@ export default function PatreonPage() {
             <PageContainer className="z-10 max-w-3xl flex-grow">
                 <PageHeader title="支持 moesekai!" />
 
-                <Surface tone="low" className="space-y-8 p-6 type-body-l text-on-surface sm:p-8">
+                <Surface tone="card" className="space-y-8 p-6 type-body-l text-on-surface sm:p-8">
                     <section className="space-y-4">
                         <p className="type-title-m">
                             Welcome to the official support page of moesekai!

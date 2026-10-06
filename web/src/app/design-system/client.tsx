@@ -295,7 +295,7 @@ export default function DesignSystemClient() {
 
                 {/* Seed */}
                 <Section title={t("page.designSystem.seedTitle")} hint={t("page.designSystem.seedHint")}>
-                    <Surface tone="low" className="p-4">
+                    <Surface tone="card" className="p-4">
                         <div className="flex flex-wrap gap-2">
                             {Object.keys(THEME_SEED_COLORS).map((id) => {
                                 const selected = themeCharId === id;
@@ -345,7 +345,7 @@ export default function DesignSystemClient() {
 
                 {/* Typography */}
                 <Section title={t("page.designSystem.typeTitle")}>
-                    <Surface tone="low" className="divide-y divide-outline-variant overflow-hidden">
+                    <Surface tone="card" className="divide-y divide-outline-variant overflow-hidden">
                         {TYPE_SCALE.map((cls) => (
                             <div key={cls} className="flex flex-col gap-1 px-4 py-3 sm:flex-row sm:items-baseline sm:gap-6">
                                 <span className="w-36 shrink-0 font-mono type-label-m text-on-surface-variant">{cls.replace("type-", "")}</span>
@@ -383,7 +383,7 @@ export default function DesignSystemClient() {
 
                 {/* Buttons */}
                 <Section title={t("page.designSystem.buttonsTitle")}>
-                    <Surface tone="low" className="space-y-5 p-5">
+                    <Surface tone="card" className="space-y-5 p-5">
                         {BUTTON_VARIANTS.map((variant) => (
                             <div key={variant} className="flex flex-wrap items-center gap-3">
                                 <span className="w-20 font-mono type-label-m text-on-surface-variant">{variant}</span>
@@ -420,7 +420,7 @@ export default function DesignSystemClient() {
 
                 {/* Icon buttons & FAB */}
                 <Section title={t("page.designSystem.iconButtonsTitle")}>
-                    <Surface tone="low" className="flex flex-wrap items-center gap-3 p-5">
+                    <Surface tone="card" className="flex flex-wrap items-center gap-3 p-5">
                         {(["standard", "filled", "tonal", "outlined"] as const).map((variant) => (
                             <IconButton
                                 key={variant}
@@ -442,7 +442,7 @@ export default function DesignSystemClient() {
 
                 {/* Chips */}
                 <Section title={t("page.designSystem.chipsTitle")}>
-                    <Surface tone="low" className="flex flex-wrap items-center gap-2 p-5">
+                    <Surface tone="card" className="flex flex-wrap items-center gap-2 p-5">
                         {["filter", "sort", "owned"].map((id, i) => (
                             <Chip
                                 key={id}
@@ -471,7 +471,7 @@ export default function DesignSystemClient() {
 
                 {/* Inputs */}
                 <Section title={t("page.designSystem.inputsTitle")}>
-                    <Surface tone="low" className="grid gap-6 p-5 sm:grid-cols-2" style={{ ["--md3-tf-label-bg" as string]: "var(--md-sys-color-surface-container-low)" }}>
+                    <Surface tone="card" className="grid gap-6 p-5 sm:grid-cols-2">
                         <TextField
                             variant="outlined"
                             label={t("page.designSystem.fieldLabel")}
@@ -490,7 +490,7 @@ export default function DesignSystemClient() {
                 </Section>
 
                 <Section title={t("page.designSystem.selectTitle")}>
-                    <Surface tone="low" className="grid gap-6 p-5 sm:grid-cols-2">
+                    <Surface tone="card" className="grid gap-6 p-5 sm:grid-cols-2">
                         <Select label={t("page.designSystem.selectLabel")} value={selectValue} onValueChange={setSelectValue} options={tabItems.map(({ value, label }) => ({ value, label }))} />
                         <Select searchable dense label={t("page.designSystem.selectSearchLabel")} value={selectValue} onValueChange={setSelectValue} options={tabItems.map(({ value, label }) => ({ value, label }))} />
                     </Surface>
@@ -498,7 +498,7 @@ export default function DesignSystemClient() {
 
                 {/* Selection */}
                 <Section title={t("page.designSystem.selectionTitle")}>
-                    <Surface tone="low" className="grid gap-6 p-5 md:grid-cols-2">
+                    <Surface tone="card" className="grid gap-6 p-5 md:grid-cols-2">
                         <div className="space-y-4">
                             <Switch checked={switchOn} onCheckedChange={setSwitchOn} label={t("page.designSystem.switchLabel")} description={t("page.designSystem.switchDesc")} />
                             <div className="flex items-center gap-4">
@@ -526,7 +526,7 @@ export default function DesignSystemClient() {
 
                 {/* Segmented & tabs */}
                 <Section title={t("page.designSystem.segmentedTitle")}>
-                    <Surface tone="low" className="space-y-6 p-5">
+                    <Surface tone="card" className="space-y-6 p-5">
                         <SegmentedButton
                             value={segment}
                             onValueChange={setSegment}
@@ -547,7 +547,7 @@ export default function DesignSystemClient() {
 
                 {/* Progress */}
                 <Section title={t("page.designSystem.progressTitle")}>
-                    <Surface tone="low" className="flex flex-wrap items-center gap-8 p-5">
+                    <Surface tone="card" className="flex flex-wrap items-center gap-8 p-5">
                         <LoadingIndicator aria-label={t("common.md3.loading")} />
                         <LoadingIndicator contained aria-label={t("common.md3.loading")} />
                         <CircularProgress aria-label={t("common.md3.loading")} />
@@ -562,7 +562,7 @@ export default function DesignSystemClient() {
                 {/* Menu, list, tooltip, snackbar */}
                 <Section title={t("page.designSystem.menuTitle")}>
                     <div className="grid gap-4 md:grid-cols-2">
-                        <Surface tone="low" className="flex flex-wrap items-start gap-3 p-5">
+                        <Surface tone="card" className="flex flex-wrap items-start gap-3 p-5">
                             <Menu
                                 anchor={(props) => (
                                     <Button {...props} variant="outlined" icon={mdSort} trailingIcon={mdKeyboardArrowDown}>
@@ -591,7 +591,7 @@ export default function DesignSystemClient() {
                                 {t("page.designSystem.snackbarShow")}
                             </Button>
                         </Surface>
-                        <Surface tone="low" className="overflow-hidden">
+                        <Surface tone="card" className="overflow-hidden">
                             <List>
                                 <ListItem icon={mdStyle} headline={t("page.designSystem.listHeadline")} supportingText={t("page.designSystem.listSupport")} onClick={() => undefined} trailingText="100+" />
                                 <ListItem icon={mdLibraryMusic} headline={t("page.designSystem.listHeadline")} selected onClick={() => undefined} />
@@ -613,7 +613,7 @@ export default function DesignSystemClient() {
 
                 {/* Dialogs & sheets */}
                 <Section title={t("page.designSystem.dialogTitle")}>
-                    <Surface tone="low" className="flex flex-wrap gap-3 p-5">
+                    <Surface tone="card" className="flex flex-wrap gap-3 p-5">
                         <Button variant="filled" onClick={() => setDialogOpen(true)}>
                             {t("page.designSystem.dialogOpen")}
                         </Button>
@@ -700,7 +700,7 @@ export default function DesignSystemClient() {
 
                 {/* Card thumbnails */}
                 <Section title={t("page.designSystem.cardThumbTitle")}>
-                    <Surface tone="low" className="flex flex-wrap items-end gap-8 p-6">
+                    <Surface tone="card" className="flex flex-wrap items-end gap-8 p-6">
                         {DEMO_CARDS.map((demo) => (
                             <div key={demo.key} className="flex flex-col items-center gap-2">
                                 <SekaiCardThumbnail card={demo.card} trained={demo.trained} mastery={demo.mastery} width={demo.width} />
@@ -713,10 +713,10 @@ export default function DesignSystemClient() {
                 {/* Quick filter */}
                 <Section title={t("page.designSystem.quickFilterTitle")} hint={t("page.designSystem.quickFilterHint")}>
                     <div className="grid gap-4 md:grid-cols-2">
-                        <Surface tone="low" className="p-5">
+                        <Surface tone="card" className="p-5">
                             {quickFilterContent}
                         </Surface>
-                        <Surface tone="low" className="space-y-1 p-5 font-mono type-body-s text-on-surface-variant">
+                        <Surface tone="card" className="space-y-1 p-5 font-mono type-body-s text-on-surface-variant">
                             <div>search: &quot;{demoSearch}&quot;</div>
                             <div>
                                 sortBy: &quot;{demoSortBy}&quot; / order: &quot;{demoSortOrder}&quot;
@@ -735,7 +735,7 @@ export default function DesignSystemClient() {
 
                 {/* MySekai preview */}
                 <Section title={t("page.designSystem.mysekaiTitle")}>
-                    <Surface tone="low" className="p-4 sm:p-6">
+                    <Surface tone="card" className="p-4 sm:p-6">
                         <MysekaiScenePreview heightClassName="h-[560px] min-h-[480px]" compact />
                     </Surface>
                 </Section>

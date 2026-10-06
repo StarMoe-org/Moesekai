@@ -81,7 +81,7 @@ function EmptyState() {
             icon={mdDescription}
             title={t("page.information.emptyTitle")}
             description={t("page.information.emptyDescription")}
-            className="rounded-md3-xl bg-surface-container-low"
+            className="rounded-md3-xl bg-surface-card border border-outline-variant/70"
         />
     );
 }
