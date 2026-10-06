@@ -156,12 +156,19 @@
 }
 
 :root {
-    /* Typefaces. Locale-specific CJK order is set below via [data-ui-locale]. */
+    /* Typefaces. Roboto Flex covers Latin; CJK uses the platform fonts per UI
+       locale (below) so kanji/hanzi/hangul get native glyph shapes without
+       shipping web fonts. */
     --md-ref-typeface-latin: "Roboto Flex Variable", "Roboto Flex", Roboto;
-    --md-ref-typeface-cjk: "Noto Sans SC Variable", "Noto Sans JP Variable";
-    --md-ref-typeface-system: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Hiragino Sans", "Microsoft YaHei", "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
+    --md-ref-typeface-cjk: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei UI", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC";
+    --md-ref-typeface-system: system-ui, -apple-system, "Segoe UI", "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji";
     --md-ref-typeface-brand: var(--md-ref-typeface-latin), var(--md-ref-typeface-cjk), var(--md-ref-typeface-system);
     --md-ref-typeface-plain: var(--md-ref-typeface-latin), var(--md-ref-typeface-cjk), var(--md-ref-typeface-system);
+
+    /* Latin tracking and body leading; CJK locales reset them below. */
+    --md-ref-tracking-scale: 1;
+    --md-sys-typescale-body-l-line-height: 24px;
+    --md-sys-typescale-body-m-line-height: 20px;
 
     /* State layer opacities */
     --md-sys-state-hover: 0.08;
@@ -191,15 +198,23 @@
 }
 
 :root[data-ui-locale="ja-JP"] {
-    --md-ref-typeface-cjk: "Noto Sans JP Variable", "Noto Sans SC Variable";
+    --md-ref-typeface-cjk: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Meiryo UI", "Meiryo", "Noto Sans CJK JP", "Source Han Sans JP";
 }
 
-:root[data-ui-locale="zh-TW"],
+:root[data-ui-locale="zh-TW"] {
+    --md-ref-typeface-cjk: "PingFang TC", "Microsoft JhengHei UI", "Microsoft JhengHei", "Noto Sans CJK TC", "Source Han Sans TC";
+}
+
 :root[data-ui-locale="ko-KR"] {
-    /* No self-hosted TC/KR face: let the system font take Hanzi/Hangul first,
-       so traditional/Korean glyphs are not rendered with SC shapes. */
-    --md-ref-typeface-plain: var(--md-ref-typeface-latin), var(--md-ref-typeface-system);
-    --md-ref-typeface-brand: var(--md-ref-typeface-latin), var(--md-ref-typeface-system);
+    --md-ref-typeface-cjk: "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", "Source Han Sans K";
+}
+
+/* CJK is set solid: Roboto's positive tracking opens gaps between ideographs,
+   and the denser glyphs need more leading than Latin body text. */
+:root:not([data-ui-locale="en-US"]) {
+    --md-ref-tracking-scale: 0;
+    --md-sys-typescale-body-l-line-height: 26px;
+    --md-sys-typescale-body-m-line-height: 22px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -217,22 +232,22 @@
     }
 }
 
-/* ── Type scale (M3 Expressive baseline + emphasized) ─────────────── */
-@utility type-display-l { font-family: var(--md-ref-typeface-brand); font-size: 57px; line-height: 64px; font-weight: 400; letter-spacing: -0.25px; }
-@utility type-display-m { font-family: var(--md-ref-typeface-brand); font-size: 45px; line-height: 52px; font-weight: 400; letter-spacing: 0; }
-@utility type-display-s { font-family: var(--md-ref-typeface-brand); font-size: 36px; line-height: 44px; font-weight: 400; letter-spacing: 0; }
-@utility type-headline-l { font-family: var(--md-ref-typeface-brand); font-size: 32px; line-height: 40px; font-weight: 400; letter-spacing: 0; }
-@utility type-headline-m { font-family: var(--md-ref-typeface-brand); font-size: 28px; line-height: 36px; font-weight: 400; letter-spacing: 0; }
-@utility type-headline-s { font-family: var(--md-ref-typeface-brand); font-size: 24px; line-height: 32px; font-weight: 400; letter-spacing: 0; }
-@utility type-title-l { font-family: var(--md-ref-typeface-brand); font-size: 22px; line-height: 28px; font-weight: 400; letter-spacing: 0; }
-@utility type-title-m { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: 0.15px; }
-@utility type-title-s { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: 0.1px; }
-@utility type-body-l { font-size: 16px; line-height: 24px; font-weight: 400; letter-spacing: 0.5px; }
-@utility type-body-m { font-size: 14px; line-height: 20px; font-weight: 400; letter-spacing: 0.25px; }
-@utility type-body-s { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: 0.4px; }
-@utility type-label-l { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: 0.1px; }
-@utility type-label-m { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
-@utility type-label-s { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: 0.5px; }
+/* ── Type scale (M3 Expressive; display/headline/title-l emphasized) ── */
+@utility type-display-l { font-family: var(--md-ref-typeface-brand); font-size: 57px; line-height: 64px; font-weight: 600; letter-spacing: calc(-0.25px * var(--md-ref-tracking-scale)); }
+@utility type-display-m { font-family: var(--md-ref-typeface-brand); font-size: 45px; line-height: 52px; font-weight: 600; letter-spacing: 0; }
+@utility type-display-s { font-family: var(--md-ref-typeface-brand); font-size: 36px; line-height: 44px; font-weight: 600; letter-spacing: 0; }
+@utility type-headline-l { font-family: var(--md-ref-typeface-brand); font-size: 32px; line-height: 40px; font-weight: 600; letter-spacing: 0; }
+@utility type-headline-m { font-family: var(--md-ref-typeface-brand); font-size: 28px; line-height: 36px; font-weight: 600; letter-spacing: 0; }
+@utility type-headline-s { font-family: var(--md-ref-typeface-brand); font-size: 24px; line-height: 32px; font-weight: 600; letter-spacing: 0; }
+@utility type-title-l { font-family: var(--md-ref-typeface-brand); font-size: 22px; line-height: 28px; font-weight: 600; letter-spacing: 0; }
+@utility type-title-m { font-size: 16px; line-height: 24px; font-weight: 500; letter-spacing: calc(0.15px * var(--md-ref-tracking-scale)); }
+@utility type-title-s { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: calc(0.1px * var(--md-ref-tracking-scale)); }
+@utility type-body-l { font-size: 16px; line-height: var(--md-sys-typescale-body-l-line-height); font-weight: 400; letter-spacing: calc(0.5px * var(--md-ref-tracking-scale)); }
+@utility type-body-m { font-size: 14px; line-height: var(--md-sys-typescale-body-m-line-height); font-weight: 400; letter-spacing: calc(0.25px * var(--md-ref-tracking-scale)); }
+@utility type-body-s { font-size: 12px; line-height: 16px; font-weight: 400; letter-spacing: calc(0.4px * var(--md-ref-tracking-scale)); }
+@utility type-label-l { font-size: 14px; line-height: 20px; font-weight: 500; letter-spacing: calc(0.1px * var(--md-ref-tracking-scale)); }
+@utility type-label-m { font-size: 12px; line-height: 16px; font-weight: 500; letter-spacing: calc(0.5px * var(--md-ref-tracking-scale)); }
+@utility type-label-s { font-size: 11px; line-height: 16px; font-weight: 500; letter-spacing: calc(0.5px * var(--md-ref-tracking-scale)); }
 /* Emphasized: bump weight one step (Expressive). Combine: "type-title-l type-emphasized". */
 @utility type-emphasized { font-weight: 600; }
 

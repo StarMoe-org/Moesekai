@@ -412,11 +412,11 @@ export default function CardSelectorModal({
                                 <div className="w-full relative">
                                     <SekaiCardThumbnail card={item.card} trained={showTrained} className="w-full" />
                                     {isSelected ? (
-                                        <div className="absolute top-1 right-1 z-10 px-1.5 py-0.5 bg-primary text-on-primary text-[8px] font-black rounded-md3-xs shadow-elev-1">
+                                        <div className="absolute top-1 right-1 z-10 px-1.5 bg-primary text-on-primary type-label-s rounded-md3-xs shadow-elev-1">
                                             ✓ {t("page.gacha.selected")}
                                         </div>
                                     ) : item.isPickup ? (
-                                        <div className="absolute top-1 right-1 z-10 px-1.5 py-0.5 bg-tertiary text-on-tertiary text-[8px] font-black rounded-md3-xs shadow-elev-1">
+                                        <div className="absolute top-1 right-1 z-10 px-1.5 bg-tertiary text-on-tertiary type-label-s rounded-md3-xs shadow-elev-1">
                                             {t("page.gacha.upLabel")}
                                         </div>
                                     ) : null}
@@ -429,16 +429,16 @@ export default function CardSelectorModal({
                                             original={item.card.prefix}
                                             category="cards"
                                             field="prefix"
-                                            originalClassName="text-on-surface text-[10px] font-bold truncate leading-tight group-hover:text-primary block"
-                                            translationClassName="text-on-surface-variant text-[9px] truncate leading-tight block"
+                                            originalClassName="type-label-m type-emphasized text-on-surface truncate group-hover:text-primary block"
+                                            translationClassName="type-label-s text-on-surface-variant truncate block"
                                         />
                                     </div>
                                     <div className="flex items-center justify-between gap-1">
-                                        <p className="text-on-surface-variant text-[9px] truncate leading-tight flex-1">
+                                        <p className="type-label-s text-on-surface-variant truncate flex-1">
                                             {characterName}
                                         </p>
                                         {item.actualRate > 0 && (
-                                            <span className="shrink-0 text-[8px] font-bold text-on-surface-variant bg-surface-container-high px-1 py-0.5 rounded-md3-xs leading-none font-mono">
+                                            <span className="shrink-0 type-label-s text-on-surface-variant bg-surface-container-high px-1 rounded-md3-xs font-mono">
                                                 {/* Below 0.005 two decimals round a real draw rate down to 0.00%. */}
                                                 {item.actualRate >= 0.1
                                                     ? `${item.actualRate.toFixed(1)}%`

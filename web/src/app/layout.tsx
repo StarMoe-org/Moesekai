@@ -12,8 +12,6 @@ import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { DEFAULT_THEME_SEED_ID, THEME_SEED_COLORS } from "@/lib/theme-seeds";
 import { MD3_DEFAULT_SURFACE } from "@/styles/md3-default-surface.generated";
 import "@fontsource-variable/roboto-flex/wght.css";
-import "@fontsource-variable/noto-sans-sc/index.css";
-import "@fontsource-variable/noto-sans-jp/index.css";
 import {
   COLOR_SCHEME_STORAGE_KEY,
   DARK_MEDIA_QUERY,

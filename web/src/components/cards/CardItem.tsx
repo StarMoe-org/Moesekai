@@ -42,7 +42,7 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
                     {/* Spoiler Badge - inline in footer */}
                     {isSpoiler && (
                         <div className="mb-0.5">
-                            <span className="inline-block px-1.5 py-0.5 bg-tertiary text-on-tertiary text-[9px] font-bold rounded-md3-xs leading-none">
+                            <span className="inline-block px-1.5 bg-tertiary text-on-tertiary type-label-s rounded-md3-xs">
                                 {t("common.badge.spoiler")}
                             </span>
                         </div>
@@ -52,14 +52,14 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
                             original={card.prefix}
                             category="cards"
                             field="prefix"
-                            originalClassName="text-on-surface text-[10px] font-bold truncate leading-tight group-hover:text-primary block"
-                            translationClassName="text-on-surface-variant text-[9px] truncate leading-tight block"
+                            originalClassName="type-label-m type-emphasized text-on-surface truncate group-hover:text-primary block"
+                            translationClassName="type-label-s text-on-surface-variant truncate block"
                         />
                     </div>
                     <div className="flex items-center justify-between gap-1">
-                        <p className="text-on-surface-variant text-[9px] truncate leading-tight flex-1">{characterName}</p>
-                        <span className="flex-shrink-0 text-[8px] text-on-surface-variant bg-surface-container-high px-1 py-0.5 rounded-md3-xs leading-none font-mono">
-                            ID:{card.id}
+                        <p className="type-label-s text-on-surface-variant truncate flex-1">{characterName}</p>
+                        <span className="flex-shrink-0 type-label-s text-on-surface-variant bg-surface-container-high px-1 rounded-md3-xs font-mono">
+                            #{card.id}
                         </span>
                     </div>
                 </div>

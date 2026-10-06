@@ -10,8 +10,6 @@
       "version": "0.1.0",
       "dependencies": {
         "@empty-sekai/allium-deck-wasm": "0.1.0",
-        "@fontsource-variable/noto-sans-jp": "^5.3.0",
-        "@fontsource-variable/noto-sans-sc": "^5.3.0",
         "@fontsource-variable/roboto-flex": "^5.3.0",
         "@supabase/supabase-js": "2.106.0",
         "@swc/helpers": "^0.5.15",
@@ -140,10 +138,6 @@
     "@eslint/plugin-kit": ["@eslint/plugin-kit@0.4.1", "https://registry.npmmirror.com/@eslint/plugin-kit/-/plugin-kit-0.4.1.tgz", { "dependencies": { "@eslint/core": "^0.17.0", "levn": "^0.4.1" } }, "sha512-43/qtrDUokr7LJqoF2c3+RInu/t4zfrpYdoSDfYyhg52rwLV6TnOvdG4fXm7IkSB3wErkcmJS9iEhjVtOSEjjA=="],
 
     "@exodus/bytes": ["@exodus/bytes@1.15.1", "https://registry.npmmirror.com/@exodus/bytes/-/bytes-1.15.1.tgz", { "peerDependencies": { "@noble/hashes": "^1.8.0 || ^2.0.0" }, "optionalPeers": ["@noble/hashes"] }, "sha512-S6mL0yNB/Abt9Ei4tq8gDhcczc4S3+vQ4ra7vxnAf+YHC02srtqxKKZghx2Dq6p0e66THKwR6r8N6P95wEty7Q=="],
-
-    "@fontsource-variable/noto-sans-jp": ["@fontsource-variable/noto-sans-jp@5.3.0", "https://registry.npmmirror.com/@fontsource-variable/noto-sans-jp/-/noto-sans-jp-5.3.0.tgz", {}, "sha512-XVL9GfGBRjj523v9w3Bctu4mNq7E5rUa+AMZm8DK1EM3LAGlKC3DZMvuqkLn4DB4TwwoAjcsJUCiRpUTDzzOkw=="],
-
-    "@fontsource-variable/noto-sans-sc": ["@fontsource-variable/noto-sans-sc@5.3.0", "https://registry.npmmirror.com/@fontsource-variable/noto-sans-sc/-/noto-sans-sc-5.3.0.tgz", {}, "sha512-lNar1dF7Ik/lHNPo/7JWG0TolXY29LtsqYgMvEysooZ5bsO9uH4shJmRrwyJ3PjyTPljhpMJEK0jDuLSU4vJ1w=="],
 
     "@fontsource-variable/roboto-flex": ["@fontsource-variable/roboto-flex@5.3.0", "https://registry.npmmirror.com/@fontsource-variable/roboto-flex/-/roboto-flex-5.3.0.tgz", {}, "sha512-bOxckUy0qXNRjhV6e4pcHGSvptix4ZRD1uaj5Za8h+p3qrb2GL4U4TQdpVmPSy0SmqwldfD+JJqEKdF68EyiAw=="],
 
