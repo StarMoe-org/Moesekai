@@ -67,6 +67,8 @@ export function SectionCard({
     bodyClassName?: string;
     tone?: "low" | "default" | "high" | "lowest";
 }) {
+    // "low" (the default) is the card surface: white with a hairline on the light page,
+    // so panels separate from the background without a stack of near-identical greys.
     const toneCls =
         tone === "lowest"
             ? "bg-surface-container-lowest"
@@ -74,17 +76,17 @@ export function SectionCard({
               ? "bg-surface-container"
               : tone === "high"
                 ? "bg-surface-container-high"
-                : "bg-surface-container-low";
+                : "bg-surface-card border border-outline-variant/70";
     return (
-        <section className={cn("overflow-hidden rounded-md3-xl text-on-surface", toneCls, className)}>
+        <section className={cn("overflow-hidden rounded-md3-lg text-on-surface", toneCls, className)}>
             {(title || actions) && (
-                <div className="flex min-h-14 items-center gap-3 px-5 pt-4">
+                <div className="flex min-h-14 items-center gap-3 px-4 pt-4 sm:px-5">
                     {icon && <Icon path={icon} size={24} className="text-primary" />}
                     {title && <h2 className="min-w-0 flex-1 truncate type-title-l">{title}</h2>}
                     {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
                 </div>
             )}
-            <div className={cn("p-5", title ? "pt-3" : undefined, bodyClassName)}>{children}</div>
+            <div className={cn("p-4 sm:p-5", title ? "pt-3 sm:pt-3" : undefined, bodyClassName)}>{children}</div>
         </section>
     );
 }
@@ -107,7 +109,7 @@ export function Banner({
         tone === "error"
             ? "bg-error-container text-on-error-container"
             : tone === "warning"
-              ? "bg-tertiary-container text-on-tertiary-container"
+              ? "bg-warning-container text-on-warning-container"
               : "bg-secondary-container text-on-secondary-container";
     const icon = tone === "error" ? mdErrorFill : tone === "warning" ? mdWarningFill : mdInfo;
     return (

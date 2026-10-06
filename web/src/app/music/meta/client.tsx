@@ -428,7 +428,7 @@ function MusicMetaContent() {
                 href={`/music/${meta.music_id}`}
                 className="group state-layer focus-ring relative block rounded-md3-md"
             >
-                <div className="relative rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 group-hover:shadow-elev-2 transition-shadow duration-200 ease-md3-standard flex">
+                <div className="relative rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 group-hover:shadow-elev-2 transition-shadow duration-200 ease-md3-standard flex">
                     {/* Cover Image - Smaller */}
                     <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 overflow-hidden">
                         {music && (

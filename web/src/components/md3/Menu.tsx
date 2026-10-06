@@ -183,7 +183,7 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                                     );
                                     const itemClassName = cn(
                                         "state-layer flex h-12 w-full items-center gap-3 px-3 text-left type-label-l outline-none focus-visible:bg-on-surface/10",
-                                        item.selected ? "bg-tertiary-container text-on-tertiary-container" : "text-on-surface",
+                                        item.selected ? "bg-secondary-container text-on-secondary-container" : "text-on-surface",
                                         item.disabled ? "pointer-events-none opacity-38" : "cursor-pointer",
                                     );
                                     const commonProps = {

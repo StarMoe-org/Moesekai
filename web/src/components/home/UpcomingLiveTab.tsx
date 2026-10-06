@@ -120,7 +120,7 @@ export default function UpcomingLiveTab() {
 
                     return (
                         <Link key={vl.id} href={`/live/${vl.id}`} className="state-layer focus-ring block group rounded-md3-lg">
-                            <div className="relative flex h-20 sm:h-24 rounded-md3-lg overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
+                            <div className="relative flex h-20 sm:h-24 rounded-md3-lg overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
                                 {/* Left: Banner (35%) */}
                                 <div className="w-[35%] relative overflow-hidden">
                                     <Image

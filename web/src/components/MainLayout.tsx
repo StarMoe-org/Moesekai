@@ -337,7 +337,7 @@ export default function MainLayout({
     });
 
     return (
-        <main className="relative flex min-h-screen flex-col bg-surface text-on-surface selection:bg-primary-container selection:text-on-primary-container">
+        <main className="relative flex min-h-screen flex-col text-on-surface selection:bg-primary-container selection:text-on-primary-container">
             <Suspense fallback={null}>
                 <ScreenshotParamsListener onChange={setIsScreenshotMode} />
             </Suspense>
@@ -345,7 +345,8 @@ export default function MainLayout({
             {/* Loading Animation */}
             {showLoader && <SekaiLoader />}
 
-            {/* Background: plain MD3 surface (set on <body>); no decorative washes. */}
+            {/* Background: MD3 surface on <body> plus a faint seed-tinted wash (globals.css). */}
+            <div aria-hidden="true" className="brand-wash" />
 
             {/* Navbar */}
             {!immersiveMode && (

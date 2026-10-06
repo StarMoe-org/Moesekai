@@ -230,7 +230,7 @@ test("music list/detail preserve responsive layouts and use light/dark semantic 
   assert.match(pageContainer, /"max-w-7xl"/, "ordinary pages retain a bounded desktop content width");
   assert.match(detail, /<h1 className="min-w-0 type-headline-m text-on-surface sm:type-headline-l">/);
   assert.match(item, /sizes="\(max-width: 640px\) 50vw, \(max-width: 1024px\) 33vw, 20vw"/);
-  assert.match(item, /bg-surface-container-low text-on-surface/);
+  assert.match(item, /bg-surface-card text-on-surface/);
   assert.match(filters, /className=\{getFilterChipStateClasses\(isSelected\)\}/);
   assert.match(filters, /className=\{`!p-1\.5 \$\{getFilterIconStateClasses\(isSelected\)\}`\}/);
   const baseFilters = readWeb("src/components/common/BaseFilters.tsx");
@@ -243,7 +243,7 @@ test("music list/detail preserve responsive layouts and use light/dark semantic 
   const lightRoles = schemes.match(/:root\s*\{([^}]*--md-sys-color-primary:[^}]*)\}/)?.[1];
   const darkRoles = schemes.match(/:root\[data-theme="dark"\]\s*\{([^}]*)\}/)?.[1];
   assert.ok(lightRoles && darkRoles, "both light and dark default color schemes must be generated");
-  for (const role of ["surface-container-low", "on-surface", "on-surface-variant", "secondary-container", "on-secondary-container", "outline-variant"]) {
+  for (const role of ["surface-container-low", "surface-card", "on-surface", "on-surface-variant", "secondary-container", "on-secondary-container", "outline-variant"]) {
     assert.ok(tokens.includes(`--color-${role}: var(--md-sys-color-${role});`), `${role} must resolve through the dynamic scheme`);
     const declaration = new RegExp(`--md-sys-color-${role}: #[0-9a-fA-F]{6};`);
     assert.ok(declaration.test(lightRoles), `${role} must exist in the light scheme`);

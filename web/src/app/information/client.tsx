@@ -166,7 +166,7 @@ function InformationCard({
             data-shortcut-item="true"
             className="group block h-full w-full cursor-pointer rounded-md3-md text-left focus-ring"
         >
-            <article className="state-layer relative flex h-full flex-col overflow-hidden rounded-md3-md bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+            <article className="state-layer relative flex h-full flex-col overflow-hidden rounded-md3-md bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 <div className="relative aspect-[16/7] overflow-hidden bg-surface-container-high">
                     {bannerUrl && !imageFailed ? (
                         <img

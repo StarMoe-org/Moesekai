@@ -107,7 +107,7 @@ export default function ContentBrowser({
                                 className={`state-layer focus-ring group relative flex flex-col rounded-md3-lg p-3 text-left transition-[background-color,box-shadow] duration-200 ease-md3-standard ${
                                     isSelected
                                         ? "bg-secondary-container text-on-secondary-container ring-2 ring-primary"
-                                        : "bg-surface-container-low hover:shadow-elev-1"
+                                        : "bg-surface-card ring-1 ring-outline-variant/70 hover:shadow-elev-1"
                                 }`}
                             >
                                 {/* Artwork Container */}

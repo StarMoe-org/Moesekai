@@ -756,7 +756,7 @@ function EventLinkCard({
     description: string;
 }) {
     return (
-        <Card href={href} variant="filled" radius="xl" className="group bg-surface-container-low">
+        <Card href={href} variant="filled" radius="xl" className="group">
             <div className="flex items-center gap-3 px-5 pt-4">
                 <Icon path={icon} className="text-primary" />
                 <h2 className="type-title-l text-on-surface">{title}</h2>

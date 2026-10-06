@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import test from "node:test";
-import { Hct, MaterialDynamicColors, SchemeFidelity, argbFromHex, hexFromArgb } from "@material/material-color-utilities";
+import { Hct, argbFromHex } from "@material/material-color-utilities";
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { defaultSeedId, seeds } = JSON.parse(fs.readFileSync(path.join(webRoot, "src/lib/theme-seeds.json"), "utf8"));
@@ -30,19 +30,38 @@ const pairs = [
     ["inverse-surface", "inverse-on-surface"],
 ];
 
+const hct = (hex) => Hct.fromInt(argbFromHex(hex));
+const hueDistance = (a, b) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b));
+const strongPairs = [["secondary-container", "on-secondary-container"], ["tertiary-container", "on-tertiary-container"]];
+
 for (const [id, hex] of Object.entries(seeds)) {
     for (const mode of ["light", "dark"]) {
-        test(`seed ${id} ${mode}: complete roles, faithful character container and readable foreground pairs`, () => {
+        test(`seed ${id} ${mode}: complete roles, character-faithful primary and readable foreground pairs`, () => {
             const selector = mode === "light" ? `[data-seed="${id}"]` : `:root[data-theme="dark"][data-seed="${id}"],\n:root[data-theme="dark"] [data-seed="${id}"]`;
             const block = blocks.find((block) => block.selector === selector);
             assert.ok(block, `missing ${selector}`);
-            const scheme = new SchemeFidelity(Hct.fromInt(argbFromHex(hex)), mode === "dark", 0, "2025");
-            const expectedContainer = hexFromArgb(MaterialDynamicColors.primaryContainer.getArgb(scheme));
-            assert.equal(block.roles["primary-container"], expectedContainer, "use the standard Fidelity container, including its contrast-driven tone adjustments");
             for (const [background, foreground] of pairs) {
                 assert.ok(block.roles[background] && block.roles[foreground], `missing ${background}/${foreground}`);
                 const ratio = contrast(block.roles[background], block.roles[foreground]);
                 assert.ok(ratio >= 4.5, `${background}/${foreground} contrast ${ratio.toFixed(3)} is below 4.5:1`);
+            }
+            const strong = mode === "dark" ? [...strongPairs, ["primary-container", "on-primary-container"]] : strongPairs;
+            for (const [background, foreground] of strong) {
+                const ratio = contrast(block.roles[background], block.roles[foreground]);
+                assert.ok(ratio >= 7, `${background}/${foreground} contrast ${ratio.toFixed(3)} is below 7:1`);
+            }
+            const seed = hct(hex);
+            if (mode === "light") {
+                const container = hct(block.roles["primary-container"]);
+                assert.ok(hueDistance(container.hue, seed.hue) <= 15, "light primary container keeps the character hue");
+                assert.ok(Math.abs(container.tone - seed.tone) <= 12, "light primary container stays close to the character color");
+            } else {
+                const primary = hct(block.roles.primary);
+                assert.ok(primary.tone <= 85, `dark primary tone ${primary.tone.toFixed(1)} must not wash out to near-white`);
+                assert.ok(primary.chroma >= Math.min(24, seed.chroma * 0.6), "dark primary keeps visible character chroma");
+            }
+            for (const surface of ["surface", "surface-container-low", "surface-container", "surface-container-high"]) {
+                assert.ok(hct(block.roles[surface]).chroma <= 5, `${surface} stays near-neutral`);
             }
         });
     }

@@ -50,6 +50,15 @@
     --color-on-error: var(--md-sys-color-on-error);
     --color-error-container: var(--md-sys-color-error-container);
     --color-on-error-container: var(--md-sys-color-on-error-container);
+    /* Fixed status colors (seed-independent): bg-warning-container, text-on-success-container … */
+    --color-warning: var(--md-sys-color-warning);
+    --color-on-warning: var(--md-sys-color-on-warning);
+    --color-warning-container: var(--md-sys-color-warning-container);
+    --color-on-warning-container: var(--md-sys-color-on-warning-container);
+    --color-success: var(--md-sys-color-success);
+    --color-on-success: var(--md-sys-color-on-success);
+    --color-success-container: var(--md-sys-color-success-container);
+    --color-on-success-container: var(--md-sys-color-on-success-container);
 
     --color-background: var(--md-sys-color-background);
     --color-on-background: var(--md-sys-color-on-background);
@@ -62,6 +71,8 @@
     --color-surface-container: var(--md-sys-color-surface-container);
     --color-surface-container-high: var(--md-sys-color-surface-container-high);
     --color-surface-container-highest: var(--md-sys-color-surface-container-highest);
+    /* Cards and panels: lifts off the page in both modes (lowest in light, low in dark). */
+    --color-surface-card: var(--md-sys-color-surface-card);
     --color-on-surface: var(--md-sys-color-on-surface);
     --color-surface-variant: var(--md-sys-color-surface-variant);
     --color-on-surface-variant: var(--md-sys-color-on-surface-variant);

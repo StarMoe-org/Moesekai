@@ -498,7 +498,7 @@ function EventSelectionItem({
             onClick={onClick}
             className="group block cursor-pointer"
         >
-            <div className="state-layer overflow-hidden rounded-md3-md bg-surface-container-low shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
+            <div className="state-layer overflow-hidden rounded-md3-md bg-surface-card shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
                 {/* Event Thumbnail */}
                 <div className="relative aspect-[16/9] bg-surface-container-high overflow-hidden">
                     <Image

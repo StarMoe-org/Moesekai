@@ -361,7 +361,7 @@ export default function PredictionClient() {
                             return (
                                 <>
                                     <Link href={`/events/${banner.mockEvent.id}`} className="block group mb-6 rounded-md3-xl focus-ring">
-                                        <div className="state-layer relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow group-hover:shadow-elev-2 cursor-pointer">
+                                        <div className="state-layer relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-card shadow-elev-1 transition-shadow group-hover:shadow-elev-2 cursor-pointer">
                                             {/* Left Side: Background & Logo */}
                                             <div className="w-[45%] relative overflow-hidden">
                                                 {banner.hasBanner ? (

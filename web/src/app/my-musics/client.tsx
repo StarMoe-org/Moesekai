@@ -1116,7 +1116,7 @@ function MusicItem({ music, difficulties, results, thumbnailUrl, hasUserData, se
 
     return (
         <Link href={`/music/${music.id}`} className="group state-layer focus-ring block rounded-md3-md" data-shortcut-item="true">
-            <div className="relative cursor-pointer overflow-hidden rounded-md3-md bg-surface-container-low shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
+            <div className="relative cursor-pointer overflow-hidden rounded-md3-md bg-surface-card shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2">
                 {/* Music Thumbnail */}
                 <div className="w-full aspect-square relative">
                     <Image

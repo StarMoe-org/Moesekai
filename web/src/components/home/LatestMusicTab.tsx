@@ -86,7 +86,7 @@ export default function LatestMusicTab() {
 
                     return (
                         <Link key={music.id} href={`/music/${music.id}`} className="group state-layer focus-ring block rounded-md3-md">
-                            <div className={`relative rounded-md3-md overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2 ${isSpoiler ? 'ring-2 ring-tertiary' : ''}`}>
+                            <div className={`relative rounded-md3-md overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2 ${isSpoiler ? 'ring-2 ring-tertiary' : ''}`}>
                                 {/* Music Jacket */}
                                 <div className="aspect-square relative bg-surface-container-high">
                                     <Image

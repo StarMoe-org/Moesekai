@@ -598,7 +598,7 @@ function MusicSelectionItem({ music, translations }: { music: IMusicInfo; transl
     const jacketUrl = getMusicJacketUrl(music.assetbundleName, assetSource);
 
     return (
-        <div className="state-layer group rounded-md3-md bg-surface-container-low shadow-elev-1 overflow-hidden transition-shadow hover:shadow-elev-2 flex items-center gap-3 p-2">
+        <div className="state-layer group rounded-md3-md bg-surface-card shadow-elev-1 overflow-hidden transition-shadow hover:shadow-elev-2 flex items-center gap-3 p-2">
             <div className="relative w-14 h-14 rounded-md3-sm overflow-hidden flex-shrink-0 bg-surface-container-high">
                 <Image
                     src={jacketUrl}

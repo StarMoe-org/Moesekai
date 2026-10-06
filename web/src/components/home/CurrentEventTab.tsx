@@ -115,7 +115,7 @@ export default function CurrentEventTab() {
     return (
         <div>
             <Link href={`/events/${currentEvent.id}`} className="state-layer focus-ring block group rounded-md3-xl">
-                <div className="relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-container-low shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
+                <div className="relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
 
                     {/* Left Side: Background & Logo (45%) */}
                     <div className="w-[45%] relative overflow-hidden">

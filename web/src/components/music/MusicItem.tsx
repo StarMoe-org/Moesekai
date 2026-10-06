@@ -40,7 +40,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
 
     return (
         <Link href={itemHref} className="group state-layer focus-ring block rounded-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_320px]" data-shortcut-item="true">
-            <div className="relative rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+            <div className="relative rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Jacket Image */}
                 <div className="relative aspect-square overflow-hidden">
                     <Image

@@ -152,8 +152,9 @@ function DynamicHomeSection({ section }: { section: HomeSectionId }) {
   );
 }
 
-const FRIEND_LINK_CLASS =
-  "state-layer focus-ring relative group overflow-hidden rounded-md3-lg h-16 bg-surface-container-low text-on-surface transition-shadow duration-200 hover:shadow-elev-1";
+const FRIEND_LINK_BASE_CLASS =
+  "state-layer focus-ring relative group overflow-hidden rounded-md3-lg h-16 bg-surface-card text-on-surface ring-1 transition-shadow duration-200 hover:shadow-elev-1";
+const FRIEND_LINK_CLASS = `${FRIEND_LINK_BASE_CLASS} ring-outline-variant/70`;
 
 export default function Home() {
   const { t } = useI18n();
@@ -381,7 +382,7 @@ export default function Home() {
           <div className="grid grid-cols-4 sm:grid-cols-8 md:grid-cols-9 gap-2">
             {SHORTCUTS.map((shortcut, index) => {
               const content = (
-                <div className={`relative h-full p-3 rounded-md3-lg bg-surface-container-low flex flex-col items-center gap-1.5 text-center transition-[background-color,box-shadow] duration-200 ease-md3-standard group-hover:shadow-elev-1 ${shortcut.isExternal ? "ring-1 ring-[#fb7299]/40" : ""}`}>
+                <div className={`relative h-full p-3 rounded-md3-lg bg-surface-card flex flex-col items-center gap-1.5 text-center transition-[background-color,box-shadow] duration-200 ease-md3-standard group-hover:shadow-elev-1 ring-1 ${shortcut.isExternal ? "ring-[#fb7299]/40" : "ring-outline-variant/70"}`}>
                   {shortcut.badgeKey && (
                     <span className="absolute -top-1.5 -right-1 bg-[#fb7299] text-white text-[9px] font-black px-1.5 rounded-full">
                       {t(shortcut.badgeKey)}
@@ -467,7 +468,7 @@ export default function Home() {
             <ExternalLink
               href={MOESEKAI_BILIBILI_SPACE_URL}
               target="_blank"
-              className={`${FRIEND_LINK_CLASS} ring-1 ring-[#fb7299]/40`}
+              className={`${FRIEND_LINK_BASE_CLASS} ring-[#fb7299]/40`}
             >
               <div className="relative z-10 h-full flex items-center justify-between px-4">
                 <div className="flex items-center gap-3 min-w-0">

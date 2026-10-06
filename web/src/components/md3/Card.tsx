@@ -9,8 +9,8 @@ import { cn } from "./cn";
 export type CardVariant = "elevated" | "filled" | "outlined";
 
 const CARD_VARIANT: Record<CardVariant, string> = {
-    elevated: "bg-surface-container-low text-on-surface shadow-elev-1",
-    filled: "bg-surface-container-highest text-on-surface",
+    elevated: "bg-surface-card text-on-surface shadow-elev-1",
+    filled: "bg-surface-card text-on-surface border border-outline-variant/70",
     outlined: "bg-surface text-on-surface border border-outline-variant",
 };
 
@@ -80,10 +80,11 @@ export function Card(props: CardProps) {
    panels and grouped content.
    ========================================================================== */
 
-export type SurfaceTone = "lowest" | "low" | "default" | "high" | "highest" | "surface";
+export type SurfaceTone = "card" | "lowest" | "low" | "default" | "high" | "highest" | "surface";
 
 const SURFACE_TONE: Record<SurfaceTone, string> = {
     surface: "bg-surface",
+    card: "bg-surface-card border border-outline-variant/70",
     lowest: "bg-surface-container-lowest",
     low: "bg-surface-container-low",
     default: "bg-surface-container",
@@ -111,7 +112,7 @@ const RADIUS: Record<NonNullable<SurfaceProps["radius"]>, string> = {
 
 const ELEVATION = ["", "shadow-elev-1", "shadow-elev-2", "shadow-elev-3"] as const;
 
-export function Surface({ tone = "low", radius = "xl", elevation = 0, as: Tag = "div", className, ...rest }: SurfaceProps) {
+export function Surface({ tone = "low", radius = "lg", elevation = 0, as: Tag = "div", className, ...rest }: SurfaceProps) {
     return <Tag className={cn(SURFACE_TONE[tone], "text-on-surface", RADIUS[radius], ELEVATION[elevation], className)} {...rest} />;
 }
 

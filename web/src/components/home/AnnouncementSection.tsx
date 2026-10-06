@@ -247,7 +247,7 @@ export default function AnnouncementSection() {
                                 onClick={() => setSelectedItem(item)}
                                 className="group state-layer focus-ring block h-full w-full cursor-pointer rounded-md3-lg text-left"
                             >
-                                <article className="flex h-full flex-col overflow-hidden rounded-md3-lg bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+                                <article className="flex h-full flex-col overflow-hidden rounded-md3-lg bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                                     <div className="relative aspect-[16/7] overflow-hidden bg-surface-container-high">
                                         {hasBanner ? (
                                             <img

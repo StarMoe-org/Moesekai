@@ -7,7 +7,7 @@
 | 层 | 位置 | 说明 |
 |---|---|---|
 | 种子色 | `src/lib/theme-seeds.json` | 26 位角色主题色，`defaultSeedId = 21`（Miku）。`CHAR_COLORS` 由此派生 |
-| 配色生成 | `scripts/generate-md3-schemes.mjs` → `src/styles/md3-schemes.css` | `SchemeFidelity`（spec 2025，主容器尽量保留角色色并按标准对比度调整 tone），每个种子输出 light/dark 全部 color roles；运行时只切换 `<html data-seed data-theme>` |
+| 配色生成 | `scripts/generate-md3-schemes.mjs` → `src/styles/md3-schemes.css` | 混合策略（spec 2021）：浅色按 `Fidelity` 映射，`primary-container` 直接用角色原色（文字取 tone 10/100 中对比度更高者，不足 4.5:1 时微调 tone）；深色及 secondary/tertiary 容器按 `TonalSpot` 映射（primary ≈ tone 80、容器 tone 30），主色板保留种子彩度；中性色彩度封顶 4。另输出 `surface-card`（卡片底色）与固定的 warning/success。运行时只切换 `<html data-seed data-theme>` |
 | 图标生成 | `scripts/generate-material-symbols.mjs` → `src/components/md3/icons.generated.ts` | 扫描源码中 `from "@/components/md3/icons"` 的导入，只打包用到的 Material Symbols Rounded |
 | Token | `src/styles/md3-tokens.css` | Tailwind `@theme`：颜色、形状、阴影、动效、字体层级、`state-layer`、`focus-ring`、`dark:` 变体（基于 `data-theme`） |
 | 游戏例外 | `src/styles/legacy-games.css` | 仅为 guess-who / guess-jacket / goods-gacha 保留旧样式，选择器由 `<html data-legacy-game="true">` 限定；全站兼容层已删除 |
@@ -21,14 +21,14 @@
 
 ## 2. 页面迁移规则（每个文件必须满足）
 
-1. **颜色只用语义角色**：`bg-surface*`、`bg-surface-container{-lowest|-low||-high|-highest}`、`text-on-surface`、`text-on-surface-variant`、`bg-primary text-on-primary`、`bg-primary-container text-on-primary-container`、`bg-secondary-container text-on-secondary-container`、`bg-tertiary*`、`bg-error*`、`border-outline`、`border-outline-variant`、`bg-scrim/32`、`bg-inverse-surface text-inverse-on-surface`。
+1. **颜色只用语义角色**：`bg-surface*`、`bg-surface-container{-lowest|-low||-high|-highest}`、`text-on-surface`、`text-on-surface-variant`、`bg-primary text-on-primary`、`bg-primary-container text-on-primary-container`、`bg-secondary-container text-on-secondary-container`、`bg-tertiary*`、`bg-error*`、`bg-warning*` / `bg-success*`（固定语义色，不随种子变化）、`border-outline`、`border-outline-variant`、`bg-scrim/32`、`bg-inverse-surface text-inverse-on-surface`。
    - 禁止：`slate-*`、`gray-*`、`zinc-*`、`white`、`black`、`dark:*`、`miku`、`luka`、`text-primary-text`、`var(--color-miku)`、`glass-card`、`ios-glass-*`、`island-*`、`material-*`、`backdrop-blur*`、`pressable`、`type-title`/`type-body`/`type-caption`/`type-display`（旧）、`--surface-*`/`--text-*`/`--border-*` 等旧变量。
    - 明暗模式由 token 自动处理，**不要写 `dark:`**。
    - 角色官方色（徽章、角色色条）用 `bg-char-<id>` / `text-char-<id>` 或 `var(--md-ext-color-char-<id>)`；属性色、稀有度色、谱面难度色等**游戏数据色**可保留原值（它们不是主题色）。
 2. **形状**：卡片 `rounded-md3-md`（默认）/`rounded-md3-lg`/`rounded-md3-xl`（大面板、hero）；chip `rounded-md3-sm`；按钮 `rounded-full`；输入框 outlined `rounded-md3-xs`；对话框 `rounded-md3-xl`。不要用 `rounded-2xl/3xl`。
 3. **字体层级**：`type-display-{l,m,s}`、`type-headline-{l,m,s}`、`type-title-{l,m,s}`、`type-body-{l,m,s}`、`type-label-{l,m,s}`，需要强调时叠加 `type-emphasized`。不要再用 `text-xs font-bold uppercase tracking-wider` 这类组合当小标题，改用 `type-title-s` 或 `type-label-l`。
    - 页面主标题：`type-headline-m`（移动端）/`type-headline-l`（≥ expanded）。区块标题：`type-title-l`。卡片标题：`type-title-m`。正文：`type-body-m`/`type-body-l`。
-4. **层级**：浅色用 `shadow-elev-{0..5}`（卡片 elevated 用 1，悬停 2，菜单 2，FAB 3，对话框 3）。不要用 `shadow-lg/xl/2xl`、彩色阴影（`shadow-miku/20`）。表面层级优先用 tonal surface-container 区分。
+4. **层级**：浅色用 `shadow-elev-{0..5}`（卡片 elevated 用 1，悬停 2，菜单 2，FAB 3，对话框 3）。不要用 `shadow-lg/xl/2xl`、彩色阴影（`shadow-miku/20`）。表面层级优先用 tonal surface-container 区分。卡片与面板底色统一用 `bg-surface-card`（浅色 = lowest 白、深色 = container-low），静止无阴影时加 `border-outline-variant/70` 细描边；选中态统一 `secondary-container`。
 5. **交互状态**：可点击元素加 `state-layer`（hover/focus/pressed 覆盖层，自动取 currentColor）+ `focus-ring`。不要用 `hover:scale-*`、`active:scale-*`、`hover:-translate-y-*`。
 6. **组件优先**：按钮→`Button`/`IconButton`/`Fab`；卡片→`Card`/`Surface`；筛选标签→`Chip` 或 `BaseFilters` 的 `FilterButton`；输入→`TextField`（IME 安全）；开关→`Switch`/`Checkbox`/`Radio`；分段→`SegmentedButton`/`ConnectedButtonGroup`；一组动作按钮→`ButtonGroup`（按下的加宽、相邻的让出）；标签页→`Tabs`；弹窗→`Dialog`（或保留 `common/Modal`，API 不变）；底部/侧边面板→`BottomSheet`/`SideSheet`；菜单→`Menu`；加载→`LoadingIndicator`/`CircularProgress`/`LinearProgress`（确定进度可加 `wavy`）；列表→`List`/`ListItem`；提示→`Tooltip`/`Snackbar`。
 7. **图标**：通用 UI 图标（搜索、关闭、箭头、筛选、排序、下载、分享、设置…）用 `<Icon path={mdXxx} />`。业务图形（稀有度星、属性图标、谱面 SVG、logo、角色/团体图标）保留。

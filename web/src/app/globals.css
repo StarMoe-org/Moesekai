@@ -48,6 +48,31 @@ body {
   }
 }
 
+/* Brand wash: a faint seed-tinted glow behind the MD3 surface so the page keeps
+   the character's color without tinting surfaces themselves. Static, follows the
+   seed through container roles, and is dropped with background effects off. */
+:root {
+  --brand-wash-strength: 32%;
+}
+
+:root[data-theme="dark"] {
+  --brand-wash-strength: 34%;
+}
+
+.brand-wash {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(64rem 36rem at 32% -8%, color-mix(in srgb, var(--md-sys-color-primary-container) var(--brand-wash-strength), transparent), transparent 70%),
+    radial-gradient(48rem 32rem at 100% 104%, color-mix(in srgb, var(--md-sys-color-tertiary-container) var(--brand-wash-strength), transparent), transparent 70%);
+}
+
+:root[data-background-animation="off"] .brand-wash {
+  display: none;
+}
+
 :root.theme-switching,
 :root.theme-switching *,
 :root.theme-switching *::before,

@@ -91,7 +91,7 @@ function RankingCard({
         <Link
             href={href}
             data-shortcut-item="true"
-            className="state-layer focus-ring group block h-full overflow-hidden rounded-md3-xl bg-surface-container-low p-3 text-left shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2"
+            className="state-layer focus-ring group block h-full overflow-hidden rounded-md3-xl bg-surface-card p-3 text-left shadow-elev-1 transition-shadow duration-200 ease-md3-standard hover:shadow-elev-2"
         >
             <div className="aspect-[4/3] overflow-hidden rounded-md3-lg bg-surface-container">
                 {thumbnailUrl && !imageFailed ? (

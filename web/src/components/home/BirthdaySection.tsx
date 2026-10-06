@@ -33,7 +33,7 @@ export default function BirthdaySection() {
                                 group state-layer focus-ring relative p-3 rounded-md3-lg transition-shadow duration-200 ease-md3-standard flex flex-col items-center gap-2
                                 ${birthday.isToday
                                     ? "bg-primary-container text-on-primary-container shadow-elev-1 hover:shadow-elev-2"
-                                    : "bg-surface-container-low text-on-surface hover:shadow-elev-1"
+                                    : "bg-surface-card text-on-surface ring-1 ring-outline-variant/70 hover:shadow-elev-1"
                                 }
                                 ${index < 2 ? "flex" : (index < 3 ? "hidden sm:flex" : "hidden lg:flex")} 
                             `}

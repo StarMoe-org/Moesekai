@@ -27,7 +27,7 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards" }: Car
 
     return (
         <Link href={`${hrefPrefix}/${card.id}`} className="group state-layer focus-ring block rounded-md3-md" data-shortcut-item="true">
-            <div className="relative cursor-pointer rounded-md3-md overflow-hidden bg-surface-container-low text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+            <div className="relative cursor-pointer rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Card Image Container */}
                 <div className="w-full relative">
                     <SekaiCardThumbnail
