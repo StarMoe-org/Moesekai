@@ -178,6 +178,8 @@ export function useEventListData({ storageKey }: UseEventListDataConfig): UseEve
         try { sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters)); } catch { /* ignore */ }
 
         const params = new URLSearchParams();
+        const currentView = new URLSearchParams(window.location.search).get("view");
+        if (currentView === "table" || currentView === "list") params.set("view", "table");
         if (selectedTypes.length > 0) params.set("types", selectedTypes.join(","));
         if (selectedEventUnits.length > 0) params.set("eventUnits", selectedEventUnits.join(","));
         if (selectedCharacters.length > 0) params.set("characters", selectedCharacters.join(","));

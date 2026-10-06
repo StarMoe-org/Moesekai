@@ -1,8 +1,9 @@
 "use client";
 import React from "react";
 import Image from "next/image";
-import { Chip, Icon, SegmentedButton, Surface } from "@/components/md3";
+import { Chip, Icon, Select, SegmentedButton, Surface } from "@/components/md3";
 import { mdGroups, mdKidStar } from "@/components/md3/icons";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
@@ -35,8 +36,8 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
                 value={server}
                 onValueChange={setServer}
                 options={[
-                    { value: "cn", label: t("page.prediction.servers.cn") },
-                    { value: "jp", label: t("page.prediction.servers.jp") },
+                    { value: "cn", label: <ServerRegionLabel server="cn" label={t("page.prediction.servers.cn")} /> },
+                    { value: "jp", label: <ServerRegionLabel server="jp" label={t("page.prediction.servers.jp")} /> },
                 ]}
                 showCheckmark={false}
                 className="max-w-xs shrink-0 sm:w-auto"
@@ -44,32 +45,17 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
 
             {/* Event Selector */}
             <div className="flex-1">
-                <select
-                    value={selectedEventId || ""}
-                    onChange={(e) => setSelectedEventId(Number(e.target.value))}
-                    disabled={eventsLoading || events.length === 0}
+                <Select
+                    value={selectedEventId}
+                    onValueChange={setSelectedEventId}
+                    disabled={eventsLoading || (events.length === 0 && unlistedEventId == null)}
                     aria-label={t("page.prediction.title")}
-                    className="focus-ring h-10 w-full px-4 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary disabled:opacity-38 disabled:cursor-not-allowed"
-                >
-                    {eventsLoading ? (
-                        <option>{t("page.prediction.events.loading")}</option>
-                    ) : events.length === 0 && unlistedEventId == null ? (
-                        <option>{t("page.prediction.events.empty")}</option>
-                    ) : (
-                        <>
-                            {unlistedEventId != null && (
-                                <option value={unlistedEventId}>
-                                    #{unlistedEventId} {masterEvent?.name ?? ""}
-                                </option>
-                            )}
-                            {events.map(event => (
-                                <option key={event.id} value={event.id}>
-                                    {event.is_active ? "🟢 " : ""}#{event.id} {event.name}
-                                </option>
-                            ))}
-                        </>
-                    )}
-                </select>
+                    options={[
+                        ...(unlistedEventId != null ? [{ value: unlistedEventId, label: `#${unlistedEventId} ${masterEvent?.name ?? ""}` }] : []),
+                        ...events.map(event => ({ value: event.id, label: `${event.is_active ? "🟢 " : ""}#${event.id} ${event.name}` })),
+                    ]}
+                    placeholder={eventsLoading ? t("page.prediction.events.loading") : t("page.prediction.events.empty")}
+                />
             </div>
             {children}
         </div>

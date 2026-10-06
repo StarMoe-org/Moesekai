@@ -7,6 +7,8 @@ import { CardRarityType, CardAttribute, ATTR_NAMES, SupportUnit, SUPPORT_UNIT_LA
 import { useCardSupplyTypeMapping } from "@/hooks/useCardSupplyType";
 import { useSkillMapping } from "@/hooks/useSkillMapping";
 import { useI18n } from "@/contexts/I18nContext";
+import { useTheme } from "@/contexts/ThemeContext";
+import { SegmentedButton } from "@/components/md3";
 
 interface CardFiltersProps {
     // Character filter
@@ -113,6 +115,7 @@ export default function CardFilters({
 }: CardFiltersProps) {
 
     const { t } = useI18n();
+    const { useTrainedThumbnail, setUseTrainedThumbnail } = useTheme();
     const supplyTypes = useCardSupplyTypeMapping();
     const skillTypes = useSkillMapping();
     const getSupportUnitLabel = (unit: SupportUnit) => t(SUPPORT_UNIT_LABEL_KEYS[unit]);
@@ -255,6 +258,18 @@ export default function CardFilters({
             hasActiveFilters={hasActiveFilters}
             onReset={handleReset}
         >
+            <FilterSection label={t("settings.trainedThumbnail.label")}>
+                <SegmentedButton
+                    aria-label={t("settings.trainedThumbnail.label")}
+                    value={useTrainedThumbnail ? "trained" : "normal"}
+                    onValueChange={(value) => setUseTrainedThumbnail(value === "trained")}
+                    options={[
+                        { value: "normal", label: t("page.cards.beforeTrained") },
+                        { value: "trained", label: t("page.cards.afterTrained") },
+                    ]}
+                    className="w-full"
+                />
+            </FilterSection>
             {/* Unit & Character Selection */}
             <CharacterFilter
                 selectedCharacters={selectedCharacters}

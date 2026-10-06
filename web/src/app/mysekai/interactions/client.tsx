@@ -6,6 +6,8 @@ import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
 import { Button, IconButton, LoadingState, PageHeader } from "@/components/md3";
 import { mdArrowBack, mdClose, mdPlayArrowFill, mdSettings } from "@/components/md3/icons";
+import { ServerRegionIcon } from "@/components/common/ServerRegion";
+import { isValidServer, SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
 import { INITIAL_BROWSE, filterCatalog, supportedRegion, type BrowseState, type CatalogEntry } from "@/lib/moly/catalog";
@@ -470,7 +472,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                 <div className="workspace-catalog-column">
                     {catalogProblem && (
                         <section className="workspace-inline-notice" role="status">
-                            <h2>{t(`page.mysekaiInteractions.${catalogProblem}`, { region: source.toUpperCase() })}</h2>
+                            <h2>{isValidServer(source) && <ServerRegionIcon server={source} size={18} decorative />} {t(`page.mysekaiInteractions.${catalogProblem}`, { region: isValidServer(source) ? t(SERVER_LABEL_KEYS[source]) : source.toUpperCase() })}</h2>
                             <button className="interaction-button" onClick={() => setRetry(value => value + 1)}>{t("common.action.retry")}</button>
                             {expired && (
                                 <button className="interaction-button" onClick={() => commit(current => ({ ...current, snapshot: null, content: null, invalidContent: false }))}>

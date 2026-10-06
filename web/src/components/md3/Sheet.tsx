@@ -106,6 +106,8 @@ export interface SideSheetProps extends SheetBaseProps {
     /** Width class (default w-[min(400px,100vw-3.5rem)]). */
     widthClassName?: string;
     showClose?: boolean;
+    /** Inset modal presentation; leaves the default edge-attached sheet unchanged. */
+    floating?: boolean;
 }
 
 export function SideSheet({
@@ -118,6 +120,7 @@ export function SideSheet({
     side = "right",
     widthClassName = "w-[min(400px,calc(100vw-3.5rem))]",
     showClose = true,
+    floating = false,
     syncHistory = true,
     className,
     bodyClassName,
@@ -133,7 +136,7 @@ export function SideSheet({
         <OverlayParentContext.Provider value={overlayContext}>
         <AnimatePresence>
             {isOpen && (
-                <div className={cn("fixed inset-0 z-[200] isolate flex", side === "right" ? "justify-end" : "justify-start")}>
+                <div className={cn("fixed inset-0 z-[200] isolate flex", floating && "p-3", side === "right" ? "justify-end" : "justify-start")}>
                     <motion.div
                         className="absolute inset-0 bg-scrim/32"
                         initial={{ opacity: 0 }}
@@ -150,8 +153,9 @@ export function SideSheet({
                         tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
                         className={cn(
-                            "relative flex h-full flex-col bg-surface-container-low text-on-surface shadow-elev-1",
-                            side === "right" ? "rounded-l-md3-lg" : "rounded-r-md3-lg",
+                            "relative flex h-full flex-col bg-surface-container-low text-on-surface",
+                            floating ? "overflow-hidden rounded-md3-xl shadow-elev-3" : "shadow-elev-1",
+                            !floating && (side === "right" ? "rounded-l-md3-lg" : "rounded-r-md3-lg"),
                             widthClassName,
                             className,
                         )}

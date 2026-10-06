@@ -129,7 +129,7 @@ function removeGlobalListeners() {
 }
 
 /** Shared focus/Escape stack; modal layers additionally trap focus and lock scroll. */
-export function useOverlay(isOpen: boolean, onClose: () => void, { syncHistory = true, closeOnEscape = true, modal = true } = {}) {
+export function useOverlay(isOpen: boolean, onClose: () => void, { syncHistory = true, closeOnEscape = true, modal = true, autoFocus = true } = {}) {
     const [mounted, setMounted] = useState(false);
     const onCloseRef = useRef(onClose);
     const overlayRef = useRef<HTMLDivElement>(null);
@@ -175,7 +175,7 @@ export function useOverlay(isOpen: boolean, onClose: () => void, { syncHistory =
                 item.historyToken = ++nextHistoryToken;
                 window.history.pushState({ ...(window.history.state ?? {}), modal: true, modalToken: item.historyToken }, "");
             }
-            if (!root?.contains(document.activeElement)) focusEntry(entry);
+            if (autoFocus && !root?.contains(document.activeElement)) focusEntry(entry);
         });
         return () => {
             cancelAnimationFrame(raf);
@@ -202,7 +202,7 @@ export function useOverlay(isOpen: boolean, onClose: () => void, { syncHistory =
             entry.previousFocus = null;
             removeGlobalListeners();
         };
-    }, [isOpen, mounted, entry, modal]);
+    }, [isOpen, mounted, entry, modal, autoFocus]);
 
     return { mounted, close: stableOnClose, overlayRef, overlayContext: entry, onFocusCapture, isTopOverlay };
 }

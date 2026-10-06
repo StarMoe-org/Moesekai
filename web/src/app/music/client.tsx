@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useCallback, useDeferredValue, Suspense }
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
-import MusicFilters from "@/components/music/MusicFilters";
+import MusicFilters, { MUSIC_DIFFICULTIES, parseMusicLevelRange, parseMusicLevelParams, parseMusicDifficulties, useMusicLevelFilter } from "@/components/music/MusicFilters";
 import MusicItem from "@/components/music/MusicItem";
 import SearchSyntaxHelp from "@/components/search/SearchSyntaxHelp";
 import { parseSearchQuery, matchExpr, makeNumericField, type SearchTerm, type SearchExpr, type FieldRegistry } from "@/lib/searchQuery";
@@ -115,6 +115,8 @@ function MusicContent() {
     const [hasEventOnly, setHasEventOnly] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedDifficulty, setSelectedDifficulty] = useState<string>("master");
+    const levelFilter = useMusicLevelFilter(musicDifficulties);
+    const { difficulties: selectedDifficulties, setDifficulties: setSelectedDifficulties, range: difficultyRange, setRange: setDifficultyRange, bounds: difficultyBounds, matches: matchesLevel } = levelFilter;
     const [showDifficulty, setShowDifficulty] = useState(true);
     const [showBpm, setShowBpm] = useState(true);
     const deferredSearchQuery = useDeferredValue(searchQuery);
@@ -145,8 +147,8 @@ function MusicContent() {
         const order = searchParams.get("sortOrder");
         const showDiff = searchParams.get("showDifficulty");
         const showBpmParam = searchParams.get("showBpm");
-
-        const hasUrlParams = tag || categories || eventOnly || search || sort || order || showDiff || showBpmParam;
+        const difficulty = searchParams.get("difficulty");
+        const hasUrlParams = ["tag", "categories", "eventOnly", "search", "sortBy", "sortOrder", "showDifficulty", "showBpm", "sortDifficulty", "difficulty", "difficultyMin", "difficultyMax"].some((key) => searchParams.has(key));
 
         if (hasUrlParams) {
             if (tag) setSelectedTag(tag as MusicTagType);
@@ -157,6 +159,10 @@ function MusicContent() {
             if (order) setSortOrder(order as "asc" | "desc");
             if (showDiff === "false") setShowDifficulty(false);
             if (showBpmParam === "false") setShowBpm(false);
+            setSelectedDifficulties(parseMusicDifficulties(difficulty));
+            const sortDifficulty = searchParams.get("sortDifficulty");
+            if (sortDifficulty && MUSIC_DIFFICULTIES.includes(sortDifficulty)) setSelectedDifficulty(sortDifficulty);
+            setDifficultyRange(parseMusicLevelParams(searchParams));
         } else {
             try {
                 const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -170,6 +176,9 @@ function MusicContent() {
                     if (filters.sortOrder) setSortOrder(filters.sortOrder);
                     if (filters.showDifficulty === false) setShowDifficulty(false);
                     if (filters.showBpm === false) setShowBpm(false);
+                    setSelectedDifficulties(parseMusicDifficulties(filters.difficulties ?? filters.difficulty));
+                    if (MUSIC_DIFFICULTIES.includes(filters.sortDifficulty)) setSelectedDifficulty(filters.sortDifficulty);
+                    setDifficultyRange(parseMusicLevelRange(filters.difficultyRange));
                 }
             } catch {
                 console.log("Could not restore filters from sessionStorage");
@@ -192,6 +201,9 @@ function MusicContent() {
             sortOrder,
             showDifficulty,
             showBpm,
+            difficulties: selectedDifficulties,
+            sortDifficulty: selectedDifficulty,
+            difficultyRange,
         };
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
@@ -208,8 +220,14 @@ function MusicContent() {
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
         if (!showDifficulty) params.set("showDifficulty", "false");
         if (!showBpm) params.set("showBpm", "false");
+        params.set("sortDifficulty", selectedDifficulty);
+        if (selectedDifficulties.length) params.set("difficulty", selectedDifficulties.join(","));
+        if (difficultyRange) {
+            params.set("difficultyMin", String(difficultyRange[0]));
+            params.set("difficultyMax", String(difficultyRange[1]));
+        }
         replaceCurrentUrlSearchParams(params);
-    }, [selectedTag, selectedCategories, hasEventOnly, searchQuery, sortBy, sortOrder, showDifficulty, showBpm, filtersInitialized]);
+    }, [selectedTag, selectedCategories, hasEventOnly, searchQuery, sortBy, sortOrder, showDifficulty, showBpm, selectedDifficulty, selectedDifficulties, difficultyRange, filtersInitialized]);
 
     // Fetch data
     useEffect(() => {
@@ -390,6 +408,9 @@ function MusicContent() {
             result = result.filter((m) => eventMusicIds.has(m.id));
         }
 
+        // A song passes when any selected chart lies within the requested range.
+        result = result.filter((music) => matchesLevel(music.id));
+
         // Apply search query (advanced syntax: space/AND/OR/parens/quotes/fields)
         if (parsedSearch) {
             result = result.filter((m) => matchExpr(parsedSearch, m, matchMusicTerm));
@@ -433,7 +454,7 @@ function MusicContent() {
         });
 
         return result;
-    }, [musics, musicTags, eventMusicIds, selectedTag, selectedCategories, hasEventOnly, sortBy, sortOrder, isShowSpoiler, musicDifficultiesMap, selectedDifficulty, songConstantsMap, musicBpmMap, parsedSearch, matchMusicTerm]);
+    }, [musics, musicTags, eventMusicIds, selectedTag, selectedCategories, hasEventOnly, matchesLevel, sortBy, sortOrder, isShowSpoiler, musicDifficultiesMap, selectedDifficulty, songConstantsMap, musicBpmMap, parsedSearch, matchMusicTerm]);
 
     // musicId -> aliases that explain the current search hit, one per text term
     // that is not already explained by a visible field (title/translation/credits).
@@ -507,10 +528,13 @@ function MusicContent() {
         setSearchQuery("");
         setSortBy("publishedAt");
         setSortOrder("desc");
+        setSelectedDifficulty("master");
+        setDifficultyRange(null);
+        setSelectedDifficulties([]);
         setShowDifficulty(true);
         setShowBpm(true);
         resetDisplayCount();
-    }, [resetDisplayCount]);
+    }, [resetDisplayCount, setDifficultyRange, setSelectedDifficulties]);
 
     // Sort change handler
     const handleSortChange = useCallback(
@@ -551,8 +575,22 @@ function MusicContent() {
                     ]}
                 />
             }
+            selectedDifficulties={selectedDifficulties}
+            onDifficultiesChange={(difficulties) => {
+                levelFilter.changeDifficulties(difficulties);
+                resetDisplayCount();
+            }}
             selectedDifficulty={selectedDifficulty}
-            onDifficultyChange={setSelectedDifficulty}
+            onDifficultyChange={(difficulty) => {
+                setSelectedDifficulty(difficulty);
+                resetDisplayCount();
+            }}
+            difficultyRange={difficultyRange}
+            difficultyBounds={difficultyBounds}
+            onDifficultyRangeChange={(range) => {
+                setDifficultyRange(range);
+                resetDisplayCount();
+            }}
             showDifficulty={showDifficulty}
             onShowDifficultyChange={setShowDifficulty}
             showBpm={showBpm}
@@ -572,6 +610,9 @@ function MusicContent() {
         hasEventOnly,
         searchQuery,
         selectedDifficulty,
+        selectedDifficulties,
+        difficultyRange,
+        difficultyBounds,
         showDifficulty,
         showBpm,
         sortBy,

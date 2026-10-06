@@ -19,6 +19,10 @@ export const zhCNMessages = {
             loading: "加载中",
             showPassword: "显示内容",
             required: "必填",
+            selectSearch: "搜索选项…",
+            selectNoOptions: "没有匹配的选项",
+            selectPlaceholder: "请选择",
+            selectRequired: "请选择一项",
         },
         action: {
             close: "关闭",
@@ -88,7 +92,7 @@ export const zhCNMessages = {
         server: {
             cn: "简中 (CN)",
             jp: "日服 (JP)",
-            tw: "繁中 (TW)",
+            tw: "港澳台服 (HMT)",
             kr: "韩服 (KR)",
             en: "国际服 (EN)",
         },
@@ -208,6 +212,11 @@ export const zhCNMessages = {
             musicTag: "乐曲标签",
             mvType: "MV类型",
             difficulty: "难度选择",
+            difficultyRange: "等级范围",
+            sortDifficulty: "排序及定数显示难度",
+            difficultiesHint: "可多选，未选视为全部；符合任一所选难度即显示。",
+            minimum: "最低",
+            maximum: "最高",
             otherFilters: "其他筛选",
             eventSongsOnly: "仅显示活动歌曲",
             showDifficulty: "显示歌曲难度",
@@ -253,6 +262,11 @@ export const zhCNMessages = {
             character2: "角色 2",
             unlimited: "不限",
             sourceArea: "来源区域",
+        },
+        view: {
+            grid: "网格",
+            table: "表格",
+            label: "视图",
         },
         progress: {
             collectionProgress: "收集进度",
@@ -568,6 +582,13 @@ export const zhCNMessages = {
             },
         },
         virtualSingerWithUnit: "虚拟歌手（{unit}）",
+        serverDescription: {
+            cn: "简中服务器",
+            jp: "日本服务器",
+            tw: "港澳台服 (HMT)",
+            kr: "韩国服务器",
+            en: "国际服务器",
+        },
     },
     layout: {
         nav: {
@@ -772,7 +793,7 @@ export const zhCNMessages = {
             machineTranslationNotice: "部分文本使用机器翻译，可能存在不准确之处。",
             options: {
                 zhCN: "简体中文",
-                zhTW: "繁體中文 (TW)",
+                zhTW: "繁體中文 (HMT)",
                 enUS: "English",
                 jaJP: "日本語",
                 koKR: "한국어",
@@ -780,6 +801,9 @@ export const zhCNMessages = {
         },
         themeColor: {
             sectionTitle: "主题色",
+            expand: "展开主题色",
+            collapse: "收起主题色",
+            current: "当前：{name}",
         },
         backgroundAnimationBudget: {
             sectionTitle: "背景动画",
@@ -825,7 +849,7 @@ export const zhCNMessages = {
             en: "国际服 (EN)",
             jp: "日服 (JP)",
             cn: "国服 (CN)",
-            tw: "台服 (TW)",
+            tw: "港澳台服 (HMT)",
             kr: "韩服 (KR)",
         },
         dataVersion: {
@@ -970,6 +994,9 @@ export const zhCNMessages = {
             onlyCompleted: "仅显示已完成",
             mysekaiTitle: "烤森预览（开发测试）",
             mysekaiLoading: "正在加载烤森预览器...",
+            selectTitle: "下拉选择",
+            selectLabel: "单选选项",
+            selectSearchLabel: "搜索选项",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
@@ -1176,7 +1203,7 @@ export const zhCNMessages = {
             languageBilingualDesc: "请选择界面语言。You can change this anytime in settings.",
             languageOptionSubtitles: {
                 "zh-CN": "简体中文 / Simplified Chinese",
-                "zh-TW": "繁體中文 (TW) / Traditional Chinese",
+                "zh-TW": "繁體中文 (HMT) / Traditional Chinese",
                 "en-US": "English / 英语",
                 "ja-JP": "日本語 / Japanese",
                 "ko-KR": "한국어 / Korean",
@@ -1226,6 +1253,14 @@ export const zhCNMessages = {
                 cards: "最新卡牌",
                 music: "最新歌曲",
                 live: "演唱会",
+            },
+            customize: {
+                open: "自定义主页",
+                title: "自定义主页",
+                description: "选择显示哪些动态区块，并调整它们的顺序。设置会保存在当前设备。",
+                moveUp: "上移",
+                moveDown: "下移",
+                reset: "恢复默认",
             },
             shortcuts: {
                 cards: "卡牌",
@@ -1508,7 +1543,7 @@ export const zhCNMessages = {
                 en: "国际服",
                 jp: "日服",
                 cn: "国服",
-                tw: "台服",
+                tw: "港澳台服 (HMT)",
                 kr: "韩服",
             },
             navigation: {
@@ -2889,7 +2924,7 @@ export const zhCNMessages = {
             regions: {
                 cn: "国服",
                 jp: "日服",
-                tw: "繁中",
+                tw: "港澳台服 (HMT)",
                 kr: "韩服",
                 en: "国际服",
             },

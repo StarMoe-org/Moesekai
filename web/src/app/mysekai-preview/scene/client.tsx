@@ -7,6 +7,7 @@ import MainLayout from "@/components/MainLayout";
 import { Banner, Button, PageContainer, PageHeader, SegmentedButton, TextField } from "@/components/md3";
 import { mdArrowBack } from "@/components/md3/icons";
 import MysekaiScenePreview from "@/components/mysekai-preview/MysekaiScenePreview";
+import { ServerRegionLabel, getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { replaceAssetSourceRegion, type AssetSourceType, useTheme } from "@/contexts/ThemeContext";
 import { type BaijingServer, getUserMysekaiRoomUrl } from "@/lib/mysekai-preview/baijing";
@@ -350,8 +351,8 @@ export default function MysekaiPreviewSceneClient() {
     if (previewState) {
         const isUidPreview = previewState.kind === "uid";
         const title = isUidPreview ? `UID ${previewState.uid}` : t("page.mysekaiPreview.scene.preview.customTitle");
-        const badge = isUidPreview ? `${previewState.server.toUpperCase()} UID` : previewState.sourceType === "file" ? t("page.mysekaiPreview.scene.preview.fileBadge") : t("page.mysekaiPreview.scene.preview.urlBadge");
-        const sourceLabel = isUidPreview ? `${previewState.server.toUpperCase()} · UID ${previewState.uid}` : previewState.sourceLabel;
+        const badge = isUidPreview ? `${getServerDisplayCode(previewState.server)} UID` : previewState.sourceType === "file" ? t("page.mysekaiPreview.scene.preview.fileBadge") : t("page.mysekaiPreview.scene.preview.urlBadge");
+        const sourceLabel = isUidPreview ? `${getServerDisplayCode(previewState.server)} · UID ${previewState.uid}` : previewState.sourceLabel;
         const layoutSource = isUidPreview ? getUserMysekaiRoomUrl(previewState.server, previewState.uid) : previewState.sourceUrl ?? `browser-file:${previewState.sourceLabel}`;
         const headerNote = isUidPreview ? t("page.mysekaiPreview.scene.preview.uidHeaderNote") : t("page.mysekaiPreview.scene.preview.jsonHeaderNote");
 
@@ -363,7 +364,7 @@ export default function MysekaiPreviewSceneClient() {
                             {t("page.mysekaiPreview.scene.preview.backToEntry")}
                         </Button>
                         <div className="max-w-full truncate rounded-md3-md bg-surface-container-high px-4 py-2 type-label-l text-on-surface-variant">
-                            {sourceLabel}
+                            {isUidPreview ? <><ServerRegionLabel server={previewState.server} /> · UID {previewState.uid}</> : sourceLabel}
                         </div>
                     </div>
 
@@ -435,7 +436,7 @@ export default function MysekaiPreviewSceneClient() {
                             <div className="block">
                                 <span className="mb-1 block type-label-l text-on-surface-variant">{t("page.mysekaiPreview.scene.uidForm.server")}</span>
                                 <div className="rounded-md3-sm bg-secondary-container px-3 py-2 text-center type-label-l text-on-secondary-container">
-                                    {t(`common.server.${SCENE_SERVER}`)}
+                                    <ServerRegionLabel server={SCENE_SERVER} />
                                 </div>
                                 <p className="mt-1 type-body-s text-on-surface-variant">{t("page.mysekaiPreview.scene.uidForm.serverJpOnly")}</p>
                             </div>

@@ -5,11 +5,17 @@ import CardItem from "./CardItem";
 import { useI18n } from "@/contexts/I18nContext";
 import { EmptyState } from "@/components/md3";
 import { mdStyle } from "@/components/md3/icons";
+import DatabaseTable from "./DatabaseTable";
+import SekaiCardThumbnail from "./SekaiCardThumbnail";
+import { TranslatedText } from "@/components/common/TranslatedText";
+import { getCharacterName } from "@/lib/i18n";
+import { getCardDefaultTrainedStatus, isTrainableCard } from "@/types/types";
 
 interface CardGridProps {
     cards: ICardInfo[];
     isLoading?: boolean;
     hrefPrefix?: string;
+    view?: "grid" | "table";
 }
 
 // Loading skeleton component
@@ -25,9 +31,9 @@ function CardSkeleton() {
     );
 }
 
-export default function CardGrid({ cards, isLoading = false, hrefPrefix }: CardGridProps) {
+export default function CardGrid({ cards, isLoading = false, hrefPrefix, view = "grid" }: CardGridProps) {
     const [now] = React.useState(() => Date.now());
-    const { t } = useI18n();
+    const { t, formatDate } = useI18n();
 
     if (isLoading) {
         return (
@@ -41,6 +47,30 @@ export default function CardGrid({ cards, isLoading = false, hrefPrefix }: CardG
 
     if (cards.length === 0) {
         return <EmptyState icon={mdStyle} title={t("page.cards.noResult")} description={t("page.cards.noResultHint")} />;
+    }
+
+    if (view === "table") {
+        return <DatabaseTable thumbnailClassName="w-36" rows={cards.map(card => ({
+            id: card.id,
+            href: `${hrefPrefix ?? "/cards"}/${card.id}`,
+            thumbnail: <div className="flex items-start justify-center gap-2">
+                {(getCardDefaultTrainedStatus(card)
+                    ? [true]
+                    : isTrainableCard(card) && card.cardRarityType !== "rarity_birthday"
+                        ? [false, true]
+                        : [false]
+                ).map((trained) => (
+                    <div key={String(trained)} className="w-16 shrink-0 text-center">
+                        <SekaiCardThumbnail card={card} trained={trained} className="w-16" />
+                        <span className="mt-1 block type-label-s text-on-surface-variant">
+                            {t(trained ? "page.cards.afterTrained" : "page.cards.beforeTrained")}
+                        </span>
+                    </div>
+                ))}
+            </div>,
+            name: <TranslatedText original={card.prefix} category="cards" field="prefix" />,
+            details: <><div>{getCharacterName(t, card.characterId)}</div><div>{formatDate(card.releaseAt || card.archivePublishedAt || 0)}</div>{(card.releaseAt || card.archivePublishedAt || 0) > now && <span className="text-tertiary">{t("common.badge.spoiler")}</span>}</>,
+        }))} />;
     }
 
     return (

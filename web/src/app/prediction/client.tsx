@@ -15,11 +15,9 @@ import { IEventInfo, getEventStatus, EVENT_STATUS_DISPLAY } from "@/types/events
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchMasterData } from "@/lib/fetch";
 import { getEventBannerUrl, getEventLogoUrl } from "@/lib/assets";
-import { Banner, EmptyState, ErrorState, Icon, LoadingState, PageContainer, PageHeader, SegmentedButton, cn } from "@/components/md3";
+import { Banner, EmptyState, ErrorState, Icon, LoadingState, PageContainer, PageHeader, Select, SegmentedButton, cn } from "@/components/md3";
 import { mdBarChart, mdInfo } from "@/components/md3/icons";
-
-const PREDICTION_SELECT_CLS =
-    "h-12 w-full px-4 bg-surface border border-outline rounded-md3-xs type-body-l text-on-surface outline-none focus:border-primary focus:shadow-[inset_0_0_0_1px_var(--md-sys-color-primary)] disabled:opacity-38";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 
 interface LegacyTierKline {
     rank: number;
@@ -288,8 +286,8 @@ export default function PredictionClient() {
                     {/* Server Toggle */}
                     <SegmentedButton
                         options={[
-                            { value: "cn" as const, label: t("page.prediction.servers.cn") },
-                            { value: "jp" as const, label: t("page.prediction.servers.jp") },
+                            { value: "cn" as const, label: <ServerRegionLabel server="cn" label={t("page.prediction.servers.cn")} /> },
+                            { value: "jp" as const, label: <ServerRegionLabel server="jp" label={t("page.prediction.servers.jp")} /> },
                         ]}
                         value={server}
                         onValueChange={(v) => handleServerChange(v)}
@@ -298,24 +296,18 @@ export default function PredictionClient() {
 
                     {/* Event Selector */}
                     <div className="flex-1 w-full">
-                        <select
-                            value={selectedEventId || ''}
-                            onChange={(e) => handleEventChange(Number(e.target.value))}
+                        <Select
+                            value={selectedEventId}
+                            onValueChange={handleEventChange}
                             disabled={eventsLoading || events.length === 0}
-                            className={PREDICTION_SELECT_CLS}
-                        >
-                            {eventsLoading ? (
-                                <option>{t("page.prediction.events.loading")}</option>
-                            ) : events.length === 0 ? (
-                                <option>{t("page.prediction.events.empty")}</option>
-                            ) : (
-                                events.map(event => (
-                                    <option key={event.id} value={event.id}>
-                                        {event.is_active ? '🟢 ' : ''}#{event.id} {event.name}
-                                    </option>
-                                ))
-                            )}
-                        </select>
+                            aria-label={t("page.prediction.title")}
+                            options={events.map(event => ({
+                                value: event.id,
+                                label: `${event.is_active ? "🟢 " : ""}#${event.id} ${event.name}`,
+                            }))}
+                            placeholder={eventsLoading ? t("page.prediction.events.loading") : t("page.prediction.events.empty")}
+                            className="w-full"
+                        />
                     </div>
                     {isWorldBloomEvent && (
                         <button

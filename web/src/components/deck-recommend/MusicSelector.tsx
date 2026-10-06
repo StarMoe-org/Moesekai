@@ -18,7 +18,7 @@ import { loadTranslations, TranslationData } from "@/lib/translations";
 import SelectorModal from "./SelectorModal";
 import { Button, Icon, LoadingState } from "@/components/md3";
 import { mdArrowBack, mdArrowForward, mdMusicNote, mdSearch, mdUnfoldMore } from "@/components/md3/icons";
-import MusicFilters from "@/components/music/MusicFilters";
+import MusicFilters, { useMusicLevelFilter, type MusicLevelChart } from "@/components/music/MusicFilters";
 
 /** Sort options for MusicSelector (no level/constant since there's no difficulty context) */
 const SELECTOR_SORT_OPTION_IDS = ["publishedAt", "id"] as const;
@@ -63,6 +63,9 @@ export default function MusicSelector({
     const [now] = useState(() => Date.now());
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
     const [musicTags, setMusicTags] = useState<IMusicTagInfo[]>([]);
+    const [charts, setCharts] = useState<MusicLevelChart[]>([]);
+    const levelFilter = useMusicLevelFilter(charts);
+    const { matches: matchesLevel } = levelFilter;
     const [musicMetas, setMusicMetas] = useState<IMusicMeta[]>([]);
     const [translations, setTranslations] = useState<TranslationData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -106,6 +109,7 @@ export default function MusicSelector({
             fetchMasterDataForServer<IMusicCategoryInfo[]>(server, "musicCategories.json").catch(() => [] as IMusicCategoryInfo[]),
             fetchMasterDataForServer<IMusicTagInfo[]>(server, "musicTags.json"),
             loadTranslations(),
+            fetchMasterDataForServer<MusicLevelChart[]>(server, "musicDifficulties.json"),
         ];
         if (showRecommendations) {
             fetches.push(
@@ -116,13 +120,14 @@ export default function MusicSelector({
             );
         }
         Promise.all(fetches)
-            .then(([musicsData, categoriesData, tagsData, translationsData, metasData]) => {
+            .then(([musicsData, categoriesData, tagsData, translationsData, chartsData, metasData]) => {
                 if (cancelled) return;
                 const rawMusics = musicsData as IMusicInfo[];
                 const rawCats = categoriesData as IMusicCategoryInfo[];
                 const normalizedMusics = normalizeMusicsData(rawMusics, rawCats);
                 setMusics(normalizedMusics);
                 setMusicTags(tagsData as IMusicTagInfo[]);
+                setCharts(chartsData as MusicLevelChart[]);
                 setTranslations(translationsData as TranslationData);
                 if (metasData) setMusicMetas(metasData as IMusicMeta[]);
                 setLoading(false);
@@ -264,7 +269,7 @@ export default function MusicSelector({
 
     // Filter musics
     const filteredMusics = useMemo(() => {
-        let result = [...musics];
+        let result = musics.filter((music) => matchesLevel(music.id));
 
         // Tag filter
         if (selectedTag !== "all") {
@@ -310,7 +315,7 @@ export default function MusicSelector({
         });
 
         return result;
-    }, [musics, musicTags, selectedTag, selectedCategories, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
+    }, [matchesLevel, musics, musicTags, selectedTag, selectedCategories, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
 
     // Get currently selected music object
     const selectedMusic = useMemo(() => {
@@ -504,6 +509,11 @@ export default function MusicSelector({
                         /* Detailed View: Filter + Search + Paginated All Songs */
                         <div className="space-y-6">
                             <MusicFilters
+                                selectedDifficulties={levelFilter.difficulties}
+                                onDifficultiesChange={(next) => { levelFilter.changeDifficulties(next); setDisplayCount(30); }}
+                                difficultyRange={levelFilter.range}
+                                difficultyBounds={levelFilter.bounds}
+                                onDifficultyRangeChange={(next) => { levelFilter.setRange(next); setDisplayCount(30); }}
                                 selectedTag={selectedTag}
                                 onTagChange={(tag) => {
                                     setSelectedTag(tag);
@@ -534,6 +544,7 @@ export default function MusicSelector({
                                 }}
                                 customSortOptions={selectorSortOptions}
                                 onReset={() => {
+                                    levelFilter.reset();
                                     setSelectedTag("all");
                                     setSelectedCategories([]);
                                     setHasEventOnly(false);

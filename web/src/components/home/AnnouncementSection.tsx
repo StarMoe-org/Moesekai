@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import {
@@ -197,7 +198,7 @@ export default function AnnouncementSection() {
                         selected={activeServer === server.id}
                         onClick={() => setActiveServer(server.id)}
                     >
-                        {t(server.labelKey)}
+                        <ServerRegionLabel server={server.id} label={t(server.labelKey)} />
                     </Chip>
                 ))}
             </div>

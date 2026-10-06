@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "@/components/LocalizedLink";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { Chip, Icon, PageHeader, Switch } from "@/components/md3";
 import { mdArrowForward, mdCelebration } from "@/components/md3/icons";
@@ -79,7 +80,7 @@ export default function RankingHeader({
                 <div className="flex max-w-full flex-wrap gap-1.5">
                     {REALTIME_RANKING_REGION_OPTIONS.map((value) => (
                         <Chip key={value} selected={region === value} onClick={() => onRegionChange(value)}>
-                            {t(`page.realtimeRanking.regions.${value}`)}
+                            <ServerRegionLabel server={value} label={t(`page.realtimeRanking.regions.${value}`)} />
                         </Chip>
                     ))}
                 </div>

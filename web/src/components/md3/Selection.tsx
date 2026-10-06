@@ -1,5 +1,5 @@
 "use client";
-import React, { useId } from "react";
+import React, { useId, useRef, useState } from "react";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck, mdClose, mdRemove } from "./icons";
@@ -240,5 +240,97 @@ export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, sho
                 {...rest}
             />
         </span>
+    );
+}
+
+/** Two accessible handles sharing one MD3 range track. */
+export interface RangeSliderProps {
+    value: [number, number];
+    onValueChange: (value: [number, number]) => void;
+    min?: number;
+    max?: number;
+    step?: number;
+    lowerLabel: string;
+    upperLabel: string;
+    disabled?: boolean;
+    formatValue?: (value: number) => string;
+    className?: string;
+}
+
+export function RangeSlider({ value, onValueChange, min = 0, max = 100, step = 1, lowerLabel, upperLabel, disabled, formatValue, className }: RangeSliderProps) {
+    const lowerInput = useRef<HTMLInputElement>(null);
+    const upperInput = useRef<HTMLInputElement>(null);
+    const activeHandle = useRef<0 | 1>(0);
+    const dragging = useRef(false);
+    const [focused, setFocused] = useState<0 | 1 | null>(null);
+    const upperBound = Math.max(min, max);
+    const lower = Math.max(min, Math.min(upperBound, value[0]));
+    const upper = Math.max(lower, Math.min(upperBound, value[1]));
+    const range = upperBound - min;
+    const lowerPct = range ? (lower - min) / range * 100 : 0;
+    const upperPct = range ? (upper - min) / range * 100 : 0;
+    const isDisabled = disabled || range === 0;
+    const update = (index: 0 | 1, next: number) => {
+        const bounded = Math.max(min, Math.min(upperBound, next));
+        onValueChange(index === 0 ? [Math.min(bounded, upper), upper] : [lower, Math.max(bounded, lower)]);
+    };
+    const pointerValue = (event: React.PointerEvent<HTMLDivElement>) => {
+        const rect = event.currentTarget.getBoundingClientRect();
+        const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+        const increment = step > 0 ? step : 1;
+        return Math.max(min, Math.min(upperBound, Number((min + Math.round(fraction * range / increment) * increment).toFixed(6))));
+    };
+    const endDrag = () => { dragging.current = false; };
+    return (
+        <div
+            className={cn("relative flex h-11 w-full touch-none items-center", isDisabled && "opacity-38", className)}
+            data-range-slider="true"
+            onPointerDown={(event) => {
+                if (isDisabled || event.button !== 0) return;
+                event.preventDefault();
+                const next = pointerValue(event);
+                const index: 0 | 1 = lower === upper
+                    ? next < lower ? 0 : next > upper ? 1 : activeHandle.current
+                    : Math.abs(next - lower) <= Math.abs(next - upper) ? 0 : 1;
+                activeHandle.current = index;
+                dragging.current = true;
+                (index === 0 ? lowerInput : upperInput).current?.focus({ preventScroll: true });
+                event.currentTarget.setPointerCapture(event.pointerId);
+                update(index, next);
+            }}
+            onPointerMove={(event) => {
+                if (dragging.current && !isDisabled) update(activeHandle.current, pointerValue(event));
+            }}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            onLostPointerCapture={endDrag}
+        >
+            <span aria-hidden className="pointer-events-none absolute inset-x-0 h-4 rounded-full bg-secondary-container" />
+            <span aria-hidden className="pointer-events-none absolute h-4 rounded-[2px] bg-primary" style={{ left: `${lowerPct}%`, width: `${upperPct - lowerPct}%` }} />
+            {([0, 1] as const).map((index) => (
+                <React.Fragment key={index}>
+                    <input
+                        ref={index === 0 ? lowerInput : upperInput}
+                        type="range"
+                        aria-label={index === 0 ? lowerLabel : upperLabel}
+                        aria-valuetext={formatValue?.(index === 0 ? lower : upper)}
+                        min={index === 0 ? min : lower}
+                        max={index === 0 ? upper : upperBound}
+                        step={step}
+                        value={index === 0 ? lower : upper}
+                        disabled={isDisabled}
+                        onChange={(event) => update(index, Number(event.target.value))}
+                        onFocus={() => { activeHandle.current = index; setFocused(index); }}
+                        onBlur={() => setFocused(null)}
+                        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                    />
+                    <span
+                        aria-hidden
+                        className={cn("pointer-events-none absolute h-11 w-1 -translate-x-1/2 rounded-full bg-primary ring-4 ring-surface", focused === index && "z-10 outline-3 outline-offset-4 outline-secondary")}
+                        style={{ left: `${index === 0 ? lowerPct : upperPct}%` }}
+                    />
+                </React.Fragment>
+            ))}
+        </div>
     );
 }

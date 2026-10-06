@@ -43,7 +43,8 @@ export function NavigationDrawerItem({
     prefetch = false,
     className,
     dataAttrs,
-}: NavItemBaseProps) {
+    density = "standard",
+}: NavItemBaseProps & { density?: "standard" | "compact" }) {
     const path = active && activeIcon ? activeIcon : icon;
     return (
         <LocalizedLink
@@ -52,13 +53,14 @@ export function NavigationDrawerItem({
             onClick={onClick}
             aria-current={active ? "page" : undefined}
             className={cn(
-                "state-layer focus-ring flex h-14 items-center gap-3 rounded-full pl-4 pr-6 type-label-l",
+                "state-layer focus-ring flex items-center gap-3 rounded-full type-label-l",
+                density === "compact" ? "h-12 px-3 lg:h-10 [@media(any-pointer:coarse)]:min-h-12" : "h-14 pl-4 pr-6",
                 active ? "bg-secondary-container text-on-secondary-container" : "text-on-surface-variant",
                 className,
             )}
             {...dataAttrs}
         >
-            {leading ?? (path && <Icon path={path} size={24} />)}
+            {leading ?? (path && <Icon path={path} size={density === "compact" ? 20 : 24} />)}
             <span className="min-w-0 flex-1 truncate">{label}</span>
             {badge && <span className="type-label-l">{badge}</span>}
         </LocalizedLink>

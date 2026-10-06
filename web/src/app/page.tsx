@@ -16,7 +16,7 @@ import { MOESEKAI_BILIBILI_SPACE_URL } from "@/lib/team-links";
 import { useI18n } from "@/contexts/I18nContext";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { getMotionTransition } from "@/lib/motion";
-import { Button, Chip, Icon } from "@/components/md3";
+import { Button, Dialog, Icon, Checkbox } from "@/components/md3";
 import {
   mdAccountCircle,
   mdApparel,
@@ -29,6 +29,8 @@ import {
   mdEvent,
   mdHelp,
   mdHome,
+  mdKeyboardArrowDown,
+  mdKeyboardArrowUp,
   mdLiveTv,
   mdMenuBook,
   mdMusicNote,
@@ -43,14 +45,40 @@ import {
   mdVerified,
 } from "@/components/md3/icons";
 
-type TabType = "event" | "cards" | "music" | "live";
+type HomeSectionId = "event" | "cards" | "music" | "live";
 
-const TABS: { id: TabType; labelKey: string; icon: string }[] = [
+type HomeSectionConfig = {
+  id: HomeSectionId;
+  labelKey: string;
+  icon: string;
+};
+
+const HOME_SECTIONS: HomeSectionConfig[] = [
   { id: "event", labelKey: "page.home.tabs.event", icon: mdEvent },
   { id: "cards", labelKey: "page.home.tabs.cards", icon: mdStyle },
   { id: "music", labelKey: "page.home.tabs.music", icon: mdMusicNote },
   { id: "live", labelKey: "page.home.tabs.live", icon: mdLiveTv },
 ];
+const HOME_LAYOUT_STORAGE_KEY = "home_dynamic_sections";
+
+function getInitialHomeLayout(): { order: HomeSectionId[]; hidden: HomeSectionId[] } {
+  const fallback = { order: HOME_SECTIONS.map((section) => section.id), hidden: [] as HomeSectionId[] };
+  if (typeof window === "undefined") return fallback;
+  try {
+    const saved = localStorage.getItem(HOME_LAYOUT_STORAGE_KEY);
+    if (!saved) return fallback;
+    const parsed = JSON.parse(saved) as { order?: HomeSectionId[]; hidden?: HomeSectionId[] };
+    const validIds = new Set(HOME_SECTIONS.map((section) => section.id));
+    const savedOrder = Array.isArray(parsed?.order) ? [...new Set(parsed.order.filter((id) => validIds.has(id)))] : [];
+    const missingIds = HOME_SECTIONS.map((section) => section.id).filter((id) => !savedOrder.includes(id));
+    return {
+      order: [...savedOrder, ...missingIds],
+      hidden: Array.isArray(parsed.hidden) ? parsed.hidden.filter((id) => validIds.has(id)) : [],
+    };
+  } catch {
+    return fallback;
+  }
+}
 
 // Loading fallback component
 function TabLoading() {
@@ -113,13 +141,36 @@ function SectionHeading({ children, actions }: { children: React.ReactNode; acti
   );
 }
 
+function DynamicHomeSection({ section }: { section: HomeSectionId }) {
+  return (
+    <div className="space-y-3">
+      {section === "event" && <CurrentEventTab />}
+      {section === "cards" && <LatestCardsTab />}
+      {section === "music" && <LatestMusicTab />}
+      {section === "live" && <UpcomingLiveTab />}
+    </div>
+  );
+}
 
 const FRIEND_LINK_CLASS =
   "state-layer focus-ring relative group overflow-hidden rounded-md3-lg h-16 bg-surface-container-low text-on-surface transition-shadow duration-200 hover:shadow-elev-1";
 
 export default function Home() {
   const { t } = useI18n();
-  const [activeTab, setActiveTab] = useState<TabType>("event");
+  const [homeOrder, setHomeOrder] = useState<HomeSectionId[]>(HOME_SECTIONS.map((section) => section.id));
+  const [hiddenHomeSections, setHiddenHomeSections] = useState<HomeSectionId[]>([]);
+  const [layoutReady, setLayoutReady] = useState(false);
+
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      const layout = getInitialHomeLayout();
+      setHomeOrder(layout.order);
+      setHiddenHomeSections(layout.hidden);
+      setLayoutReady(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []);
+  const [isHomeCustomizeOpen, setIsHomeCustomizeOpen] = useState(false);
   const [showSetup, setShowSetup] = useState(false);
   const [showSettingsHint, setShowSettingsHint] = useState(false);
   const prefersReducedMotion = useReducedMotion();
@@ -136,6 +187,15 @@ export default function Home() {
     });
     return () => cancelAnimationFrame(handle);
   }, []);
+
+  useEffect(() => {
+    if (!layoutReady) return;
+    try {
+      localStorage.setItem(HOME_LAYOUT_STORAGE_KEY, JSON.stringify({ order: homeOrder, hidden: hiddenHomeSections }));
+    } catch {
+      // Ignore storage failures (private mode/quota).
+    }
+  }, [homeOrder, hiddenHomeSections, layoutReady]);
 
   useEffect(() => {
     if (!showSettingsHint) return;
@@ -217,37 +277,103 @@ export default function Home() {
           <HeroCarousel />
         </div>
 
-        {/* ─── Latest Tabs ─── */}
+        {/* ─── Dynamic home sections ─── */}
         <div className="w-full max-w-5xl">
-          <SectionHeading>{t("page.home.sections.latest")}</SectionHeading>
+          <SectionHeading
+            actions={
+              <Button variant="tonal" size="xs" icon={mdSettings} onClick={() => setIsHomeCustomizeOpen(true)}>
+                {t("page.home.customize.open")}
+              </Button>
+            }
+          >
+            {t("page.home.sections.latest")}
+          </SectionHeading>
 
-          {/* Tab Navigation */}
-          <div className="flex gap-2 mb-4 overflow-x-auto pb-2" role="tablist">
-            {TABS.map((tab) => (
-              <Chip
-                key={tab.id}
-                role="tab"
-                aria-selected={activeTab === tab.id}
-                selected={activeTab === tab.id}
-                showCheckmark={false}
-                icon={tab.icon}
-                onClick={() => setActiveTab(tab.id)}
-              >
-                {t(tab.labelKey)}
-              </Chip>
-            ))}
-          </div>
-
-          {/* Tab Content */}
-          <div className="text-left">
-            <Suspense fallback={<TabLoading />}>
-              {activeTab === "event" && <CurrentEventTab />}
-              {activeTab === "cards" && <LatestCardsTab />}
-              {activeTab === "music" && <LatestMusicTab />}
-              {activeTab === "live" && <UpcomingLiveTab />}
-            </Suspense>
-          </div>
+          <Suspense fallback={<TabLoading />}>
+            <div className="space-y-6 text-left">
+              {homeOrder.filter((id) => !hiddenHomeSections.includes(id)).map((id) => {
+                const section = HOME_SECTIONS.find((item) => item.id === id);
+                if (!section) return null;
+                return (
+                  <section key={id} aria-labelledby={`home-section-${id}`}>
+                    <div className="mb-3 flex items-center gap-2">
+                      <Icon path={section.icon} size={20} className="text-primary" />
+                      <h3 id={`home-section-${id}`} className="type-title-m text-on-surface">{t(section.labelKey)}</h3>
+                    </div>
+                    <DynamicHomeSection section={id} />
+                  </section>
+                );
+              })}
+            </div>
+          </Suspense>
         </div>
+
+        <Dialog
+          isOpen={isHomeCustomizeOpen}
+          onClose={() => setIsHomeCustomizeOpen(false)}
+          title={t("page.home.customize.title")}
+          size="sm"
+          syncHistory={false}
+        >
+          <p className="mb-4 type-body-m text-on-surface-variant">{t("page.home.customize.description")}</p>
+          <div className="space-y-2">
+            {homeOrder.map((id, index) => {
+              const section = HOME_SECTIONS.find((item) => item.id === id);
+              if (!section) return null;
+              const isHidden = hiddenHomeSections.includes(id);
+              return (
+                <div key={id} className="flex items-center gap-2 rounded-md3-md bg-surface-container-low px-3 py-2">
+                  <Checkbox
+                    checked={!isHidden}
+                    onCheckedChange={(checked) => setHiddenHomeSections((current) => checked ? current.filter((item) => item !== id) : [...current, id])}
+                    label={t(section.labelKey)}
+                    className="min-w-0 flex-1"
+                  />
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => setHomeOrder((current) => {
+                      const next = [...current];
+                      [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                      return next;
+                    })}
+                    className="state-layer focus-ring flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant disabled:opacity-38"
+                    aria-label={t("page.home.customize.moveUp")}
+                  >
+                    <Icon path={mdKeyboardArrowUp} size={20} />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === homeOrder.length - 1}
+                    onClick={() => setHomeOrder((current) => {
+                      const next = [...current];
+                      [next[index], next[index + 1]] = [next[index + 1], next[index]];
+                      return next;
+                    })}
+                    className="state-layer focus-ring flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant disabled:opacity-38"
+                    aria-label={t("page.home.customize.moveDown")}
+                  >
+                    <Icon path={mdKeyboardArrowDown} size={20} />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+          <div className="mt-5 flex justify-end gap-2">
+            <Button
+              variant="text"
+              onClick={() => {
+                setHomeOrder(HOME_SECTIONS.map((section) => section.id));
+                setHiddenHomeSections([]);
+              }}
+            >
+              {t("page.home.customize.reset")}
+            </Button>
+            <Button variant="filled" onClick={() => setIsHomeCustomizeOpen(false)}>
+              {t("common.action.close")}
+            </Button>
+          </div>
+        </Dialog>
 
         {/* ─── Shortcuts ─── */}
         <div className="w-full max-w-5xl">

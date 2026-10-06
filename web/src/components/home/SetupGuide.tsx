@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTheme, type ServerSourceType, type AssetSourceType, type BackgroundAnimationBudget, CHAR_COLORS } from "@/contexts/ThemeContext";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, type UiLocale } from "@/lib/i18n";
 import { MOE_LOGO_URL } from "@/lib/assets";
@@ -406,13 +407,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 <div className="flex flex-col gap-3 pt-2 max-h-[360px] overflow-y-auto pr-1">
                   {(["jp", "cn", "en", "tw", "kr"] as ServerSourceType[]).map((srv) => {
                     const isSelected = serverSource === srv;
-                    const serverDescriptions: Record<ServerSourceType, string> = {
-                      en: "Global Event Schedule & Masterdata",
-                      jp: "JP Event Schedule & Masterdata",
-                      cn: "CN Event Schedule & Masterdata",
-                      tw: "TW Event Schedule & Masterdata",
-                      kr: "KR Event Schedule & Masterdata"
-                    };
+                    const serverDescription = t(`common.serverDescription.${srv}`);
                     return (
                       <button
                         key={srv}
@@ -430,10 +425,10 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                       >
                         <div className="flex flex-col">
                           <span className="type-title-m">
-                            {t("settings.serverSource." + srv)}
+                            <ServerRegionLabel server={srv} size={24} />
                           </span>
                           <span className="type-body-s opacity-75">
-                            {serverDescriptions[srv]}
+                            {serverDescription}
                           </span>
                         </div>
                         {isSelected && (

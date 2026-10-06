@@ -10,6 +10,7 @@ import {
     type ServerType,
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, Button, Chip, CircularProgress, Icon, Surface, TextField } from "@/components/md3";
 import { mdPersonAdd } from "@/components/md3/icons";
@@ -101,7 +102,7 @@ export default function QuickBindForm({
                 />
                 <div>
                     <div className="mb-1.5 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-wrap gap-2">
                         {SERVER_OPTIONS.map((s) => (
                             <Chip
                                 key={s.value}
@@ -111,7 +112,7 @@ export default function QuickBindForm({
                                 disabled={isVerifying}
                                 className="justify-center"
                             >
-                                {t(`common.server.${s.value}`)}
+                                <ServerRegionLabel server={s.value} size={18} />
                             </Chip>
                         ))}
                     </div>

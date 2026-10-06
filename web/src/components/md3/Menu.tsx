@@ -1,6 +1,8 @@
 "use client";
 import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import LocalizedLink from "@/components/LocalizedLink";
+import { usePathname } from "next/navigation";
 import { cn } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck } from "./icons";
@@ -19,6 +21,10 @@ export interface MenuItemDef {
     trailing?: React.ReactNode;
     selected?: boolean;
     disabled?: boolean;
+    /** Render this item as a native localized navigation link. */
+    href?: string;
+    preFetch?: boolean;
+    ariaCurrent?: React.AriaAttributes["aria-current"];
     onSelect?: () => void;
     /** Render a divider before this item. */
     dividerBefore?: boolean;
@@ -41,8 +47,9 @@ export interface MenuProps {
 }
 
 export function Menu({ anchor, items, align = "start", matchAnchorWidth, className }: MenuProps) {
+    const pathname = usePathname();
     const [open, setOpen] = useState(false);
-    const [pos, setPos] = useState<{ top: number; left: number; width: number; flipUp: boolean } | null>(null);
+    const [pos, setPos] = useState<{ top: number; left: number; right: number; width: number; flipUp: boolean } | null>(null);
     const anchorRef = useRef<HTMLButtonElement>(null);
     const [activeKey, setActiveKey] = useState(() => items.find((item) => !item.disabled)?.key);
     const closeMenu = useCallback(() => {
@@ -50,6 +57,12 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
         anchorRef.current?.focus();
     }, []);
     const { overlayRef: menuRef, overlayContext, onFocusCapture, isTopOverlay } = useOverlay(open, closeMenu, { syncHistory: false, modal: false });
+
+    useEffect(() => {
+        // Route changes should never leave a portaled menu open.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setOpen(false);
+    }, [pathname]);
     const menuId = useId();
     const tabStopKey = items.some((item) => item.key === activeKey && !item.disabled) ? activeKey : items.find((item) => !item.disabled)?.key;
 
@@ -59,8 +72,15 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
         const r = el.getBoundingClientRect();
         const spaceBelow = window.innerHeight - r.bottom;
         const flipUp = spaceBelow < 240 && r.top > spaceBelow;
-        setPos({ top: flipUp ? r.top : r.bottom, left: align === "end" ? r.right : r.left, width: r.width, flipUp });
-    }, [align]);
+        const maxMenuWidth = matchAnchorWidth ? Math.max(r.width, 280) : 280;
+        setPos({
+            top: flipUp ? r.top : r.bottom,
+            left: Math.max(8, Math.min(r.left, window.innerWidth - maxMenuWidth - 8)),
+            right: Math.max(8, Math.min(window.innerWidth - r.right, window.innerWidth - maxMenuWidth - 8)),
+            width: r.width,
+            flipUp,
+        });
+    }, [matchAnchorWidth]);
 
     useLayoutEffect(() => {
         if (!open) return;
@@ -101,7 +121,7 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
         }
         if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "Home" && e.key !== "End") return;
         e.preventDefault();
-        const nodes = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([disabled])') ?? []);
+        const nodes = Array.from(menuRef.current?.querySelectorAll<HTMLElement>('[role^="menuitem"]:not([disabled]):not([aria-disabled="true"])') ?? []);
         if (!nodes.length) return;
         const idx = nodes.indexOf(document.activeElement as HTMLElement);
         const next =
@@ -140,7 +160,7 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                             top: pos.flipUp ? undefined : pos.top + 4,
                             bottom: pos.flipUp ? window.innerHeight - pos.top + 4 : undefined,
                             left: align === "start" ? pos.left : undefined,
-                            right: align === "end" ? window.innerWidth - pos.left : undefined,
+                            right: align === "end" ? pos.right : undefined,
                             minWidth: matchAnchorWidth ? pos.width : undefined,
                             maxWidth: matchAnchorWidth ? Math.max(pos.width, 280) : undefined,
                             transformOrigin: pos.flipUp ? "bottom" : "top",
@@ -149,31 +169,66 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                         {items.map((item) => (
                             <React.Fragment key={item.key}>
                                 {item.dividerBefore && <div role="separator" className="my-2 h-px bg-outline-variant" />}
-                                <button
-                                    type="button"
-                                    role={item.selected === undefined ? "menuitem" : "menuitemradio"}
-                                    disabled={item.disabled}
-                                    tabIndex={item.key === tabStopKey ? 0 : -1}
-                                    onFocus={() => setActiveKey(item.key)}
-                                    aria-checked={item.selected === undefined ? undefined : item.selected}
-                                    onClick={() => {
-                                        item.onSelect?.();
-                                        closeMenu();
-                                    }}
-                                    className={cn(
-                                        "state-layer flex h-12 w-full cursor-pointer items-center gap-3 px-3 text-left type-label-l outline-none focus-visible:bg-on-surface/10",
+                                {(() => {
+                                    const content = (
+                                        <>
+                                            {item.icon ? (
+                                                <Icon path={item.icon} size={24} className={item.selected ? "" : "text-on-surface-variant"} />
+                                            ) : item.selected !== undefined ? (
+                                                <span className="w-6">{item.selected && <Icon path={mdCheck} size={24} />}</span>
+                                            ) : null}
+                                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                                            {item.trailing && <span className="text-on-surface-variant">{item.trailing}</span>}
+                                        </>
+                                    );
+                                    const itemClassName = cn(
+                                        "state-layer flex h-12 w-full items-center gap-3 px-3 text-left type-label-l outline-none focus-visible:bg-on-surface/10",
                                         item.selected ? "bg-tertiary-container text-on-tertiary-container" : "text-on-surface",
-                                        item.disabled && "pointer-events-none opacity-38",
-                                    )}
-                                >
-                                    {item.icon ? (
-                                        <Icon path={item.icon} size={24} className={item.selected ? "" : "text-on-surface-variant"} />
-                                    ) : item.selected !== undefined ? (
-                                        <span className="w-6">{item.selected && <Icon path={mdCheck} size={24} />}</span>
-                                    ) : null}
-                                    <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                                    {item.trailing && <span className="text-on-surface-variant">{item.trailing}</span>}
-                                </button>
+                                        item.disabled ? "pointer-events-none opacity-38" : "cursor-pointer",
+                                    );
+                                    const commonProps = {
+                                        role: item.selected === undefined ? "menuitem" : "menuitemradio",
+                                        tabIndex: item.disabled ? -1 : item.key === tabStopKey ? 0 : -1,
+                                        onFocus: () => setActiveKey(item.key),
+                                        "aria-checked": item.selected === undefined ? undefined : item.selected,
+                                    } as const;
+                                    if (item.href) {
+                                        return (
+                                            <LocalizedLink
+                                                href={item.href}
+                                                prefetch={item.preFetch}
+                                                aria-current={item.ariaCurrent}
+                                                aria-disabled={item.disabled || undefined}
+                                                {...commonProps}
+                                                className={itemClassName}
+                                                onClick={(event) => {
+                                                    if (item.disabled) {
+                                                        event.preventDefault();
+                                                        return;
+                                                    }
+                                                    item.onSelect?.();
+                                                    setOpen(false);
+                                                }}
+                                            >
+                                                {content}
+                                            </LocalizedLink>
+                                        );
+                                    }
+                                    return (
+                                        <button
+                                            type="button"
+                                            disabled={item.disabled}
+                                            {...commonProps}
+                                            className={itemClassName}
+                                            onClick={() => {
+                                                item.onSelect?.();
+                                                closeMenu();
+                                            }}
+                                        >
+                                            {content}
+                                        </button>
+                                    );
+                                })()}
                             </React.Fragment>
                         ))}
                     </div>

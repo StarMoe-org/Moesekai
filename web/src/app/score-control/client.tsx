@@ -15,6 +15,7 @@ import EventSelector from "@/components/deck-recommend/EventSelector";
 import CharacterSelector from "@/components/deck-recommend/CharacterSelector";
 import { preloadDeckEngine } from "@/lib/deck-engine/wasm-loader";
 
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -1147,7 +1148,7 @@ export default function ScoreControlClient() {
                                                     : "border border-outline-variant text-on-surface-variant"
                                                     }`}
                                             >
-                                                {t(s.labelKey)}
+                                                <ServerRegionLabel server={s.value} />
                                             </button>
                                         ))}
                                     </div>

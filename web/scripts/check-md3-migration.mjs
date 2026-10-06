@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Guard migrated UI against accidental dependence on the retired theme bridge.
  * Images, charts and game-data colors are outside this check; their fixed color
- * encodings are not theme roles. Mini-games keep separately scoped legacy CSS.
+ * encodings are not theme roles. Multiplayer games keep separately scoped legacy CSS.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -10,7 +10,7 @@ import ts from "typescript";
 
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const sourceRoot = path.join(webRoot, "src");
-const excluded = ["app/guess-who/", "app/guess-jacket/", "app/goods-gacha/", "lib/i18n/messages/"];
+const excluded = ["app/guess-who/multiplayer/", "app/guess-jacket/multiplayer/", "lib/i18n/messages/"];
 const retiredClass = /(?:^|\s)(?:[\w-]+:)*(?:(?:bg|text|border|divide|ring|shadow|outline|from|via|to|fill|stroke)-(?:slate-\d+|miku(?:-dark)?|primary-text)(?:\/[^\s]+)?|(?:ios-glass|glass-card|liquid-glass|island)(?:-[\w-]+)?|material-(?:thin|regular|thick|chrome)|backdrop-blur(?:-[\w-]+)?|dark:[^\s]+|pressable|loading-spinner(?:-[\w-]+)?|type-(?:display|title|body|caption|on-glass))(?=\s|$)/;
 const retiredVariable = /var\(--(?:color-(?:miku(?:-dark|-rgb)?|luka|primary-text)|theme-light|(?:surface|text|border|ring)-(?:base|soft|muted|strong|body)|accent-(?:soft|deep)|glass-[\w-]+|island-[\w-]+|material-[\w-]+)\b/;
 const failures = [];
@@ -55,5 +55,5 @@ if (failures.length) {
     console.error(`MD3 migration guard failed (${failures.length} violations).`);
     process.exitCode = 1;
 } else {
-    console.log(`MD3 migration guard OK (${checked} files; legacy UI limited to the three mini-games).`);
+    console.log(`MD3 migration guard OK (${checked} files; legacy UI limited to the two multiplayer games).`);
 }

@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/LocalizedLink";
+import { ServerRegionIcon } from "@/components/common/ServerRegion";
+import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { resourceCacheCommand, type ResourceCacheState } from "@/lib/moly/resourceCache";
 import { useRuntimeManifest } from "@/lib/moly/useResources";
@@ -79,7 +81,7 @@ export default function ResourceCachePanel({ playerOpen, reloadHref = "/mysekai/
                     </div>
                 </div>
                 <div className="interaction-resource-cache-context">
-                    {snapshots.map(snapshot => <p key={snapshot.id}>{t("page.mysekaiInteractions.cache.snapshot", { region: snapshot.region.toUpperCase(), version: snapshot.version, id: snapshot.id })}</p>)}
+                    {snapshots.map(snapshot => <p key={snapshot.id}><ServerRegionIcon server={snapshot.region} size={16} decorative /> {t("page.mysekaiInteractions.cache.snapshot", { region: t(SERVER_LABEL_KEYS[snapshot.region]), version: snapshot.version, id: snapshot.id })}</p>)}
                     {snapshotId && !snapshots.length && <p>{t("page.mysekaiInteractions.cache.requestedSnapshot", { id: snapshotId })}</p>}
                     <p>{t("page.mysekaiInteractions.cache.origin", { origin })}</p>
                 </div>

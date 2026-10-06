@@ -6,6 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import MainLayout from "@/components/MainLayout";
 import { Banner, Button, Chip, EmptyState, ErrorState, Icon, PageContainer, PageHeader, Surface } from "@/components/md3";
 import { mdArrowForward, mdHome, mdImage, mdRefresh } from "@/components/md3/icons";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
 import {
@@ -43,7 +45,7 @@ function PreviewEmptyState({ server }: { server: BaijingServer }) {
         <div className="rounded-md3-xl bg-surface-container-low">
             <EmptyState
                 icon={mdHome}
-                title={t("page.mysekaiPreview.top.emptyTitle", { server: server.toUpperCase() })}
+                title={t("page.mysekaiPreview.top.emptyTitle", { server: t(SERVER_LABEL_KEYS[server]) })}
                 description={t("page.mysekaiPreview.top.emptyDescription")}
             />
         </div>
@@ -220,10 +222,10 @@ export default function MysekaiPreviewClient() {
                             </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-2">
-                            <span className="px-2 type-label-l text-on-surface-variant">Server</span>
+                            <span className="px-2 type-label-l text-on-surface-variant">{t("common.form.server")}</span>
                             {(["jp", "cn"] as BaijingServer[]).map((item) => (
                                 <Chip key={item} selected={server === item} onClick={() => handleServerChange(item)}>
-                                    {item.toUpperCase()}
+                                    <ServerRegionLabel server={item} />
                                 </Chip>
                             ))}
                             <Button variant="tonal" size="xs" icon={mdRefresh} onClick={() => void loadRankings(server)}>

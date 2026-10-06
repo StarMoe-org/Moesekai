@@ -5,9 +5,12 @@ import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
+import { Button, Icon, IconButton, TextField, LinearProgress, LoadingIndicator, LoadingState, ErrorState } from "@/components/md3";
 import { fetchMasterData } from "@/lib/fetch";
 import { ICardInfo, UNIT_DATA, CHAR_COLORS, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS } from "@/types/types";
 import { getCardFullUrl, getCharacterIconUrl } from "@/lib/assets";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import { mdShare, mdRefresh, mdArrowForward } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 
@@ -491,7 +494,7 @@ function GuessWhoContent() {
                 // Transient feedback
                 const feedbackEl = document.createElement("div");
                 feedbackEl.textContent = t("page.guessWho.single.wrongTimePenalty");
-                feedbackEl.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-500 text-white font-bold px-6 py-3 rounded-full animate-bounce z-[100] shadow-lg text-xl";
+                feedbackEl.className = "fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-error text-on-error font-bold px-6 py-3 rounded-full motion-safe:animate-bounce z-[100] shadow-elev-2 type-title-l";
                 document.body.appendChild(feedbackEl);
                 setTimeout(() => feedbackEl.remove(), 1000);
                 return; // Do NOT end round
@@ -577,7 +580,7 @@ function GuessWhoContent() {
             <MainLayout>
                 <div className="flex h-screen items-center justify-center">
                     <h1 className="sr-only">{t("page.guessWho.title")}</h1>
-                    {t("page.guessWho.common.loading")}
+                    <LoadingState label={t("page.guessWho.common.loading")} />
                 </div>
             </MainLayout>
         );
@@ -599,37 +602,37 @@ function GuessWhoContent() {
             <MainLayout>
                 <div className="min-h-screen">
                     <div className="container mx-auto px-4 py-8 pb-20">
-                        <div className="max-w-4xl mx-auto rounded-3xl overflow-hidden ios-glass-card">
-                            <div className="p-8 text-center border-b border-slate-200/20">
+                        <div className="max-w-4xl mx-auto rounded-md3-xl overflow-hidden bg-surface-container-low text-on-surface">
+                            <div className="p-8 text-center border-b border-outline-variant">
                                 {/* Header */}
-                                <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4 bg-white/10">
-                                    <span className="text-miku text-xs font-bold tracking-widest uppercase">GAME OVER</span>
+                                <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4">
+                                    <span className="text-primary type-label-m type-emphasized">GAME OVER</span>
                                 </div>
-                                <h1 className="text-4xl font-black text-slate-800 dark:text-slate-100 mb-2">{t("page.guessWho.single.challengeComplete")}</h1>
-                                <p className="text-xl text-slate-500 mb-6">{t("page.guessWho.single.finalScore")}</p>
-                                <div className="text-6xl font-black text-miku mb-8 animate-bounce">{currentTotalScore}</div>
+                                <h1 className="type-headline-l type-emphasized text-on-surface mb-2">{t("page.guessWho.single.challengeComplete")}</h1>
+                                <p className="type-title-l text-on-surface-variant mb-6">{t("page.guessWho.single.finalScore")}</p>
+                                <div className="type-display-l type-emphasized text-primary mb-8 motion-safe:animate-bounce">{currentTotalScore}</div>
 
-                                <div className="flex flex-col md:flex-row items-center justify-center gap-8 ios-glass-panel rounded-2xl p-6 mb-8">
-                                    <div className="text-left space-y-2 text-sm text-slate-500">
+                                <div className="flex flex-col md:flex-row items-center justify-center gap-8 bg-surface-container-high rounded-md3-lg p-6 mb-8">
+                                    <div className="text-left space-y-2 type-body-m text-on-surface-variant">
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 w-16">{t("page.guessWho.common.seed")}</span>
-                                            <code className="ios-glass-panel px-2 py-1 rounded border border-slate-200/10 font-mono text-slate-800 dark:text-slate-200">{settings.seed}</code>
+                                            <span className="font-bold text-on-surface w-16">{t("page.guessWho.common.seed")}</span>
+                                            <code className="bg-surface-container-high px-2 py-1 rounded-md3-xs border border-outline-variant font-mono text-on-surface ">{settings.seed}</code>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 w-16">{t("page.guessWho.common.server")}</span>
-                                            <span className="font-bold text-slate-900 dark:text-slate-100">{getServerLabel(settings.server)}</span>
+                                            <span className="font-bold text-on-surface w-16">{t("page.guessWho.common.server")}</span>
+                                            <span className="font-bold text-on-surface "><ServerRegionLabel server={settings.server} label={getServerLabel(settings.server)} /></span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 w-16">{t("page.guessWho.common.difficulty")}</span>
-                                            <span className="capitalize font-bold text-miku">{getDifficultyLabel(settings.difficulty)}</span>
+                                            <span className="font-bold text-on-surface w-16">{t("page.guessWho.common.difficulty")}</span>
+                                            <span className="capitalize font-bold text-primary">{getDifficultyLabel(settings.difficulty)}</span>
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-bold text-slate-700 dark:text-slate-300 w-16">{t("page.guessWho.common.timeLimit")}</span>
-                                            <span className="text-slate-800 dark:text-slate-200">{settings.timeLimit}{t("page.guessWho.common.secondsSuffix")}</span>
+                                            <span className="font-bold text-on-surface w-16">{t("page.guessWho.common.timeLimit")}</span>
+                                            <span className="text-on-surface ">{settings.timeLimit}{t("page.guessWho.common.secondsSuffix")}</span>
                                         </div>
                                         {settings.selectedUnitIds.length > 0 && (
                                             <div className="flex items-start gap-2">
-                                                <span className="font-bold text-slate-700 dark:text-slate-300 w-16 shrink-0">{t("page.guessWho.common.selectedUnits")}</span>
+                                                <span className="font-bold text-on-surface w-16 shrink-0">{t("page.guessWho.common.selectedUnits")}</span>
                                                 <div className="flex flex-wrap gap-1">
                                                     {settings.selectedUnitIds.map(uid => (
                                                         <Image key={uid} src={`/data/icon/${UNIT_ICON_FILES[uid]}`} width={20} height={20} alt={uid} className="w-5 h-5 object-contain" unoptimized />
@@ -639,61 +642,61 @@ function GuessWhoContent() {
                                         )}
 
                                         {settings.difficulty === "extreme" && (
-                                            <div className="text-xs text-red-500 font-bold mt-2 pt-2 border-t border-slate-200/20">
+                                            <div className="type-label-m text-error font-bold mt-2 pt-2 border-t border-outline-variant">
                                                 {t("page.guessWho.common.distortions.extremeSummary")}
                                             </div>
                                         )}
                                     </div>
                                     <div className="flex flex-col items-center gap-2">
-                                        <div className="w-[120px] h-[120px] bg-white p-2 rounded-xl shadow-sm border border-slate-200/50">
+                                        <div data-theme="light" data-seed="21" className="w-[120px] h-[120px] bg-surface-container-lowest p-2 rounded-md3-md shadow-elev-1 border border-outline-variant">
                                             <img src={qrCodeUrl} alt="Share QR Code" className="w-full h-full object-contain" />
                                         </div>
-                                        <span className="text-xs text-slate-400 font-bold uppercase tracking-wide">{t("page.guessWho.single.scanToChallenge")}</span>
+                                        <span className="type-label-m text-on-surface-variant type-emphasized">{t("page.guessWho.single.scanToChallenge")}</span>
                                     </div>
                                 </div>
 
-                                <div className="flex justify-center gap-4">
-                                    <button onClick={copyShareLink} className="px-6 py-3 ios-glass-btn text-slate-700 dark:text-slate-200 rounded-xl font-bold hover:bg-white/10 transition-all flex items-center gap-2 shadow-sm">
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                                <div className="flex flex-wrap justify-center gap-4">
+                                    <Button onClick={copyShareLink} variant="tonal" size="m" className="max-w-full">
+                                        <Icon path={mdShare} size={20} />
                                         {t("page.guessWho.single.copyLink")}
-                                    </button>
-                                    <button onClick={() => { setSettings(prev => ({ ...prev, seed: Math.random().toString(36).substring(7) })); setGameState("setup"); }} className="px-6 py-3 ios-glass-btn ios-glass-btn-primary text-white rounded-xl font-bold shadow-lg shadow-miku/30">
+                                    </Button>
+                                    <Button onClick={() => { setSettings(prev => ({ ...prev, seed: Math.random().toString(36).substring(7) })); setGameState("setup"); }} variant="filled" size="m" className="">
                                         {t("page.guessWho.single.playAgainNewSeed")}
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
 
                             {/* Results Grid */}
-                            <div className="p-8 bg-slate-50/10">
+                            <div className="p-8 bg-surface-container">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
                                     {currentResults.map((res, idx) => (
-                                        <Link href={`/cards/${res.card.id}`} key={idx} className={`relative block p-4 rounded-xl border flex gap-4 overflow-hidden transition-transform hover:-translate-y-1 hover:shadow-md ${res.isCorrect ? "bg-green-50/90 dark:bg-black/50 border-green-200" : "bg-red-50/90 dark:bg-black/50 border-red-200"}`}>
+                                        <Link href={`/cards/${res.card.id}`} key={idx} className={`state-layer focus-ring relative block p-4 rounded-md3-md border flex gap-4 overflow-hidden transition-transform  hover:shadow-elev-2 ${res.isCorrect ? "bg-primary-container  border-primary/30" : "bg-error-container  border-error/30"}`}>
                                             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
                                                 <CanvasImage image={activeImagesRef.current[res.round]} objectFit="cover" />
                                             </div>
                                             <div className="relative z-10 flex flex-col gap-2 w-full">
                                                 <div className="flex gap-4 w-full">
                                                     <div className="w-16 h-16 relative shrink-0">
-                                                        <div className="absolute inset-0 rounded-lg overflow-hidden shadow-sm ring-1 ring-black/10">
+                                                        <div className="absolute inset-0 rounded-md3-sm overflow-hidden shadow-elev-1 ring-1 ring-outline-variant">
                                                             <Image src={getCharacterIconUrl(res.card.characterId)} alt="char" fill className="object-cover" />
                                                         </div>
                                                     </div>
                                                     <div className="flex-1 min-w-0">
-                                                        <div className="text-xs text-slate-500 font-bold uppercase tracking-wide mb-0.5">Round {res.round + 1}</div>
-                                                        <div className={`font-black text-lg leading-tight mb-1 ${res.isCorrect ? "text-green-700" : "text-red-700"}`}>
+                                                        <div className="type-label-m text-on-surface-variant type-emphasized mb-0.5">Round {res.round + 1}</div>
+                                                        <div className={`type-emphasized type-title-m leading-tight mb-1 ${res.isCorrect ? "text-on-primary-container" : "text-on-error-container"}`}>
                                                             {res.isCorrect ? t("page.guessWho.common.correct") : t("page.guessWho.common.wrong")}
                                                         </div>
-                                                        {!res.isCorrect && <div className="text-xs text-red-600 font-bold bg-white/50 inline-block px-1 rounded block w-fit mb-1">{t("page.guessWho.common.selectedGuess", { name: res.userGuess ? getCharacterName(t, res.userGuess) : t("page.guessWho.common.timeout") })}</div>}
-                                                        <div className="text-xs text-slate-600 truncate flex items-center gap-1">
+                                                        {!res.isCorrect && <div className="type-label-m text-error font-bold bg-surface-container-lowest inline-block px-1 rounded-md3-xs block w-fit mb-1">{t("page.guessWho.common.selectedGuess", { name: res.userGuess ? getCharacterName(t, res.userGuess) : t("page.guessWho.common.timeout") })}</div>}
+                                                        <div className="type-label-m text-on-surface-variant truncate flex items-center gap-1">
                                                             <span className="font-bold shrink-0">{getCharacterName(t, res.card.characterId)}</span>
-                                                            <span className="w-1 h-1 rounded-full bg-slate-300 shrink-0"></span>
+                                                            <span className="w-1 h-1 rounded-full bg-outline shrink-0"></span>
                                                             <span className="opacity-80 truncate">{res.card.prefix}</span>
                                                         </div>
                                                     </div>
                                                     <div className="flex flex-col items-end shrink-0">
-                                                        <div className="text-lg font-bold text-slate-700">+{res.score}</div>
+                                                        <div className="type-title-m font-bold text-on-surface">+{res.score}</div>
                                                         {res.multiplier > 1 && (
-                                                            <div className="text-xs font-bold text-miku bg-miku/10 px-1.5 rounded">
+                                                            <div className="type-label-m font-bold text-primary bg-primary-container px-1.5 rounded-md3-xs">
                                                                 x{res.multiplier.toFixed(1)} Combo
                                                             </div>
                                                         )}
@@ -702,7 +705,7 @@ function GuessWhoContent() {
                                                 {res.distortions && res.distortions.length > 0 && (
                                                     <div className="flex flex-wrap justify-end gap-1 px-1">
                                                         {res.distortions.map((d, i) => (
-                                                            <span key={i} className="text-[10px] px-1.5 py-0.5 bg-slate-800/80 text-white rounded font-bold shadow-sm whitespace-nowrap">
+                                                            <span key={i} className="type-label-s px-1.5 py-0.5 bg-inverse-surface text-inverse-on-surface rounded-md3-xs font-bold shadow-elev-1 whitespace-nowrap">
                                                                 {t(`page.guessWho.common.distortions.${DISTORTION_LABEL_KEYS[d.type]}`)}
                                                             </span>
                                                         ))}
@@ -736,7 +739,7 @@ function GuessWhoContent() {
 
 export default function GuessWhoClient() {
     return (
-        <Suspense fallback={<div className="flex h-screen items-center justify-center">Loading...</div>}>
+        <Suspense fallback={<LoadingState />}>
             <GuessWhoContent />
         </Suspense>
     );
@@ -794,31 +797,31 @@ function GuessWhoClientPlayingAndSetup({
                     <div className="container mx-auto px-4 py-4 flex flex-col min-h-screen relative">
                         {/* Feedback Overlay */}
                         {showFeedback && feedbackResult && currentCanvasImage && typeof document !== "undefined" && createPortal(
-                            <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-black/90 cursor-pointer animate-in fade-in duration-200" onClick={handleNextRound}>
+                            <div className="fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-inverse-surface text-inverse-on-surface cursor-pointer animate-in fade-in duration-200" onClick={handleNextRound}>
                                 <div className="relative w-full max-w-lg aspect-[4/3] sm:aspect-auto sm:h-[70vh]">
                                     <CanvasImage image={currentCanvasImage} objectFit="contain" />
                                 </div>
-                                <div className={`mt-8 px-8 py-4 rounded-full font-black text-3xl animate-bounce ${feedbackResult.isCorrect ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}>
+                                <div className={`mt-8 px-8 py-4 rounded-full type-emphasized type-headline-m motion-safe:animate-bounce ${feedbackResult.isCorrect ? "bg-primary text-on-primary" : "bg-error text-on-error"}`}>
                                     {feedbackResult.isCorrect ? t("page.guessWho.single.feedbackCorrect") : t("page.guessWho.single.feedbackWrong")}
                                 </div>
-                                <div className="mt-4 text-center text-white">
-                                    <div className="text-2xl font-bold mb-1">{getCharacterLabel(feedbackResult.card.characterId)}</div>
-                                    <div className="text-slate-300">{feedbackResult.card.prefix}</div>
+                                <div className="mt-4 text-center text-inverse-on-surface">
+                                    <div className="type-headline-s font-bold mb-1">{getCharacterLabel(feedbackResult.card.characterId)}</div>
+                                    <div className="text-inverse-on-surface">{feedbackResult.card.prefix}</div>
                                 </div>
-                                <div className="mt-8 text-slate-400 text-sm animate-pulse">{t("page.guessWho.single.clickContinue", { seconds: FEEDBACK_DURATION / 1000 })}</div>
+                                <div className="mt-8 text-inverse-on-surface type-body-m motion-safe:animate-pulse">{t("page.guessWho.single.clickContinue", { seconds: FEEDBACK_DURATION / 1000 })}</div>
                             </div>,
                             document.body
                         )}
 
-                        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-4 shadow-sm mb-6">
+                        <div className="bg-surface-container rounded-md3-lg p-4 shadow-elev-1 mb-6">
                             <div className="flex justify-between items-start mb-4">
                                 <div>
-                                    <div className="text-xl font-bold text-slate-700">Round {currentRound + 1} / {ROUNDS_PER_GAME}</div>
-                                    <div className="text-xs text-slate-400 font-mono mt-1">Seed: {settings.seed}</div>
+                                    <div className="type-title-l font-bold text-on-surface">Round {currentRound + 1} / {ROUNDS_PER_GAME}</div>
+                                    <div className="type-label-m text-on-surface-variant font-mono mt-1">Seed: {settings.seed}</div>
                                 </div>
                                 <div className="text-right">
-                                    <div className="text-2xl font-black text-slate-800">{currentTotalScore} <span className="text-sm text-slate-400 font-normal">pts</span></div>
-                                    {isRoundActive && <div className="text-sm font-bold text-miku animate-pulse">+{potentialScore}</div>}
+                                    <div className="type-headline-s type-emphasized text-on-surface">{currentTotalScore} <span className="type-body-m text-on-surface-variant font-normal">pts</span></div>
+                                    {isRoundActive && <div className="type-body-m font-bold text-primary motion-safe:animate-pulse">+{potentialScore}</div>}
                                 </div>
                             </div>
 
@@ -826,53 +829,53 @@ function GuessWhoClientPlayingAndSetup({
                             <div className="flex justify-between items-center mb-2 px-1">
                                 <div className="flex items-center gap-1 h-6">
                                     {multiplier > 1 && (
-                                        <div className="flex items-center gap-1 bg-yellow-400 text-white px-2 py-0.5 rounded-full text-xs font-bold shadow-sm animate-pulse">
+                                        <div className="flex items-center gap-1 bg-tertiary-container text-on-tertiary-container px-2 py-0.5 rounded-full type-label-m font-bold shadow-elev-1 motion-safe:animate-pulse">
                                             <span>COMBO x{multiplier.toFixed(1)}</span>
-                                            <span className="text-[10px] opacity-80">{t("page.guessWho.single.streakLabel", { combo })}</span>
+                                            <span className="type-label-s opacity-80">{t("page.guessWho.single.streakLabel", { combo })}</span>
                                         </div>
                                     )}
                                 </div>
                                 <div className="flex items-center gap-1">
                                     {[...Array(MAX_STRIKES_PER_ROUND)].map((_, i) => (
-                                        <div key={i} className={`w-3 h-3 rounded-full transition-colors ${i < (MAX_STRIKES_PER_ROUND - strikes) ? "bg-red-500" : "bg-slate-200"}`} />
+                                        <div key={i} className={`w-3 h-3 rounded-full transition-colors ${i < (MAX_STRIKES_PER_ROUND - strikes) ? "bg-error" : "bg-surface-container-highest"}`} />
                                     ))}
                                 </div>
                             </div>
 
-                            <div className="relative h-6 w-full bg-slate-200 rounded-full overflow-hidden">
-                                <div className="h-full bg-miku transition-all duration-100 ease-linear" style={{ width: `${(timeLeft / settings.timeLimit) * 100}%` }} />
-                                <div className="absolute inset-0 flex items-center justify-center text-xs font-bold text-white drop-shadow-md">{formatTime(timeLeft)}</div>
+                            <div className="space-y-2">
+                                <div className="text-center type-label-l text-on-surface tabular-nums">{formatTime(timeLeft)}</div>
+                                <LinearProgress value={timeLeft / settings.timeLimit} aria-label={t("page.guessWho.common.timeLimit")} />
                             </div>
                         </div>
 
                         <div className="flex-1 flex flex-col items-center justify-start gap-8">
                             <div className="relative">
-                                <div className="relative rounded-2xl overflow-hidden shadow-2xl ring-4 ring-white bg-slate-100 shrink-0" style={{ width: 300, height: 300 }}>
+                                <div className="relative rounded-md3-lg overflow-hidden shadow-elev-3 ring-4 ring-outline-variant bg-surface-container-high shrink-0" style={{ width: 300, height: 300 }}>
                                     <canvas ref={canvasRef} width={300} height={300} className="w-full h-full" />
                                     {isRoundActive && currentDistortions.length > 0 && (
                                         <div className="absolute top-2 right-2 flex flex-col gap-1 items-end pointer-events-none">
                                             {currentDistortions.map((d: ActiveDistortion, i: number) => (
-                                                <span key={i} className="px-2 py-1 bg-red-500 text-white text-xs font-bold rounded shadow-sm opacity-90">
+                                                <span key={i} className="px-2 py-1 bg-error text-on-error type-label-m font-bold rounded-md3-xs shadow-elev-1 opacity-90">
                                                     {t(`page.guessWho.common.distortions.${DISTORTION_LABEL_KEYS[d.type]}`)}
                                                 </span>
                                             ))}
                                         </div>
                                     )}
                                     {!isRoundActive && !showFeedback && (
-                                        <div className="absolute inset-0 flex items-center justify-center bg-black/50 text-white font-bold backdrop-blur-sm">
-                                            {t("page.guessWho.single.loadingImage")}
+                                        <div className="absolute inset-0 flex items-center justify-center bg-scrim/60 text-inverse-on-surface font-bold ">
+                                            <LoadingIndicator contained aria-label={t("page.guessWho.single.loadingImage")} />
                                         </div>
                                     )}
                                 </div>
                             </div>
 
-                            <div className="w-full max-w-5xl flex flex-wrap justify-center gap-2 sm:gap-3 p-4 bg-white/80 backdrop-blur-md rounded-3xl shadow-sm transition-opacity">
+                            <div className="w-full max-w-5xl flex flex-wrap justify-center gap-2 sm:gap-3 p-4 bg-surface-container rounded-md3-xl shadow-elev-1 transition-opacity">
                                 {availableCharacters.map((id) => {
                                     const name = getCharacterLabel(id);
                                     const idStr = String(id);
                                     const color = CHAR_COLORS[idStr];
                                     return (
-                                        <button key={id} onClick={() => isRoundActive && handleGuess(id)} disabled={!isRoundActive} className="w-10 h-10 sm:w-16 sm:h-16 rounded-xl overflow-hidden relative group transition-transform active:scale-95 hover:scale-105 disabled:opacity-50 disabled:scale-100 ring-2 ring-transparent hover:ring-miku shadow-sm" title={name}>
+                                        <button key={id} onClick={() => isRoundActive && handleGuess(id)} disabled={!isRoundActive} className="state-layer focus-ring w-10 h-10 sm:w-16 sm:h-16 rounded-md3-md overflow-hidden relative group transition-transform disabled:opacity-50 ring-2 ring-transparent hover:ring-primary shadow-elev-1" title={name}>
                                             <Image src={getCharacterIconUrl(id)} alt={name} fill className="object-cover" unoptimized />
                                             <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity" style={{ backgroundColor: color }} />
                                         </button>
@@ -892,66 +895,61 @@ function GuessWhoClientPlayingAndSetup({
             <div className="min-h-screen pt-8 pb-20">
                 <div className="container mx-auto px-4 max-w-2xl">
                     <div className="text-center mb-10">
-                        <div className="inline-flex items-center gap-2 px-4 py-2 border border-miku/30 bg-miku/5 rounded-full mb-4 bg-white/10 backdrop-blur-sm shadow-sm">
-                            <span className="text-miku text-xs font-bold tracking-widest uppercase">{t("page.guessWho.badge")}</span>
+                        <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4 shadow-elev-1">
+                            <span className="text-primary type-label-m type-emphasized">{t("page.guessWho.badge")}</span>
                         </div>
-                        <h1 className="text-4xl font-black text-slate-800 dark:text-slate-100 mb-2 drop-shadow-sm">{t("page.guessWho.title")} <span className="text-miku">?</span></h1>
-                        <p className="text-slate-500 font-medium">{t("page.guessWho.description")}</p>
+                        <h1 className="type-headline-l type-emphasized text-on-surface mb-2 ">{t("page.guessWho.title")} <span className="text-primary">?</span></h1>
+                        <p className="text-on-surface-variant font-medium">{t("page.guessWho.description")}</p>
                         <a
                             href="/guess-who/multiplayer/"
-                            className="inline-flex items-center gap-2 mt-4 px-6 py-2.5 ios-glass-btn ios-glass-btn-primary text-white rounded-full font-bold text-sm shadow-lg hover:shadow-xl transition-all hover:-translate-y-0.5"
+                            className="state-layer focus-ring inline-flex items-center gap-2 mt-4 px-6 py-2.5 bg-primary text-on-primary text-on-primary rounded-full font-bold type-body-m shadow-elev-2 hover:shadow-elev-3 transition-all "
                         >
                             <span>{t("page.guessWho.single.multiplayerMode")}</span>
-                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+                            <Icon path={mdArrowForward} size={20} />
                         </a>
                     </div>
 
-                    <div className="ios-glass-card p-4 sm:p-8 rounded-3xl space-y-6 sm:space-y-8">
+                    <div className="bg-surface-container-low text-on-surface p-4 sm:p-8 rounded-md3-xl space-y-6 sm:space-y-8">
                         <div className="flex flex-col sm:flex-row gap-4">
                             <div className="flex-1">
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2">{t("page.guessWho.common.seed")}</label>
+                                <label className="block type-body-m font-bold text-on-surface mb-2">{t("page.guessWho.common.seed")}</label>
                                 <div className="flex gap-2">
-                                    <input type="text" value={settings.seed} onChange={(e) => setSettings({ ...settings, seed: e.target.value })} className="flex-1 px-4 py-2 ios-glass-input rounded-xl focus:outline-none font-mono text-sm" />
-                                    <button onClick={() => setSettings({ ...settings, seed: Math.random().toString(36).substring(7) })} className="px-3 py-2 text-slate-400 hover:text-miku hover:bg-white/10 rounded-lg transition-colors" title={t("page.guessWho.single.regenerateSeed")}>
-                                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                    </button>
+                                    <TextField type="text" value={settings.seed} onChange={(e) => setSettings({ ...settings, seed: e.target.value })} label={t("page.guessWho.common.seed")} containerClassName="min-w-0 flex-1" className="font-mono" />
+                                    <IconButton onClick={() => setSettings({ ...settings, seed: Math.random().toString(36).substring(7) })} variant="tonal" icon={mdRefresh} label={t("page.guessWho.single.regenerateSeed")} />
                                 </div>
                             </div>
                             <div className="flex items-end w-full sm:w-auto">
-                                <button onClick={copyShareLink} className="w-full sm:w-auto justify-center px-4 py-2.5 ios-glass-btn text-slate-600 dark:text-slate-300 rounded-xl font-bold hover:bg-white/10 transition-colors flex items-center gap-2 h-[42px]">
-                                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" /></svg>
+                                <Button onClick={copyShareLink} variant="tonal" size="m" className="max-w-full">
+                                    <Icon path={mdShare} size={20} />
                                     {t("page.guessWho.single.share")}
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">{t("page.guessWho.single.difficultySetting")}</label>
+                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.difficultySetting")}</label>
                             <div className="grid grid-cols-4 gap-2">
                                 {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(d => (
-                                    <button
+                                    <Button
                                         key={d}
                                         onClick={() => setSettings({ ...settings, difficulty: d })}
-                                        className={`py-3 rounded-xl font-bold capitalize transition-all text-sm ${settings.difficulty === d
-                                            ? `${d === 'extreme' ? 'bg-red-500 ring-red-300' : 'bg-miku ring-miku/30'} text-white shadow-md ring-2`
-                                            : "ios-glass-tab text-slate-500 hover:bg-white/60"
-                                            }`}
+                                        variant="tonal" selected={settings.difficulty === d} className="min-w-0 px-2 "
                                     >
                                         {t(`page.guessWho.common.difficultyLabels.${d}`)}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
 
                         <div>
-                            <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">{t("page.guessWho.single.raritySetting")}</label>
+                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.raritySetting")}</label>
                             <div className="flex flex-wrap gap-2">
                                 {RARITY_OPTIONS.map(({ id, num }) => {
                                     const isSelected = settings.selectedRarities.includes(id);
                                     return (
-                                        <button key={id} onClick={() => handleRarityToggle(id)} className={`h-11 px-3 rounded-xl transition-all flex items-center justify-center gap-0.5 ${isSelected ? "ring-2 ring-miku shadow-sm ios-glass-tab-active text-white border-transparent" : "ios-glass-tab text-slate-400"}`}>
+                                        <Button key={id} onClick={() => handleRarityToggle(id)} variant="tonal" selected={isSelected} className="min-w-0 px-2 ">
                                             {id === "rarity_birthday" ? (<div className="w-5 h-5 relative"><Image src="/data/icon/birthday.webp" alt="Birthday" fill className="object-contain" unoptimized /></div>) : (Array.from({ length: num }).map((_, i) => (<div key={i} className="w-4 h-4 relative"><Image src="/data/icon/star.webp" alt="Star" fill className="object-contain" unoptimized /></div>)))}
-                                        </button>
+                                        </Button>
                                     );
                                 })}
                             </div>
@@ -959,54 +957,49 @@ function GuessWhoClientPlayingAndSetup({
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">{t("page.guessWho.single.serverScope")}</label>
-                                <div className="flex gap-2 p-1 ios-glass-panel rounded-lg">
+                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.serverScope")}</label>
+                                <div className="flex gap-2 p-1 bg-surface-container-high rounded-md3-sm">
                                     {(["jp", "cn"] as ServerScope[]).map(s => (
-                                        <button key={s} onClick={() => setSettings({ ...settings, server: s })} className={`flex-1 py-2 rounded-md text-sm font-bold transition-all ${settings.server === s ? "ios-glass-tab-active text-miku shadow-sm" : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"}`}>
-                                            {t(`page.guessWho.common.serverLabels.${s}`)}
-                                        </button>
+                                        <Button key={s} onClick={() => setSettings({ ...settings, server: s })} variant="tonal" selected={settings.server === s} className="min-w-0 px-2 flex-1">
+                                            <ServerRegionLabel server={s} label={t(`page.guessWho.common.serverLabels.${s}`)} />
+                                        </Button>
                                     ))}
                                 </div>
                             </div>
                             <div>
-                                <label className="block text-sm font-bold text-slate-700 dark:text-slate-300 mb-3">{t("page.guessWho.single.guessTime")}</label>
-                                <input type="number" value={settings.timeLimit} onChange={(e) => setSettings({ ...settings, timeLimit: Math.max(3, Math.min(120, Number(e.target.value))) })} className="w-full px-4 py-2 ios-glass-input rounded-xl focus:outline-none font-mono text-center" />
+                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.guessTime")}</label>
+                                <TextField type="number" value={settings.timeLimit} onChange={(e) => setSettings({ ...settings, timeLimit: Math.max(3, Math.min(120, Number(e.target.value))) })} label={t("page.guessWho.single.guessTime")} containerClassName="w-full" className="font-mono" />
                             </div>
                         </div>
                     </div>
 
-                    <div className="border-t border-slate-200/20 pt-6">
+                    <div className="border-t border-outline-variant pt-6">
                         <div className="flex justify-between items-center mb-4">
-                            <label className="text-sm font-bold text-slate-700 dark:text-slate-300">{t("page.guessWho.single.characterFilter")}</label>
-                            <button onClick={() => setSettings({ ...settings, selectedUnitIds: [] })} className="text-xs text-miku hover:underline">{t("page.guessWho.single.resetFilter")}</button>
+                            <label className="type-body-m font-bold text-on-surface ">{t("page.guessWho.single.characterFilter")}</label>
+                            <button onClick={() => setSettings({ ...settings, selectedUnitIds: [] })} className="state-layer focus-ring type-label-m text-primary hover:underline">{t("page.guessWho.single.resetFilter")}</button>
                         </div>
                         <div className="flex flex-wrap gap-3 mb-4 justify-center">
                             {UNIT_DATA.map(unit => {
                                 const unitLabel = t(UNIT_ID_LABEL_KEYS[unit.id] ?? `common.units.${unit.id}`);
                                 return (
-                                    <button key={unit.id} onClick={() => handleUnitToggle(unit.id)} className={`transition-all p-1 rounded-full ${settings.selectedUnitIds.includes(unit.id) ? "bg-white/20 ring-2 ring-miku scale-110" : "opacity-60 hover:opacity-100 grayscale hover:grayscale-0 hover:bg-white/10"}`}>
+                                    <button aria-pressed={settings.selectedUnitIds.includes(unit.id)} key={unit.id} onClick={() => handleUnitToggle(unit.id)} className={`state-layer focus-ring transition-all p-1 rounded-full ${settings.selectedUnitIds.includes(unit.id) ? "bg-secondary-container ring-2 ring-primary " : "opacity-60 hover:opacity-100 grayscale hover:grayscale-0 hover:bg-surface-container-high"}`}>
                                         <Image src={`/data/icon/${UNIT_ICON_FILES[unit.id]}`} alt={unitLabel} width={40} height={40} className="w-10 h-10 object-contain" unoptimized />
                                     </button>
                                 );
                             })}
                         </div>
-                        <div className="text-xs text-slate-400 text-center">{settings.selectedUnitIds.length > 0 ? t("page.guessWho.single.selectedCharacters", { count: availableCharacters.length }) : t("page.guessWho.single.selectedAllCharacters")}</div>
+                        <div className="type-label-m text-on-surface-variant text-center">{settings.selectedUnitIds.length > 0 ? t("page.guessWho.single.selectedCharacters", { count: availableCharacters.length }) : t("page.guessWho.single.selectedAllCharacters")}</div>
                     </div>
 
                     {loadError && (
-                        <div className="text-center p-4 ios-glass-card border border-red-500/20 bg-red-500/5 rounded-2xl">
-                            <p className="text-red-600 text-sm font-medium mb-2">{loadError}</p>
-                            <button onClick={loadCards} className="px-4 py-2 bg-red-500 text-white rounded-xl text-sm font-bold hover:bg-red-600 transition-colors">
-                                {t("page.guessWho.common.reload")}
-                            </button>
-                        </div>
+                        <ErrorState className="mt-4" title={loadError} retryLabel={t("page.guessWho.common.reload")} onRetry={loadCards} />
                     )}
 
-                    <button onClick={startGame} disabled={isLoading || !!loadError} className={`w-full py-4 ios-glass-btn ios-glass-btn-primary text-white rounded-2xl font-black text-xl shadow-lg shadow-miku/20 active:scale-[0.99] transition-all ${(isLoading || loadError) ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                    <Button onClick={startGame} disabled={isLoading || !!loadError} variant="filled" size="m" className="mt-6 w-full">
                         {isLoading ? t("page.guessWho.common.loading") : t("page.guessWho.single.startChallenge")}
-                    </button>
+                    </Button>
 
-                    <Link href="/guess-jacket" className="mt-3 block text-center text-sm text-slate-500 hover:text-miku transition-colors">
+                    <Link href="/guess-jacket" className="state-layer focus-ring mt-3 block text-center type-body-m text-on-surface-variant hover:text-primary transition-colors">
                         {t("page.guessWho.single.goGuessJacket")}
                     </Link>
                 </div>

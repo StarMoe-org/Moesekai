@@ -5,6 +5,12 @@ import { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { EmptyState } from "@/components/md3";
 import { mdCalendarMonth } from "@/components/md3/icons";
+import DatabaseTable from "@/components/cards/DatabaseTable";
+import Image from "next/image";
+import { useTheme } from "@/contexts/ThemeContext";
+import { getEventStoryBannerUrl, getEventLogoUrl } from "@/lib/assets";
+import { TranslatedText } from "@/components/common/TranslatedText";
+import { getEventStatus } from "@/types/events";
 
 interface EventGridProps {
     events: IEventInfo[];
@@ -14,6 +20,7 @@ interface EventGridProps {
     eventBannerCharMap?: Map<number, number>;
     eventBonusAttrMap?: Map<number, string>;
     eventStoryIds?: Set<number>;
+    view?: "grid" | "table";
 }
 
 // Skeleton loading component
@@ -30,9 +37,10 @@ function EventSkeleton() {
     );
 }
 
-export default function EventGrid({ events, isLoading = false, basePath = "/events", eventUnitMap, eventBannerCharMap: _eventBannerCharMap, eventBonusAttrMap, eventStoryIds }: EventGridProps) {
+export default function EventGrid({ events, isLoading = false, basePath = "/events", eventUnitMap, eventBannerCharMap: _eventBannerCharMap, eventBonusAttrMap, eventStoryIds, view = "grid" }: EventGridProps) {
     const [now] = useState(() => Date.now());
-    const { t } = useI18n();
+    const { t, formatDate } = useI18n();
+    const { assetSource } = useTheme();
 
     // Show skeletons while loading
     if (isLoading) {
@@ -48,6 +56,16 @@ export default function EventGrid({ events, isLoading = false, basePath = "/even
     // Empty state
     if (events.length === 0) {
         return <EmptyState icon={mdCalendarMonth} title={t("page.events.noResult")} description={t("page.events.noResultHint")} />;
+    }
+
+    if (view === "table") {
+        return <DatabaseTable rows={events.map(event => ({
+            id: event.id,
+            href: `${basePath}/${event.id}`,
+            thumbnail: <Image src={!eventStoryIds || eventStoryIds.has(event.id) ? getEventStoryBannerUrl(event.assetbundleName, assetSource) : getEventLogoUrl(event.assetbundleName, assetSource)} alt={event.name} fill className="object-contain" unoptimized />,
+            name: <TranslatedText original={event.name} category="events" field="name" />,
+            details: <><div>{t(`common.eventTypes.${event.eventType}`)} · {t(`common.status.${getEventStatus(event)}`)}</div><div className="whitespace-nowrap">{formatDate(event.startAt)} ~ {formatDate(event.aggregateAt)}</div>{event.startAt > now && <span className="text-tertiary">{t("common.badge.spoiler")}</span>}</>,
+        }))} />;
     }
 
     return (

@@ -116,13 +116,14 @@ export default function MainNavbar({
                     className="lg:hidden"
                 />
 
+                <div className="hidden md:block">
                 <IconButton
                     icon={mdKeyboard}
                     label={t("layout.nav.shortcutsHelp")}
                     title={`${t("layout.nav.shortcutsHelp")} (${helpShortcut})`}
                     onClick={onShortcutsHelpToggle}
-                    className="hidden sm:inline-flex"
                 />
+                </div>
 
                 <div className="relative">
                     <IconButton

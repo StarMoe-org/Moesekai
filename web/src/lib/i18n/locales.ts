@@ -8,7 +8,7 @@ export const DEFAULT_UI_LOCALE: UiLocale = "zh-CN";
 
 export const UI_LOCALE_LABELS: Record<UiLocale, string> = {
     "zh-CN": "简体中文",
-    "zh-TW": "繁體中文 (TW)",
+    "zh-TW": "繁體中文 (HMT)",
     "en-US": "English",
     "ja-JP": "日本語",
     "ko-KR": "한국어",
@@ -16,7 +16,7 @@ export const UI_LOCALE_LABELS: Record<UiLocale, string> = {
 
 export const UI_LOCALE_NATIVE_NAMES: Record<UiLocale, string> = {
     "zh-CN": "简体中文",
-    "zh-TW": "繁體中文 (TW)",
+    "zh-TW": "繁體中文 (HMT)",
     "en-US": "English",
     "ja-JP": "日本語",
     "ko-KR": "한국어",

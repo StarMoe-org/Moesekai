@@ -17,6 +17,10 @@ export const zhTWCommon = {
         loading: "載入中",
         showPassword: "顯示內容",
         required: "必填",
+        selectSearch: "搜尋選項…",
+        selectNoOptions: "沒有符合的選項",
+        selectPlaceholder: "請選擇",
+        selectRequired: "請選擇一項",
     },
     action: {
         close: "關閉",
@@ -86,7 +90,7 @@ export const zhTWCommon = {
     server: {
         cn: "簡中服 (CN)",
         jp: "日服 (JP)",
-        tw: "繁中服 (TW)",
+        tw: "港澳台服 (HMT)",
         kr: "韓服 (KR)",
         en: "國際服 (EN)",
     },
@@ -206,6 +210,11 @@ export const zhTWCommon = {
         musicTag: "歌曲標籤",
         mvType: "MV 類型",
         difficulty: "選擇難度",
+        difficultyRange: "等級範圍",
+        sortDifficulty: "排序及譜面定數顯示難度",
+        difficultiesHint: "可複選，未選視為全部；符合任一所選難度即顯示。",
+        minimum: "最低",
+        maximum: "最高",
         otherFilters: "其他篩選條件",
         eventSongsOnly: "只顯示活動歌曲",
         showDifficulty: "顯示歌曲難度",
@@ -251,6 +260,11 @@ export const zhTWCommon = {
         character2: "角色 2",
         unlimited: "不限",
         sourceArea: "來源區域",
+    },
+    view: {
+        grid: "格線",
+        table: "表格",
+        label: "檢視",
     },
     progress: {
         collectionProgress: "收集進度",
@@ -566,4 +580,11 @@ export const zhTWCommon = {
         },
     },
     virtualSingerWithUnit: "虛擬歌手（{unit}）",
+    serverDescription: {
+        cn: "簡中伺服器",
+        jp: "日本伺服器",
+        tw: "港澳台服 (HMT)",
+        kr: "韓國伺服器",
+        en: "國際伺服器",
+    },
 } as const satisfies MessageTree;

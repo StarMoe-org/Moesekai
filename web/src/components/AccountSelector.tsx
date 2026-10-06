@@ -11,6 +11,7 @@ import {
     type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { cn } from "@/components/md3";
 
@@ -86,7 +87,7 @@ export default function AccountSelector({ onSelect, currentUserId, currentServer
                             )}
                             <span className="font-mono truncate min-w-0 flex-1">{acc.gameId}</span>
                             <span className={cn("shrink-0 whitespace-nowrap rounded-md3-xs px-1.5 type-label-s", isActive ? "bg-on-secondary-container/12" : "bg-surface-container-highest")}>
-                                {t(`common.server.${acc.server}`)}
+                                <ServerRegionLabel server={acc.server} size={16} />
                             </span>
                         </button>
                     );

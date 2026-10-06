@@ -1,6 +1,6 @@
-/* The three unmodified mini-games are the only remaining legacy UI consumers.
-   MainLayout marks their routes (including localized URLs) on <html>, which also
-   scopes styles used by game portals. No rewritten page depends on these aliases. */
+/* Only guess-who/multiplayer and guess-jacket/multiplayer retain legacy UI.
+   MainLayout marks these routes (including localized URLs) on <html>, which also
+   scopes styles used by game portals. Single-player games use MD3 directly. */
 @theme inline {
     --color-miku: var(--legacy-game-primary);
     --color-miku-dark: var(--legacy-game-primary-deep);

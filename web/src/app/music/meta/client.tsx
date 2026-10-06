@@ -18,7 +18,7 @@ import {
 import { fetchMasterData, fetchMusicMetas } from "@/lib/fetch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
-import { Button, ErrorState, Icon, LoadingState, PageContainer, PageHeader, SegmentedButton, TextField } from "@/components/md3";
+import { Button, ErrorState, Icon, LoadingState, PageContainer, PageHeader, Select, SegmentedButton, TextField } from "@/components/md3";
 import { mdHelp, mdKeyboardArrowDown, mdKeyboardArrowUp, mdLeaderboard, mdSearch } from "@/components/md3/icons";
 
 // Items per page options
@@ -561,12 +561,14 @@ function MusicMetaContent() {
         <div className="flex flex-wrap items-center justify-between gap-4 mt-4 px-2">
             <div className="flex items-center gap-2 type-body-m text-on-surface-variant">
                 <span>{t("page.musicMeta.pagination.perPagePrefix")}</span>
-                <select value={pageSize} onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setCurrentPage(1);
-                }} className="h-8 px-2 border border-outline-variant rounded-md3-xs bg-surface-container-lowest text-on-surface focus:outline-none focus:ring-2 focus:ring-primary">
-                    {PAGE_SIZE_OPTIONS.map((size) => (<option key={size} value={size}>{size}</option>))}
-                </select>
+                <Select
+                    value={pageSize}
+                    onValueChange={(size) => { setPageSize(size); setCurrentPage(1); }}
+                    options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: String(size) }))}
+                    aria-label={t("page.musicMeta.pagination.perPagePrefix")}
+                    dense
+                    className="min-w-20"
+                />
                 <span>{t("page.musicMeta.pagination.perPageSuffix")}</span>
                 <span className="ml-2">{t("page.musicMeta.pagination.total", { count: formatNumber(filteredMetas.length) })}</span>
             </div>

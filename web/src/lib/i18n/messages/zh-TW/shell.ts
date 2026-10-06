@@ -205,7 +205,7 @@ export const zhTWSettings = {
         machineTranslationNotice: "部分文字使用機器翻譯，可能不盡準確。",
         options: {
             zhCN: "簡體中文",
-            zhTW: "繁體中文 (TW)",
+            zhTW: "繁體中文 (HMT)",
             enUS: "English",
             jaJP: "日本語",
             koKR: "한국어",
@@ -213,6 +213,9 @@ export const zhTWSettings = {
     },
     themeColor: {
         sectionTitle: "主題色",
+        expand: "展開主題色",
+        collapse: "收起主題色",
+        current: "目前：{name}",
     },
     backgroundAnimationBudget: {
         sectionTitle: "背景動畫",
@@ -258,7 +261,7 @@ export const zhTWSettings = {
         en: "國際服 (EN)",
         jp: "日服 (JP)",
         cn: "簡中服 (CN)",
-        tw: "繁中服 (TW)",
+        tw: "港澳台服 (HMT)",
         kr: "韓服 (KR)",
     },
     dataVersion: {

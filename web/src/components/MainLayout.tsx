@@ -50,7 +50,7 @@ export default function MainLayout({
     const pathname = usePathname();
     const routePath = stripRouteLocale(pathname);
     const isHomeRoute = routePath === "/";
-    const isLegacyGameRoute = /^\/(?:guess-who|guess-jacket|goods-gacha)(?:\/|$)/.test(routePath);
+    const isLegacyGameRoute = /^\/(?:guess-who|guess-jacket)\/multiplayer(?:\/|$)/.test(routePath);
     useEffect(() => {
         document.documentElement.dataset.legacyGame = String(isLegacyGameRoute);
         return () => { delete document.documentElement.dataset.legacyGame; };

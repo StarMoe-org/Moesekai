@@ -1,10 +1,10 @@
 "use client";
-import React, { useRef, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import React, { useId, useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { ServerRegionLabel, getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useTheme, CHAR_COLORS } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
-import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
+import { md3EffectsDefault, reducedMotionFade } from "@/lib/motion";
 import { UNIT_DATA, UNIT_ID_LABEL_KEYS } from "@/types/types";
 import { useMasterData } from "@/contexts/MasterDataContext";
 import { ADS_SETTINGS_VISIBLE } from "@/lib/ads";
@@ -20,6 +20,8 @@ import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
     Banner,
+    BottomSheet,
+    SideSheet,
     CircularProgress,
     Icon,
     IconButton,
@@ -40,7 +42,7 @@ import {
     mdOpenInNew,
     mdPalette,
     mdRefresh,
-    mdSettings,
+    mdKeyboardArrowDown,
     mdClose,
     mdTune,
 } from "@/components/md3/icons";
@@ -61,9 +63,6 @@ const unitGroups = UNIT_DATA.map(u => ({ id: u.id, labelKey: UNIT_ID_LABEL_KEYS[
 const SETTINGS_TOGGLE_COMBO = parseShortcutCombos(
     getShortcutById("toggle-settings")?.combos ?? []
 )[0] ?? [];
-const CLOSE_OVERLAY_COMBOS = parseShortcutCombos(
-    getShortcutById("close-overlay")?.combos ?? []
-);
 
 const appearanceOptions = [
     { id: "system", labelKey: "settings.appearance.system", icon: mdBrightnessAuto },
@@ -85,7 +84,7 @@ const tabs: { id: SettingsTab; labelKey: string; icon: string }[] = [
     { id: "about", labelKey: "settings.sections.about", icon: mdInfo },
 ];
 
-const WIDE_QUERY = "(min-width: 640px)";
+const WIDE_QUERY = "(min-width: 1024px)";
 
 /** Reload the current page with a cache-busting param after a data-source change. */
 function scheduleRefreshReload() {
@@ -127,32 +126,17 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     const { cloudVersion, localVersion, isLoading, isRefreshing, forceRefreshData } = useMasterData();
     const [activeTab, setActiveTab] = useState<SettingsTab>("visual");
     const languageOptions = SUPPORTED_UI_LOCALES.map((id) => ({ id, label: UI_LOCALE_LABELS[id] }));
-    const panelRef = useRef<HTMLDivElement>(null);
     const isWide = useMediaQuery(WIDE_QUERY, true);
-
-    const [mounted, setMounted] = useState(false);
+    const [themeExpanded, setThemeExpanded] = useState(false);
+    const themeOptionsId = useId();
     const prefersReducedMotion = useReducedMotion();
 
-    useEffect(() => {
-        const raf = requestAnimationFrame(() => {
-            setMounted(true);
-        });
-        return () => cancelAnimationFrame(raf);
-    }, []);
-
-    // Prevent body scroll while preserving any existing overflow override.
-    useEffect(() => {
-        if (!isOpen) return;
-        // Skip locking on touch devices to avoid page reflow and viewport flicker
-        if (typeof window !== "undefined" && window.matchMedia("(pointer: coarse)").matches) {
-            return;
-        }
-        const previousBodyOverflow = document.body.style.overflow;
-        document.body.style.overflow = "hidden";
-        return () => {
-            document.body.style.overflow = previousBodyOverflow;
-        };
-    }, [isOpen]);
+    // Reset only the transient disclosure; the selected theme remains persisted.
+    const [wasOpen, setWasOpen] = useState(isOpen);
+    if (wasOpen !== isOpen) {
+        setWasOpen(isOpen);
+        setThemeExpanded(false);
+    }
 
     useEffect(() => {
         if (!isOpen) return;
@@ -161,12 +145,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
             if (event.defaultPrevented || isKeyboardEventComposing(event)) return;
             if (isEditableEventTarget(event.target)) return;
 
-            const shouldCloseByEscape = CLOSE_OVERLAY_COMBOS.some((combo) =>
-                matchesShortcutCombo(event, combo)
-            );
-            const shouldCloseByToggle = matchesShortcutCombo(event, SETTINGS_TOGGLE_COMBO);
-
-            if (!shouldCloseByEscape && !shouldCloseByToggle) return;
+            // Escape and focus ownership belong to the shared overlay stack.
+            if (!matchesShortcutCombo(event, SETTINGS_TOGGLE_COMBO)) return;
 
             event.preventDefault();
             onClose();
@@ -204,24 +184,6 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         scheduleRefreshReload();
     };
 
-    if (!mounted) return null;
-
-    const panelMotion = prefersReducedMotion
-        ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: reducedMotionFade }
-        : isWide
-          ? {
-                initial: { opacity: 0, scale: 0.92, y: -8 },
-                animate: { opacity: 1, scale: 1, y: 0 },
-                exit: { opacity: 0, scale: 0.96, y: -4 },
-                transition: md3SpatialDefault,
-            }
-          : {
-                initial: { y: "100%" },
-                animate: { y: 0 },
-                exit: { y: "100%" },
-                transition: md3SpatialDefault,
-            };
-
     const localStale = Boolean(localVersion && localVersion !== cloudVersion);
 
     const tabContent = (
@@ -245,8 +207,22 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                     </section>
 
                     <section>
-                        <SectionTitle>{t("settings.themeColor.sectionTitle")}</SectionTitle>
-                        <div className="space-y-3">
+                        <button
+                            type="button"
+                            aria-expanded={themeExpanded}
+                            aria-controls={themeOptionsId}
+                            title={t(themeExpanded ? "settings.themeColor.collapse" : "settings.themeColor.expand")}
+                            onClick={() => setThemeExpanded((expanded) => !expanded)}
+                            className="state-layer focus-ring flex min-h-12 w-full items-center gap-3 rounded-md3-md px-3 text-left"
+                        >
+                            <span className="flex-1 type-title-s text-primary">{t("settings.themeColor.sectionTitle")}</span>
+                            <span aria-hidden="true" className="h-4 w-4 shrink-0 rounded-full" style={{ backgroundColor: CHAR_COLORS[themeCharId] }} />
+                            <span className="type-body-m text-on-surface-variant" aria-label={t("settings.themeColor.current", { name: getCharacterName(t, Number(themeCharId), "short") })}>
+                                {getCharacterName(t, Number(themeCharId), "short")}
+                            </span>
+                            <Icon path={mdKeyboardArrowDown} size={20} className={cn("transition-transform duration-200", themeExpanded && "rotate-180")} />
+                        </button>
+                        <div id={themeOptionsId} hidden={!themeExpanded} className="space-y-3 pt-3">
                             {unitGroups.map((unit) => (
                                 <div key={unit.id}>
                                     <div className="mb-1.5 type-label-m text-on-surface-variant">{t(unit.labelKey)}</div>
@@ -368,7 +344,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             onValueChange={handleSelectServer}
                             showCheckmark={false}
                             density={-1}
-                            options={SERVER_REGIONS.map((region) => ({ value: region, label: region.toUpperCase() }))}
+                            className="[&_button]:px-2"
+                            options={SERVER_REGIONS.map((region) => ({ value: region, label: <ServerRegionLabel server={region} label={getServerDisplayCode(region)} size={16} /> }))}
                         />
                         <p className="mt-2 type-body-s text-on-surface-variant">{t(`settings.serverSource.${serverSource}`)}</p>
                     </section>
@@ -458,77 +435,43 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         </>
     );
 
-    return createPortal(
-        <AnimatePresence>
-            {isOpen && (
-                <div className={cn("fixed inset-0 z-[200] isolate", !isWide && "flex items-end justify-center")}>
-                    {/* Click-outside layer: transparent for the anchored panel, scrim for the bottom sheet */}
-                    <motion.div
-                        className={cn("absolute inset-0", isWide ? "bg-transparent" : "bg-scrim/32")}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={prefersReducedMotion ? reducedMotionFade : md3EffectsDefault}
-                        onClick={onClose}
-                    />
+    const content = (
+        <div id="settings-panel-content" className="flex min-h-0 flex-1 flex-col">
+            <Tabs<SettingsTab>
+                aria-label={t("settings.title")}
+                value={activeTab}
+                onValueChange={setActiveTab}
+                items={tabs.map((tab) => ({ value: tab.id, label: t(tab.labelKey), icon: tab.icon }))}
+                className="shrink-0"
+            />
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 py-5">
+                <motion.div
+                    key={activeTab}
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={prefersReducedMotion ? reducedMotionFade : md3EffectsDefault}
+                >
+                    {tabContent}
+                </motion.div>
+            </div>
+        </div>
+    );
+    const sharedProps = {
+        isOpen,
+        onClose,
+        title: t("settings.title"),
+        syncHistory: false,
+        bodyClassName: "flex flex-col overflow-hidden! p-0!",
+        footer: <p className="text-center type-label-s text-on-surface-variant">{t("settings.footer.version")}</p>,
+    };
 
-                    <motion.div
-                        id="settings-panel-content"
-                        ref={panelRef}
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label={t("settings.title")}
-                        onClick={(e) => e.stopPropagation()}
-                        className={cn(
-                            "flex flex-col overflow-hidden bg-surface-container-high text-on-surface shadow-elev-3",
-                            isWide
-                                ? "absolute right-3 top-[4.25rem] max-h-[calc(100dvh-5rem)] w-[400px] rounded-md3-xl"
-                                : "relative max-h-[90dvh] w-full rounded-t-md3-xl",
-                        )}
-                        style={{ transformOrigin: "top right" }}
-                        {...panelMotion}
-                    >
-                        {!isWide && (
-                            <div className="flex shrink-0 justify-center pt-3" aria-hidden>
-                                <span className="h-1 w-8 rounded-full bg-on-surface-variant/40" />
-                            </div>
-                        )}
-
-                        {/* Header */}
-                        <div className="flex h-14 shrink-0 items-center gap-3 pl-5 pr-2">
-                            <Icon path={mdSettings} size={24} className="text-on-surface-variant" />
-                            <h3 className="flex-1 truncate type-title-l text-on-surface">{t("settings.title")}</h3>
-                            <IconButton icon={mdClose} label={t("common.action.close")} onClick={onClose} />
-                        </div>
-
-                        <Tabs<SettingsTab>
-                            aria-label={t("settings.title")}
-                            value={activeTab}
-                            onValueChange={setActiveTab}
-                            items={tabs.map((tab) => ({ value: tab.id, label: t(tab.labelKey), icon: tab.icon }))}
-                            className="shrink-0"
-                        />
-
-                        {/* Tab content */}
-                        <div className="min-h-[260px] flex-1 overflow-y-auto overscroll-contain px-5 py-5">
-                            <motion.div
-                                key={activeTab}
-                                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={prefersReducedMotion ? reducedMotionFade : md3EffectsDefault}
-                            >
-                                {tabContent}
-                            </motion.div>
-                        </div>
-
-                        {/* Footer */}
-                        <div className="shrink-0 border-t border-outline-variant px-4 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] text-center">
-                            <span className="type-label-s text-on-surface-variant">{t("settings.footer.version")}</span>
-                        </div>
-                    </motion.div>
-                </div>
-            )}
-        </AnimatePresence>,
-        document.body
+    return isWide ? (
+        <SideSheet {...sharedProps} floating widthClassName="w-[480px] max-w-full">
+            {content}
+        </SideSheet>
+    ) : (
+        <BottomSheet {...sharedProps} headerActions={<IconButton icon={mdClose} label={t("common.action.close")} onClick={onClose} />}>
+            {content}
+        </BottomSheet>
     );
 }

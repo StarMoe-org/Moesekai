@@ -458,9 +458,10 @@ export default function Sidebar({
                 </div>
 
                 {/* Navigation groups - scrollable area */}
-                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-3 pb-3 md:pt-2">
+                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:pt-1">
                     {/* Home */}
                     <NavigationDrawerItem
+                        density="compact"
                         href="/"
                         label={t("layout.nav.home")}
                         icon={mdHome}
@@ -475,12 +476,12 @@ export default function Sidebar({
                     {navigationGroups.map((group) => {
                         const isExpanded = expandedGroups.includes(group.id);
                         return (
-                            <div key={group.id} className="mt-2 border-t border-outline-variant pt-2">
+                            <div key={group.id} className="mt-1 border-t border-outline-variant pt-1">
                                 <button
                                     type="button"
                                     onClick={() => toggleGroup(group.id)}
                                     aria-expanded={isExpanded}
-                                    className="state-layer focus-ring flex h-12 w-full cursor-pointer items-center justify-between rounded-full px-4 type-title-s text-on-surface-variant"
+                                    className="state-layer focus-ring flex h-12 w-full cursor-pointer items-center justify-between rounded-full px-3 type-title-s text-on-surface-variant lg:h-8 [@media(any-pointer:coarse)]:min-h-12"
                                 >
                                     {getGroupLabel(group.id)}
                                     <Icon
@@ -495,12 +496,12 @@ export default function Sidebar({
                                         isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
                                     )}
                                 >
-                                    <div className="min-h-0 overflow-hidden">
+                                    <div className="min-h-0 overflow-hidden" inert={!isExpanded}>
                                         {group.items.map((item) => {
-                                            const thisIdx = flatIdx;
-                                            flatIdx++;
+                                            const thisIdx = isExpanded ? flatIdx++ : -1;
                                             return (
                                                 <NavigationDrawerItem
+                                                    density="compact"
                                                     key={item.href}
                                                     href={item.href}
                                                     label={getItemLabel(item.href, item.id)}
@@ -508,8 +509,8 @@ export default function Sidebar({
                                                     activeIcon={item.activeIcon}
                                                     active={isActive(item.href)}
                                                     onClick={handleNavClick}
-                                                    className={focusedIndex === thisIdx ? "ring-2 ring-primary" : undefined}
-                                                    dataAttrs={{ "data-nav-index": thisIdx }}
+                                                    className={isExpanded && focusedIndex === thisIdx ? "ring-2 ring-primary" : undefined}
+                                                    dataAttrs={isExpanded ? { "data-nav-index": thisIdx } : undefined}
                                                 />
                                             );
                                         })}

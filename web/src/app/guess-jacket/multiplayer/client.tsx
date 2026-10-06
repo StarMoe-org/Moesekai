@@ -20,6 +20,8 @@ import {
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import type { IMusicInfo } from "@/types/music";
 import Modal from "@/components/common/Modal";
+import { Select } from "@/components/md3";
+import { ServerRegionIcon } from "@/components/common/ServerRegion";
 import "./multiplayer.css";
 
 // ==================== CONSTANTS ====================
@@ -1688,34 +1690,22 @@ function MultiplayerContent() {
 
                                 {/* Server Scope */}
                                 <div style={{ marginBottom: "1rem" }}>
-                                    <div className="mp-settings-label">{t("page.guessJacket.multiplayer.serverScope")}</div>
-                                    <div className="mp-settings-grid" style={{ gridTemplateColumns: "1fr 1fr" }}>
-                                        {(["jp", "cn"] as ServerScope[]).map(s => (
-                                            <button
-                                                key={s}
-                                                className={`mp-settings-btn ${gameSettings.server === s ? "active" : ""}`}
-                                                onClick={() => updateGameSettings(prev => ({ ...prev, server: s }))}
-                                            >
-                                                {getServerShortLabel(s)}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <Select
+                                        value={gameSettings.server}
+                                        onValueChange={(server) => updateGameSettings(prev => ({ ...prev, server }))}
+                                        options={(["jp", "cn"] as ServerScope[]).map(server => ({ value: server, label: getServerShortLabel(server), leading: <ServerRegionIcon server={server} decorative /> }))}
+                                        label={t("page.guessJacket.multiplayer.serverScope")}
+                                    />
                                 </div>
 
                                 {/* Difficulty */}
                                 <div style={{ marginBottom: "1rem" }}>
-                                    <div className="mp-settings-label">{t("page.guessJacket.multiplayer.difficultySetting")}</div>
-                                    <div className="mp-settings-grid">
-                                        {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(d => (
-                                            <button
-                                                key={d}
-                                                className={`mp-settings-btn ${gameSettings.difficulty === d ? (d === "extreme" ? "active-danger" : "active") : ""}`}
-                                                onClick={() => updateGameSettings(prev => ({ ...prev, difficulty: d }))}
-                                            >
-                                                {getDifficultyLabel(d)}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <Select
+                                        value={gameSettings.difficulty}
+                                        onValueChange={(difficulty) => updateGameSettings(prev => ({ ...prev, difficulty }))}
+                                        options={(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(difficulty => ({ value: difficulty, label: getDifficultyLabel(difficulty) }))}
+                                        label={t("page.guessJacket.multiplayer.difficultySetting")}
+                                    />
                                 </div>
 
                                 {/* Time Limit */}
@@ -1732,18 +1722,12 @@ function MultiplayerContent() {
 
                                 {/* Options Count */}
                                 <div style={{ marginBottom: "1rem" }}>
-                                    <div className="mp-settings-label">{t("page.guessJacket.multiplayer.optionsCount")}</div>
-                                    <div className="mp-settings-grid">
-                                        {OPTIONS_CHOICES.map(count => (
-                                            <button
-                                                key={count}
-                                                className={`mp-settings-btn ${gameSettings.optionsCount === count ? "active" : ""}`}
-                                                onClick={() => updateGameSettings(prev => ({ ...prev, optionsCount: count }))}
-                                            >
-                                                {t("page.guessJacket.common.optionCountLabel", { count })}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <Select
+                                        value={gameSettings.optionsCount}
+                                        onValueChange={(optionsCount) => updateGameSettings(prev => ({ ...prev, optionsCount }))}
+                                        options={OPTIONS_CHOICES.map(count => ({ value: count, label: t("page.guessJacket.common.optionCountLabel", { count }) }))}
+                                        label={t("page.guessJacket.multiplayer.optionsCount")}
+                                    />
                                 </div>
 
                                 {/* Loading/Error State */}

@@ -4,6 +4,8 @@ import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
+import DatabaseTable from "@/components/cards/DatabaseTable";
+import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
 import { Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
 import BaseFilters, { FilterButton, FilterSection } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
@@ -46,6 +48,7 @@ function MysekaiContent() {
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
+    const [view, setView] = useState<ListViewMode>("grid");
     const [selectedGenre, setSelectedGenre] = useState<number | null>(null);
     const [selectedSubGenre, setSelectedSubGenre] = useState<number | null>(null);
     const [selectedTag, setSelectedTag] = useState<number | null>(null);
@@ -77,9 +80,11 @@ function MysekaiContent() {
         const search = searchParams.get("search");
         const sort = searchParams.get("sortBy");
         const order = searchParams.get("sortOrder");
+        const viewParam = searchParams.get("view");
+        if (viewParam) setView(viewParam === "table" || viewParam === "list" ? "table" : "grid");
 
         // If URL has params, use them
-        const hasUrlParams = genre || subGenre || tag || chars || units || search || sort || order;
+        const hasUrlParams = genre || subGenre || tag || chars || units || search || sort || order || viewParam;
 
         if (hasUrlParams) {
             if (genre) setSelectedGenre(Number(genre));
@@ -146,8 +151,9 @@ function MysekaiContent() {
         if (searchQuery) params.set("search", searchQuery);
         if (sortBy !== "id") params.set("sortBy", sortBy);
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
+        if (view !== "grid") params.set("view", view);
         replaceCurrentUrlSearchParams(params);
-    }, [selectedGenre, selectedSubGenre, selectedTag, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, filtersInitialized]);
+    }, [selectedGenre, selectedSubGenre, selectedTag, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, view, filtersInitialized]);
 
     useEffect(() => {
         let cancelled = false;
@@ -414,7 +420,14 @@ function MysekaiContent() {
                     <LoadingState />
                 ) : (
                     <>
-                        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={setView} /></div>
+                        {view === "table" ? <DatabaseTable rows={displayedFixtures.map(fixture => ({
+                            id: fixture.id,
+                            href: mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id, serverSource),
+                            thumbnail: <Image src={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt={fixture.name} fill className="object-contain" unoptimized />,
+                            name: <TranslatedText original={fixture.name} category="mysekai" field="fixtureName" />,
+                            details: getGenreName(fixture.mysekaiFixtureMainGenreId),
+                        }))} /> : <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedFixtures.map(fixture => (
                                 <Card
                                     variant="elevated"
@@ -453,7 +466,7 @@ function MysekaiContent() {
                                     </div>
                                 </Card>
                             ))}
-                        </div>
+                        </div>}
 
                         {/* Load More */}
                         <LoadMore

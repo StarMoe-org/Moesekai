@@ -17,6 +17,10 @@ export const koKRMessages = {
             loading: "로딩 중",
             showPassword: "내용 표시",
             required: "필수",
+            selectSearch: "옵션 검색…",
+            selectNoOptions: "일치하는 옵션이 없습니다",
+            selectPlaceholder: "옵션을 선택하세요",
+            selectRequired: "옵션을 선택하세요",
         },
         action: {
             close: "닫기",
@@ -86,7 +90,7 @@ export const koKRMessages = {
         server: {
             cn: "CN",
             jp: "JP",
-            tw: "TW",
+            tw: "홍콩·마카오·대만 서버 (HMT)",
             kr: "KR",
             en: "EN"
         },
@@ -206,6 +210,11 @@ export const koKRMessages = {
             musicTag: "노래 태그",
             mvType: "MV형",
             difficulty: "난이도 선택",
+            difficultyRange: "레벨 범위",
+            sortDifficulty: "정렬 및 채보 상수 표시 난이도",
+            difficultiesHint: "여러 난이도를 선택할 수 있습니다. 선택하지 않으면 전체를 대상으로 하며, 선택한 난이도 중 하나라도 일치하는 곡을 표시합니다.",
+            minimum: "최소",
+            maximum: "최대",
             otherFilters: "기타 필터",
             eventSongsOnly: "활동 중인 노래만 표시",
             showDifficulty: "노래 난이도 표시",
@@ -251,6 +260,11 @@ export const koKRMessages = {
             character2: "캐릭터 2",
             unlimited: "제한 없음",
             sourceArea: "소스 영역"
+        },
+        view: {
+            grid: "그리드",
+            table: "테이블",
+            label: "보기"
         },
         progress: {
             collectionProgress: "수집 진행",
@@ -565,7 +579,14 @@ export const koKRMessages = {
                 virtual_live: "가상 라이브"
             }
         },
-        virtualSingerWithUnit: "가상 가수({unit})"
+        virtualSingerWithUnit: "가상 가수({unit})",
+        serverDescription: {
+            cn: "중국어 간체 서버",
+            jp: "일본 서버",
+            tw: "홍콩·마카오·대만 서버 (HMT)",
+            kr: "한국 서버",
+            en: "글로벌 서버",
+        },
     },
     layout: {
         nav: {
@@ -770,14 +791,17 @@ export const koKRMessages = {
             machineTranslationNotice: "일부 텍스트는 기계 번역을 사용하므로 부정확할 수 있습니다.",
             options: {
                 zhCN: "중국어 간체",
-                zhTW: "중국어 번체 (TW)",
+                zhTW: "중국어 번체 (HMT)",
                 enUS: "영어",
                 jaJP: "일본어",
                 koKR: "한국어"
             }
         },
         themeColor: {
-            sectionTitle: "테마 색상"
+            sectionTitle: "테마 색상",
+            expand: "테마 색상 펼치기",
+            collapse: "테마 색상 접기",
+            current: "현재: {name}",
         },
         backgroundAnimationBudget: {
             sectionTitle: "배경 애니메이션",
@@ -823,7 +847,7 @@ export const koKRMessages = {
             en: "글로벌 서버 (EN)",
             jp: "일본 서버 (JP)",
             cn: "중국 서버 (CN)",
-            tw: "대만 서버 (TW)",
+            tw: "홍콩·마카오·대만 서버 (HMT)",
             kr: "한국 서버 (KR)"
         },
         dataVersion: {
@@ -968,6 +992,9 @@ export const koKRMessages = {
             onlyCompleted: "완료된 항목만",
             mysekaiTitle: "마이세카이 미리보기(개발용)",
             mysekaiLoading: "마이세카이 미리보기 로딩 중...",
+            selectTitle: "선택 메뉴",
+            selectLabel: "옵션 선택",
+            selectSearchLabel: "옵션 검색",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
@@ -1174,7 +1201,7 @@ export const koKRMessages = {
             languageBilingualDesc: "선호하는 인터페이스 언어를 선택해 주세요. You can change this anytime in settings.",
             languageOptionSubtitles: {
                 "zh-CN": "중국어 간체 / 중국어 간체",
-                "zh-TW": "繁體中文 (TW) / 중국어 번체",
+                "zh-TW": "繁體中文 (HMT) / 중국어 번체",
                 "en-US": "English / 영어",
                 "ja-JP": "일본어 / 일본어",
                 "ko-KR": "한국어 / Korean"
@@ -1224,6 +1251,14 @@ export const koKRMessages = {
                 cards: "최신 카드",
                 music: "최신곡",
                 live: "콘서트"
+            },
+            customize: {
+                open: "홈 사용자 지정",
+                title: "홈 사용자 지정",
+                description: "표시할 동적 섹션과 순서를 선택합니다. 설정은 이 기기에 저장됩니다.",
+                moveUp: "위로 이동",
+                moveDown: "아래로 이동",
+                reset: "기본값 복원"
             },
             shortcuts: {
                 cards: "카드",
@@ -1506,7 +1541,7 @@ export const koKRMessages = {
                 en: "국제 서버",
                 jp: "일본 서버",
                 cn: "국가 서비스",
-                tw: "대만 서버",
+                tw: "홍콩·마카오·대만 서버 (HMT)",
                 kr: "한복"
             },
             navigation: {
@@ -2911,7 +2946,7 @@ export const koKRMessages = {
             regions: {
                 cn: "국가 서비스",
                 jp: "일본 서버",
-                tw: "중국어 번체(TW)",
+                tw: "홍콩·마카오·대만 서버 (HMT)",
                 kr: "한복",
                 en: "국제 서버"
             },

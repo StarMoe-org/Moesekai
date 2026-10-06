@@ -19,6 +19,10 @@ export const enUSMessages = {
             loading: "Loading",
             showPassword: "Show content",
             required: "Required",
+            selectSearch: "Search options…",
+            selectNoOptions: "No matching options",
+            selectPlaceholder: "Choose an option",
+            selectRequired: "Choose an option",
         },
         action: {
             close: "Close",
@@ -88,7 +92,7 @@ export const enUSMessages = {
         server: {
             cn: "CN",
             jp: "JP",
-            tw: "TW",
+            tw: "Hong Kong, Macao and Taiwan (HMT)",
             kr: "KR",
             en: "EN",
         },
@@ -209,6 +213,11 @@ export const enUSMessages = {
             musicTag: "Music Tag",
             mvType: "MV Type",
             difficulty: "Difficulty",
+            difficultyRange: "Level range",
+            sortDifficulty: "Difficulty for sorting and chart constants",
+            difficultiesHint: "Select multiple difficulties. No selection includes all; songs matching any selected difficulty are shown.",
+            minimum: "Minimum",
+            maximum: "Maximum",
             otherFilters: "Other Filters",
             eventSongsOnly: "Event songs only",
             showDifficulty: "Show difficulty levels",
@@ -254,6 +263,11 @@ export const enUSMessages = {
             character2: "Character 2",
             unlimited: "Any",
             sourceArea: "Source Area",
+        },
+        view: {
+            grid: "Grid",
+            table: "Table",
+            label: "View",
         },
         progress: {
             collectionProgress: "Collection Progress",
@@ -569,6 +583,13 @@ export const enUSMessages = {
             },
         },
         virtualSingerWithUnit: "Virtual Singer ({unit})",
+        serverDescription: {
+            cn: "Simplified Chinese server",
+            jp: "Japanese server",
+            tw: "Hong Kong, Macao and Taiwan (HMT)",
+            kr: "Korean server",
+            en: "Global server",
+        },
     },
     layout: {
         nav: {
@@ -773,7 +794,7 @@ export const enUSMessages = {
             machineTranslationNotice: "Some text uses machine translation and may be inaccurate.",
             options: {
                 zhCN: "Chinese (Simplified)",
-                zhTW: "Chinese (Traditional, TW)",
+                zhTW: "Chinese (Traditional, HMT)",
                 enUS: "English",
                 jaJP: "Japanese",
                 koKR: "Korean",
@@ -781,6 +802,9 @@ export const enUSMessages = {
         },
         themeColor: {
             sectionTitle: "Theme color",
+            expand: "Expand theme colors",
+            collapse: "Collapse theme colors",
+            current: "Current: {name}",
         },
         backgroundAnimationBudget: {
             sectionTitle: "Background animation",
@@ -826,7 +850,7 @@ export const enUSMessages = {
             en: "Global (EN)",
             jp: "Japan (JP)",
             cn: "China (CN)",
-            tw: "Taiwan (TW)",
+            tw: "Hong Kong, Macao and Taiwan (HMT)",
             kr: "Korea (KR)",
         },
         dataVersion: {
@@ -971,6 +995,9 @@ export const enUSMessages = {
             onlyCompleted: "Completed only",
             mysekaiTitle: "MySekai preview (dev)",
             mysekaiLoading: "Loading MySekai preview...",
+            selectTitle: "Select menus",
+            selectLabel: "Select an option",
+            selectSearchLabel: "Search options",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         mysekaiInteractions: {
@@ -1177,7 +1204,7 @@ export const enUSMessages = {
             languageBilingualDesc: "Choose your interface language. 之后也可以在设置中随时修改。",
             languageOptionSubtitles: {
                 "zh-CN": "简体中文 / Simplified Chinese",
-                "zh-TW": "繁體中文 (TW) / Traditional Chinese",
+                "zh-TW": "繁體中文 (HMT) / Traditional Chinese",
                 "en-US": "English / 英语",
                 "ja-JP": "日本語 / Japanese",
                 "ko-KR": "한국어 / Korean",
@@ -1227,6 +1254,14 @@ export const enUSMessages = {
                 cards: "Latest Cards",
                 music: "Latest Songs",
                 live: "Virtual Lives",
+            },
+            customize: {
+                open: "Customize home",
+                title: "Customize home",
+                description: "Choose which dynamic sections to show and arrange their order. Settings are saved on this device.",
+                moveUp: "Move up",
+                moveDown: "Move down",
+                reset: "Reset default",
             },
             shortcuts: {
                 cards: "Cards",
@@ -1509,7 +1544,7 @@ export const enUSMessages = {
                 en: "Global",
                 jp: "JP",
                 cn: "CN",
-                tw: "TW",
+                tw: "Hong Kong, Macao and Taiwan (HMT)",
                 kr: "KR",
             },
             navigation: {
@@ -2890,7 +2925,7 @@ export const enUSMessages = {
             regions: {
                 cn: "CN",
                 jp: "JP",
-                tw: "TW",
+                tw: "Hong Kong, Macao and Taiwan (HMT)",
                 kr: "KR",
                 en: "EN",
             },

@@ -846,7 +846,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                         {/* Card Story Card */}
                         {hasCardStory && (
-                            <div className="rounded-md3-xl bg-tertiary-container text-on-tertiary-container overflow-hidden">
+                            <div className="rounded-md3-xl bg-secondary-container text-on-secondary-container overflow-hidden">
                                 <Link href={`/story/card/${cardId}`} className="state-layer focus-ring block rounded-md3-xl">
                                     <div className="flex min-h-14 items-center gap-3 px-5 pt-4">
                                         <Icon path={mdMenuBook} size={24} />
@@ -861,7 +861,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                                 {t("page.cards.storyReadDesc")}
                                             </p>
                                         </div>
-                                        <span className="w-10 h-10 rounded-full bg-tertiary text-on-tertiary flex items-center justify-center shrink-0">
+                                        <span className="w-10 h-10 rounded-full bg-surface-container text-primary flex items-center justify-center shrink-0">
                                             <Icon path={mdChevronRight} size={24} />
                                         </span>
                                     </div>

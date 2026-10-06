@@ -1,5 +1,7 @@
 "use client";
 import React from "react";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import { isValidServer } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { Button, Card, Icon, Surface, cn } from "@/components/md3";
 import { mdArrowBack, mdChevronLeft, mdChevronRight } from "@/components/md3/icons";
@@ -36,7 +38,7 @@ export function StoryBadge({ tone = "secondary", children }: { tone?: StoryBadge
 /** Server source badge (CN uses tertiary, other servers secondary). */
 export function ServerSourceBadge({ serverSource }: { serverSource: string }) {
     const { t } = useI18n();
-    return <StoryBadge tone={serverSource === "cn" ? "tertiary" : "secondary"}>{t(`page.story.serverSource.${serverSource}`)}</StoryBadge>;
+    return <StoryBadge tone={serverSource === "cn" ? "tertiary" : "secondary"}>{isValidServer(serverSource) ? <ServerRegionLabel server={serverSource} size={16} /> : t(`page.story.serverSource.${serverSource}`)}</StoryBadge>;
 }
 
 export function StoryReaderHeader({

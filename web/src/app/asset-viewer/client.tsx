@@ -5,6 +5,7 @@ import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "rea
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
 import { useTheme } from "@/contexts/ThemeContext";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import Modal from "@/components/common/Modal";
@@ -801,7 +802,7 @@ function AssetViewerContent() {
             onReset={resetFilters}
         >
             <FilterSection label={t("page.assetViewer.serverSelect")}>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-2">
                     {(["jp", "en", "tw", "kr", "cn"] as const).map(srv => (
                         <FilterButton
                             key={srv}
@@ -811,7 +812,7 @@ function AssetViewerContent() {
                                 setServer(srv);
                             }}
                         >
-                            {t(`settings.serverSource.${srv}`) || srv.toUpperCase()}
+                            <ServerRegionLabel server={srv} />
                         </FilterButton>
                     ))}
                 </div>

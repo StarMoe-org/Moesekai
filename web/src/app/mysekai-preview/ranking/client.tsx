@@ -7,6 +7,7 @@ import MainLayout from "@/components/MainLayout";
 import { Banner, Button, EmptyState, LoadingState, PageContainer } from "@/components/md3";
 import { mdArrowBack } from "@/components/md3/icons";
 import MysekaiScenePreview from "@/components/mysekai-preview/MysekaiScenePreview";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { replaceAssetSourceRegion, type AssetSourceType, useTheme } from "@/contexts/ThemeContext";
 import {
@@ -27,7 +28,7 @@ function HeartIcon({ className = "" }: { className?: string }) {
     );
 }
 
-function DetailStat({ label, value, accent = false }: { label: string; value: string; accent?: boolean }) {
+function DetailStat({ label, value, accent = false }: { label: string; value: React.ReactNode; accent?: boolean }) {
     return (
         <div className={`rounded-md3-lg bg-surface-container px-4 py-3 ${accent ? "text-rose-500" : "text-on-surface"}`}>
             <div className="type-label-m text-on-surface-variant">{label}</div>
@@ -149,7 +150,7 @@ function RankingPreviewInner() {
                                     {entry ? getTabTypeLabel(entry.tabType, t) : t("page.mysekaiPreview.common.baijingTop")}
                                 </span>
                                 <span className="rounded-md3-sm bg-surface-container-high px-3 py-1.5 type-label-m text-on-surface-variant">
-                                    {server.toUpperCase()} · {t("page.mysekaiPreview.ranking.activityStat")} #{competitionId}
+                                    <ServerRegionLabel server={server} /> · {t("page.mysekaiPreview.ranking.activityStat")} #{competitionId}
                                 </span>
                             </div>
                             <h1 className="line-clamp-2 type-headline-m text-on-surface sm:type-headline-l">
@@ -167,7 +168,7 @@ function RankingPreviewInner() {
                                 </Banner>
                             )}
                             <div className="mt-5 grid max-w-3xl grid-cols-2 gap-3 md:grid-cols-4">
-                                <DetailStat label={t("page.mysekaiPreview.ranking.serverStat")} value={server.toUpperCase()} />
+                                <DetailStat label={t("page.mysekaiPreview.ranking.serverStat")} value={<ServerRegionLabel server={server} />} />
                                 <DetailStat label={t("page.mysekaiPreview.ranking.activityStat")} value={`#${competitionId}`} />
                                 <DetailStat label={t("page.mysekaiPreview.ranking.rankStat")} value={`#${rank}`} />
                                 <DetailStat label={t("page.mysekaiPreview.common.likes")} value={entry ? formatNumber(Number(entry.reviewCount || 0)) : "-"} accent />

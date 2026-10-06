@@ -16,6 +16,7 @@ import {
 } from "@/lib/supabase";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import Modal from "@/components/common/Modal";
+import { Select } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import "./multiplayer.css";
 
@@ -1769,18 +1770,12 @@ function MultiplayerContent() {
 
                                 {/* Difficulty */}
                                 <div style={{ marginBottom: "1rem" }}>
-                                    <div className="mp-settings-label">{t("page.guessWho.multiplayer.difficultySetting")}</div>
-                                    <div className="mp-settings-grid">
-                                        {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(d => (
-                                            <button
-                                                key={d}
-                                                className={`mp-settings-btn ${gameSettings.difficulty === d ? (d === "extreme" ? "active-danger" : "active") : ""}`}
-                                                onClick={() => updateGameSettings(prev => ({ ...prev, difficulty: d }))}
-                                            >
-                                                {t(`page.guessWho.common.difficultyLabels.${d}`)}
-                                            </button>
-                                        ))}
-                                    </div>
+                                    <Select
+                                        value={gameSettings.difficulty}
+                                        onValueChange={(difficulty) => updateGameSettings(prev => ({ ...prev, difficulty }))}
+                                        options={(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(d => ({ value: d, label: t(`page.guessWho.common.difficultyLabels.${d}`) }))}
+                                        label={t("page.guessWho.multiplayer.difficultySetting")}
+                                    />
                                 </div>
 
                                 {/* Rarity */}

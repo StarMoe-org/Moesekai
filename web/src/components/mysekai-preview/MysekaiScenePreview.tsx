@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/md3";
+import { Button, Select } from "@/components/md3";
 import { mdCenterFocusStrong, mdRefresh } from "@/components/md3/icons";
 
 import { useI18n } from "@/contexts/I18nContext";
@@ -268,18 +268,12 @@ export default function MysekaiScenePreview({
                             />
                         </label>
                     )}
-                    <label className="block">
-                        <span className="mb-1 block type-label-l text-on-surface-variant">{t("page.mysekaiPreview.preview.scene")}</span>
-                        <select
-                            value={siteId}
-                            onChange={(event) => setSiteId(Number(event.target.value))}
-                            className="focus-ring w-full rounded-md3-xs border border-outline bg-surface-container-lowest px-3 py-2 type-body-m text-on-surface outline-none focus:border-primary"
-                        >
-                            {SITE_OPTIONS.map(option => (
-                                <option key={option.id} value={option.id}>{option.labelKey ? t(option.labelKey) : option.fallback}</option>
-                            ))}
-                        </select>
-                    </label>
+                    <Select
+                        value={siteId}
+                        onValueChange={setSiteId}
+                        options={SITE_OPTIONS.map(option => ({ value: option.id, label: option.labelKey ? t(option.labelKey) : option.fallback }))}
+                        label={t("page.mysekaiPreview.preview.scene")}
+                    />
                     <label className="block">
                         <span className="mb-1 flex items-center justify-between type-label-l text-on-surface-variant">
                             <span>{t("page.mysekaiPreview.preview.backWall")}</span>

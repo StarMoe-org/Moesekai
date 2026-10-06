@@ -28,6 +28,7 @@ import {
     type ServerType,
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     Banner,
@@ -361,7 +362,7 @@ export default function ProfileClient() {
                                                         "rounded-md3-xs px-1.5 py-0.5 type-label-s",
                                                         isActive ? "bg-primary text-on-primary" : "bg-surface-container-highest text-on-surface-variant",
                                                     )}>
-                                                        {t(`common.server.${acc.server}`)}
+                                                        <ServerRegionLabel server={acc.server} size={16} />
                                                     </span>
                                                     {isActive && (
                                                         <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
@@ -468,7 +469,7 @@ export default function ProfileClient() {
                                                 onClick={() => setFormServer(s.value)}
                                                 disabled={isVerifying}
                                             >
-                                                {t(`common.server.${s.value}`)}
+                                                <ServerRegionLabel server={s.value} />
                                             </Chip>
                                         ))}
                                     </div>

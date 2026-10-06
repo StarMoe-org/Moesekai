@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Modal from "@/components/common/Modal";
 import { Button, Chip, Icon, SegmentedButton, Tabs, buttonClassName } from "@/components/md3";
 import { mdArrowForward, mdDelete } from "@/components/md3/icons";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import type { ServerSourceType } from "@/contexts/ThemeContext";
 import type {
@@ -113,7 +114,7 @@ export default function InteractionsSettingsModal({
                                 </span>
                                 {snapshot && (
                                     <span className="rounded-md3-xs bg-surface-container-highest px-2 py-0.5 font-mono type-label-m text-on-surface-variant">
-                                        {snapshot.region.toUpperCase()} · {snapshot.version}
+                                        <ServerRegionLabel server={snapshot.region} size={16} /> · {snapshot.version}
                                     </span>
                                 )}
                             </div>
@@ -125,7 +126,7 @@ export default function InteractionsSettingsModal({
                                         selected={source === server}
                                         onClick={() => onSourceChange(server)}
                                     >
-                                        {t(`common.server.${server}`)}
+                                        <ServerRegionLabel server={server} />
                                     </Chip>
                                 ))}
                             </div>

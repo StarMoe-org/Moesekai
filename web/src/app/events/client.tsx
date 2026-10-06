@@ -1,7 +1,10 @@
 "use client";
 import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
+import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
 import EventGrid from "@/components/events/EventGrid";
+import ViewToggle from "@/components/cards/ViewToggle";
 import EventFilters from "@/components/events/EventFilters";
 import { useEventListData } from "@/hooks/useEventListData";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
@@ -10,7 +13,15 @@ import { ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@
 
 function EventsContent() {
     const { t } = useI18n();
+    const searchParams = useSearchParams();
+    const view: "grid" | "table" = ["table", "list"].includes(searchParams.get("view") ?? "") ? "table" : "grid";
     const data = useEventListData({ storageKey: "events", basePath: "/events" });
+
+    const handleViewChange = (next: "grid" | "table") => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (next === "grid") params.delete("view"); else params.set("view", next);
+        replaceCurrentUrlSearchParams(params);
+    };
 
     const quickFilterContent = (
         <EventFilters
@@ -77,7 +88,8 @@ function EventsContent() {
             {/* Event Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                <EventGrid events={data.displayedEvents} isLoading={data.isLoading} eventUnitMap={data.eventUnitMap} eventBannerCharMap={data.eventBannerCharMap} eventBonusAttrMap={data.eventBonusAttrMap} eventStoryIds={data.eventStoryIds} />
+                <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={handleViewChange} /></div>
+                <EventGrid events={data.displayedEvents} isLoading={data.isLoading} eventUnitMap={data.eventUnitMap} eventBannerCharMap={data.eventBannerCharMap} eventBonusAttrMap={data.eventBonusAttrMap} eventStoryIds={data.eventStoryIds} view={view} />
 
                 {!data.isLoading && (
                     <LoadMore

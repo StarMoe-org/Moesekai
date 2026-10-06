@@ -4,7 +4,7 @@ import { Suspense, useDeferredValue, useEffect, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation";
 
 import MainLayout from "@/components/MainLayout";
-import MusicFilters from "@/components/music/MusicFilters";
+import MusicFilters, { parseMusicDifficulties, parseMusicLevelParams, useMusicLevelFilter, type MusicLevelChart } from "@/components/music/MusicFilters";
 import MusicItem from "@/components/music/MusicItem";
 import { MUSIC_GRID_CLASS } from "@/components/music/music-layout";
 import { useI18n } from "@/contexts/I18nContext";
@@ -31,6 +31,9 @@ function LyricsContent() {
     const { t } = useI18n();
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
     const [musicTags, setMusicTags] = useState<IMusicTagInfo[]>([]);
+    const [charts, setCharts] = useState<MusicLevelChart[]>([]);
+    const levelFilter = useMusicLevelFilter(charts, parseMusicDifficulties(searchParams.get("difficulty")), parseMusicLevelParams(searchParams));
+    const { difficulties, range, matches: matchesLevel } = levelFilter;
     const [eventMusicIds, setEventMusicIds] = useState<Set<number>>(new Set());
     const [lyricsByMusicId, setLyricsByMusicId] = useState<Map<number, ILyricsIndexEntry>>(new Map());
     const [musicAliasesById, setMusicAliasesById] = useState<Map<number, string[]>>(new Map());
@@ -67,12 +70,14 @@ function LyricsContent() {
             catalogRequest,
             fetchMasterData<IMusicTagInfo[]>("musicTags.json"),
             fetchMasterData<{ musicId: number }[]>("eventMusics.json"),
+            fetchMasterData<MusicLevelChart[]>("musicDifficulties.json"),
         ])
-            .then(([index, musicData, tags, eventMusics]) => {
+            .then(([index, musicData, tags, eventMusics, difficultiesData]) => {
                 if (cancelled) return;
                 setLyricsByMusicId(new Map(index.songs.map((item) => [item.musicId, item])));
                 setMusics(musicData);
                 setMusicTags(tags);
+                setCharts(difficultiesData);
                 setEventMusicIds(new Set(eventMusics.map((item) => item.musicId)));
                 setError(null);
             })
@@ -124,8 +129,13 @@ function LyricsContent() {
         if (searchQuery) params.set("search", searchQuery);
         if (sortBy !== "publishedAt") params.set("sortBy", sortBy);
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
+        if (difficulties.length) params.set("difficulty", difficulties.join(","));
+        if (range) {
+            params.set("difficultyMin", String(range[0]));
+            params.set("difficultyMax", String(range[1]));
+        }
         replaceCurrentUrlSearchParams(params);
-    }, [hasEventOnly, searchQuery, selectedCategories, selectedTag, sortBy, sortOrder]);
+    }, [hasEventOnly, searchQuery, selectedCategories, selectedTag, sortBy, sortOrder, difficulties, range]);
 
     const nonInstrumentalMusics = useMemo(
         () => musics.filter((music) => {
@@ -138,7 +148,7 @@ function LyricsContent() {
     const totalMusics = nonInstrumentalMusics.length;
 
     const filteredMusics = useMemo(() => {
-        let result = nonInstrumentalMusics;
+        let result = nonInstrumentalMusics.filter((music) => matchesLevel(music.id));
         if (selectedTag !== "all") {
             let matchingIds: Set<number>;
             if (selectedTag === "vocaloid") {
@@ -180,7 +190,7 @@ function LyricsContent() {
             const difference = sortBy === "id" ? left.id - right.id : left.publishedAt - right.publishedAt;
             return sortOrder === "asc" ? difference : -difference;
         });
-    }, [deferredSearchQuery, eventMusicIds, hasEventOnly, isShowSpoiler, lyricsByMusicId, musicAliasesById, musicTags, nonInstrumentalMusics, now, selectedCategories, selectedTag, sortBy, sortOrder]);
+    }, [matchesLevel, deferredSearchQuery, eventMusicIds, hasEventOnly, isShowSpoiler, lyricsByMusicId, musicAliasesById, musicTags, nonInstrumentalMusics, now, selectedCategories, selectedTag, sortBy, sortOrder]);
 
     const waitingForAliasMatch = !isLoading
         && !aliasIndexSettled
@@ -195,6 +205,7 @@ function LyricsContent() {
     });
 
     const resetFilters = () => {
+        levelFilter.reset();
         setSelectedTag("all");
         setSelectedCategories([]);
         setHasEventOnly(false);
@@ -206,6 +217,11 @@ function LyricsContent() {
 
     const quickFilterContent = (
         <MusicFilters
+            selectedDifficulties={difficulties}
+            onDifficultiesChange={(next) => { levelFilter.changeDifficulties(next); resetDisplayCount(); }}
+            difficultyRange={range}
+            difficultyBounds={levelFilter.bounds}
+            onDifficultyRangeChange={(next) => { levelFilter.setRange(next); resetDisplayCount(); }}
             title={t("page.lyrics.filterTitle")}
             countUnit={t("page.lyrics.countUnit")}
             searchPlaceholder={t("page.lyrics.searchPlaceholder")}
@@ -247,6 +263,9 @@ function LyricsContent() {
     );
 
     useQuickFilter(t("page.lyrics.filterTitle"), quickFilterContent, [
+        difficulties,
+        range,
+        levelFilter.bounds,
         selectedTag,
         selectedCategories,
         hasEventOnly,

@@ -12,6 +12,55 @@ import {
     MUSIC_CATEGORY_COLORS,
 } from "@/types/music";
 import { useI18n } from "@/contexts/I18nContext";
+import { RangeSlider } from "@/components/md3";
+
+export type MusicLevelRange = [number, number];
+export const MUSIC_DIFFICULTIES = ["easy", "normal", "hard", "expert", "master", "append"];
+
+export function parseMusicLevelRange(value: unknown): MusicLevelRange | null {
+    if (!Array.isArray(value) || value.length !== 2) return null;
+    const [min, max] = value;
+    return typeof min === "number" && typeof max === "number"
+        && Number.isSafeInteger(min) && Number.isSafeInteger(max)
+        && min >= 1 && max <= 100 && min <= max ? [min, max] : null;
+}
+
+export function parseMusicLevelParams(params: { get: (key: string) => string | null }): MusicLevelRange | null {
+    const min = params.get("difficultyMin");
+    const max = params.get("difficultyMax");
+    if (min === null && max === null) return null;
+    if ((min !== null && !/^\d+$/.test(min)) || (max !== null && !/^\d+$/.test(max))) return null;
+    return parseMusicLevelRange([min === null ? 1 : Number(min), max === null ? 100 : Number(max)]);
+}
+
+export interface MusicLevelChart { musicId: number; musicDifficulty: string; playLevel: number }
+
+export function parseMusicDifficulties(value: unknown): string[] {
+    const items = typeof value === "string" ? value.split(",") : Array.isArray(value) ? value : [];
+    return MUSIC_DIFFICULTIES.filter((difficulty) => items.includes(difficulty));
+}
+
+export function useMusicLevelFilter(charts: MusicLevelChart[], initialDifficulties: string[] = [], initialRange: MusicLevelRange | null = null) {
+    const [difficulties, setDifficulties] = React.useState(initialDifficulties);
+    const [range, setRange] = React.useState<MusicLevelRange | null>(initialRange);
+    const levels = React.useMemo(() => charts.filter((chart) =>
+        (!difficulties.length || difficulties.includes(chart.musicDifficulty))
+        && MUSIC_DIFFICULTIES.includes(chart.musicDifficulty)
+        && Number.isSafeInteger(chart.playLevel) && chart.playLevel > 0), [charts, difficulties]);
+    const bounds = React.useMemo<MusicLevelRange>(() => {
+        const values = levels.map((chart) => chart.playLevel);
+        const min = values.length ? Math.min(...values) : 1;
+        const max = values.length ? Math.max(...values) : 40;
+        return range ? [Math.min(min, range[0]), Math.max(max, range[1])] : [min, max];
+    }, [levels, range]);
+    const matchingIds = React.useMemo(() => new Set(levels.filter((chart) =>
+        !range || (chart.playLevel >= range[0] && chart.playLevel <= range[1])).map((chart) => chart.musicId)), [levels, range]);
+    const matches = React.useCallback((id: number) =>
+        (!range && !difficulties.length) || matchingIds.has(id), [range, difficulties.length, matchingIds]);
+    return { difficulties, range, bounds, matches, setRange, setDifficulties,
+        changeDifficulties: (value: string[]) => { setDifficulties(value); },
+        reset: () => { setDifficulties([]); setRange(null); } };
+}
 
 interface MusicFiltersProps {
     // Context labels
@@ -33,6 +82,11 @@ interface MusicFiltersProps {
     // Difficulty filter
     selectedDifficulty?: string;
     onDifficultyChange?: (difficulty: string) => void;
+    selectedDifficulties?: string[];
+    onDifficultiesChange?: (difficulties: string[]) => void;
+    difficultyRange?: [number, number] | null;
+    difficultyBounds?: [number, number];
+    onDifficultyRangeChange?: (range: [number, number]) => void;
     // Show difficulty toggle
     showDifficulty?: boolean;
     onShowDifficultyChange?: (checked: boolean) => void;
@@ -95,6 +149,11 @@ export default function MusicFilters({
     onSearchChange,
     selectedDifficulty,
     onDifficultyChange,
+    selectedDifficulties,
+    onDifficultiesChange,
+    difficultyRange: selectedRange,
+    difficultyBounds,
+    onDifficultyRangeChange,
     showDifficulty,
     onShowDifficultyChange,
     showBpm,
@@ -109,6 +168,7 @@ export default function MusicFilters({
     filteredMusics,
 }: MusicFiltersProps) {
     const { t } = useI18n();
+    const difficultyRange = selectedRange ?? difficultyBounds;
 
     const SORT_OPTIONS = SORT_OPTIONS_BASE.map(opt => ({
         id: opt.id,
@@ -127,7 +187,8 @@ export default function MusicFilters({
         selectedTag !== "all" ||
         selectedCategories.length > 0 ||
         hasEventOnly ||
-        searchQuery.trim() !== "";
+        searchQuery.trim() !== "" ||
+        !!selectedRange || !!selectedDifficulties?.length;
 
     return (
         <BaseFilters
@@ -222,15 +283,22 @@ export default function MusicFilters({
             </FilterSection>
 
             {/* Difficulty Filter - Only show when sorting by level */}
-            {(sortBy === "level" || sortBy === "constant") && selectedDifficulty && onDifficultyChange && (
+            {((selectedDifficulties && onDifficultiesChange) || (selectedDifficulty && onDifficultyChange)) && (
                 <FilterSection label={t("common.filter.difficulty")}>
                     <div className="grid grid-cols-2 gap-2">
                         {DIFFICULTY_OPTIONS.map((diff) => {
-                            const isSelected = selectedDifficulty === diff.id;
+                            const isSelected = selectedDifficulties ? selectedDifficulties.includes(diff.id) : selectedDifficulty === diff.id;
                             return (
                                 <button
                                     key={diff.id}
-                                    onClick={() => onDifficultyChange(diff.id)}
+                                    type="button"
+                                    aria-pressed={isSelected}
+                                    onClick={() => {
+                                        if (selectedDifficulties && onDifficultiesChange) {
+                                            const next = isSelected ? selectedDifficulties.filter((item) => item !== diff.id) : [...selectedDifficulties, diff.id];
+                                            onDifficultiesChange(next);
+                                        } else onDifficultyChange?.(diff.id);
+                                    }}
                                     className={isSelected
                                         ? `${getFilterChipStateClasses(true)} !border-transparent bg-gradient-to-r ${diff.color} !text-white`
                                         : getFilterChipStateClasses(false)
@@ -241,9 +309,37 @@ export default function MusicFilters({
                             );
                         })}
                     </div>
+                    {selectedDifficulties && <p className="mt-2 type-body-s text-on-surface-variant">{t("common.filter.difficultiesHint")}</p>}
+                    {difficultyRange && difficultyBounds && onDifficultyRangeChange && (
+                        <div className="mt-4 space-y-2">
+                            <div className="flex items-center justify-between gap-2 type-label-m text-on-surface-variant">
+                                <span>{t("common.filter.difficultyRange")}</span>
+                                <span className="tabular-nums text-on-surface">{difficultyRange[0]}–{difficultyRange[1]}</span>
+                            </div>
+                            <RangeSlider
+                                value={difficultyRange}
+                                min={difficultyBounds[0]}
+                                max={difficultyBounds[1]}
+                                onValueChange={onDifficultyRangeChange}
+                                lowerLabel={t("common.filter.minimum")}
+                                upperLabel={t("common.filter.maximum")}
+                            />
+                        </div>
+                    )}
                 </FilterSection>
             )}
 
+            {selectedDifficulties && selectedDifficulty && onDifficultyChange && (
+                <FilterSection label={t("common.filter.sortDifficulty")}>
+                    <div className="flex flex-wrap gap-2">
+                        {DIFFICULTY_OPTIONS.map((diff) => (
+                            <button key={diff.id} type="button" aria-pressed={selectedDifficulty === diff.id}
+                                className={getFilterChipStateClasses(selectedDifficulty === diff.id)}
+                                onClick={() => onDifficultyChange(diff.id)}>{diff.label}</button>
+                        ))}
+                    </div>
+                </FilterSection>
+            )}
             {/* Other Filters */}
             <FilterSection label={t("common.filter.otherFilters")}>
                 <div className="space-y-2">

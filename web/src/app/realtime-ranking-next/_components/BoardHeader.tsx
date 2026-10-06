@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { Button, Chip, PageHeader } from "@/components/md3";
 import { mdBolt, mdRefresh } from "@/components/md3/icons";
@@ -28,14 +29,6 @@ interface BoardHeaderProps {
     showChurn: boolean;
     onShowChurnChange: (value: boolean) => void;
 }
-
-const REGION_SHORT_NAMES: Record<RealtimeRankingRegion, string> = {
-    cn: "CN",
-    jp: "JP",
-    tw: "TW",
-    kr: "KR",
-    en: "EN",
-};
 
 export default function BoardHeader({
     region,
@@ -84,8 +77,7 @@ export default function BoardHeader({
                         const regionText = t(`page.realtimeRanking.regions.${r}`);
                         return (
                             <Chip key={r} selected={region === r} onClick={() => onRegionChange(r)} title={regionText}>
-                                <span className="uppercase">{REGION_SHORT_NAMES[r]}</span>
-                                <span className="hidden opacity-85 sm:inline"> {regionText}</span>
+                                <ServerRegionLabel server={r} label={regionText} />
                             </Chip>
                         );
                     })}

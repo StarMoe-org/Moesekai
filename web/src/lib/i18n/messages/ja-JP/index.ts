@@ -19,6 +19,10 @@ export const jaJPMessages = {
       loading: "読み込み中",
       showPassword: "内容を表示",
       required: "必須",
+      selectSearch: "選択肢を検索…",
+      selectNoOptions: "一致する選択肢がありません",
+      selectPlaceholder: "選択してください",
+      selectRequired: "項目を選択してください",
     },
     action: {
       close: '閉じる',
@@ -88,7 +92,7 @@ export const jaJPMessages = {
     server: {
       cn: '簡体字 (CN)',
       jp: '日本版 (JP)',
-      tw: '繁体字 (TW)',
+      tw: '香港・マカオ・台湾サーバー (HMT)',
       kr: '韓国版 (KR)',
       en: 'グローバル版 (EN)'
     },
@@ -208,6 +212,11 @@ export const jaJPMessages = {
       musicTag: '楽曲タグ',
       mvType: 'MVタイプ',
       difficulty: '難易度',
+      difficultyRange: 'レベル範囲',
+      sortDifficulty: '並び替え・譜面定数表示の難易度',
+      difficultiesHint: '複数選択できます。未選択の場合はすべて対象となり、選択した難易度のいずれかに一致する楽曲を表示します。',
+      minimum: '最低',
+      maximum: '最高',
       otherFilters: 'その他のフィルター',
       eventSongsOnly: 'イベント楽曲のみ',
       showDifficulty: '難易度を表示',
@@ -253,6 +262,11 @@ export const jaJPMessages = {
       character2: 'Character 2',
       unlimited: 'Any',
       sourceArea: 'Source Area'
+    },
+    view: {
+      grid: 'グリッド',
+      table: 'テーブル',
+      label: '表示形式'
     },
     progress: {
       collectionProgress: 'Collection Progress',
@@ -567,7 +581,14 @@ export const jaJPMessages = {
         virtual_live: 'Virtual Live'
       }
     },
-    virtualSingerWithUnit: 'Virtual Singer ({unit})'
+    virtualSingerWithUnit: 'Virtual Singer ({unit})',
+    serverDescription: {
+      cn: "簡体字版サーバー",
+      jp: "日本サーバー",
+      tw: "香港・マカオ・台湾サーバー (HMT)",
+      kr: "韓国サーバー",
+      en: "グローバルサーバー",
+    },
   },
   layout: {
     nav: {
@@ -772,14 +793,17 @@ export const jaJPMessages = {
       machineTranslationNotice: '一部のテキストには機械翻訳が使用されており、不正確な場合があります。',
       options: {
         zhCN: '簡体字中国語',
-        zhTW: '繁体字中国語 (TW)',
+        zhTW: '繁体字中国語 (HMT)',
         enUS: 'English',
         jaJP: '日本語',
         koKR: '韓国語'
       }
     },
     themeColor: {
-      sectionTitle: 'テーマカラー'
+      sectionTitle: 'テーマカラー',
+      expand: "テーマカラーを展開",
+      collapse: "テーマカラーを折りたたむ",
+      current: "現在：{name}",
     },
     backgroundAnimationBudget: {
       sectionTitle: '背景アニメーション',
@@ -825,7 +849,7 @@ export const jaJPMessages = {
       en: 'グローバル版 (EN)',
       jp: '日本版 (JP)',
       cn: '簡体字版 (CN)',
-      tw: '繁体字版 (TW)',
+      tw: '香港・マカオ・台湾サーバー (HMT)',
       kr: '韓国版 (KR)'
     },
     dataVersion: {
@@ -970,6 +994,9 @@ export const jaJPMessages = {
       onlyCompleted: "完了のみ表示",
       mysekaiTitle: "マイセカイプレビュー（開発用）",
       mysekaiLoading: "マイセカイプレビューを読み込み中...",
+      selectTitle: "セレクトメニュー",
+      selectLabel: "項目を選択",
+      selectSearchLabel: "選択肢を検索",
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
     mysekaiInteractions: {
@@ -1176,7 +1203,7 @@ export const jaJPMessages = {
       languageBilingualDesc: "インターフェース言語を選択してください。You can change this anytime in settings.",
       languageOptionSubtitles: {
         "zh-CN": "简体中文 / Simplified Chinese",
-        "zh-TW": "繁體中文 (TW) / Traditional Chinese",
+        "zh-TW": "繁體中文 (HMT) / Traditional Chinese",
         "en-US": "English / 英语",
         "ja-JP": "日本語 / Japanese",
         "ko-KR": "한국어 / Korean",
@@ -1226,6 +1253,14 @@ export const jaJPMessages = {
         cards: '最新カード',
         music: '最新楽曲',
         live: 'バーチャルライブ'
+      },
+      customize: {
+        open: 'ホームをカスタマイズ',
+        title: 'ホームをカスタマイズ',
+        description: '表示する動的セクションと順番を選択できます。この設定はこの端末に保存されます。',
+        moveUp: '上へ移動',
+        moveDown: '下へ移動',
+        reset: '初期設定に戻す'
       },
       shortcuts: {
         cards: 'カード',
@@ -1508,7 +1543,7 @@ export const jaJPMessages = {
         en: 'グローバル版',
         jp: '日本版',
         cn: '簡体字版',
-        tw: '繁体字版',
+        tw: '香港・マカオ・台湾サーバー (HMT)',
         kr: '韓国版'
       },
       navigation: {
@@ -2913,7 +2948,7 @@ export const jaJPMessages = {
       regions: {
         cn: 'CN',
         jp: 'JP',
-        tw: 'TW',
+        tw: '香港・マカオ・台湾サーバー (HMT)',
         kr: 'KR',
         en: 'EN'
       },

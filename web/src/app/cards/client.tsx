@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
 import CardGrid from "@/components/cards/CardGrid";
+import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
 import CardFilters from "@/components/cards/CardFilters";
 import SearchSyntaxHelp from "@/components/search/SearchSyntaxHelp";
 import { parseSearchQuery, matchExpr, type SearchTerm, type SearchExpr } from "@/lib/searchQuery";
@@ -45,6 +46,7 @@ function CardsContent() {
     const [selectedSupportUnits, setSelectedSupportUnits] = useState<SupportUnit[]>([]);
     const [selectedSkillTypes, setSelectedSkillTypes] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
+    const [view, setView] = useState<ListViewMode>("grid");
 
     // Sort states
     const [sortBy, setSortBy] = useState<"id" | "releaseAt" | "rarity">("id");
@@ -73,9 +75,10 @@ function CardsContent() {
         const search = searchParams.get("search");
         const sort = searchParams.get("sortBy");
         const order = searchParams.get("sortOrder");
+        const viewParam = searchParams.get("view");
 
         // If URL has params, use them
-        const hasUrlParams = chars || units || attrs || rarities || supplyTypes || supportUnits || skillTypes || search || sort || order;
+        const hasUrlParams = chars || units || attrs || rarities || supplyTypes || supportUnits || skillTypes || search || sort || order || viewParam;
 
         if (hasUrlParams) {
             if (chars) setSelectedCharacters(chars.split(",").map(Number));
@@ -88,6 +91,7 @@ function CardsContent() {
             if (search) setSearchQuery(search);
             if (sort) setSortBy(sort as "id" | "releaseAt" | "rarity");
             if (order) setSortOrder(order as "asc" | "desc");
+            if (viewParam) setView(viewParam === "table" || viewParam === "list" ? "table" : "grid");
         } else {
             // Fallback to sessionStorage
             try {
@@ -104,6 +108,7 @@ function CardsContent() {
                     if (filters.search) setSearchQuery(filters.search);
                     if (filters.sortBy) setSortBy(filters.sortBy);
                     if (filters.sortOrder) setSortOrder(filters.sortOrder);
+                    if (filters.view) setView(filters.view === "table" || filters.view === "list" ? "table" : "grid");
                 }
             } catch {
                 console.log("Could not restore filters from sessionStorage");
@@ -132,6 +137,7 @@ function CardsContent() {
             search: searchQuery,
             sortBy,
             sortOrder,
+            view,
         };
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
@@ -154,8 +160,9 @@ function CardsContent() {
 
         if (sortBy !== "id") params.set("sortBy", sortBy);
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
+        if (view !== "grid") params.set("view", view);
         replaceCurrentUrlSearchParams(params);
-    }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, filtersInitialized, isScreenshotMode]);
+    }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, view, filtersInitialized, isScreenshotMode]);
 
     // Fetch cards data
     useEffect(() => {
@@ -427,7 +434,8 @@ function CardsContent() {
             {/* Card grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                <CardGrid cards={displayedCards} isLoading={isLoading} />
+                <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={setView} /></div>
+                <CardGrid cards={displayedCards} isLoading={isLoading} view={view} />
 
                 {isScreenshotMode && (
                     <Banner tone="info" className="mt-8">

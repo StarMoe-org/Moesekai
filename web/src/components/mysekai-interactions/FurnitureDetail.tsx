@@ -7,6 +7,8 @@ import { Button } from "@/components/md3/Button";
 import { Icon } from "@/components/md3/Icon";
 import { mdArrowForward, mdChevronRight, mdOpenInNew, mdRefresh, mdShare, mdViewInAr } from "@/components/md3/icons";
 import { TranslatedText } from "@/components/common/TranslatedText";
+import { ServerRegionIcon } from "@/components/common/ServerRegion";
+import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
@@ -108,8 +110,8 @@ export default function FurnitureDetail({ fixture, data, snapshot, runtimeEntry,
         </section>
         <details className="workspace-source-record">
             <summary>{t("page.mysekaiWorkspace.sourceRecord")}</summary>
-            <p>{t("page.mysekaiWorkspace.databaseSource", { region: data.region.toUpperCase() })}</p>
-            {snapshot && <p>{t("page.mysekaiWorkspace.authoredSource", { region: snapshot.region.toUpperCase(), version: snapshot.version })}</p>}
+            <p><ServerRegionIcon server={data.region} size={16} decorative /> {t("page.mysekaiWorkspace.databaseSource", { region: t(SERVER_LABEL_KEYS[data.region]) })}</p>
+            {snapshot && <p><ServerRegionIcon server={snapshot.region} size={16} decorative /> {t("page.mysekaiWorkspace.authoredSource", { region: t(SERVER_LABEL_KEYS[snapshot.region]), version: snapshot.version })}</p>}
             <dl className="workspace-facts">
                 <div><dt>{t("page.mysekai.detail.fields.type")}</dt><dd>{fixture.mysekaiFixtureType}</dd></div>
                 <div><dt>{t("page.mysekai.detail.fields.layoutType")}</dt><dd>{fixture.mysekaiSettableLayoutType}</dd></div>

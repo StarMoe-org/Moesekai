@@ -79,7 +79,7 @@ const { Tabs, SegmentedButton, ConnectedButtonGroup } = md3("Segmented.tsx");
 const { Button, IconButton } = md3("Button.tsx");
 const { List, ListItem } = md3("Misc.tsx");
 const { TextField } = md3("TextField.tsx");
-const { Slider } = md3("Selection.tsx");
+const { Slider, RangeSlider } = md3("Selection.tsx");
 const host = document.getElementById("root");
 let root;
 async function flushFrames() {
@@ -445,6 +445,69 @@ test("read-only TextField cannot be cleared and labelled support preserves calle
     const support = host.querySelector('[id$="-support"]');
     assert.ok(field.getAttribute("aria-describedby").split(" ").includes(support.id));
     assert.ok(field.getAttribute("aria-describedby").split(" ").includes("external-help"));
+});
+
+test("RangeSlider exposes two named native handles on one track with ordered bounds", async () => {
+    const updates = [];
+    function Example() {
+        const [value, setValue] = React.useState([10, 30]);
+        return h(RangeSlider, { value, min: 1, max: 40, lowerLabel: "Minimum", upperLabel: "Maximum", formatValue: (n) => `Level ${n}`, onValueChange: (next) => { updates.push(next); setValue(next); } });
+    }
+    await render(h(Example));
+    const [lower, upper] = host.querySelectorAll('input[type="range"]');
+    assert.equal(host.querySelectorAll('[data-range-slider="true"]').length, 1);
+    assert.equal(lower.getAttribute("aria-label"), "Minimum");
+    assert.equal(upper.getAttribute("aria-label"), "Maximum");
+    assert.equal(lower.getAttribute("aria-valuetext"), "Level 10");
+    assert.deepEqual([lower.min, lower.max, upper.min, upper.max], ["1", "30", "10", "40"]);
+    await focus(lower);
+    assert.equal((await key(lower, "ArrowRight")).defaultPrevented, false, "native keyboard increments remain available");
+    await input(lower, "20");
+    await input(upper, "35");
+    assert.deepEqual(updates, [[20, 30], [20, 35]]);
+    assert.deepEqual([lower.max, upper.min], ["35", "20"]);
+});
+
+async function rangePointer(track, type, clientX) {
+    const event = new window.MouseEvent(type, { clientX, button: 0, bubbles: true, cancelable: true });
+    Object.defineProperty(event, "pointerId", { value: 1 });
+    await act(async () => track.dispatchEvent(event));
+}
+
+test("RangeSlider pointer chooses nearest handle, snaps to steps and stops after cancel", async () => {
+    const updates = [];
+    function Example() {
+        const [value, setValue] = React.useState([20, 80]);
+        return h(RangeSlider, { value, min: 0, max: 100, step: 5, lowerLabel: "Min", upperLabel: "Max", onValueChange: (next) => { updates.push(next); setValue(next); } });
+    }
+    await render(h(Example));
+    const track = host.querySelector('[data-range-slider="true"]');
+    track.getBoundingClientRect = () => ({ left: 10, width: 100 });
+    track.setPointerCapture = () => {};
+    await rangePointer(track, "pointerdown", 36);
+    assert.deepEqual(updates.at(-1), [25, 80]);
+    assertFocused(host.querySelector('[aria-label="Min"]'));
+    await rangePointer(track, "pointermove", 200);
+    assert.deepEqual(updates.at(-1), [80, 80], "lower handle cannot cross the upper handle");
+    await rangePointer(track, "pointercancel", 200);
+    const count = updates.length;
+    await rangePointer(track, "pointermove", 20);
+    assert.equal(updates.length, count);
+    await rangePointer(track, "pointerdown", 100);
+    assert.deepEqual(updates.at(-1), [80, 90], "coincident handles can separate upward");
+    assertFocused(host.querySelector('[aria-label="Max"]'));
+});
+
+test("RangeSlider disables both handles for disabled or collapsed bounds", async () => {
+    const updates = [];
+    for (const props of [{ min: 1, max: 40, disabled: true }, { min: 20, max: 20 }]) {
+        await render(h(RangeSlider, { value: [10, 30], lowerLabel: "Min", upperLabel: "Max", onValueChange: (next) => updates.push(next), ...props }));
+        const handles = [...host.querySelectorAll('input[type="range"]')];
+        assert.equal(handles.length, 2);
+        assert.ok(handles.every((node) => node.disabled));
+        await rangePointer(host.querySelector('[data-range-slider="true"]'), "pointerdown", 10);
+    }
+    assert.deepEqual(updates, []);
 });
 
 test("Slider stays a native keyboard/form control and its visual handle agrees with clamped range values", async () => {

@@ -1,8 +1,9 @@
 "use client";
 import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import { Banner, Button, Checkbox, Chip, LinearProgress, List, ListItem, LoadingIndicator, SegmentedButton, Surface, TextField } from "@/components/md3";
-import { mdCalculate, mdSearch } from "@/components/md3/icons";
+import { Banner, Button, Checkbox, Chip, LinearProgress, LoadingIndicator, Select, SegmentedButton, Surface, TextField } from "@/components/md3";
+import { mdCalculate } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
+import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
 import { loadTranslations } from "@/lib/translations";
 import { DEFAULT_GAP_SECONDS, FIRE_MULTIPLIERS, fireMultiplier, playsPerHour } from "@/lib/goal-planner/core";
@@ -697,35 +698,26 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                                 {song.subtitle && <div className="type-body-s text-on-surface-variant truncate">{song.subtitle}</div>}
                             </Surface>
                         ) : null}
-                        <div className="relative">
-                            <TextField
-                                variant="filled"
-                                dense
-                                icon={mdSearch}
-                                type="search"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder={t("page.predictionPlanner.pt.songSearch")}
-                                aria-label={t("page.predictionPlanner.pt.songSearch")}
-                            />
-                            {searchMatches.length > 0 && (
-                                <List className="absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-surface-container-high text-on-surface border border-outline-variant rounded-md3-md shadow-elev-2">
-                                    {searchMatches.map((entry) => (
-                                        <ListItem
-                                            key={entry.musicId}
-                                            onClick={() => pickSong(entry)}
-                                            headline={(
-                                                <span className="flex items-center gap-2 min-w-0">
-                                                    <span className="type-label-s font-mono text-on-surface-variant shrink-0">#{entry.musicId}</span>
-                                                    <span className="type-title-s text-on-surface truncate">{entry.title}</span>
-                                                </span>
-                                            )}
-                                            supportingText={entry.subtitle}
-                                        />
-                                    ))}
-                                </List>
-                            )}
-                        </div>
+                        <Select<number>
+                            searchable
+                            dense
+                            disabled={songsLoading}
+                            filterOptions={false}
+                            value={musicId}
+                            selectedLabel={song?.title}
+                            searchValue={search}
+                            onSearchChange={setSearch}
+                            onValueChange={(id) => { const entry = songById.get(id); if (entry) pickSong(entry); }}
+                            placeholder={t("page.predictionPlanner.pt.songSearch")}
+                            searchPlaceholder={t("page.predictionPlanner.pt.songSearch")}
+                            aria-label={t("page.predictionPlanner.pt.songSearch")}
+                            options={searchMatches.map((entry) => ({
+                                value: entry.musicId,
+                                textValue: entry.title,
+                                label: <span><span className="block type-title-s">{entry.title}</span>{entry.subtitle && <span className="block type-body-s">{entry.subtitle}</span>}</span>,
+                                leading: <span className="type-label-s font-mono">#{entry.musicId}</span>,
+                            }))}
+                        />
                     </div>
 
                     {songDifficulties.length > 0 && (
@@ -753,30 +745,20 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
             )}
 
             <div className="grid grid-cols-2 gap-3">
-                <label className="block min-w-0">
-                    <span className={LABEL_CLASS}>{t("page.predictionPlanner.pt.fire")}</span>
-                    <select
-                        value={fire}
-                        onChange={(e) => setFire(Number(e.target.value))}
-                        className="focus-ring h-12 w-full px-3 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary"
-                    >
-                        {fireOptions.map(({ count, m }) => (
-                            <option key={count} value={count}>{t("page.predictionPlanner.pt.fireOption", { count, multiplier: m })}</option>
-                        ))}
-                    </select>
-                </label>
-                <label className="block min-w-0">
-                    <span className={LABEL_CLASS}>{t("page.predictionPlanner.pt.autoFire")}</span>
-                    <select
-                        value={autoFire}
-                        onChange={(e) => setAutoFireChoice(Number(e.target.value))}
-                        className="focus-ring h-12 w-full px-3 bg-surface-container-highest border border-outline rounded-md3-xs type-body-m text-on-surface focus:border-primary"
-                    >
-                        {fireOptions.filter(({ count }) => count >= minAutoFire && count <= maxAutoFire).map(({ count, m }) => (
-                            <option key={count} value={count}>{t("page.predictionPlanner.pt.fireOption", { count, multiplier: m })}</option>
-                        ))}
-                    </select>
-                </label>
+                <Select
+                    value={fire}
+                    onValueChange={setFire}
+                    options={fireOptions.map(({ count, m }) => ({ value: count, label: t("page.predictionPlanner.pt.fireOption", { count, multiplier: m }) }))}
+                    label={t("page.predictionPlanner.pt.fire")}
+                    className="min-w-0"
+                />
+                <Select
+                    value={autoFire}
+                    onValueChange={setAutoFireChoice}
+                    options={fireOptions.filter(({ count }) => count >= minAutoFire && count <= maxAutoFire).map(({ count, m }) => ({ value: count, label: t("page.predictionPlanner.pt.fireOption", { count, multiplier: m }) }))}
+                    label={t("page.predictionPlanner.pt.autoFire")}
+                    className="min-w-0"
+                />
             </div>
 
             {mode !== "direct" && (
@@ -811,7 +793,7 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                         <>
                             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                 <span className="type-body-s text-on-surface-variant font-mono break-all">
-                                    {t("page.predictionPlanner.pt.deck.account", { userId: account.userId, server: account.server.toUpperCase() })}
+                                    {t("page.predictionPlanner.pt.deck.account", { userId: account.userId, server: getServerDisplayCode(account.server) })}
                                 </span>
                                 {running ? (
                                     <div className="flex items-center gap-2">

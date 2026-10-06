@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
@@ -442,14 +443,14 @@ function AssetVersionsContent() {
             onReset={resetFilters}
         >
             <FilterSection label={t("page.assetVersions.serverSelect")}>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="flex flex-wrap gap-2">
                     {SERVERS.map(srv => (
                         <FilterButton
                             key={srv}
                             selected={server === srv}
                             onClick={() => handleServerChange(srv)}
                         >
-                            {t(`settings.serverSource.${srv}`) || srv.toUpperCase()}
+                            <ServerRegionLabel server={srv} />
                         </FilterButton>
                     ))}
                 </div>

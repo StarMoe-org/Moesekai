@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { localizePathForBrowser } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
+import { ServerRegionIcon } from "@/components/common/ServerRegion";
+import { isValidServer, SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, Button, Card, CircularProgress, Icon, PageContainer, PageHeader, Surface } from "@/components/md3";
 import { mdChevronRight } from "@/components/md3/icons";
@@ -204,7 +206,7 @@ export default function CallbackClient() {
                                             <div className="flex items-center justify-between gap-3">
                                                 <div>
                                                     <p className="type-title-s text-on-surface">{gameId}</p>
-                                                    <p className="mt-1 type-body-s text-on-surface-variant">{t("page.oauth2.callback.serverLabel", { server })}</p>
+                                                    <p className="mt-1 flex items-center gap-1.5 type-body-s text-on-surface-variant">{isValidServer(server) && <ServerRegionIcon server={server} size={18} decorative />}{t("page.oauth2.callback.serverLabel", { server: isValidServer(server) ? t(SERVER_LABEL_KEYS[server]) : server })}</p>
                                                 </div>
                                                 <span className="flex items-center gap-1 type-label-l text-primary">
                                                     {t("page.oauth2.callback.selectAction")}

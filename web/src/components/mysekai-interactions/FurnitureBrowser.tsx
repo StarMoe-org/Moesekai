@@ -4,6 +4,7 @@ import FurnitureThumbnail from "./FurnitureThumbnail";
 import BaseFilters, { FilterSection, FilterToggle } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { TranslatedText } from "@/components/common/TranslatedText";
+import { Select } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import { getMysekaiFixtureThumbnailUrl } from "@/lib/assets";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
@@ -53,19 +54,24 @@ export default function FurnitureBrowser({ data, snapshot, results, relations, r
                 onReset={reset}>
                 <div className="workspace-filter-row">
                     <FilterSection label={t("page.mysekai.detail.fields.mainGenre")}>
-                        <select aria-label={t("page.mysekai.detail.fields.mainGenre")} value={filters.genre ?? ""}
-                            onChange={event => filter({ genre: Number(event.target.value) || null, subGenre: null })}>
-                            <option value="">{t("page.mysekaiWorkspace.all")}</option>
-                            {genres.map(genre => <option key={genre.id} value={genre.id}>{getMysekaiGenreDisplayName(genre.name, t)}</option>)}
-                        </select>
+                        <Select
+                            value={filters.genre ?? 0}
+                            onValueChange={value => filter({ genre: value === 0 ? null : value, subGenre: null })}
+                            options={[{ value: 0, label: t("page.mysekaiWorkspace.all") }, ...genres.map(genre => ({ value: genre.id, label: getMysekaiGenreDisplayName(genre.name, t) }))]}
+                            aria-label={t("page.mysekai.detail.fields.mainGenre")}
+                        />
                     </FilterSection>
                     <FilterSection label={t("page.mysekaiWorkspace.order")}>
-                        <select aria-label={t("page.mysekaiWorkspace.order")} value={`${filters.sortBy}:${filters.sortOrder}`}
-                            onChange={event => { const [sortBy, sortOrder] = event.target.value.split(":"); filter({ sortBy: sortBy as "id" | "name", sortOrder: sortOrder as "asc" | "desc" }); }}>
-                            <option value="id:desc">{t("page.mysekaiWorkspace.newest")}</option>
-                            <option value="id:asc">{t("page.mysekaiWorkspace.oldest")}</option>
-                            <option value="name:asc">{t("page.mysekaiWorkspace.nameOrder")}</option>
-                        </select>
+                        <Select
+                            value={`${filters.sortBy}:${filters.sortOrder}`}
+                            onValueChange={value => { const [sortBy, sortOrder] = value.split(":"); filter({ sortBy: sortBy as "id" | "name", sortOrder: sortOrder as "asc" | "desc" }); }}
+                            options={[
+                                { value: "id:desc", label: t("page.mysekaiWorkspace.newest") },
+                                { value: "id:asc", label: t("page.mysekaiWorkspace.oldest") },
+                                { value: "name:asc", label: t("page.mysekaiWorkspace.nameOrder") },
+                            ]}
+                            aria-label={t("page.mysekaiWorkspace.order")}
+                        />
                     </FilterSection>
                     <FilterToggle label={t("page.mysekaiWorkspace.sceneAvailable")} selected={browse.availability === "ready"}
                         onClick={() => change({ availability: browse.availability === "ready" ? "all" : "ready" })} />
@@ -74,16 +80,20 @@ export default function FurnitureBrowser({ data, snapshot, results, relations, r
                     <summary>{t("page.mysekaiWorkspace.refine")}{refined && <span className="workspace-filter-dot" />}</summary>
                     <div className="workspace-filter-row">
                         <FilterSection label={t("page.mysekai.detail.fields.subGenre")}>
-                            <select aria-label={t("page.mysekai.detail.fields.subGenre")} value={filters.subGenre ?? ""} onChange={event => filter({ subGenre: Number(event.target.value) || null })}>
-                                <option value="">{t("page.mysekaiWorkspace.all")}</option>
-                                {subGenres.map(genre => <option key={genre.id} value={genre.id}>{getMysekaiGenreDisplayName(genre.name, t)}</option>)}
-                            </select>
+                            <Select
+                                value={filters.subGenre ?? 0}
+                                onValueChange={value => filter({ subGenre: value === 0 ? null : value })}
+                                options={[{ value: 0, label: t("page.mysekaiWorkspace.all") }, ...subGenres.map(genre => ({ value: genre.id, label: getMysekaiGenreDisplayName(genre.name, t) }))]}
+                                aria-label={t("page.mysekai.detail.fields.subGenre")}
+                            />
                         </FilterSection>
                         <FilterSection label={t("page.mysekai.detail.tags")}>
-                            <select aria-label={t("page.mysekai.detail.tags")} value={filters.tag ?? ""} onChange={event => filter({ tag: Number(event.target.value) || null })}>
-                                <option value="">{t("page.mysekaiWorkspace.all")}</option>
-                                {tags.map(tag => <option key={tag.id} value={tag.id}>{getMysekaiTagDisplayName(tag.name, t)}</option>)}
-                            </select>
+                            <Select
+                                value={filters.tag ?? 0}
+                                onValueChange={value => filter({ tag: value === 0 ? null : value })}
+                                options={[{ value: 0, label: t("page.mysekaiWorkspace.all") }, ...tags.map(tag => ({ value: tag.id, label: getMysekaiTagDisplayName(tag.name, t) }))]}
+                                aria-label={t("page.mysekai.detail.tags")}
+                            />
                         </FilterSection>
                     </div>
                     <CharacterFilter selectedCharacters={filters.characters} selectedUnitIds={filters.units}

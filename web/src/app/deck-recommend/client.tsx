@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import Link from "@/components/LocalizedLink";
+import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
@@ -1100,7 +1101,7 @@ export default function DeckRecommendClient() {
                                         }}
                                         className={pill(server === option.value)}
                                     >
-                                        {t(option.labelKey)}
+                                        <ServerRegionLabel server={option.value} />
                                     </button>
                                 ))}
                             </div>

@@ -80,6 +80,9 @@ export const zhTWPagePrimary = {
         onlyCompleted: "僅顯示已完成",
         mysekaiTitle: "MySekai 預覽（開發測試）",
         mysekaiLoading: "正在載入 MySekai 預覽器...",
+        selectTitle: "下拉選擇",
+        selectLabel: "單選選項",
+        selectSearchLabel: "搜尋選項",
     },
     mysekaiInteractions: {
             r5: {"pagination":"內容分頁","previous":"上一頁","next":"下一頁","page":"第 {page} 頁，共 {pages} 頁","range":"{start}–{end} / {total}","preparing":"正在準備資源…","ready":"準備就緒，點擊播放"},
@@ -286,7 +289,7 @@ export const zhTWPagePrimary = {
             languageBilingualDesc: "請選擇介面語言。You can change this anytime in settings.",
             languageOptionSubtitles: {
                 "zh-CN": "簡體中文 / Simplified Chinese",
-                "zh-TW": "繁體中文 (TW) / Traditional Chinese",
+                "zh-TW": "繁體中文 (HMT) / Traditional Chinese",
                 "en-US": "English / 英語",
                 "ja-JP": "日本語 / Japanese",
                 "ko-KR": "한국어 / Korean",
@@ -336,6 +339,14 @@ export const zhTWPagePrimary = {
                 cards: "最新卡牌",
                 music: "最新歌曲",
                 live: "演唱會",
+            },
+            customize: {
+                open: "自訂首頁",
+                title: "自訂首頁",
+                description: "選擇要顯示的動態區塊並調整順序。設定會儲存在此裝置。",
+                moveUp: "上移",
+                moveDown: "下移",
+                reset: "恢復預設",
             },
             shortcuts: {
                 cards: "卡牌",
@@ -619,7 +630,7 @@ export const zhTWPagePrimary = {
                 en: "國際服",
                 jp: "日服",
                 cn: "簡中服 (CN)",
-                tw: "繁中服 (TW)",
+                tw: "港澳台服 (HMT)",
                 kr: "韓服",
             },
             navigation: {
@@ -2005,7 +2016,7 @@ export const zhTWPagePrimary = {
             regions: {
                 cn: "簡中",
                 jp: "日服",
-                tw: "繁中",
+                tw: "港澳台服 (HMT)",
                 kr: "韓服",
                 en: "國際服",
             },

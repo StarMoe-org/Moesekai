@@ -33,7 +33,7 @@ import {
 import { getCharacterName } from "@/lib/i18n";
 import type { ExchangeStatus, FlattenedMaterialExchange } from "@/types/exchange";
 import type { ICardInfo } from "@/types/types";
-import { Banner, Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
+import { Banner, Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader, Select } from "@/components/md3";
 import { mdSwapHoriz } from "@/components/md3/icons";
 
 function ExchangesPageHeader() {
@@ -88,9 +88,6 @@ function getStatusTone(status: ExchangeStatus): BadgeTone {
             return "neutral";
     }
 }
-
-const SELECT_CLASS =
-    "focus-ring h-10 w-full cursor-pointer rounded-md3-xs border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none focus:border-2 focus:border-primary";
 
 const THUMB_LG = "h-9 w-9 shrink-0 rounded-md3-xs bg-surface-container-high object-contain p-0.5";
 const THUMB_SM = "h-7 w-7 rounded-md3-xs bg-surface-container-high object-contain p-0.5";
@@ -549,39 +546,23 @@ function ExchangesContent() {
             onReset={resetFilters}
         >
             <FilterSection label={t("common.filter.exchangeShop")}>
-                <select
-                    className={SELECT_CLASS}
-                    value={filters.selectedSummaryIds.length === 1 ? String(filters.selectedSummaryIds[0]) : ""}
-                    onChange={(e) => {
-                        const val = e.target.value ? [Number(e.target.value)] : [];
-                        updateFilters((prev) => ({ ...prev, selectedSummaryIds: val }));
-                    }}
-                >
-                    <option value="">{t("common.filter.all")}</option>
-                    {summaryOptions.map((summary) => (
-                        <option key={summary.id} value={summary.id}>
-                            {summary.label} ({summary.count})
-                        </option>
-                    ))}
-                </select>
+                <Select
+                    value={filters.selectedSummaryIds.length === 1 ? filters.selectedSummaryIds[0] : null}
+                    onValueChange={(value) => updateFilters((prev) => ({ ...prev, selectedSummaryIds: value === 0 ? [] : [value] }))}
+                    options={[{ value: 0, label: t("common.filter.all") }, ...summaryOptions.map((summary) => ({ value: summary.id, label: `${summary.label} (${summary.count})`, textValue: summary.label }))]}
+                    label={t("common.filter.exchangeShop")}
+                    selectedLabel={filters.selectedSummaryIds.length === 0 ? t("common.filter.all") : undefined}
+                />
             </FilterSection>
 
             <FilterSection label={t("common.filter.category")}>
-                <select
-                    className={SELECT_CLASS}
-                    value={filters.selectedCategories.length === 1 ? filters.selectedCategories[0] : ""}
-                    onChange={(e) => {
-                        const val = e.target.value ? [e.target.value] : [];
-                        updateFilters((prev) => ({ ...prev, selectedCategories: val }));
-                    }}
-                >
-                    <option value="">{t("common.filter.all")}</option>
-                    {categoryOptions.map((category) => (
-                        <option key={category} value={category}>
-                            {getExchangeCategoryLabel(category, t)}
-                        </option>
-                    ))}
-                </select>
+                <Select
+                    value={filters.selectedCategories.length === 1 ? filters.selectedCategories[0] : null}
+                    onValueChange={(value) => updateFilters((prev) => ({ ...prev, selectedCategories: value === "__all__" ? [] : [value] }))}
+                    options={[{ value: "__all__", label: t("common.filter.all") }, ...categoryOptions.map((category) => ({ value: category, label: getExchangeCategoryLabel(category, t) }))]}
+                    label={t("common.filter.category")}
+                    selectedLabel={filters.selectedCategories.length === 0 ? t("common.filter.all") : undefined}
+                />
             </FilterSection>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -692,21 +673,13 @@ function ExchangesContent() {
             </div>
 
             <FilterSection label={t("common.filter.rewardType")}>
-                <select
-                    className={SELECT_CLASS}
-                    value={filters.selectedRewardTypes.length === 1 ? filters.selectedRewardTypes[0] : ""}
-                    onChange={(e) => {
-                        const val = e.target.value ? [e.target.value] : [];
-                        updateFilters((prev) => ({ ...prev, selectedRewardTypes: val }));
-                    }}
-                >
-                    <option value="">{t("common.filter.all")}</option>
-                    {rewardTypeOptions.map((rewardType) => (
-                        <option key={rewardType} value={rewardType}>
-                            {getRewardTypeLabel(rewardType, t)}
-                        </option>
-                    ))}
-                </select>
+                <Select
+                    value={filters.selectedRewardTypes.length === 1 ? filters.selectedRewardTypes[0] : null}
+                    onValueChange={(value) => updateFilters((prev) => ({ ...prev, selectedRewardTypes: value === "__all__" ? [] : [value] }))}
+                    options={[{ value: "__all__", label: t("common.filter.all") }, ...rewardTypeOptions.map((rewardType) => ({ value: rewardType, label: getRewardTypeLabel(rewardType, t) }))]}
+                    label={t("common.filter.rewardType")}
+                    selectedLabel={filters.selectedRewardTypes.length === 0 ? t("common.filter.all") : undefined}
+                />
             </FilterSection>
         </BaseFilters>
     ), [coreData?.flattenedExchanges.length, filteredEntries.length, filters, hasActiveFilters, resetFilters, rewardTypeOptions, summaryOptions, categoryOptions, t, updateFilters]);

@@ -211,9 +211,9 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                 )}
             </AnimatePresence>
 
-            <div className="relative z-10 flex w-full items-center px-3 py-2.5 sm:py-3">
+            <div className="relative z-10 grid w-full grid-cols-[2.5rem_3rem_minmax(0,1fr)] items-center gap-x-2 gap-y-2 px-3 py-2.5 sm:flex sm:gap-0 sm:py-3">
                 {/* Rank # */}
-                <div className="w-12 shrink-0 text-center sm:w-14">
+                <div className="row-span-2 w-10 min-w-0 shrink-0 self-start text-center max-sm:[&>span]:max-w-full max-sm:[&>span]:text-[10px] sm:w-14 sm:self-auto">
                     <RankBadge
                         rank={entry.rank}
                         toneClassName={isTopThree ? topThreeBadge[entry.rank] : "border-outline-variant bg-surface-container-lowest text-on-surface-variant"}
@@ -263,32 +263,31 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                 </div>
 
                 {/* Avatar */}
-                <div className="relative ml-2 w-16 shrink-0 sm:w-[72px]">
+                <div className="relative ml-0 w-12 shrink-0 sm:ml-2 sm:w-[72px]">
                     {leaderCard ? (
                         <div className={`overflow-hidden ${isTopThree ? topThreeCardDeco[entry.rank] : ""}`}>
                             <SekaiCardThumbnail card={leaderCard} trained={isTrained} mastery={masterRank} width={72} className="w-full" />
                         </div>
                     ) : derivedLeaderCharacterId ? (
-                        <div className={`relative h-16 w-16 overflow-hidden border border-outline-variant bg-surface-container-lowest sm:h-[72px] sm:w-[72px] ${isTopThree ? topThreeCardDeco[entry.rank] : ""}`}>
+                        <div className={`relative h-12 w-12 overflow-hidden border border-outline-variant bg-surface-container-lowest sm:h-[72px] sm:w-[72px] ${isTopThree ? topThreeCardDeco[entry.rank] : ""}`}>
                             <Image src={getCharacterIconUrl(derivedLeaderCharacterId)} alt={getCharacterName(t, derivedLeaderCharacterId)} fill className="object-cover" unoptimized />
                         </div>
                     ) : (
-                        <div className="flex h-16 w-16 items-center justify-center bg-surface-container sm:h-[72px] sm:w-[72px]">
-                            <span className="text-xs font-black text-on-surface-variant">#{entry.rank}</span>
+                        <div className="flex h-12 w-12 items-center justify-center bg-surface-container sm:h-[72px] sm:w-[72px]">
+                            <span className="max-w-full px-1 text-[10px] font-black text-on-surface-variant [overflow-wrap:anywhere] sm:text-xs">#{entry.rank}</span>
                         </div>
                     )}
                 </div>
 
                 {/* Player info: name + signature + honors */}
-                <div className="ml-3 min-w-0 flex-1 overflow-hidden">
-                    {/* Name + signature: horizontal scroll on mobile, normal truncation on desktop. */}
+                <div className="min-w-0 overflow-hidden sm:ml-3 sm:flex-1">
+                    {/* Let mobile names wrap without competing with the score row. */}
                     <div className="relative">
                         <div
-                            className="flex items-baseline gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden sm:overflow-visible"
-                            style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
+                            className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-1.5"
                         >
-                            <h3 className="shrink-0 text-sm font-bold leading-tight text-on-surface sm:shrink sm:truncate flex items-center gap-1.5">
-                                <span className="truncate">{entry.displayName}</span>
+                            <h3 className="flex w-full min-w-0 items-center gap-1.5 text-sm font-bold leading-tight text-on-surface sm:w-auto sm:shrink sm:truncate">
+                                <span className="min-w-0 [overflow-wrap:anywhere] sm:truncate">{entry.displayName}</span>
                                 {!isExtendedTier && onTrackToggle && (
                                     <button
                                         onClick={(e) => {
@@ -296,7 +295,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                             e.stopPropagation();
                                             onTrackToggle(entry.userId);
                                         }}
-                                        className={`inline-flex items-center justify-center p-0.5 rounded-md3-xs transition-all duration-200 hover:bg-primary-container hover:text-on-primary-container ${
+                                        className={`inline-flex shrink-0 items-center justify-center p-0.5 rounded-md3-xs transition-all duration-200 hover:bg-primary-container hover:text-on-primary-container ${
                                             isTracked
                                                 ? "text-primary"
                                                 : "text-outline"
@@ -321,14 +320,9 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                 )}
                             </h3>
                             {entry.signature && (
-                                <p className="shrink-0 text-[11px] leading-tight text-on-surface-variant sm:shrink sm:truncate">{entry.signature}</p>
+                                <p className="max-w-full truncate text-[11px] leading-tight text-on-surface-variant sm:shrink">{entry.signature}</p>
                             )}
                         </div>
-                        {/* Right-side fade mask, mobile only. */}
-                        <div
-                            className="pointer-events-none absolute right-0 top-0 h-full w-5 sm:hidden"
-                            style={{ background: "linear-gradient(to left, var(--md-sys-color-surface-container-low), transparent)" }}
-                        />
                     </div>
                     <div className="mt-1 max-w-full overflow-hidden">
                         <PlayerHonorPreview honors={entry.honors} masterData={masterData} assetSource={assetSource} compact />
@@ -336,7 +330,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                 </div>
 
                 {/* Score column — stock-style feedback */}
-                <div className="w-32 shrink-0 text-right sm:w-40">
+                <div className="col-span-2 col-start-2 min-w-0 text-right sm:w-40 sm:shrink-0">
                     {/* Score body: movement color plus bounce animation. */}
                     <motion.div
                         key={hasCurrentChange ? entry.score : "stable"}
@@ -350,7 +344,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                     </motion.div>
 
                     {/* Movement detail row */}
-                    <div className="mt-0.5 flex items-center justify-end gap-1">
+                    <div className="mt-0.5 flex flex-wrap items-center justify-end gap-1 sm:flex-nowrap">
                         <RankChangeBadge rankDelta={displayRankDelta} isNewEntry={entry.isNewEntry} hasChurnData={hasChurnData} />
                         <AnimatePresence mode="wait">
                             {displayScoreDelta !== 0 ? (
@@ -360,7 +354,7 @@ export default function RankingRow({ entry, masterData, assetSource, secondsSinc
                                     animate={{ opacity: 1, y: 0, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
                                     transition={{ type: "spring", stiffness: 350, damping: 20 }}
-                                    className={`inline-flex items-center gap-0.5 rounded-md3-xs px-1 py-0.5 type-label-s ${
+                                    className={`inline-flex max-w-full flex-wrap items-center justify-end gap-0.5 rounded-md3-xs px-1 py-0.5 type-label-s sm:flex-nowrap ${
                                         displayScoreDelta > 0
                                             ? "bg-tertiary-container text-on-tertiary-container "
                                             : "bg-error-container text-on-error-container "
@@ -586,7 +580,7 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
             {/* Churn grid row */}
             <div className="flex items-center gap-2">
                 {/* 48H total */}
-                <div className="shrink-0 text-center w-12 sm:w-14">
+                <div className="w-10 shrink-0 text-center sm:w-14">
                     <span className="type-label-s text-on-surface-variant">48H</span>
                     <div className="text-xs font-black text-primary">{churnEntry.churn_48h}</div>
                 </div>
@@ -626,7 +620,7 @@ function ChurnRow({ churnEntry, userId, rank, churnData, onShowParkingPeriods }:
             </div>
 
             {/* Speed and churn stats row */}
-            <div className="relative mt-1.5 pl-[calc(3rem+0.5rem)] sm:pl-[calc(3.5rem+0.5rem)]">
+            <div className="relative mt-1.5 pl-[calc(2.5rem+0.5rem)] sm:pl-[calc(3.5rem+0.5rem)]">
                 <div
                     className="flex flex-nowrap items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:gap-y-1"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}
@@ -736,7 +730,7 @@ function TierLineChurnRow({ churnEntry }: { churnEntry: ChurnRankingEntry }) {
 
     return (
         <div className="px-3 pb-2.5 pt-0.5">
-            <div className="relative pl-[calc(3rem+0.5rem)] sm:pl-[calc(3.5rem+0.5rem)]">
+            <div className="relative pl-[calc(2.5rem+0.5rem)] sm:pl-[calc(3.5rem+0.5rem)]">
                 <div
                     className="flex flex-nowrap items-center gap-1.5 overflow-x-auto [&::-webkit-scrollbar]:hidden sm:flex-wrap sm:overflow-visible sm:gap-y-1"
                     style={{ scrollbarWidth: "none", msOverflowStyle: "none", WebkitOverflowScrolling: "touch" } as React.CSSProperties}

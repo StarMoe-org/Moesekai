@@ -5,6 +5,8 @@ import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
 import CostumeFilters from "@/components/costumes/CostumeFilters";
+import DatabaseTable from "@/components/cards/DatabaseTable";
+import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -45,6 +47,7 @@ function CostumesContent() {
 
     // Filter states
     const [searchQuery, setSearchQuery] = useState("");
+    const [view, setView] = useState<ListViewMode>("grid");
     const [selectedPartTypes, setSelectedPartTypes] = useState<string[]>([]);
     const [selectedSources, setSelectedSources] = useState<string[]>([]);
     const [selectedRarities, setSelectedRarities] = useState<string[]>([]);
@@ -80,8 +83,9 @@ function CostumesContent() {
         const sort = searchParams.get("sortBy");
         const order = searchParams.get("sortOrder");
         const related = searchParams.get("related"); // New param
+        const viewParam = searchParams.get("view");
 
-        const hasUrlParams = partTypes || sources || rarities || genders || chars || units || search || sort || order || related;
+        const hasUrlParams = partTypes || sources || rarities || genders || chars || units || search || sort || order || related || viewParam;
 
         if (hasUrlParams) {
             if (partTypes) setSelectedPartTypes(partTypes.split(","));
@@ -94,6 +98,7 @@ function CostumesContent() {
             if (sort) setSortBy(sort);
             if (order) setSortOrder(order as "asc" | "desc");
             if (related) setOnlyRelatedCardCostumes(related === "true");
+            if (viewParam) setView(viewParam === "table" || viewParam === "list" ? "table" : "grid");
         } else {
             try {
                 const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -154,8 +159,9 @@ function CostumesContent() {
         if (sortBy !== "id") params.set("sortBy", sortBy);
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
         if (onlyRelatedCardCostumes) params.set("related", "true");
+        if (view !== "grid") params.set("view", view);
         replaceCurrentUrlSearchParams(params);
-    }, [selectedPartTypes, selectedSources, selectedRarities, selectedGenders, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, onlyRelatedCardCostumes, filtersInitialized]);
+    }, [selectedPartTypes, selectedSources, selectedRarities, selectedGenders, selectedCharacters, selectedUnitIds, searchQuery, sortBy, sortOrder, onlyRelatedCardCostumes, view, filtersInitialized]);
 
     useEffect(() => {
         async function fetchData() {
@@ -348,7 +354,17 @@ function CostumesContent() {
                     <LoadingState />
                 ) : (
                     <>
-                        <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
+                        <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={setView} /></div>
+                        {view === "table" ? <DatabaseTable rows={displayedGroups.map(costume => {
+                            const part = costume.parts.body?.[0] ?? costume.parts.hair?.[0] ?? costume.parts.head?.[0] ?? Object.values(costume.parts).flat()[0];
+                            return {
+                                id: costume.costumeNumber,
+                                href: `/costumes/${costume.costumeNumber}`,
+                                thumbnail: <Image src={getCostumeThumbnailUrl(part?.assetbundleName ?? "", assetSource)} alt={costume.name} fill className="object-contain" unoptimized />,
+                                name: <TranslatedText original={costume.name} category="costumes" field="name" />,
+                                details: <><div>{costume.partTypes.map(pt => translateWithFallback(PART_TYPE_LABEL_KEYS[pt], pt)).join(" · ")}</div><div>{translateWithFallback(SOURCE_LABEL_KEYS[costume.source], costume.source)}</div>{(costume.publishedAt || 0) > Date.now() && <span className="text-tertiary">{tI18n("page.costumes.spoilerBadge")}</span>}</>,
+                            };
+                        })} /> : <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
                             {displayedGroups.map(costume => {
                                 let assetName = "";
                                 let repPart;
@@ -420,7 +436,7 @@ function CostumesContent() {
                                     </Card>
                                 );
                             })}
-                        </div>
+                        </div>}
 
                         {/* Load More */}
                         <LoadMore

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
 import GachaGrid from "@/components/gacha/GachaGrid";
+import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
 import GachaFilters from "@/components/gacha/GachaFilters";
 import { useTheme } from "@/contexts/ThemeContext";
 import { IGachaInfo, ICardInfo, GachaCategoryType, isWishGacha } from "@/types/types";
@@ -33,7 +34,7 @@ function GachaContent() {
     const [selectedCategory, setSelectedCategory] = useState<GachaCategoryType>("all");
     const [selectedCharacters, setSelectedCharacters] = useState<number[]>([]);
     const [selectedUnitIds, setSelectedUnitIds] = useState<string[]>([]);
-
+    const [view, setView] = useState<ListViewMode>("grid");
 
     // Pagination with scroll restore
     const { displayCount, loadMore, resetDisplayCount } = useScrollRestore({
@@ -54,8 +55,9 @@ function GachaContent() {
         const category = searchParams.get("category") as GachaCategoryType | null;
         const chars = searchParams.get("chars");
         const units = searchParams.get("units");
+        const viewParam = searchParams.get("view");
 
-        const hasUrlParams = search || sort || order || category || chars || units;
+        const hasUrlParams = search || sort || order || category || chars || units || viewParam;
 
         if (hasUrlParams) {
             if (search) setSearchQuery(search);
@@ -74,6 +76,7 @@ function GachaContent() {
                     setSelectedUnitIds(JSON.parse(units));
                 } catch { /* ignore */ }
             }
+            if (viewParam) setView(viewParam === "table" || viewParam === "list" ? "table" : "grid");
         } else {
             try {
                 const saved = sessionStorage.getItem(STORAGE_KEY);
@@ -120,8 +123,9 @@ function GachaContent() {
         if (selectedCategory !== "all") params.set("category", selectedCategory);
         if (selectedCharacters.length > 0) params.set("chars", JSON.stringify(selectedCharacters));
         if (selectedUnitIds.length > 0) params.set("units", JSON.stringify(selectedUnitIds));
+        if (view !== "grid") params.set("view", view);
         replaceCurrentUrlSearchParams(params);
-    }, [searchQuery, sortBy, sortOrder, selectedCategory, selectedCharacters, selectedUnitIds, filtersInitialized]);
+    }, [searchQuery, sortBy, sortOrder, selectedCategory, selectedCharacters, selectedUnitIds, view, filtersInitialized]);
 
     // Fetch gachas from master data
     useEffect(() => {
@@ -288,7 +292,8 @@ function GachaContent() {
             {/* Gacha Grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                <GachaGrid gachas={displayedGachas} isLoading={isLoading} />
+                <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={setView} /></div>
+                <GachaGrid gachas={displayedGachas} isLoading={isLoading} view={view} />
 
                 {!isLoading && (
                     <LoadMore
