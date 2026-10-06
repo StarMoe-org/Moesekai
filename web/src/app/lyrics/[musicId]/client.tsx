@@ -144,7 +144,7 @@ function VocalPlayer({
                     onClick={togglePlay}
                     aria-label={isPlaying ? t("common.action.pause") : t("common.action.play")}
                     aria-pressed={isPlaying}
-                    className={`state-layer focus-ring shrink-0 w-12 h-12 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-spatial-fast ${isPlaying
+                    className={`state-layer focus-ring shrink-0 w-12 h-12 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-standard ${isPlaying
                         ? "bg-primary-container text-on-primary-container rounded-md3-lg"
                         : "bg-primary text-on-primary rounded-full shadow-elev-1"
                     }`}

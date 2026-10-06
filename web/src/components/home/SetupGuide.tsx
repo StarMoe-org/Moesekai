@@ -636,7 +636,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                           }`}
                         >
                           <span
-                            className={`w-10 h-10 flex items-center justify-center text-white shadow-elev-1 transition-[border-radius] duration-300 ease-md3-spatial-fast ${isSelected ? "rounded-md3-md" : "rounded-full"}`}
+                            className={`w-10 h-10 flex items-center justify-center text-white shadow-elev-1 transition-[border-radius] duration-300 ease-md3-standard ${isSelected ? "rounded-md3-md" : "rounded-full"}`}
                             style={{
                               backgroundColor: color,
                             }}

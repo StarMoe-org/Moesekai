@@ -1012,7 +1012,7 @@ function GachaPhraseRow({ phrase, assetbundleName }: { phrase: string; assetbund
                     type="button"
                     onClick={togglePlay}
                     aria-pressed={isPlaying}
-                    className={`state-layer focus-ring flex-shrink-0 w-10 h-10 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-spatial-fast ${isPlaying
+                    className={`state-layer focus-ring flex-shrink-0 w-10 h-10 flex items-center justify-center transition-[border-radius,background-color] duration-200 ease-md3-standard ${isPlaying
                         ? "bg-primary text-on-primary rounded-md3-md"
                         : "bg-surface-container-high text-on-surface-variant rounded-full"
                         }`}

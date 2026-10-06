@@ -240,7 +240,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                                                     aria-pressed={isSelected}
                                                     onClick={() => setThemeCharacter(id)}
                                                     className={cn(
-                                                        "focus-ring relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden transition-[border-radius] duration-300 ease-md3-spatial-fast",
+                                                        "focus-ring relative h-11 w-11 shrink-0 cursor-pointer overflow-hidden transition-[border-radius] duration-300 ease-md3-standard",
                                                         isSelected
                                                             ? "rounded-md3-lg ring-[3px] ring-primary ring-offset-2 ring-offset-surface-container-high"
                                                             : "rounded-full hover:rounded-md3-lg",

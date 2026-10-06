@@ -8,6 +8,30 @@ import { JSDOM } from "jsdom";
 import ts from "typescript";
 import "./ui-regressions.test.mjs";
 
+test("corner morph transitions use bounded easing instead of spring overshoot", () => {
+    const files = [
+        "components/md3/Button.tsx", "components/md3/Segmented.tsx",
+        "components/SettingsPanel.tsx", "components/home/SetupGuide.tsx",
+        "app/design-system/client.tsx", "app/page.tsx",
+        "app/cards/[id]/client.tsx", "app/music/[id]/client.tsx", "app/lyrics/[musicId]/client.tsx",
+    ];
+    for (const file of files) {
+        const source = readFileSync(path.join(webRoot, "src", file), "utf8");
+        const transitions = source.split("\n").filter((line) => /transition-\[[^\]]*border-radius/.test(line));
+        assert.ok(transitions.length > 0, `${file} has a corner morph`);
+        for (const line of transitions) {
+            assert.match(line, /ease-md3-standard/, `${file} must use bounded corner easing`);
+            assert.doesNotMatch(line, /ease-md3-spatial/, `${file} must not overshoot its corner radius`);
+        }
+    }
+    const tokens = readFileSync(path.join(webRoot, "src/styles/md3-tokens.css"), "utf8");
+    const curve = tokens.match(/--ease-md3-standard:\s*cubic-bezier\(([^)]+)\)/);
+    assert.ok(curve);
+    for (const coordinate of curve[1].split(",").map(Number)) {
+        assert.ok(coordinate >= 0 && coordinate <= 1, "standard easing stays within its endpoints");
+    }
+});
+
 const require = createRequire(import.meta.url);
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { window } = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>", { url: "https://pjsk.moe/" });

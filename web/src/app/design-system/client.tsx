@@ -308,7 +308,7 @@ export default function DesignSystemClient() {
                                         aria-label={name}
                                         aria-pressed={selected}
                                         onClick={() => setThemeCharacter(id)}
-                                        className={`focus-ring relative h-12 w-12 overflow-hidden transition-[border-radius] duration-300 ease-md3-spatial-fast ${selected ? "rounded-md3-lg ring-[3px] ring-primary ring-offset-2 ring-offset-surface-container-low" : "rounded-full hover:rounded-md3-lg"}`}
+                                        className={`focus-ring relative h-12 w-12 overflow-hidden transition-[border-radius] duration-300 ease-md3-standard ${selected ? "rounded-md3-lg ring-[3px] ring-primary ring-offset-2 ring-offset-surface-container-low" : "rounded-full hover:rounded-md3-lg"}`}
                                         style={{ backgroundColor: THEME_SEED_COLORS[id] }}
                                     >
                                         <img src={getCharacterIconUrl(Number(id))} alt="" className="h-full w-full object-cover" loading="lazy" />

@@ -387,7 +387,7 @@ export default function Home() {
                       {t(shortcut.badgeKey)}
                     </span>
                   )}
-                  <span className={`flex h-10 w-10 items-center justify-center rounded-md3-md transition-[border-radius] duration-200 ease-md3-spatial-fast group-hover:rounded-full ${shortcut.isExternal ? "bg-[#fb7299]/15 text-[#fb7299]" : "bg-secondary-container text-on-secondary-container"}`}>
+                  <span className={`flex h-10 w-10 items-center justify-center rounded-md3-md transition-[border-radius] duration-200 ease-md3-standard group-hover:rounded-full ${shortcut.isExternal ? "bg-[#fb7299]/15 text-[#fb7299]" : "bg-secondary-container text-on-secondary-container"}`}>
                     {shortcut.icon ? <Icon path={shortcut.icon} size={22} /> : <BilibiliIcon className="w-5 h-5" />}
                   </span>
                   <div>

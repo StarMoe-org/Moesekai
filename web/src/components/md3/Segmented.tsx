@@ -151,7 +151,7 @@ export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonPro
                         onClick={() => toggle(opt.value)}
                         className={cn(
                             "state-layer focus-ring relative flex min-w-0 flex-1 items-center justify-center gap-2 px-4 type-label-l",
-                            "cursor-pointer transition-[border-radius,background-color] duration-300 ease-md3-spatial-fast",
+                            "cursor-pointer transition-[border-radius,background-color] duration-300 ease-md3-standard",
                             DENSITY[density],
                             selected
                                 ? "rounded-full bg-secondary text-on-secondary"

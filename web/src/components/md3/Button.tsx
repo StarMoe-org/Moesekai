@@ -16,9 +16,11 @@ export type ButtonSize = "xs" | "s" | "m" | "l" | "xl";
 export type ButtonShape = "round" | "square";
 export type ButtonColor = "primary" | "secondary" | "tertiary" | "error";
 
+// Radius interpolation must stay bounded: spring overshoot can clamp it to zero
+// when morphing from rounded-full, briefly flashing square corners.
 const BASE =
     "state-layer focus-ring relative isolate inline-flex select-none items-center justify-center gap-2 whitespace-nowrap " +
-    "cursor-pointer transition-[border-radius,background-color,box-shadow,color] duration-200 ease-md3-spatial-fast " +
+    "cursor-pointer transition-[border-radius,background-color,box-shadow,color] duration-200 ease-md3-standard " +
     "disabled:cursor-not-allowed aria-disabled:cursor-not-allowed";
 
 const SIZE: Record<ButtonSize, { box: string; round: string; square: string; pressed: string; icon: number }> = {
