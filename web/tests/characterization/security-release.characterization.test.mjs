@@ -108,6 +108,8 @@ test("staff links are whitelisted in ExternalLink and team translation members a
   const teamLinks = await importWebTypeScript("src/lib/team-links.ts");
   assert.equal(teamLinks.MEMBER_LINKS["@御明正"], "https://space.bilibili.com/10820191");
   assert.equal(teamLinks.MEMBER_LINKS["御明正"], "https://space.bilibili.com/10820191");
+  assert.equal(teamLinks.MEMBER_LINKS["@深海棉花糖"], "https://space.bilibili.com/33960889");
+  assert.equal(teamLinks.MEMBER_LINKS["深海棉花糖"], "https://space.bilibili.com/33960889");
 
   const externalLinkSource = readWeb("src/components/ExternalLink.tsx");
   assert.match(externalLinkSource, /import\s*\{[^}]*MEMBER_LINKS[^}]*\}\s*from\s*["']@\/lib\/team-links["']/);
@@ -128,5 +130,7 @@ test("staff links are whitelisted in ExternalLink and team translation members a
   ]) {
     assert.doesNotMatch(sourceContent, /translationMembers:\s*["'](?:翻译\/校对|翻譯\/校對|Translation \/ proofreading:|번역\/교정)/, `${sourceName} should not have role prefix in translationMembers`);
     assert.match(sourceContent, /translationMembers:.*@御明正/, `${sourceName} must include @御明正`);
+    assert.match(sourceContent, /guideMembers:.*@深海棉花糖/, `${sourceName} must include @深海棉花糖`);
+    assert.match(sourceContent, /guideMembers:.*@羽月/, `${sourceName} must include @羽月`);
   }
 });

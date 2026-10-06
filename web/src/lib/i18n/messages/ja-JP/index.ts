@@ -1403,7 +1403,7 @@ export const jaJPMessages = {
         artLabel: 'Moesekai Art Team: ',
         artMembers: '@岓诚 @黄Yell',
         guideLabel: 'Moesekai 攻略チーム: ',
-        guideMembers: '@Pizza @Misto @火狐mzk @阿木 @盐盐',
+        guideMembers: '@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月',
         joinPrefix: 'お手伝いいただける場合は、',
         joinMiddle: '',
         joinGroup: '',
