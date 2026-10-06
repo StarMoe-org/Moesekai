@@ -1401,7 +1401,7 @@ export const koKRMessages = {
                 artLabel: "Moesekai 아트팀: ",
                 artMembers: "@岓诚 @黄Yell",
                 guideLabel: "Moesekai 공략팀:",
-                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐",
+                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月",
                 joinPrefix: "우리를 돕고 싶다면",
                 joinMiddle: "",
                 joinGroup: "",

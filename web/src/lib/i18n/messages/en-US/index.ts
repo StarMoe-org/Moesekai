@@ -1404,7 +1404,7 @@ export const enUSMessages = {
                 artLabel: "Moesekai Art Team: ",
                 artMembers: "@岓诚 @黄Yell",
                 guideLabel: "Moesekai Strategy Guide Team: ",
-                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐",
+                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月",
                 joinPrefix: "If you want to help us, join",
                 joinMiddle: "",
                 joinGroup: "",

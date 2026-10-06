@@ -1403,7 +1403,7 @@ export const zhCNMessages = {
                 artLabel: "Moesekai 美工组：",
                 artMembers: "@岓诚 @黄Yell",
                 guideLabel: "Moesekai 攻略组：",
-                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐",
+                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月",
                 joinPrefix: "如果你想帮助我们，可以加入",
                 joinMiddle: "",
                 joinGroup: "",

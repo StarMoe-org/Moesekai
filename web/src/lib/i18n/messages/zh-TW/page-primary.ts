@@ -489,7 +489,7 @@ export const zhTWPagePrimary = {
                 artLabel: "Moesekai 美工組：",
                 artMembers: "@岓诚 @黄Yell",
                 guideLabel: "Moesekai 攻略組：",
-                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐",
+                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月",
                 joinPrefix: "如果你想幫助我們，可以加入",
                 joinMiddle: "",
                 joinGroup: "",
