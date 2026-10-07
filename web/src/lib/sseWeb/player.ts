@@ -60,7 +60,16 @@ export interface SsePlayerOptions {
     onProgress?: (progress: SsePlayerProgress) => void;
 }
 
+/** Counts since the player was made; the bytes are its two workers' wasm memories. */
+export interface SsePlayerStats {
+    presented: number;
+    skipped: number;
+    simWasm?: number;
+    renderWasm?: number;
+}
+
 export interface SsePlayer extends EventTarget {
+    readonly stats: SsePlayerStats;
     readonly talks: [speaker: string, body: string][];
     readonly unsupported: SsePlayerUnsupported[];
     readonly talk: number;

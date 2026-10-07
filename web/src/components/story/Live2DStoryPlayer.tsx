@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { Banner, Button, CircularProgress, Icon, IconButton, LinearProgress, Slider, Surface, Switch, cn } from "@/components/md3";
 import {
     mdClose, mdDragIndicator, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
-    mdSmartDisplay, mdVolumeOff, mdVolumeUp,
+    mdSmartDisplay, mdTune, mdVolumeOff, mdVolumeUp,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { sseWebCoreUrl, sseWebEnabled, sseWebSources } from "@/lib/sseWeb/config";
@@ -12,6 +12,11 @@ import {
     loadSsePlayer, sseWebScriptBase,
     type SsePlayer, type SsePlayerError, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
 } from "@/lib/sseWeb/player";
+import {
+    SSE_WEB_DEFAULT_SETTINGS, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize, storeSseWebSettings,
+    type SseWebSettings,
+} from "@/lib/sseWeb/settings";
+import { Live2DPlayerSettings } from "./Live2DPlayerSettings";
 
 export interface Live2DStoryPlayerHandle {
     /** Continues from the start of talk `talk` (0-based), when the player is loaded. */
@@ -84,18 +89,21 @@ function viewport(): [number, number] {
     return [document.documentElement.clientWidth, window.innerHeight];
 }
 
-/** The widest the window may be: the picture and the `chrome` around it (title and controls) fit the page. */
-function fitWidth(width: number, chrome: number): number {
+/**
+ * The widest the window may be: the picture (`ratio`: its width over its height) and the
+ * `chrome` around it (title and controls) fit the page.
+ */
+function fitWidth(width: number, chrome: number, ratio: number): number {
     const [vw, vh] = viewport();
-    const widest = Math.min(vw - 2 * FRAME_MARGIN, (vh - live2dStoryPlayerTop() - FRAME_MARGIN - chrome) * 16 / 9);
+    const widest = Math.min(vw - 2 * FRAME_MARGIN, (vh - live2dStoryPlayerTop() - FRAME_MARGIN - chrome) * ratio);
     return Math.round(Math.max(FRAME_MIN_WIDTH, Math.min(width, widest)));
 }
 
 /** `frame` narrowed and moved to lie wholly in the page, below the site's header. */
-function fitFrame(frame: Frame, chrome: number): Frame {
+function fitFrame(frame: Frame, chrome: number, ratio: number): Frame {
     const [vw, vh] = viewport();
-    const width = fitWidth(frame.width, chrome);
-    const height = chrome + width * 9 / 16;
+    const width = fitWidth(frame.width, chrome, ratio);
+    const height = chrome + width / ratio;
     const x = Math.round(Math.max(FRAME_MARGIN, Math.min(frame.x, vw - width - FRAME_MARGIN)));
     const y = Math.round(Math.max(live2dStoryPlayerTop(), Math.min(frame.y, vh - height - FRAME_MARGIN)));
     return x === frame.x && y === frame.y && width === frame.width ? frame : { x, y, width };
@@ -128,24 +136,6 @@ function storeFrame(frame: Frame) {
 const subscribeNever = () => () => {};
 
 /**
- * The size to render at: the stage's shown width times the device pixel ratio
- * at exactly 16:9 (the player lays its UI out by the aspect ratio), or the
- * screen's in full screen, where a touch device is capped at 1920 on its long
- * side.
- */
-function renderSize(stage: HTMLElement, shownWidth = stage.clientWidth): [number, number] {
-    const dpr = window.devicePixelRatio || 1;
-    if (document.fullscreenElement === stage) {
-        let [w, h] = [window.screen.width * dpr, window.screen.height * dpr];
-        const cap = window.matchMedia("(pointer: coarse)").matches ? 1920 / Math.max(w, h) : 1;
-        if (cap < 1) [w, h] = [w * cap, h * cap];
-        return [Math.round(w), Math.round(h)];
-    }
-    const w = Math.max(16, Math.floor(shownWidth * dpr / 16) * 16);
-    return [w, w * 9 / 16];
-}
-
-/**
  * The Live2D mode of the story reader: plays the episode as the game does,
  * rendered in the browser by sse-web. Nothing is downloaded until the reader
  * asks for it. Renders nothing when no release is configured.
@@ -174,6 +164,10 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
     const [fullscreen, setFullscreen] = useState(false);
     const [frame, setFrame] = useState<Frame | null>(null);
+    const [settings, setSettings] = useState<SseWebSettings>(SSE_WEB_DEFAULT_SETTINGS);
+    const [settingsOpen, setSettingsOpen] = useState(false);
+    const [stats, setStats] = useState<{ width: number; height: number; fps: number; skipped: number; megabytes: number } | null>(null);
+    const ratio = sseWebAspectRatio(settings);
     // the window is outside the page's own layers, in the body: only in the browser
     const inBrowser = useSyncExternalStore(subscribeNever, () => true, () => false);
 
@@ -215,7 +209,9 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         release();
         const epoch = epochRef.current;
         // the window is not laid out yet: its width is known from where it will be
-        const placed = fitFrame(initialFrame(), 0);
+        const chosen = loadSseWebSettings();
+        const placed = fitFrame(initialFrame(), 0, sseWebAspectRatio(chosen));
+        setSettings(chosen);
         setFrame(placed);
         setFailure(null);
         setProgress({ fraction: undefined, megabytes: 0 });
@@ -224,7 +220,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             const SsePlayerClass = await loadSsePlayer();
             if (epoch !== epochRef.current) return;
             const canvas = document.createElement("canvas");
-            const [width, height] = renderSize(stage, placed.width);
+            const [width, height] = sseWebRenderSize(chosen, placed.width, false);
             canvas.width = width;
             canvas.height = height;
             canvas.className = "block h-full w-full object-contain";
@@ -333,7 +329,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         if (!shown || !frameElement || !stage) return;
         const fit = () => {
             if (document.fullscreenElement === stage || dragRef.current) return;
-            setFrame(previous => previous && fitFrame(previous, frameElement.offsetHeight - stage.offsetHeight));
+            setFrame(previous => previous && fitFrame(previous, frameElement.offsetHeight - stage.offsetHeight, ratio));
         };
         const observer = new ResizeObserver(fit);
         observer.observe(frameElement);
@@ -342,9 +338,10 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             observer.disconnect();
             window.removeEventListener("resize", fit);
         };
-    }, [shown]);
+    }, [shown, ratio]);
 
-    // The render size follows the stage: the window's width, the screen in full screen.
+    // The render size follows the stage (the window's width, the screen in full screen) and
+    // what the reader chose.
     useEffect(() => {
         const stage = stageRef.current;
         if (phase !== "ready" || !stage) return;
@@ -352,10 +349,11 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         const follow = () => {
             clearTimeout(pending);
             pending = setTimeout(() => {
-                const [width, height] = renderSize(stage);
+                const [width, height] = sseWebRenderSize(settings, stage.clientWidth, document.fullscreenElement === stage);
                 playerRef.current?.resize(width, height);
             }, 200);
         };
+        follow();
         const onFullscreen = () => {
             setFullscreen(document.fullscreenElement === stage);
             follow();
@@ -368,7 +366,30 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             observer.disconnect();
             document.removeEventListener("fullscreenchange", onFullscreen);
         };
-    }, [phase]);
+    }, [phase, settings]);
+
+    // What the picture costs, once a second, when the reader asked to see it.
+    useEffect(() => {
+        const player = playerRef.current;
+        if (phase !== "ready" || !player || !settings.showStats) return;
+        let last = { at: performance.now(), presented: player.stats.presented };
+        const read = () => {
+            const now = { at: performance.now(), presented: player.stats.presented };
+            setStats({
+                width: player.width,
+                height: player.height,
+                fps: Math.round((now.presented - last.presented) * 1000 / Math.max(1, now.at - last.at)),
+                skipped: player.stats.skipped,
+                megabytes: Math.round(((player.stats.simWasm ?? 0) + (player.stats.renderWasm ?? 0)) / 1e6),
+            });
+            last = now;
+        };
+        const timer = setInterval(read, 1000);
+        return () => {
+            clearInterval(timer);
+            setStats(null);
+        };
+    }, [phase, settings.showStats]);
 
     // Leaving the page, or another episode in the same reader, ends the player.
     useEffect(() => release, [release, selector]);
@@ -432,9 +453,14 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
 
     /** `from` moved by (`dx`, `dy`), or resized by `dx` at its left or right corner (the other side stays). */
     const dragged = (kind: "move" | "left" | "right", from: Frame, dx: number, dy: number): Frame => {
-        if (kind === "move") return fitFrame({ ...from, x: from.x + dx, y: from.y + dy }, chrome());
-        const width = fitWidth(from.width + (kind === "right" ? dx : -dx), chrome());
-        return fitFrame({ x: kind === "left" ? from.x + from.width - width : from.x, y: from.y, width }, chrome());
+        if (kind === "move") return fitFrame({ ...from, x: from.x + dx, y: from.y + dy }, chrome(), ratio);
+        const width = fitWidth(from.width + (kind === "right" ? dx : -dx), chrome(), ratio);
+        return fitFrame({ x: kind === "left" ? from.x + from.width - width : from.x, y: from.y, width }, chrome(), ratio);
+    };
+
+    const changeSettings = (next: SseWebSettings) => {
+        setSettings(next);
+        storeSseWebSettings(next);
     };
 
     const gripProps = (kind: "move" | "left" | "right") => ({
@@ -577,7 +603,10 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                         <Icon path={mdDragIndicator} size={20} className="shrink-0 text-on-surface-variant" />
                         <span className="min-w-0 flex-1 truncate type-label-l text-on-surface">{t("page.story.live2d.title")}</span>
                         {phase === "ready" && (
-                            <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} size="xs" onClick={toggleFullscreen} />
+                            <>
+                                <IconButton icon={mdTune} label={t("page.story.live2d.settings.title")} size="xs" onClick={() => setSettingsOpen(true)} />
+                                <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} size="xs" onClick={toggleFullscreen} />
+                            </>
                         )}
                         <IconButton icon={mdClose} label={t("page.story.live2d.close")} size="xs" onClick={close} />
                     </div>
@@ -585,11 +614,8 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                     <div
                         ref={stageRef}
                         onClick={onStageClick}
-                        className={cn(
-                            "relative aspect-video w-full select-none bg-scrim",
-                            phase === "ready" && "cursor-pointer",
-                            fullscreen && "aspect-auto",
-                        )}
+                        className={cn("relative w-full select-none bg-scrim", phase === "ready" && "cursor-pointer")}
+                        style={fullscreen ? undefined : { aspectRatio: ratio }}
                     >
                         {phase === "loading" && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-primary-fixed">
@@ -614,6 +640,11 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                                 <CircularProgress aria-label={t("page.story.live2d.buffering")} />
                                 <p className="type-label-l">{t("page.story.live2d.buffering")}</p>
                             </div>
+                        )}
+                        {phase === "ready" && stats && (
+                            <p className="pointer-events-none absolute left-2 top-2 rounded-md3-sm bg-scrim/60 px-2 py-0.5 type-label-s tabular-nums text-primary-fixed">
+                                {t("page.story.live2d.settings.statsLine", stats)}
+                            </p>
                         )}
                         {fullscreen && (
                             <IconButton
@@ -702,6 +733,13 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                 </div>,
                 document.body,
             )}
+
+            <Live2DPlayerSettings
+                isOpen={settingsOpen && phase === "ready"}
+                onClose={() => setSettingsOpen(false)}
+                settings={settings}
+                onChange={changeSettings}
+            />
         </>
     );
 }
