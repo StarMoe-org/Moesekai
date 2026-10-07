@@ -1,8 +1,9 @@
 "use client";
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { useCallback, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { Banner, Button, CircularProgress, Icon, IconButton, LinearProgress, Slider, Surface, Switch, cn } from "@/components/md3";
 import {
-    mdClose, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
+    mdClose, mdDragIndicator, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
     mdSmartDisplay, mdVolumeOff, mdVolumeUp,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -29,8 +30,13 @@ interface Live2DStoryPlayerProps {
     ref?: React.Ref<Live2DStoryPlayerHandle>;
 }
 
-/** The player's element: it stays in view while it plays, and the page scrolls its list below it. */
+/** The player's window, which floats over the page while it plays: the page keeps its list clear of it. */
 export const LIVE2D_STORY_PLAYER_ID = "story-live2d-player";
+
+/** The page's top that the site's header covers (taller on a narrow page), and a gap below it. */
+export function live2dStoryPlayerTop(): number {
+    return Math.round(document.querySelector("header")?.getBoundingClientRect().bottom ?? 64) + 8;
+}
 
 type Phase = "idle" | "loading" | "ready" | "failed";
 
@@ -60,13 +66,74 @@ const NOT_PLAYED_KEY = {
 /** A stall shorter than this is not shown: decoding a model's textures holds a frame or two. */
 const BUFFERING_AFTER_MS = 400;
 
+/** Where the player's window is: its left and top in the viewport and its width, in CSS pixels. */
+interface Frame {
+    x: number;
+    y: number;
+    width: number;
+}
+
+const FRAME_KEY = "story-live2d-window";
+const FRAME_MARGIN = 8;
+const FRAME_MIN_WIDTH = 240;
+/** What the arrow keys move or resize the window by. */
+const FRAME_KEY_STEP = 16;
+
+/** The viewport without its scrollbar. */
+function viewport(): [number, number] {
+    return [document.documentElement.clientWidth, window.innerHeight];
+}
+
+/** The widest the window may be: the picture and the `chrome` around it (title and controls) fit the page. */
+function fitWidth(width: number, chrome: number): number {
+    const [vw, vh] = viewport();
+    const widest = Math.min(vw - 2 * FRAME_MARGIN, (vh - live2dStoryPlayerTop() - FRAME_MARGIN - chrome) * 16 / 9);
+    return Math.round(Math.max(FRAME_MIN_WIDTH, Math.min(width, widest)));
+}
+
+/** `frame` narrowed and moved to lie wholly in the page, below the site's header. */
+function fitFrame(frame: Frame, chrome: number): Frame {
+    const [vw, vh] = viewport();
+    const width = fitWidth(frame.width, chrome);
+    const height = chrome + width * 9 / 16;
+    const x = Math.round(Math.max(FRAME_MARGIN, Math.min(frame.x, vw - width - FRAME_MARGIN)));
+    const y = Math.round(Math.max(live2dStoryPlayerTop(), Math.min(frame.y, vh - height - FRAME_MARGIN)));
+    return x === frame.x && y === frame.y && width === frame.width ? frame : { x, y, width };
+}
+
+/** Where the reader left the window, or the page's lower right corner (a narrow page: its top, in full width). */
+function initialFrame(): Frame {
+    try {
+        const stored = JSON.parse(localStorage.getItem(FRAME_KEY) ?? "null") as Partial<Frame> | null;
+        if (stored && [stored.x, stored.y, stored.width].every(Number.isFinite)) {
+            return { x: stored.x!, y: stored.y!, width: stored.width! };
+        }
+    } catch {
+        // no storage, or not what was stored: the default place
+    }
+    const [vw, vh] = viewport();
+    if (vw < 640) return { x: FRAME_MARGIN, y: live2dStoryPlayerTop(), width: vw - 2 * FRAME_MARGIN };
+    const width = Math.round(Math.min(560, Math.max(400, vw * 0.36)));
+    return { x: vw - width, y: vh, width };
+}
+
+function storeFrame(frame: Frame) {
+    try {
+        localStorage.setItem(FRAME_KEY, JSON.stringify(frame));
+    } catch {
+        // the window is where it is until the page is left
+    }
+}
+
+const subscribeNever = () => () => {};
+
 /**
- * The size to render at: the stage's shown size times the device pixel ratio
+ * The size to render at: the stage's shown width times the device pixel ratio
  * at exactly 16:9 (the player lays its UI out by the aspect ratio), or the
  * screen's in full screen, where a touch device is capped at 1920 on its long
  * side.
  */
-function renderSize(stage: HTMLElement): [number, number] {
+function renderSize(stage: HTMLElement, shownWidth = stage.clientWidth): [number, number] {
     const dpr = window.devicePixelRatio || 1;
     if (document.fullscreenElement === stage) {
         let [w, h] = [window.screen.width * dpr, window.screen.height * dpr];
@@ -74,7 +141,7 @@ function renderSize(stage: HTMLElement): [number, number] {
         if (cap < 1) [w, h] = [w * cap, h * cap];
         return [Math.round(w), Math.round(h)];
     }
-    const w = Math.max(16, Math.floor(stage.clientWidth * dpr / 16) * 16);
+    const w = Math.max(16, Math.floor(shownWidth * dpr / 16) * 16);
     return [w, w * 9 / 16];
 }
 
@@ -85,7 +152,11 @@ function renderSize(stage: HTMLElement): [number, number] {
  */
 export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraControls, ref }: Live2DStoryPlayerProps) {
     const { t } = useI18n();
+    const windowRef = useRef<HTMLDivElement | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
+    /** A drag of the window's title or of one of its corners: where it began. */
+    const dragRef = useRef<{ kind: "move" | "left" | "right"; x: number; y: number; from: Frame; to: Frame } | null>(null);
+    const lastVolumeRef = useRef(80);
     const playerRef = useRef<SsePlayer | null>(null);
     /** Counts starts and closes: a load that finishes after it was superseded is thrown away. */
     const epochRef = useRef(0);
@@ -102,6 +173,9 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
     const [buffering, setBuffering] = useState(false);
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
     const [fullscreen, setFullscreen] = useState(false);
+    const [frame, setFrame] = useState<Frame | null>(null);
+    // the window is outside the page's own layers, in the body: only in the browser
+    const inBrowser = useSyncExternalStore(subscribeNever, () => true, () => false);
 
     const release = useCallback(() => {
         epochRef.current++;
@@ -140,6 +214,9 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         if (!stage || !core) return;
         release();
         const epoch = epochRef.current;
+        // the window is not laid out yet: its width is known from where it will be
+        const placed = fitFrame(initialFrame(), 0);
+        setFrame(placed);
         setFailure(null);
         setProgress({ fraction: undefined, megabytes: 0 });
         setPhase("loading");
@@ -147,7 +224,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             const SsePlayerClass = await loadSsePlayer();
             if (epoch !== epochRef.current) return;
             const canvas = document.createElement("canvas");
-            const [width, height] = renderSize(stage);
+            const [width, height] = renderSize(stage, placed.width);
             canvas.width = width;
             canvas.height = height;
             canvas.className = "block h-full w-full object-contain";
@@ -248,7 +325,26 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         };
     }, [phase, fail]);
 
-    // The render size follows the stage: its width in the page, the screen in full screen.
+    // The window stays in the page: when the page is resized, and when its own height changes
+    // (its controls wrap, or come with the player).
+    const shown = phase === "loading" || phase === "ready";
+    useEffect(() => {
+        const [frameElement, stage] = [windowRef.current, stageRef.current];
+        if (!shown || !frameElement || !stage) return;
+        const fit = () => {
+            if (document.fullscreenElement === stage || dragRef.current) return;
+            setFrame(previous => previous && fitFrame(previous, frameElement.offsetHeight - stage.offsetHeight));
+        };
+        const observer = new ResizeObserver(fit);
+        observer.observe(frameElement);
+        window.addEventListener("resize", fit);
+        return () => {
+            observer.disconnect();
+            window.removeEventListener("resize", fit);
+        };
+    }, [shown]);
+
+    // The render size follows the stage: the window's width, the screen in full screen.
     useEffect(() => {
         const stage = stageRef.current;
         if (phase !== "ready" || !stage) return;
@@ -326,9 +422,52 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
     };
 
     const changeVolume = (next: number) => {
+        if (next > 0) lastVolumeRef.current = next;
         setVolume(next);
         playerRef.current?.setVolume(next / 100);
     };
+
+    /** The window's height that is not picture. */
+    const chrome = () => (windowRef.current?.offsetHeight ?? 0) - (stageRef.current?.offsetHeight ?? 0);
+
+    /** `from` moved by (`dx`, `dy`), or resized by `dx` at its left or right corner (the other side stays). */
+    const dragged = (kind: "move" | "left" | "right", from: Frame, dx: number, dy: number): Frame => {
+        if (kind === "move") return fitFrame({ ...from, x: from.x + dx, y: from.y + dy }, chrome());
+        const width = fitWidth(from.width + (kind === "right" ? dx : -dx), chrome());
+        return fitFrame({ x: kind === "left" ? from.x + from.width - width : from.x, y: from.y, width }, chrome());
+    };
+
+    const gripProps = (kind: "move" | "left" | "right") => ({
+        onPointerDown: (event: React.PointerEvent<HTMLElement>) => {
+            if (!frame || event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
+            event.currentTarget.setPointerCapture(event.pointerId);
+            dragRef.current = { kind, x: event.clientX, y: event.clientY, from: frame, to: frame };
+            event.preventDefault();
+        },
+        onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
+            const drag = dragRef.current;
+            if (!drag) return;
+            drag.to = dragged(drag.kind, drag.from, event.clientX - drag.x, event.clientY - drag.y);
+            setFrame(drag.to);
+        },
+        onPointerUp: () => {
+            if (dragRef.current) storeFrame(dragRef.current.to);
+            dragRef.current = null;
+        },
+        onPointerCancel: () => {
+            dragRef.current = null;
+        },
+        onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
+            const [dx, dy] = {
+                ArrowLeft: [-FRAME_KEY_STEP, 0], ArrowRight: [FRAME_KEY_STEP, 0], ArrowUp: [0, -FRAME_KEY_STEP], ArrowDown: [0, FRAME_KEY_STEP],
+            }[event.key] ?? [0, 0];
+            if (!frame || event.target !== event.currentTarget || (dx === 0 && dy === 0)) return;
+            event.preventDefault();
+            const next = dragged(kind, frame, dx, dy);
+            setFrame(next);
+            storeFrame(next);
+        },
+    });
 
     const failureTitle = failure && {
         unsupported: t("page.story.live2d.errors.unsupportedTitle"),
@@ -353,150 +492,217 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             : position.ended
                 ? t("page.story.live2d.ended")
                 : null;
-    const shown = phase === "loading" || phase === "ready";
+    const note = [
+        t("page.story.live2d.windowHint"),
+        phase === "ready" && t("page.story.live2d.originalTextNote"),
+        phase === "ready" && notPlayed.length > 0 && t("page.story.live2d.notPlayed", {
+            items: [...new Set(notPlayed.map(item => t(NOT_PLAYED_KEY[item.reason])))].join(t("page.story.live2d.listSeparator")),
+        }),
+    ].filter(Boolean).join(" ");
+
+    const corner = "absolute bottom-0 z-10 flex h-5 w-5 touch-none items-center justify-center text-on-surface-variant focus-ring";
+    const cornerMark = (
+        <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
+            <path d="M11 4 4 11M11 8 8 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+    );
 
     return (
-        <Surface
-            id={LIVE2D_STORY_PLAYER_ID}
-            tone="default"
-            radius="xl"
-            elevation={shown ? 2 : 0}
-            // below the site's header while it plays, so the list can be read along with the picture
-            className={cn("z-10 mb-6 overflow-hidden", shown ? "sticky top-[4.5rem] z-20" : "relative")}
-        >
-            {phase === "idle" && (
-                <div className="flex flex-col items-center justify-between gap-4 p-5 sm:flex-row">
-                    <div className="min-w-0">
-                        <h3 className="flex items-center gap-2 type-title-m text-on-surface">
-                            <Icon path={mdSmartDisplay} size={20} className="text-primary" />
-                            {t("page.story.live2d.title")}
-                        </h3>
-                        <p className="mt-1 type-body-s text-on-surface-variant">{t("page.story.live2d.hint")}</p>
+        <>
+            <Surface tone="default" radius="xl" className="relative z-10 mb-6 overflow-hidden">
+                {phase === "idle" && (
+                    <div className="flex flex-col items-center justify-between gap-4 p-5 sm:flex-row">
+                        <div className="min-w-0">
+                            <h3 className="flex items-center gap-2 type-title-m text-on-surface">
+                                <Icon path={mdSmartDisplay} size={20} className="text-primary" />
+                                {t("page.story.live2d.title")}
+                            </h3>
+                            <p className="mt-1 type-body-s text-on-surface-variant">{t("page.story.live2d.hint")}</p>
+                        </div>
+                        <Button variant="tonal" icon={mdPlayArrowFill} onClick={() => void start()} className="shrink-0">
+                            {t("page.story.live2d.start")}
+                        </Button>
                     </div>
-                    <Button variant="tonal" icon={mdPlayArrowFill} onClick={() => void start()} className="shrink-0">
-                        {t("page.story.live2d.start")}
-                    </Button>
-                </div>
-            )}
+                )}
 
-            {phase === "failed" && failure && (
-                <div className="p-4">
-                    <Banner
-                        tone={failure.kind === "unsupported" || failure.kind === "not-found" ? "warning" : "error"}
-                        title={failureTitle}
-                        action={(
-                            <div className="flex gap-2">
-                                {canRetry && <Button variant="tonal" size="xs" onClick={() => void start()}>{t("common.action.retry")}</Button>}
-                                <Button variant="text" size="xs" onClick={close}>{t("page.story.reader.close")}</Button>
-                            </div>
+                {phase === "failed" && failure && (
+                    <div className="p-4">
+                        <Banner
+                            tone={failure.kind === "unsupported" || failure.kind === "not-found" ? "warning" : "error"}
+                            title={failureTitle}
+                            action={(
+                                <div className="flex gap-2">
+                                    {canRetry && <Button variant="tonal" size="xs" onClick={() => void start()}>{t("common.action.retry")}</Button>}
+                                    <Button variant="text" size="xs" onClick={close}>{t("page.story.reader.close")}</Button>
+                                </div>
+                            )}
+                        >
+                            <p className="break-words">{failureDetail}</p>
+                        </Banner>
+                    </div>
+                )}
+
+                {/* The picture is in its window: what stays in the page says so. */}
+                {shown && (
+                    <div className="flex items-start gap-3 px-5 py-4">
+                        <Icon path={mdSmartDisplay} size={20} className="mt-0.5 shrink-0 text-primary" />
+                        <div className="min-w-0">
+                            <h3 className="type-title-s text-on-surface">{t("page.story.live2d.title")}</h3>
+                            <p className="mt-1 type-body-s text-on-surface-variant">{note}</p>
+                        </div>
+                    </div>
+                )}
+            </Surface>
+
+            {/*
+              * The window: over the page and its side rail, below the site's header and its dialogs.
+              * It stays mounted while a player exists, whose canvas is in its stage.
+              */}
+            {inBrowser && createPortal(
+                <div
+                    ref={windowRef}
+                    id={LIVE2D_STORY_PLAYER_ID}
+                    role="region"
+                    aria-label={t("page.story.live2d.title")}
+                    className={cn("@container fixed z-[90]", !shown && "hidden")}
+                    style={frame ? { left: frame.x, top: frame.y, width: frame.width } : undefined}
+                >
+                <Surface tone="default" radius="lg" elevation={3} className="relative overflow-hidden">
+                    <div
+                        {...gripProps("move")}
+                        tabIndex={0}
+                        aria-label={t("page.story.live2d.moveWindow")}
+                        className="focus-ring flex h-10 cursor-grab touch-none select-none items-center gap-1 pl-2 pr-1 active:cursor-grabbing"
+                    >
+                        <Icon path={mdDragIndicator} size={20} className="shrink-0 text-on-surface-variant" />
+                        <span className="min-w-0 flex-1 truncate type-label-l text-on-surface">{t("page.story.live2d.title")}</span>
+                        {phase === "ready" && (
+                            <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} size="xs" onClick={toggleFullscreen} />
+                        )}
+                        <IconButton icon={mdClose} label={t("page.story.live2d.close")} size="xs" onClick={close} />
+                    </div>
+
+                    <div
+                        ref={stageRef}
+                        onClick={onStageClick}
+                        className={cn(
+                            "relative aspect-video w-full select-none bg-scrim",
+                            phase === "ready" && "cursor-pointer",
+                            fullscreen && "aspect-auto",
                         )}
                     >
-                        <p className="break-words">{failureDetail}</p>
-                    </Banner>
-                </div>
+                        {phase === "loading" && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-primary-fixed">
+                                <p className="type-title-s">
+                                    {progress.fraction === undefined
+                                        ? t("page.story.live2d.preparing")
+                                        : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
+                                </p>
+                                <LinearProgress value={progress.fraction} className="w-3/5 max-w-sm" aria-label={t("page.story.live2d.title")} />
+                                <p className="type-body-s opacity-80">{t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}</p>
+                            </div>
+                        )}
+                        {phase === "ready" && !playing && !position.ended && (
+                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-scrim/30">
+                                <span className="flex h-1/4 max-h-16 min-h-10 aspect-square items-center justify-center rounded-full bg-primary text-on-primary">
+                                    <Icon path={mdPlayArrowFill} size={28} />
+                                </span>
+                            </div>
+                        )}
+                        {phase === "ready" && buffering && (
+                            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-scrim/40 text-primary-fixed">
+                                <CircularProgress aria-label={t("page.story.live2d.buffering")} />
+                                <p className="type-label-l">{t("page.story.live2d.buffering")}</p>
+                            </div>
+                        )}
+                        {fullscreen && (
+                            <IconButton
+                                icon={mdFullscreenExit}
+                                label={t("page.story.live2d.exitFullscreen")}
+                                variant="tonal"
+                                onClick={toggleFullscreen}
+                                className="absolute right-3 top-3 opacity-70"
+                            />
+                        )}
+                    </div>
+
+                    {/* The corners at the bottom lie on this bar, which is there in both phases. */}
+                    <div className="flex min-h-12 flex-wrap items-center gap-x-2 gap-y-1 px-4 py-1.5">
+                        {phase === "ready" && (
+                            <>
+                                <div className="flex items-center gap-1">
+                                    <IconButton
+                                        icon={mdSkipPrevious}
+                                        label={t("page.story.live2d.previousTalk")}
+                                        size="xs"
+                                        onClick={() => playerRef.current?.previous()}
+                                        disabled={position.talk <= 0}
+                                    />
+                                    <IconButton
+                                        icon={playing ? mdPauseFill : mdPlayArrowFill}
+                                        label={playing ? t("page.story.reader.pause") : t("page.story.reader.play")}
+                                        variant="filled"
+                                        size="xs"
+                                        onClick={togglePlay}
+                                    />
+                                    <IconButton
+                                        icon={mdSkipNext}
+                                        label={t("page.story.live2d.nextTalk")}
+                                        size="xs"
+                                        onClick={() => playerRef.current?.next()}
+                                        disabled={position.talk >= position.talks}
+                                    />
+                                </div>
+                                <div className="min-w-16 flex-1">
+                                    <span className="block truncate type-label-m text-on-surface">
+                                        {t("page.story.live2d.position", { current: Math.min(position.talk + 1, position.talks), total: position.talks })}
+                                    </span>
+                                    {hint && <span className="block truncate type-label-s text-primary">{hint}</span>}
+                                </div>
+                                <Switch checked={auto} onCheckedChange={changeAuto} label={t("page.story.live2d.auto")} icons={false} />
+                                <div className="flex items-center">
+                                    <IconButton
+                                        icon={volume === 0 ? mdVolumeOff : mdVolumeUp}
+                                        label={volume === 0 ? t("page.story.live2d.unmute") : t("page.story.live2d.mute")}
+                                        size="xs"
+                                        onClick={() => changeVolume(volume === 0 ? lastVolumeRef.current : 0)}
+                                    />
+                                    {/* a narrow window has the button alone */}
+                                    <div className="hidden w-20 @md:block">
+                                        <Slider value={volume} onValueChange={changeVolume} min={0} max={100} step={5} aria-label={t("page.story.live2d.volume")} />
+                                    </div>
+                                </div>
+                                {extraControls}
+                            </>
+                        )}
+                        {phase === "loading" && (
+                            <Button variant="text" size="xs" onClick={close} className="ml-auto">{t("common.action.cancel")}</Button>
+                        )}
+                    </div>
+
+                    <div
+                        {...gripProps("left")}
+                        tabIndex={0}
+                        role="separator"
+                        aria-label={t("page.story.live2d.resizeWindow")}
+                        className={cn(corner, "left-0 -scale-x-100 cursor-nesw-resize")}
+                    >
+                        {cornerMark}
+                    </div>
+                    <div
+                        {...gripProps("right")}
+                        tabIndex={0}
+                        role="separator"
+                        aria-label={t("page.story.live2d.resizeWindow")}
+                        className={cn(corner, "right-0 cursor-nwse-resize")}
+                    >
+                        {cornerMark}
+                    </div>
+                </Surface>
+                </div>,
+                document.body,
             )}
-
-            {/* The stage stays mounted while a player exists: its canvas belongs to the player. */}
-            <div className={cn(!shown && "hidden")}>
-                <div
-                    ref={stageRef}
-                    onClick={onStageClick}
-                    className={cn(
-                        "relative aspect-video w-full select-none bg-scrim",
-                        phase === "ready" && "cursor-pointer",
-                        fullscreen && "aspect-auto",
-                    )}
-                >
-                    {phase === "loading" && (
-                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-primary-fixed">
-                            <p className="type-title-s">
-                                {progress.fraction === undefined
-                                    ? t("page.story.live2d.preparing")
-                                    : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
-                            </p>
-                            <LinearProgress value={progress.fraction} className="w-3/5 max-w-sm" aria-label={t("page.story.live2d.title")} />
-                            <p className="type-body-s opacity-80">{t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}</p>
-                        </div>
-                    )}
-                    {phase === "ready" && !playing && !position.ended && (
-                        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-scrim/30">
-                            <span className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-on-primary">
-                                <Icon path={mdPlayArrowFill} size={36} />
-                            </span>
-                        </div>
-                    )}
-                    {phase === "ready" && buffering && (
-                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-scrim/40 text-primary-fixed">
-                            <CircularProgress aria-label={t("page.story.live2d.buffering")} />
-                            <p className="type-label-l">{t("page.story.live2d.buffering")}</p>
-                        </div>
-                    )}
-                    {fullscreen && (
-                        <IconButton
-                            icon={mdFullscreenExit}
-                            label={t("page.story.live2d.exitFullscreen")}
-                            variant="tonal"
-                            onClick={toggleFullscreen}
-                            className="absolute right-3 top-3 opacity-70"
-                        />
-                    )}
-                </div>
-
-                {phase === "loading" && (
-                    <div className="flex justify-end px-3 py-2">
-                        <Button variant="text" size="xs" onClick={close}>{t("common.action.cancel")}</Button>
-                    </div>
-                )}
-
-                {phase === "ready" && (
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2">
-                        <div className="flex items-center gap-1">
-                            <IconButton
-                                icon={mdSkipPrevious}
-                                label={t("page.story.live2d.previousTalk")}
-                                onClick={() => playerRef.current?.previous()}
-                                disabled={position.talk <= 0}
-                            />
-                            <IconButton
-                                icon={playing ? mdPauseFill : mdPlayArrowFill}
-                                label={playing ? t("page.story.reader.pause") : t("page.story.reader.play")}
-                                variant="filled"
-                                onClick={togglePlay}
-                            />
-                            <IconButton
-                                icon={mdSkipNext}
-                                label={t("page.story.live2d.nextTalk")}
-                                onClick={() => playerRef.current?.next()}
-                                disabled={position.talk >= position.talks}
-                            />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                            <span className="block truncate type-label-m text-on-surface">
-                                {t("page.story.live2d.position", { current: Math.min(position.talk + 1, position.talks), total: position.talks })}
-                            </span>
-                            {hint && <span className="block truncate type-label-s text-primary">{hint}</span>}
-                        </div>
-                        <Switch checked={auto} onCheckedChange={changeAuto} label={t("page.story.live2d.auto")} icons={false} />
-                        <div className="flex w-36 items-center gap-2">
-                            <Icon path={volume === 0 ? mdVolumeOff : mdVolumeUp} size={20} className="shrink-0 text-on-surface-variant" />
-                            <Slider value={volume} onValueChange={changeVolume} min={0} max={100} step={5} aria-label={t("page.story.live2d.volume")} />
-                        </div>
-                        {extraControls}
-                        <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} onClick={toggleFullscreen} />
-                        <IconButton icon={mdClose} label={t("page.story.live2d.close")} onClick={close} />
-                    </div>
-                )}
-
-                {phase === "ready" && (
-                    <p className="px-4 pb-3 type-body-s text-on-surface-variant">
-                        {t("page.story.live2d.originalTextNote")}
-                        {notPlayed.length > 0 && ` ${t("page.story.live2d.notPlayed", {
-                            items: [...new Set(notPlayed.map(item => t(NOT_PLAYED_KEY[item.reason])))].join(t("page.story.live2d.listSeparator")),
-                        })}`}
-                    </p>
-                )}
-            </div>
-        </Surface>
+        </>
     );
 }
 

@@ -2,7 +2,7 @@
 import { Banner, Button, ErrorState, Icon, IconButton, LinearProgress, LoadingState, Surface } from "@/components/md3";
 import { mdClose, mdGraphicEq, mdLandscape, mdMyLocation, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious } from "@/components/md3/icons";
 import { useState, useEffect, useMemo, useRef } from "react";
-import { LIVE2D_STORY_PLAYER_ID, Live2DStoryPlayer, type Live2DStoryPlayerHandle } from "@/components/story/Live2DStoryPlayer";
+import { LIVE2D_STORY_PLAYER_ID, Live2DStoryPlayer, live2dStoryPlayerTop, type Live2DStoryPlayerHandle } from "@/components/story/Live2DStoryPlayer";
 import { StorySnippet } from "@/components/story/StorySnippet";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -76,14 +76,20 @@ export function StoryReader({
         ? talkActionIndices[Math.min(live2dTalk.talk, talkActionIndices.length - 1)] ?? -1
         : -1;
 
-    // Keep the current talk's row in view below the player, which stays at the top while it plays.
+    // Keep the current talk's row in view: below the site's header, and clear of the player's
+    // window where that lies over the list.
     useEffect(() => {
         if (live2dIndex < 0 || !isScrollLocked) return;
         const row = document.getElementById(`snippet-${live2dIndex}`);
         if (!row) return;
-        const top = (document.getElementById(LIVE2D_STORY_PLAYER_ID)?.getBoundingClientRect().bottom ?? 0) + 12;
         const box = row.getBoundingClientRect();
-        if (box.top < top || box.bottom > window.innerHeight - 12) {
+        let [top, bottom] = [live2dStoryPlayerTop() + 12, window.innerHeight - 12];
+        const over = document.getElementById(LIVE2D_STORY_PLAYER_ID)?.getBoundingClientRect();
+        if (over && over.width > 0 && over.left < box.right && over.right > box.left) {
+            if (over.top + over.bottom < window.innerHeight) top = over.bottom + 12;
+            else bottom = over.top - 12;
+        }
+        if (box.top < top || box.bottom > bottom) {
             window.scrollBy({ top: box.top - top, behavior: "smooth" });
         }
     }, [live2dIndex, isScrollLocked]);
@@ -401,6 +407,7 @@ export function StoryReader({
                             icon={mdMyLocation}
                             label={t("page.story.reader.autoScroll")}
                             variant="standard"
+                            size="xs"
                             selected={isScrollLocked}
                             onClick={() => setIsScrollLocked(prev => !prev)}
                         />
