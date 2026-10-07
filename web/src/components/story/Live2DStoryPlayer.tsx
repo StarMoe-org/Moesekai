@@ -201,12 +201,23 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         const player = playerRef.current;
         if (phase !== "ready" || !player) return;
         let stallTimer: ReturnType<typeof setTimeout> | undefined;
-        const onStall = () => {
+        let stall: { since: number; reason: string } | undefined;
+        const onStall = (event: Event) => {
             clearTimeout(stallTimer);
-            stallTimer = setTimeout(() => setBuffering(true), BUFFERING_AFTER_MS);
+            stall = { since: performance.now(), reason: String((event as CustomEvent<{ reason?: string }>).detail?.reason ?? "") };
+            const reason = stall.reason;
+            stallTimer = setTimeout(() => {
+                // shown from here on: say what playback waits for (a wait that never ends has no resume)
+                console.info(`[sse-web] buffering: ${reason}`);
+                setBuffering(true);
+            }, BUFFERING_AFTER_MS);
         };
         const onResume = () => {
             clearTimeout(stallTimer);
+            if (stall && performance.now() - stall.since >= BUFFERING_AFTER_MS) {
+                console.info(`[sse-web] buffered for ${Math.round(performance.now() - stall.since)} ms`);
+            }
+            stall = undefined;
             setBuffering(false);
         };
         const onTalkEvent = () => callbacks.current.onTalk?.(player.talk, player.talks.length);
