@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import os from "node:os";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
+import { SSE_WEB_PATH, sseWebCoreUrl, sseWebReleaseBase, sseWebSources } from "./src/lib/sseWeb/config";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -20,6 +21,21 @@ const molyProxyBase = (() => {
   }
 })();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
+
+// The Live2D story player (sse-web) starts workers from its own directory, and
+// a worker script has to be same-origin with the page: the release directory
+// is served below SSE_WEB_PATH. Unset, there is no release and the reader does
+// not offer the mode. A malformed value fails the build here rather than in a
+// reader's browser.
+const sseWebProxyBase = (() => {
+  try {
+    sseWebCoreUrl();
+    sseWebSources();
+    return sseWebReleaseBase();
+  } catch (error) {
+    throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost); directories end in /`);
+  }
+})();
 
 function getAllowedDevOrigins(): string[] {
   const origins = new Set<string>(["localhost", "127.0.0.1"]);
@@ -98,6 +114,14 @@ const nextConfig: NextConfig = {
               {
                 source: "/moly/:path*",
                 destination: `${molyProxyBase}:path*`,
+              },
+            ]
+          : []),
+        ...(sseWebProxyBase
+          ? [
+              {
+                source: `${SSE_WEB_PATH}:path*`,
+                destination: `${sseWebProxyBase}:path*`,
               },
             ]
           : []),

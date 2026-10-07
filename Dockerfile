@@ -24,6 +24,17 @@ ENV NEXT_PUBLIC_OAUTH2_CLIENT_ID=snowy-viewer-public
 # the source default, so automatic deployments need no platform variable.
 ARG NEXT_PUBLIC_MOLY_RESOURCE_BASE=
 ENV NEXT_PUBLIC_MOLY_RESOURCE_BASE=$NEXT_PUBLIC_MOLY_RESOURCE_BASE
+# Live2D story player (sse-web): off unless the release and Cubism Core are both given
+ARG NEXT_PUBLIC_SSE_WEB_BASE=
+ENV NEXT_PUBLIC_SSE_WEB_BASE=$NEXT_PUBLIC_SSE_WEB_BASE
+ARG NEXT_PUBLIC_SSE_WEB_CORE_URL=
+ENV NEXT_PUBLIC_SSE_WEB_CORE_URL=$NEXT_PUBLIC_SSE_WEB_CORE_URL
+ARG NEXT_PUBLIC_SSE_WEB_LIBRARY=
+ENV NEXT_PUBLIC_SSE_WEB_LIBRARY=$NEXT_PUBLIC_SSE_WEB_LIBRARY
+ARG NEXT_PUBLIC_SSE_WEB_INAPP=
+ENV NEXT_PUBLIC_SSE_WEB_INAPP=$NEXT_PUBLIC_SSE_WEB_INAPP
+ARG NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=
+ENV NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=$NEXT_PUBLIC_SSE_WEB_ASSET_PROXY
 # Public lyrics artifacts. Production accepts only a credential-free HTTPS directory;
 # sitemap generation derives index.json from the same explicitly supplied source.
 # CI may mount a short-lived synthetic CA only for the required image build contract;

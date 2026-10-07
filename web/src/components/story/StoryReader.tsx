@@ -2,6 +2,7 @@
 import { Banner, Button, ErrorState, Icon, IconButton, LinearProgress, LoadingState, Surface } from "@/components/md3";
 import { mdClose, mdGraphicEq, mdLandscape, mdMyLocation, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious } from "@/components/md3/icons";
 import { useState, useEffect, useMemo, useRef } from "react";
+import { LIVE2D_STORY_PLAYER_ID, Live2DStoryPlayer, type Live2DStoryPlayerHandle } from "@/components/story/Live2DStoryPlayer";
 import { StorySnippet } from "@/components/story/StorySnippet";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -19,6 +20,11 @@ interface StoryReaderProps {
     translationSource?: StoryTranslationSource;
     storyType?: "event" | "unit" | "card" | "area" | "self" | "special";
     storyId?: number;
+    /**
+     * The episode in the Live2D story library (e.g. `event:219/1`), when it has one: offers the
+     * Live2D mode, whose picture and this list follow each other.
+     */
+    live2dSelector?: string;
 }
 
 export function StoryReader({
@@ -30,6 +36,7 @@ export function StoryReader({
     translationSource,
     storyType,
     storyId,
+    live2dSelector,
 }: StoryReaderProps) {
     const { useLLMTranslation } = useTheme();
     const { t } = useI18n();
@@ -55,6 +62,31 @@ export function StoryReader({
 
     // Tracks asset URLs already preloaded during autoplay, to avoid duplicate fetches.
     const preloadedUrlsRef = useRef<Set<string>>(new Set());
+
+    // Live2D mode: the player moves between talks, which are this list's Talk actions in order.
+    const live2dRef = useRef<Live2DStoryPlayerHandle | null>(null);
+    const [live2dActive, setLive2dActive] = useState(false);
+    const [live2dTalk, setLive2dTalk] = useState<{ talk: number; talks: number } | null>(null);
+    const talkActionIndices = useMemo(() => (
+        scenarioData?.actions.flatMap((act, idx) => (act.type === SnippetAction.Talk ? [idx] : [])) ?? []
+    ), [scenarioData]);
+    // The two are in step only when both count the same talks; otherwise the list is left alone.
+    const live2dSynced = live2dActive && live2dTalk !== null && live2dTalk.talks === talkActionIndices.length;
+    const live2dIndex = live2dSynced && live2dTalk
+        ? talkActionIndices[Math.min(live2dTalk.talk, talkActionIndices.length - 1)] ?? -1
+        : -1;
+
+    // Keep the current talk's row in view below the player, which stays at the top while it plays.
+    useEffect(() => {
+        if (live2dIndex < 0 || !isScrollLocked) return;
+        const row = document.getElementById(`snippet-${live2dIndex}`);
+        if (!row) return;
+        const top = (document.getElementById(LIVE2D_STORY_PLAYER_ID)?.getBoundingClientRect().bottom ?? 0) + 12;
+        const box = row.getBoundingClientRect();
+        if (box.top < top || box.bottom > window.innerHeight - 12) {
+            window.scrollBy({ top: box.top - top, behavior: "smooth" });
+        }
+    }, [live2dIndex, isScrollLocked]);
 
     // Extract all backgrounds and their indices
     const bgList = useMemo(() => {
@@ -354,8 +386,30 @@ export function StoryReader({
                 </div>
             )}
 
+            {live2dSelector && (
+                <Live2DStoryPlayer
+                    ref={live2dRef}
+                    selector={live2dSelector}
+                    onActiveChange={(active) => {
+                        setLive2dActive(active);
+                        if (active) handleStop();
+                        else setLive2dTalk(null);
+                    }}
+                    onTalk={(talk, talks) => setLive2dTalk({ talk, talks })}
+                    extraControls={(
+                        <IconButton
+                            icon={mdMyLocation}
+                            label={t("page.story.reader.autoScroll")}
+                            variant="standard"
+                            selected={isScrollLocked}
+                            onClick={() => setIsScrollLocked(prev => !prev)}
+                        />
+                    )}
+                />
+            )}
+
             {/* Autoplay onboarding banner */}
-            {activeIndex === -1 && (
+            {activeIndex === -1 && !live2dActive && (
                 <Surface tone="default" radius="xl" className="relative z-10 mb-6 flex animate-fade-in flex-col items-center justify-between gap-4 p-5 sm:flex-row">
                     <div className="min-w-0">
                         <h3 className="flex items-center gap-2 type-title-m text-on-surface">
@@ -388,16 +442,29 @@ export function StoryReader({
 
             {/* Dialogue list with IDs to anchor scroll tracking */}
             <div className="relative z-10 space-y-2">
-                {scenarioData.actions.map((action, index) => (
-                    <div key={index} id={`snippet-${index}`}>
-                        <StorySnippet
-                            action={action}
-                            index={index}
-                            activeIndex={activeIndex}
-                            playbackProgress={playbackProgress}
-                        />
-                    </div>
-                ))}
+                {scenarioData.actions.map((action, index) => {
+                    // In the Live2D mode a talk's row takes playback to that talk.
+                    const talk = live2dSynced && action.type === SnippetAction.Talk ? talkActionIndices.indexOf(index) : -1;
+                    return (
+                        <div
+                            key={index}
+                            id={`snippet-${index}`}
+                            className={talk >= 0 ? "cursor-pointer" : undefined}
+                            onClick={talk >= 0 ? (event) => {
+                                // the row's own controls (its voice button) keep their meaning
+                                if ((event.target as HTMLElement).closest("button, a, audio")) return;
+                                live2dRef.current?.seek(talk);
+                            } : undefined}
+                        >
+                            <StorySnippet
+                                action={action}
+                                index={index}
+                                activeIndex={live2dActive ? live2dIndex : activeIndex}
+                                playbackProgress={live2dActive ? 0 : playbackProgress}
+                            />
+                        </div>
+                    );
+                })}
             </div>
 
             {scenarioData.actions.length > 0 && (
@@ -418,7 +485,7 @@ export function StoryReader({
             )}
 
             {/* Floating autoplay control bar */}
-            {activeIndex >= 0 && (
+            {activeIndex >= 0 && !live2dActive && (
                 <div className="fixed bottom-6 left-4 right-4 z-50 animate-fade-in sm:left-1/2 sm:right-auto sm:w-[520px] sm:-translate-x-1/2">
                     <Surface tone="default" radius="xl" elevation={3} className="overflow-hidden">
                         <LinearProgress

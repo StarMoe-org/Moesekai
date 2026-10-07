@@ -148,6 +148,8 @@ export default function StoryEventReaderClient() {
                     translationSource={translationSource}
                     storyType="event"
                     storyId={eventId}
+                    // the Live2D story library holds the JP server's episodes only
+                    live2dSelector={serverSource === "jp" ? `event:${eventId}/${episodeNo}` : undefined}
                 />
 
                 {!isLoading && !masterLoading && (
