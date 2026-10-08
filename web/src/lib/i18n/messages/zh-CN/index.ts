@@ -1723,6 +1723,7 @@ export const zhCNMessages = {
                 volume: "音量",
                 mute: "静音",
                 unmute: "取消静音",
+                controls: "播放控制",
                 moveWindow: "移动窗口（拖动，或按方向键）",
                 resizeWindow: "调整窗口大小（拖动，或按左右方向键）",
                 windowHint: "正在悬浮窗中播放：拖动标题栏可以移动，拖动下方两角可以调整大小。",

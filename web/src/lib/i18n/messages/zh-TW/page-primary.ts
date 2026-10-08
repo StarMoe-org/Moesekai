@@ -811,6 +811,7 @@ export const zhTWPagePrimary = {
                 volume: "音量",
                 mute: "靜音",
                 unmute: "取消靜音",
+                controls: "播放控制",
                 moveWindow: "移動視窗（拖曳，或按方向鍵）",
                 resizeWindow: "調整視窗大小（拖曳，或按左右方向鍵）",
                 windowHint: "正在懸浮視窗中播放：拖曳標題列可以移動，拖曳下方兩角可以調整大小。",

@@ -1723,6 +1723,7 @@ export const jaJPMessages = {
         volume: "音量",
         mute: "ミュート",
         unmute: "ミュート解除",
+        controls: "再生コントロール",
         moveWindow: "ウィンドウを移動（ドラッグ、または矢印キー）",
         resizeWindow: "ウィンドウのサイズを変更（ドラッグ、または左右の矢印キー）",
         windowHint: "フローティングウィンドウで再生中：タイトルバーをドラッグで移動、下の両角をドラッグでサイズを変更できます。",

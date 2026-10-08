@@ -411,7 +411,6 @@ export function StoryReader({
                             icon={mdMyLocation}
                             label={t("page.story.reader.autoScroll")}
                             variant="standard"
-                            size="xs"
                             selected={isScrollLocked}
                             onClick={() => setIsScrollLocked(prev => !prev)}
                         />

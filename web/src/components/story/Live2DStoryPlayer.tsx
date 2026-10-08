@@ -1,13 +1,15 @@
 "use client";
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
-import { Banner, Button, CircularProgress, Icon, IconButton, LinearProgress, Slider, Surface, Switch, cn } from "@/components/md3";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { Banner, Button, Icon, IconButton, LinearProgress, LoadingIndicator, Slider, Surface, cn } from "@/components/md3";
 import {
-    mdClose, mdDragIndicator, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
+    mdClose, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
     mdSmartDisplay, mdTune, mdVolumeOff, mdVolumeUp,
 } from "@/components/md3/icons";
 import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
+import { md3EffectsFast, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import type { ServerType } from "@/lib/account-servers";
 import { sseWebCoreUrl, sseWebEnabled, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
 import {
@@ -81,6 +83,8 @@ const NOT_PLAYED_KEY = {
 
 /** A stall shorter than this is not shown: decoding a model's textures holds a frame or two. */
 const BUFFERING_AFTER_MS = 400;
+/** In full screen the toolbar leaves this long after the pointer last moved, while it plays. */
+const TOOLBAR_IDLE_MS = 3000;
 
 /** Where the player's window is: its left and top in the viewport and its width, in CSS pixels. */
 interface Frame {
@@ -177,6 +181,12 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
     const [fullscreen, setFullscreen] = useState(false);
     const [frame, setFrame] = useState<Frame | null>(null);
+    /** The window is being moved or resized: it is lifted while it is. */
+    const [dragging, setDragging] = useState(false);
+    /** In full screen: the pointer moved lately, so the toolbar is there. */
+    const [toolbarAwake, setToolbarAwake] = useState(false);
+    const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    const reducedMotion = useReducedMotion();
     const [settings, setSettings] = useState<SseWebSettings>(SSE_WEB_DEFAULT_SETTINGS);
     const [settingsOpen, setSettingsOpen] = useState(false);
     const [stats, setStats] = useState<{ width: number; height: number; fps: number; skipped: number; megabytes: number } | null>(null);
@@ -414,6 +424,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         };
     }, [phase, settings.showStats]);
 
+    useEffect(() => () => clearTimeout(toolbarTimerRef.current), []);
+
     // Leaving the page, or another episode or server in the same reader, ends the player.
     useEffect(() => () => {
         if (closeCurrent === closeRef.current) closeCurrent = null;
@@ -444,7 +456,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
     const onStageClick = (event: React.MouseEvent<HTMLDivElement>) => {
         const player = playerRef.current;
         const canvas = stageRef.current?.querySelector("canvas");
-        if (!player || !canvas || (event.target as HTMLElement).closest("button")) return;
+        if (!player || !canvas || (event.target as HTMLElement).closest("button, [data-player-toolbar]")) return;
         if (!playing) {
             togglePlay();
             return;
@@ -461,6 +473,14 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         if (!stage) return;
         if (document.fullscreenElement === stage) void document.exitFullscreen();
         else void stage.requestFullscreen().catch(() => {});
+    };
+
+    /** In full screen: shows the toolbar, to leave again once the pointer has rested. */
+    const wakeToolbar = () => {
+        if (!fullscreen) return;
+        setToolbarAwake(true);
+        clearTimeout(toolbarTimerRef.current);
+        toolbarTimerRef.current = setTimeout(() => setToolbarAwake(false), TOOLBAR_IDLE_MS);
     };
 
     const changeAuto = (next: boolean) => {
@@ -494,6 +514,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
             if (!frame || event.button !== 0 || (event.target as HTMLElement).closest("button")) return;
             event.currentTarget.setPointerCapture(event.pointerId);
             dragRef.current = { kind, x: event.clientX, y: event.clientY, from: frame, to: frame };
+            setDragging(true);
             event.preventDefault();
         },
         onPointerMove: (event: React.PointerEvent<HTMLElement>) => {
@@ -505,9 +526,11 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         onPointerUp: () => {
             if (dragRef.current) storeFrame(dragRef.current.to);
             dragRef.current = null;
+            setDragging(false);
         },
         onPointerCancel: () => {
             dragRef.current = null;
+            setDragging(false);
         },
         onKeyDown: (event: React.KeyboardEvent<HTMLElement>) => {
             const [dx, dy] = {
@@ -544,7 +567,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
             : position.ended
                 ? t("page.story.live2d.ended")
                 : null;
-    const note = [
+    // what stays in the page while the picture is in its window, a line each
+    const notes = [
         t("page.story.live2d.windowHint"),
         phase === "ready" && t("page.story.live2d.originalTextNote", { server: getServerDisplayCode(region as ServerType) }),
         phase === "ready" && sources.borrowedUi && t("page.story.live2d.borrowedUiNote"),
@@ -552,12 +576,81 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         phase === "ready" && notPlayed.length > 0 && t("page.story.live2d.notPlayed", {
             items: [...new Set(notPlayed.map(item => t(NOT_PLAYED_KEY[item.reason])))].join(t("page.story.live2d.listSeparator")),
         }),
-    ].filter(Boolean).join(" ");
+    ].filter((line): line is string => typeof line === "string");
 
-    const corner = "absolute bottom-0 z-10 flex h-5 w-5 touch-none items-center justify-center text-on-surface-variant focus-ring";
+    const shownTalk = Math.min(position.talk + 1, position.talks);
+    const fade = reducedMotion ? reducedMotionFade : md3EffectsFast;
+    // In full screen the toolbar floats over the picture and rests with the pointer; a paused
+    // picture, or one waiting for its reader, keeps it.
+    const toolbarShown = fullscreen && (toolbarAwake || !playing || position.waitsForClick || position.waitsForAnswer);
+
+    /**
+     * The player's controls, as Material's toolbar: the transport is a button group whose
+     * main action is the wide filled one, and what follows are toggles. `floating` is the
+     * toolbar of a full screen, which also leaves it.
+     */
+    const controls = (floating: boolean) => (
+        <>
+            <div role="group" className="flex shrink-0 items-center gap-1">
+                <IconButton
+                    icon={mdSkipPrevious}
+                    label={t("page.story.live2d.previousTalk")}
+                    variant="tonal"
+                    width="narrow"
+                    onClick={() => playerRef.current?.previous()}
+                    disabled={position.talk <= 0}
+                />
+                <IconButton
+                    icon={playing ? mdPauseFill : mdPlayArrowFill}
+                    label={playing ? t("page.story.reader.pause") : t("page.story.reader.play")}
+                    variant="filled"
+                    width="wide"
+                    // the main action changes shape with its state, as an Expressive toggle does
+                    shape={playing ? "square" : "round"}
+                    onClick={togglePlay}
+                />
+                <IconButton
+                    icon={mdSkipNext}
+                    label={t("page.story.live2d.nextTalk")}
+                    variant="tonal"
+                    width="narrow"
+                    onClick={() => playerRef.current?.next()}
+                    disabled={position.talk >= position.talks}
+                />
+            </div>
+            {/* the position is never cut short: a narrow window wraps what follows it instead */}
+            <div className={cn("px-1", floating ? "shrink-0" : "min-w-max flex-1")}>
+                <span className="block whitespace-nowrap type-label-l tabular-nums text-on-surface">
+                    {t("page.story.live2d.position", { current: shownTalk, total: position.talks })}
+                </span>
+                {hint && <span className="block truncate type-label-s text-primary">{hint}</span>}
+            </div>
+            <Button variant="tonal" size="xs" selected={auto} onClick={() => changeAuto(!auto)} className="shrink-0">
+                {t("page.story.live2d.auto")}
+            </Button>
+            <div className="flex shrink-0 items-center">
+                <IconButton
+                    icon={volume === 0 ? mdVolumeOff : mdVolumeUp}
+                    label={volume === 0 ? t("page.story.live2d.unmute") : t("page.story.live2d.mute")}
+                    selected={volume === 0}
+                    onClick={() => changeVolume(volume === 0 ? lastVolumeRef.current : 0)}
+                />
+                {/* a narrow window has the button alone */}
+                <div className={cn("w-20", floating ? "hidden sm:block" : "hidden @min-[480px]:block")}>
+                    <Slider value={volume} onValueChange={changeVolume} min={0} max={100} step={5} aria-label={t("page.story.live2d.volume")} />
+                </div>
+            </div>
+            {floating
+                ? <IconButton icon={mdFullscreenExit} label={t("page.story.live2d.exitFullscreen")} onClick={toggleFullscreen} />
+                : extraControls}
+        </>
+    );
+
+    // a corner's mark follows the window's rounding
+    const corner = "absolute bottom-0 z-10 flex h-7 w-7 touch-none items-center justify-center text-on-surface-variant/60 focus-ring rounded-md3-sm";
     const cornerMark = (
-        <svg viewBox="0 0 12 12" className="h-3 w-3" aria-hidden="true">
-            <path d="M11 4 4 11M11 8 8 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <svg viewBox="0 0 16 16" className="h-4 w-4" aria-hidden="true">
+            <path d="M13 3A10 10 0 0 1 3 13" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
         </svg>
     );
 
@@ -598,11 +691,15 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
 
                 {/* The picture is in its window: what stays in the page says so. */}
                 {shown && (
-                    <div className="flex items-start gap-3 px-5 py-4">
-                        <Icon path={mdSmartDisplay} size={20} className="mt-0.5 shrink-0 text-primary" />
+                    <div className="flex items-start gap-4 p-5">
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md3-md bg-primary-container text-on-primary-container">
+                            <Icon path={mdSmartDisplay} size={24} />
+                        </span>
                         <div className="min-w-0">
-                            <h3 className="type-title-s text-on-surface">{t("page.story.live2d.title")}</h3>
-                            <p className="mt-1 type-body-s text-on-surface-variant">{note}</p>
+                            <h3 className="type-title-m text-on-surface">{t("page.story.live2d.title")}</h3>
+                            <ul className="mt-1 space-y-1 type-body-s text-on-surface-variant">
+                                {notes.map(line => <li key={line}>{line}</li>)}
+                            </ul>
                         </div>
                     </div>
                 )}
@@ -613,129 +710,150 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
               * It stays mounted while a player exists, whose canvas is in its stage.
               */}
             {inBrowser && createPortal(
-                <div
+                <motion.div
                     ref={windowRef}
                     id={shown ? LIVE2D_STORY_PLAYER_ID : undefined}
                     role="region"
                     aria-label={t("page.story.live2d.title")}
                     className={cn("@container fixed z-[90]", !shown && "hidden")}
                     style={frame ? { left: frame.x, top: frame.y, width: frame.width } : undefined}
+                    // it arrives with a spring; it leaves at once (its picture is gone already)
+                    initial={false}
+                    animate={shown ? { opacity: 1, scale: 1 } : { opacity: 0, scale: reducedMotion ? 1 : 0.92 }}
+                    transition={reducedMotion ? reducedMotionFade : { scale: md3SpatialDefault, opacity: md3EffectsFast }}
                 >
-                <Surface tone="default" radius="lg" elevation={3} className="relative overflow-hidden">
+                <Surface
+                    tone="high"
+                    radius="xl"
+                    className={cn(
+                        "relative overflow-hidden transition-shadow duration-200 ease-md3-standard",
+                        dragging ? "shadow-elev-4" : "shadow-elev-3",
+                    )}
+                >
                     <div
                         {...gripProps("move")}
                         tabIndex={0}
                         aria-label={t("page.story.live2d.moveWindow")}
-                        className="focus-ring flex h-10 cursor-grab touch-none select-none items-center gap-1 pl-2 pr-1 active:cursor-grabbing"
+                        className="focus-ring relative flex h-12 cursor-grab touch-none select-none items-center gap-1 rounded-t-md3-xl pl-5 pr-2 active:cursor-grabbing"
                     >
-                        <Icon path={mdDragIndicator} size={20} className="shrink-0 text-on-surface-variant" />
-                        <span className="min-w-0 flex-1 truncate type-label-l text-on-surface">{t("page.story.live2d.title")}</span>
+                        {/* Material's drag handle */}
+                        <span aria-hidden className="absolute left-1/2 top-1.5 h-1 w-8 -translate-x-1/2 rounded-full bg-on-surface-variant/40" />
+                        <span className="min-w-0 flex-1 truncate type-title-s text-on-surface">{t("page.story.live2d.title")}</span>
                         {phase === "ready" && (
                             <>
-                                <IconButton icon={mdTune} label={t("page.story.live2d.settings.title")} size="xs" onClick={() => setSettingsOpen(true)} />
-                                <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} size="xs" onClick={toggleFullscreen} />
+                                <IconButton icon={mdTune} label={t("page.story.live2d.settings.title")} onClick={() => setSettingsOpen(true)} />
+                                <IconButton icon={mdFullscreen} label={t("page.story.live2d.fullscreen")} onClick={toggleFullscreen} />
                             </>
                         )}
-                        <IconButton icon={mdClose} label={t("page.story.live2d.close")} size="xs" onClick={close} />
+                        <IconButton icon={mdClose} label={t("page.story.live2d.close")} onClick={close} />
                     </div>
 
                     <div
                         ref={stageRef}
                         onClick={onStageClick}
-                        className={cn("relative w-full select-none bg-scrim", phase === "ready" && "cursor-pointer")}
+                        onPointerMove={wakeToolbar}
+                        onPointerDown={wakeToolbar}
+                        className={cn(
+                            "relative w-full select-none overflow-hidden bg-scrim",
+                            // in full screen the pointer rests with the toolbar (the site's themed
+                            // pointer outranks `cursor-none` on an element that also has a cursor class)
+                            fullscreen && !toolbarShown ? "cursor-none" : phase === "ready" && "cursor-pointer",
+                        )}
                         style={fullscreen ? undefined : { aspectRatio: ratio }}
                     >
                         {phase === "loading" && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6 text-center text-primary-fixed">
-                                <p className="type-title-s">
+                            <div className="absolute inset-0 flex items-center justify-center p-3">
+                                <div className="flex w-72 max-w-full flex-col items-center gap-2 rounded-md3-lg bg-surface-container-high px-4 py-3 text-center text-on-surface">
                                     {progress.fraction === undefined
-                                        ? t("page.story.live2d.preparing")
-                                        : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
-                                </p>
-                                <LinearProgress value={progress.fraction} className="w-3/5 max-w-sm" aria-label={t("page.story.live2d.title")} />
-                                <p className="type-body-s opacity-80">{t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}</p>
+                                        ? <LoadingIndicator size={40} aria-label={t("page.story.live2d.preparing")} />
+                                        : <LinearProgress value={progress.fraction} className="mt-1" aria-label={t("page.story.live2d.title")} />}
+                                    <p className="type-title-s tabular-nums">
+                                        {progress.fraction === undefined
+                                            ? t("page.story.live2d.preparing")
+                                            : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
+                                    </p>
+                                    <p className="type-body-s tabular-nums text-on-surface-variant">
+                                        {t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}
+                                    </p>
+                                </div>
                             </div>
                         )}
-                        {phase === "ready" && !playing && !position.ended && (
-                            <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-scrim/30">
-                                <span className="flex h-1/4 max-h-16 min-h-10 aspect-square items-center justify-center rounded-full bg-primary text-on-primary">
-                                    <Icon path={mdPlayArrowFill} size={28} />
-                                </span>
-                            </div>
-                        )}
-                        {phase === "ready" && buffering && (
-                            <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-3 bg-scrim/40 text-primary-fixed">
-                                <CircularProgress aria-label={t("page.story.live2d.buffering")} />
-                                <p className="type-label-l">{t("page.story.live2d.buffering")}</p>
-                            </div>
-                        )}
+                        <AnimatePresence>
+                            {phase === "ready" && !playing && !position.ended && !buffering && (
+                                <motion.div
+                                    key="paused"
+                                    className="pointer-events-none absolute inset-0 flex items-center justify-center bg-scrim/32"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={fade}
+                                >
+                                    {/* the fixed colour roles, the same in both themes: the stage is black in either */}
+                                    <span className="flex aspect-square h-1/3 max-h-24 min-h-12 items-center justify-center rounded-md3-xl bg-primary-fixed text-on-primary-fixed shadow-elev-2">
+                                        <Icon path={mdPlayArrowFill} size={32} />
+                                    </span>
+                                </motion.div>
+                            )}
+                            {phase === "ready" && buffering && (
+                                <motion.div
+                                    key="buffering"
+                                    className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-2 bg-scrim/32"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={fade}
+                                >
+                                    <LoadingIndicator contained size={56} aria-label={t("page.story.live2d.buffering")} />
+                                    <p className="rounded-md3-sm bg-inverse-surface px-2 py-1 type-label-m text-inverse-on-surface">
+                                        {t("page.story.live2d.buffering")}
+                                    </p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                         {phase === "ready" && stats && (
-                            <p className="pointer-events-none absolute left-2 top-2 rounded-md3-sm bg-scrim/60 px-2 py-0.5 type-label-s tabular-nums text-primary-fixed">
+                            <p className="pointer-events-none absolute left-2 top-2 max-w-[calc(100%-1rem)] truncate rounded-md3-sm bg-inverse-surface/85 px-2 py-1 type-label-s tabular-nums text-inverse-on-surface">
                                 {t("page.story.live2d.settings.statsLine", stats)}
                             </p>
                         )}
-                        {fullscreen && (
-                            <IconButton
-                                icon={mdFullscreenExit}
-                                label={t("page.story.live2d.exitFullscreen")}
-                                variant="tonal"
-                                onClick={toggleFullscreen}
-                                className="absolute right-3 top-3 opacity-70"
-                            />
-                        )}
+                        {/* Full screen has the stage alone: its controls float over the picture. */}
+                        <AnimatePresence>
+                            {phase === "ready" && toolbarShown && (
+                                <motion.div
+                                    key="toolbar"
+                                    data-player-toolbar
+                                    className="absolute inset-x-0 bottom-6 flex cursor-default justify-center px-4"
+                                    initial={{ opacity: 0, y: reducedMotion ? 0 : 16 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: reducedMotion ? 0 : 16 }}
+                                    transition={reducedMotion ? reducedMotionFade : { y: md3SpatialDefault, opacity: md3EffectsFast }}
+                                >
+                                    <div
+                                        role="toolbar"
+                                        aria-label={t("page.story.live2d.controls")}
+                                        className="flex h-16 max-w-full items-center gap-2 rounded-full bg-surface-container px-3 text-on-surface shadow-elev-3"
+                                    >
+                                        {controls(true)}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </div>
 
-                    {/* The corners at the bottom lie on this bar, which is there in both phases. */}
-                    <div className="flex min-h-12 flex-wrap items-center gap-x-2 gap-y-1 px-4 py-1.5">
-                        {phase === "ready" && (
-                            <>
-                                <div className="flex items-center gap-1">
-                                    <IconButton
-                                        icon={mdSkipPrevious}
-                                        label={t("page.story.live2d.previousTalk")}
-                                        size="xs"
-                                        onClick={() => playerRef.current?.previous()}
-                                        disabled={position.talk <= 0}
-                                    />
-                                    <IconButton
-                                        icon={playing ? mdPauseFill : mdPlayArrowFill}
-                                        label={playing ? t("page.story.reader.pause") : t("page.story.reader.play")}
-                                        variant="filled"
-                                        size="xs"
-                                        onClick={togglePlay}
-                                    />
-                                    <IconButton
-                                        icon={mdSkipNext}
-                                        label={t("page.story.live2d.nextTalk")}
-                                        size="xs"
-                                        onClick={() => playerRef.current?.next()}
-                                        disabled={position.talk >= position.talks}
-                                    />
-                                </div>
-                                <div className="min-w-16 flex-1">
-                                    <span className="block truncate type-label-m text-on-surface">
-                                        {t("page.story.live2d.position", { current: Math.min(position.talk + 1, position.talks), total: position.talks })}
-                                    </span>
-                                    {hint && <span className="block truncate type-label-s text-primary">{hint}</span>}
-                                </div>
-                                <Switch checked={auto} onCheckedChange={changeAuto} label={t("page.story.live2d.auto")} icons={false} />
-                                <div className="flex items-center">
-                                    <IconButton
-                                        icon={volume === 0 ? mdVolumeOff : mdVolumeUp}
-                                        label={volume === 0 ? t("page.story.live2d.unmute") : t("page.story.live2d.mute")}
-                                        size="xs"
-                                        onClick={() => changeVolume(volume === 0 ? lastVolumeRef.current : 0)}
-                                    />
-                                    {/* a narrow window has the button alone */}
-                                    <div className="hidden w-20 @md:block">
-                                        <Slider value={volume} onValueChange={changeVolume} min={0} max={100} step={5} aria-label={t("page.story.live2d.volume")} />
-                                    </div>
-                                </div>
-                                {extraControls}
-                            </>
-                        )}
+                    {/* The window's toolbar; the corners at the bottom lie on it, and it is there in both phases. */}
+                    {phase === "ready" && (
+                        <LinearProgress
+                            value={position.talks > 0 ? Math.min(position.talk, position.talks) / position.talks : 0}
+                            aria-label={t("page.story.live2d.position", { current: shownTalk, total: position.talks })}
+                        />
+                    )}
+                    <div
+                        role="toolbar"
+                        aria-label={t("page.story.live2d.controls")}
+                        className="flex min-h-16 flex-wrap items-center gap-x-2 gap-y-1 px-5 py-2"
+                    >
+                        {phase === "ready" && controls(false)}
                         {phase === "loading" && (
-                            <Button variant="text" size="xs" onClick={close} className="ml-auto">{t("common.action.cancel")}</Button>
+                            <Button variant="text" onClick={close} className="ml-auto">{t("common.action.cancel")}</Button>
                         )}
                     </div>
 
@@ -758,7 +876,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                         {cornerMark}
                     </div>
                 </Surface>
-                </div>,
+                </motion.div>,
                 document.body,
             )}
 

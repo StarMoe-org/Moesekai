@@ -1721,6 +1721,7 @@ export const koKRMessages = {
                 volume: "음량",
                 mute: "음소거",
                 unmute: "음소거 해제",
+                controls: "재생 컨트롤",
                 moveWindow: "창 이동(드래그 또는 방향키)",
                 resizeWindow: "창 크기 조절(드래그 또는 좌우 방향키)",
                 windowHint: "플로팅 창에서 재생 중: 제목 표시줄을 드래그해 옮기고, 아래 양쪽 모서리를 드래그해 크기를 조절할 수 있습니다.",

@@ -1724,6 +1724,7 @@ export const enUSMessages = {
                 volume: "Volume",
                 mute: "Mute",
                 unmute: "Unmute",
+                controls: "Playback controls",
                 moveWindow: "Move the window (drag, or use the arrow keys)",
                 resizeWindow: "Resize the window (drag, or use the left and right arrow keys)",
                 windowHint: "Playing in a floating window: drag its title bar to move it, and its bottom corners to resize it.",

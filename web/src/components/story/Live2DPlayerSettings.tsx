@@ -1,5 +1,5 @@
 "use client";
-import { Button, Dialog, SegmentedButton, Select, Switch } from "@/components/md3";
+import { Button, ConnectedButtonGroup, Dialog, Select, Switch } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     SSE_WEB_ASPECTS, SSE_WEB_DEFAULT_SETTINGS, SSE_WEB_RESOLUTIONS,
@@ -53,12 +53,10 @@ export function Live2DPlayerSettings({ isOpen, onClose, settings, onChange }: Li
 
                 <section>
                     <h4 className="mb-2 type-title-s text-on-surface">{t("page.story.live2d.settings.aspect")}</h4>
-                    <SegmentedButton<SseWebAspect>
+                    <ConnectedButtonGroup<SseWebAspect>
                         aria-label={t("page.story.live2d.settings.aspect")}
                         value={settings.aspect}
                         onValueChange={aspect => onChange({ ...settings, aspect })}
-                        showCheckmark={false}
-                        density={-1}
                         options={ASPECTS.map(value => ({ value, label: value }))}
                     />
                     <p className="mt-2 type-body-s text-on-surface-variant">{t("page.story.live2d.settings.aspectHint")}</p>
