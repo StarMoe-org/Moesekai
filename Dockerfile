@@ -24,7 +24,7 @@ ENV NEXT_PUBLIC_OAUTH2_CLIENT_ID=snowy-viewer-public
 # the source default, so automatic deployments need no platform variable.
 ARG NEXT_PUBLIC_MOLY_RESOURCE_BASE=
 ENV NEXT_PUBLIC_MOLY_RESOURCE_BASE=$NEXT_PUBLIC_MOLY_RESOURCE_BASE
-# Live2D story player (sse-web): off unless the release and Cubism Core are both given
+# Live2D story player (sse-web): off unless the release is given; Cubism Core is Live2D's own unless a copy is named
 ARG NEXT_PUBLIC_SSE_WEB_BASE=
 ENV NEXT_PUBLIC_SSE_WEB_BASE=$NEXT_PUBLIC_SSE_WEB_BASE
 ARG NEXT_PUBLIC_SSE_WEB_CORE_URL=

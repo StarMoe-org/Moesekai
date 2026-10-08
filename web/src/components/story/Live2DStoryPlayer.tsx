@@ -237,7 +237,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
     const start = useCallback(async () => {
         const stage = stageRef.current;
         const core = sseWebCoreUrl();
-        if (!stage || !core || !sources) return;
+        if (!stage || !sources) return;
         // one player at a time: each holds an episode's files and models in memory
         if (closeCurrent && closeCurrent !== closeRef.current) closeCurrent();
         closeCurrent = closeRef.current;
@@ -264,7 +264,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                 canvas,
                 js: sseWebScriptBase(),
                 pkg: "pkg/",
-                core,
+                ...(core ? { core } : {}),
                 sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
                 ...(fonts ? { fonts } : {}),
                 selector,

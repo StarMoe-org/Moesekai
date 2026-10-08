@@ -60,7 +60,8 @@ export interface SsePlayerOptions {
     canvas: HTMLCanvasElement;
     js: string;
     pkg: string;
-    core: string;
+    /** Cubism Core for Web, when not the one at Live2D's own address. */
+    core?: string;
     sources: { library: string; inapp: string; proxy?: string };
     /** Fonts to draw the text with in place of the client's (which are then not fetched). */
     fonts?: { body: { url: string; weight?: number }[]; name: { url: string; weight?: number }[] };

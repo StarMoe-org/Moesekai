@@ -57,9 +57,11 @@ for (const region of ["cn", "tw", "kr", "en"]) assert.equal(sseWebFonts(region),
 set({ NEXT_PUBLIC_SSE_WEB_FONT_BASE: "https://assets.example.test/fonts" });
 assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_FONT_BASE/);
 
-// The release alone, or Cubism Core alone, does not turn it on.
+// The release turns it on: Cubism Core is Live2D's own unless a copy is named, and a copy
+// alone turns nothing on.
 set({ NEXT_PUBLIC_SSE_WEB_BASE: "https://assets.example.test/bucket/sse-web/0.2.1/" });
-assert.equal(sseWebEnabled(), false);
+assert.equal(sseWebEnabled(), true);
+assert.equal(sseWebCoreUrl(), null);
 set({ NEXT_PUBLIC_SSE_WEB_CORE_URL: "https://example.test/vendor/live2dcubismcore.min.js" });
 assert.equal(sseWebEnabled(), false);
 

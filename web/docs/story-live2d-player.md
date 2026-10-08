@@ -4,17 +4,17 @@
 
 ## 开关
 
-默认关闭。同时设置下面两个变量后才显示入口（Next.js 在构建时写入 `NEXT_PUBLIC_*`，Docker 用 `--build-arg` 传）：
+默认关闭。设置下面这个变量后才显示入口（Next.js 在构建时写入 `NEXT_PUBLIC_*`，Docker 用 `--build-arg` 传）：
 
 | 变量 | 含义 |
 |---|---|
 | `NEXT_PUBLIC_SSE_WEB_BASE` | 发布物所在的目录，以 `/` 结尾，里面是 `player.js`、各 Worker 脚本和 `pkg/` |
-| `NEXT_PUBLIC_SSE_WEB_CORE_URL` | 站点自己托管的 `live2dcubismcore.min.js`（Cubism SDK for Web 5-r.5）。发布物不含 Cubism Core |
 
 可选（都有默认值，指向 `assets.pjsk.moe` 上已发布的数据）：
 
 | 变量 | 含义 | 默认 |
 |---|---|---|
+| `NEXT_PUBLIC_SSE_WEB_CORE_URL` | 站点自己托管的 `live2dcubismcore.min.js`（Cubism Core for Web）。发布物不含 Cubism Core；不设时播放器从 Live2D 的官方地址加载，那个地址不带版本号，提供的是 Live2D 当前放在那里的版本 | `https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js`（写在播放器里） |
 | `NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE` | 各区服剧情库的上级目录，剧情库是 `<它>/<jp\|cn\|tw\|kr\|en>/` | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
@@ -88,11 +88,10 @@
 
 ## 本地联调
 
-在 SekaiStoryExporter 仓库里：`crates/sse-web/dist.sh` 生成发布物，拷到 `target/web-dev/dist/`，`python3 crates/sse-web/dev/serve.py` 提供发布物、Cubism Core 和资源中转。然后在 `web/.env.local` 里：
+在 SekaiStoryExporter 仓库里：`crates/sse-web/dist.sh` 生成发布物，拷到 `target/web-dev/dist/`，`python3 crates/sse-web/dev/serve.py` 提供发布物和资源中转。然后在 `web/.env.local` 里：
 
 ```
 NEXT_PUBLIC_SSE_WEB_BASE=http://127.0.0.1:8787/dist/
-NEXT_PUBLIC_SSE_WEB_CORE_URL=http://127.0.0.1:8787/core/live2dcubismcore.min.js
 NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=http://127.0.0.1:8787/remote/
 NEXT_PUBLIC_SSE_WEB_FONT_BASE=http://127.0.0.1:8787/fonts/
 ```

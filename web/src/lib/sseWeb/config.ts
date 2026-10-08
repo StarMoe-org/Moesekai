@@ -3,11 +3,13 @@
  * SekaiStoryExporter). It is a separately versioned release that this
  * repository does not contain: `player.js`, its worker scripts and a wasm
  * under one directory. No release is published by default, so the feature is
- * off until both of these are set:
+ * off until this is set:
  *
  * - `NEXT_PUBLIC_SSE_WEB_BASE`: the release directory, ending in "/".
- * - `NEXT_PUBLIC_SSE_WEB_CORE_URL`: the pinned `live2dcubismcore.min.js`
- *   (Cubism Core for Web) the site hosts itself; the release has no copy.
+ *
+ * The release has no copy of Cubism Core for Web: the player loads
+ * `live2dcubismcore.min.js` from Live2D's own address. A deployment that
+ * serves a copy of its own names it in `NEXT_PUBLIC_SSE_WEB_CORE_URL`.
  *
  * The player starts workers from its own directory, and a worker script has
  * to be same-origin with the page. next.config.ts therefore serves the
@@ -51,7 +53,7 @@ export function sseWebReleaseBase(): string | null {
     return directory(process.env.NEXT_PUBLIC_SSE_WEB_BASE, "NEXT_PUBLIC_SSE_WEB_BASE");
 }
 
-/** The URL of Cubism Core for Web, or null when it is not configured. */
+/** The deployment's own copy of Cubism Core for Web, or null: the player then loads Live2D's. */
 export function sseWebCoreUrl(): string | null {
     const value = process.env.NEXT_PUBLIC_SSE_WEB_CORE_URL?.trim();
     if (!value) return null;
@@ -60,9 +62,9 @@ export function sseWebCoreUrl(): string | null {
     return parsed.href;
 }
 
-/** The player is offered only when both the release and Cubism Core are configured. */
+/** The player is offered only when a release is configured. */
 export function sseWebEnabled(): boolean {
-    return sseWebReleaseBase() !== null && sseWebCoreUrl() !== null;
+    return sseWebReleaseBase() !== null;
 }
 
 /** The game servers a story library is published for. */
