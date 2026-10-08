@@ -6,7 +6,9 @@ import {
     mdClose, mdDragIndicator, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
     mdSmartDisplay, mdTune, mdVolumeOff, mdVolumeUp,
 } from "@/components/md3/icons";
+import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
+import type { ServerType } from "@/lib/account-servers";
 import { sseWebCoreUrl, sseWebEnabled, sseWebSources } from "@/lib/sseWeb/config";
 import {
     loadSsePlayer, sseWebScriptBase,
@@ -26,6 +28,8 @@ export interface Live2DStoryPlayerHandle {
 interface Live2DStoryPlayerProps {
     /** The episode in the story library, e.g. `event:219/1`. */
     selector: string;
+    /** The game server whose library the episode is read from. */
+    region: string;
     /** The player is loaded (true) or was closed (false). */
     onActiveChange?: (active: boolean) => void;
     /** Playback is in talk `talk` of `talks` (0-based; `talks` after the last one). */
@@ -35,8 +39,15 @@ interface Live2DStoryPlayerProps {
     ref?: React.Ref<Live2DStoryPlayerHandle>;
 }
 
-/** The player's window, which floats over the page while it plays: the page keeps its list clear of it. */
+/**
+ * The player's window, which floats over the page while it plays: the page keeps its list
+ * clear of it. A page may hold several players (a card's two parts); one plays at a time,
+ * and only its window carries the id.
+ */
 export const LIVE2D_STORY_PLAYER_ID = "story-live2d-player";
+
+/** Closes the player that is loading or playing now, for the next one to take its place. */
+let closeCurrent: (() => void) | null = null;
 
 /** The page's top that the site's header covers (taller on a narrow page), and a gap below it. */
 export function live2dStoryPlayerTop(): number {
@@ -140,8 +151,9 @@ const subscribeNever = () => () => {};
  * rendered in the browser by sse-web. Nothing is downloaded until the reader
  * asks for it. Renders nothing when no release is configured.
  */
-export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraControls, ref }: Live2DStoryPlayerProps) {
+export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, extraControls, ref }: Live2DStoryPlayerProps) {
     const { t } = useI18n();
+    const sources = sseWebSources(region);
     const windowRef = useRef<HTMLDivElement | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
     /** A drag of the window's title or of one of its corners: where it began. */
@@ -179,7 +191,11 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         stageRef.current?.querySelector("canvas")?.remove();
     }, []);
 
+    // what closes this player, as the page's other players know it
+    const closeRef = useRef<() => void>(() => {});
+
     const close = useCallback(() => {
+        if (closeCurrent === closeRef.current) closeCurrent = null;
         release();
         if (document.fullscreenElement === stageRef.current) void document.exitFullscreen();
         setPhase("idle");
@@ -202,10 +218,15 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         callbacks.current.onActiveChange?.(false);
     }, [release]);
 
+    useEffect(() => { closeRef.current = close; });
+
     const start = useCallback(async () => {
         const stage = stageRef.current;
         const core = sseWebCoreUrl();
-        if (!stage || !core) return;
+        if (!stage || !core || !sources) return;
+        // one player at a time: each holds an episode's files and models in memory
+        if (closeCurrent && closeCurrent !== closeRef.current) closeCurrent();
+        closeCurrent = closeRef.current;
         release();
         const epoch = epochRef.current;
         // the window is not laid out yet: its width is known from where it will be
@@ -230,7 +251,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                 js: sseWebScriptBase(),
                 pkg: "pkg/",
                 core,
-                sources: sseWebSources(),
+                sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
                 selector,
                 width,
                 height,
@@ -266,7 +287,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         }
         // `volume` is read once, for the new player; later changes go through setVolume
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [fail, release, selector, t]);
+    }, [fail, release, selector, region, t]);
 
     // The player's events, and its position a few times a second (waiting for a click or an
     // answer has no event of its own).
@@ -391,8 +412,11 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         };
     }, [phase, settings.showStats]);
 
-    // Leaving the page, or another episode in the same reader, ends the player.
-    useEffect(() => release, [release, selector]);
+    // Leaving the page, or another episode or server in the same reader, ends the player.
+    useEffect(() => () => {
+        if (closeCurrent === closeRef.current) closeCurrent = null;
+        release();
+    }, [release, selector, region]);
 
     useImperativeHandle(ref, () => ({
         seek(talk: number) {
@@ -400,7 +424,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
         },
     }), []);
 
-    if (!sseWebEnabled()) return null;
+    if (!sseWebEnabled() || !sources) return null;
 
     const togglePlay = () => {
         const player = playerRef.current;
@@ -520,7 +544,8 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
                 : null;
     const note = [
         t("page.story.live2d.windowHint"),
-        phase === "ready" && t("page.story.live2d.originalTextNote"),
+        phase === "ready" && t("page.story.live2d.originalTextNote", { server: getServerDisplayCode(region as ServerType) }),
+        phase === "ready" && sources.borrowedUi && t("page.story.live2d.borrowedUiNote"),
         phase === "ready" && notPlayed.length > 0 && t("page.story.live2d.notPlayed", {
             items: [...new Set(notPlayed.map(item => t(NOT_PLAYED_KEY[item.reason])))].join(t("page.story.live2d.listSeparator")),
         }),
@@ -587,7 +612,7 @@ export function Live2DStoryPlayer({ selector, onActiveChange, onTalk, extraContr
             {inBrowser && createPortal(
                 <div
                     ref={windowRef}
-                    id={LIVE2D_STORY_PLAYER_ID}
+                    id={shown ? LIVE2D_STORY_PLAYER_ID : undefined}
                     role="region"
                     aria-label={t("page.story.live2d.title")}
                     className={cn("@container fixed z-[90]", !shown && "hidden")}

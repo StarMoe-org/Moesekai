@@ -21,8 +21,9 @@ interface StoryReaderProps {
     storyType?: "event" | "unit" | "card" | "area" | "self" | "special";
     storyId?: number;
     /**
-     * The episode in the Live2D story library (e.g. `event:219/1`), when it has one: offers the
-     * Live2D mode, whose picture and this list follow each other.
+     * The episode in the Live2D story library (e.g. `event:219/1`, `card:1/first`), when it
+     * has one: offers the Live2D mode, whose picture and this list follow each other. It is
+     * read from the library of the server the reader chose.
      */
     live2dSelector?: string;
 }
@@ -38,7 +39,7 @@ export function StoryReader({
     storyId,
     live2dSelector,
 }: StoryReaderProps) {
-    const { useLLMTranslation } = useTheme();
+    const { useLLMTranslation, serverSource } = useTheme();
     const { t } = useI18n();
 
     // Autoplay Player States
@@ -65,6 +66,7 @@ export function StoryReader({
 
     // Live2D mode: the player moves between talks, which are this list's Talk actions in order.
     const live2dRef = useRef<Live2DStoryPlayerHandle | null>(null);
+    const rootRef = useRef<HTMLDivElement | null>(null);
     const [live2dActive, setLive2dActive] = useState(false);
     const [live2dTalk, setLive2dTalk] = useState<{ talk: number; talks: number } | null>(null);
     const talkActionIndices = useMemo(() => (
@@ -80,7 +82,8 @@ export function StoryReader({
     // window where that lies over the list.
     useEffect(() => {
         if (live2dIndex < 0 || !isScrollLocked) return;
-        const row = document.getElementById(`snippet-${live2dIndex}`);
+        // a page may hold several readers (a card's two parts), whose rows share their ids
+        const row = rootRef.current?.querySelector<HTMLElement>(`#snippet-${live2dIndex}`);
         if (!row) return;
         const box = row.getBoundingClientRect();
         let [top, bottom] = [live2dStoryPlayerTop() + 12, window.innerHeight - 12];
@@ -383,7 +386,7 @@ export function StoryReader({
     if (!scenarioData) return null;
 
     return (
-        <div className="relative mx-auto max-w-4xl pb-24">
+        <div ref={rootRef} className="relative mx-auto max-w-4xl pb-24">
             {/* Ambient immersion background layer */}
             {activeBgUrl && immersionMode && (
                 <div className="pointer-events-none fixed inset-0 z-0 opacity-25 transition-opacity duration-1000 ease-in-out">
@@ -396,6 +399,7 @@ export function StoryReader({
                 <Live2DStoryPlayer
                     ref={live2dRef}
                     selector={live2dSelector}
+                    region={serverSource}
                     onActiveChange={(active) => {
                         setLive2dActive(active);
                         if (active) handleStop();

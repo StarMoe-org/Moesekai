@@ -36,7 +36,7 @@ export default function StoryAreaTalkClient() {
     const lang: "jp" | "cn" = serverSource === "cn" ? "cn" : "jp";
 
     const [areaName, setAreaName] = useState<string>("");
-    const [actionSet, setActionSet] = useState<{ id: number; serverSource: ServerSourceType } | null>(null);
+    const [actionSet, setActionSet] = useState<{ id: number; areaId: number; serverSource: ServerSourceType } | null>(null);
     const [scenarioData, setScenarioData] = useState<IProcessedScenarioData | null>(null);
     const [missingPaths, setMissingPaths] = useState<string[] | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export default function StoryAreaTalkClient() {
                 const action = actionSetsData.find(a => a.scenarioId === scenarioId);
                 if (!action?.scenarioId) throw new Error(t("page.story.area.dialogueNotFound"));
 
-                setActionSet({ id: action.id, serverSource });
+                setActionSet({ id: action.id, areaId: action.areaId, serverSource });
                 const area = areasData.find(a => a.id === action.areaId);
                 const name = area ? (area.subName ? `${area.name} - ${area.subName}` : area.name) : t("page.story.area.areaFallback", { id: action.areaId });
                 setAreaName(name);
@@ -142,6 +142,8 @@ export default function StoryAreaTalkClient() {
                     endLabel={t("page.story.area.endLabel")}
                     translationSource={translationSource}
                     storyType="area"
+                    // the story library names an area talk by its area and action set, of the server they were read from
+                    live2dSelector={actionSet && actionSet.serverSource === serverSource ? `area:${actionSet.areaId}/${actionSet.id}` : undefined}
                 />
             </PageContainer>
         </MainLayout>

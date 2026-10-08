@@ -203,6 +203,7 @@ export default function StoryCardReaderClient() {
                                             endLabel={label}
                                             translationSource={source}
                                             storyType="card"
+                                            live2dSelector={`card:${cardId}/${key === "1" ? "first" : "second"}`}
                                         />
                                     </div>
                                 );

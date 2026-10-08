@@ -1,6 +1,6 @@
 # 剧情阅读页的 Live2D 播放
 
-活动剧情的阅读页（`/story/event/<活动>/<话>/`）可以在浏览器里实时播放这一话的 Live2D 演出。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web），本仓库不包含它，只有加载它的组件。
+剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读自己的剧情库。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web），本仓库不包含它，只有加载它的组件。
 
 ## 开关
 
@@ -11,13 +11,23 @@
 | `NEXT_PUBLIC_SSE_WEB_BASE` | 发布物所在的目录，以 `/` 结尾，里面是 `player.js`、各 Worker 脚本和 `pkg/` |
 | `NEXT_PUBLIC_SSE_WEB_CORE_URL` | 站点自己托管的 `live2dcubismcore.min.js`（Cubism SDK for Web 5-r.5）。发布物不含 Cubism Core |
 
-可选：`NEXT_PUBLIC_SSE_WEB_LIBRARY`、`NEXT_PUBLIC_SSE_WEB_INAPP` 改剧情库和客户端解包的地址（默认是 `assets.pjsk.moe` 上的日服数据）；`NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
+可选（都有默认值，指向 `assets.pjsk.moe` 上已发布的数据）：
+
+| 变量 | 含义 | 默认 |
+|---|---|---|
+| `NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE` | 各区服剧情库的上级目录，剧情库是 `<它>/<jp\|cn\|tw\|kr\|en>/` | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
+| `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
+| `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
+
+`NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
 
 播放器要从自己的目录启动 Worker，而 Worker 脚本必须与页面同源，所以 `next.config.ts` 把发布物目录映射到本站的 `/sse-web/`，浏览器只访问这个路径。Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。
 
 ## 行为
 
-- 只在资源服务器选日服时显示：剧情库目前只有日服，画面里的文字是日服原文。
+- 读的是设置里所选资源服务器的剧情库，画面里的文字是那个服务器的原文。目前只有日服和国服的客户端解包；繁中、韩、英三个服务器的剧情库配国服的解包播放，文字能正常显示，但对话框和字体是国服客户端的，播放时页面上有一行说明。等这三个服务器的客户端解包收录后，改 `NEXT_PUBLIC_SSE_WEB_INAPPS` 即可。
+- 各类剧情在剧情库里的名字：活动 `event:<活动>/<话>`，主线 `unit:<章节的 assetbundleName>/<话>`，卡面 `card:<卡>/first`、`card:<卡>/second`，特别 `special:<id>/<话>`，区域对话 `area:<区域>/<actionSet>`。角色自我介绍不在剧情库里，没有入口。剧情库里没有的一话（例如资源还没上线）点了以后提示「这一话还没有 Live2D 数据」。
+- 一个页面上可以有几个入口（卡面的前后篇、特别剧情的各话），同一时间只有一个在播：开始另一个时，前一个自动关闭。
 - 点「加载并播放」之前不下载任何东西。之后先下载这一话的全部资源（长的一话两百多 MB）再开始。
 - 画面在一个悬浮窗里，浮在页面上方（站点顶栏之下）：拖标题栏移动，拖下方两角调整大小（画面保持 16:9），也可以用方向键。窗口不会超出页面；位置和大小记在浏览器的 `localStorage`（`story-live2d-window`）里。默认在页面右下角，窄屏上在顶栏下方、占满宽度。窗口窄时音量只留静音按钮。
 - 标题栏上的「播放设置」（记在 `localStorage` 的 `story-live2d-settings`，改了立即生效）：
@@ -39,9 +49,10 @@
 | `src/components/story/Live2DStoryPlayer.tsx` | 播放器组件 |
 | `src/lib/sseWeb/settings.ts` | 播放设置：读写与渲染尺寸的计算 |
 | `src/components/story/Live2DPlayerSettings.tsx` | 播放设置的对话框 |
-| `src/components/story/StoryReader.tsx` | `live2dSelector` 属性：传入剧集（如 `event:219/1`）就提供 Live2D 播放 |
+| `src/components/story/StoryReader.tsx` | `live2dSelector` 属性：传入剧集（如 `event:219/1`）就提供 Live2D 播放；区服取自设置里的资源服务器 |
+| `src/app/story/{event,unit,card,special,area}/…/client.tsx` | 各类剧情页拼出自己的 `live2dSelector` |
 
-其他类型的剧情（主线、卡牌等）剧情库里也有，接入时给对应页面的 `StoryReader` 传 `live2dSelector` 即可。
+再接入新的剧情页时，给它的 `StoryReader` 传 `live2dSelector` 即可。
 
 ## 本地联调
 
