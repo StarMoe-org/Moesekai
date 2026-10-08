@@ -11,7 +11,7 @@ import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EffectsFast, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import type { ServerType } from "@/lib/account-servers";
-import { sseWebCoreUrl, sseWebEnabled, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
+import { sseWebCoreUrl, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
 import {
     loadSsePlayer, sseWebScriptBase,
     type SsePlayer, type SsePlayerError, type SsePlayerNode, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
@@ -441,7 +441,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
         },
     }), []);
 
-    if (!sseWebEnabled() || !sources) return null;
+    if (!sources) return null;
 
     const togglePlay = () => {
         const player = playerRef.current;

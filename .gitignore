@@ -121,3 +121,7 @@ data/html_cache/
 # 否则 lint / build:next 在没跑 copy:wasm 的干净 clone 上会因缺文件报错。
 web/public/wasm/allium-deck.js
 web/public/wasm/allium-deck_bg.wasm
+# Live2D 剧情播放器（sse-web）的发布物：入库的是 web/vendor/sse-web/，
+# 这里是 web/scripts/copy-sse-web.mjs 在 dev / build 前拷出来给浏览器加载的副本。
+# src/lib/sseWeb/release.ts 由 web/scripts/sync-sse-web.mjs 生成，同样**入库**。
+web/public/sse-web/

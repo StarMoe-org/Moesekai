@@ -28,6 +28,7 @@ const eslintConfig = defineConfig([
     // Generated / vendor files
     "public/sw.js",
     "public/wasm/**",
+    "public/sse-web/**",
     "src/vendor/**",
     "vendor/**",
   ]),

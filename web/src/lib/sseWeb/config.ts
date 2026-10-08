@@ -1,27 +1,21 @@
 /**
  * Configuration of the Live2D story player (sse-web, built from
- * SekaiStoryExporter). It is a separately versioned release that this
- * repository does not contain: `player.js`, its worker scripts and a wasm
- * under one directory. No release is published by default, so the feature is
- * off until this is set:
- *
- * - `NEXT_PUBLIC_SSE_WEB_BASE`: the release directory, ending in "/".
+ * SekaiStoryExporter). Its release -- `player.js`, its worker scripts and a
+ * wasm -- is kept in this repository as it was built, in `web/vendor/sse-web`,
+ * and copied to `public/sse-web/<release>/` before dev and build
+ * (scripts/copy-sse-web.mjs): the player starts workers from its own
+ * directory, and a worker script has to be same-origin with the page.
  *
  * The release has no copy of Cubism Core for Web: the player loads
  * `live2dcubismcore.min.js` from Live2D's own address. A deployment that
- * serves a copy of its own names it in `NEXT_PUBLIC_SSE_WEB_CORE_URL`.
- *
- * The player starts workers from its own directory, and a worker script has
- * to be same-origin with the page. next.config.ts therefore serves the
- * release directory below `/sse-web/`, and the client only ever names that
- * path. Cubism Core is loaded by the workers with `importScripts`, which may
- * cross origins, so its URL is used as it is.
+ * serves a copy of its own names it in `NEXT_PUBLIC_SSE_WEB_CORE_URL`; the
+ * workers load it with `importScripts`, which may cross origins.
  *
  * Values must already be canonical (what the URL parser gives back), https,
  * or http on a loopback host for development.
  */
 
-/** Same-origin path the release directory is served under. */
+/** Same-origin path the releases are served under, each in a directory of its own. */
 export const SSE_WEB_PATH = "/sse-web/";
 
 function parse(raw: string, name: string): URL {
@@ -48,11 +42,6 @@ function directory(raw: string | undefined, name: string): string | null {
     return parsed.href;
 }
 
-/** The release directory, or null when no release is configured. */
-export function sseWebReleaseBase(): string | null {
-    return directory(process.env.NEXT_PUBLIC_SSE_WEB_BASE, "NEXT_PUBLIC_SSE_WEB_BASE");
-}
-
 /** The deployment's own copy of Cubism Core for Web, or null: the player then loads Live2D's. */
 export function sseWebCoreUrl(): string | null {
     const value = process.env.NEXT_PUBLIC_SSE_WEB_CORE_URL?.trim();
@@ -60,11 +49,6 @@ export function sseWebCoreUrl(): string | null {
     const parsed = parse(value, "NEXT_PUBLIC_SSE_WEB_CORE_URL");
     if (!parsed.pathname.endsWith(".js")) throw new Error("sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_CORE_URL");
     return parsed.href;
-}
-
-/** The player is offered only when a release is configured. */
-export function sseWebEnabled(): boolean {
-    return sseWebReleaseBase() !== null;
 }
 
 /** The game servers a story library is published for. */

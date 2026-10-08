@@ -1,16 +1,27 @@
 # 剧情阅读页的 Live2D 播放
 
-剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读自己的剧情库。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web），本仓库不包含它，只有加载它的组件。
+剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读自己的剧情库。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web）。发布物原样放在本仓库的 `web/vendor/sse-web/`，站点另有加载它的组件。
 
-## 开关
+## 发布物
 
-默认关闭。设置下面这个变量后才显示入口（Next.js 在构建时写入 `NEXT_PUBLIC_*`，Docker 用 `--build-arg` 传）：
+`web/vendor/sse-web/` 是 SekaiStoryExporter 的 `crates/sse-web/dist.sh` 的输出，没有改动：`player.js`、各 Worker 脚本、`pkg/` 里的 wasm、许可证（AGPL-3.0-or-later 加链接例外）和它自带的嵌入说明 `README.md`。`manifest.json` 记着它的版本、构建它的提交、工具链和其余每个文件的 SHA-256。里面没有 Cubism Core。
 
-| 变量 | 含义 |
-|---|---|
-| `NEXT_PUBLIC_SSE_WEB_BASE` | 发布物所在的目录，以 `/` 结尾，里面是 `player.js`、各 Worker 脚本和 `pkg/` |
+- `copy:wasm`（`dev` 和 `build` 都会先跑）用 `scripts/copy-sse-web.mjs` 把它拷到 `public/sse-web/<发布物名>/`，浏览器从那里加载；`public/sse-web/` 不入库。拷之前按 `manifest.json` 校验每个文件，对不上就让构建失败。
+- 发布物名是版本号加全部文件哈希的摘要（如 `0.2.1-e0dff1e11b39`），写在 `src/lib/sseWeb/release.ts` 里（生成的，入库）。换了发布物目录名就变，浏览器不会把两版的文件混着用。
+- 播放器要从自己的目录启动 Worker，Worker 脚本必须与页面同源、彼此按相对路径加载，所以发布物原样提供，不经过打包器。
 
-可选（都有默认值，指向 `assets.pjsk.moe` 上已发布的数据）：
+更新发布物：在 SekaiStoryExporter 仓库里提交好改动后跑 `crates/sse-web/dist.sh`，然后
+
+```sh
+node web/scripts/sync-sse-web.mjs --from <SekaiStoryExporter>/target/web-dist/sse-web-<版本>
+bun run --cwd web copy:wasm
+```
+
+`sync-sse-web.mjs` 校验那份构建，替换 `web/vendor/sse-web/` 并重写 `release.ts`，两处一起提交。工作区有未提交改动时打出来的构建（`manifest.json` 里 `dirty` 为真）记的提交不是它真正的来源，脚本会拒绝；加 `--allow-dirty` 可以拿来试，但不要提交。站点组件用到的播放器接口（`src/lib/sseWeb/player.ts`）要和发布物对得上，更新后在剧情页实际播一次。
+
+## 设置
+
+不需要任何设置就能用。下面的变量都是可选的（Next.js 在构建时写入 `NEXT_PUBLIC_*`，Docker 用 `--build-arg` 传）：
 
 | 变量 | 含义 | 默认 |
 |---|---|---|
@@ -18,12 +29,11 @@
 | `NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE` | 各区服剧情库的上级目录，剧情库是 `<它>/<jp\|cn\|tw\|kr\|en>/` | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
-
 | `NEXT_PUBLIC_SSE_WEB_FONT_BASE` | 放开源字体的目录（见下「字体」）；不设则用客户端解包里的字体 | 不设 |
 
 `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
 
-播放器要从自己的目录启动 Worker，而 Worker 脚本必须与页面同源，所以 `next.config.ts` 把发布物目录映射到本站的 `/sse-web/`，浏览器只访问这个路径。Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。
+Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D Inc. 的软件，适用它自己的许可；本仓库和发布物都不包含它。
 
 ## 行为
 
@@ -88,13 +98,14 @@
 
 ## 本地联调
 
-在 SekaiStoryExporter 仓库里：`crates/sse-web/dist.sh` 生成发布物，拷到 `target/web-dev/dist/`，`python3 crates/sse-web/dev/serve.py` 提供发布物和资源中转。然后在 `web/.env.local` 里：
+剧情库所在的主机只允许 `https://pjsk.moe` 跨源读取，本地开发要经过一个中转。在 SekaiStoryExporter 仓库里跑 `python3 crates/sse-web/dev/serve.py`，然后在 `web/.env.local` 里：
 
 ```
-NEXT_PUBLIC_SSE_WEB_BASE=http://127.0.0.1:8787/dist/
 NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=http://127.0.0.1:8787/remote/
 NEXT_PUBLIC_SSE_WEB_FONT_BASE=http://127.0.0.1:8787/fonts/
 ```
+
+要试还没提交的播放器改动，用上面「发布物」一节的 `sync-sse-web.mjs --allow-dirty`。
 
 最后一行可选：把上面「字体」一节的三个文件放进 `target/web-dev/fonts/` 即可。
 

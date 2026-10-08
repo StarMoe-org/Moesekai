@@ -1,0 +1,20 @@
+{
+  "format": "sse-web-release/1",
+  "version": "0.2.1",
+  "commit": "6822e78ecf61c34a1d888f88a1284d94ac0dee5f",
+  "dirty": false,
+  "toolchain": { "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)", "wasmBindgen": "0.2.128" },
+  "sha256": {
+    "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
+    "LICENSE-EXCEPTION": "415f550d8372c34ab5f9e1e9a06acff438d51b9b396908c997c05cd5595fc0f8",
+    "README.md": "ee7258c2bc5c94d56c905eb05d241443d7ed81c02b181cc8af5fcc3c9be57c94",
+    "audio-worklet.js": "214e32970d87555777e9e39122a3885df4662e890a65298d1f5b502abeaa6c01",
+    "common.js": "c17c9da21cac1d2224f45f6c2dc617c133e554b47c038c1654e92f5a147a849c",
+    "kit-worker.js": "fb68881ad88014756cd1302c77c2f795fa8a5cbf0817da4c8c2884d5469ec3cd",
+    "pkg/sse_web.js": "1c97ffc2f772fccf6e322a19697c79e94f221122854807e16799cb5528ecec3d",
+    "pkg/sse_web_bg.wasm": "68f0f1dbbbd12297908b041a8d34bd0638d444919969f4ebbe2bb875dea4a392",
+    "player.js": "ac23b8c37dd43f5da1f16369a7b8134b5c4e01a95b0eacfc887c941966e491b9",
+    "render-worker.js": "f8f2bd001ef64a0267776f5cf169b700ba063f389b0b7ca744158ae86b51a9e0",
+    "sim-worker.js": "331e958bd00428087a12fa84c77df90120505edfb3f8ebcd2cc4b0567d966f6f"
+  }
+}

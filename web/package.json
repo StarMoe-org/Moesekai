@@ -6,7 +6,7 @@
     "dev": "npm run copy:wasm && npm run generate:md3 && next dev",
     "build": "npm run copy:wasm && npm run generate:md3 && npm run sitemap && npm run generate:metadata && next build",
     "build:next": "next build",
-    "copy:wasm": "node scripts/copy-wasm-artifacts.mjs",
+    "copy:wasm": "node scripts/copy-wasm-artifacts.mjs && node scripts/copy-sse-web.mjs",
     "test:deck-params": "node --experimental-strip-types scripts/test-deck-engine-params.mjs",
     "test:deck-payload": "node --experimental-strip-types scripts/test-deck-payload.mjs",
     "test:moly-resource-base": "node --experimental-strip-types scripts/test-moly-resource-base.mjs",

@@ -4,6 +4,7 @@
  * here; the release's README documents the full interface.
  */
 import { SSE_WEB_PATH } from "./config";
+import { SSE_WEB_RELEASE } from "./release";
 
 export type SsePlayerErrorKind = "unsupported" | "not-found" | "network" | "internal";
 
@@ -109,13 +110,13 @@ export interface SsePlayerStatic {
 
 /** The directory the player's scripts are served from, as a URL of this origin. */
 export function sseWebScriptBase(): string {
-    return new URL(SSE_WEB_PATH, window.location.origin).href;
+    return new URL(`${SSE_WEB_PATH}${SSE_WEB_RELEASE}/`, window.location.origin).href;
 }
 
 /** Loads the player class from the release. */
 export async function loadSsePlayer(): Promise<SsePlayerStatic> {
     const url = `${sseWebScriptBase()}player.js`;
-    // The release is versioned apart from this site: keep it out of every bundle.
+    // The release is served as it was built (vendor/sse-web): keep it out of every bundle.
     const loaded = await import(/* webpackIgnore: true */ /* turbopackIgnore: true */ url) as { SsePlayer?: SsePlayerStatic };
     if (typeof loaded.SsePlayer?.create !== "function") throw new Error("sse_web_player_unavailable");
     return loaded.SsePlayer;
