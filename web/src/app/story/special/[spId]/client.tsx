@@ -104,6 +104,7 @@ export default function StorySpecialReaderClient() {
                                         error={r?.err ?? null}
                                         missingPaths={r?.missing ?? undefined}
                                         endLabel={multiEp ? t("page.story.special.episodeLabel", { episode: ep.episodeNo }) : storyTitle}
+                                        live2dSelector={`special:${spId}/${ep.episodeNo}`}
                                     />
                                 </div>
                             );

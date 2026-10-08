@@ -57,7 +57,7 @@ export function calculateSelectPosition(rect: DOMRect, count: number): MenuPosit
     const width = Math.max(0, (viewport?.width ?? window.innerWidth) - 16);
     const height = Math.max(0, (viewport?.height ?? window.innerHeight) - 16);
     const bottomEdge = topEdge + height;
-    const desiredHeight = Math.min(360, Math.max(1, count) * 48 + 16);
+    const desiredHeight = Math.min(360, Math.max(1, count) * 44 + 8);
     const below = Math.max(0, bottomEdge - rect.bottom - 4);
     const above = Math.max(0, rect.top - topEdge - 4);
     const opensUpward = below < desiredHeight && above > below;
@@ -292,7 +292,7 @@ export function Select<T extends string | number>({
                 <OverlayParentContext.Provider value={overlayContext}>
                     <div ref={overlayRef} onFocusCapture={onFocusCapture} style={{ left: position.left, top: position.top, width: position.width, maxHeight: position.maxHeight }}
                         role="listbox" id={listId} aria-label={listLabel ?? label ?? ariaLabel} tabIndex={-1} data-placement={position.opensUpward ? "top" : "bottom"}
-                        onKeyDown={handleKeyDown} className="md3-menu-enter fixed z-[300] overflow-y-auto overscroll-contain rounded-md3-sm bg-surface-container py-2 text-on-surface shadow-elev-2 outline-none">
+                        onKeyDown={handleKeyDown} className="md3-menu-enter fixed z-[300] overflow-y-auto overscroll-contain rounded-md3-lg bg-surface-container-low p-1 text-on-surface shadow-elev-2 outline-none">
                         {visible.length === 0 && <div className="px-4 py-3 type-body-m text-on-surface-variant" role="presentation">{noOptionsLabel ?? t("common.md3.selectNoOptions")}</div>}
                         {visible.map((option, index) => (
                             <React.Fragment key={`${typeof option.value}:${option.value}`}>
@@ -300,7 +300,10 @@ export function Select<T extends string | number>({
                                 <div role="option" id={`${listId}-${index}`} aria-selected={Object.is(option.value, value)} aria-disabled={option.disabled || undefined}
                                     onMouseDown={(event) => event.preventDefault()} onClick={() => choose(option)}
                                     onPointerMove={() => { if (!option.disabled) setActiveValue(option.value); }}
-                                    className={cn("state-layer flex min-h-12 cursor-pointer items-center gap-3 px-3 py-2 type-body-m", option.disabled && "cursor-not-allowed opacity-38", Object.is(option.value, value) ? "bg-secondary-container text-on-secondary-container" : index === activeIndex ? "bg-on-surface/8 text-on-surface" : "text-on-surface")}>
+                                    className={cn("state-layer flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 type-label-l", option.disabled && "cursor-not-allowed opacity-38",
+                                        // an item's corners are 4; the selected one's, and the list's first and last towards the container, are 12
+                                        Object.is(option.value, value) ? "rounded-md3-md" : cn("rounded-md3-xs", index === 0 && "rounded-t-md3-md", index === visible.length - 1 && "rounded-b-md3-md"),
+                                        Object.is(option.value, value) ? "bg-tertiary-container text-on-tertiary-container" : index === activeIndex ? "bg-on-surface/8 text-on-surface" : "text-on-surface")}>
                                     {option.leading && <span className="shrink-0">{option.leading}</span>}
                                     <span className="min-w-0 flex-1">{option.label}</span>
                                     {option.trailing && <span className="shrink-0 type-label-s">{option.trailing}</span>}

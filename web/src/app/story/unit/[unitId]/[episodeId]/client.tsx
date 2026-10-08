@@ -99,6 +99,8 @@ export default function StoryUnitReaderClient() {
                     error={error}
                     missingPaths={missingPaths ?? undefined}
                     endLabel={currentEp ? currentEp.episodeNoLabel : t("page.story.unit.currentEpisode")}
+                    // the story library names a main story by its chapter's bundle and the episode's number
+                    live2dSelector={assetbundleName && currentEp ? `unit:${assetbundleName}/${currentEp.episodeNo}` : undefined}
                 />
 
                 {!isLoading && !masterLoading && (

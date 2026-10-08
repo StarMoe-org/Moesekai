@@ -156,7 +156,7 @@ export async function processScenarioForDisplay(
     }
 
     // Process snippets
-    for (const snippet of data.Snippets) {
+    for (const [snippetIndex, snippet] of data.Snippets.entries()) {
         const isWait = snippet.ProgressBehavior === SnippetProgressBehavior.WaitUnitilFinished;
 
         switch (snippet.Action) {
@@ -235,6 +235,7 @@ export async function processScenarioForDisplay(
                 }
 
                 actions.push({
+                    snippetIndex,
                     type: SnippetAction.Talk,
                     delay: snippet.Delay,
                     isWait,
@@ -280,6 +281,7 @@ export async function processScenarioForDisplay(
                 }
 
                 actions.push({
+                    snippetIndex,
                     type: SnippetAction.SpecialEffect,
                     delay: snippet.Delay,
                     isWait,
@@ -295,6 +297,7 @@ export async function processScenarioForDisplay(
                 if (!soundData) continue;
 
                 actions.push({
+                    snippetIndex,
                     type: SnippetAction.Sound,
                     delay: snippet.Delay,
                     isWait,

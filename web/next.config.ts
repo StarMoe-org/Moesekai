@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 import os from "node:os";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
+import { sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -20,6 +21,15 @@ const molyProxyBase = (() => {
   }
 })();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
+
+// The Live2D story player (sse-web): a malformed setting fails the build here
+// rather than in a reader's browser.
+try {
+  sseWebCoreUrl();
+  sseWebCheckSources();
+} catch (error) {
+  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /; NEXT_PUBLIC_SSE_WEB_INAPPS is region=unpack pairs`);
+}
 
 function getAllowedDevOrigins(): string[] {
   const origins = new Set<string>(["localhost", "127.0.0.1"]);

@@ -148,6 +148,7 @@ export default function StoryEventReaderClient() {
                     translationSource={translationSource}
                     storyType="event"
                     storyId={eventId}
+                    live2dSelector={`event:${eventId}/${episodeNo}`}
                 />
 
                 {!isLoading && !masterLoading && (
