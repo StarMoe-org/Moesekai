@@ -18,6 +18,7 @@ import { WL3_SIMULATION_GROUPS } from "@/lib/world-bloom-simulation";
 import {
     buildEngineOptions,
     type EngineOptionsEventRow,
+    type EngineOptionsWorldBloomRow,
 } from "@/lib/deck-recommend/engine-options";
 import {
     loadDeckEngine,
@@ -271,9 +272,10 @@ async function runDeck(input: DeckWorkerInput): Promise<DeckWorkerOutput> {
 
         const options = buildEngineOptions(input, {
             eventRows: (tables.events ?? []) as EngineOptionsEventRow[],
+            worldBloomRows: (tables.worldBlooms ?? []) as EngineOptionsWorldBloomRow[],
             wl3SimulationEventIds: WL3_SIMULATION_GROUPS.map((group) => group.eventId),
         });
-        const { decks, performance } = engine.recommend(options, user);
+        const { decks, performance, completion } = engine.recommend(options, user);
 
         const result = decks.map(
             (deck): DeckResultDeck => {
@@ -321,6 +323,7 @@ async function runDeck(input: DeckWorkerInput): Promise<DeckWorkerOutput> {
             result,
             userCards,
             duration: performance.build_pool_ms + performance.search_ms,
+            completion,
             upload_time: uploadTime,
         };
     } finally {

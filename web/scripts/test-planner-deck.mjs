@@ -55,7 +55,7 @@ const PRELOAD_MASTER_KEYS = [
     'worldBloomSupportDeckBonusesWL2', 'worldBloomSupportDeckBonusesWL3',
     'worldBloomSupportDeckUnitEventLimitedBonuses',
 ];
-/** 引擎可选表：站点现发的三张 + 引擎修复（fix/allium-deck-finale-218）后站点加发的两张，缺失时走引擎内建 fallback。 */
+/** 引擎可选表：与 data-provider 的完整可选表集合一致。 */
 const OPTIONAL_MASTER_KEYS = [
     'eventCardBonusLimits', 'eventHonorBonuses', 'eventSkillScoreUpLimits',
     'eventShuffleUnitBonuses', 'eventMysekaiFixtureGameCharacterPerformanceBonusLimits',
@@ -400,7 +400,7 @@ async function measureRegion(region, normalEventId, finaleEventId) {
     check('规划器 worker 入参：清掉已保存的搜索约束、保留养成假设',
         args.target === 'score' && args.fixedCards === undefined && args.leaderCharacterId === undefined
         && !args.unitFilter && args.simulatedEvent === undefined && args.cardConfig.rarity_4.masterMax === true);
-    const options = buildEngineOptions(args, { eventRows: master.events, wl3SimulationEventIds: WL3_SIM_EVENT_IDS });
+    const options = buildEngineOptions(args, { eventRows: master.events, worldBloomRows: master.worldBlooms ?? [], wl3SimulationEventIds: WL3_SIM_EVENT_IDS });
     const plannerRun = recommend(options, finaleHandle).decks[0];
     check('规划器链路搜出的 Auto 卡组与直接调用引擎一致（PT 含火数）',
         deckKey(plannerRun) === deckKey(autoRun) && plannerRun.event_point === autoRun.event_point,

@@ -4,6 +4,7 @@ import Image from "next/image";
 import { IEventInfo, IEventDeckBonus, EventType, EVENT_TYPE_COLORS, getEventStatus } from "@/types/events";
 import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, CardAttribute, ATTR_ICON_PATHS, ATTR_NAMES } from "@/types/types";
 import { fetchMasterDataForServer, type ServerSourceType } from "@/lib/fetch";
+import { isWorldBloomFinale, type WorldBloomChapterRow } from "@/lib/deck-recommend/world-bloom-finale";
 import { getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -65,6 +66,7 @@ interface EventSelectorProps {
     selectedEventId: string;
     onSelect: (eventId: string, eventType?: string) => void;
     onEventTypeChange?: (eventType: string | null) => void;
+    onFinaleChange?: (eventId: string, isFinale: boolean) => void;
     onBonusCharactersChange?: (characterIds: number[]) => void;
     server?: ServerSourceType;
 }
@@ -73,6 +75,7 @@ export default function EventSelector({
     selectedEventId,
     onSelect,
     onEventTypeChange,
+    onFinaleChange,
     onBonusCharactersChange,
     server = "jp",
 }: EventSelectorProps) {
@@ -80,6 +83,7 @@ export default function EventSelector({
     const { t, formatDate } = useI18n();
     const [now] = useState(() => Date.now());
     const [events, setEvents] = useState<IEventInfo[]>([]);
+    const [worldBlooms, setWorldBlooms] = useState<WorldBloomChapterRow[]>([]);
     const [deckBonuses, setDeckBonuses] = useState<IEventDeckBonus[]>([]);
     const [charaUnits, setCharaUnits] = useState<ICharaUnitInfo[]>([]);
     const [actionSetsForUnitMap, setActionSetsForUnitMap] = useState<IActionSet[]>([]);
@@ -109,15 +113,17 @@ export default function EventSelector({
             fetchMasterDataForServer<ICharaUnitInfo[]>(server, "gameCharacterUnits.json"),
             fetchMasterDataForServer<IActionSet[]>(server, "actionSets.json"),
             fetchMasterDataForServer<IEventStory[]>(server, "eventStories.json"),
+            fetchMasterDataForServer<WorldBloomChapterRow[]>(server, "worldBlooms.json"),
             loadTranslations(),
         ])
-            .then(([eventsData, bonusesData, charaUnitsData, actionSetsForUnitMapData, eventStoriesData, translationsData]) => {
+            .then(([eventsData, bonusesData, charaUnitsData, actionSetsForUnitMapData, eventStoriesData, worldBloomsData, translationsData]) => {
                 if (cancelled) return;
                 setEvents(eventsData);
                 setDeckBonuses(bonusesData);
                 setCharaUnits(charaUnitsData);
                 setActionSetsForUnitMap(actionSetsForUnitMapData);
                 setEventStories(eventStoriesData);
+                setWorldBlooms(worldBloomsData);
                 setTranslations(translationsData);
                 setLoading(false);
             })
@@ -289,6 +295,10 @@ export default function EventSelector({
     useEffect(() => {
         onEventTypeChange?.(selectedEvent?.eventType ?? (selectedWl3Simulation ? "world_bloom" : null));
     }, [selectedEvent, selectedWl3Simulation, onEventTypeChange]);
+
+    useEffect(() => {
+        onFinaleChange?.(selectedEventId, isWorldBloomFinale(Number(selectedEventId), worldBlooms));
+    }, [selectedEventId, worldBlooms, onFinaleChange]);
 
     const handleSelect = (event: IEventInfo) => {
         onSelect(event.id.toString(), event.eventType);

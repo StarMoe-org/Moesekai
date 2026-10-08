@@ -3343,6 +3343,7 @@ export const enUSMessages = {
                 supportCharacterRequired: "Select the chapter character",
                 customCharactersRequired: "Select at least one custom bonus character",
                 workerError: "Recommendation failed: {message}",
+                engineVersion: "The deck engine version does not match. Reload the page and try again.",
                 userNotFound: "User data not found",
                 apiNotPublic: "This user's data API is not public",
                 userNotFound404: "User not found (404). Check the user ID and data server",
@@ -3354,6 +3355,8 @@ export const enUSMessages = {
             result: {
                 title: "Recommendation Results",
                 duration: "Deck engine total elapsed {ms} ms",
+                complete: "Search complete. The best results for these conditions are confirmed.",
+                timedOut: "Search timed out. Results are usable, but optimality and completeness are unproven.",
                 leader: "Leader",
                 cardId: "Card ID",
                 cardName: "Card",

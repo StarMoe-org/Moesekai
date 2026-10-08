@@ -3342,6 +3342,7 @@ export const zhCNMessages = {
                 supportCharacterRequired: "请选择章节角色",
                 customCharactersRequired: "请至少选择一个自定义加成角色",
                 workerError: "推荐失败：{message}",
+                engineVersion: "组卡引擎版本不匹配，请刷新页面后重试。",
                 userNotFound: "未找到该用户数据",
                 apiNotPublic: "该用户的数据接口未公开",
                 userNotFound404: "未找到该用户（404），请检查用户 ID 与数据服务器",
@@ -3353,6 +3354,8 @@ export const zhCNMessages = {
             result: {
                 title: "推荐结果",
                 duration: "组卡引擎合计用时 {ms} ms",
+                complete: "搜索完成，已确认当前条件下的最优结果。",
+                timedOut: "搜索已超时；当前结果可用，但尚未确认最优或完整。",
                 leader: "队长",
                 cardId: "卡牌 ID",
                 cardName: "卡牌",

@@ -683,10 +683,12 @@ export default function DeckRecommendClient() {
     // Run state (resident engine worker)
     const {
         isCalculating, progressPercent, progressLabel, error, setError, results, userCards,
-        duration, musicByDeck, musicLoadingByDeck, warmup, runDeck, requestDeckMusic,
+        duration, completion, musicByDeck, musicLoadingByDeck, warmup, runDeck, requestDeckMusic,
         cancel: handleCancel,
     } = useDeckEngine();
     const [savedHint, setSavedHint] = useState(false);
+    const [finaleEventId, setFinaleEventId] = useState<string | null>(null);
+    const selectedEventIsFinale = finaleEventId === eventId;
     const calculateScrollYRef = useRef<number | null>(null);
 
     // Card master + music metas for result rendering
@@ -869,6 +871,10 @@ export default function DeckRecommendClient() {
         patch({ selectedEventType: evType });
     }, [patch]);
 
+    const handleFinaleChange = useCallback((id: string, isFinale: boolean) => {
+        setFinaleEventId(isFinale ? id : null);
+    }, []);
+
     const handleBonusCharacters = useCallback((charIds: number[]) => {
         patch({ eventBonusCharacterIds: charIds });
     }, [patch]);
@@ -989,7 +995,7 @@ export default function DeckRecommendClient() {
             setError(t("page.deckRecommend.errors.eventRequired"));
             return;
         }
-        if (mode === "event" && !simulateEnabled && selectedEventType === "world_bloom" && !supportCharacterId) {
+        if (mode === "event" && !simulateEnabled && selectedEventType === "world_bloom" && !selectedEventIsFinale && !supportCharacterId) {
             setError(t("page.deckRecommend.errors.supportCharacterRequired"));
             return;
         }
@@ -1377,6 +1383,7 @@ export default function DeckRecommendClient() {
                                         selectedEventId={eventId}
                                         onSelect={handleEventSelect}
                                         onEventTypeChange={handleEventTypeChange}
+                                        onFinaleChange={handleFinaleChange}
                                         onBonusCharactersChange={handleBonusCharacters}
                                     />
                                     {selectedWl3Simulation && (
@@ -1399,7 +1406,7 @@ export default function DeckRecommendClient() {
                     )}
 
                     {/* 连接世界章节角色 */}
-                    {mode === "event" && !simulateEnabled && selectedEventType === "world_bloom" && (
+                    {mode === "event" && !simulateEnabled && selectedEventType === "world_bloom" && !selectedEventIsFinale && (
                         <div className="mb-5">
                             <SectionTitle
                                 text={selectedWl3Simulation
@@ -1712,6 +1719,13 @@ export default function DeckRecommendClient() {
                 )}
 
                 {/* Results */}
+                {results !== null && completion && !error && (
+                    <p role="status" className="mb-3 type-body-s text-on-surface-variant">
+                        {t(completion === "complete"
+                            ? "page.deckRecommend.result.complete"
+                            : "page.deckRecommend.result.timedOut")}
+                    </p>
+                )}
                 {results && results.length > 0 && (
                     <div className="bg-surface-container-low p-5 sm:p-6 rounded-md3-xl mb-6 [overflow-anchor:none]">
                         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">

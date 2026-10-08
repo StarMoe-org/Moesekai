@@ -9,6 +9,7 @@
     "copy:wasm": "node scripts/copy-wasm-artifacts.mjs && node scripts/copy-sse-web.mjs",
     "test:deck-params": "node --experimental-strip-types scripts/test-deck-engine-params.mjs",
     "test:deck-payload": "node --experimental-strip-types scripts/test-deck-payload.mjs",
+    "test:deck-completion": "node --experimental-strip-types scripts/test-deck-completion.mjs",
     "test:moly-resource-base": "node --experimental-strip-types scripts/test-moly-resource-base.mjs",
     "test:moly-resource-cache": "node --experimental-strip-types scripts/test-moly-resource-cache.mjs",
     "test:moly-resource-panel": "node --experimental-strip-types scripts/test-moly-resource-panel.mjs",
@@ -30,7 +31,7 @@
     "generate:md3": "bun scripts/generate-md3-schemes.mjs && node scripts/generate-material-symbols.mjs"
   },
   "dependencies": {
-    "@empty-sekai/allium-deck-wasm": "0.0.14",
+    "@empty-sekai/allium-deck-wasm": "0.1.0",
     "@fontsource-variable/noto-sans-jp": "^5.3.0",
     "@fontsource-variable/noto-sans-sc": "^5.3.0",
     "@fontsource-variable/roboto-flex": "^5.3.0",

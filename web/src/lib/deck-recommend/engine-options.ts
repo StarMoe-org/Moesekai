@@ -6,6 +6,7 @@
  * 运行时零依赖（只有 import type），Node 可直接导入。
  */
 import type { DeckWorkerInput } from "./engine-types";
+import { isWorldBloomFinale, type WorldBloomChapterRow } from "./world-bloom-finale.ts";
 
 /** 活动主表里本映射需要的最小字段。 */
 export interface EngineOptionsEventRow {
@@ -13,9 +14,12 @@ export interface EngineOptionsEventRow {
     eventType?: string;
 }
 
+export type EngineOptionsWorldBloomRow = WorldBloomChapterRow;
+
 export interface EngineOptionsContext {
     /** 活动主表：用于把混战活动的 multi 换算成 cheerful。 */
     eventRows: readonly EngineOptionsEventRow[];
+    worldBloomRows: readonly EngineOptionsWorldBloomRow[];
     /** EventSelector 里 WL3 模拟分组占用的假活动 ID。 */
     wl3SimulationEventIds: readonly number[];
 }
@@ -38,7 +42,7 @@ function toEngineSkillOrder(text: string): string | undefined {
 /** 组装引擎 options；活动类型相关的 live_type 转换在此完成。 */
 export function buildEngineOptions(
     input: DeckWorkerInput,
-    { eventRows, wl3SimulationEventIds }: EngineOptionsContext,
+    { eventRows, worldBloomRows, wl3SimulationEventIds }: EngineOptionsContext,
 ): Record<string, unknown> {
     const {
         mode, eventId, eventType, simulatedEvent, liveType, supportCharacterId,
@@ -118,6 +122,14 @@ export function buildEngineOptions(
     if (leaderCharacterId) options.forced_leader_character_id = leaderCharacterId;
     if (fixedCards?.length) options.fixedCards = fixedCards;
     if (fixedCharacters?.length) options.fixedCharacters = fixedCharacters;
+    // Preserve the vendored finale behavior: pins mean "on stage" and the leader
+    // is selected separately. Other modes retain the engine's existing slot contract.
+    const isFinale = (mode === "event" || mode === "mysekai") && (
+        simulatedEvent
+            ? simulatedEvent.worldBloomFinaleTurn !== undefined
+            : isWorldBloomFinale(eventId, worldBloomRows)
+    );
+    if (isFinale && (fixedCards?.length || fixedCharacters?.length)) options.fixedConstraintMode = "members";
     if (excludedCards?.length) options.excludedCards = excludedCards;
     if (singleCardOverrides?.length) {
         options.singleCardConfigs = singleCardOverrides.map((entry) => ({
@@ -146,7 +158,9 @@ export function buildEngineOptions(
                 );
             }
         }
-        if (simulatedEvent.worldBloomTurn) {
+        if (simulatedEvent.worldBloomFinaleTurn !== undefined) {
+            options.world_bloom_finale_turn = simulatedEvent.worldBloomFinaleTurn;
+        } else if (simulatedEvent.worldBloomTurn) {
             options.world_bloom_event_turn = simulatedEvent.worldBloomTurn;
             if (simulatedEvent.worldBloomTurn === 3 && simulatedEvent.worldBloomCharacterId) {
                 options.world_bloom_character_id = simulatedEvent.worldBloomCharacterId;
@@ -174,7 +188,7 @@ export function buildEngineOptions(
         }
         if (!eventId) throw new Error("event mode requires eventId");
         options.event_id = eventId;
-        if (eventType === "world_bloom" && supportCharacterId) {
+        if (eventType === "world_bloom" && supportCharacterId && !isFinale) {
             options.world_bloom_character_id = supportCharacterId;
         }
         const searchTarget = target ?? "score";

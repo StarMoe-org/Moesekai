@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { getOAuthAccessTokenForGameUser, type ServerType } from "@/lib/account";
-import { preloadDeckEngine } from "@/lib/deck-engine/wasm-loader";
+import { preloadDeckEngine, type DeckSearchCompletion } from "@/lib/deck-engine/wasm-loader";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
 import type { IMusicInfo } from "@/types/music";
 import type { DeckMusicRow, DeckResultDeck, DeckUserCard, DeckWorkerInput, DeckWorkerOutput } from "./engine-types";
@@ -57,6 +57,8 @@ export class DeckEngineAbortError extends Error {
 
 export function getDeckErrorMessage(error: string, t: TranslationFn): string {
     switch (error) {
+        case "INVALID_SEARCH_COMPLETION":
+            return t("page.deckRecommend.errors.engineVersion");
         case "USER_NOT_FOUND":
             return t("page.deckRecommend.errors.userNotFound");
         case "API_NOT_PUBLIC":
@@ -75,6 +77,7 @@ export interface DeckEngineState extends PlannerDeckEngine {
     results: DeckResultDeck[] | null;
     userCards: DeckUserCard[];
     duration: number | null;
+    completion: DeckSearchCompletion | null;
     /** Song ranking rows per deck rank (deck-recommend page); cleared when a run starts or is cancelled. */
     musicByDeck: Record<number, DeckMusicRow[] | null>;
     musicLoadingByDeck: Record<number, boolean>;
@@ -104,6 +107,7 @@ export function useDeckEngine(): DeckEngineState {
     const [results, setResults] = useState<DeckResultDeck[] | null>(null);
     const [userCards, setUserCards] = useState<DeckUserCard[]>([]);
     const [duration, setDuration] = useState<number | null>(null);
+    const [completion, setCompletion] = useState<DeckSearchCompletion | null>(null);
     const [musicByDeck, setMusicByDeck] = useState<Record<number, DeckMusicRow[] | null>>({});
     const [musicLoadingByDeck, setMusicLoadingByDeck] = useState<Record<number, boolean>>({});
     const [status, setStatus] = useState<PlannerDeckEngine["status"]>("idle");
@@ -184,6 +188,7 @@ export function useDeckEngine(): DeckEngineState {
                 setResults(decks);
                 if (data.userCards) setUserCards(data.userCards);
                 setDuration(data.duration ?? null);
+                setCompletion(data.completion ?? null);
                 readyRef.current = true;
                 setStatus("ready");
                 run?.onSuccess?.();
@@ -238,6 +243,8 @@ export function useDeckEngine(): DeckEngineState {
         setError(null);
         setIsCalculating(true);
         setResults(null);
+        setDuration(null);
+        setCompletion(null);
         clearDeckMusic();
         setProgressPercent(5);
         setProgressLabel(tRef.current("page.deckRecommend.progress.fetchingUserData"));
@@ -361,6 +368,7 @@ export function useDeckEngine(): DeckEngineState {
         results,
         userCards,
         duration,
+        completion,
         musicByDeck,
         musicLoadingByDeck,
         setError,
@@ -369,7 +377,7 @@ export function useDeckEngine(): DeckEngineState {
         requestDeckMusic,
     }), [
         status, error, progress, recommend, songGains, cancel, isCalculating, progressPercent,
-        progressLabel, results, userCards, duration, musicByDeck, musicLoadingByDeck, warmup,
+        progressLabel, results, userCards, duration, completion, musicByDeck, musicLoadingByDeck, warmup,
         runDeck, requestDeckMusic,
     ]);
 }

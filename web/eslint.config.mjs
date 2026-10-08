@@ -30,7 +30,8 @@ const eslintConfig = defineConfig([
     "public/wasm/**",
     "public/sse-web/**",
     "src/vendor/**",
-    "vendor/**",
+    // the Live2D story player's release, as it was built (docs/story-live2d-player.md)
+    "vendor/sse-web/**",
   ]),
 ]);
 

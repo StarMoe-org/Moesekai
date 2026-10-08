@@ -1,6 +1,7 @@
 /**
  * 组卡引擎 worker 与页面之间共享的类型。
  */
+import type { DeckSearchCompletion } from "../deck-engine/wasm-loader";
 
 export type DeckRecommendMode = "event" | "challenge" | "custom" | "strongest" | "weakest" | "mysekai";
 
@@ -93,8 +94,10 @@ export interface DeckSimulatedEvent {
     characterIds?: number[];
     /** 混活模拟：VS 角色对应的支援团约束（characterId → unit）。 */
     characterUnits?: Record<number, string>;
-    /** 连接世界章节轮次（1/2/3；3 为 WL3 模拟终章）。 */
+    /** 连接世界章节轮次（1/2/3；3 为 WL3 分组章节）。 */
     worldBloomTurn?: number;
+    /** 显式终章模拟轮次；与分组章节模拟分开。 */
+    worldBloomFinaleTurn?: 2 | 3;
     /** 连接世界第 3 轮的章节角色。 */
     worldBloomCharacterId?: number;
 }
@@ -250,6 +253,7 @@ export type DeckWorkerOutput =
           result?: DeckResultDeck[];
           userCards?: DeckUserCard[];
           duration?: number;
+          completion?: DeckSearchCompletion;
           upload_time?: number;
           error?: string;
       };
