@@ -23,6 +23,8 @@ const EVENT_ROWS = [
     { id: 200, eventType: 'marathon' },
     { id: 201, eventType: 'cheerful_carnival' },
     { id: 202, eventType: 'world_bloom' },
+    { id: 218, eventType: 'world_bloom' },
+    { id: 999, eventType: 'world_bloom' },
 ];
 const WL3_SIM_EVENT_IDS = [3200001, 3200002, 3200003, 3200004, 3200005];
 
@@ -34,6 +36,11 @@ function pipeline(patch, account = ACCOUNT) {
     const args = buildDeckWorkerArgs(state, account);
     const options = buildEngineOptions(args, {
         eventRows: EVENT_ROWS,
+        worldBloomRows: [
+            { eventId: 202, worldBloomChapterType: 'chapter' },
+            { eventId: 218, worldBloomChapterType: 'finale' },
+            { eventId: 999, worldBloomChapterType: 'finale' },
+        ],
         wl3SimulationEventIds: WL3_SIM_EVENT_IDS,
     });
     return { state, args, options };
@@ -108,6 +115,16 @@ check('连接世界真实活动带章节角色', () => {
     });
     return eq(options.event_id, 202, 'event_id')
         ?? eq(options.world_bloom_character_id, 5, 'world_bloom_character_id');
+});
+
+check('真实终章不下发之前章节遗留的角色限制', () => {
+    const { options } = pipeline({
+        mode: 'event', eventId: '999', selectedEventType: 'world_bloom',
+        supportCharacterId: 5, musicId: '74', fixedCards: [1004],
+    });
+    return eq(options.event_id, 999, 'event_id')
+        ?? eq(options.world_bloom_character_id, undefined, '终章无章节角色')
+        ?? eq(options.fixedConstraintMode, 'members', '终章固定卡仅要求上场');
 });
 
 check('EventSelector 的 WL3 假活动转成模拟参数且不带 event_id', () => {
@@ -237,7 +254,38 @@ check('固定卡与指定队长同时下发', () => {
         fixedCards: [1004], leaderCharacterId: 26,
     });
     return eq(options.fixedCards, [1004], 'fixedCards')
+        ?? eq(options.fixedConstraintMode, undefined, '普通活动保留slot约束')
         ?? eq(options.forced_leader_character_id, 26, 'forced_leader_character_id');
+});
+
+check('真实终章固定卡和角色只要求上场，未指定队长时不固定队长', () => {
+    for (const pins of [
+        { fixedCards: [1004] },
+        { fixedCharacters: [2, 3] },
+        { fixedCards: [1004], fixedCharacters: [2] },
+    ]) {
+        const { options } = pipeline({ ...ARGS_BASE, eventId: '999', selectedEventType: 'world_bloom', ...pins });
+        const error = eq(options.fixedConstraintMode, 'members', 'fixedConstraintMode')
+            ?? eq(options.forced_leader_character_id, undefined, '不隐式指定队长');
+        if (error) return error;
+    }
+    return null;
+});
+
+check('普通章节固定卡保留slot模式', () => {
+    const { options } = pipeline({ ...ARGS_BASE, eventId: '202', selectedEventType: 'world_bloom', fixedCards: [1004] });
+    return eq(options.fixedConstraintMode, undefined, '章节不启用members');
+});
+
+check('显式终章模拟采用members，分组章节模拟不采用', () => {
+    const context = { eventRows: [], worldBloomRows: [], wl3SimulationEventIds: [] };
+    const common = { mode: 'event', liveType: 'multi', cardConfig: {}, fixedCards: [1004] };
+    const finale = buildEngineOptions({ ...common, simulatedEvent: { eventType: 'world_bloom', worldBloomFinaleTurn: 3 } }, context);
+    const chapter = buildEngineOptions({ ...common, simulatedEvent: { eventType: 'world_bloom', worldBloomTurn: 3, worldBloomCharacterId: 1 } }, context);
+    return eq(finale.fixedConstraintMode, 'members', '终章members')
+        ?? eq(finale.world_bloom_finale_turn, 3, '独立终章轮次')
+        ?? eq(finale.world_bloom_event_turn, undefined, '不冒用章节轮次')
+        ?? eq(chapter.fixedConstraintMode, undefined, '章节slots');
 });
 
 check('未指定队长时不下发该键', () => {

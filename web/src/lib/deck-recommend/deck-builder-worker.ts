@@ -18,6 +18,7 @@ import {
 } from "./data-provider";
 import {
     loadDeckEngine,
+    type DeckSearchCompletion,
     type DeckEngineUserHandle,
 } from "@/lib/deck-engine/wasm-loader";
 
@@ -66,6 +67,7 @@ export interface DeckBuilderOutput {
     result?: DeckResultRow[];
     userCards?: UserCardEntry[];
     duration?: number;
+    completion?: DeckSearchCompletion;
     error?: string;
     upload_time?: number;
 }
@@ -218,8 +220,11 @@ async function deckBuilderRunner(args: DeckBuilderInput): Promise<DeckBuilderOut
               })();
 
         const results: DeckResultRow[] = [];
+        let completion: DeckSearchCompletion = "complete";
         for (const batch of chunk(bonusList, BONUS_BATCH_SIZE)) {
-            const { decks } = engine.recommend({ ...options, target_bonus_list: batch }, user);
+            const response = engine.recommend({ ...options, target_bonus_list: batch }, user);
+            if (response.completion === "timed_out") completion = "timed_out";
+            const { decks } = response;
             for (const deck of decks) {
                 results.push({
                     eventBonus: deck.event_bonus_total ?? 0,
@@ -238,6 +243,7 @@ async function deckBuilderRunner(args: DeckBuilderInput): Promise<DeckBuilderOut
             result: results,
             userCards,
             duration: currentDuration.done(),
+            completion,
             upload_time: uploadTime,
         };
     } finally {

@@ -17,7 +17,7 @@ import { resolve } from 'path';
 
 const webRoot = resolve(import.meta.dirname ?? '.', '..');
 const artDir = resolve(process.env.ALLIUM_DECK_WASM_DIR || `${webRoot}/public/wasm`);
-// public/wasm 下是改名后的 allium-deck.*；wasm-pack 产物、npm 包与 vendor 目录是原名 allium_deck.*。
+// public/wasm 下是改名后的 allium-deck.*；wasm-pack 产物与 npm 包是原名 allium_deck.*。
 const artBase = existsSync(`${artDir}/allium-deck.js`) ? 'allium-deck' : 'allium_deck';
 const MASTER_BASE = 'https://metadata.exmeaning.com/jp/master';
 const MUSIC_META_URL = 'https://moe.exmeaning.com/data/music_meta/music_metas.json';

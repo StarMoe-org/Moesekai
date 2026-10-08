@@ -12,6 +12,8 @@
  */
 
 import { DECK_ENGINE_WASM_VERSION } from "./wasm-version";
+import { readSearchCompletion, type DeckSearchCompletion } from "./search-completion";
+export type { DeckSearchCompletion } from "./search-completion";
 
 /** 用户数据句柄：解析成本只付一次，后续多次 recommend 复用。 */
 export interface DeckEngineUserHandle {
@@ -52,6 +54,9 @@ export interface DeckEngineDeck {
 
 export interface DeckEngineRecommendResult {
     decks: DeckEngineDeck[];
+    /** Only complete certifies the canonical Top-K; timed-out decks are legal incumbents. */
+    completion: DeckSearchCompletion;
+    timed_out: boolean;
     performance: {
         build_pool_ms: number;
         search_ms: number;
@@ -150,7 +155,9 @@ function createEngine(mod: WasmExports): DeckEngine {
         },
         recommend(options, user) {
             const text = mod.recommendWithUserData(JSON.stringify(options ?? {}), user);
-            return JSON.parse(text) as DeckEngineRecommendResult;
+            const response = JSON.parse(text) as DeckEngineRecommendResult;
+            readSearchCompletion(response);
+            return response;
         },
         recommendMusic(options) {
             const text = mod.recommendMusic(JSON.stringify(options ?? {}));
@@ -198,4 +205,3 @@ export function preloadDeckEngine(): void {
         // ignore prefetch errors
     }
 }
-
