@@ -14,7 +14,7 @@ import type { ServerType } from "@/lib/account-servers";
 import { sseWebCoreUrl, sseWebEnabled, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
 import {
     loadSsePlayer, sseWebScriptBase,
-    type SsePlayer, type SsePlayerError, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
+    type SsePlayer, type SsePlayerError, type SsePlayerNode, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
 } from "@/lib/sseWeb/player";
 import {
     SSE_WEB_DEFAULT_SETTINGS, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize, storeSseWebSettings,
@@ -23,8 +23,8 @@ import {
 import { Live2DPlayerSettings } from "./Live2DPlayerSettings";
 
 export interface Live2DStoryPlayerHandle {
-    /** Continues from the start of talk `talk` (0-based), when the player is loaded. */
-    seek(talk: number): void;
+    /** Continues from the start of node `node` (0-based), when the player is loaded. */
+    seek(node: number): void;
 }
 
 interface Live2DStoryPlayerProps {
@@ -34,8 +34,11 @@ interface Live2DStoryPlayerProps {
     region: string;
     /** The player is loaded (true) or was closed (false). */
     onActiveChange?: (active: boolean) => void;
-    /** Playback is in talk `talk` of `talks` (0-based; `talks` after the last one). */
-    onTalk?: (talk: number, talks: number) => void;
+    /**
+     * Playback is in node `node` of `nodes` (0-based; `nodes.length` after the last one). The
+     * nodes are what a tap acts on: talks, telops, full-screen texts and choices.
+     */
+    onNode?: (node: number, nodes: readonly SsePlayerNode[]) => void;
     /** Controls of the page that belong with the player's own, shown while it plays. */
     extraControls?: React.ReactNode;
     ref?: React.Ref<Live2DStoryPlayerHandle>;
@@ -155,7 +158,7 @@ const subscribeNever = () => () => {};
  * rendered in the browser by sse-web. Nothing is downloaded until the reader
  * asks for it. Renders nothing when no release is configured.
  */
-export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, extraControls, ref }: Live2DStoryPlayerProps) {
+export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, extraControls, ref }: Live2DStoryPlayerProps) {
     const { t } = useI18n();
     const sources = sseWebSources(region);
     const fonts = sseWebFonts(region);
@@ -167,8 +170,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
     const playerRef = useRef<SsePlayer | null>(null);
     /** Counts starts and closes: a load that finishes after it was superseded is thrown away. */
     const epochRef = useRef(0);
-    const callbacks = useRef({ onActiveChange, onTalk });
-    useEffect(() => { callbacks.current = { onActiveChange, onTalk }; });
+    const callbacks = useRef({ onActiveChange, onNode });
+    useEffect(() => { callbacks.current = { onActiveChange, onNode }; });
 
     const [phase, setPhase] = useState<Phase>("idle");
     const [progress, setProgress] = useState<{ fraction: number | undefined; megabytes: number }>({ fraction: undefined, megabytes: 0 });
@@ -176,7 +179,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
     const [playing, setPlaying] = useState(false);
     const [auto, setAuto] = useState(true);
     const [volume, setVolume] = useState(80);
-    const [position, setPosition] = useState({ talk: 0, talks: 0, waitsForClick: false, waitsForAnswer: false, ended: false });
+    const [position, setPosition] = useState({ node: 0, nodes: 0, waitsForClick: false, waitsForAnswer: false, ended: false });
     const [buffering, setBuffering] = useState(false);
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
     const [fullscreen, setFullscreen] = useState(false);
@@ -289,10 +292,10 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
             player.setVolume(volume / 100);
             setAuto(true);
             setNotPlayed(player.unsupported);
-            setPosition({ talk: player.talk, talks: player.talks.length, waitsForClick: false, waitsForAnswer: false, ended: false });
+            setPosition({ node: player.node, nodes: player.nodes.length, waitsForClick: false, waitsForAnswer: false, ended: false });
             setPhase("ready");
             callbacks.current.onActiveChange?.(true);
-            callbacks.current.onTalk?.(player.talk, player.talks.length);
+            callbacks.current.onNode?.(player.node, player.nodes);
         } catch (error) {
             if (epoch !== epochRef.current) return;
             fail(error as SsePlayerError);
@@ -326,21 +329,21 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
             stall = undefined;
             setBuffering(false);
         };
-        const onTalkEvent = () => callbacks.current.onTalk?.(player.talk, player.talks.length);
+        const onNodeEvent = () => callbacks.current.onNode?.(player.node, player.nodes);
         const onEnded = () => setPlaying(false);
         const onError = (event: Event) => fail((event as CustomEvent<{ kind?: SsePlayerErrorKind; message?: string }>).detail ?? {});
         player.addEventListener("stall", onStall);
         player.addEventListener("resume", onResume);
-        player.addEventListener("talk", onTalkEvent);
+        player.addEventListener("node", onNodeEvent);
         player.addEventListener("ended", onEnded);
         player.addEventListener("error", onError);
         const poll = setInterval(() => {
             const p = player.position;
             setPosition(previous => (
-                previous.talk === p.talk && previous.talks === p.talks && previous.waitsForClick === !!p.waitsForClick
+                previous.node === p.node && previous.nodes === p.nodes && previous.waitsForClick === !!p.waitsForClick
                     && previous.waitsForAnswer === !!p.waitsForAnswer && previous.ended === p.ended
                     ? previous
-                    : { talk: p.talk, talks: p.talks, waitsForClick: !!p.waitsForClick, waitsForAnswer: !!p.waitsForAnswer, ended: p.ended }
+                    : { node: p.node, nodes: p.nodes, waitsForClick: !!p.waitsForClick, waitsForAnswer: !!p.waitsForAnswer, ended: p.ended }
             ));
         }, 250);
         return () => {
@@ -348,7 +351,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
             clearInterval(poll);
             player.removeEventListener("stall", onStall);
             player.removeEventListener("resume", onResume);
-            player.removeEventListener("talk", onTalkEvent);
+            player.removeEventListener("node", onNodeEvent);
             player.removeEventListener("ended", onEnded);
             player.removeEventListener("error", onError);
         };
@@ -433,8 +436,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
     }, [release, selector, region]);
 
     useImperativeHandle(ref, () => ({
-        seek(talk: number) {
-            playerRef.current?.seek(talk);
+        seek(node: number) {
+            playerRef.current?.seek(node);
         },
     }), []);
 
@@ -578,7 +581,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         }),
     ].filter((line): line is string => typeof line === "string");
 
-    const shownTalk = Math.min(position.talk + 1, position.talks);
+    const shownNode = Math.min(position.node + 1, position.nodes);
     const fade = reducedMotion ? reducedMotionFade : md3EffectsFast;
     // In full screen the toolbar floats over the picture and rests with the pointer; a paused
     // picture, or one waiting for its reader, keeps it.
@@ -598,7 +601,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     variant="tonal"
                     width="narrow"
                     onClick={() => playerRef.current?.previous()}
-                    disabled={position.talk <= 0}
+                    disabled={position.node <= 0}
                 />
                 <IconButton
                     icon={playing ? mdPauseFill : mdPlayArrowFill}
@@ -615,15 +618,16 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     variant="tonal"
                     width="narrow"
                     onClick={() => playerRef.current?.next()}
-                    disabled={position.talk >= position.talks}
+                    disabled={position.node >= position.nodes}
                 />
             </ButtonGroup>
             {/* the position is never cut short: a narrow window wraps what follows it instead */}
             <div className={cn("px-1", floating ? "shrink-0" : "min-w-max flex-1")}>
                 <span className="block whitespace-nowrap type-label-l tabular-nums text-on-surface">
-                    {t("page.story.live2d.position", { current: shownTalk, total: position.talks })}
+                    {t("page.story.live2d.position", { current: shownNode, total: position.nodes })}
                 </span>
-                {hint && <span className="block truncate type-label-s text-primary">{hint}</span>}
+                {/* the hint takes the width the position has: it is cut short and does not wrap the toolbar */}
+                {hint && <span className="block w-0 min-w-full truncate type-label-s text-primary">{hint}</span>}
             </div>
             <Button variant="tonal" size="xs" selected={auto} onClick={() => changeAuto(!auto)} className="shrink-0">
                 {t("page.story.live2d.auto")}
@@ -844,8 +848,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                         <LinearProgress
                             // a wave while the story plays, flat while it is paused
                             wavy={playing}
-                            value={position.talks > 0 ? Math.min(position.talk, position.talks) / position.talks : 0}
-                            aria-label={t("page.story.live2d.position", { current: shownTalk, total: position.talks })}
+                            value={position.nodes > 0 ? Math.min(position.node, position.nodes) / position.nodes : 0}
+                            aria-label={t("page.story.live2d.position", { current: shownNode, total: position.nodes })}
                         />
                     )}
                     <div

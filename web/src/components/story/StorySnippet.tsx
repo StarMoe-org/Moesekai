@@ -178,6 +178,8 @@ interface SpecialEffectSnippetProps {
     seType: string;
     text?: string;
     resource?: string;
+    /** Playback is on this row. */
+    active?: boolean;
 }
 
 // Helper function to check if a background is a CG
@@ -190,14 +192,16 @@ function isCgImage(picName: string): boolean {
     return picName.startsWith('bg_s');
 }
 
-export function SpecialEffectSnippet({ seType, text, resource }: SpecialEffectSnippetProps) {
+export function SpecialEffectSnippet({ seType, text, resource, active = false }: SpecialEffectSnippetProps) {
     const [isImageOpen, setIsImageOpen] = useState(false);
     const { t } = useI18n();
+    // the rows playback can be in (a telop, a full-screen text, choices) are marked as a talk is
+    const mark = active && "relative z-10 shadow-elev-2 ring-2 ring-primary";
 
     switch (seType) {
         case "FullScreenText":
             return (
-                <SnippetBox className="my-4 bg-inverse-surface p-6 text-inverse-on-surface">
+                <SnippetBox className={cn("my-4 bg-inverse-surface p-6 text-inverse-on-surface", mark)}>
                     <div className="mb-3 flex items-center gap-2">
                         <SnippetTag tone="inverse">{t("page.story.snippet.fullScreenText")}</SnippetTag>
                     </div>
@@ -214,7 +218,7 @@ export function SpecialEffectSnippet({ seType, text, resource }: SpecialEffectSn
 
         case "Telop":
             return (
-                <SnippetBox className="bg-tertiary-container text-on-tertiary-container">
+                <SnippetBox className={cn("bg-tertiary-container text-on-tertiary-container", mark)}>
                     <div className="mb-2 flex items-center gap-2">
                         <SnippetTag tone="tertiary">{t("page.story.snippet.telop")}</SnippetTag>
                     </div>
@@ -290,7 +294,7 @@ export function SpecialEffectSnippet({ seType, text, resource }: SpecialEffectSn
 
         case "SimpleSelectable":
             return (
-                <SnippetBox className="bg-primary-container text-on-primary-container">
+                <SnippetBox className={cn("bg-primary-container text-on-primary-container", mark)}>
                     <div className="mb-2 flex items-center gap-2">
                         <SnippetTag tone="primary">{t("page.story.snippet.choice")}</SnippetTag>
                     </div>
@@ -448,6 +452,7 @@ export function StorySnippet({ action, index, activeIndex, playbackProgress }: S
                     seType={action.seType || ""}
                     text={action.body}
                     resource={action.resource}
+                    active={active}
                 />
             );
 

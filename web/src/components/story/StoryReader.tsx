@@ -7,6 +7,7 @@ import { StorySnippet } from "@/components/story/StorySnippet";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { IProcessedScenarioData, SnippetAction, type StoryTranslationSource } from "@/types/story";
+import type { SsePlayerNode } from "@/lib/sseWeb/player";
 
 // How many actions ahead of the active line we preload assets for in autoplay mode.
 const PRELOAD_AHEAD = 6;
@@ -64,18 +65,24 @@ export function StoryReader({
     // Tracks asset URLs already preloaded during autoplay, to avoid duplicate fetches.
     const preloadedUrlsRef = useRef<Set<string>>(new Set());
 
-    // Live2D mode: the player moves between talks, which are this list's Talk actions in order.
+    // Live2D mode: the player moves between nodes, the snippets a tap acts on (talks, telops,
+    // full-screen texts, choices). A node's row is the one made from the same snippet.
     const live2dRef = useRef<Live2DStoryPlayerHandle | null>(null);
     const rootRef = useRef<HTMLDivElement | null>(null);
     const [live2dActive, setLive2dActive] = useState(false);
-    const [live2dTalk, setLive2dTalk] = useState<{ talk: number; talks: number } | null>(null);
-    const talkActionIndices = useMemo(() => (
-        scenarioData?.actions.flatMap((act, idx) => (act.type === SnippetAction.Talk ? [idx] : [])) ?? []
-    ), [scenarioData]);
-    // The two are in step only when both count the same talks; otherwise the list is left alone.
-    const live2dSynced = live2dActive && live2dTalk !== null && live2dTalk.talks === talkActionIndices.length;
-    const live2dIndex = live2dSynced && live2dTalk
-        ? talkActionIndices[Math.min(live2dTalk.talk, talkActionIndices.length - 1)] ?? -1
+    const [live2dNode, setLive2dNode] = useState(0);
+    const [live2dNodes, setLive2dNodes] = useState<readonly SsePlayerNode[] | null>(null);
+    const live2dRows = useMemo(() => {
+        const rowOfSnippet = new Map<number, number>();
+        scenarioData?.actions.forEach((act, idx) => {
+            if (act.snippetIndex !== undefined) rowOfSnippet.set(act.snippetIndex, idx);
+        });
+        const rows = (live2dNodes ?? []).map(node => rowOfSnippet.get(node.snippet) ?? -1);
+        return { rows, nodeOfRow: new Map(rows.flatMap((row, node) => (row >= 0 ? [[row, node] as const] : []))) };
+    }, [scenarioData, live2dNodes]);
+    // The row of the node playback is in; a node without a row leaves the last one before it marked.
+    const live2dIndex = live2dActive
+        ? live2dRows.rows.slice(0, Math.min(live2dNode, live2dRows.rows.length - 1) + 1).findLast(row => row >= 0) ?? -1
         : -1;
 
     // Keep the current talk's row in view: below the site's header, and clear of the player's
@@ -403,9 +410,12 @@ export function StoryReader({
                     onActiveChange={(active) => {
                         setLive2dActive(active);
                         if (active) handleStop();
-                        else setLive2dTalk(null);
+                        else setLive2dNodes(null);
                     }}
-                    onTalk={(talk, talks) => setLive2dTalk({ talk, talks })}
+                    onNode={(node, nodes) => {
+                        setLive2dNode(node);
+                        setLive2dNodes(nodes);
+                    }}
                     extraControls={(
                         <IconButton
                             icon={mdMyLocation}
@@ -453,17 +463,17 @@ export function StoryReader({
             {/* Dialogue list with IDs to anchor scroll tracking */}
             <div className="relative z-10 space-y-2">
                 {scenarioData.actions.map((action, index) => {
-                    // In the Live2D mode a talk's row takes playback to that talk.
-                    const talk = live2dSynced && action.type === SnippetAction.Talk ? talkActionIndices.indexOf(index) : -1;
+                    // In the Live2D mode a node's row takes playback to that node.
+                    const node = live2dActive ? live2dRows.nodeOfRow.get(index) : undefined;
                     return (
                         <div
                             key={index}
                             id={`snippet-${index}`}
-                            className={talk >= 0 ? "cursor-pointer" : undefined}
-                            onClick={talk >= 0 ? (event) => {
+                            className={node !== undefined ? "cursor-pointer" : undefined}
+                            onClick={node !== undefined ? (event) => {
                                 // the row's own controls (its voice button) keep their meaning
                                 if ((event.target as HTMLElement).closest("button, a, audio")) return;
-                                live2dRef.current?.seek(talk);
+                                live2dRef.current?.seek(node);
                             } : undefined}
                         >
                             <StorySnippet

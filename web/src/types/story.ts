@@ -232,6 +232,8 @@ export interface IProcessedAction {
     type: SnippetAction;
     delay: number;
     isWait: boolean;
+    /** The position in the scenario's `Snippets` of the snippet this action was made from; the actions made from the scenario's header have none. */
+    snippetIndex?: number;
     // Talk specific
     chara?: {
         id: number;

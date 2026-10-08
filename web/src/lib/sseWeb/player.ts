@@ -35,10 +35,20 @@ export interface SsePlayerProgress {
     kit?: SsePlayerProgressPart;
 }
 
+/**
+ * What playback moves between: an instruction of the scenario a tap acts on.
+ * `snippet` is its position in the scenario's `Snippets`.
+ */
+export type SsePlayerNode = { snippet: number } & (
+    | { kind: "talk"; speaker: string; body: string }
+    | { kind: "telop" | "text"; body: string }
+    | { kind: "choices"; options: string[] }
+);
+
 export interface SsePlayerPosition {
     shown: number;
-    talk: number;
-    talks: number;
+    node: number;
+    nodes: number;
     seeking: boolean;
     waitsForClick?: boolean;
     waitsForAnswer?: boolean;
@@ -72,9 +82,9 @@ export interface SsePlayerStats {
 
 export interface SsePlayer extends EventTarget {
     readonly stats: SsePlayerStats;
-    readonly talks: [speaker: string, body: string][];
+    readonly nodes: SsePlayerNode[];
     readonly unsupported: SsePlayerUnsupported[];
-    readonly talk: number;
+    readonly node: number;
     readonly position: SsePlayerPosition;
     readonly error?: string;
     width: number;
@@ -84,7 +94,7 @@ export interface SsePlayer extends EventTarget {
     setAuto(auto: boolean): void;
     click(x?: number, y?: number): void;
     resize(width: number, height: number): void;
-    seek(talk: number): void;
+    seek(node: number): void;
     next(): void;
     previous(): void;
     setVolume(volume: number): void;
