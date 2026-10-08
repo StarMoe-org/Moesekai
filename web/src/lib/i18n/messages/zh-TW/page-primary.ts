@@ -2365,6 +2365,7 @@ export const zhTWPagePrimary = {
                 supportCharacterRequired: "請選擇章節角色",
                 customCharactersRequired: "請至少選擇一個自訂加成角色",
                 workerError: "推薦失敗：{message}",
+                engineVersion: "組卡引擎版本不符，請重新整理頁面後再試。",
                 userNotFound: "未找到該使用者資料",
                 apiNotPublic: "該使用者的資料介面未公開",
                 userNotFound404: "未找到該使用者（404），請檢查使用者 ID 與資料伺服器",
@@ -2376,6 +2377,8 @@ export const zhTWPagePrimary = {
             result: {
                 title: "推薦結果",
                 duration: "組卡引擎合計用時 {ms} ms",
+                complete: "搜尋完成，已確認目前條件下的最優結果。",
+                timedOut: "搜尋已逾時；目前結果可用，但尚未確認最優或完整。",
                 leader: "隊長",
                 cardId: "卡牌 ID",
                 cardName: "卡牌",

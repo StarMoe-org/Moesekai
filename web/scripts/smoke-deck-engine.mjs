@@ -9,13 +9,16 @@
  *
  * 用真实 master data（和 app 同源）+ 合成的用户数据，所以不需要真实账号。
  *
- * 使用方法: node scripts/smoke-deck-engine.mjs
+ * 使用方法: node --experimental-strip-types scripts/smoke-deck-engine.mjs
  *   ALLIUM_DECK_WASM_DIR=... 可指定本地 wasm 产物目录，默认用 public/wasm。
  */
 
 import { existsSync, readFileSync } from 'fs';
 import { pathToFileURL } from 'url';
 import { resolve } from 'path';
+import assert from 'node:assert/strict';
+import { buildEngineOptions } from '../src/lib/deck-recommend/engine-options.ts';
+import { readSearchCompletion } from '../src/lib/deck-engine/search-completion.ts';
 
 const MASTER_BASE = 'https://metadata.exmeaning.com/jp/master';
 const MUSIC_META_URL = 'https://moe.exmeaning.com/data/music_meta/music_metas.json';
@@ -142,8 +145,8 @@ function buildSyntheticUserData(master) {
     };
 }
 
-/** public/wasm 下是 copy-wasm 改名后的 allium-deck.*；wasm-pack 产物、npm 包与
- *  vendor 目录是原名 allium_deck.*，ALLIUM_DECK_WASM_DIR 两种都认。 */
+/** public/wasm 下是 copy-wasm 改名后的 allium-deck.*；wasm-pack 产物与
+ *  npm 包是原名 allium_deck.*，ALLIUM_DECK_WASM_DIR 两种都认。 */
 function resolveArtifacts(dir) {
     for (const [glue, wasm] of [
         ['allium-deck.js', 'allium-deck_bg.wasm'],
@@ -186,7 +189,12 @@ async function main() {
 
     const meta = musicMetas[0];
     const base = { live_type: 'multi', music_id: meta.music_id, music_diff: meta.difficulty, limit: 3, timeout_ms: 15000 };
-    const run = (options) => JSON.parse(mod.recommendWithUserData(JSON.stringify({ ...base, ...options }), userData));
+    const run = (options) => {
+        const response = JSON.parse(mod.recommendWithUserData(JSON.stringify({ ...base, ...options }), userData));
+        readSearchCompletion(response);
+        console.log(`   completion=${response.completion}`);
+        return response;
+    };
 
     console.log('5) recommend(target=power)…');
     const power = run({ target: 'power' });
@@ -250,6 +258,43 @@ async function main() {
     );
     console.log(`   support cards=${support.length}, top bonus=${support[0]?.bonus}`);
     if (support.length === 0) throw new Error('WL 支援卡列表为空');
+
+    console.log('10) Consumer pins retain free-leader membership semantics on JP #218…');
+    const pinnedCards = power.decks[0].cards.map((card) => card.card_id);
+    const pinInput = {
+        mode: 'event', eventId: 218, eventType: 'world_bloom', liveType: 'multi',
+        musicId: meta.music_id, difficulty: meta.difficulty, target: 'score',
+        cardConfig: {}, fixedCards: pinnedCards, limit: 3, timeoutMs: 15000,
+    };
+    const context = { eventRows: master.events, worldBloomRows: master.worldBlooms, wl3SimulationEventIds: [] };
+    const pinned = run(buildEngineOptions(pinInput, context));
+    assert.equal(pinned.completion, 'complete', 'Five fixed cards must finish before asserting optimality');
+    assert.equal(pinned.decks.length, 1, 'Permutations remain one distinct public card set');
+    assert.deepEqual(pinned.decks[0].cards.map((card) => card.card_id).sort((a, b) => a - b),
+        [...pinnedCards].sort((a, b) => a - b));
+    const reordered = run(buildEngineOptions({ ...pinInput, fixedCards: [...pinnedCards].reverse() }, context));
+    assert.equal(reordered.completion, 'complete');
+    assert.deepEqual(reordered.decks, pinned.decks, 'Pin order must not silently choose a leader');
+    for (const card of power.decks[0].cards) {
+        const forced = run(buildEngineOptions({ ...pinInput, leaderCharacterId: card.character_id }, context));
+        assert.equal(forced.completion, 'complete');
+        assert.equal(forced.decks[0].cards[0].character_id, card.character_id);
+        assert.ok(pinned.decks[0].target_value >= forced.decks[0].target_value,
+            'Free leader must cover every explicitly selected leader');
+    }
+
+    const mixedInput = {
+        ...pinInput,
+        fixedCards: pinnedCards.slice(0, 3),
+        fixedCharacters: power.decks[0].cards.slice(3).map((card) => card.character_id),
+    };
+    const mixed = run(buildEngineOptions(mixedInput, context));
+    assert.equal(mixed.completion, 'complete');
+    assert.ok(mixed.decks.length > 0);
+    for (const deck of mixed.decks) {
+        assert.ok(mixedInput.fixedCards.every((id) => deck.cards.some((card) => card.card_id === id)));
+        assert.ok(mixedInput.fixedCharacters.every((id) => deck.cards.some((card) => card.character_id === id)));
+    }
 
     userData.free();
     console.log('\n冒烟测试通过。');

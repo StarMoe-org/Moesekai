@@ -3297,6 +3297,7 @@ export const jaJPMessages = {
             supportCharacterRequired: '章キャラを選択してください',
             customCharactersRequired: 'カスタムボーナスキャラクターを 1 人以上選択してください',
             workerError: '推薦に失敗しました：{message}',
+            engineVersion: 'デッキエンジンのバージョンが一致しません。ページを再読み込みしてください。',
             userNotFound: 'ユーザーデータが見つかりません',
             apiNotPublic: 'このユーザーのデータ API は非公開です',
             userNotFound404: 'ユーザーが見つかりません（404）。ユーザー ID とデータサーバーを確認してください',
@@ -3308,6 +3309,8 @@ export const jaJPMessages = {
         result: {
             title: '推薦結果',
             duration: 'デッキエンジン合計 {ms} ms',
+            complete: '探索が完了し、指定条件での最適な結果が確認されました。',
+            timedOut: '探索が時間切れになりました。現在の結果は利用できますが、最適性と網羅性は未確認です。',
             leader: 'リーダー',
             cardId: 'カード ID',
             cardName: 'カード',

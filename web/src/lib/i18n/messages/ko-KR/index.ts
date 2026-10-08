@@ -3295,6 +3295,7 @@ export const koKRMessages = {
                 supportCharacterRequired: "챕터 캐릭터를 선택하세요",
                 customCharactersRequired: "커스텀 보너스 캐릭터를 1명 이상 선택하세요",
                 workerError: "추천 실패: {message}",
+                engineVersion: "덱 엔진 버전이 일치하지 않습니다. 페이지를 새로고침한 후 다시 시도하세요.",
                 userNotFound: "사용자 데이터를 찾을 수 없습니다",
                 apiNotPublic: "이 사용자의 데이터 API는 비공개입니다",
                 userNotFound404: "사용자를 찾을 수 없습니다(404). 사용자 ID와 데이터 서버를 확인하세요",
@@ -3306,6 +3307,8 @@ export const koKRMessages = {
             result: {
                 title: "추천 결과",
                 duration: "덱 엔진 총 {ms} ms",
+                complete: "검색이 완료되어 현재 조건의 최적 결과가 확인되었습니다.",
+                timedOut: "검색 시간이 초과되었습니다. 현재 결과는 사용할 수 있지만 최적성과 완전성은 확인되지 않았습니다.",
                 leader: "리더",
                 cardId: "카드 ID",
                 cardName: "카드",

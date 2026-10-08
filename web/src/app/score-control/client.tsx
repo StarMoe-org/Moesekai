@@ -153,6 +153,8 @@ type ScoreControlTranslationFn = (key: string, values?: Record<string, string | 
 
 function getErrorMessage(error: string, t: ScoreControlTranslationFn): string {
     switch (error) {
+        case "INVALID_SEARCH_COMPLETION":
+            return t("page.deckRecommend.errors.engineVersion");
         case "USER_NOT_FOUND":
             return t("page.scoreControl.errors.userNotFound");
         case "API_NOT_PUBLIC":
