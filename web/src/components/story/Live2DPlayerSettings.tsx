@@ -67,13 +67,11 @@ export function Live2DPlayerSettings({ isOpen, onClose, settings, onChange }: Li
                     onCheckedChange={fullscreenFillsScreen => onChange({ ...settings, fullscreenFillsScreen })}
                     label={t("page.story.live2d.settings.fullscreenFillsScreen")}
                     description={t("page.story.live2d.settings.fullscreenFillsScreenHint")}
-                    icons={false}
                 />
                 <Switch
                     checked={settings.showStats}
                     onCheckedChange={showStats => onChange({ ...settings, showStats })}
                     label={t("page.story.live2d.settings.showStats")}
-                    icons={false}
                 />
             </div>
         </Dialog>
