@@ -51,12 +51,13 @@ export function Switch({ checked, onCheckedChange, icons = true, label, descript
                 aria-hidden
                 className={cn(
                     "pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center justify-center rounded-full",
+                    // pressed, the handle is 28 and lies 2 from the track's end
                     "transition-all duration-300 ease-md3-spatial-fast peer-active:h-7 peer-active:w-7",
                     checked
-                        ? "left-[24px] h-6 w-6 bg-on-primary text-on-primary-container peer-hover:bg-primary-container"
+                        ? "left-[24px] h-6 w-6 bg-on-primary text-on-primary-container peer-hover:bg-primary-container peer-active:left-[22px]"
                         : icons
-                          ? "left-[4px] h-6 w-6 bg-outline text-surface-container-highest peer-hover:bg-on-surface-variant"
-                          : "left-[8px] h-4 w-4 bg-outline peer-hover:bg-on-surface-variant",
+                          ? "left-[4px] h-6 w-6 bg-outline text-surface-container-highest peer-hover:bg-on-surface-variant peer-active:left-[2px]"
+                          : "left-[8px] h-4 w-4 bg-outline peer-hover:bg-on-surface-variant peer-active:left-[2px]",
                     disabled && (checked ? "bg-surface" : "bg-on-surface/38"),
                 )}
             >

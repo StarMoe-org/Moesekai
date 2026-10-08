@@ -278,6 +278,15 @@
     pointer-events: none;
 }
 
+/* The same for a button without a container (text, outlined): the content at 38%, an outline at 12%. */
+@utility md3-disabled-bare {
+    color: rgb(var(--md-sys-color-on-surface-rgb) / var(--md-sys-state-disabled-content)) !important;
+    background-color: transparent !important;
+    border-color: rgb(var(--md-sys-color-on-surface-rgb) / var(--md-sys-state-disabled-container)) !important;
+    box-shadow: none !important;
+    pointer-events: none;
+}
+
 /* ── Progress / loading indicator animations ─────────────────────────── */
 @keyframes md3-linear-indeterminate {
     0% { left: -35%; width: 35%; }

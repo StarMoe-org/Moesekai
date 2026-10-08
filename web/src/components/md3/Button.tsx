@@ -72,6 +72,8 @@ function variantClass(variant: ButtonVariant, color: ButtonColor, selected?: boo
 }
 
 const DISABLED = "md3-disabled";
+// a text or outlined button has no container to show while disabled
+const DISABLED_BARE = "md3-disabled-bare";
 
 interface ButtonOwnProps {
     variant?: ButtonVariant;
@@ -112,7 +114,7 @@ export function buttonClassName({
         !disabled && s.pressed,
         variantClass(variant, color, selected),
         fullWidth && "w-full",
-        disabled && DISABLED,
+        disabled && (variant === "text" || variant === "outlined" ? DISABLED_BARE : DISABLED),
     );
 }
 
@@ -244,7 +246,7 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
         square ? s.square : SIZE[size].round,
         !disabled && "active:rounded-md3-sm",
         iconVariantClass(variant, selected),
-        disabled && (variant === "standard" ? "opacity-38 pointer-events-none" : DISABLED),
+        disabled && (variant === "standard" ? "opacity-38 pointer-events-none" : variant === "outlined" ? DISABLED_BARE : DISABLED),
         className,
     );
     const path = selected && selectedIcon ? selectedIcon : icon;

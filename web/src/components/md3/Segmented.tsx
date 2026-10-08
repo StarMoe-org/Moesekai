@@ -7,8 +7,9 @@ import { isKeyboardEventComposing } from "@/lib/shortcuts";
 
 /* ==========================================================================
    SegmentedButton (M3): 2–5 options, single or multi select, 40px tall.
-   ConnectedButtonGroup (M3 Expressive): adjacent toggle buttons whose
-   selected item morphs to a full pill.
+   ConnectedButtonGroup (M3 Expressive): adjacent toggle buttons 2 apart
+   whose inner corners are 8, 4 while pressed; the selected item morphs to a
+   full pill.
    ========================================================================== */
 
 export interface SegmentOption<T extends string = string> {
@@ -42,6 +43,13 @@ type MultiProps<T extends string> = SegmentedBaseProps<T> & {
 export type SegmentedButtonProps<T extends string> = SingleProps<T> | MultiProps<T>;
 
 const DENSITY = { 0: "h-10", [-1]: "h-9", [-2]: "h-8" } as const;
+// The full shape is half the height and not `rounded-full`: a radius far beyond
+// what shows cannot be interpolated, the morph would happen within one frame.
+const CONNECTED_FULL = {
+    0: { all: "rounded-md3-lg-inc", left: "rounded-l-md3-lg-inc", right: "rounded-r-md3-lg-inc" },
+    [-1]: { all: "rounded-[18px]", left: "rounded-l-[18px]", right: "rounded-r-[18px]" },
+    [-2]: { all: "rounded-md3-lg", left: "rounded-l-md3-lg", right: "rounded-r-md3-lg" },
+} as const;
 
 function moveOptionFocus(e: React.KeyboardEvent<HTMLDivElement>, nodes: HTMLButtonElement[], vertical = false) {
     if (e.defaultPrevented || isKeyboardEventComposing(e.nativeEvent)) return null;
@@ -123,6 +131,7 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
 
 export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonProps<T>) {
     const { options, className, density = 0 } = props;
+    const full = CONNECTED_FULL[density];
     const isSelected = (v: T) => (props.multiple ? props.value.includes(v) : props.value === v);
     const tabStopValue = options.find((opt) => !opt.disabled && isSelected(opt.value))?.value ?? options.find((opt) => !opt.disabled)?.value;
     const toggle = (v: T) => {
@@ -153,12 +162,14 @@ export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonPro
                             "state-layer focus-ring relative flex min-w-0 flex-1 items-center justify-center gap-2 px-4 type-label-l",
                             "cursor-pointer transition-[border-radius,background-color] duration-300 ease-md3-standard",
                             DENSITY[density],
-                            selected
-                                ? "rounded-full bg-secondary text-on-secondary"
-                                : cn(
-                                      "bg-secondary-container text-on-secondary-container",
-                                      first ? "rounded-l-full rounded-r-md3-sm" : last ? "rounded-r-full rounded-l-md3-sm" : "rounded-md3-sm",
-                                  ),
+                            selected ? "bg-secondary text-on-secondary" : "bg-secondary-container text-on-secondary-container",
+                            selected ? full.all
+                                : first && last ? full.all
+                                : first ? cn(full.left, "rounded-r-md3-sm")
+                                : last ? cn(full.right, "rounded-l-md3-sm")
+                                : "rounded-md3-sm",
+                            // pressed: the inner corners tighten, selected or not
+                            first && last ? null : first ? "active:rounded-r-md3-xs" : last ? "active:rounded-l-md3-xs" : "active:rounded-md3-xs",
                             opt.disabled && "pointer-events-none opacity-38",
                         )}
                     >
