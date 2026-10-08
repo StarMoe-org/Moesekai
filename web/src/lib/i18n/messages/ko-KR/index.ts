@@ -1745,6 +1745,7 @@ export const koKRMessages = {
                 ended: "재생 종료",
                 originalTextNote: "화면 속 텍스트는 선택한 에셋 서버({server})의 원문입니다.",
                 borrowedUiNote: "이 서버의 클라이언트 리소스가 아직 없어 대화창과 글꼴은 중국 서버 클라이언트의 것을 사용하며, 실제 게임과 다를 수 있습니다.",
+                substituteFontNote: "텍스트는 오픈 소스 글꼴(M PLUS 1, 본고딕)로 표시되며, 게임 내 글꼴과 글자 모양 및 일부 줄바꿈이 조금 다릅니다.",
                 notPlayed: "이 에피소드에는 웹에서 재생되지 않는 내용이 있습니다: {items}.",
                 listSeparator: ", ",
                 playerName: "세카이의 주민",

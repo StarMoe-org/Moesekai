@@ -52,6 +52,8 @@ export interface SsePlayerOptions {
     pkg: string;
     core: string;
     sources: { library: string; inapp: string; proxy?: string };
+    /** Fonts to draw the text with in place of the client's (which are then not fetched). */
+    fonts?: { body: { url: string; weight?: number }[]; name: { url: string; weight?: number }[] };
     selector: string;
     width: number;
     height: number;

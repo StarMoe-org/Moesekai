@@ -125,7 +125,53 @@ export function sseWebSources(region: string): SseWebSources | null {
     };
 }
 
-/** Checks every value that `sseWebSources` reads; a wrong one throws. For the build. */
+/** A font file the player draws text with: its URL and, for a variable font, the weight it is set to. */
+export interface SseWebFontFile {
+    url: string;
+    weight?: number;
+}
+
+/** The fonts of the words and of the names: each a font and the fonts that fill in the characters it lacks. */
+export interface SseWebFonts {
+    body: SseWebFontFile[];
+    name: SseWebFontFile[];
+}
+
+/*
+ * The JP client's own typeface is a commercial one, which this site does not hand out. With
+ * `NEXT_PUBLIC_SSE_WEB_FONT_BASE` set (a directory holding the three files below, under
+ * their upstream names, with their licence), the JP stories are drawn with open fonts
+ * instead, and the player does not fetch the client's font files at all:
+ *
+ * - M PLUS 1 (variable; SIL OFL 1.1) for the text. Its weights are set to what measures the
+ *   same stroke weight as the client's two faces: 460 for the words, 820 for the names.
+ * - Source Han Sans JP (SIL OFL 1.1) for the characters M PLUS 1 lacks (it has the common
+ *   kanji but not all of the rarer ones): Medium behind the words, Heavy behind the names.
+ *
+ * The other servers' text is drawn with Source Han Sans SC, an open font their client unpack
+ * carries, and is left as it is.
+ */
+const FONT_TEXT = "MPLUS1[wght].ttf";
+const FONT_FILL_BODY = "SourceHanSansJP-Medium.otf";
+const FONT_FILL_NAME = "SourceHanSansJP-Heavy.otf";
+const WEIGHT_BODY = 460;
+const WEIGHT_NAME = 820;
+
+/** The fonts that replace the client's for `region`'s stories, or null when the client's are used. */
+export function sseWebFonts(region: string): SseWebFonts | null {
+    const base = directory(process.env.NEXT_PUBLIC_SSE_WEB_FONT_BASE, "NEXT_PUBLIC_SSE_WEB_FONT_BASE");
+    if (!base || region !== "jp") return null;
+    const file = (name: string) => `${base}${encodeURIComponent(name)}`;
+    return {
+        body: [{ url: file(FONT_TEXT), weight: WEIGHT_BODY }, { url: file(FONT_FILL_BODY) }],
+        name: [{ url: file(FONT_TEXT), weight: WEIGHT_NAME }, { url: file(FONT_FILL_NAME) }],
+    };
+}
+
+/** Checks every value that `sseWebSources` and `sseWebFonts` read; a wrong one throws. For the build. */
 export function sseWebCheckSources(): void {
-    for (const region of SSE_WEB_REGIONS) sseWebSources(region);
+    for (const region of SSE_WEB_REGIONS) {
+        sseWebSources(region);
+        sseWebFonts(region);
+    }
 }

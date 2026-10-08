@@ -1748,6 +1748,7 @@ export const enUSMessages = {
                 ended: "Finished",
                 originalTextNote: "The text in the picture is the original of the selected asset server ({server}).",
                 borrowedUiNote: "This server's client assets are not available yet: the dialogue window and fonts are the CN client's and may differ from this server's game.",
+                substituteFontNote: "The text is set in open fonts (M PLUS 1, Source Han Sans), not the game's own typeface: glyph shapes and a few line breaks differ slightly.",
                 notPlayed: "This episode has content the web player does not play: {items}.",
                 listSeparator: ", ",
                 playerName: "Resident of SEKAI",

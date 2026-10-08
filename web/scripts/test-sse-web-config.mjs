@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 
-const { SSE_WEB_PATH, sseWebCheckSources, sseWebCoreUrl, sseWebEnabled, sseWebReleaseBase, sseWebSources } = await import("../src/lib/sseWeb/config.ts");
+const { SSE_WEB_PATH, sseWebCheckSources, sseWebCoreUrl, sseWebEnabled, sseWebFonts, sseWebReleaseBase, sseWebSources } = await import("../src/lib/sseWeb/config.ts");
 
-const NAMES = ["NEXT_PUBLIC_SSE_WEB_BASE", "NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE", "NEXT_PUBLIC_SSE_WEB_INAPP_BASE", "NEXT_PUBLIC_SSE_WEB_INAPPS", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY"];
+const NAMES = ["NEXT_PUBLIC_SSE_WEB_BASE", "NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE", "NEXT_PUBLIC_SSE_WEB_INAPP_BASE", "NEXT_PUBLIC_SSE_WEB_INAPPS", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY", "NEXT_PUBLIC_SSE_WEB_FONT_BASE"];
 const set = (values) => {
     for (const name of NAMES) delete process.env[name];
     Object.assign(process.env, values);
@@ -36,7 +36,26 @@ for (const empty of [{}, { NEXT_PUBLIC_SSE_WEB_BASE: "", NEXT_PUBLIC_SSE_WEB_COR
         });
     }
     assert.equal(sseWebSources("xx"), null);
+    // Without a font directory the client's fonts are used, on every server.
+    for (const region of ["jp", "cn", "tw", "kr", "en"]) assert.equal(sseWebFonts(region), null);
 }
+
+// With one, the JP stories are drawn with open fonts: M PLUS 1 at the weights matching the
+// client's two faces, and Source Han Sans JP behind it for the characters it lacks.
+set({ NEXT_PUBLIC_SSE_WEB_FONT_BASE: "https://assets.example.test/fonts/" });
+assert.deepEqual(sseWebFonts("jp"), {
+    body: [
+        { url: "https://assets.example.test/fonts/MPLUS1%5Bwght%5D.ttf", weight: 460 },
+        { url: "https://assets.example.test/fonts/SourceHanSansJP-Medium.otf" },
+    ],
+    name: [
+        { url: "https://assets.example.test/fonts/MPLUS1%5Bwght%5D.ttf", weight: 820 },
+        { url: "https://assets.example.test/fonts/SourceHanSansJP-Heavy.otf" },
+    ],
+});
+for (const region of ["cn", "tw", "kr", "en"]) assert.equal(sseWebFonts(region), null);
+set({ NEXT_PUBLIC_SSE_WEB_FONT_BASE: "https://assets.example.test/fonts" });
+assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_FONT_BASE/);
 
 // The release alone, or Cubism Core alone, does not turn it on.
 set({ NEXT_PUBLIC_SSE_WEB_BASE: "https://assets.example.test/bucket/sse-web/0.2.1/" });

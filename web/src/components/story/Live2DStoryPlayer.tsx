@@ -9,7 +9,7 @@ import {
 import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import type { ServerType } from "@/lib/account-servers";
-import { sseWebCoreUrl, sseWebEnabled, sseWebSources } from "@/lib/sseWeb/config";
+import { sseWebCoreUrl, sseWebEnabled, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
 import {
     loadSsePlayer, sseWebScriptBase,
     type SsePlayer, type SsePlayerError, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
@@ -154,6 +154,7 @@ const subscribeNever = () => () => {};
 export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, extraControls, ref }: Live2DStoryPlayerProps) {
     const { t } = useI18n();
     const sources = sseWebSources(region);
+    const fonts = sseWebFonts(region);
     const windowRef = useRef<HTMLDivElement | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
     /** A drag of the window's title or of one of its corners: where it began. */
@@ -252,6 +253,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                 pkg: "pkg/",
                 core,
                 sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
+                ...(fonts ? { fonts } : {}),
                 selector,
                 width,
                 height,
@@ -546,6 +548,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
         t("page.story.live2d.windowHint"),
         phase === "ready" && t("page.story.live2d.originalTextNote", { server: getServerDisplayCode(region as ServerType) }),
         phase === "ready" && sources.borrowedUi && t("page.story.live2d.borrowedUiNote"),
+        phase === "ready" && fonts !== null && t("page.story.live2d.substituteFontNote"),
         phase === "ready" && notPlayed.length > 0 && t("page.story.live2d.notPlayed", {
             items: [...new Set(notPlayed.map(item => t(NOT_PLAYED_KEY[item.reason])))].join(t("page.story.live2d.listSeparator")),
         }),

@@ -19,6 +19,8 @@
 | `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
 
+| `NEXT_PUBLIC_SSE_WEB_FONT_BASE` | 放开源字体的目录（见下「字体」）；不设则用客户端解包里的字体 | 不设 |
+
 `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
 
 播放器要从自己的目录启动 Worker，而 Worker 脚本必须与页面同源，所以 `next.config.ts` 把发布物目录映射到本站的 `/sse-web/`，浏览器只访问这个路径。Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。
@@ -39,6 +41,25 @@
 - AUTO 与手动两种模式；手动模式下点画面推进。选项要在画面上点。
 - 浏览器不支持（需要 WebGPU 等）、剧情库里没有这一话、网络出错时各有提示，文本阅读不受影响。
 - 与原有的「自动播放」（只播语音）互斥：打开 Live2D 播放时自动播放停止并隐藏。
+
+## 字体
+
+日服客户端的字体是商业字体（Fontworks 的 Rodin），站点不应该把它的文件发给访客。设了 `NEXT_PUBLIC_SSE_WEB_FONT_BASE` 以后：
+
+- 日服的剧情改用开源字体：正文和名字用 **M PLUS 1**（可变字重，正文 460、名字 820，是与客户端两个字体实测笔画粗细相同的值），M PLUS 1 缺的字用**思源黑体 JP** 补（正文补 Medium，名字补 Heavy）。
+- 播放器这时不读也不下载客户端的字体文件。
+- 其他区服不变：它们用的国服解包里本来就是思源黑体。
+- 播放时页面上有一行说明：字体不是游戏内的，字形和个别句子的换行略有不同（全角字符宽度相同，差别来自拉丁字母和数字的宽度）。
+
+目录里要放这三个文件，用上游的文件名，并把各自的许可文本（都是 SIL OFL 1.1）放在旁边：
+
+| 文件 | 来源 |
+|---|---|
+| `MPLUS1[wght].ttf` | Google Fonts 仓库 `google/fonts` 的 `ofl/mplus1/` |
+| `SourceHanSansJP-Medium.otf` | Adobe 仓库 `adobe-fonts/source-han-sans` 的 `SubsetOTF/JP/` |
+| `SourceHanSansJP-Heavy.otf` | 同上 |
+
+字体由播放器的 Worker 用 `fetch` 取，跨源时那台主机要放行本站。字重和文件名写在 `src/lib/sseWeb/config.ts` 里。
 
 ## 代码
 
@@ -62,6 +83,9 @@
 NEXT_PUBLIC_SSE_WEB_BASE=http://127.0.0.1:8787/dist/
 NEXT_PUBLIC_SSE_WEB_CORE_URL=http://127.0.0.1:8787/core/live2dcubismcore.min.js
 NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=http://127.0.0.1:8787/remote/
+NEXT_PUBLIC_SSE_WEB_FONT_BASE=http://127.0.0.1:8787/fonts/
 ```
+
+最后一行可选：把上面「字体」一节的三个文件放进 `target/web-dev/fonts/` 即可。
 
 `bun run --cwd web test:sse-web-config` 检查变量的校验规则。

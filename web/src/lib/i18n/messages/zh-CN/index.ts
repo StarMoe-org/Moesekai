@@ -1747,6 +1747,7 @@ export const zhCNMessages = {
                 ended: "播放结束",
                 originalTextNote: "画面里的文字是所选资源服务器（{server}）的原文。",
                 borrowedUiNote: "这个服务器的客户端素材还没有收录，对话框和字体用的是国服客户端的，与该服务器的游戏可能不同。",
+                substituteFontNote: "文字用的是开源字体（M PLUS 1、思源黑体），不是游戏内的字体，字形和个别句子的换行会略有不同。",
                 notPlayed: "这一话里有网页端不播放的内容：{items}。",
                 listSeparator: "、",
                 playerName: "「世界」的居民",

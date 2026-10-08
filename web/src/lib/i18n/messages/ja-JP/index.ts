@@ -1747,6 +1747,7 @@ export const jaJPMessages = {
         ended: "再生終了",
         originalTextNote: "画面内のテキストは選択中のアセットサーバー（{server}）の原文です。",
         borrowedUiNote: "このサーバーのクライアント素材は未収録のため、会話ウィンドウとフォントは中国サーバー版のものを使用しており、実際のゲームと異なる場合があります。",
+        substituteFontNote: "テキストはオープンソースのフォント（M PLUS 1、源ノ角ゴシック）で表示しており、ゲーム内のフォントとは字形や一部の改行位置が少し異なります。",
         notPlayed: "このエピソードにはウェブ版で再生されない内容があります：{items}。",
         listSeparator: "、",
         playerName: "セカイの住人",

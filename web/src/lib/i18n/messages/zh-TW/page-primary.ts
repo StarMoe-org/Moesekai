@@ -835,6 +835,7 @@ export const zhTWPagePrimary = {
                 ended: "播放結束",
                 originalTextNote: "畫面裡的文字是所選資源伺服器（{server}）的原文。",
                 borrowedUiNote: "這個伺服器的用戶端素材尚未收錄，對話框和字型用的是簡中服用戶端的，與該伺服器的遊戲可能不同。",
+                substituteFontNote: "文字用的是開源字型（M PLUS 1、思源黑體），不是遊戲內的字型，字形和個別句子的換行會略有不同。",
                 notPlayed: "這一話裡有網頁端不播放的內容：{items}。",
                 listSeparator: "、",
                 playerName: "「世界」的居民",
