@@ -30,7 +30,7 @@
    - 页面主标题：`type-headline-m`（移动端）/`type-headline-l`（≥ expanded）。区块标题：`type-title-l`。卡片标题：`type-title-m`。正文：`type-body-m`/`type-body-l`。
 4. **层级**：浅色用 `shadow-elev-{0..5}`（卡片 elevated 用 1，悬停 2，菜单 2，FAB 3，对话框 3）。不要用 `shadow-lg/xl/2xl`、彩色阴影（`shadow-miku/20`）。表面层级优先用 tonal surface-container 区分。
 5. **交互状态**：可点击元素加 `state-layer`（hover/focus/pressed 覆盖层，自动取 currentColor）+ `focus-ring`。不要用 `hover:scale-*`、`active:scale-*`、`hover:-translate-y-*`。
-6. **组件优先**：按钮→`Button`/`IconButton`/`Fab`；卡片→`Card`/`Surface`；筛选标签→`Chip` 或 `BaseFilters` 的 `FilterButton`；输入→`TextField`（IME 安全）；开关→`Switch`/`Checkbox`/`Radio`；分段→`SegmentedButton`/`ConnectedButtonGroup`；标签页→`Tabs`；弹窗→`Dialog`（或保留 `common/Modal`，API 不变）；底部/侧边面板→`BottomSheet`/`SideSheet`；菜单→`Menu`；加载→`LoadingIndicator`/`CircularProgress`/`LinearProgress`；列表→`List`/`ListItem`；提示→`Tooltip`/`Snackbar`。
+6. **组件优先**：按钮→`Button`/`IconButton`/`Fab`；卡片→`Card`/`Surface`；筛选标签→`Chip` 或 `BaseFilters` 的 `FilterButton`；输入→`TextField`（IME 安全）；开关→`Switch`/`Checkbox`/`Radio`；分段→`SegmentedButton`/`ConnectedButtonGroup`；一组动作按钮→`ButtonGroup`（按下的加宽、相邻的让出）；标签页→`Tabs`；弹窗→`Dialog`（或保留 `common/Modal`，API 不变）；底部/侧边面板→`BottomSheet`/`SideSheet`；菜单→`Menu`；加载→`LoadingIndicator`/`CircularProgress`/`LinearProgress`（确定进度可加 `wavy`）；列表→`List`/`ListItem`；提示→`Tooltip`/`Snackbar`。
 7. **图标**：通用 UI 图标（搜索、关闭、箭头、筛选、排序、下载、分享、设置…）用 `<Icon path={mdXxx} />`。业务图形（稀有度星、属性图标、谱面 SVG、logo、角色/团体图标）保留。
 8. **动效**：framer-motion 用 `md3Spatial*`（位移/尺寸/形状）与 `md3Effects*`（颜色/透明度）；CSS 用 `ease-md3-*` 与 `duration-*`。必须尊重 `useReducedMotion()`。
 9. **不改动**：数据逻辑、URL query param 同步、`useScrollRestore`、SEO metadata、i18n key 语义；`page.tsx` 不动。新增/改动的用户可见文案必须补齐 5 个语言（`zh-CN`、`zh-TW`、`en-US`、`ja-JP`、`ko-KR`）。

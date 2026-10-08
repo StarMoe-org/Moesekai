@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Banner, Button, Icon, IconButton, LinearProgress, LoadingIndicator, Slider, Surface, cn } from "@/components/md3";
+import { Banner, Button, ButtonGroup, Icon, IconButton, LinearProgress, LoadingIndicator, Slider, Surface, cn } from "@/components/md3";
 import {
     mdClose, mdFullscreen, mdFullscreenExit, mdPauseFill, mdPlayArrowFill, mdSkipNext, mdSkipPrevious,
     mdSmartDisplay, mdTune, mdVolumeOff, mdVolumeUp,
@@ -591,7 +591,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
      */
     const controls = (floating: boolean) => (
         <>
-            <div role="group" className="flex shrink-0 items-center gap-1">
+            <ButtonGroup>
                 <IconButton
                     icon={mdSkipPrevious}
                     label={t("page.story.live2d.previousTalk")}
@@ -617,7 +617,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     onClick={() => playerRef.current?.next()}
                     disabled={position.talk >= position.talks}
                 />
-            </div>
+            </ButtonGroup>
             {/* the position is never cut short: a narrow window wraps what follows it instead */}
             <div className={cn("px-1", floating ? "shrink-0" : "min-w-max flex-1")}>
                 <span className="block whitespace-nowrap type-label-l tabular-nums text-on-surface">
@@ -636,7 +636,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     onClick={() => changeVolume(volume === 0 ? lastVolumeRef.current : 0)}
                 />
                 {/* a narrow window has the button alone */}
-                <div className={cn("w-20", floating ? "hidden sm:block" : "hidden @min-[480px]:block")}>
+                <div className={cn("w-20", floating ? "hidden sm:block" : "hidden @min-[500px]:block")}>
                     <Slider value={volume} onValueChange={changeVolume} min={0} max={100} step={5} aria-label={t("page.story.live2d.volume")} />
                 </div>
             </div>
@@ -842,6 +842,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     {/* The window's toolbar; the corners at the bottom lie on it, and it is there in both phases. */}
                     {phase === "ready" && (
                         <LinearProgress
+                            // a wave while the story plays, flat while it is paused
+                            wavy={playing}
                             value={position.talks > 0 ? Math.min(position.talk, position.talks) / position.talks : 0}
                             aria-label={t("page.story.live2d.position", { current: shownTalk, total: position.talks })}
                         />
@@ -849,7 +851,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onTalk, ex
                     <div
                         role="toolbar"
                         aria-label={t("page.story.live2d.controls")}
-                        className="flex min-h-16 flex-wrap items-center gap-x-2 gap-y-1 px-5 py-2"
+                        className="flex min-h-16 flex-wrap items-center gap-x-2 gap-y-1 px-4 py-2"
                     >
                         {phase === "ready" && controls(false)}
                         {phase === "loading" && (

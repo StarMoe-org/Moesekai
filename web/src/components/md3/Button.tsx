@@ -16,19 +16,21 @@ export type ButtonSize = "xs" | "s" | "m" | "l" | "xl";
 export type ButtonShape = "round" | "square";
 export type ButtonColor = "primary" | "secondary" | "tertiary" | "error";
 
-// Radius interpolation must stay bounded: spring overshoot can clamp it to zero
-// when morphing from rounded-full, briefly flashing square corners.
+// The round shape is half the button's height and not `rounded-full`: a radius
+// far beyond what shows cannot be interpolated, the morph to the square shape
+// would happen within its last frame. The curve has no overshoot, as the
+// reference has none for a button's shape (Compose: DefaultEffects).
 const BASE =
     "state-layer focus-ring relative isolate inline-flex select-none items-center justify-center gap-2 whitespace-nowrap " +
     "cursor-pointer transition-[border-radius,background-color,box-shadow,color] duration-200 ease-md3-standard " +
     "disabled:cursor-not-allowed aria-disabled:cursor-not-allowed";
 
 const SIZE: Record<ButtonSize, { box: string; round: string; square: string; pressed: string; icon: number }> = {
-    xs: { box: "h-8 px-3 type-label-l", round: "rounded-full", square: "rounded-md3-md", pressed: "active:rounded-md3-sm", icon: 20 },
-    s: { box: "h-10 px-4 type-label-l", round: "rounded-full", square: "rounded-md3-md", pressed: "active:rounded-md3-sm", icon: 20 },
-    m: { box: "h-14 px-6 type-title-m", round: "rounded-full", square: "rounded-md3-lg", pressed: "active:rounded-md3-md", icon: 24 },
-    l: { box: "h-24 px-12 type-headline-s", round: "rounded-full", square: "rounded-md3-xl", pressed: "active:rounded-md3-lg", icon: 32 },
-    xl: { box: "h-[136px] px-16 type-headline-l", round: "rounded-full", square: "rounded-md3-xl", pressed: "active:rounded-md3-lg", icon: 40 },
+    xs: { box: "h-8 px-3 type-label-l", round: "rounded-md3-lg", square: "rounded-md3-md", pressed: "active:rounded-md3-sm", icon: 20 },
+    s: { box: "h-10 px-4 type-label-l", round: "rounded-md3-lg-inc", square: "rounded-md3-md", pressed: "active:rounded-md3-sm", icon: 20 },
+    m: { box: "h-14 px-6 type-title-m", round: "rounded-md3-xl", square: "rounded-md3-lg", pressed: "active:rounded-md3-md", icon: 24 },
+    l: { box: "h-24 px-12 type-headline-s", round: "rounded-md3-xxl", square: "rounded-md3-xl", pressed: "active:rounded-md3-lg", icon: 32 },
+    xl: { box: "h-[136px] px-16 type-headline-l", round: "rounded-[68px]", square: "rounded-md3-xl", pressed: "active:rounded-md3-lg", icon: 40 },
 };
 
 function variantClass(variant: ButtonVariant, color: ButtonColor, selected?: boolean): string {
@@ -174,7 +176,7 @@ export type IconButtonWidth = "narrow" | "default" | "wide";
 
 const ICON_SIZE: Record<ButtonSize, { h: string; w: Record<IconButtonWidth, string>; icon: number; square: string }> = {
     xs: { h: "h-8", w: { narrow: "w-7", default: "w-8", wide: "w-10" }, icon: 20, square: "rounded-md3-md" },
-    s: { h: "h-10", w: { narrow: "w-8", default: "w-10", wide: "w-12" }, icon: 24, square: "rounded-md3-md" },
+    s: { h: "h-10", w: { narrow: "w-8", default: "w-10", wide: "w-13" }, icon: 24, square: "rounded-md3-md" },
     m: { h: "h-14", w: { narrow: "w-12", default: "w-14", wide: "w-18" }, icon: 24, square: "rounded-md3-lg" },
     l: { h: "h-24", w: { narrow: "w-16", default: "w-24", wide: "w-32" }, icon: 32, square: "rounded-md3-xl" },
     xl: { h: "h-[136px]", w: { narrow: "w-26", default: "w-[136px]", wide: "w-46" }, icon: 40, square: "rounded-md3-xl" },
@@ -232,12 +234,14 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
     ref,
 ) {
     const s = ICON_SIZE[size];
+    // A selected toggle has the other shape: round becomes square, square becomes round.
+    const square = selected ? shape === "round" : shape === "square";
     const cls = cn(
         BASE,
         "shrink-0 p-0",
         s.h,
         s.w[width],
-        selected || shape === "square" ? s.square : "rounded-full",
+        square ? s.square : SIZE[size].round,
         !disabled && "active:rounded-md3-sm",
         iconVariantClass(variant, selected),
         disabled && (variant === "standard" ? "opacity-38 pointer-events-none" : DISABLED),

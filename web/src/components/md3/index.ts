@@ -22,6 +22,8 @@ export { Select } from "./Select";
 export type { SelectProps, SelectOption } from "./Select";
 export { Switch, Checkbox, Radio, Slider, RangeSlider } from "./Selection";
 export type { SwitchProps, CheckboxProps, RadioProps, SliderProps, RangeSliderProps } from "./Selection";
+export { ButtonGroup } from "./ButtonGroup";
+export type { ButtonGroupProps } from "./ButtonGroup";
 export { SegmentedButton, ConnectedButtonGroup, Tabs } from "./Segmented";
 export type { SegmentOption, SegmentedButtonProps, TabItem, TabsProps } from "./Segmented";
 export { Dialog } from "./Dialog";
