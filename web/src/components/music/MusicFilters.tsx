@@ -10,6 +10,7 @@ import {
     MUSIC_TAG_LABEL_KEYS,
     MUSIC_CATEGORY_LABEL_KEYS,
     MUSIC_CATEGORY_COLORS,
+    difficultyFillStyle,
 } from "@/types/music";
 import { useI18n } from "@/contexts/I18nContext";
 import { RangeSlider } from "@/components/md3";
@@ -127,12 +128,12 @@ const SORT_OPTIONS_BASE = [
 ];
 
 const DIFFICULTY_OPTIONS = [
-    { id: "easy", label: "EASY", color: "from-green-400 to-green-500" },
-    { id: "normal", label: "NORMAL", color: "from-blue-400 to-blue-500" },
-    { id: "hard", label: "HARD", color: "from-yellow-400 to-yellow-500" },
-    { id: "expert", label: "EXPERT", color: "from-red-400 to-red-500" },
-    { id: "master", label: "MASTER", color: "from-purple-500 to-purple-600" },
-    { id: "append", label: "APPEND", color: "from-pink-500 to-pink-600" },
+    { id: "easy", label: "EASY" },
+    { id: "normal", label: "NORMAL" },
+    { id: "hard", label: "HARD" },
+    { id: "expert", label: "EXPERT" },
+    { id: "master", label: "MASTER" },
+    { id: "append", label: "APPEND" },
 ];
 
 export default function MusicFilters({
@@ -299,10 +300,8 @@ export default function MusicFilters({
                                             onDifficultiesChange(next);
                                         } else onDifficultyChange?.(diff.id);
                                     }}
-                                    className={isSelected
-                                        ? `${getFilterChipStateClasses(true)} !border-transparent bg-gradient-to-r ${diff.color} !text-white`
-                                        : getFilterChipStateClasses(false)
-                                        }
+                                    className={getFilterChipStateClasses(isSelected)}
+                                    style={isSelected ? difficultyFillStyle(diff.id) : undefined}
                                 >
                                     {diff.label}
                                 </button>
@@ -335,6 +334,7 @@ export default function MusicFilters({
                         {DIFFICULTY_OPTIONS.map((diff) => (
                             <button key={diff.id} type="button" aria-pressed={selectedDifficulty === diff.id}
                                 className={getFilterChipStateClasses(selectedDifficulty === diff.id)}
+                                style={selectedDifficulty === diff.id ? difficultyFillStyle(diff.id) : undefined}
                                 onClick={() => onDifficultyChange(diff.id)}>{diff.label}</button>
                         ))}
                     </div>
@@ -342,7 +342,7 @@ export default function MusicFilters({
             )}
             {/* Other Filters */}
             <FilterSection label={t("common.filter.otherFilters")}>
-                <div className="space-y-2">
+                <div>
                     <FilterToggle
                         selected={hasEventOnly}
                         onClick={() => onHasEventOnlyChange(!hasEventOnly)}

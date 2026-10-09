@@ -7,7 +7,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
 import type { ICardInfo } from "@/types/types";
-import type { IMusicInfo } from "@/types/music";
+import { difficultyFillStyle, type IMusicInfo } from "@/types/music";
 import CharacterSelector from "@/components/deck-recommend/CharacterSelector";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import CardSelectorModal from "@/components/cards/CardSelectorModal";
@@ -270,15 +270,6 @@ const MODE_OPTIONS: { value: DeckRecommendMode }[] = [
 
 const DIFFICULTY_OPTIONS = ["easy", "normal", "hard", "expert", "master", "append"];
 
-const DIFFICULTY_COLORS: Record<string, string> = {
-    easy: "bg-blue-500",
-    normal: "bg-green-500",
-    hard: "bg-amber-500",
-    expert: "bg-red-500",
-    master: "bg-purple-500",
-    append: "bg-[#EE92BC]",
-};
-
 const LIVE_TYPE_OPTIONS = ["multi", "solo", "auto"] as const;
 const CHALLENGE_LIVE_OPTIONS = ["challenge", "auto"] as const;
 
@@ -363,7 +354,7 @@ function SectionTitle({ text }: { text: string }) {
 function usePillClass() {
     return useCallback((active: boolean) =>
         `state-layer focus-ring inline-flex h-10 items-center justify-center gap-2 px-4 rounded-md3-sm type-label-l transition-colors duration-200 ease-md3-standard ${active
-            ? "bg-secondary-container text-on-secondary-container"
+            ? "bg-primary-container text-on-primary-container"
             : "border border-outline-variant text-on-surface-variant"}`, []);
 }
 
@@ -1060,7 +1051,6 @@ export default function DeckRecommendClient() {
         <MainLayout>
             <PageContainer className="max-w-5xl">
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.deckRecommend.badge")}
                     title={t("page.deckRecommend.title")}
                     highlight={t("page.deckRecommend.titleHighlight")}
@@ -1122,7 +1112,7 @@ export default function DeckRecommendClient() {
                                     localStorage.setItem(USER_ID_STORAGE_KEY, e.target.value);
                                 }}
                                 placeholder={t("page.deckRecommend.account.userIdPlaceholder")}
-                                className="h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                className="h-10 w-full rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
                             <p className="text-xs text-on-surface-variant mt-1.5">{t("page.deckRecommend.account.userIdHint")}</p>
                         </div>
@@ -1130,7 +1120,7 @@ export default function DeckRecommendClient() {
                 </div>
 
                 {/* Mode tabs */}
-                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 mb-6 justify-center">
+                <div className="grid grid-cols-3 sm:flex sm:flex-wrap gap-1.5 sm:gap-2 mb-6">
                     {MODE_OPTIONS.map((option) => (
                         <button
                             key={option.value}
@@ -1619,7 +1609,7 @@ export default function DeckRecommendClient() {
                                         value={bonusTargets}
                                         onChange={(e) => patch({ bonusTargets: e.target.value })}
                                         placeholder={t("page.deckRecommend.config.bonusTargetsPlaceholder")}
-                                        className="h-12 w-full max-w-sm rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                        className="h-10 w-full max-w-sm rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                                     />
                                     <p className="text-xs text-on-surface-variant mt-1.5">{t("page.deckRecommend.config.bonusTargetsHint")}</p>
                                 </div>
@@ -1638,9 +1628,8 @@ export default function DeckRecommendClient() {
                                         key={option}
                                         type="button"
                                         onClick={() => patch({ difficulty: option })}
-                                        className={`state-layer focus-ring h-9 px-3 rounded-md3-sm type-label-l transition-colors ${difficulty === option
-                                            ? `${DIFFICULTY_COLORS[option]} text-white`
-                                            : "border border-outline-variant text-on-surface-variant"}`}
+                                        className="state-layer focus-ring h-9 px-3 rounded-md3-sm border border-outline-variant type-label-l text-on-surface-variant transition-colors"
+                                        style={difficulty === option ? difficultyFillStyle(option) : undefined}
                                     >
                                         {option.toUpperCase()}
                                     </button>

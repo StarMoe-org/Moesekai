@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import ExternalLink from "@/components/ExternalLink";
 import { useI18n } from "@/contexts/I18nContext";
-import { IMusicInfo, IMusicMeta } from "@/types/music";
+import { IMusicInfo, IMusicMeta, difficultyFillStyle } from "@/types/music";
 import { fetchMasterData, fetchMusicMetas } from "@/lib/fetch";
 import MainLayout from "@/components/MainLayout";
 import MusicSelector from "@/components/deck-recommend/MusicSelector";
@@ -233,7 +233,6 @@ export default function DeckComparatorClient() {
         <MainLayout>
             <PageContainer className="max-w-5xl">
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.deckComparator.badge")}
                     title={t("page.deckComparator.title")}
                     highlight={t("page.deckComparator.titleHighlight")}
@@ -270,30 +269,16 @@ export default function DeckComparatorClient() {
                         <div>
                             <label className="mb-1 block type-label-l text-on-surface-variant">{t("page.deckComparator.difficulty")}</label>
                             <div className="flex flex-wrap gap-2">
-                                {DIFFICULTY_OPTIONS.map((d) => {
-                                    let activeClass = "";
-                                    switch (d.value) {
-                                        case "easy": activeClass = "bg-[#5AC06E] text-white"; break;
-                                        case "normal": activeClass = "bg-[#56A4D4] text-white"; break;
-                                        case "hard": activeClass = "bg-[#EFAF28] text-white"; break;
-                                        case "expert": activeClass = "bg-[#E84D53] text-white"; break;
-                                        case "master": activeClass = "bg-[#BB58B8] text-white"; break;
-                                        case "append": activeClass = "bg-[#EE92BC] text-white"; break;
-                                        default: activeClass = "bg-primary text-on-primary";
-                                    }
-                                    return (
-                                        <button
-                                            key={d.value}
-                                            onClick={() => setDifficulty(d.value)}
-                                            className={`state-layer focus-ring h-9 px-3 rounded-md3-sm type-label-l transition-colors ${difficulty === d.value
-                                                ? activeClass
-                                                : "border border-outline-variant text-on-surface-variant"
-                                                }`}
-                                        >
-                                            {t(d.labelKey)}
-                                        </button>
-                                    );
-                                })}
+                                {DIFFICULTY_OPTIONS.map((d) => (
+                                    <button
+                                        key={d.value}
+                                        onClick={() => setDifficulty(d.value)}
+                                        className="state-layer focus-ring h-9 px-3 rounded-md3-sm border border-outline-variant type-label-l text-on-surface-variant transition-colors"
+                                        style={difficulty === d.value ? difficultyFillStyle(d.value) : undefined}
+                                    >
+                                        {t(d.labelKey)}
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     </div>
@@ -317,7 +302,7 @@ export default function DeckComparatorClient() {
                                 value={userPower}
                                 onChange={(e) => setUserPower(Number(e.target.value))}
                                 placeholder="280000"
-                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
                         </div>
                         <div>
@@ -329,7 +314,7 @@ export default function DeckComparatorClient() {
                                 value={userEffectiveness}
                                 onChange={(e) => setUserEffectiveness(Number(e.target.value))}
                                 placeholder="250"
-                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
                         </div>
                         <div>
@@ -341,7 +326,7 @@ export default function DeckComparatorClient() {
                                 value={deckBonus}
                                 onChange={(e) => setDeckBonus(Number(e.target.value))}
                                 placeholder="150"
-                                className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                             />
                             <p className="mt-1 text-xs text-on-surface-variant">{t("page.deckComparator.deckBonusHint")}</p>
                         </div>
@@ -371,7 +356,7 @@ export default function DeckComparatorClient() {
                                         type="number"
                                         value={teammatePower}
                                         onChange={(e) => setTeammatePower(Number(e.target.value))}
-                                        className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                        className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                     />
                                 </div>
                                 <div>
@@ -380,7 +365,7 @@ export default function DeckComparatorClient() {
                                         type="number"
                                         value={teammateEffectiveness}
                                         onChange={(e) => setTeammateEffectiveness(Number(e.target.value))}
-                                        className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                        className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                     />
                                 </div>
                             </div>
@@ -396,14 +381,14 @@ export default function DeckComparatorClient() {
                                             value={tm.power}
                                             onChange={(e) => updateTeammate(i, 'power', Number(e.target.value))}
                                             placeholder={t("page.deckComparator.powerPlaceholder")}
-                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                         />
                                         <input
                                             type="number"
                                             value={tm.effectiveness}
                                             onChange={(e) => updateTeammate(i, 'effectiveness', Number(e.target.value))}
                                             placeholder={t("page.deckComparator.effectivenessPlaceholder")}
-                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
+                                            className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-full"
                                         />
                                     </div>
                                 ))}
@@ -419,7 +404,7 @@ export default function DeckComparatorClient() {
                                 <button
                                     onClick={() => setSkill6Mode(Skill6Mode.TEAM_AVERAGE)}
                                     className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill6Mode === Skill6Mode.TEAM_AVERAGE
-                                        ? "bg-secondary-container text-on-secondary-container"
+                                        ? "bg-primary-container text-on-primary-container"
                                         : "border border-outline-variant text-on-surface-variant"
                                         }`}
                                 >
@@ -428,7 +413,7 @@ export default function DeckComparatorClient() {
                                 <button
                                     onClick={() => setSkill6Mode(Skill6Mode.HIGHEST_POWER)}
                                     className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill6Mode === Skill6Mode.HIGHEST_POWER
-                                        ? "bg-secondary-container text-on-secondary-container"
+                                        ? "bg-primary-container text-on-primary-container"
                                         : "border border-outline-variant text-on-surface-variant"
                                         }`}
                                 >
@@ -448,7 +433,7 @@ export default function DeckComparatorClient() {
                                         key={s.value}
                                         onClick={() => setSkill15Strategy(s.value)}
                                         className={`flex-1 px-3 py-2 rounded-md3-md type-label-m transition-all ${skill15Strategy === s.value
-                                            ? "bg-secondary-container text-on-secondary-container"
+                                            ? "bg-primary-container text-on-primary-container"
                                             : "border border-outline-variant text-on-surface-variant"
                                             }`}
                                     >
@@ -472,7 +457,7 @@ export default function DeckComparatorClient() {
                                     min={0}
                                     max={10}
                                     onChange={(e) => setFires(Math.min(10, Math.max(0, Number(e.target.value) || 0)))}
-                                    className="dc-number-input h-12 px-4 type-body-l rounded-md3-xs border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-24"
+                                    className="dc-number-input h-10 px-3 type-body-m rounded-md3-md border border-outline bg-transparent text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant w-24"
                                 />
                                 <span className="text-sm text-on-surface-variant">
                                     {t("page.deckComparator.currentMultiplier", { rate: getBoostRate(fires) })}
@@ -663,11 +648,7 @@ export default function DeckComparatorClient() {
                                             <span className="type-title-s text-on-surface truncate">
                                                 {item.musicTitle}
                                             </span>
-                                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md3-xs uppercase ${item.difficulty === 'master' ? 'bg-[#BB58B8] text-white' :
-                                                    item.difficulty === 'expert' ? 'bg-[#E84D53] text-white' :
-                                                        item.difficulty === 'append' ? 'bg-[#EE92BC] text-white' :
-                                                            'bg-surface-container-highest text-on-surface-variant'
-                                                }`}>
+                                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md3-xs uppercase bg-surface-container-highest text-on-surface-variant" style={difficultyFillStyle(item.difficulty)}>
                                                 {item.difficulty}
                                             </span>
                                         </div>

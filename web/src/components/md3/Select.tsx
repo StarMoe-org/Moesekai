@@ -4,7 +4,7 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef,
 import { createPortal } from "react-dom";
 import { useI18n } from "@/contexts/I18nContext";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck, mdKeyboardArrowDown } from "./icons";
 import { OverlayParentContext, useOverlay } from "./useOverlay";
@@ -31,7 +31,6 @@ export interface SelectProps<T extends string | number> {
     placeholder?: string;
     selectedLabel?: React.ReactNode;
     disabled?: boolean;
-    dense?: boolean;
     searchable?: boolean;
     searchPlaceholder?: string;
     noOptionsLabel?: string;
@@ -78,7 +77,7 @@ const optionText = <T extends string | number>(option: SelectOption<T>) => optio
 /** Controlled MD3 select-only/editable combobox. Selection never changes merely by opening. */
 export function Select<T extends string | number>({
     value, onValueChange, options, label, "aria-label": ariaLabel, "aria-describedby": describedBy,
-    listLabel, placeholder, selectedLabel, disabled = false, dense = false, searchable = false,
+    listLabel, placeholder, selectedLabel, disabled = false, searchable = false,
     searchPlaceholder, noOptionsLabel, searchValue, onSearchChange, filterOptions = true,
     name, required, className, id, supportingText, errorText,
 }: SelectProps<T>) {
@@ -252,10 +251,10 @@ export function Select<T extends string | number>({
         onCompositionStart: () => { composing.current = true; },
         onCompositionEnd: () => { composing.current = false; },
     };
-    const fieldClass = cn("relative flex w-full min-w-0 items-center gap-2 rounded-md3-xs border bg-surface-container-low px-3 text-on-surface transition-colors duration-150 ease-md3-standard", dense ? "h-10 type-body-m" : "h-14 type-body-l", error ? "border-error" : isOpen ? "border-primary" : "border-outline hover:border-on-surface", disabled && "opacity-38");
+    const fieldClass = cn("relative flex w-full min-w-0 items-center gap-2 rounded-md3-md border bg-surface-container-low px-3 text-on-surface transition-colors duration-150 ease-md3-standard", "h-10 type-body-m", error ? "border-error" : isOpen ? "border-primary" : "border-outline hover:border-on-surface", disabled && "opacity-38");
 
     return (
-        <div className={cn("min-w-0 w-full", className)}>
+        <div className={withOverrides("min-w-0 w-full", className)}>
             {label && <label htmlFor={controlId} className="mb-1 block type-label-m text-on-surface-variant">{label}</label>}
             <div ref={fieldRef} className={searchable ? fieldClass : undefined}>
                 {searchable ? (

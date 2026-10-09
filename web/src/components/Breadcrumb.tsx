@@ -35,7 +35,7 @@ function ExpandButton({
             aria-expanded={ariaExpanded}
             aria-controls={ariaControls}
         >
-            <Icon path={mdKeyboardArrowDown} size={18} className={cn("transition-transform duration-200 ease-md3-spatial-fast", ariaExpanded && "rotate-180")} />
+            <Icon path={mdKeyboardArrowDown} size={18} className={cn("transition-transform duration-300 ease-md3-spatial", ariaExpanded && "rotate-180")} />
         </button>
     );
 }

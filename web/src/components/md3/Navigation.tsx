@@ -1,12 +1,13 @@
 "use client";
 import React from "react";
 import LocalizedLink from "@/components/LocalizedLink";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 
 /* ==========================================================================
    M3 navigation primitives
-   - NavigationDrawerItem: 56px pill, secondary-container active indicator
+   - NavigationDrawerItem: 56px pill; the active indicator is glass-selected,
+                           since the drawer is a glass pane
    - NavigationRailItem:   icon in 56×32 pill + label (collapsed rail)
    - NavigationBar(Item):  bottom bar for compact windows (Expressive: 64px,
                            horizontal items on medium widths)
@@ -52,10 +53,11 @@ export function NavigationDrawerItem({
             prefetch={prefetch}
             onClick={onClick}
             aria-current={active ? "page" : undefined}
-            className={cn(
+            className={withOverrides(
                 "state-layer focus-ring flex items-center gap-3 rounded-full type-label-l",
                 density === "compact" ? "h-12 px-3 lg:h-10 [@media(any-pointer:coarse)]:min-h-12" : "h-14 pl-4 pr-6",
-                active ? "bg-secondary-container text-on-secondary-container" : "text-on-surface-variant",
+                // The drawer is a glass pane: the active pill is the thinned seed, not the pale tint.
+                active ? "glass-selected text-on-surface" : "text-on-surface-variant",
                 className,
             )}
             {...dataAttrs}
@@ -75,7 +77,7 @@ export function NavigationRailItem({ href, label, icon, activeIcon, leading, act
             prefetch={prefetch}
             onClick={onClick}
             aria-current={active ? "page" : undefined}
-            className={cn("group/rail focus-ring flex w-full flex-col items-center gap-1 rounded-md3-lg py-1", className)}
+            className={withOverrides("group/rail focus-ring flex w-full flex-col items-center gap-1 rounded-md3-lg py-1", className)}
             {...dataAttrs}
         >
             <span
@@ -97,7 +99,7 @@ export function NavigationRailItem({ href, label, icon, activeIcon, leading, act
 export function NavigationBar({ className, children, ...rest }: React.HTMLAttributes<HTMLElement>) {
     return (
         <nav
-            className={cn(
+            className={withOverrides(
                 "flex h-16 items-stretch justify-around bg-surface-container text-on-surface pb-[env(safe-area-inset-bottom)] box-content",
                 className,
             )}
@@ -136,7 +138,7 @@ export function NavigationBarItem({
             <span className={cn("max-w-full truncate type-label-m", active ? "text-secondary" : "text-on-surface-variant")}>{label}</span>
         </>
     );
-    const cls = cn("focus-ring flex min-w-0 flex-1 flex-col items-center justify-center gap-1 pt-1.5 pb-2 cursor-pointer", className);
+    const cls = withOverrides("focus-ring flex min-w-0 flex-1 flex-col items-center justify-center gap-1 pt-1.5 pb-2 cursor-pointer", className);
     if (asButton) {
         return (
             <button type="button" onClick={onClick} className={cls} aria-pressed={active}>
@@ -186,7 +188,7 @@ export function TopAppBar({ variant = "small", title, subtitle, navigation, acti
         </div>
     );
     return (
-        <header className={cn("w-full text-on-surface transition-colors duration-200 ease-md3-standard", bg, className)}>
+        <header className={withOverrides("w-full text-on-surface transition-colors duration-200 ease-md3-standard", bg, className)}>
             {row}
             {(variant === "medium" || variant === "large") && title && (
                 <div className={cn("px-4", variant === "medium" ? "pb-6" : "pb-7 pt-10")}>

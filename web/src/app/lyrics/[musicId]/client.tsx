@@ -734,7 +734,7 @@ export default function LyricsDetailClient() {
                                                     aria-pressed={activeRendition?.key === rendition.key}
                                                     onClick={() => selectRendition(rendition.key)}
                                                     className={`state-layer focus-ring h-8 rounded-md3-sm border px-3 type-label-l transition-colors ${activeRendition?.key === rendition.key
-                                                        ? "border-transparent bg-secondary-container text-on-secondary-container"
+                                                        ? "border-transparent bg-primary-container text-on-primary-container"
                                                         : "border-outline-variant text-on-surface-variant"
                                                     }`}
                                                 >

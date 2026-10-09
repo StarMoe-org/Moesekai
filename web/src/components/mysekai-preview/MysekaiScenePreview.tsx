@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Button, Select } from "@/components/md3";
+import { Button, ErrorState, Select } from "@/components/md3";
 import { mdCenterFocusStrong, mdRefresh } from "@/components/md3/icons";
 
 import { useI18n } from "@/contexts/I18nContext";
@@ -60,6 +60,22 @@ function persistOptions(options: MysekaiPreviewOptions) {
     }
 }
 
+/**
+ * Whether the browser hands out a WebGL context at all, asked the way three.js
+ * asks. Checking first keeps three.js from logging errors when it cannot; the
+ * probe context is released straight away so it does not count against the limit.
+ */
+function canCreateWebGLContext(): boolean {
+    try {
+        const canvas = document.createElement("canvas");
+        const gl = (canvas.getContext("webgl2") ?? canvas.getContext("webgl") ?? canvas.getContext("experimental-webgl")) as WebGLRenderingContext | null;
+        gl?.getExtension("WEBGL_lose_context")?.loseContext();
+        return gl !== null;
+    } catch {
+        return false;
+    }
+}
+
 export default function MysekaiScenePreview({
     className = "",
     heightClassName = "h-[min(78vh,760px)] min-h-[520px]",
@@ -96,6 +112,7 @@ export default function MysekaiScenePreview({
     const [shadowEnabled, setShadowEnabled] = useState(true);
     const [backWallOpacity, setBackWallOpacity] = useState(0.2);
     const [lookSensitivity, setLookSensitivity] = useState(1);
+    const [webglUnavailable, setWebglUnavailable] = useState(false);
 
     const runtimeMessages = useMemo<MysekaiPreviewRuntimeMessages>(() => ({
         initializing: t("page.mysekaiPreview.runtime.initializing"),
@@ -195,15 +212,28 @@ export default function MysekaiScenePreview({
 
     useEffect(() => {
         if (!hostRef.current || !axesRef.current) return;
-        const runtime = new MysekaiScenePreviewRuntime(hostRef.current, axesRef.current, options, {
-            onStatus: setStatus,
-            onCycleSite: () => {
-                setSiteId((current) => {
-                    const index = SITE_OPTIONS.findIndex((option) => option.id === current);
-                    return SITE_OPTIONS[(index + 1) % SITE_OPTIONS.length].id;
-                });
-            },
-        });
+        if (!canCreateWebGLContext()) {
+            setWebglUnavailable(true);
+            return;
+        }
+        let runtime: MysekaiScenePreviewRuntime;
+        try {
+            runtime = new MysekaiScenePreviewRuntime(hostRef.current, axesRef.current, options, {
+                onStatus: setStatus,
+                onCycleSite: () => {
+                    setSiteId((current) => {
+                        const index = SITE_OPTIONS.findIndex((option) => option.id === current);
+                        return SITE_OPTIONS[(index + 1) % SITE_OPTIONS.length].id;
+                    });
+                },
+            });
+        } catch (error) {
+            // No WebGL context (hardware acceleration off, GPU blocklisted, context limit):
+            // only the preview gives way, not the page around it.
+            console.warn("[mysekai-preview] WebGL unavailable", error);
+            setWebglUnavailable(true);
+            return;
+        }
         runtimeRef.current = runtime;
         void runtime.reload(false);
         return () => {
@@ -234,6 +264,17 @@ export default function MysekaiScenePreview({
     const loadingTitle = status.stageLabel || (status.stage === "master" ? t("page.mysekaiPreview.preview.loadingMaster") : status.stage === "layout" ? t("page.mysekaiPreview.preview.readingLayout") : t("page.mysekaiPreview.preview.loadingModels"));
     const panelPadding = compact ? "p-3" : "p-4";
 
+    if (webglUnavailable) {
+        return (
+            <ErrorState
+                className={className}
+                title={t("page.mysekaiPreview.preview.webglUnavailableTitle")}
+                message={t("page.mysekaiPreview.preview.webglUnavailableMessage")}
+                retryLabel={t("common.errorBoundary.refreshPage")}
+            />
+        );
+    }
+
     return (
         <div className={`space-y-3 ${className}`}>
             <div className={`rounded-md3-xl bg-surface-container ${panelPadding} type-body-s text-on-surface`}>
@@ -263,7 +304,7 @@ export default function MysekaiScenePreview({
                             <input
                                 value={layoutUrl}
                                 onChange={(event) => setLayoutUrl(event.target.value)}
-                                className="focus-ring w-full rounded-md3-xs border border-outline bg-surface-container-lowest px-3 py-2 type-body-m text-on-surface outline-none focus:border-primary"
+                                className="focus-ring w-full rounded-md3-md border border-outline bg-surface-container-lowest px-3 py-2 type-body-m text-on-surface outline-none focus:border-primary"
                                 placeholder={LOCAL_TEST_LAYOUT_URL}
                             />
                         </label>
@@ -343,7 +384,7 @@ export default function MysekaiScenePreview({
                     <div className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-scrim/32">
                         <div className="w-[min(460px,calc(100%-2rem))] rounded-md3-xl bg-inverse-surface p-6 text-center text-inverse-on-surface shadow-elev-3">
                             <div
-                                className="mx-auto h-14 w-56 bg-inverse-primary sm:h-16 sm:w-64"
+                                className="mx-auto h-14 w-56 bg-primary-container sm:h-16 sm:w-64"
                                 style={{
                                     maskImage: `url(${MOE_LOGO_URL})`,
                                     maskSize: "contain",

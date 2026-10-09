@@ -10,25 +10,30 @@ import {
     getHonorRankMatchBgUrl,
 } from "@/lib/assets";
 import { AssetSourceType } from "@/contexts/ThemeContext";
+import { mdMilitaryTech } from "@/components/md3/icons";
 
 // Achievement group IDs that should show level icons
 const ACHIEVEMENT_LEVEL_WHITELIST = new Set([33, 36, 37, 52, 72, 73, 74, 75, 76, 77]);
 
 // Hook to preload an image and track success/failure
-function useImageLoaded(url: string | undefined): boolean {
-    const [loadedUrl, setLoadedUrl] = useState<string | null>(null);
+type ImageStatus = "none" | "loading" | "loaded" | "error";
+
+function useImageStatus(url: string | undefined): ImageStatus {
+    const [settled, setSettled] = useState<{ url: string; ok: boolean } | null>(null);
 
     useEffect(() => {
         if (!url) return;
         const targetUrl = url;
         const img = new Image();
-        img.onload = () => setLoadedUrl(targetUrl);
-        img.onerror = () => setLoadedUrl(prev => (prev === targetUrl ? null : prev));
+        img.onload = () => setSettled({ url: targetUrl, ok: true });
+        img.onerror = () => setSettled({ url: targetUrl, ok: false });
         img.src = targetUrl;
         return () => { img.onload = null; img.onerror = null; };
     }, [url]);
 
-    return !!url && loadedUrl === url;
+    if (!url) return "none";
+    if (settled?.url !== url) return "loading";
+    return settled.ok ? "loaded" : "error";
 }
 
 interface DegreeImageProps {
@@ -154,10 +159,14 @@ export default function DegreeImage({
     }
 
     // ── Preload images to hide 404s ──
-    const bgLoaded = useImageLoaded(bgUrl);
-    const customFrameLoaded = useImageLoaded(customFrameUrl);
+    const bgStatus = useImageStatus(bgUrl);
+    const bgLoaded = bgStatus === "loaded";
+    const customFrameLoaded = useImageStatus(customFrameUrl) === "loaded";
     const frameUrl = customFrameUrl && customFrameLoaded ? customFrameUrl : defaultFrameUrl;
-    const rankLoaded = useImageLoaded(rankUrl);
+    const rankLoaded = useImageStatus(rankUrl) === "loaded";
+    // Some honors list assets the CDN never received (e.g. limitevent_v2);
+    // without a stand-in the card shows an empty white strip.
+    const bgMissing = bgStatus === "error" || bgStatus === "none";
 
     // Level 1-5 icons and 6+ icons
     const levelCount = shouldDrawLevel && honorLevel ? Math.min(5, honorLevel) : 0;
@@ -170,6 +179,15 @@ export default function DegreeImage({
             className={className}
             style={{ width: "100%", height: "auto" }}
         >
+            {/* Placeholder while the background loads, or when it never will */}
+            {!bgLoaded && (
+                <rect x="0" y="0" width={width} height={height} rx="12" className="fill-surface-container-high" />
+            )}
+            {bgMissing && (
+                <svg x={width / 2 - 16} y={height / 2 - 16} width="32" height="32" viewBox="0 -960 960 960">
+                    <path d={mdMilitaryTech} className="fill-on-surface-variant" opacity="0.6" />
+                </svg>
+            )}
             {/* Background */}
             {bgUrl && bgLoaded && (
                 <image

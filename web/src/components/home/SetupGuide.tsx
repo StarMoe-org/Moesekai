@@ -291,7 +291,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                 {/* Brand Logo & Name */}
                 <div className="flex flex-col items-center gap-2">
                   <div
-                    className="h-12 w-44 bg-primary"
+                    className="h-12 w-44 bg-primary-container"
                     style={{
                       maskImage: `url(${MOE_LOGO_URL})`,
                       maskSize: "contain",

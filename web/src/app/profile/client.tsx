@@ -1,15 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "@/components/LocalizedLink";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
 import AccountAvatar from "@/components/AccountAvatar";
-import CharacterRankRadar from "@/components/profile/CharacterRankRadar";
+import ProfileHeroCard from "@/components/profile/ProfileHeroCard";
+import MusicClearStatus from "@/components/profile/MusicClearStatus";
+import CharacterRankGrid from "@/components/profile/CharacterRankGrid";
 import ChallengeStageChart from "@/components/profile/ChallengeStageChart";
 import BondsRankTable from "@/components/profile/BondsRankTable";
 import PowerBonusDetail from "@/components/profile/PowerBonusDetail";
+import { useProfileExtras } from "@/hooks/useProfileExtras";
+import { fetchRealtimeRankingMasterData } from "@/lib/realtime-ranking-api";
+import type { RealtimeRankingMasterData } from "@/types/realtime-ranking";
 import {
     getAccounts,
     getActiveAccount,
@@ -258,6 +263,25 @@ export default function ProfileClient() {
         if (stage.rank > current) activeChallengeStageRanks.set(stage.characterId, stage.rank);
     });
 
+    // Signature, honors, card states and clear results for the player card.
+    const extras = useProfileExtras(activeAccount);
+    // Cards and honors come from the account's own server.
+    const activeServer = activeAccount?.server ?? null;
+    const [master, setMaster] = useState<{ server: ServerType; data: RealtimeRankingMasterData } | null>(null);
+    useEffect(() => {
+        if (!activeServer) return;
+        let cancelled = false;
+        void fetchRealtimeRankingMasterData(activeServer).then((data) => {
+            if (!cancelled) setMaster({ server: activeServer, data });
+        });
+        return () => { cancelled = true; };
+    }, [activeServer]);
+    const masterData = master && master.server === activeServer ? master.data : null;
+    const cardMap = useMemo(() => (masterData ? new Map(masterData.cards.map((card) => [card.id, card])) : null), [masterData]);
+    const scrollToAccounts = useCallback(() => {
+        document.getElementById("profile-accounts")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, []);
+
     if (!loaded) {
         return (
             <MainLayout>
@@ -278,7 +302,6 @@ export default function ProfileClient() {
         <MainLayout>
             <PageContainer>
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.profile.badge")}
                     title={t("page.profile.title")}
                     highlight={t("page.profile.titleHighlight")}
@@ -291,275 +314,294 @@ export default function ProfileClient() {
                     </Banner>
                 )}
 
+                {activeAccount && (
+                    <>
+                        <ProfileHeroCard
+                            account={activeAccount}
+                            extras={extras}
+                            master={masterData}
+                            cards={cardMap}
+                            accountCount={accounts.length}
+                            onManageAccounts={scrollToAccounts}
+                        />
+
+                        <div className="mb-6">
+                            <MusicClearStatus server={activeAccount.server} status={extras.status} results={extras.musicResults} />
+                        </div>
+
+                        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+                            <CharacterRankGrid characterRanks={activeCharacterRanks} />
+                            <ChallengeStageChart
+                                challengeStageRanks={activeChallengeStageRanks}
+                                server={activeAccount.server}
+                                challengeSoloStages={activeAccount.userChallengeLiveSoloStages || []}
+                                challengeSoloResults={activeAccount.userChallengeLiveSoloResults || []}
+                                challengeHighScoreRewards={activeAccount.userChallengeLiveSoloHighScoreRewards || []}
+                            />
+                        </div>
+
+                        <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-2">
+                            <BondsRankTable
+                                userBonds={activeAccount.userBonds || []}
+                                userCharacters={activeAccount.userCharacters || []}
+                            />
+                            <PowerBonusDetail
+                                server={activeAccount.server}
+                                userAreas={activeAccount.userAreas || []}
+                                userCharacters={activeAccount.userCharacters || []}
+                                userMysekaiFixtureGameCharacterPerformanceBonuses={activeAccount.userMysekaiFixtureGameCharacterPerformanceBonuses || []}
+                                userMysekaiGates={activeAccount.userMysekaiGates || []}
+                            />
+                        </div>
+                    </>
+                )}
+
                 {/* Accounts List */}
-                <SectionCard
-                    className="mb-6"
-                    icon={mdPerson}
-                    title={
-                        <>
-                            {t("page.profile.boundAccounts")}
-                            {accounts.length > 0 && (
-                                <span className="ml-1 type-body-m text-on-surface-variant">({accounts.length})</span>
-                            )}
-                        </>
-                    }
-                    actions={
-                        <div className="flex flex-wrap items-center gap-2">
-                            <Button variant="outlined" size="xs" icon={mdLink} onClick={() => void handleOAuthBind()}>
+                <div id="profile-accounts" className="mb-6 scroll-mt-20">
+                    <SectionCard
+                        icon={mdPerson}
+                        title={
+                            <>
+                                {t("page.profile.boundAccounts")}
+                                {accounts.length > 0 && (
+                                    <span className="ml-1 type-body-m text-on-surface-variant">({accounts.length})</span>
+                                )}
+                            </>
+                        }
+                        actions={
+                            <div className="hidden items-center gap-2 sm:flex">
+                                <Button variant="outlined" size="xs" icon={mdLink} onClick={() => void handleOAuthBind()}>
+                                    {t("common.account.oauthBind")}
+                                </Button>
+                                <Button
+                                    variant="filled"
+                                    size="xs"
+                                    icon={mdAdd}
+                                    onClick={() => { setShowAddForm(true); setVerifyError(null); }}
+                                >
+                                    {t("common.account.addAccount")}
+                                </Button>
+                            </div>
+                        }
+                    >
+                        {/* On phones the header only has room for the title. */}
+                        <div className="mb-4 grid grid-cols-2 gap-2 sm:hidden">
+                            <Button variant="outlined" size="s" icon={mdLink} onClick={() => void handleOAuthBind()}>
                                 {t("common.account.oauthBind")}
                             </Button>
                             <Button
                                 variant="filled"
-                                size="xs"
+                                size="s"
                                 icon={mdAdd}
                                 onClick={() => { setShowAddForm(true); setVerifyError(null); }}
                             >
                                 {t("common.account.addAccount")}
                             </Button>
                         </div>
-                    }
-                >
-                    {accounts.length === 0 && !showAddForm ? (
-                        <EmptyState
-                            className="py-10"
-                            icon={mdPerson}
-                            title={t("common.account.noAccounts")}
-                            action={
-                                <Button variant="filled" size="m" onClick={() => { setShowAddForm(true); setVerifyError(null); }}>
-                                    {t("common.account.addFirstAccount")}
-                                </Button>
-                            }
-                        />
-                    ) : (
-                        <div className="space-y-3">
-                            {accounts.map((acc) => {
-                                const isActive = acc.id === activeId;
-                                // Prefer userGamedata.name, otherwise use nickname.
-                                const displayName = acc.userGamedata?.name || acc.nickname;
-
-                                return (
-                                    <div
-                                        key={acc.id}
-                                        className={cn(
-                                            "relative rounded-md3-lg border p-4 transition-colors duration-200 ease-md3-standard",
-                                            isActive
-                                                ? "border-primary bg-primary-container/40"
-                                                : "border-outline-variant bg-surface-container",
-                                        )}
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {/* Avatar - use the leader card thumbnail. */}
-                                            <AccountAvatar account={acc} size="lg" className={cn("ring-2 ring-offset-1 ring-offset-surface transition-all", isActive ? "ring-primary" : "ring-outline-variant")} />
-
-                                            {/* Info */}
-                                            <div className="min-w-0 flex-1">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    {displayName && (
-                                                        <span className="truncate type-title-s text-on-surface">{displayName}</span>
-                                                    )}
-                                                    <span className="font-mono type-body-s text-on-surface-variant">{acc.gameId}</span>
-                                                    <span className={cn(
-                                                        "rounded-md3-xs px-1.5 py-0.5 type-label-s",
-                                                        isActive ? "bg-primary text-on-primary" : "bg-surface-container-highest text-on-surface-variant",
-                                                    )}>
-                                                        <ServerRegionLabel server={acc.server} size={16} />
-                                                    </span>
-                                                    {isActive && (
-                                                        <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
-                                                            {t("common.account.current")}
+                        {accounts.length === 0 && !showAddForm ? (
+                            <EmptyState
+                                className="py-10"
+                                icon={mdPerson}
+                                title={t("common.account.noAccounts")}
+                                action={
+                                    <Button variant="filled" size="m" onClick={() => { setShowAddForm(true); setVerifyError(null); }}>
+                                        {t("common.account.addFirstAccount")}
+                                    </Button>
+                                }
+                            />
+                        ) : (
+                            <div className="space-y-3">
+                                {accounts.map((acc) => {
+                                    const isActive = acc.id === activeId;
+                                    // Prefer userGamedata.name, otherwise use nickname.
+                                    const displayName = acc.userGamedata?.name || acc.nickname;
+    
+                                    return (
+                                        <div
+                                            key={acc.id}
+                                            className={cn(
+                                                "relative rounded-md3-lg border p-4 transition-colors duration-200 ease-md3-standard",
+                                                isActive
+                                                    ? "border-primary bg-primary-container/40"
+                                                    : "border-outline-variant bg-surface-container",
+                                            )}
+                                        >
+                                            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                                {/* Avatar - use the leader card thumbnail. */}
+                                                <AccountAvatar account={acc} size="lg" className={cn("ring-2 ring-offset-1 ring-offset-surface transition-all", isActive ? "ring-primary" : "ring-outline-variant")} />
+    
+                                                {/* Info */}
+                                                <div className="min-w-0 flex-1 basis-48">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        {displayName && (
+                                                            <span className="truncate type-title-s text-on-surface">{displayName}</span>
+                                                        )}
+                                                        <span className="font-mono type-body-s text-on-surface-variant">{acc.gameId}</span>
+                                                        <span className={cn(
+                                                            "rounded-md3-xs px-1.5 py-0.5 type-label-s",
+                                                            isActive ? "bg-primary text-on-primary" : "bg-surface-container-highest text-on-surface-variant",
+                                                        )}>
+                                                            <ServerRegionLabel server={acc.server} size={16} />
                                                         </span>
-                                                    )}
-                                                    <span className={cn(
-                                                        "rounded-md3-xs px-1.5 py-0.5 type-label-s",
-                                                        acc.authSource === "oauth2" ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-highest text-on-surface-variant",
-                                                    )}>
-                                                        {acc.authSource === "oauth2" ? "OAuth2" : t("common.account.publicApi")}
-                                                    </span>
-                                                    {acc.authError === "reauth_required" && (
-                                                        <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
-                                                            {t("common.account.reauthRequired")}
+                                                        {isActive && (
+                                                            <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
+                                                                {t("common.account.current")}
+                                                            </span>
+                                                        )}
+                                                        <span className={cn(
+                                                            "rounded-md3-xs px-1.5 py-0.5 type-label-s",
+                                                            acc.authSource === "oauth2" ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-highest text-on-surface-variant",
+                                                        )}>
+                                                            {acc.authSource === "oauth2" ? "OAuth2" : t("common.account.publicApi")}
                                                         </span>
-                                                    )}
-                                                </div>
-                                                <div className="mt-0.5 flex flex-wrap items-center gap-2 type-label-s text-on-surface-variant">
-                                                    <p>
-                                                        {t("common.account.createdAt", { date: formatDate(acc.createdAt) })}
-                                                    </p>
-                                                    {acc.uploadTime && (
-                                                        <>
-                                                            <span aria-hidden="true" className="opacity-60">•</span>
-                                                            <p>
-                                                                {t("common.account.dataUpdatedAt", { date: formatDate(acc.uploadTime * 1000, { dateStyle: "medium", timeStyle: "short" }) })}
-                                                            </p>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-
-                                            {/* Actions */}
-                                            <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
-                                                {!isActive && (
-                                                    <Button variant="text" size="xs" onClick={() => handleSetActive(acc.id)}>
-                                                        {t("common.account.setDefault")}
-                                                    </Button>
-                                                )}
-                                                {acc.authSource === "oauth2" && (
-                                                    <Button
-                                                        variant="text"
-                                                        size="xs"
-                                                        color="secondary"
-                                                        icon={mdSync}
-                                                        onClick={() => void refreshOAuthAccountData(acc.id).then(reload).catch((error) => {
-                                                            console.warn(`OAuth2 account ${acc.gameId} manual sync failed`, error);
-                                                            setVerifyError(t("common.harukiErrors.oauthRefreshFailed"));
-                                                        })}
-                                                    >
-                                                        {t("common.account.resync")}
-                                                    </Button>
-                                                )}
-                                                {deleteConfirmId === acc.id ? (
-                                                    <div className="flex items-center gap-1">
-                                                        <Button variant="tonal" size="xs" color="error" onClick={() => handleDelete(acc.id)}>
-                                                            {t("common.action.confirm")}
-                                                        </Button>
-                                                        <Button variant="text" size="xs" onClick={() => setDeleteConfirmId(null)}>
-                                                            {t("common.action.cancel")}
-                                                        </Button>
+                                                        {acc.authError === "reauth_required" && (
+                                                            <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                                {t("common.account.reauthRequired")}
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                ) : (
-                                                    <IconButton
-                                                        icon={mdDelete}
-                                                        label={t("common.account.deleteAccount")}
-                                                        size="xs"
-                                                        className="hover:text-error"
-                                                        onClick={() => setDeleteConfirmId(acc.id)}
-                                                    />
-                                                )}
+                                                    <div className="mt-0.5 flex flex-wrap items-center gap-2 type-label-s text-on-surface-variant">
+                                                        <p>
+                                                            {t("common.account.createdAt", { date: formatDate(acc.createdAt) })}
+                                                        </p>
+                                                        {acc.uploadTime && (
+                                                            <>
+                                                                <span aria-hidden="true" className="opacity-60">•</span>
+                                                                <p>
+                                                                    {t("common.account.dataUpdatedAt", { date: formatDate(acc.uploadTime * 1000, { dateStyle: "medium", timeStyle: "short" }) })}
+                                                                </p>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </div>
+    
+                                                {/* Actions: wrap under the info on narrow screens */}
+                                                <div className="ml-auto flex flex-shrink-0 flex-wrap items-center justify-end gap-1">
+                                                    {!isActive && (
+                                                        <Button variant="text" size="xs" onClick={() => handleSetActive(acc.id)}>
+                                                            {t("common.account.setDefault")}
+                                                        </Button>
+                                                    )}
+                                                    {acc.authSource === "oauth2" && (
+                                                        <Button
+                                                            variant="text"
+                                                            size="xs"
+                                                            color="secondary"
+                                                            icon={mdSync}
+                                                            onClick={() => void refreshOAuthAccountData(acc.id).then(reload).catch((error) => {
+                                                                console.warn(`OAuth2 account ${acc.gameId} manual sync failed`, error);
+                                                                setVerifyError(t("common.harukiErrors.oauthRefreshFailed"));
+                                                            })}
+                                                        >
+                                                            {t("common.account.resync")}
+                                                        </Button>
+                                                    )}
+                                                    {deleteConfirmId === acc.id ? (
+                                                        <div className="flex items-center gap-1">
+                                                            <Button variant="tonal" size="xs" color="error" onClick={() => handleDelete(acc.id)}>
+                                                                {t("common.action.confirm")}
+                                                            </Button>
+                                                            <Button variant="text" size="xs" onClick={() => setDeleteConfirmId(null)}>
+                                                                {t("common.action.cancel")}
+                                                            </Button>
+                                                        </div>
+                                                    ) : (
+                                                        <IconButton
+                                                            icon={mdDelete}
+                                                            label={t("common.account.deleteAccount")}
+                                                            size="xs"
+                                                            className="hover:text-error"
+                                                            onClick={() => setDeleteConfirmId(acc.id)}
+                                                        />
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
-
-                    {/* Add Account Form */}
-                    {showAddForm && (
-                        <div className="mt-4 rounded-md3-lg bg-surface-container p-4">
-                            <h3 className="mb-3 type-title-m text-on-surface">
-                                {t("common.account.addNewAccount")}
-                            </h3>
-                            <div className="space-y-4">
-                                <TextField
-                                    variant="outlined"
-                                    label={t("common.form.gameUid")}
-                                    required
-                                    value={formGameId}
-                                    onChange={(e) => setFormGameId(e.target.value)}
-                                    placeholder={t("common.account.inputGameUid")}
-                                    disabled={isVerifying}
-                                />
-                                <div>
-                                    <div className="mb-2 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {SERVER_OPTIONS.map((s) => (
-                                            <Chip
-                                                key={s.value}
-                                                selected={formServer === s.value}
-                                                onClick={() => setFormServer(s.value)}
-                                                disabled={isVerifying}
-                                            >
-                                                <ServerRegionLabel server={s.value} />
-                                            </Chip>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                {verifyError && (
-                                    <Banner tone="error" title={verifyError}>
-                                        <ExternalLink
-                                            href="https://haruki.seiunx.com"
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="mt-1 inline-block rounded-md3-xs underline focus-ring"
-                                        >
-                                            {t("common.account.goHaruki")}
-                                        </ExternalLink>
-                                    </Banner>
-                                )}
-
-                                <p className="type-body-s text-on-surface-variant">
-                                    {t("common.account.addHint")}
-                                </p>
-
-                                <div className="flex gap-3 pt-1">
-                                    <Button
-                                        variant="filled"
-                                        size="m"
-                                        className="flex-1"
-                                        onClick={handleAddAccount}
-                                        disabled={!formGameId.trim() || isVerifying}
-                                    >
-                                        {isVerifying ? (
-                                            <>
-                                                <CircularProgress size={18} strokeWidth={2} />
-                                                {t("common.account.verifyingWithDots")}
-                                            </>
-                                        ) : (
-                                            t("common.account.verifyAndAdd")
-                                        )}
-                                    </Button>
-                                    <Button
+                                    );
+                                })}
+                            </div>
+                        )}
+    
+                        {/* Add Account Form */}
+                        {showAddForm && (
+                            <div className="mt-4 rounded-md3-lg bg-surface-container p-4">
+                                <h3 className="mb-3 type-title-m text-on-surface">
+                                    {t("common.account.addNewAccount")}
+                                </h3>
+                                <div className="space-y-4">
+                                    <TextField
                                         variant="outlined"
-                                        size="m"
-                                        onClick={() => { setShowAddForm(false); setVerifyError(null); }}
+                                        label={t("common.form.gameUid")}
+                                        required
+                                        value={formGameId}
+                                        onChange={(e) => setFormGameId(e.target.value)}
+                                        placeholder={t("common.account.inputGameUid")}
                                         disabled={isVerifying}
-                                    >
-                                        {t("common.action.cancel")}
-                                    </Button>
+                                    />
+                                    <div>
+                                        <div className="mb-2 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
+                                        <div className="flex flex-wrap gap-2">
+                                            {SERVER_OPTIONS.map((s) => (
+                                                <Chip
+                                                    key={s.value}
+                                                    selected={formServer === s.value}
+                                                    onClick={() => setFormServer(s.value)}
+                                                    disabled={isVerifying}
+                                                >
+                                                    <ServerRegionLabel server={s.value} />
+                                                </Chip>
+                                            ))}
+                                        </div>
+                                    </div>
+    
+                                    {verifyError && (
+                                        <Banner tone="error" title={verifyError}>
+                                            <ExternalLink
+                                                href="https://haruki.seiunx.com"
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="mt-1 inline-block rounded-md3-xs underline focus-ring"
+                                            >
+                                                {t("common.account.goHaruki")}
+                                            </ExternalLink>
+                                        </Banner>
+                                    )}
+    
+                                    <p className="type-body-s text-on-surface-variant">
+                                        {t("common.account.addHint")}
+                                    </p>
+    
+                                    <div className="flex gap-3 pt-1">
+                                        <Button
+                                            variant="filled"
+                                            size="m"
+                                            className="flex-1"
+                                            onClick={handleAddAccount}
+                                            disabled={!formGameId.trim() || isVerifying}
+                                        >
+                                            {isVerifying ? (
+                                                <>
+                                                    <CircularProgress size={18} strokeWidth={2} />
+                                                    {t("common.account.verifyingWithDots")}
+                                                </>
+                                            ) : (
+                                                t("common.account.verifyAndAdd")
+                                            )}
+                                        </Button>
+                                        <Button
+                                            variant="outlined"
+                                            size="m"
+                                            onClick={() => { setShowAddForm(false); setVerifyError(null); }}
+                                            disabled={isVerifying}
+                                        >
+                                            {t("common.action.cancel")}
+                                        </Button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
-                </SectionCard>
-
-                {activeAccount && (
-                    <div className="mb-6 grid grid-cols-1 items-stretch gap-6 xl:grid-cols-2">
-                        <div className="flex h-full min-w-0 flex-col gap-6">
-                            <div className="min-w-0">
-                                <CharacterRankRadar
-                                    characterRanks={activeCharacterRanks}
-                                />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <ChallengeStageChart
-                                    challengeStageRanks={activeChallengeStageRanks}
-                                    server={activeAccount.server}
-                                    challengeSoloStages={activeAccount.userChallengeLiveSoloStages || []}
-                                    challengeSoloResults={activeAccount.userChallengeLiveSoloResults || []}
-                                    challengeHighScoreRewards={activeAccount.userChallengeLiveSoloHighScoreRewards || []}
-                                />
-                            </div>
-                        </div>
-                        <div className="flex h-full min-w-0 flex-col gap-6">
-                            <div className="min-w-0">
-                                <BondsRankTable
-                                    userBonds={activeAccount.userBonds || []}
-                                    userCharacters={activeAccount.userCharacters || []}
-                                />
-                            </div>
-                            <div className="min-w-0 flex-1">
-                                <PowerBonusDetail
-                                    server={activeAccount.server}
-                                    userAreas={activeAccount.userAreas || []}
-                                    userCharacters={activeAccount.userCharacters || []}
-                                    userMysekaiFixtureGameCharacterPerformanceBonuses={activeAccount.userMysekaiFixtureGameCharacterPerformanceBonuses || []}
-                                    userMysekaiGates={activeAccount.userMysekaiGates || []}
-                                />
-                            </div>
-                        </div>
-                    </div>
-                )}
+                        )}
+                    </SectionCard>
+                </div>
 
                 {/* Tool Quick Links */}
                 <SectionCard className="mb-6" icon={mdBuild} title={t("page.profile.toolQuickLinks")}>

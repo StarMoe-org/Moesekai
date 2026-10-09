@@ -208,9 +208,8 @@ function PlannerContent() {
     const waitingForRules = selectedEventId != null && !rules && !rulesError;
 
     return (
-        <PageContainer className="[&]:max-w-5xl">
+        <PageContainer className="max-w-5xl">
             <PageHeader
-                align="center"
                 title={t("page.predictionPlanner.title")}
                 description={t("page.predictionPlanner.subtitle")}
             />

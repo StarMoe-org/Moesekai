@@ -398,14 +398,14 @@ export default function CommandPalette({ isOpen, onClose, onNavigate }: CommandP
                     >
                         {/* Search bar */}
                         <div className="shrink-0 p-2 sm:p-3">
-                            <div className="flex h-14 items-center gap-1 rounded-full bg-surface-container-highest pl-1 pr-2 sm:bg-surface-container">
+                            <div className="flex h-12 items-center gap-1 rounded-md3-md bg-surface-container-highest pl-1 pr-1 sm:bg-surface-container">
                                 <IconButton
                                     icon={mdArrowBack}
                                     label={t("common.action.close")}
                                     onClick={onClose}
                                     className="sm:hidden"
                                 />
-                                <Icon path={mdSearch} size={24} className="ml-3 hidden shrink-0 text-on-surface-variant sm:block" />
+                                <Icon path={mdSearch} size={20} className="ml-3 hidden shrink-0 text-on-surface-variant sm:block" />
                                 <input
                                     ref={inputRef}
                                     type="text"

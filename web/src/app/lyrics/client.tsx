@@ -24,11 +24,13 @@ import { buildMusicAliasesById, SEARCH_INDEX_URL } from "@/lib/lyrics-aliases.mj
 import { fetchLyricsMusicCatalog } from "@/lib/lyrics-music-source";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import type { IMusicInfo, IMusicTagInfo, MusicCategoryType, MusicTagType } from "@/types/music";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 function LyricsContent() {
     const searchParams = useSearchParams();
     const { isShowSpoiler } = useTheme();
     const { t } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
     const [musicTags, setMusicTags] = useState<IMusicTagInfo[]>([]);
     const [charts, setCharts] = useState<MusicLevelChart[]>([]);
@@ -279,7 +281,6 @@ function LyricsContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.lyrics.badge")}
                 title={t("page.lyrics.title")}
                 highlight={t("page.lyrics.titleHighlight")}
@@ -316,7 +317,7 @@ function LyricsContent() {
                     <EmptyState icon={mdLyrics} title={t("page.lyrics.empty")} description={t("page.lyrics.emptyHint")} />
                 ) : (
                     <>
-                        <div className={MUSIC_GRID_CLASS}>
+                        <div ref={gridRef} className={`relative ${MUSIC_GRID_CLASS}`}>
                             {filteredMusics.slice(0, displayCount).map((music) => {
                                 const lyrics = lyricsByMusicId.get(music.id);
                                 const hasDetail = lyrics ? hasLyricsDetail(lyrics) : false;

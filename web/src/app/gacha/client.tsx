@@ -273,7 +273,6 @@ function GachaContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.gacha.badge")}
                 title={t("page.gacha.title")}
                 highlight={t("page.gacha.titleHighlight")}

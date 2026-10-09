@@ -201,7 +201,7 @@ export default function CharacterFilter({
                                     "state-layer focus-ring cursor-pointer rounded-md3-md border p-1.5 transition-[background-color,border-radius] duration-200 ease-md3-standard",
                                     selectedUnitIds.includes(unit.id)
                                         ? "rounded-md3-lg border-transparent bg-secondary-container ring-2 ring-primary"
-                                        : "border-outline-variant",
+                                        : "border-transparent bg-surface-container-high",
                                 )}
                                 title={unitLabel}
                             >
@@ -279,8 +279,8 @@ export default function CharacterFilter({
                             className={cn(
                                 "state-layer focus-ring flex h-11 w-11 cursor-pointer items-center justify-center rounded-full border type-label-l transition-colors duration-150 ease-md3-standard",
                                 allSelected
-                                    ? "border-transparent bg-primary text-on-primary"
-                                    : "border-outline-variant text-on-surface-variant",
+                                    ? "border-transparent bg-primary-container text-on-primary-container"
+                                    : "border-transparent bg-surface-container-high text-on-surface",
                             )}
                             title={t("common.filter.all")}
                         >

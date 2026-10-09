@@ -197,6 +197,7 @@ function RealtimeRankingNextContent() {
                     totalEntries={board.entries.length}
                     countdown={countdown}
                     isRefreshing={board.isRefreshing}
+                    syncFailed={!!board.error}
                     onRefresh={board.refresh}
                     showChurn={showChurn}
                     onShowChurnChange={handleShowChurnChange}

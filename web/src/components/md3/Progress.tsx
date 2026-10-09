@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import { animate, useAnimationFrame, useMotionValue, useReducedMotion } from "framer-motion";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EasingEmphasizedAccelerate, md3EasingStandard } from "@/lib/motion";
 
@@ -39,7 +39,7 @@ export function LinearProgress({ value, wavy, className, "aria-label": label }: 
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={determinate ? Math.round(pct) : undefined}
-            className={cn("relative h-1 w-full overflow-hidden", className)}
+            className={withOverrides("relative h-1 w-full overflow-hidden", className)}
         >
             {determinate ? (
                 <>
@@ -167,7 +167,7 @@ export function CircularProgress({ value, size = 48, strokeWidth = 4, className,
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={determinate ? Math.round(pct * 100) : undefined}
-            className={cn("inline-flex", !determinate && "animate-spin", className)}
+            className={withOverrides("inline-flex", !determinate && "animate-spin", className)}
             style={{ width: size, height: size }}
         >
             <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
@@ -199,7 +199,7 @@ export function LoadingIndicator({
     "aria-label": label,
 }: {
     size?: number;
-    /** Show on a primary-container circle (for use over content). */
+    /** Show on a tinted disc (for use over images and other content). */
     contained?: boolean;
     className?: string;
     "aria-label"?: string;
@@ -209,16 +209,18 @@ export function LoadingIndicator({
         <span
             role="progressbar"
             aria-label={label ?? t("common.md3.loading")}
-            className={cn(
+            className={withOverrides(
                 "inline-flex items-center justify-center",
-                contained && "rounded-full bg-primary-container",
+                // A pale disc with the accent shape inside, well clear of its edge: the seed-colored
+                // disc with a near-black shape on it read as a heavy ring.
+                contained && "rounded-full bg-secondary-container shadow-elev-1",
                 className,
             )}
             style={{ width: size, height: size }}
         >
             <span
-                className={cn("md3-loading-shape block", contained ? "bg-on-primary-container" : "bg-primary")}
-                style={{ width: size * 0.79, height: size * 0.79 }}
+                className="md3-loading-shape block bg-primary"
+                style={{ width: size * (contained ? 0.66 : 0.79), height: size * (contained ? 0.66 : 0.79) }}
             />
         </span>
     );

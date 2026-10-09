@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useCallback, Suspense, type CSSProperties } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, Suspense } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
@@ -359,6 +359,13 @@ const CATEGORY_THEMES: Record<number, { from: string; to: string }> = {
 };
 
 const DEFAULT_THEME = { from: "#00CCBB", to: "#1E293B" };
+
+// Category tiles: the category's own color is only a dot by the label; selection
+// is the shared tint plus an inset ring, so the scroller never clips it. The ring
+// lives on ::after (state-layer owns ::before) to sit above the jacket backdrop.
+const CATEGORY_TILE_CLASS = "state-layer focus-ring relative flex h-16 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard";
+const CATEGORY_TILE_SELECTED = "bg-secondary-container text-on-surface after:pointer-events-none after:absolute after:inset-0 after:z-20 after:rounded-[inherit] after:ring-2 after:ring-inset after:ring-primary";
+const CATEGORY_TILE_IDLE = "bg-surface-container text-on-surface";
 
 function SoundtrackContent() {
     const { t, formatNumber } = useI18n();
@@ -1569,17 +1576,13 @@ function SoundtrackContent() {
                             </h3>
 
                             {/* Horizontal sliding categories list (scrollbars hidden via no-scrollbar) */}
-                            <div className="no-scrollbar flex gap-3 overflow-x-auto pb-3">
+                            <div className="no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-3 pt-1">
                                 {/* "ALL" Card */}
                                 <button
                                     type="button"
                                     aria-pressed={selectedCategoryId === null}
                                     onClick={() => selectCategory(null)}
-                                    className={`state-layer focus-ring relative flex h-16 w-24 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
-                                        selectedCategoryId === null
-                                            ? "bg-secondary-container text-on-secondary-container ring-2 ring-primary"
-                                            : "bg-surface-container text-on-surface"
-                                    }`}
+                                    className={`${CATEGORY_TILE_CLASS} w-24 ${selectedCategoryId === null ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
                                 >
                                     <span className="type-label-s text-on-surface-variant">ALL</span>
                                     <span className="type-label-l">{t("page.soundtrack.allCategory")}</span>
@@ -1591,17 +1594,10 @@ function SoundtrackContent() {
                                         type="button"
                                         aria-pressed={selectedCategoryId === SPOILER_CATEGORY_FILTER}
                                         onClick={() => selectCategory(SPOILER_CATEGORY_FILTER)}
-                                        className={`state-layer focus-ring relative flex h-16 w-32 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
-                                            selectedCategoryId === SPOILER_CATEGORY_FILTER
-                                                ? "bg-tertiary-container text-on-tertiary-container ring-2"
-                                                : "bg-surface-container text-on-surface"
-                                        }`}
-                                        style={{
-                                            ["--tw-ring-color" as string]: SPOILER_CATEGORY_THEME.from,
-                                            borderLeft: `3px solid ${SPOILER_CATEGORY_THEME.from}`,
-                                            } as CSSProperties}
+                                        className={`${CATEGORY_TILE_CLASS} w-32 ${selectedCategoryId === SPOILER_CATEGORY_FILTER ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
                                     >
-                                        <span className="relative z-10 type-label-s text-tertiary">
+                                        <span className="relative z-10 flex items-center gap-1.5 type-label-s text-on-surface-variant">
+                                            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: SPOILER_CATEGORY_THEME.from }} />
                                             {t("common.badge.spoiler")} · {formatNumber(spoilerTrackCount)}
                                         </span>
                                         <span className="relative z-10 block max-w-full truncate type-label-l">
@@ -1621,15 +1617,7 @@ function SoundtrackContent() {
                                             key={cat.id}
                                             aria-pressed={active}
                                             onClick={() => selectCategory(cat.id)}
-                                            className={`group state-layer focus-ring relative flex h-16 w-32 flex-shrink-0 flex-col justify-between overflow-hidden rounded-md3-md p-2.5 text-left transition-colors duration-150 ease-md3-standard ${
-                                                active
-                                                    ? "bg-secondary-container text-on-secondary-container ring-2"
-                                                    : "bg-surface-container text-on-surface"
-                                            }`}
-                                            style={{
-                                                ["--tw-ring-color" as string]: theme.from,
-                                                borderLeft: `3px solid ${theme.from}`,
-                                                } as CSSProperties}
+                                            className={`group ${CATEGORY_TILE_CLASS} w-32 ${active ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
                                         >
                                             {/* Faint jacket background */}
                                             {isPerformanceVisuals && (
@@ -1645,7 +1633,8 @@ function SoundtrackContent() {
                                             )}
 
                                             {/* Category Indicator Tag */}
-                                            <span className="relative z-10 type-label-s text-on-surface-variant">
+                                            <span className="relative z-10 flex items-center gap-1.5 type-label-s text-on-surface-variant">
+                                                <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: theme.from }} />
                                                 CAT #{cat.id}
                                             </span>
 
@@ -1666,7 +1655,6 @@ function SoundtrackContent() {
                             <TextField
                                 data-shortcut-search="true"
                                 containerClassName="w-full sm:w-72"
-                                dense
                                 icon={mdSearch}
                                 placeholder={t("page.soundtrack.filters.searchPlaceholder")}
                                 aria-label={t("page.soundtrack.filters.searchPlaceholder")}

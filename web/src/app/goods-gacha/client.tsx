@@ -102,7 +102,6 @@ export default function GachaClient({ pools }: GachaClientProps) {
 
                     {/* Page Header */}
                     <PageHeader
-                        align="center"
                         eyebrow={t("page.goodsGacha.badge")}
                         title={t("page.goodsGacha.title")}
                         highlight={t("page.goodsGacha.titleHighlight")}

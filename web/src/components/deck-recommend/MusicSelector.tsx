@@ -337,7 +337,7 @@ export default function MusicSelector({
             <button
                 type="button"
                 onClick={() => setModalOpen(true)}
-                className="state-layer focus-ring group flex w-full items-center gap-3 rounded-md3-md border border-outline bg-surface-container-lowest p-3 text-left transition-colors hover:border-on-surface"
+                className="state-layer focus-ring group flex w-full items-center gap-3 rounded-md3-md border border-outline bg-surface-container-low p-3 text-left transition-colors hover:border-on-surface"
             >
                 {selectedMusic ? (
                     <>
@@ -434,7 +434,7 @@ export default function MusicSelector({
                                             <div
                                                 key={`${category.key}-${item.music.id}`}
                                                 onClick={() => handleSelect(item.music)}
-                                                className="state-layer cursor-pointer rounded-md3-md border border-outline-variant bg-surface-container-lowest transition-colors hover:border-outline flex items-center gap-3 p-2.5 group"
+                                                className="state-layer cursor-pointer rounded-md3-md border border-outline-variant bg-surface-container-low transition-colors hover:border-outline flex items-center gap-3 p-2.5 group"
                                             >
                                                 {/* Rank Badge */}
                                                 <div

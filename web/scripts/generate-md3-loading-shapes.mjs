@@ -1,0 +1,141 @@
+#!/usr/bin/env node
+/**
+ * M3 Expressive loading indicator → src/styles/md3-loading.css
+ *
+ * The indicator morphs through the spec's rounded shapes (soft burst, 9-sided
+ * cookie, pentagon, pill, sunny, 4-sided cookie, oval) while turning. Each shape
+ * is sampled as a polygon with the same number of points at the same angles, so
+ * CSS can interpolate `clip-path: polygon()` between them; with enough points
+ * the outline reads as a smooth curve rather than the jagged star a 20-point
+ * approximation gives.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const outPath = path.join(webRoot, "src/styles/md3-loading.css");
+
+const POINTS = 72;
+const TAU = Math.PI * 2;
+const angles = Array.from({ length: POINTS }, (_, i) => (i / POINTS) * TAU - Math.PI / 2);
+
+/** Scalloped circle: `lobes` rounded bumps of relative depth `depth`. */
+const scallop = (lobes, depth) => (theta) => 1 + depth * Math.cos(lobes * (theta + Math.PI / 2));
+
+/** Radius along each sample angle of a closed convex outline given as points around the origin. */
+function radialFromOutline(corners) {
+    // Fill straight runs with points too: interpolating the radius across a long
+    // side would bow it outward instead of keeping it straight.
+    const outline = corners.flatMap(([x, y], i) => {
+        const [nx, ny] = corners[(i + 1) % corners.length];
+        return Array.from({ length: 16 }, (_, s) => [x + ((nx - x) * s) / 16, y + ((ny - y) * s) / 16]);
+    });
+    const polar = outline.map(([x, y]) => ({ a: Math.atan2(y, x), r: Math.hypot(x, y) })).sort((p, q) => p.a - q.a);
+    return (theta) => {
+        const a = Math.atan2(Math.sin(theta), Math.cos(theta));
+        let lo = polar[polar.length - 1];
+        let hi = polar[0];
+        for (let i = 0; i < polar.length; i++) {
+            if (polar[i].a >= a) {
+                hi = polar[i];
+                lo = polar[(i - 1 + polar.length) % polar.length];
+                break;
+            }
+        }
+        const span = (hi.a - lo.a + TAU) % TAU || TAU;
+        const t = ((a - lo.a + TAU) % TAU) / span;
+        return lo.r + (hi.r - lo.r) * t;
+    };
+}
+
+/** A convex polygon (vertices around the origin) grown by a circle of `round`: straight sides, round corners. */
+function roundedPolygon(vertices, round) {
+    const outline = [];
+    vertices.forEach(([x, y], i) => {
+        const [px, py] = vertices[(i - 1 + vertices.length) % vertices.length];
+        const [nx, ny] = vertices[(i + 1) % vertices.length];
+        const inAngle = Math.atan2(y - py, x - px) - Math.PI / 2;
+        const outAngle = Math.atan2(ny - y, nx - x) - Math.PI / 2;
+        let sweep = outAngle - inAngle;
+        while (sweep < 0) sweep += TAU;
+        const steps = 48;
+        for (let s = 0; s <= steps; s++) {
+            const a = inAngle + (sweep * s) / steps;
+            outline.push([x + round * Math.cos(a), y + round * Math.sin(a)]);
+        }
+    });
+    return radialFromOutline(outline);
+}
+
+const regular = (sides, radius, rotation = -Math.PI / 2) =>
+    Array.from({ length: sides }, (_, i) => {
+        const a = rotation + (i / sides) * TAU;
+        return [radius * Math.cos(a), radius * Math.sin(a)];
+    });
+
+const rotate = ([x, y], a) => [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)];
+
+/** Ellipse with semi-axes 1 and `ratio`, its long axis turned by `tilt`. */
+const ellipse = (ratio, tilt) => (theta) => {
+    const local = theta - tilt;
+    return 1 / Math.hypot(Math.cos(local), Math.sin(local) / ratio);
+};
+
+// Order and character follow the M3 Expressive indeterminate sequence.
+const SHAPES = {
+    softBurst: scallop(10, 0.12),
+    cookie9: scallop(9, 0.07),
+    pentagon: roundedPolygon(regular(5, 0.78), 0.22),
+    pill: roundedPolygon([rotate([-0.34, 0], Math.PI / 4), rotate([0.34, 0], Math.PI / 4)], 0.56),
+    sunny: scallop(8, 0.09),
+    cookie4: scallop(4, 0.09),
+    oval: ellipse(0.72, -Math.PI / 4),
+};
+
+/** Sample one shape, scaled so its farthest point touches the box edge. */
+function polygon(radius) {
+    const radii = angles.map(radius);
+    const max = Math.max(...radii);
+    const pct = (v) => `${(Math.round(v * 10) / 10).toFixed(1).replace(/\.0$/, "")}%`;
+    return `polygon(${angles
+        .map((theta, i) => {
+            const r = (radii[i] / max) * 50;
+            return `${pct(50 + r * Math.cos(theta))} ${pct(50 + r * Math.sin(theta))}`;
+        })
+        .join(", ")})`;
+}
+
+const names = Object.keys(SHAPES);
+// Two full turns per cycle, spread evenly so the loop closes without a jump.
+const turn = 720 / names.length;
+const frames = [...names, names[0]].map((name, i) => {
+    const at = Math.round((i / names.length) * 10000) / 100;
+    return `    ${at}% {\n        clip-path: ${polygon(SHAPES[name])};\n        transform: rotate(${Math.round(turn * i * 100) / 100}deg);\n    }`;
+});
+
+const css = `/* AUTO-GENERATED by scripts/generate-md3-loading-shapes.mjs — DO NOT EDIT.
+ * M3 Expressive loading indicator: ${names.join(" → ")}, ${POINTS} points per shape.
+ */
+
+@keyframes md3-loading-morph {
+${frames.join("\n")}
+}
+
+.md3-loading-shape {
+    clip-path: ${polygon(SHAPES.softBurst)};
+    /* Each morph settles with the spatial spring before the next one starts. */
+    animation: md3-loading-morph ${(names.length * 0.65).toFixed(2)}s var(--ease-md3-spatial) infinite;
+}
+
+/* Reduced motion: no morphing, just a slow turn of the cookie so progress still shows. */
+@media (prefers-reduced-motion: reduce) {
+    .md3-loading-shape {
+        clip-path: ${polygon(SHAPES.cookie9)};
+        animation: spin 3s linear infinite;
+    }
+}
+`;
+
+fs.writeFileSync(outPath, css);
+console.log(`[md3] wrote ${path.relative(webRoot, outPath)} (${names.length} shapes, ${(css.length / 1024).toFixed(1)} KB)`);

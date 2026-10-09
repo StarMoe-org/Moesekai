@@ -153,7 +153,7 @@ export default function MangaDetailClient() {
                             onKeyDown={(e) => { if (e.key === "Enter") handleJump(); }}
                             placeholder={`${currentManga.id}`}
                             aria-label={t("page.manga.jumpLabel")}
-                            className="h-10 w-16 rounded-md3-xs border border-outline bg-transparent px-2 text-center type-body-m text-on-surface caret-primary outline-none placeholder:text-on-surface-variant focus:border-2 focus:border-primary"
+                            className="h-10 w-16 rounded-md3-md border border-outline bg-transparent px-2 text-center type-body-m text-on-surface caret-primary outline-none placeholder:text-on-surface-variant focus:border-2 focus:border-primary"
                         />
                         <IconButton variant="tonal" icon={mdArrowForward} label={t("page.manga.jumpLabel")} onClick={handleJump} />
                     </div>

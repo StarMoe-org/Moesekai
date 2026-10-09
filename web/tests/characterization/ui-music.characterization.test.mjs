@@ -210,7 +210,7 @@ test("MusicItem keeps localized default links and translation precedence", () =>
   assert.match(item, /const itemHref = href \?\? `\$\{hrefBase\}\/\$\{music\.id\}`/);
   assert.match(item, /translateMasterText\("music", "title", music\.title\) \?\? \(useLLMTranslation \? indexedTitle : undefined\)/);
   assert.match(item, /\{music\.title\}[\s\S]*\{translatedTitle &&/);
-  assert.match(item, /<p className="type-body-s text-on-surface-variant mt-1">\s*\{music\.composer\}/, "composer credit must use secondary semantic text");
+  assert.match(item, /<p className="type-body-s text-on-surface-variant mt-1[^"]*">\s*\{music\.composer\}/, "composer credit must use secondary semantic text");
 });
 
 test("music list/detail preserve responsive layouts and use light/dark semantic colors", () => {
@@ -234,8 +234,8 @@ test("music list/detail preserve responsive layouts and use light/dark semantic 
   assert.match(filters, /className=\{getFilterChipStateClasses\(isSelected\)\}/);
   assert.match(filters, /className=\{`!p-1\.5 \$\{getFilterIconStateClasses\(isSelected\)\}`\}/);
   const baseFilters = readWeb("src/components/common/BaseFilters.tsx");
-  assert.ok(baseFilters.includes('border-transparent bg-secondary-container text-on-secondary-container'), "selected filter chips retain a distinct theme-aware state");
-  assert.ok(baseFilters.includes('border-outline-variant bg-transparent text-on-surface-variant'), "unselected filter chips retain theme-aware text and outlines");
+  assert.ok(baseFilters.includes('border-transparent bg-primary-container text-on-primary-container'), "selected filter chips retain a distinct theme-aware state");
+  assert.ok(baseFilters.includes('border-transparent bg-surface-container-high text-on-surface'), "unselected filter chips are filled with a neutral container, not outlined");
 
   // Dark mode now comes from the shared roles rather than per-component dark: classes.
   const tokens = readWeb("src/styles/md3-tokens.css");

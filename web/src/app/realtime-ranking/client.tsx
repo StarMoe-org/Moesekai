@@ -963,6 +963,7 @@ function RealtimeRankingContent() {
                     scopeLabel={activeScopeLabel}
                     totalEntries={activeSnapshot?.entries.length ?? 0}
                     isRefreshing={isRefreshing}
+                    syncFailed={!!error}
                     showChurn={shouldShowChurnToggle ? showChurn : false}
                     onShowChurnChange={(v) => {
                         setShowChurn(v);

@@ -49,27 +49,34 @@ function RegionArtwork({ server }: { server: ServerType }) {
         case "jp":
             return <><rect width="100" height="100" fill="#fff" /><circle cx="50" cy="50" r="25" fill="#bc002d" /></>;
         case "en":
-            // Simplified artwork fills the disc and remains legible at 16–20px.
+            // The global server serves no single country: a globe, not a flag.
+            // Strokes of 5 units stay one pixel wide at 20px.
             return <>
-                <rect width="100" height="100" fill="#fff" />
-                <path d="M0 0h100v14H0zm0 28h100v14H0zm0 28h100v14H0zm0 28h100v16H0z" fill="#b22234" />
-                <rect width="54" height="56" fill="#3c3b6e" />
-                <g fill="#fff"><Star x={30} y={30} radius={16} /></g>
+                <rect width="100" height="100" fill="#1f5fbf" />
+                <g fill="none" stroke="#fff" strokeWidth="5">
+                    <circle cx="50" cy="50" r="33" />
+                    <ellipse cx="50" cy="50" rx="14" ry="33" />
+                    <path d="M17 50H83M21.7 33H78.3M21.7 67H78.3" />
+                </g>
             </>;
         case "kr":
+            // Scaled so the flag's height spans the disc, as the other flags do: the
+            // taegeuk fills half of it and the trigrams' outer corners run off the edge.
             return <>
                 <rect width="100" height="100" fill="#fff" />
-                <g transform="rotate(33.69 50 50)">
-                    <circle cx="50" cy="50" r="16" fill="#0047a0" />
-                    <path d="M34 50a16 16 0 0 1 32 0a8 8 0 0 0-16 0a8 8 0 0 1-16 0" fill="#cd2e3a" />
-                </g>
-                {TRIGRAMS.map(({ name, x, y, rotation, broken }) => (
-                    <g key={name} data-trigram={name} transform={`translate(${x} ${y}) rotate(${rotation})`} fill="#111">
-                        {broken.map((split, row) => split
-                            ? <path key={row} d={`M-8 ${row * 4 - 5.33}h7.33v2.67h-7.33z M.67 ${row * 4 - 5.33}H8v2.67H.67z`} />
-                            : <rect key={row} x="-8" y={row * 4 - 5.33} width="16" height="2.67" />)}
+                <g transform="translate(50 50) scale(1.5) translate(-50 -50)">
+                    <g transform="rotate(33.69 50 50)">
+                        <circle cx="50" cy="50" r="16" fill="#0047a0" />
+                        <path d="M34 50a16 16 0 0 1 32 0a8 8 0 0 0-16 0a8 8 0 0 1-16 0" fill="#cd2e3a" />
                     </g>
-                ))}
+                    {TRIGRAMS.map(({ name, x, y, rotation, broken }) => (
+                        <g key={name} data-trigram={name} transform={`translate(${x} ${y}) rotate(${rotation})`} fill="#111">
+                            {broken.map((split, row) => split
+                                ? <path key={row} d={`M-8 ${row * 4 - 5.33}h7.33v2.67h-7.33z M.67 ${row * 4 - 5.33}H8v2.67H.67z`} />
+                                : <rect key={row} x="-8" y={row * 4 - 5.33} width="16" height="2.67" />)}
+                        </g>
+                    ))}
+                </g>
             </>;
         case "tw":
             // Hong Kong regional flag artwork, used for the HMT display region.

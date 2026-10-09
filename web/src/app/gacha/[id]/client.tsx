@@ -1340,7 +1340,7 @@ export default function GachaDetailClient() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Button href="/gacha" variant="tonal" size="m" icon={mdArrowBack}>
+                    <Button href="/gacha" variant="tonal" size="s" icon={mdArrowBack}>
                         {t("page.gacha.backToList")}
                     </Button>
                 </div>

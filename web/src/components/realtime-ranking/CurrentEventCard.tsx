@@ -81,7 +81,7 @@ export default function CurrentEventCard({ event, assetSource, themeColor }: Cur
                             </div>
                         </>
                     ) : (
-                        <div className="absolute inset-0 bg-primary-container flex items-center justify-center text-on-primary-container/40 type-headline-m">
+                        <div className="absolute inset-0 bg-surface-container-high flex items-center justify-center text-on-surface-variant/60 type-headline-m">
                             NO IMAGE
                         </div>
                     )}

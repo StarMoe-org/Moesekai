@@ -123,13 +123,18 @@
     --radius-md3-xxl: 48px;
     --radius-md3-full: 9999px;
 
-    /* ── Elevation (key + ambient, M3 levels 0–5) ─────────────────── */
+    /* ── Elevation (M3 levels 0–5) ────────────────────────────────────
+       Edge + contact + ambient. The hairline edge keeps a white card crisp on
+       the light page; the contact shadow is tight and faint; the ambient one is
+       offset down and pulled in (negative spread) so the lift reads below the
+       element instead of as a grey halo around it. M3's stock pair (30% + 15%
+       black with positive spread) smudged every card edge. */
     --shadow-elev-0: none;
-    --shadow-elev-1: 0 1px 2px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 1px 3px 1px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
-    --shadow-elev-2: 0 1px 2px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 2px 6px 2px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
-    --shadow-elev-3: 0 1px 3px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 4px 8px 3px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
-    --shadow-elev-4: 0 2px 3px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 6px 10px 4px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
-    --shadow-elev-5: 0 4px 4px 0 rgb(var(--md-sys-color-shadow-rgb) / 0.3), 0 8px 12px 6px rgb(var(--md-sys-color-shadow-rgb) / 0.15);
+    --shadow-elev-1: 0 0 0 1px var(--md3-shadow-edge), 0 1px 2px 0 rgb(var(--md3-shadow-ink) / 0.06), 0 4px 12px -4px rgb(var(--md3-shadow-ink) / 0.16);
+    --shadow-elev-2: 0 0 0 1px var(--md3-shadow-edge), 0 2px 4px -1px rgb(var(--md3-shadow-ink) / 0.08), 0 10px 22px -8px rgb(var(--md3-shadow-ink) / 0.22);
+    --shadow-elev-3: 0 0 0 1px var(--md3-shadow-edge), 0 4px 8px -2px rgb(var(--md3-shadow-ink) / 0.1), 0 16px 32px -10px rgb(var(--md3-shadow-ink) / 0.22);
+    --shadow-elev-4: 0 0 0 1px var(--md3-shadow-edge), 0 6px 12px -3px rgb(var(--md3-shadow-ink) / 0.1), 0 22px 44px -12px rgb(var(--md3-shadow-ink) / 0.26);
+    --shadow-elev-5: 0 0 0 1px var(--md3-shadow-edge), 0 8px 16px -4px rgb(var(--md3-shadow-ink) / 0.12), 0 30px 60px -14px rgb(var(--md3-shadow-ink) / 0.3);
 
     /* ── Motion ───────────────────────────────────────────────────── */
     --ease-md3-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -149,10 +154,12 @@
     --font-brand: var(--md-ref-typeface-brand);
 
     /* ── Window size classes (M3 breakpoints) ─────────────────────── */
-    --breakpoint-medium: 600px;
-    --breakpoint-expanded: 840px;
-    --breakpoint-large: 1200px;
-    --breakpoint-xlarge: 1600px;
+    /* rem, like Tailwind's sm–2xl: variants are ordered by value only when the
+       units match, so a px breakpoint would sort before `md:` and lose to it. */
+    --breakpoint-medium: 37.5rem;   /* 600px */
+    --breakpoint-expanded: 52.5rem; /* 840px */
+    --breakpoint-large: 75rem;      /* 1200px */
+    --breakpoint-xlarge: 100rem;    /* 1600px */
 }
 
 :root {
@@ -190,11 +197,71 @@
     --md-sys-motion-duration-long1: 450ms;
     --md-sys-motion-duration-long2: 500ms;
 
+    /* Elevation shadow colors: a cool ink that matches the neutral surfaces. */
+    --md3-shadow-ink: 20 26 38;
+    --md3-shadow-edge: rgb(20 26 38 / 0.06);
+
+    /* Glass material (see the `glass` utilities): a translucent tint over a
+       blurred, saturated backdrop, a sheen on its upper part, a bright inner rim
+       and a hairline outer edge. No lensing: only Chromium can refract a
+       backdrop, so every browser gets the same frosted glass. */
+    --md3-glass-tint: rgb(255 255 255 / 0.42);
+    /* App bar capsules once content runs under them: busy art would show through the thin tint. */
+    --md3-glass-tint-raised: rgb(255 255 255 / 0.66);
+    --md3-glass-tint-thick: rgb(255 255 255 / 0.72);
+    --md3-glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.3), rgb(255 255 255 / 0) 30%);
+    /* Selection on glass: the seed itself, thinned so on-surface text stays legible. */
+    --md3-glass-selected: color-mix(in srgb, var(--md-sys-color-primary-container) 55%, transparent);
+    /* Bright top and side rim, a faint shade along the bottom: the edge of a slab, not a sticker. */
+    --md3-glass-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.95), inset 0 0 0 1px rgb(255 255 255 / 0.5), inset 0 -1px 0 0 rgb(20 26 38 / 0.05);
+    --md3-glass-edge: 0 0 0 1px rgb(20 26 38 / 0.09);
+    --md3-glass-lift: 0 2px 6px -2px rgb(20 26 38 / 0.08), 0 14px 36px -14px rgb(20 26 38 / 0.22);
+    --md3-glass-blur: blur(20px) saturate(170%);
+
     color-scheme: light;
 }
 
 :root[data-theme="dark"] {
+    /* Shadows barely show on dark surfaces; a faint light edge carries the lift. */
+    --md3-shadow-ink: 0 0 0;
+    --md3-shadow-edge: rgb(255 255 255 / 0.06);
+
+    --md3-glass-tint: rgb(36 38 42 / 0.58);
+    --md3-glass-tint-raised: rgb(36 38 42 / 0.76);
+    --md3-glass-tint-thick: rgb(30 32 35 / 0.86);
+    --md3-glass-sheen: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0) 36%);
+    --md3-glass-rim: inset 0 1px 0 0 rgb(255 255 255 / 0.14), inset 0 0 0 1px rgb(255 255 255 / 0.06);
+    --md3-glass-edge: 0 0 0 1px rgb(0 0 0 / 0.5);
+    --md3-glass-selected: color-mix(in srgb, var(--md-sys-color-primary-container) 30%, transparent);
+    --md3-glass-lift: 0 16px 40px -14px rgb(0 0 0 / 0.6);
     color-scheme: dark;
+}
+
+/* Blur cost grows with its radius: phones get a lighter one. */
+@media (max-width: 767px), (pointer: coarse) {
+    :root {
+        --md3-glass-blur: blur(14px) saturate(160%);
+    }
+}
+
+/* Solid panes where the backdrop cannot be blurred or the user asked for less transparency. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    :root,
+    :root[data-theme="dark"] {
+        --md3-glass-tint: var(--md-sys-color-surface-card);
+        --md3-glass-tint-raised: var(--md-sys-color-surface-card);
+        --md3-glass-tint-thick: var(--md-sys-color-surface-card);
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    :root,
+    :root[data-theme="dark"] {
+        --md3-glass-tint: var(--md-sys-color-surface-card);
+        --md3-glass-tint-raised: var(--md-sys-color-surface-card);
+        --md3-glass-tint-thick: var(--md-sys-color-surface-card);
+        --md3-glass-blur: none;
+    }
 }
 
 :root[data-ui-locale="ja-JP"] {
@@ -279,6 +346,63 @@
     &[aria-disabled="true"]::before { opacity: 0; }
 }
 
+/* ── Glass material ───────────────────────────────────────────────────
+   For the chrome that floats over content (app bar capsules, navigation and
+   filter panes, floating buttons), never for the content itself. `glass` for
+   panes and controls; `glass-thick` where text sits on it for long (modal
+   drawers, sheets). Each sets its own background and shadow: do not add
+   bg-* or shadow-* next to it. */
+@utility glass {
+    background-color: var(--md3-glass-tint);
+    background-image: var(--md3-glass-sheen);
+    -webkit-backdrop-filter: var(--md3-glass-blur);
+    backdrop-filter: var(--md3-glass-blur);
+    box-shadow: var(--md3-glass-rim), var(--md3-glass-edge), var(--md3-glass-lift);
+    --md3-tf-label-bg: var(--md-sys-color-surface-card);
+}
+
+@utility glass-thick {
+    background-color: var(--md3-glass-tint-thick);
+    background-image: var(--md3-glass-sheen);
+    -webkit-backdrop-filter: var(--md3-glass-blur);
+    backdrop-filter: var(--md3-glass-blur);
+    box-shadow: var(--md3-glass-rim), var(--md3-glass-edge), var(--md3-glass-lift);
+    --md3-tf-label-bg: var(--md-sys-color-surface-card);
+}
+
+/* Selected item on a glass pane (the pale secondary-container vanishes on it). */
+@utility glass-selected {
+    background-color: var(--md3-glass-selected);
+}
+
+/* Scroll edge: content scrolling under a transparent app bar fades into the
+   page instead of meeting a hard bar. A gradient, not a blur: it spans the full
+   width and repaints on every scroll frame. Shown while [data-scrolled], when
+   the glass inside also thickens. */
+@utility scroll-edge {
+    &[data-scrolled="true"] {
+        --md3-glass-tint: var(--md3-glass-tint-raised);
+    }
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0 0 -1.5rem;
+        z-index: -1;
+        pointer-events: none;
+        background: linear-gradient(
+            to bottom,
+            color-mix(in srgb, var(--md-sys-color-surface) 60%, transparent),
+            color-mix(in srgb, var(--md-sys-color-surface) 30%, transparent) 60%,
+            transparent
+        );
+        opacity: 0;
+        transition: opacity var(--md-sys-motion-duration-medium1) var(--ease-md3-standard);
+    }
+    &[data-scrolled="true"]::before {
+        opacity: 1;
+    }
+}
+
 /* Focus indicator: 3px secondary outline, offset 2px (M3 focus ring). */
 @utility focus-ring {
     &:focus-visible {
@@ -324,44 +448,9 @@
     animation: md3-linear-indeterminate 1.6s var(--ease-md3-standard) infinite;
 }
 
-/* M3 Expressive loading indicator: morphs soft-burst → cookie → pentagon → pill → sunny → oval
-   (polygon approximations with equal vertex counts so clip-path can interpolate). */
-@keyframes md3-loading-morph {
-    0% {
-        clip-path: polygon(50% 0%, 61% 15%, 79% 10%, 82% 28%, 100% 34%, 90% 50%, 100% 66%, 82% 72%, 79% 90%, 61% 85%, 50% 100%, 39% 85%, 21% 90%, 18% 72%, 0% 66%, 10% 50%, 0% 34%, 18% 28%, 21% 10%, 39% 15%);
-        transform: rotate(0deg);
-    }
-    20% {
-        clip-path: polygon(50% 2%, 66% 6%, 80% 14%, 92% 27%, 98% 42%, 98% 58%, 92% 73%, 80% 86%, 66% 94%, 50% 98%, 34% 94%, 20% 86%, 8% 73%, 2% 58%, 2% 42%, 8% 27%, 20% 14%, 34% 6%, 42% 4%, 46% 3%);
-        transform: rotate(90deg);
-    }
-    40% {
-        clip-path: polygon(50% 0%, 63% 9%, 76% 18%, 88% 27%, 100% 38%, 95% 53%, 90% 69%, 85% 84%, 80% 100%, 65% 100%, 50% 100%, 35% 100%, 20% 100%, 15% 84%, 10% 69%, 5% 53%, 0% 38%, 12% 27%, 24% 18%, 37% 9%);
-        transform: rotate(180deg);
-    }
-    60% {
-        clip-path: polygon(30% 0%, 70% 0%, 85% 3%, 96% 12%, 100% 25%, 100% 50%, 100% 75%, 96% 88%, 85% 97%, 70% 100%, 30% 100%, 15% 97%, 4% 88%, 0% 75%, 0% 50%, 0% 25%, 4% 12%, 15% 3%, 22% 1%, 26% 0%);
-        transform: rotate(270deg);
-    }
-    80% {
-        clip-path: polygon(50% 0%, 63% 10%, 79% 10%, 84% 25%, 98% 35%, 92% 50%, 98% 65%, 84% 75%, 79% 90%, 63% 90%, 50% 100%, 37% 90%, 21% 90%, 16% 75%, 2% 65%, 8% 50%, 2% 35%, 16% 25%, 21% 10%, 37% 10%);
-        transform: rotate(360deg);
-    }
-    100% {
-        clip-path: polygon(50% 0%, 61% 15%, 79% 10%, 82% 28%, 100% 34%, 90% 50%, 100% 66%, 82% 72%, 79% 90%, 61% 85%, 50% 100%, 39% 85%, 21% 90%, 18% 72%, 0% 66%, 10% 50%, 0% 34%, 18% 28%, 21% 10%, 39% 15%);
-        transform: rotate(450deg);
-    }
-}
-
-.md3-loading-shape {
-    animation: md3-loading-morph 2.8s var(--ease-md3-spatial) infinite;
-}
+/* M3 Expressive loading indicator: generated into md3-loading.css. */
 
 @media (prefers-reduced-motion: reduce) {
-    .md3-loading-shape {
-        animation: spin 1.6s linear infinite;
-        clip-path: circle(45%);
-    }
     .md3-linear-indeterminate {
         animation-duration: 3s;
     }

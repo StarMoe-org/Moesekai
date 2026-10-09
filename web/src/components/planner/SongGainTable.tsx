@@ -4,6 +4,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import CollapsibleBlock from "./CollapsibleBlock";
 import { Button, Icon } from "@/components/md3";
 import { mdKeyboardArrowDown } from "@/components/md3/icons";
+import { difficultyFillStyle } from "@/types/music";
 
 export interface SongGainView {
     key: string;
@@ -27,14 +28,6 @@ interface SongGainTableProps {
     limit?: number;
 }
 
-export const DIFFICULTY_BADGE_COLORS: Record<string, string> = {
-    easy: "bg-surface-container-high text-on-surface",
-    normal: "bg-secondary-container text-on-secondary-container",
-    hard: "bg-tertiary-container text-on-tertiary-container",
-    expert: "bg-error-container text-on-error-container",
-    master: "bg-tertiary text-on-tertiary",
-    append: "bg-error text-on-error",
-};
 
 /** Splits off the last word (a trailing Latin/digit run, else the last character) so the sort arrow can stay on its line. */
 function splitLastWord(label: string): [string, string] {
@@ -125,7 +118,7 @@ export default function SongGainTable({ rows, selectedKey, onUse, limit = 10 }: 
                                             <div className={`truncate type-body-s ${selected ? "text-on-secondary-container" : "text-on-surface-variant"}`} title={row.subtitle}>{row.subtitle}</div>
                                         )}
                                         <div className="mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                            <span className={`px-1.5 py-0.5 rounded-md3-xs type-label-s uppercase ${DIFFICULTY_BADGE_COLORS[row.difficulty] ?? "bg-surface-container-high text-on-surface"}`}>
+                                            <span className="px-1.5 py-0.5 rounded-md3-xs type-label-s uppercase bg-surface-container-high text-on-surface" style={difficultyFillStyle(row.difficulty)}>
                                                 {row.difficulty}
                                             </span>
                                             {!selected && (

@@ -152,7 +152,7 @@ export default function PatreonPage() {
                     <section className="space-y-4 pt-8 border-t border-outline-variant mb-8">
                         <h2 className="mb-2 type-headline-s text-on-surface">赞助</h2>
 
-                        <p className="mb-6 rounded-md3-md bg-primary-container p-4 text-on-primary-container">
+                        <p className="mb-6 rounded-md3-md bg-secondary-container p-4 text-on-secondary-container">
                             <strong className="font-medium">附言：</strong>赞助时请附言你的<strong>个人ID</strong>，以便于 moesekai 将你加入我们的感谢名单中！
                         </p>
 
@@ -215,7 +215,7 @@ export default function PatreonPage() {
 
                         <div className="mt-12 pt-8 border-t border-outline-variant">
                             <h3 className="mb-4 type-title-l text-on-surface">你也可以以其它形式支持我们</h3>
-                            <p className="rounded-md3-md bg-primary-container p-4 text-on-primary-container">
+                            <p className="rounded-md3-md bg-secondary-container p-4 text-on-secondary-container">
                                 <strong className="font-medium">服务器赞助：</strong>如果你有服务器愿意低于市场价租赁/免费赞助我们 也可以联系我们！
                                 <br />
                                 <span className="mt-1 block type-body-m">moesekai目前的需求：存储≈带宽＞内存/核心</span>

@@ -453,12 +453,20 @@ export default function EventDetailPage() {
                                     className="relative aspect-[16/9] bg-surface-container cursor-zoom-in group"
                                     onClick={() => setImageViewerOpen(true)}
                                 >
+                                    {/* Letterboxed and transparent assets sit on the dimmed event background
+                                        instead of a grey band, the way the game itself presents them. */}
+                                    {effectiveTab !== "banner" && (
+                                        <>
+                                            <Image src={bannerUrl} alt="" fill className="object-cover" unoptimized />
+                                            <div className="absolute inset-0 bg-scrim/40" />
+                                        </>
+                                    )}
                                     {effectiveTab === "event_story_banner" && (
                                         <Image
                                             src={eventStoryBannerUrl}
                                             alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.event_story_banner") })}
                                             fill
-                                            className="object-contain"
+                                            className="object-contain p-4 sm:p-6 drop-shadow-xl"
                                             unoptimized
                                             priority
                                         />
@@ -468,7 +476,7 @@ export default function EventDetailPage() {
                                             src={logoUrl}
                                             alt={t("page.events.imageDetailAlt", { name: event.name, tab: t("page.events.imageTabs.logo") })}
                                             fill
-                                            className="object-contain p-6"
+                                            className="object-contain p-6 drop-shadow-xl"
                                             unoptimized
                                             priority
                                         />
@@ -491,7 +499,7 @@ export default function EventDetailPage() {
                                             unoptimized
                                         />
                                     )}
-                                    <div className="absolute bottom-3 right-3 z-10 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                    <div className="absolute bottom-2 right-2 z-10 flex items-center gap-1 rounded-full bg-inverse-surface/70 py-1 pl-1.5 pr-2.5 type-label-s text-inverse-on-surface transition-opacity duration-200 [@media(hover:hover)]:opacity-0 group-hover:opacity-100">
                                         <Icon path={mdZoomIn} size={16} />
                                         {t("page.events.clickExpand")}
                                     </div>
@@ -722,7 +730,7 @@ export default function EventDetailPage() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Button href="/events" variant="tonal" size="m" icon={mdArrowBack}>
+                    <Button href="/events" variant="tonal" size="s" icon={mdArrowBack}>
                         {t("page.events.backToList")}
                     </Button>
                 </div>

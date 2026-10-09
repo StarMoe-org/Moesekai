@@ -1,7 +1,7 @@
 "use client";
 import React from "react";
 import LocalizedLink from "@/components/LocalizedLink";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 
 /* ==========================================================================
@@ -9,6 +9,9 @@ import { Icon } from "./Icon";
    - Button: filled | tonal | outlined | text | elevated
    - Sizes: xs (32) | s (40, default) | m (56) | l (96) | xl (136)
    - Shape: round (default) | square; pressed state morphs the corner radius.
+     Only buttons with a container morph: on a text button or a standard icon
+     button the only thing showing the shape is the pressed state layer, which
+     would turn into a grey square on a round button.
    ========================================================================== */
 
 export type ButtonVariant = "filled" | "tonal" | "outlined" | "text" | "elevated";
@@ -61,7 +64,7 @@ function variantClass(variant: ButtonVariant, color: ButtonColor, selected?: boo
             return cn(tonal[color], "hover:shadow-elev-1 active:shadow-none");
         case "outlined":
             if (selected === true) return "bg-inverse-surface text-inverse-on-surface";
-            return cn("border border-outline-variant bg-transparent", color === "primary" ? "text-on-surface-variant" : text[color]);
+            return cn("border border-outline bg-transparent", color === "primary" ? "text-on-surface" : text[color]);
         case "elevated":
             if (selected === true) return filled[color];
             return cn("bg-surface-container-low shadow-elev-1 hover:shadow-elev-2", text[color]);
@@ -111,7 +114,7 @@ export function buttonClassName({
         BASE,
         s.box,
         shapeClass,
-        !disabled && s.pressed,
+        !disabled && variant !== "text" && s.pressed,
         variantClass(variant, color, selected),
         fullWidth && "w-full",
         disabled && (variant === "text" || variant === "outlined" ? DISABLED_BARE : DISABLED),
@@ -138,7 +141,7 @@ export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(function 
     },
     ref,
 ) {
-    const cls = cn(buttonClassName({ variant, size, shape, color, selected, fullWidth, disabled }), className);
+    const cls = withOverrides(buttonClassName({ variant, size, shape, color, selected, fullWidth, disabled }), className);
     const iconSize = SIZE[size].icon;
     const content = (
         <>
@@ -238,13 +241,13 @@ export const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(f
     const s = ICON_SIZE[size];
     // A selected toggle has the other shape: round becomes square, square becomes round.
     const square = selected ? shape === "round" : shape === "square";
-    const cls = cn(
+    const cls = withOverrides(
         BASE,
         "shrink-0 p-0",
         s.h,
         s.w[width],
         square ? s.square : SIZE[size].round,
-        !disabled && "active:rounded-md3-sm",
+        !disabled && variant !== "standard" && "active:rounded-md3-sm",
         iconVariantClass(variant, selected),
         disabled && (variant === "standard" ? "opacity-38 pointer-events-none" : variant === "outlined" ? DISABLED_BARE : DISABLED),
         className,
@@ -317,7 +320,7 @@ export const Fab = React.forwardRef<HTMLButtonElement, FabProps>(function Fab(
             type={type}
             aria-label={extended ? undefined : label}
             title={extended ? undefined : label}
-            className={cn(
+            className={withOverrides(
                 BASE,
                 "gap-3",
                 extended ? s.ext : s.box,

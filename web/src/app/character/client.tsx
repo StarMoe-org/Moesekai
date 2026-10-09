@@ -73,7 +73,6 @@ function CharacterListContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.character.badge")}
                 title={t("page.character.title")}
                 highlight={t("page.character.titleHighlight")}

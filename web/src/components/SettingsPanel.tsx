@@ -403,7 +403,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         className="focus-ring group flex cursor-pointer flex-col items-center rounded-md3-md p-1"
                     >
                         <div
-                            className="my-1 h-9 w-32 bg-primary"
+                            className="my-1 h-9 w-32 bg-primary-container"
                             style={{
                                 maskImage: `url(${MOE_LOGO_URL})`,
                                 maskSize: "contain",

@@ -16,15 +16,16 @@ interface FilterTabHandleProps {
 /**
  * Quick-filter entry point — an MD3 Extended FAB anchored bottom-right.
  *
- * Shown whenever the page has registered filters and the filter sheet is not
- * already open (the open sheet carries its own close / collapse button).
+ * Shown when the page has registered filters, the filter sheet is not already
+ * open (the open sheet carries its own close / collapse button) and the sheet
+ * is not docked (a collapsed docked sheet leaves its own rail to reopen from).
  * Collapses to an icon-only FAB while the user is scrolling down, and extends
  * again when scrolling up — the standard M3 extended-FAB behaviour.
  */
 export default function FilterTabHandle(_props: FilterTabHandleProps) {
     const { t } = useI18n();
     const reduced = useReducedMotion();
-    const { hasFilters, isOpen, toggle, filterTitle } = useQuickFilterContext();
+    const { hasFilters, isOpen, isDocked, toggle, filterTitle } = useQuickFilterContext();
     const [extended, setExtended] = useState(true);
 
     useEffect(() => {
@@ -39,7 +40,8 @@ export default function FilterTabHandle(_props: FilterTabHandleProps) {
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
 
-    const isVisible = Boolean(hasFilters && !isOpen);
+    // Docked layouts reopen from the collapsed rail in FilterDrawer instead.
+    const isVisible = Boolean(hasFilters && !isOpen && !isDocked);
     const label = filterTitle || t("common.filter.title");
 
     const handleClick = useCallback(

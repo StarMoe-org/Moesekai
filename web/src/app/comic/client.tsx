@@ -131,7 +131,6 @@ function ComicContent() {
             />
 
             <PageHeader
-                align="center"
                 eyebrow={t("page.comic.badge")}
                 title={t("page.comic.title")}
                 highlight={t("page.comic.titleHighlight")}

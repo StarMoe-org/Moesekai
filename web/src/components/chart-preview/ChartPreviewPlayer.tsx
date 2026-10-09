@@ -1892,7 +1892,7 @@ export default function ChartPreviewPlayer({
                                             aria-pressed={renderScale === opt.value}
                                             onClick={() => handleRenderScaleChange(opt.value)}
                                             className={`state-layer focus-ring rounded-full px-2 py-0.5 type-label-m transition-colors duration-150 ease-md3-standard ${renderScale === opt.value
-                                                ? "bg-primary text-on-primary"
+                                                ? "bg-primary-container text-on-primary-container"
                                                 : "text-on-surface-variant"
                                                 }`}
                                         >

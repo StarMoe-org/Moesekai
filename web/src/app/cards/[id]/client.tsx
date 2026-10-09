@@ -400,7 +400,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
             <PageContainer>
                 {/* Header Section */}
                 <div className="mb-8">
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-2">
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-2">
                         <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high rounded-md3-sm type-label-m font-mono text-on-surface-variant w-fit">
                             ID: {card.id}
                         </span>
@@ -485,7 +485,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                         <div className="px-4 py-2 border-b border-outline-variant">
                                             <span className="type-title-s text-on-surface-variant">{t("page.cards.viewNormal")}</span>
                                         </div>
-                                        <div className="relative aspect-[2/1] bg-surface-container">
+                                        <div className="relative aspect-[7/4] bg-surface-container">
                                             <Image
                                                 src={getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource)}
                                                 alt={`${card.prefix} - ${t("page.cards.viewNormal")}`}
@@ -503,7 +503,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                         <div className="px-4 py-2 border-b border-outline-variant">
                                             <span className="type-title-s text-on-surface-variant">{t("page.cards.viewTrained")}</span>
                                         </div>
-                                        <div className="relative aspect-[2/1] bg-surface-container">
+                                        <div className="relative aspect-[7/4] bg-surface-container">
                                             <Image
                                                 src={getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource)}
                                                 alt={`${card.prefix} - ${t("page.cards.viewTrained")}`}
@@ -535,7 +535,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
 
                                 {/* Main Image */}
                                 <div
-                                    className="relative aspect-[2/1] bg-surface-container cursor-zoom-in group"
+                                    className="relative aspect-[7/4] bg-surface-container cursor-zoom-in group"
                                     onClick={() => setImageViewerOpen(true)}
                                 >
                                     {/* Loading Spinner (behind image) */}
@@ -558,41 +558,29 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                                     </div>
                                 </div>
 
-                                {/* Thumbnails */}
+                                {/* Thumbnails: only when there are two states to pick between. */}
+                                {trainable && !isBirthday && !cardDefaultTrained && (
                                 <div className="p-4 flex gap-3 justify-center">
-                                    {/* Only show normal thumbnail if card has both images */}
-                                    {!cardDefaultTrained && (
-                                        <div
-                                            className={`relative w-16 h-16 rounded-md3-sm overflow-hidden cursor-pointer ring-2 transition-[box-shadow] duration-150 ${!effectiveShowTrained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"
-                                                }`}
-                                            onClick={() => setShowTrained(false)}
+                                    {[false, true].map((trained) => (
+                                        <button
+                                            key={String(trained)}
+                                            type="button"
+                                            aria-pressed={effectiveShowTrained === trained}
+                                            aria-label={t(trained ? "page.cards.viewTrained" : "page.cards.viewNormal")}
+                                            className={`focus-ring relative w-16 h-16 rounded-md3-sm overflow-hidden ring-2 transition-[box-shadow] duration-150 ${effectiveShowTrained === trained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"}`}
+                                            onClick={() => setShowTrained(trained)}
                                         >
                                             <Image
-                                                src={getCardThumbnailUrl(card.characterId, card.assetbundleName, false, assetSource)}
-                                                alt="Normal"
+                                                src={getCardThumbnailUrl(card.characterId, card.assetbundleName, trained, assetSource)}
+                                                alt=""
                                                 fill
                                                 className="object-cover"
                                                 unoptimized
                                             />
-                                        </div>
-                                    )}
-                                    {/* Show trained thumbnail for trainable cards or default-trained cards */}
-                                    {(cardDefaultTrained || (trainable && !isBirthday)) && (
-                                        <div
-                                            className={`relative w-16 h-16 rounded-md3-sm overflow-hidden cursor-pointer ring-2 transition-[box-shadow] duration-150 ${effectiveShowTrained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"
-                                                }`}
-                                            onClick={() => !cardDefaultTrained && setShowTrained(true)}
-                                        >
-                                            <Image
-                                                src={getCardThumbnailUrl(card.characterId, card.assetbundleName, true, assetSource)}
-                                                alt="Trained"
-                                                fill
-                                                className="object-cover"
-                                                unoptimized
-                                            />
-                                        </div>
-                                    )}
+                                        </button>
+                                    ))}
                                 </div>
+                                )}
                             </div>
                         )}
                     </div>
@@ -1235,7 +1223,7 @@ function CostumeInlineDetail({ costume, assetSource }: { costume: ICostumeInfo, 
                                     key={variant.colorId}
                                     onClick={() => setSelectedColorId(variant.colorId)}
                                     className={`state-layer focus-ring flex items-center gap-1.5 pl-1 pr-2.5 h-8 rounded-md3-sm type-label-m transition-colors whitespace-nowrap border ${isSelected
-                                        ? "bg-secondary-container text-on-secondary-container border-transparent"
+                                        ? "bg-primary-container text-on-primary-container border-transparent"
                                         : "text-on-surface-variant border-outline-variant"
                                         }`}
                                 >

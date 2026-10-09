@@ -231,7 +231,7 @@ export default function DataOverridePanel({
                         onClick={() => setSubSection(tab.key)}
                         className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all flex items-center gap-1.5 whitespace-nowrap ${
                             subSection === tab.key
-                                ? "bg-secondary-container text-on-secondary-container type-emphasized"
+                                ? "bg-primary-container text-on-primary-container type-emphasized"
                                 : "bg-surface-container-high text-on-surface-variant state-layer"
                         }`}
                     >

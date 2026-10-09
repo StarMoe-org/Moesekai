@@ -198,8 +198,8 @@ export default function CostumeFilters({
                 </FilterSection>
             </div>
 
-            {/* Rarity & Gender */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Rarity & Gender: stacked, the filter sheet is too narrow for two columns of chips. */}
+            <div className="space-y-5">
                 <FilterSection label={t("page.costumes.sectionLabel.rarity")}>
                     <div className="flex flex-wrap gap-2">
                         {RARITY_IDS.map((key) => (

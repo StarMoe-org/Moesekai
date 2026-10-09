@@ -422,6 +422,8 @@ export const zhCNMessages = {
             cheerful_carnival: "欢乐嘉年华",
             connect_live: "联动Live",
             streaming: "串流",
+            virtual_message: "留言",
+            solo_virtual_live: "个人Live",
         },
         field: {
             name: "名称",
@@ -579,6 +581,10 @@ export const zhCNMessages = {
                 main_story: "主线剧情",
                 challenge_live: "挑战Live",
                 virtual_live: "虚拟Live",
+                character: "角色",
+                limitevent: "限定活动",
+                limitevent_v2: "应援祭",
+                sekai_echo: "SEKAI ECHO",
             },
         },
         virtualSingerWithUnit: "虚拟歌手（{unit}）",
@@ -916,7 +922,7 @@ export const zhCNMessages = {
         designSystem: {
             badge: "Material 3 Expressive · 动态配色",
             title: "设计系统与组件库",
-            intro: "本站 UI 基于 Material 3 Expressive。所有颜色都来自以角色主题色为种子生成的动态配色，组件统一使用 components/md3 原语。",
+            intro: "本站 UI 基于 Material 3 Expressive。页面与卡片使用固定的中性灰，强调色取自当前主题角色的原色，组件统一使用 components/md3 原语。",
             seedTitle: "种子颜色",
             seedHint: "切换角色即可预览对应的整套配色（与设置中的主题角色同步）。",
             colorsTitle: "色彩角色",
@@ -1311,6 +1317,7 @@ export const zhCNMessages = {
             currentEvent: {
                 loadFailedTitle: "加载活动失败",
                 noActiveEvent: "暂无进行中的活动",
+                progress: "活动进度",
             },
             latestCards: {
                 loadFailedTitle: "加载卡牌失败",
@@ -2369,7 +2376,7 @@ export const zhCNMessages = {
             notFoundDesc: "请确认演唱会 ID 是否正确。若该演唱会为最新实装，可以尝试前往「设置」切换或刷新外部数据服务器。",
         },
         materials: {
-            badge: "Materials Database",
+            badge: "持有物数据库",
             title: "持有物",
             titleHighlight: "图鉴",
             description: "浏览 Project SEKAI 普通持有物与 MySekai 持有物",
@@ -2412,7 +2419,7 @@ export const zhCNMessages = {
             loadingFallback: "正在加载持有物数据...",
         },
         exchanges: {
-            badge: "Exchange Database",
+            badge: "兑换所数据库",
             title: "兑换所",
             titleHighlight: "图鉴",
             description: "浏览 Project SEKAI 各类兑换所条目，查看兑换成本、奖励内容与开放状态。",
@@ -2516,7 +2523,7 @@ export const zhCNMessages = {
             loadingFallback: "正在加载称号数据...",
         },
         soundtrack: {
-            badge: "OST PLAYER",
+            badge: "原声播放器",
             title: "游戏",
             titleHighlight: "原声带",
             description: "收录 Project Sekai 中的所有背景音乐（BGM）",
@@ -2975,6 +2982,7 @@ export const zhCNMessages = {
             totalEntries: "共 {count} 条榜线",
             refreshing: "刷新中...",
             synced: "已同步",
+            syncFailed: "同步失败",
             updatedAt: "更新于 {time}",
             loading: "正在加载实时排行榜...",
             loadFailedTitle: "加载失败",
@@ -3067,7 +3075,7 @@ export const zhCNMessages = {
             celebrationKofi: "海外赞助 / Ko-fi Support",
         },
         deckRecommend: {
-            badge: "DECK RECOMMEND",
+            badge: "组卡工具",
             title: "组卡",
             titleHighlight: "推荐",
             description: "选择账号、数据服务器、模式与歌曲参数，获取（尽可能）最优活动卡组推荐。",
@@ -3405,7 +3413,7 @@ export const zhCNMessages = {
             wl3GroupTitle: "第{group}组",
         },
         deckComparator: {
-            badge: "Deck Comparator",
+            badge: "组卡工具",
             title: "组卡",
             titleHighlight: "比较器",
             description: "多人 Live PT 简易计算器，快速比较不同歌曲和配置的得分差异",
@@ -3486,7 +3494,7 @@ export const zhCNMessages = {
             },
         },
         scoreControl: {
-            badge: "Score Control",
+            badge: "控分工具",
             title: "控分",
             titleHighlight: "计算器",
             description: "输入目标活动 PT，智能规划放置路线",
@@ -3627,7 +3635,7 @@ export const zhCNMessages = {
         profile: {
             metadataTitle: "My Profile",
             metadataDescription: "Moesekai user profile and connected account management",
-            badge: "My Profile",
+            badge: "个人主页",
             title: "我的",
             titleHighlight: "主页",
             description: "管理你的游戏账号，所有数据仅保存在浏览器本地",
@@ -3654,9 +3662,28 @@ export const zhCNMessages = {
             clearAllData: "清除所有数据",
             clearAllConfirm: "确定要清除所有账号吗？",
             confirmClear: "确认清除",
+            hero: {
+                rank: "等级",
+                switchAccount: "切换账号",
+            },
+            deck: {
+                title: "当前卡组",
+                leader: "队长",
+                level: "Lv.{level}",
+                empty: "暂无卡组数据",
+            },
+            music: {
+                title: "乐曲通关状况",
+                chartCount: "共 {count} 首",
+                clear: "CLEAR",
+                fullCombo: "FULL COMBO",
+                allPerfect: "ALL PERFECT",
+                unavailable: "暂时无法获取乐曲数据",
+                viewAll: "查看全部",
+            },
             stats: {
-                overview: "总览",
                 characterRank: "角色等级",
+                rankTotal: "合计 {value}",
                 bondRank: "羁绊等级",
                 challengeRank: "挑战等级",
                 powerBonus: "加成信息",
@@ -3674,7 +3701,6 @@ export const zhCNMessages = {
                 loadingChallengeDetails: "正在加载挑战详情...",
                 noChallengeData: "暂无挑战数据",
                 challengeDetailLoadFailed: "挑战详情加载失败，请稍后重试",
-                chartLevelTooltip: "{name}<br/>等级: <b>{value}</b>",
                 total: "总计",
                 allCharacters: "全部角色",
                 highScore: "最高分",
@@ -3715,7 +3741,7 @@ export const zhCNMessages = {
         myCards: {
             metadataTitle: "Card Progress",
             metadataDescription: "Track your Project Sekai card collection progress",
-            badge: "Card Progress",
+            badge: "个人数据",
             title: "卡牌",
             titleHighlight: "进度",
             description: "查看你的卡牌收集进度和详细信息",
@@ -3729,7 +3755,7 @@ export const zhCNMessages = {
         myMusics: {
             metadataTitle: "Music Progress",
             metadataDescription: "Track your Project Sekai song play progress",
-            badge: "Music Progress",
+            badge: "个人数据",
             title: "歌曲",
             titleHighlight: "进度",
             description: "查看你的歌曲完成进度和成绩",
@@ -3745,7 +3771,7 @@ export const zhCNMessages = {
         myMaterials: {
             metadataTitle: "Resource Inventory",
             metadataDescription: "Check your Project Sekai resources and materials",
-            badge: "Materials",
+            badge: "个人数据",
             title: "资源",
             titleHighlight: "查询",
             description: "查看你拥有的材料与资源",
@@ -3964,7 +3990,7 @@ export const zhCNMessages = {
             },
         },
         stickerMaker: {
-            badge: "Creativity Tool",
+            badge: "创意工具",
             title: "表情包",
             titleHighlight: "制作器",
             description: "选择角色，输入文字，制作你的专属 Sekai 表情包",
@@ -4016,7 +4042,7 @@ export const zhCNMessages = {
             },
         },
         goodsGacha: {
-            badge: "Entertainment Tool",
+            badge: "娱乐工具",
             title: "谷子",
             titleHighlight: "盲抽模拟",
             description: "选择卡池，消耗运气，试试你的手气吧！",
@@ -4045,7 +4071,7 @@ export const zhCNMessages = {
             },
         },
         guessWho: {
-            badge: "Creativity Game",
+            badge: "趣味游戏",
             title: "我是谁",
             description: "通过随机裁剪的卡面猜测角色",
             metadataTitle: "Guess Who",
@@ -4095,6 +4121,7 @@ export const zhCNMessages = {
             },
             single: {
                 multiplayerMode: "联机对战模式 beta",
+                seedSetting: "随机种子",
                 regenerateSeed: "重新生成",
                 share: "分享",
                 shareCopied: "链接已复制！分享给好友来挑战吧",
@@ -4388,6 +4415,8 @@ export const zhCNMessages = {
                 shadow: "阴影",
                 keyboardHint: "自由视角：WASD 移动，鼠标拖动/Alt 锁定转向，F10 全屏，F8 切换场景；固定视角保留旋转 / 平移 / 缩放。",
                 loadingOverlayTitle: "烤森预览加载中",
+                webglUnavailableTitle: "无法显示 3D 预览",
+                webglUnavailableMessage: "浏览器没能创建 WebGL 画布。请在浏览器设置里开启硬件加速（或换一个支持 WebGL 的浏览器），然后刷新页面。",
                 completed: "已完成",
                 ignored: "正常忽略",
                 failed: "失败",
@@ -4467,7 +4496,7 @@ export const zhCNMessages = {
             title: "谱面",
             titleHighlight: "预览器",
             description: "PJSK 3D 谱面预览 · 选择歌曲或输入自定义 URL",
-            metadataTitle: "Chart Previewer",
+            metadataTitle: "谱面预览器",
             metadataDescription: "MikuMikuWorld-style 3D chart previewer with song selection or custom SUS/BGM URLs",
             loading: "加载中…",
             backPrevious: "上一级",
@@ -4541,7 +4570,7 @@ export const zhCNMessages = {
             },
         },
         guessJacket: {
-            badge: "Creativity Game",
+            badge: "趣味游戏",
             title: "猜曲绘",
             description: "通过歌曲封面局部猜测曲名，可自定义选项数量",
             metadataTitle: "Guess Jacket",
@@ -4598,6 +4627,7 @@ export const zhCNMessages = {
             },
             single: {
                 multiplayerMode: "联机对战模式 beta",
+                seedSetting: "随机种子",
                 regenerateSeed: "重新生成",
                 share: "分享",
                 shareCopied: "链接已复制！分享给好友挑战同一题组吧",
@@ -4818,7 +4848,7 @@ export const zhCNMessages = {
             descriptionPrefix: "浏览与检索各地区服的静态资源文件，使用前请阅读并同意",
             descriptionLink: "用户协议",
             descriptionSuffix: "。",
-            badge: "ASSETS",
+            badge: "游戏资源",
             serverSelect: "选择服务器",
             searchPlaceholder: "在当前目录搜索文件名...",
             countUnit: "个项目",
@@ -4873,7 +4903,7 @@ export const zhCNMessages = {
         assetVersions: {
             title: "版本更新记录",
             titleHighlight: "Changelog",
-            badge: "VERSIONS",
+            badge: "资源版本",
             descriptionPrefix: "追踪各服务器资源版本的更新历史，点击版本查看该次更新的文件变更明细。使用前请阅读并同意",
             descriptionLink: "用户协议",
             descriptionSuffix: "。",

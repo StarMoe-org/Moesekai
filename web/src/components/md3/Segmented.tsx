@@ -1,16 +1,27 @@
 "use client";
 import React, { useLayoutEffect, useRef, useState } from "react";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck } from "./icons";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
 
 /* ==========================================================================
-   SegmentedButton (M3): 2–5 options, single or multi select, 40px tall.
+   SegmentedButton: 2–5 options, single or multi select. A 40px neutral track
+   whose selected segments fill with the spotlight color, sized like the chips.
    ConnectedButtonGroup (M3 Expressive): adjacent toggle buttons 2 apart
    whose inner corners are 8, 4 while pressed; the selected item morphs to a
    full pill.
    ========================================================================== */
+
+/**
+ * Both groups fill their row unless the caller sizes them. A sized group is
+ * laid out as equal `1fr` grid columns: that sizes every segment to the
+ * widest label, checkmark included. Shrink-to-fit flex would split the summed
+ * label widths evenly and truncate the selected segment.
+ */
+function segmentLayout(className: string | undefined, fill: string) {
+    return /(^|\s)w-(?!full(\s|$))/.test(className ?? "") ? "inline-grid grid-flow-col auto-cols-fr" : fill;
+}
 
 export interface SegmentOption<T extends string = string> {
     value: T;
@@ -22,9 +33,11 @@ export interface SegmentOption<T extends string = string> {
 interface SegmentedBaseProps<T extends string> {
     options: ReadonlyArray<SegmentOption<T>>;
     className?: string;
-    /** Show checkmark on selected segments (default true). */
+    /** Show a checkmark on selected segments (default false: the filled segment already says it). */
     showCheckmark?: boolean;
     density?: 0 | -1 | -2;
+    /** Icon-only segments (e.g. a grid/list view switch): string labels become the accessible name and tooltip. */
+    iconOnly?: boolean;
     "aria-label"?: string;
 }
 
@@ -51,6 +64,11 @@ const CONNECTED_FULL = {
     [-2]: { all: "rounded-md3-lg", left: "rounded-l-md3-lg", right: "rounded-r-md3-lg" },
 } as const;
 
+// Set on the group, outline included, so a segmented button lines up with a
+// field of the same density. Segments stretch to fill it, and grow with it when
+// a parent stretches the group (e.g. `items-stretch` beside a taller field).
+const SEGMENT_DENSITY = { 0: "min-h-10", [-1]: "min-h-9", [-2]: "min-h-8" } as const;
+
 function moveOptionFocus(e: React.KeyboardEvent<HTMLDivElement>, nodes: HTMLButtonElement[], vertical = false) {
     if (e.defaultPrevented || isKeyboardEventComposing(e.nativeEvent)) return null;
     const keys = vertical ? ["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"] : ["ArrowLeft", "ArrowRight", "Home", "End"];
@@ -75,7 +93,7 @@ function onSegmentKeyDown<T extends string>(e: React.KeyboardEvent<HTMLDivElemen
 }
 
 export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>) {
-    const { options, className, showCheckmark = true, density = 0 } = props;
+    const { options, className, showCheckmark = false, density = 0, iconOnly = false } = props;
     const isSelected = (v: T) => (props.multiple ? props.value.includes(v) : props.value === v);
     const tabStopValue = options.find((opt) => !opt.disabled && isSelected(opt.value))?.value ?? options.find((opt) => !opt.disabled)?.value;
     const toggle = (v: T) => {
@@ -91,10 +109,11 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
             role={props.multiple ? "group" : "radiogroup"}
             aria-label={props["aria-label"]}
             onKeyDown={(e) => onSegmentKeyDown(e, props)}
-            className={cn("inline-flex w-full overflow-hidden rounded-full border border-outline", className)}
+            className={withOverrides(segmentLayout(className, "inline-flex w-full"), "gap-0.5 rounded-md3-md bg-surface-container-high p-1", SEGMENT_DENSITY[density], className)}
         >
-            {options.map((opt, i) => {
+            {options.map((opt) => {
                 const selected = isSelected(opt.value);
+                const name = iconOnly && typeof opt.label === "string" ? opt.label : undefined;
                 return (
                     <button
                         key={opt.value}
@@ -102,24 +121,31 @@ export function SegmentedButton<T extends string>(props: SegmentedButtonProps<T>
                         role={props.multiple ? undefined : "radio"}
                         aria-checked={props.multiple ? undefined : selected}
                         aria-pressed={props.multiple ? selected : undefined}
+                        aria-label={name}
+                        title={name}
                         disabled={opt.disabled}
                         tabIndex={opt.disabled ? -1 : props.multiple || opt.value === tabStopValue ? 0 : -1}
                         onClick={() => toggle(opt.value)}
                         className={cn(
-                            "state-layer focus-ring relative flex min-w-0 flex-1 items-center justify-center gap-2 px-3 type-label-l",
+                            "state-layer focus-ring relative flex min-w-0 items-center justify-center gap-1.5 rounded-md3-sm type-label-l",
+                            iconOnly ? "w-10 flex-none" : "flex-1 px-3",
                             "cursor-pointer transition-colors duration-150 ease-md3-standard",
-                            DENSITY[density],
-                            i > 0 && "border-l border-outline",
-                            selected ? "bg-secondary-container text-on-secondary-container" : "text-on-surface",
+                            selected ? "bg-primary-container text-on-primary-container" : "text-on-surface-variant hover:text-on-surface",
                             opt.disabled && "pointer-events-none opacity-38",
                         )}
                     >
-                        {selected && showCheckmark ? (
-                            <Icon path={mdCheck} size={18} />
-                        ) : opt.icon ? (
-                            <Icon path={opt.icon} size={18} />
-                        ) : null}
-                        <span className="truncate">{opt.label}</span>
+                        {iconOnly ? (
+                            opt.icon && <Icon path={opt.icon} size={20} />
+                        ) : (
+                            <>
+                                {selected && showCheckmark ? (
+                                    <Icon path={mdCheck} size={18} />
+                                ) : opt.icon ? (
+                                    <Icon path={opt.icon} size={18} />
+                                ) : null}
+                                <span className="truncate">{opt.label}</span>
+                            </>
+                        )}
                     </button>
                 );
             })}
@@ -143,7 +169,7 @@ export function ConnectedButtonGroup<T extends string>(props: SegmentedButtonPro
         }
     };
     return (
-        <div role={props.multiple ? "group" : "radiogroup"} aria-label={props["aria-label"]} onKeyDown={(e) => onSegmentKeyDown(e, props)} className={cn("flex w-full gap-0.5", className)}>
+        <div role={props.multiple ? "group" : "radiogroup"} aria-label={props["aria-label"]} onKeyDown={(e) => onSegmentKeyDown(e, props)} className={withOverrides(segmentLayout(className, "flex w-full"), "gap-0.5", className)}>
             {options.map((opt, i) => {
                 const selected = isSelected(opt.value);
                 const first = i === 0;
@@ -243,7 +269,7 @@ export function Tabs<T extends string>({
     };
 
     return (
-        <div className={cn("relative border-b border-surface-variant", className)}>
+        <div className={withOverrides("relative border-b border-surface-variant", className)}>
             <div
                 ref={listRef}
                 role="tablist"

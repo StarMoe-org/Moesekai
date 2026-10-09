@@ -202,7 +202,6 @@ export default function MysekaiPreviewClient() {
         <MainLayout>
             <PageContainer wide>
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.mysekaiPreview.badges.top")}
                     title={t("page.mysekaiPreview.top.title")}
                     highlight={t("page.mysekaiPreview.top.titleHighlight")}

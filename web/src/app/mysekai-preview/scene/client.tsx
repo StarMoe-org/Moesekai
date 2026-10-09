@@ -477,7 +477,7 @@ export default function MysekaiPreviewSceneClient() {
                                     }}
                                     aria-pressed={jsonSourceMode === item.value}
                                     className={`state-layer focus-ring rounded-md3-lg px-4 py-3 text-left transition-colors ${jsonSourceMode === item.value
-                                        ? "bg-secondary-container text-on-secondary-container"
+                                        ? "bg-primary-container text-on-primary-container"
                                         : "border border-outline-variant text-on-surface-variant"
                                         }`}
                                 >
@@ -494,7 +494,7 @@ export default function MysekaiPreviewSceneClient() {
                                     type="file"
                                     accept=".json,application/json"
                                     onChange={handleLayoutFileChange}
-                                    className="focus-ring w-full rounded-md3-xs border border-dashed border-outline bg-surface-container-lowest px-4 py-3 type-body-m text-on-surface outline-none file:mr-4 file:rounded-full file:border-0 file:bg-secondary-container file:px-4 file:py-2 file:type-label-l file:text-on-secondary-container"
+                                    className="focus-ring w-full rounded-md3-md border border-dashed border-outline bg-surface-container-lowest px-4 py-3 type-body-m text-on-surface outline-none file:mr-4 file:rounded-full file:border-0 file:bg-secondary-container file:px-4 file:py-2 file:type-label-l file:text-on-secondary-container"
                                 />
                                 {layoutFile && (
                                     <p className="mt-2 type-body-s text-on-surface-variant">

@@ -30,7 +30,7 @@ export default function MainFooter() {
                     <div className="lg:col-span-4 space-y-3">
                         <Link href="/" className="focus-ring inline-block rounded-md3-sm" title="MoeSekai">
                             <div
-                                className="h-9 w-[6.2rem] bg-primary sm:h-10 sm:w-[7.2rem]"
+                                className="h-9 w-[6.2rem] bg-primary-container sm:h-10 sm:w-[7.2rem]"
                                 style={{
                                     maskImage: `url(${MOE_LOGO_URL})`,
                                     maskSize: "contain",

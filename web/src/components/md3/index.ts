@@ -7,7 +7,7 @@
  *
  * Icons are imported separately so the icon generator can discover them.
  */
-export { cn } from "./cn";
+export { cn, withOverrides } from "./cn";
 export { Icon } from "./Icon";
 export type { IconProps } from "./Icon";
 export { Button, IconButton, Fab, buttonClassName } from "./Button";

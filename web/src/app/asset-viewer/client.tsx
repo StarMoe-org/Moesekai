@@ -878,7 +878,6 @@ function AssetViewerContent() {
         <PageContainer>
             {/* Page Header */}
             <PageHeader
-                align="center"
                 eyebrow={t("page.assetViewer.badge")}
                 title={t("page.assetViewer.title")}
                 highlight={t("page.assetViewer.titleHighlight")}

@@ -116,13 +116,11 @@ function InformationSkeleton() {
     );
 }
 
-function BannerPlaceholder({ tagLabel }: { tagLabel: string }) {
+// The tag chip already names the category, so the placeholder is just a quiet icon.
+function BannerPlaceholder() {
     return (
-        <div className="flex h-full w-full items-center justify-center bg-primary-container text-on-primary-container">
-            <div className="flex flex-col items-center gap-2 opacity-80">
-                <Icon path={mdArticle} size={40} />
-                <span className="type-label-l">{tagLabel}</span>
-            </div>
+        <div className="flex h-full w-full items-center justify-center bg-surface-container-high text-outline">
+            <Icon path={mdArticle} size={32} />
         </div>
     );
 }
@@ -147,6 +145,9 @@ function InformationCard({
     const browseLabel = getMessageFallback(t, `page.information.browseTypes.${item.browseType}`, item.browseType);
     const statusLabel = t(`page.information.status.${status}`);
     const platformLabel = item.platform === "all" ? t("page.information.platformAll") : item.platform;
+    const hasBanner = Boolean(bannerUrl) && !imageFailed;
+    // Dark pills hold up on any banner; on the light placeholder they would read as stains.
+    const overlayPill = hasBanner ? "bg-inverse-surface/80 text-inverse-on-surface" : "bg-surface-card text-on-surface-variant";
 
     const formatInfoDate = (timestamp?: number | null) => {
         if (!timestamp) return t("page.information.noEndAt");
@@ -168,7 +169,7 @@ function InformationCard({
         >
             <article className="state-layer relative flex h-full flex-col overflow-hidden rounded-md3-md bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 <div className="relative aspect-[16/7] overflow-hidden bg-surface-container-high">
-                    {bannerUrl && !imageFailed ? (
+                    {hasBanner ? (
                         <img
                             src={bannerUrl}
                             alt={item.title}
@@ -177,19 +178,18 @@ function InformationCard({
                             onError={() => setImageFailed(true)}
                         />
                     ) : (
-                        <BannerPlaceholder tagLabel={tagLabel} />
+                        <BannerPlaceholder />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-scrim/45 via-transparent to-scrim/10 opacity-80" />
                     <div className="absolute left-2 top-2 flex flex-wrap gap-1.5">
                         <span className={cn("rounded-full px-2.5 py-1 type-label-s shadow-elev-1", getTagToneClass(item.informationTag))}>
                             {tagLabel}
                         </span>
-                        <span className="rounded-full bg-inverse-surface/80 px-2.5 py-1 type-label-s text-inverse-on-surface shadow-elev-1">
+                        <span className={cn("rounded-full px-2.5 py-1 type-label-s shadow-elev-1", overlayPill)}>
                             {platformLabel}
                         </span>
                     </div>
                     <div className="absolute bottom-2 left-2 right-2 flex items-end justify-between gap-2">
-                        <span className="rounded-full bg-inverse-surface/80 px-2.5 py-1 type-label-s font-mono text-inverse-on-surface">
+                        <span className={cn("rounded-full px-2.5 py-1 type-label-s font-mono shadow-elev-1", overlayPill)}>
                             #{item.id}
                         </span>
                         <span className={cn("rounded-full px-2.5 py-1 type-label-s", getStatusToneClass(status))}>
@@ -406,7 +406,6 @@ export default function InformationClient() {
         <MainLayout>
             <PageContainer wide>
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.information.badge")}
                     title={t("page.information.title")}
                     highlight={t("page.information.titleHighlight")}

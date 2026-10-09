@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
 import { Icon } from "@/components/md3/Icon";
-import { cn } from "@/components/md3/cn";
-import { mdCheck, mdFilterList, mdKeyboardArrowDown, mdRestartAlt, mdSearch, mdArrowDownward } from "@/components/md3/icons";
+import { cn, withOverrides } from "@/components/md3/cn";
+import { mdFilterList, mdKeyboardArrowDown, mdRestartAlt, mdSearch, mdArrowDownward } from "@/components/md3/icons";
 
 // ============================================================================
 // Types
@@ -132,16 +132,20 @@ function FilterSearchInput({ value, onChange, placeholder }: FilterSearchInputPr
             onCompositionStart={handleCompositionStart}
             onCompositionEnd={handleCompositionEnd}
             onKeyDown={handleKeyDown}
-            className="h-12 w-full rounded-full bg-surface-container-highest pl-12 pr-12 type-body-l text-on-surface placeholder:text-on-surface-variant caret-primary outline-none transition-shadow duration-150 focus:shadow-[inset_0_0_0_2px_var(--md-sys-color-primary)]"
+            className="h-10 w-full rounded-md3-md bg-surface-container-high pl-10 pr-10 type-body-m text-on-surface placeholder:text-on-surface-variant caret-primary outline-none transition-shadow duration-150 focus:shadow-[inset_0_0_0_2px_var(--md-sys-color-primary)]"
         />
     );
 }
 
-/** MD3 filter chip state classes (shared by filter panels across pages). */
+/**
+ * MD3 filter chip state classes (shared by filter panels across pages).
+ * Unselected chips are filled, not outlined: a panel of hairline boxes reads as
+ * one flat sheet, while filled chips sit on it like the search field does.
+ */
 const MD3_CHIP_BASE =
-    "state-layer focus-ring relative inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md3-sm border px-3 py-1.5 type-label-l cursor-pointer transition-colors duration-150 ease-md3-standard";
-const MD3_CHIP_SELECTED = `${MD3_CHIP_BASE} border-transparent bg-secondary-container text-on-secondary-container`;
-const MD3_CHIP_UNSELECTED = `${MD3_CHIP_BASE} border-outline-variant bg-transparent text-on-surface-variant`;
+    "state-layer focus-ring relative inline-flex min-h-8 items-center justify-center gap-1.5 rounded-md3-sm border px-3 py-1 type-label-l cursor-pointer transition-colors duration-150 ease-md3-standard";
+const MD3_CHIP_SELECTED = `${MD3_CHIP_BASE} border-transparent bg-primary-container text-on-primary-container`;
+const MD3_CHIP_UNSELECTED = `${MD3_CHIP_BASE} border-transparent bg-surface-container-high text-on-surface`;
 
 export function getFilterChipStateClasses(
     selected: boolean,
@@ -159,16 +163,15 @@ export function getFilterIconStateClasses(
     selectedClassName?: string,
     unselectedClassName?: string
 ) {
-    const selectedState = selectedClassName ?? cn(MD3_CHIP_SELECTED, "ring-2 ring-primary ring-offset-1 ring-offset-surface");
+    const selectedState = selectedClassName ?? cn(MD3_CHIP_SELECTED, "ring-2 ring-primary ring-offset-1 ring-offset-surface-card");
     const unselectedState = unselectedClassName ?? MD3_CHIP_UNSELECTED;
 
     return selected ? selectedState : unselectedState;
 }
 
+/** The switch alone shows the state; a filled row only when on reads as a different kind of item. */
 export function getFilterToggleStateClasses(selected: boolean) {
-    return selected
-        ? "bg-secondary-container text-on-secondary-container"
-        : "text-on-surface-variant";
+    return selected ? "text-on-surface" : "text-on-surface-variant";
 }
 
 export const FilterDrawerContext = React.createContext<boolean>(false);
@@ -265,7 +268,7 @@ export default function BaseFilters({
                         {t("common.filter.search")}
                     </label>
                     <div className="relative">
-                        <Icon path={mdSearch} size={24} className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant" />
+                        <Icon path={mdSearch} size={20} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant" />
                         <FilterSearchInput
                             placeholder={resolvedSearchPlaceholder}
                             value={searchQuery ?? ""}
@@ -278,7 +281,7 @@ export default function BaseFilters({
                                 aria-label={t("search.syntax.title")}
                                 aria-expanded={showSearchHelp}
                                 className={cn(
-                                    "state-layer focus-ring absolute right-2 top-1/2 flex h-8 w-8 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full type-label-l",
+                                    "state-layer focus-ring absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full type-label-l",
                                     showSearchHelp ? "bg-primary text-on-primary" : "text-on-surface-variant",
                                 )}
                             >
@@ -309,15 +312,24 @@ export default function BaseFilters({
                                     type="button"
                                     aria-pressed={active}
                                     onClick={() => handleSortClick(opt.id)}
-                                    className={getFilterChipStateClasses(active)}
+                                    className={withOverrides(getFilterChipStateClasses(active), "gap-0")}
                                 >
-                                    {active && (
-                                        <Icon
-                                            path={mdArrowDownward}
-                                            size={18}
-                                            className={cn("transition-transform duration-200 ease-md3-spatial-fast", sortOrder === "asc" && "rotate-180")}
-                                        />
-                                    )}
+                                    {/* The arrow grows in rather than popping, so the centred label glides aside. */}
+                                    <span
+                                        aria-hidden
+                                        className={cn(
+                                            "grid transition-[grid-template-columns,opacity] duration-[250ms] ease-md3-emphasized-decelerate motion-reduce:transition-none",
+                                            active ? "grid-cols-[1fr] opacity-100" : "grid-cols-[0fr] opacity-0",
+                                        )}
+                                    >
+                                        <span className="overflow-hidden">
+                                            <Icon
+                                                path={mdArrowDownward}
+                                                size={18}
+                                                className={cn("mr-1 transition-transform duration-[350ms] ease-md3-spatial motion-reduce:transition-none", sortOrder === "asc" && "rotate-180")}
+                                            />
+                                        </span>
+                                    </span>
                                     <span className="truncate">{opt.label}</span>
                                 </button>
                             );
@@ -376,7 +388,7 @@ export default function BaseFilters({
                     <Icon
                         path={mdKeyboardArrowDown}
                         size={24}
-                        className={cn("text-on-surface-variant transition-transform duration-200 ease-md3-spatial-fast lg:hidden", !mobileCollapsed && "rotate-180")}
+                        className={cn("text-on-surface-variant transition-transform duration-300 ease-md3-spatial lg:hidden", !mobileCollapsed && "rotate-180")}
                     />
                 </div>
             </div>
@@ -452,7 +464,11 @@ export default function BaseFilters({
     label: string;
     }
 
-    /** MD3 list-item style toggle with a trailing switch. */
+    /**
+     * Compact list row with a trailing switch, sized for filter panels. The row
+     * reaches 8px past its column on each side, so the label lines up with the
+     * section labels while the hover layer keeps some room around it.
+     */
     export function FilterToggle({ selected, onClick, label }: FilterToggleProps) {
     return (
         <button
@@ -461,26 +477,24 @@ export default function BaseFilters({
             aria-checked={selected}
             onClick={onClick}
             className={cn(
-                "state-layer focus-ring flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 rounded-md3-lg px-4 py-2 text-left transition-colors duration-150",
+                "state-layer focus-ring -mx-2 flex min-h-10 w-[calc(100%+1rem)] cursor-pointer items-center justify-between gap-3 rounded-md3-sm px-3 py-1 text-left transition-colors duration-150",
                 getFilterToggleStateClasses(selected),
             )}
         >
-            <span className="type-body-l">{label}</span>
+            <span className="type-body-m">{label}</span>
             <span
                 aria-hidden
                 className={cn(
-                    "relative inline-flex h-8 w-[52px] shrink-0 items-center rounded-full border-2 transition-colors duration-200",
+                    "relative inline-flex h-6 w-10 shrink-0 items-center rounded-full border-2 transition-colors duration-200",
                     selected ? "border-primary bg-primary" : "border-outline bg-surface-container-highest",
                 )}
             >
                 <span
                     className={cn(
-                        "absolute flex items-center justify-center rounded-full transition-all duration-300 ease-md3-spatial-fast",
-                        selected ? "left-[22px] h-6 w-6 bg-on-primary text-on-primary-container" : "left-[6px] h-4 w-4 bg-outline",
+                        "absolute rounded-full transition-all duration-300 ease-md3-spatial",
+                        selected ? "left-[18px] size-4 bg-on-primary" : "left-1 size-3 bg-outline",
                     )}
-                >
-                    {selected && <Icon path={mdCheck} size={16} />}
-                </span>
+                />
             </span>
         </button>
     );

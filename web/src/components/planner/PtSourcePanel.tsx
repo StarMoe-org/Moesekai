@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import React, { useEffect, useId, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { Banner, Button, Checkbox, Chip, LinearProgress, LoadingIndicator, Select, SegmentedButton, Surface, TextField } from "@/components/md3";
 import { mdCalculate } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -26,7 +26,8 @@ import type {
 } from "@/lib/deck-recommend/planner-types";
 import type { IMusicInfo, IMusicMeta } from "@/types/music";
 import DeckPicker from "./DeckPicker";
-import SongGainTable, { DIFFICULTY_BADGE_COLORS, type SongGainView } from "./SongGainTable";
+import SongGainTable, { type SongGainView } from "./SongGainTable";
+import { difficultyFillStyle } from "@/types/music";
 
 interface PtSourcePanelProps {
     rules: EventRules;
@@ -202,19 +203,21 @@ function SegmentButton({ active, onClick, children, disabled }: { active: boolea
     );
 }
 
+/** Labelled from outside like the planner's selects, so a row of fields and selects shares one height. */
 function NumberField({ label, value, onChange, placeholder }: { label: string; value: string; onChange(v: string): void; placeholder?: string }) {
+    const id = useId();
     return (
-        <TextField
-            variant="filled"
-            dense
-            label={label}
-            type="text"
-            inputMode="decimal"
-            value={value}
-            placeholder={placeholder}
-            onChange={(e) => onChange(e.target.value)}
-            className="min-w-0"
-        />
+        <div className="min-w-0">
+            <label htmlFor={id} className="mb-1 block type-label-m text-on-surface-variant">{label}</label>
+            <TextField
+                id={id}
+                type="text"
+                inputMode="decimal"
+                value={value}
+                placeholder={placeholder}
+                onChange={(e) => onChange(e.target.value)}
+            />
+        </div>
     );
 }
 
@@ -700,7 +703,6 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                         ) : null}
                         <Select<number>
                             searchable
-                            dense
                             disabled={songsLoading}
                             filterOptions={false}
                             value={musicId}
@@ -730,10 +732,8 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                                         type="button"
                                         onClick={() => setDifficultyChoice(d)}
                                         aria-pressed={difficulty === d}
-                                        className={`state-layer focus-ring relative px-3 py-2 rounded-md3-sm type-label-l uppercase transition-colors duration-150 ease-md3-standard ${difficulty === d
-                                            ? DIFFICULTY_BADGE_COLORS[d] ?? "bg-secondary-container text-on-secondary-container"
-                                            : "bg-surface-container-highest text-on-surface-variant"
-                                            }`}
+                                        className="state-layer focus-ring relative h-8 px-3 rounded-md3-sm border border-outline-variant type-label-l uppercase text-on-surface-variant transition-colors duration-150 ease-md3-standard"
+                                        style={difficulty === d ? difficultyFillStyle(d) : undefined}
                                     >
                                         {d}
                                     </button>
@@ -773,7 +773,6 @@ export default function PtSourcePanel({ rules, server, eventId, eventType, chapt
                         <Checkbox
                             checked={customRoom}
                             onCheckedChange={setCustomRoom}
-                            className="sm:pb-2"
                             label={t("page.predictionPlanner.pt.customRoom", { percent: formatNumber(CUSTOM_ROOM_PT_FACTOR * 100, { maximumFractionDigits: 1 }) })}
                         />
                     )}

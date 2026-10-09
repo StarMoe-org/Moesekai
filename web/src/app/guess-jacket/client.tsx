@@ -6,7 +6,7 @@ import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
-import { Button, Icon, IconButton, TextField, LinearProgress, LoadingIndicator, LoadingState, ErrorState } from "@/components/md3";
+import { Button, Icon, IconButton, SegmentedButton, TextField, LinearProgress, LoadingIndicator, LoadingState, ErrorState } from "@/components/md3";
 import { getMusicJacketUrl } from "@/lib/assets";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 import { fetchMasterDataForServer } from "@/lib/fetch";
@@ -651,7 +651,7 @@ function GuessJacketContent() {
                         <div className="max-w-4xl mx-auto rounded-md3-xl overflow-hidden bg-surface-container-low text-on-surface">
                             <div className="p-8 text-center border-b border-outline-variant">
                                 <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4">
-                                    <span className="text-primary type-label-m type-emphasized">GUESS JACKET</span>
+                                    <span className="text-on-primary-container type-label-m type-emphasized">GUESS JACKET</span>
                                 </div>
                                 <h1 className="type-headline-l type-emphasized text-on-surface mb-2">{t("page.guessJacket.single.challengeComplete")}</h1>
                                 <p className="type-title-l text-on-surface-variant mb-6">{t("page.guessJacket.single.finalScore")}</p>
@@ -908,7 +908,7 @@ function GuessJacketContent() {
                 <div className="container mx-auto px-4 max-w-2xl">
                     <div className="text-center mb-10">
                         <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4 shadow-elev-1">
-                            <span className="text-primary type-label-m type-emphasized">Creativity Game</span>
+                            <span className="text-on-primary-container type-label-m type-emphasized">Creativity Game</span>
                         </div>
                         <h1 className="type-headline-l type-emphasized text-on-surface mb-2 ">{t("page.guessJacket.title")} <span className="text-primary">?</span></h1>
                         <p className="text-on-surface-variant font-medium">{t("page.guessJacket.description")}</p>
@@ -921,28 +921,28 @@ function GuessJacketContent() {
                         </a>
                     </div>
 
-                    <div className="bg-surface-container-low text-on-surface p-4 sm:p-8 rounded-md3-xl space-y-6 sm:space-y-8">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1">
-                                <label className="block type-body-m font-bold text-on-surface mb-2">{t("page.guessJacket.common.seed")}</label>
-                                <div className="flex gap-2">
-                                    <TextField
-                                        type="text"
-                                        value={settings.seed}
-                                        onChange={(event) => setSettings((prev) => ({ ...prev, seed: event.target.value }))}
-                                        label={t("page.guessJacket.common.seed")} containerClassName="min-w-0 flex-1" className="font-mono"
-                                    />
-                                    <IconButton
-                                        onClick={() => setSettings((prev) => ({ ...prev, seed: Math.random().toString(36).substring(7) }))}
-                                        variant="tonal"
-                                        icon={mdRefresh}
-                                        label={t("page.guessJacket.single.regenerateSeed")}
-                                    />
-                                </div>
-                            </div>
-                            <div className="flex items-end w-full sm:w-auto">
-                                <Button onClick={copyShareLink} variant="tonal" size="m" className="max-w-full">
-                                    <Icon path={mdShare} size={20} />
+                    {/* Every setting is a title-s label over a 40px control; single choices are segmented buttons. */}
+                    <div className="bg-surface-container-low text-on-surface p-4 sm:p-8 rounded-md3-xl space-y-6">
+                        <div>
+                            <label htmlFor="guess-jacket-seed" className="mb-2 block type-title-s text-on-surface">{t("page.guessJacket.single.seedSetting")}</label>
+                            <div className="flex gap-2">
+                                <TextField
+                                    id="guess-jacket-seed"
+                                    type="text"
+                                    value={settings.seed}
+                                    onChange={(event) => setSettings((prev) => ({ ...prev, seed: event.target.value }))}
+                                    containerClassName="min-w-0 flex-1" className="font-mono"
+                                    trailing={
+                                        <IconButton
+                                            onClick={() => setSettings((prev) => ({ ...prev, seed: Math.random().toString(36).substring(7) }))}
+                                            icon={mdRefresh}
+                                            size="xs"
+                                            className="mr-1"
+                                            label={t("page.guessJacket.single.regenerateSeed")}
+                                        />
+                                    }
+                                />
+                                <Button onClick={copyShareLink} variant="tonal" icon={mdShare}>
                                     {t("page.guessJacket.single.share")}
                                 </Button>
                             </div>
@@ -950,18 +950,18 @@ function GuessJacketContent() {
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessJacket.single.serverScope")}</label>
-                                <div className="flex gap-2 p-1 bg-surface-container-high rounded-md3-sm">
-                                    {(["jp", "cn"] as ServerScope[]).map(s => (
-                                        <Button key={s} onClick={() => setSettings({ ...settings, server: s })} variant="tonal" selected={settings.server === s} className="min-w-0 px-2 flex-1">
-                                            <ServerRegionLabel server={s} label={getServerShortLabel(s)} />
-                                        </Button>
-                                    ))}
-                                </div>
+                                <span className="mb-2 block type-title-s text-on-surface">{t("page.guessJacket.single.serverScope")}</span>
+                                <SegmentedButton
+                                    aria-label={t("page.guessJacket.single.serverScope")}
+                                    value={settings.server}
+                                    onValueChange={(server) => setSettings((prev) => ({ ...prev, server }))}
+                                    options={(["jp", "cn"] as ServerScope[]).map((s) => ({ value: s, label: <ServerRegionLabel server={s} label={getServerShortLabel(s)} /> }))}
+                                />
                             </div>
                             <div>
-                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessJacket.single.roundTime")}</label>
+                                <label htmlFor="guess-jacket-time" className="mb-2 block type-title-s text-on-surface">{t("page.guessJacket.single.roundTime")}</label>
                                 <TextField
+                                    id="guess-jacket-time"
                                     type="number"
                                     value={settings.timeLimit}
                                     onChange={(event) => {
@@ -969,47 +969,37 @@ function GuessJacketContent() {
                                         const safeValue = Number.isFinite(nextValue) ? Math.max(5, Math.min(120, nextValue)) : 30;
                                         setSettings((prev) => ({ ...prev, timeLimit: safeValue }));
                                     }}
-                                    label={t("page.guessJacket.single.roundTime")} containerClassName="w-full" className="font-mono"
+                                    containerClassName="w-full" className="font-mono"
                                 />
                             </div>
                         </div>
 
                         <div>
-                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessJacket.single.difficultySetting")}</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map((difficulty) => (
-                                    <Button
-                                        key={difficulty}
-                                        onClick={() => setSettings((prev) => ({ ...prev, difficulty }))}
-                                        variant="tonal" selected={settings.difficulty === difficulty} className="min-w-0 px-2 "
-                                    >
-                                        {getDifficultyLabel(difficulty)}
-                                    </Button>
-                                ))}
-                            </div>
+                            <span className="mb-2 block type-title-s text-on-surface">{t("page.guessJacket.single.difficultySetting")}</span>
+                            <SegmentedButton
+                                aria-label={t("page.guessJacket.single.difficultySetting")}
+                                value={settings.difficulty}
+                                onValueChange={(difficulty) => setSettings((prev) => ({ ...prev, difficulty }))}
+                                options={(["easy", "normal", "hard", "extreme"] as Difficulty[]).map((difficulty) => ({ value: difficulty, label: getDifficultyLabel(difficulty) }))}
+                            />
                         </div>
 
                         <div>
-                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessJacket.single.optionsCount")}</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {OPTIONS_CHOICES.map((count) => (
-                                    <Button
-                                        key={count}
-                                        onClick={() => setSettings((prev) => ({ ...prev, optionsCount: count }))}
-                                        variant="tonal" selected={settings.optionsCount === count} className="min-w-0 px-2 "
-                                    >
-                                        {t("page.guessJacket.common.optionCountLabel", { count })}
-                                    </Button>
-                                ))}
-                            </div>
+                            <span className="mb-2 block type-title-s text-on-surface">{t("page.guessJacket.single.optionsCount")}</span>
+                            <SegmentedButton
+                                aria-label={t("page.guessJacket.single.optionsCount")}
+                                value={String(settings.optionsCount)}
+                                onValueChange={(count) => setSettings((prev) => ({ ...prev, optionsCount: Number(count) }))}
+                                options={OPTIONS_CHOICES.map((count) => ({ value: String(count), label: t("page.guessJacket.common.optionCountLabel", { count }) }))}
+                            />
                         </div>
 
-                        <div className="rounded-md3-lg bg-surface-container-high p-4 type-body-m text-on-surface-variant space-y-1">
-                            <div>• {t("page.guessJacket.single.rules.roundCount", { rounds: ROUNDS_PER_GAME, options: settings.optionsCount })}</div>
-                            <div>• {t("page.guessJacket.single.rules.strikes", { strikes: MAX_STRIKES_PER_ROUND })}</div>
-                            <div>• {t("page.guessJacket.single.rules.combo")}</div>
-                            <div>• {t("page.guessJacket.single.rules.seed")}</div>
-                        </div>
+                        <ul className="list-disc space-y-1 rounded-md3-lg bg-surface-container p-4 pl-8 type-body-m text-on-surface-variant marker:text-primary">
+                            <li>{t("page.guessJacket.single.rules.roundCount", { rounds: ROUNDS_PER_GAME, options: settings.optionsCount })}</li>
+                            <li>{t("page.guessJacket.single.rules.strikes", { strikes: MAX_STRIKES_PER_ROUND })}</li>
+                            <li>{t("page.guessJacket.single.rules.combo")}</li>
+                            <li>{t("page.guessJacket.single.rules.seed")}</li>
+                        </ul>
                     </div>
 
                     {loadError && (

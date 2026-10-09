@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion, type PanInfo } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { IconButton } from "./Button";
 import { mdClose } from "./icons";
 import { OverlayParentContext, useOverlay } from "./useOverlay";
@@ -59,7 +59,7 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
                         aria-modal="true"
                         tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
-                        className={cn(
+                        className={withOverrides(
                             "relative flex max-h-[90dvh] w-full max-w-[640px] flex-col overflow-hidden rounded-t-md3-xl bg-surface-container-low text-on-surface shadow-elev-1",
                             className,
                         )}
@@ -86,7 +86,7 @@ export function BottomSheet({ isOpen, onClose, title, headerActions, children, f
                             </div>
                         )}
                         <div
-                            className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]", bodyClassName)}
+                            className={withOverrides("min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]", bodyClassName)}
                             onPointerDownCapture={(e) => e.stopPropagation()}
                         >
                             {children}
@@ -152,7 +152,7 @@ export function SideSheet({
                         aria-modal="true"
                         tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
-                        className={cn(
+                        className={withOverrides(
                             "relative flex h-full flex-col bg-surface-container-low text-on-surface",
                             floating ? "overflow-hidden rounded-md3-xl shadow-elev-3" : "shadow-elev-1",
                             !floating && (side === "right" ? "rounded-l-md3-lg" : "rounded-r-md3-lg"),
@@ -173,7 +173,7 @@ export function SideSheet({
                             {headerActions}
                             {showClose && <IconButton icon={mdClose} label={t("common.md3.close")} onClick={close} />}
                         </div>
-                        <div className={cn("min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-6", bodyClassName)}>{children}</div>
+                        <div className={withOverrides("min-h-0 flex-1 overflow-y-auto overscroll-contain px-6 pb-6", bodyClassName)}>{children}</div>
                         {footer && <div className="shrink-0 border-t border-outline-variant px-6 py-4">{footer}</div>}
                     </motion.div>
                 </div>

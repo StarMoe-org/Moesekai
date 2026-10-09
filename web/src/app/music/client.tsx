@@ -15,6 +15,7 @@ import {
     MusicTagType,
     MusicCategoryType,
     normalizeMusicsData,
+    difficultyFillStyle,
 } from "@/types/music";
 
 interface MusicDifficulty {
@@ -34,6 +35,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import ExternalLink from "@/components/ExternalLink";
 import { EmptyState, ErrorState, LoadingState, LoadMore, PageContainer, PageHeader } from "@/components/md3";
 import { mdMusicNote } from "@/components/md3/icons";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 // Search index item (from search-index.json)
 interface SearchIndexItem {
@@ -65,21 +67,13 @@ function collectTextTerms(expr: SearchExpr, out: string[] = []): string[] {
 
 // Level Separator Card Component
 function LevelSeparatorCard({ level, difficulty }: { level: number; difficulty: string }) {
-    const difficultyColors: Record<string, string> = {
-        EASY: "from-green-400 to-green-500",
-        NORMAL: "from-blue-400 to-blue-500",
-        HARD: "from-yellow-400 to-yellow-500",
-        EXPERT: "from-red-400 to-red-500",
-        MASTER: "from-purple-500 to-purple-600",
-        APPEND: "from-pink-500 to-pink-600",
-    };
-
-    const gradientClass = difficultyColors[difficulty] || "from-outline to-outline";
-
     return (
-        <div className={`aspect-square rounded-md3-md bg-gradient-to-br ${gradientClass} flex flex-col items-center justify-center shadow-elev-1`}>
-            <div className="text-white text-center px-2">
-                <div className="text-[10px] sm:text-xs font-bold opacity-90 mb-0.5">
+        <div
+            className="flex aspect-square flex-col items-center justify-center rounded-md3-md bg-surface-container-high text-on-surface shadow-elev-1"
+            style={difficultyFillStyle(difficulty.toLowerCase())}
+        >
+            <div className="text-center px-2">
+                <div className="text-[10px] sm:text-xs font-bold opacity-80 mb-0.5">
                     {difficulty}
                 </div>
                 <div className="text-2xl sm:text-3xl md:text-4xl font-black">
@@ -94,6 +88,7 @@ function MusicContent() {
     const searchParams = useSearchParams();
     const { isShowSpoiler } = useTheme();
     const { t } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
 
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
     const [musicTags, setMusicTags] = useState<IMusicTagInfo[]>([]);
@@ -624,7 +619,6 @@ function MusicContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.music.badge")}
                 title={t("page.music.title")}
                 highlight={t("page.music.titleHighlight")}
@@ -667,7 +661,7 @@ function MusicContent() {
                 ) : displayedMusicsWithSeparators.filter(item => item.type === 'music').length === 0 ? (
                     <EmptyState icon={mdMusicNote} title={t("page.music.noResult")} description={t("page.music.noResultHint")} />
                 ) : (
-                    <div className={MUSIC_GRID_CLASS}>
+                    <div ref={gridRef} className={`relative ${MUSIC_GRID_CLASS}`}>
                         {displayedMusicsWithSeparators.map((item) => {
                             if (item.type === 'separator') {
                                 const sepData = item.data as { level: number, difficulty: string };

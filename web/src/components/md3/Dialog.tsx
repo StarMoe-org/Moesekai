@@ -4,7 +4,7 @@ import { createPortal } from "react-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EasingEmphasizedAccelerate, md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { IconButton } from "./Button";
 import { mdArrowBack, mdClose } from "./icons";
@@ -95,7 +95,7 @@ export function Dialog({
                         aria-modal="true"
                         tabIndex={-1}
                         aria-labelledby={title ? titleId : undefined}
-                        className={cn(
+                        className={withOverrides(
                             "relative flex w-full flex-col overflow-hidden bg-surface-container-high text-on-surface shadow-elev-3",
                             SIZE[size],
                             fullscreenOnMobile
@@ -144,7 +144,7 @@ export function Dialog({
                                 )}
                             </div>
                         )}
-                        <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 pb-6", (title || icon) ? "pt-4" : "pt-6", bodyClassName)}>
+                        <div className={withOverrides("min-h-0 flex-1 overflow-y-auto px-6 pb-6", (title || icon) ? "pt-4" : "pt-6", bodyClassName)}>
                             {supportingText && <div className="mb-4 type-body-m text-on-surface-variant">{supportingText}</div>}
                             {children}
                         </div>

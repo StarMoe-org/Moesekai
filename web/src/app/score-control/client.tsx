@@ -960,7 +960,6 @@ export default function ScoreControlClient() {
         <MainLayout>
             <PageContainer className="max-w-5xl">
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.scoreControl.badge")}
                     title={t("page.scoreControl.title")}
                     highlight={t("page.scoreControl.titleHighlight")}
@@ -1016,7 +1015,7 @@ export default function ScoreControlClient() {
                                 onChange={(e) => setTargetPT(Number(e.target.value))}
                                 placeholder="698"
                                 min={1}
-                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                className="sc-number-input h-10 w-full rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
                             <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.targetPtHint")}
@@ -1033,7 +1032,7 @@ export default function ScoreControlClient() {
                                 placeholder="5"
                                 min={0}
                                 max={435}
-                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                className="sc-number-input h-10 w-full rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
                             <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.minBonusHint")}
@@ -1050,7 +1049,7 @@ export default function ScoreControlClient() {
                                 placeholder="200"
                                 min={0}
                                 max={435}
-                                className="sc-number-input h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                className="sc-number-input h-10 w-full rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                             />
                             <p className="mt-1 text-xs text-on-surface-variant">
                                 {t("page.scoreControl.maxBonusHint")}
@@ -1111,7 +1110,7 @@ export default function ScoreControlClient() {
                                             if (dbAllowSave) localStorage.setItem("deck_recommend_userid", e.target.value);
                                         }}
                                         placeholder={t("page.scoreControl.userIdPlaceholder")}
-                                        className="h-12 w-full rounded-md3-xs border border-outline bg-transparent px-4 type-body-l text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
+                                        className="h-10 w-full rounded-md3-md border border-outline bg-transparent px-3 type-body-m text-on-surface outline-none transition-colors hover:border-on-surface focus:border-primary focus:ring-1 focus:ring-primary placeholder:text-on-surface-variant"
                                     />
                                     <div className="flex items-center justify-between mt-2 px-1">
                                         <span className="type-label-l text-on-surface-variant">{t("page.scoreControl.saveLocally")}</span>
@@ -1146,7 +1145,7 @@ export default function ScoreControlClient() {
                                                     if (dbAllowSave) localStorage.setItem("deck_recommend_server", s.value);
                                                 }}
                                                 className={`state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l transition-colors ${dbServer === s.value
-                                                    ? "bg-secondary-container text-on-secondary-container"
+                                                    ? "bg-primary-container text-on-primary-container"
                                                     : "border border-outline-variant text-on-surface-variant"
                                                     }`}
                                             >

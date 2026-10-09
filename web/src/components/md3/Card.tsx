@@ -1,6 +1,6 @@
 import React from "react";
 import LocalizedLink from "@/components/LocalizedLink";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 
 /* ==========================================================================
    M3 Card: elevated | filled | outlined. Interactive when onClick/href given.
@@ -52,7 +52,7 @@ export function Card(props: CardProps) {
     if (props.href !== undefined) {
         const { href, variant: _v, radius: _r, interactive: _i, className: _c, children: _ch, ...rest } = props;
         return (
-            <LocalizedLink href={href} className={cn(cardClassName({ variant, radius, interactive: true }), className)} {...rest}>
+            <LocalizedLink href={href} className={withOverrides(cardClassName({ variant, radius, interactive: true }), className)} {...rest}>
                 {children}
             </LocalizedLink>
         );
@@ -61,7 +61,7 @@ export function Card(props: CardProps) {
         const { variant: _v, radius: _r, interactive: _i, className: _c, children: _ch, href: _h, type, ...rest } = props as CardBaseProps &
             React.ButtonHTMLAttributes<HTMLButtonElement> & { href?: undefined };
         return (
-            <button type={type ?? "button"} className={cn(cardClassName({ variant, radius, interactive: true }), "w-full", className)} {...rest}>
+            <button type={type ?? "button"} className={withOverrides(cardClassName({ variant, radius, interactive: true }), "w-full", className)} {...rest}>
                 {children}
             </button>
         );
@@ -69,7 +69,7 @@ export function Card(props: CardProps) {
     const { variant: _v, radius: _r, interactive, className: _c, children: _ch, href: _h, onClick: _o, ...rest } = props as CardBaseProps &
         React.HTMLAttributes<HTMLDivElement> & { href?: undefined; onClick?: undefined };
     return (
-        <div className={cn(cardClassName({ variant, radius, interactive }), className)} {...rest}>
+        <div className={withOverrides(cardClassName({ variant, radius, interactive }), className)} {...rest}>
             {children}
         </div>
     );
@@ -113,7 +113,7 @@ const RADIUS: Record<NonNullable<SurfaceProps["radius"]>, string> = {
 const ELEVATION = ["", "shadow-elev-1", "shadow-elev-2", "shadow-elev-3"] as const;
 
 export function Surface({ tone = "low", radius = "lg", elevation = 0, as: Tag = "div", className, ...rest }: SurfaceProps) {
-    return <Tag className={cn(SURFACE_TONE[tone], "text-on-surface", RADIUS[radius], ELEVATION[elevation], className)} {...rest} />;
+    return <Tag className={withOverrides(SURFACE_TONE[tone], "text-on-surface", RADIUS[radius], ELEVATION[elevation], className)} {...rest} />;
 }
 
 export default Card;

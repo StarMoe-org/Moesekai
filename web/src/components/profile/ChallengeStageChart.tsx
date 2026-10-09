@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import ReactECharts from "echarts-for-react";
-import { CHAR_COLORS } from "@/types/types";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -12,7 +10,7 @@ import { getCharacterName } from "@/lib/i18n";
 import Modal from "@/components/common/Modal";
 import { Button, LoadingState, SectionCard } from "@/components/md3";
 import { mdLeaderboard } from "@/components/md3/icons";
-import { useProfileChartColors } from "./useProfileChartColors";
+import CharacterStatGrid from "./CharacterStatGrid";
 import type {
     ServerType,
     UserChallengeLiveSoloHighScoreReward,
@@ -79,7 +77,6 @@ export default function ChallengeStageChart({
 }: Props) {
     const { themeColor, serverSource } = useTheme();
     const { t, formatNumber } = useI18n();
-    const colors = useProfileChartColors();
     const [mobile, setMobile] = useState(false);
     const [showDetail, setShowDetail] = useState(false);
     const [rows, setRows] = useState<Row[] | null>(null);
@@ -92,73 +89,10 @@ export default function ChallengeStageChart({
 
     useEffect(() => { setRows(null); setShowDetail(false); setError(null); setLoading(false); }, [server, serverSource, challengeSoloStages, challengeSoloResults, challengeHighScoreRewards]);
 
-    // Sort characters by rank descending for bar chart
-    const sortedChars = useMemo(() => {
-        const entries: { id: number; rank: number }[] = [];
-        for (let i = 1; i <= 26; i++) {
-            entries.push({ id: i, rank: challengeStageRanks.get(i) || 0 });
-        }
-        return entries.sort((a, b) => b.rank - a.rank);
-    }, [challengeStageRanks]);
-
-    const barOption = useMemo(() => ({
-        animation: true,
-        animationDuration: 800,
-        animationEasing: "cubicOut",
-        tooltip: {
-            trigger: "axis" as const,
-            backgroundColor: colors.surfaceContainerHigh,
-            borderColor: colors.outlineVariant,
-            textStyle: { color: colors.onSurface },
-            axisPointer: { type: "shadow" as const },
-            formatter: (params: Array<{ name: string; value: number }>) => {
-                const p = params[0];
-                return t("page.profile.stats.chartLevelTooltip", { name: p.name, value: p.value });
-            },
-        },
-        grid: {
-            left: mobile ? 8 : 12,
-            right: mobile ? 8 : 12,
-            top: 16,
-            bottom: mobile ? 44 : 54,
-            containLabel: false,
-        },
-        xAxis: {
-            type: "category" as const,
-            data: sortedChars.map((c) => getCharacterName(t, c.id, "short")),
-            axisLabel: {
-                fontSize: mobile ? 8 : 10,
-                color: colors.onSurfaceVariant,
-                rotate: mobile ? 60 : 45,
-                fontWeight: 600,
-            },
-            axisLine: { lineStyle: { color: colors.outlineVariant } },
-            axisTick: { show: false },
-        },
-        yAxis: {
-            type: "value" as const,
-            axisLabel: {
-                fontSize: 10,
-                color: colors.onSurfaceVariant,
-            },
-            splitLine: { lineStyle: { color: `${colors.outlineVariant}80` } },
-            axisLine: { show: false },
-        },
-        series: [{
-            type: "bar",
-            data: sortedChars.map((c) => ({
-                value: c.rank,
-                itemStyle: {
-                    color: CHAR_COLORS[String(c.id)] || "#999",
-                    borderRadius: [3, 3, 0, 0],
-                },
-            })),
-            barMaxWidth: mobile ? 14 : 20,
-            emphasis: {
-                itemStyle: { shadowBlur: 10, shadowColor: "rgba(0,0,0,0.15)" },
-            },
-        }],
-    }), [sortedChars, mobile, t, colors]);
+    const highScores = useMemo(
+        () => new Map(challengeSoloResults.map((result) => [result.characterId, result.highScore || 0])),
+        [challengeSoloResults],
+    );
 
     const loadDetail = useCallback(async () => {
         if (loading || rows) return;
@@ -274,17 +208,13 @@ export default function ChallengeStageChart({
             }
         >
 
-            <div className="flex-1 min-h-[240px] sm:min-h-[300px] flex items-center">
-                <div className="w-full h-[240px] sm:h-[300px]">
-                    <ReactECharts
-                        option={barOption}
-                        notMerge={false}
-                        lazyUpdate={true}
-                        style={{ width: "100%", height: "100%" }}
-                        opts={{ renderer: "svg" }}
-                    />
-                </div>
-            </div>
+            <CharacterStatGrid
+                values={challengeStageRanks}
+                renderDetail={(id) => {
+                    const score = highScores.get(id) || 0;
+                    return score > 0 ? formatNumber(score, { notation: "compact", maximumSignificantDigits: 3 }) : null;
+                }}
+            />
 
             <Modal
                 isOpen={showDetail}

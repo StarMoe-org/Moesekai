@@ -104,7 +104,7 @@ export default function TermsPage() {
                 </div>
 
                 <div className="mt-12 text-center">
-                    <Button href="/" variant="tonal" size="m" icon={mdArrowBack}>
+                    <Button href="/" variant="tonal" size="s" icon={mdArrowBack}>
                         返回首页
                     </Button>
                 </div>

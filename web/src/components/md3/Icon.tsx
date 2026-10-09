@@ -1,5 +1,5 @@
 import React from "react";
-import { cn } from "./cn";
+import { withOverrides } from "./cn";
 
 export interface IconProps extends Omit<React.SVGProps<SVGSVGElement>, "children"> {
     /** Path data from `@/components/md3/icons` (Material Symbols Rounded). */
@@ -26,7 +26,7 @@ export function Icon({ path, size = 24, label, className, ...rest }: IconProps) 
             role={label ? "img" : undefined}
             aria-label={label}
             focusable="false"
-            className={cn("shrink-0", className)}
+            className={withOverrides("shrink-0", className)}
             {...rest}
         >
             <path d={path} />

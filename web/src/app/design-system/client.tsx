@@ -492,7 +492,7 @@ export default function DesignSystemClient() {
                 <Section title={t("page.designSystem.selectTitle")}>
                     <Surface tone="card" className="grid gap-6 p-5 sm:grid-cols-2">
                         <Select label={t("page.designSystem.selectLabel")} value={selectValue} onValueChange={setSelectValue} options={tabItems.map(({ value, label }) => ({ value, label }))} />
-                        <Select searchable dense label={t("page.designSystem.selectSearchLabel")} value={selectValue} onValueChange={setSelectValue} options={tabItems.map(({ value, label }) => ({ value, label }))} />
+                        <Select searchable label={t("page.designSystem.selectSearchLabel")} value={selectValue} onValueChange={setSelectValue} options={tabItems.map(({ value, label }) => ({ value, label }))} />
                     </Surface>
                 </Section>
 

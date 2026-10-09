@@ -2,7 +2,7 @@ export const zhTWPagePrimary = {
     designSystem: {
         badge: "Material 3 Expressive · 動態配色",
         title: "設計系統與元件庫",
-        intro: "本站 UI 採用 Material 3 Expressive。所有顏色皆來自以角色主題色為種子產生的動態配色，元件統一使用 components/md3 基礎元件。",
+        intro: "本站 UI 採用 Material 3 Expressive。頁面與卡片使用固定的中性灰，強調色取自目前主題角色的原色，元件統一使用 components/md3 基礎元件。",
         seedTitle: "種子顏色",
         seedHint: "切換角色即可預覽對應的整套配色（與設定中的主題角色同步）。",
         colorsTitle: "色彩角色",
@@ -397,6 +397,7 @@ export const zhTWPagePrimary = {
             currentEvent: {
                 loadFailedTitle: "載入活動失敗",
                 noActiveEvent: "目前沒有進行中的活動",
+                progress: "活動進度",
             },
             latestCards: {
                 loadFailedTitle: "載入卡牌失敗",
@@ -1459,7 +1460,7 @@ export const zhTWPagePrimary = {
             notFoundDesc: "請確認演唱會 ID 是否正確。若該演唱會為最新實裝，可以嘗試前往「設定」切換或重新整理外部資料伺服器。",
         },
         materials: {
-            badge: "Materials Database",
+            badge: "持有物資料庫",
             title: "持有物",
             titleHighlight: "圖鑒",
             description: "瀏覽 Project SEKAI 普通持有物與 MySekai 持有物",
@@ -1502,7 +1503,7 @@ export const zhTWPagePrimary = {
             loadingFallback: "正在載入持有物資料...",
         },
         exchanges: {
-            badge: "Exchange Database",
+            badge: "兌換所資料庫",
             title: "兌換所",
             titleHighlight: "圖鑒",
             description: "瀏覽 Project SEKAI 各類兌換所條目，檢視兌換成本、獎勵內容與開放狀態。",
@@ -1607,7 +1608,7 @@ export const zhTWPagePrimary = {
             loadingFallback: "正在載入稱號資料...",
         },
         soundtrack: {
-            badge: "OST PLAYER",
+            badge: "原聲播放器",
             title: "遊戲",
             titleHighlight: "原聲帶",
             description: "收錄 Project Sekai 中的所有背景音樂（BGM）",
@@ -2067,6 +2068,7 @@ export const zhTWPagePrimary = {
             totalEntries: "共 {count} 條榜線",
             refreshing: "重新整理中...",
             synced: "已同步",
+            syncFailed: "同步失敗",
             updatedAt: "更新於 {time}",
             loading: "正在載入即時排行榜...",
             loadFailedTitle: "載入失敗",
@@ -2159,7 +2161,7 @@ export const zhTWPagePrimary = {
             celebrationKofi: "海外贊助 / Ko-fi Support",
         },
         deckRecommend: {
-            badge: "DECK RECOMMEND",
+            badge: "組卡工具",
             title: "組卡",
             titleHighlight: "推薦",
             description: "選擇賬號、資料伺服器、模式與歌曲參數，獲取（盡可能）最優活動組卡推薦。",
@@ -2497,7 +2499,7 @@ export const zhTWPagePrimary = {
             },
         },
         deckComparator: {
-            badge: "Deck Comparator",
+            badge: "組卡工具",
             title: "編組",
             titleHighlight: "比較器",
             description: "多人 Live PT 簡易計算器，快速比較不同歌曲和設定的得分差異",
@@ -2578,7 +2580,7 @@ export const zhTWPagePrimary = {
             },
         },
         scoreControl: {
-            badge: "Score Control",
+            badge: "控分工具",
             title: "控分",
             titleHighlight: "計算器",
             description: "輸入目標活動 PT，智慧規劃掛機路線",

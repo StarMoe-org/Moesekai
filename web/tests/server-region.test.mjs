@@ -50,15 +50,12 @@ test("multiple instances receive independent clipPath IDs", () => {
     for (const id of ids) assert.ok(html.includes(`clip-path="url(#${id})"`));
 });
 
-test("EN artwork uses a simplified circular red-white stripe field with one white star", () => {
+test("EN is the global server: a globe, not a national flag", () => {
     const svg = render(ServerRegionIcon, { server: "en" });
-    assert.equal((svg.match(/<polygon /g) ?? []).length, 1);
-    assert.match(svg, /<rect width="54" height="56" fill="#3c3b6e">/);
-    assert.match(svg, /<rect width="100" height="100" fill="#fff">/);
-    assert.match(svg, /<path d="M0 0h100v14H0zm0 28h100v14H0zm0 28h100v14H0zm0 28h100v16H0z" fill="#b22234">/);
-    assert.match(svg, /<g fill="#fff"><polygon /);
-    assert.match(svg, /fill="#b22234"/);
-    assert.doesNotMatch(svg, /data-stripe=|50 stars/);
+    assert.doesNotMatch(svg, /<polygon /);
+    assert.doesNotMatch(svg, /#b22234|#3c3b6e/);
+    assert.match(svg, /<circle cx="50" cy="50" r="33"/);
+    assert.match(svg, /<ellipse cx="50" cy="50" rx="14" ry="33"/);
 });
 
 test("China and Japan retain their artwork; HMT uses Hong Kong's five-petal regional flag", () => {

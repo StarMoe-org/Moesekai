@@ -220,7 +220,6 @@ function VirtualLiveContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.live.badge")}
                 title={t("page.live.title")}
                 highlight={t("page.live.titleHighlight")}

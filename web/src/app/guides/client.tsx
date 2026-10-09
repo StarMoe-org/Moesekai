@@ -177,19 +177,18 @@ function GuidesContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.guides.badge")}
                 title={t("page.guides.title")}
                 highlight={t("page.guides.titleHighlight")}
                 description={t("page.guides.description")}
             />
 
-            <Banner tone="warning" className="mx-auto -mt-2 mb-6 max-w-2xl">
+            <Banner tone="warning" className="mb-6">
                 {t("page.guides.machineTranslationNotice")}
             </Banner>
 
             {/* Tool Site Card */}
-            <div className="mx-auto mb-8 max-w-2xl">
+            <div className="mb-8">
                 <ExternalLink
                     href="https://sekaitools.exmeaning.com/"
                     className={`${cardClassName({ variant: "filled", radius: "lg", interactive: true })} group p-4`}

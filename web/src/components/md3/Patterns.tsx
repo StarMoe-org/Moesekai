@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { Button } from "./Button";
 import { LoadingIndicator } from "./Progress";
@@ -10,7 +10,23 @@ import { mdErrorFill, mdInfo, mdRefresh, mdSearchOff, mdWarningFill } from "./ic
    Page-level MD3 patterns shared by every module page.
    ========================================================================== */
 
-/** Page header: optional eyebrow chip, headline, description and trailing actions. */
+// Han and kana run together without spaces; Hangul and Latin keep word spacing.
+// Script_Extensions so the shared prolonged-sound mark counts as kana.
+const UNSPACED_SCRIPT = /[\p{scx=Han}\p{scx=Hiragana}\p{scx=Katakana}]/u;
+
+/** Two Han halves join with no space; "Card" + "Progress" and "MySEKAI" + a Han word keep one. */
+function titleGap(title: React.ReactNode, highlight: React.ReactNode): string {
+    if (typeof title !== "string" || typeof highlight !== "string") return " ";
+    return UNSPACED_SCRIPT.test(title.slice(-1)) && UNSPACED_SCRIPT.test(highlight.charAt(0)) ? "" : " ";
+}
+
+/**
+ * Page header: compact title row with optional eyebrow, one-line description
+ * and trailing actions. List and data pages keep the default start alignment
+ * so the content stays above the fold; `align="center"` is only for pages
+ * whose body is itself a centered, narrower column (auth cards, hubs, forms),
+ * so the header shares the body's axis.
+ */
 export function PageHeader({
     eyebrow,
     title,
@@ -22,7 +38,7 @@ export function PageHeader({
 }: {
     eyebrow?: React.ReactNode;
     title: React.ReactNode;
-    /** Second part of the title rendered in the primary color. */
+    /** Second part of the title, marked with a highlighter stroke in the character's own color. */
     highlight?: React.ReactNode;
     description?: React.ReactNode;
     actions?: React.ReactNode;
@@ -31,16 +47,22 @@ export function PageHeader({
 }) {
     const centered = align === "center";
     return (
-        <header className={cn("mb-6 sm:mb-8", centered && "text-center", className)}>
-            <div className={cn("flex flex-wrap items-end gap-4", centered ? "justify-center" : "justify-between")}>
+        <header className={withOverrides("mb-4 sm:mb-6", centered && "text-center", className)}>
+            <div className={cn("flex flex-wrap items-end gap-x-4 gap-y-2", centered ? "justify-center" : "justify-between")}>
                 <div className={cn("min-w-0", centered && "mx-auto")}>
-                    {eyebrow && <div className="mb-2 type-label-l text-primary">{eyebrow}</div>}
-                    <h1 className="type-headline-m text-on-surface sm:type-headline-l">
+                    {/* Neutral: the highlight below is the header's one accent, in the true character color. */}
+                    {eyebrow && <div className="mb-1 type-label-m text-on-surface-variant">{eyebrow}</div>}
+                    <h1 className="type-headline-s text-on-surface sm:type-headline-m">
                         {title}
-                        {highlight && <span className="text-primary"> {highlight}</span>}
+                        {highlight && (
+                            <>
+                                {titleGap(title, highlight)}
+                                <span className="brand-mark">{highlight}</span>
+                            </>
+                        )}
                     </h1>
                     {description && (
-                        <p className={cn("mt-2 max-w-3xl type-body-l text-on-surface-variant", centered && "mx-auto")}>{description}</p>
+                        <p className={cn("mt-1 max-w-3xl type-body-m text-on-surface-variant", centered && "mx-auto")}>{description}</p>
                     )}
                 </div>
                 {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
@@ -78,7 +100,7 @@ export function SectionCard({
                 ? "bg-surface-container-high"
                 : "bg-surface-card border border-outline-variant/70";
     return (
-        <section className={cn("overflow-hidden rounded-md3-lg text-on-surface", toneCls, className)}>
+        <section className={withOverrides("overflow-hidden rounded-md3-lg text-on-surface", toneCls, className)}>
             {(title || actions) && (
                 <div className="flex min-h-14 items-center gap-3 px-4 pt-4 sm:px-5">
                     {icon && <Icon path={icon} size={24} className="text-primary" />}
@@ -86,7 +108,7 @@ export function SectionCard({
                     {actions && <div className="flex shrink-0 items-center gap-1">{actions}</div>}
                 </div>
             )}
-            <div className={cn("p-4 sm:p-5", title ? "pt-3 sm:pt-3" : undefined, bodyClassName)}>{children}</div>
+            <div className={withOverrides("p-4 sm:p-5", title ? "pt-3 sm:pt-3" : undefined, bodyClassName)}>{children}</div>
         </section>
     );
 }
@@ -105,21 +127,34 @@ export function Banner({
     action?: React.ReactNode;
     className?: string;
 }) {
+    // A light tint with a hairline border in the tone's colour; the icon carries the tone,
+    // text stays on-surface so long messages read like body copy.
     const toneCls =
         tone === "error"
-            ? "bg-error-container text-on-error-container"
+            ? "border-error/25 bg-error-container/45"
             : tone === "warning"
-              ? "bg-warning-container text-on-warning-container"
-              : "bg-secondary-container text-on-secondary-container";
+              ? "border-warning/30 bg-warning-container/55"
+              : "border-outline-variant/70 bg-secondary-container/45";
+    const iconCls = tone === "error" ? "text-error" : tone === "warning" ? "text-warning" : "text-secondary";
     const icon = tone === "error" ? mdErrorFill : tone === "warning" ? mdWarningFill : mdInfo;
+    const twoPart = !!title && !!children;
     return (
-        <div role={tone === "error" ? "alert" : "status"} className={cn("flex items-start gap-3 rounded-md3-lg px-4 py-3", toneCls, className)}>
-            <Icon path={icon} size={24} className="mt-px shrink-0" />
+        <div
+            role={tone === "error" ? "alert" : "status"}
+            className={withOverrides(
+                "flex gap-3 rounded-md3-lg border px-4 py-3 text-on-surface",
+                twoPart ? "items-start" : "items-center",
+                toneCls,
+                className,
+            )}
+        >
+            <Icon path={icon} size={20} className={cn("shrink-0", iconCls)} />
             <div className="min-w-0 flex-1">
                 {title && <div className="type-title-s">{title}</div>}
-                {children && <div className="type-body-m">{children}</div>}
+                {children && <div className={cn("type-body-m", title ? "mt-0.5 text-on-surface-variant" : undefined)}>{children}</div>}
             </div>
-            {action && <div className="shrink-0 self-center">{action}</div>}
+            {/* Negative margins keep a button from making the banner taller than its text. */}
+            {action && <div className="-my-1.5 shrink-0 self-center">{action}</div>}
         </div>
     );
 }
@@ -145,7 +180,7 @@ export function ErrorState({
             className={className}
             action={
                 retryLabel ? (
-                    <Button variant="text" color="error" icon={mdRefresh} onClick={onRetry ?? (() => window.location.reload())}>
+                    <Button variant="text" color="error" size="xs" icon={mdRefresh} onClick={onRetry ?? (() => window.location.reload())}>
                         {retryLabel}
                     </Button>
                 ) : undefined
@@ -171,7 +206,7 @@ export function EmptyState({
     className?: string;
 }) {
     return (
-        <div className={cn("flex flex-col items-center justify-center gap-3 px-6 py-16 text-center", className)}>
+        <div className={withOverrides("flex flex-col items-center justify-center gap-3 px-6 py-16 text-center", className)}>
             <span className="flex h-16 w-16 items-center justify-center rounded-md3-xl bg-surface-container-high text-on-surface-variant">
                 <Icon path={icon} size={32} />
             </span>
@@ -185,7 +220,7 @@ export function EmptyState({
 /** Centered loading block. */
 export function LoadingState({ label, className }: { label?: React.ReactNode; className?: string }) {
     return (
-        <div className={cn("flex min-h-[40vh] w-full flex-col items-center justify-center gap-4 text-on-surface-variant", className)}>
+        <div className={withOverrides("flex min-h-[40vh] w-full flex-col items-center justify-center gap-4 text-on-surface-variant", className)}>
             <LoadingIndicator size={48} />
             {label && <span className="type-body-m">{label}</span>}
         </div>
@@ -210,12 +245,12 @@ export function LoadMore({
 }) {
     if (shown >= total) {
         return allLoadedLabel && shown > 0 ? (
-            <div className={cn("mt-8 text-center type-body-m text-on-surface-variant", className)}>{allLoadedLabel}</div>
+            <div className={withOverrides("mt-8 text-center type-body-m text-on-surface-variant", className)}>{allLoadedLabel}</div>
         ) : null;
     }
     return (
-        <div className={cn("mt-8 flex justify-center", className)}>
-            <Button variant="tonal" size="m" onClick={onLoadMore} data-shortcut-load-more="true">
+        <div className={withOverrides("mt-8 flex justify-center", className)}>
+            <Button variant="tonal" color="secondary" size="s" onClick={onLoadMore} data-shortcut-load-more="true">
                 {label}
                 <span className="type-label-l opacity-80">
                     {shown} / {total}
@@ -227,5 +262,5 @@ export function LoadMore({
 
 /** Standard page container width + gutters (M3 window size classes). */
 export function PageContainer({ className, children, wide }: { className?: string; children: React.ReactNode; wide?: boolean }) {
-    return <div className={cn("mx-auto w-full px-4 py-6 sm:px-6 sm:py-8", wide ? "max-w-[1600px]" : "max-w-7xl", className)}>{children}</div>;
+    return <div className={withOverrides("mx-auto w-full px-4 py-6 sm:px-6 sm:py-8", wide ? "max-w-[1600px]" : "max-w-7xl", className)}>{children}</div>;
 }

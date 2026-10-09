@@ -415,7 +415,6 @@ function CardsContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.cards.badge")}
                 title={t("page.cards.title")}
                 highlight={t("page.cards.titleHighlight")}

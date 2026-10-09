@@ -1,6 +1,6 @@
 "use client";
 import React, { useId, useRef, useState } from "react";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck, mdClose, mdRemove } from "./icons";
 
@@ -67,7 +67,7 @@ export function Switch({ checked, onCheckedChange, icons = true, label, descript
     );
     if (!label && !description) return <span className={className}>{control}</span>;
     return (
-        <label htmlFor={inputId} className={cn("flex cursor-pointer items-center gap-4", disabled && "cursor-not-allowed opacity-38", className)}>
+        <label htmlFor={inputId} className={withOverrides("flex cursor-pointer items-center gap-4", disabled && "cursor-not-allowed opacity-38", className)}>
             {leading && control}
             <span className="min-w-0 flex-1">
                 {label && <span className="block type-body-l text-on-surface">{label}</span>}
@@ -126,7 +126,7 @@ export function Checkbox({ checked, indeterminate, onCheckedChange, label, error
     );
     if (!label) return <span className={className}>{box}</span>;
     return (
-        <label htmlFor={inputId} className={cn("inline-flex cursor-pointer items-center gap-1 pr-2 type-body-m text-on-surface", disabled && "cursor-not-allowed opacity-38", className)}>
+        <label htmlFor={inputId} className={withOverrides("inline-flex cursor-pointer items-center gap-1 pr-2 type-body-m text-on-surface", disabled && "cursor-not-allowed opacity-38", className)}>
             {box}
             {label}
         </label>
@@ -176,14 +176,18 @@ export function Radio({ checked, onSelect, label, className, disabled, id, ...re
     );
     if (!label) return <span className={className}>{dot}</span>;
     return (
-        <label htmlFor={inputId} className={cn("inline-flex cursor-pointer items-center gap-1 pr-2 type-body-m text-on-surface", disabled && "cursor-not-allowed opacity-38", className)}>
+        <label htmlFor={inputId} className={withOverrides("inline-flex cursor-pointer items-center gap-1 pr-2 type-body-m text-on-surface", disabled && "cursor-not-allowed opacity-38", className)}>
             {dot}
             {label}
         </label>
     );
 }
 
-/* ── Slider (M3 Expressive: tall track, bar handle) ───────────────────── */
+/* ── Slider: thin track, round handle, 44px touch target ──────────────── */
+
+/** Where the track and handles sit: inset by the 20px handle's radius. */
+const SLIDER_RAIL = "pointer-events-none absolute inset-x-2.5 inset-y-0 flex items-center";
+const SLIDER_RAIL_INSET = 10;
 
 export interface SliderProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" | "onChange" | "value"> {
     value: number;
@@ -200,34 +204,24 @@ export function Slider({ value, onValueChange, min = 0, max = 100, step = 1, sho
     const clampedValue = Math.max(min, Math.min(max, value));
     const pct = max <= min ? 0 : ((clampedValue - min) / (max - min)) * 100;
     return (
-        <span className={cn("group/slider relative flex h-11 w-full items-center", disabled && "opacity-38", className)}>
-            {/* active track */}
-            <span
-                aria-hidden
-                className="absolute left-0 h-4 rounded-l-md3-lg rounded-r-[2px] bg-primary"
-                style={{ width: `calc(${pct}% - 6px)` }}
-            />
-            {/* inactive track */}
-            <span
-                aria-hidden
-                className="absolute right-0 h-4 rounded-r-md3-lg rounded-l-[2px] bg-secondary-container"
-                style={{ width: `calc(${100 - pct}% - 6px)` }}
-            />
-            {/* handle */}
-            <span
-                aria-hidden
-                className="absolute h-11 w-1 -translate-x-1/2 rounded-full bg-primary transition-[width] duration-100 group-active/slider:w-0.5 group-focus-within/slider:outline-3 group-focus-within/slider:outline-offset-2 group-focus-within/slider:outline-secondary"
-                style={{ left: `${pct}%` }}
-            />
-            {showValue && (
+        <span className={withOverrides("group/slider relative flex h-11 w-full items-center", disabled && "opacity-38", className)}>
+            {/* Inset by the handle's radius so the handle stays inside at either end. */}
+            <span aria-hidden className={SLIDER_RAIL}>
+                <span className="absolute inset-x-0 h-1.5 rounded-full bg-surface-container-highest" />
+                <span className="absolute left-0 h-1.5 rounded-full bg-primary" style={{ width: `${pct}%` }} />
                 <span
-                    aria-hidden
-                    className="pointer-events-none absolute -top-10 -translate-x-1/2 scale-0 rounded-full bg-inverse-surface px-3 py-1.5 type-label-l text-inverse-on-surface opacity-0 transition-[opacity,transform] duration-150 group-focus-within/slider:scale-100 group-focus-within/slider:opacity-100 group-active/slider:scale-100 group-active/slider:opacity-100"
+                    className="absolute size-5 -translate-x-1/2 rounded-full bg-primary shadow-elev-1 transition-transform duration-100 group-active/slider:scale-110 group-focus-within/slider:outline-2 group-focus-within/slider:outline-offset-2 group-focus-within/slider:outline-primary"
                     style={{ left: `${pct}%` }}
-                >
-                    {formatValue ? formatValue(clampedValue) : clampedValue}
-                </span>
-            )}
+                />
+                {showValue && (
+                    <span
+                        className="absolute -top-8 -translate-x-1/2 scale-0 rounded-full bg-inverse-surface px-3 py-1.5 type-label-l text-inverse-on-surface opacity-0 transition-[opacity,transform] duration-150 group-focus-within/slider:scale-100 group-focus-within/slider:opacity-100 group-active/slider:scale-100 group-active/slider:opacity-100"
+                        style={{ left: `${pct}%` }}
+                    >
+                        {formatValue ? formatValue(clampedValue) : clampedValue}
+                    </span>
+                )}
+            </span>
             <input
                 type="range"
                 min={min}
@@ -277,14 +271,14 @@ export function RangeSlider({ value, onValueChange, min = 0, max = 100, step = 1
     };
     const pointerValue = (event: React.PointerEvent<HTMLDivElement>) => {
         const rect = event.currentTarget.getBoundingClientRect();
-        const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left) / Math.max(1, rect.width)));
+        const fraction = Math.max(0, Math.min(1, (event.clientX - rect.left - SLIDER_RAIL_INSET) / Math.max(1, rect.width - SLIDER_RAIL_INSET * 2)));
         const increment = step > 0 ? step : 1;
         return Math.max(min, Math.min(upperBound, Number((min + Math.round(fraction * range / increment) * increment).toFixed(6))));
     };
     const endDrag = () => { dragging.current = false; };
     return (
         <div
-            className={cn("relative flex h-11 w-full touch-none items-center", isDisabled && "opacity-38", className)}
+            className={withOverrides("relative flex h-11 w-full touch-none items-center", isDisabled && "opacity-38", className)}
             data-range-slider="true"
             onPointerDown={(event) => {
                 if (isDisabled || event.button !== 0) return;
@@ -306,31 +300,34 @@ export function RangeSlider({ value, onValueChange, min = 0, max = 100, step = 1
             onPointerCancel={endDrag}
             onLostPointerCapture={endDrag}
         >
-            <span aria-hidden className="pointer-events-none absolute inset-x-0 h-4 rounded-full bg-secondary-container" />
-            <span aria-hidden className="pointer-events-none absolute h-4 rounded-[2px] bg-primary" style={{ left: `${lowerPct}%`, width: `${upperPct - lowerPct}%` }} />
-            {([0, 1] as const).map((index) => (
-                <React.Fragment key={index}>
-                    <input
-                        ref={index === 0 ? lowerInput : upperInput}
-                        type="range"
-                        aria-label={index === 0 ? lowerLabel : upperLabel}
-                        aria-valuetext={formatValue?.(index === 0 ? lower : upper)}
-                        min={index === 0 ? min : lower}
-                        max={index === 0 ? upper : upperBound}
-                        step={step}
-                        value={index === 0 ? lower : upper}
-                        disabled={isDisabled}
-                        onChange={(event) => update(index, Number(event.target.value))}
-                        onFocus={() => { activeHandle.current = index; setFocused(index); }}
-                        onBlur={() => setFocused(null)}
-                        className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
-                    />
+            <span aria-hidden className={SLIDER_RAIL}>
+                <span className="absolute inset-x-0 h-1.5 rounded-full bg-surface-container-highest" />
+                <span className="absolute h-1.5 rounded-full bg-primary" style={{ left: `${lowerPct}%`, width: `${upperPct - lowerPct}%` }} />
+                {([0, 1] as const).map((index) => (
                     <span
-                        aria-hidden
-                        className={cn("pointer-events-none absolute h-11 w-1 -translate-x-1/2 rounded-full bg-primary ring-4 ring-surface", focused === index && "z-10 outline-3 outline-offset-4 outline-secondary")}
+                        key={index}
+                        className={cn("absolute size-5 -translate-x-1/2 rounded-full bg-primary shadow-elev-1", focused === index && "z-10 outline-2 outline-offset-2 outline-primary")}
                         style={{ left: `${index === 0 ? lowerPct : upperPct}%` }}
                     />
-                </React.Fragment>
+                ))}
+            </span>
+            {([0, 1] as const).map((index) => (
+                <input
+                    key={index}
+                    ref={index === 0 ? lowerInput : upperInput}
+                    type="range"
+                    aria-label={index === 0 ? lowerLabel : upperLabel}
+                    aria-valuetext={formatValue?.(index === 0 ? lower : upper)}
+                    min={index === 0 ? min : lower}
+                    max={index === 0 ? upper : upperBound}
+                    step={step}
+                    value={index === 0 ? lower : upper}
+                    disabled={isDisabled}
+                    onChange={(event) => update(index, Number(event.target.value))}
+                    onFocus={() => { activeHandle.current = index; setFocused(index); }}
+                    onBlur={() => setFocused(null)}
+                    className="pointer-events-none absolute inset-0 h-full w-full opacity-0"
+                />
             ))}
         </div>
     );

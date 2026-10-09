@@ -394,7 +394,6 @@ function MysekaiContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.mysekai.badge")}
                 title={t("page.mysekai.title")}
                 highlight={t("page.mysekai.titleHighlight")}

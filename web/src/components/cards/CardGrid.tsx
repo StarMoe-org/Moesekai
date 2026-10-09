@@ -10,6 +10,7 @@ import SekaiCardThumbnail from "./SekaiCardThumbnail";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { getCharacterName } from "@/lib/i18n";
 import { getCardDefaultTrainedStatus, isTrainableCard } from "@/types/types";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 interface CardGridProps {
     cards: ICardInfo[];
@@ -34,6 +35,7 @@ function CardSkeleton() {
 export default function CardGrid({ cards, isLoading = false, hrefPrefix, view = "grid" }: CardGridProps) {
     const [now] = React.useState(() => Date.now());
     const { t, formatDate } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
 
     if (isLoading) {
         return (
@@ -74,7 +76,7 @@ export default function CardGrid({ cards, isLoading = false, hrefPrefix, view = 
     }
 
     return (
-        <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
+        <div ref={gridRef} className="relative grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
             {cards.map((card) => {
                 const isSpoiler = (card.releaseAt || card.archivePublishedAt || 0) > now;
                 return <CardItem key={card.id} card={card} isSpoiler={isSpoiler} hrefPrefix={hrefPrefix} />;

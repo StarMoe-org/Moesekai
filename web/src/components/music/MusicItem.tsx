@@ -1,4 +1,5 @@
 "use client";
+import { useState } from "react";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { IMusicInfo, getMusicJacketUrl, MUSIC_CATEGORY_COLORS, MusicCategoryType, MusicDifficultyType, DIFFICULTY_COLORS } from "@/types/music";
@@ -7,7 +8,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { formatBpmValue } from "@/lib/musicBpm";
 import { Icon } from "@/components/md3";
-import { mdSearch } from "@/components/md3/icons";
+import { mdMusicNote, mdSearch } from "@/components/md3/icons";
 
 const ALL_DIFFICULTIES: MusicDifficultyType[] = ["easy", "normal", "hard", "expert", "master", "append"];
 const JACKET_OVERLAY_BADGE_CLASS = "inline-flex h-5 items-center rounded-md3-xs bg-scrim/60 px-1.5 font-mono text-[10px] font-normal leading-4 text-white";
@@ -37,22 +38,32 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
     const indexedTitle = locale === "zh-CN" ? cnTitle : locale === "en-US" ? enTitle : undefined;
     const translatedTitle = translateMasterText("music", "title", music.title) ?? (useLLMTranslation ? indexedTitle : undefined);
     const itemHref = href ?? `${hrefBase}/${music.id}`;
+    // Keyed by URL so a later source switch tries the new jacket again.
+    const [failedJacket, setFailedJacket] = useState<string | null>(null);
 
     return (
-        <Link href={itemHref} className="group state-layer focus-ring block rounded-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_320px]" data-shortcut-item="true">
-            <div className="relative rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
+        <Link href={itemHref} className="group state-layer focus-ring flex h-full rounded-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_320px]" data-shortcut-item="true">
+            {/* Fills the grid row; the difficulty row sits at the bottom so a row of cards lines up. */}
+            <div className="relative flex w-full flex-col rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Jacket Image */}
                 <div className="relative aspect-square overflow-hidden">
-                    <Image
-                        src={jacketUrl}
-                        alt={music.title}
-                        fill
-                        sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
-                        className="object-cover"
-                        unoptimized
-                        loading="lazy"
-                        decoding="async"
-                    />
+                    {failedJacket === jacketUrl ? (
+                        <div className="absolute inset-0 flex items-center justify-center bg-surface-container-high text-on-surface-variant">
+                            <Icon path={mdMusicNote} size={40} />
+                        </div>
+                    ) : (
+                        <Image
+                            src={jacketUrl}
+                            alt={music.title}
+                            fill
+                            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
+                            className="object-cover"
+                            unoptimized
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => setFailedJacket(jacketUrl)}
+                        />
+                    )}
 
                     {/* Category Tags Overlay */}
                     <div className="absolute bottom-2 left-2 flex flex-wrap gap-1">
@@ -106,16 +117,16 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                 </div>
 
                 {/* Info */}
-                <div className="p-3">
-                    <h3 className="type-title-s text-on-surface group-hover:text-primary">
+                <div className="flex flex-1 flex-col p-3">
+                    <h3 className="type-title-s text-on-surface group-hover:text-primary" title={music.title}>
                         <span className="flex flex-col">
-                            <span className="block">{music.title}</span>
+                            <span className="line-clamp-2">{music.title}</span>
                             {translatedTitle && (
-                                <span className="type-body-s text-on-surface-variant block">{translatedTitle}</span>
+                                <span className="type-body-s text-on-surface-variant truncate">{translatedTitle}</span>
                             )}
                         </span>
                     </h3>
-                    <p className="type-body-s text-on-surface-variant mt-1">
+                    <p className="type-body-s text-on-surface-variant mt-1 truncate">
                         {music.composer}
                         {music.composer !== music.arranger && music.arranger !== "-" && ` / ${music.arranger}`}
                     </p>
@@ -135,7 +146,7 @@ export default function MusicItem({ music, isSpoiler, constant, difficulties, sh
                         </div>
                     )}
                     {showDifficulty && difficulties && (
-                        <div className="flex justify-center gap-1 mt-1.5">
+                        <div className="mt-auto flex justify-center gap-1 pt-1.5">
                             {ALL_DIFFICULTIES.map(diff => {
                                 const level = difficulties[diff];
                                 if (level === undefined) return null;

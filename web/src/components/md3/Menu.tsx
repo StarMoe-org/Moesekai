@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useId, useLayoutEffect, useRef, useState
 import { createPortal } from "react-dom";
 import LocalizedLink from "@/components/LocalizedLink";
 import { usePathname } from "next/navigation";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck } from "./icons";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
@@ -152,7 +152,7 @@ export function Menu({ anchor, items, align = "start", matchAnchorWidth, classNa
                         role="menu"
                         tabIndex={-1}
                         onKeyDown={onMenuKeyDown}
-                        className={cn(
+                        className={withOverrides(
                             "md3-menu-enter fixed z-[300] max-h-[min(60vh,420px)] min-w-[112px] max-w-[280px] overflow-y-auto rounded-md3-lg bg-surface-container py-2 text-on-surface shadow-elev-2",
                             className,
                         )}

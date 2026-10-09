@@ -382,7 +382,7 @@ export default function CostumeDetailClient() {
                                                     aria-pressed={isSelected}
                                                     onClick={() => setSelectedColorId(variant.colorId)}
                                                     className={`state-layer focus-ring flex items-center gap-2 whitespace-nowrap rounded-md3-sm py-1 pl-1 pr-3 type-label-l transition-colors duration-150 ease-md3-standard ${isSelected
-                                                        ? "bg-secondary-container text-on-secondary-container ring-2 ring-primary"
+                                                        ? "bg-primary-container text-on-primary-container"
                                                         : "border border-outline-variant text-on-surface-variant"
                                                         }`}
                                                 >

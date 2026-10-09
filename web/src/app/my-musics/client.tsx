@@ -35,13 +35,21 @@ import {
     IMusicCategoryInfo,
     IMusicInfo,
     normalizeMusicsData,
+    difficultyFillStyle,
 } from "@/types/music";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { fetchSongConstants, buildSongConstantsMap } from "@/lib/songConstants";
+import {
+    mergeFallbackMusicResults,
+    parseLegacyMusicResults,
+    parseTopLevelMusicResults,
+    type PlayResult,
+} from "@/lib/user-music-results";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, Button, EmptyState, ErrorState, Icon, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
 import { mdImage, mdKeyboardArrowDown, mdLibraryMusic } from "@/components/md3/icons";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 // ==================== Types ====================
 
@@ -60,34 +68,6 @@ interface MusicDifficulty {
     musicDifficulty: string;
     playLevel: number;
 }
-
-interface RawUserMusicResult {
-    musicId?: number | string;
-    musicDifficultyType?: string;
-    musicDifficulty?: string;
-    playResult?: string;
-    fullPerfectFlg?: boolean;
-    fullComboFlg?: boolean;
-}
-
-interface RawUserMusicDifficultyStatus extends RawUserMusicResult {
-    userMusicResults?: RawUserMusicResult[];
-}
-
-interface RawUserMusic {
-    musicId?: number | string;
-    userMusicDifficultyStatuses?: RawUserMusicDifficultyStatus[];
-    userMusicResults?: RawUserMusicResult[];
-}
-
-type PlayResult = "AP" | "FC" | "C" | "";
-
-const PLAY_RESULT_PRIORITY: Record<PlayResult, number> = {
-    "": 0,
-    C: 1,
-    FC: 2,
-    AP: 3,
-};
 
 function parseUploadTimeToDate(uploadTime: string | number): Date | null {
     if (typeof uploadTime === "number") {
@@ -127,176 +107,11 @@ function getUserErrorMessageKey(code: AccountDataErrorCode): string {
     }
 }
 
-
-function parseMusicId(value: number | string | undefined, fallback?: number): number | null {
-    if (typeof value === "number" && Number.isFinite(value)) return value;
-    if (typeof value === "string") {
-        const parsed = Number(value);
-        if (Number.isFinite(parsed)) return parsed;
-    }
-    if (typeof fallback === "number" && Number.isFinite(fallback)) return fallback;
-    return null;
-}
-
-function normalizeDifficulty(value: string | undefined | null): string | null {
-    if (!value) return null;
-    const normalized = value.trim().toLowerCase();
-    return normalized || null;
-}
-
-function normalizePlayResult(result: Pick<RawUserMusicResult, "playResult" | "fullPerfectFlg" | "fullComboFlg">): PlayResult {
-    if (result.fullPerfectFlg) return "AP";
-
-    const playResult = result.playResult?.toLowerCase();
-    if (playResult === "full_perfect" || playResult === "all_perfect" || playResult === "ap") {
-        return "AP";
-    }
-
-    if (result.fullComboFlg) return "FC";
-    if (playResult === "full_combo" || playResult === "fc") {
-        return "FC";
-    }
-
-    if (playResult === "clear" || playResult === "c") {
-        return "C";
-    }
-
-    return "";
-}
-
-function upsertMusicResult(
-    resultsMap: Map<number, Record<string, PlayResult>>,
-    musicId: number,
-    difficulty: string,
-    rank: PlayResult
-): void {
-    if (!rank) return;
-
-    if (!resultsMap.has(musicId)) {
-        resultsMap.set(musicId, {});
-    }
-
-    const entry = resultsMap.get(musicId)!;
-    const current = entry[difficulty] || "";
-    if (PLAY_RESULT_PRIORITY[rank] > PLAY_RESULT_PRIORITY[current]) {
-        entry[difficulty] = rank;
-    }
-}
-
-function addRawResultsToMap(
-    resultsMap: Map<number, Record<string, PlayResult>>,
-    rawResults: RawUserMusicResult[],
-    fallbackMusicId?: number,
-    fallbackDifficulty?: string
-): void {
-    for (const rawResult of rawResults) {
-        const musicId = parseMusicId(rawResult.musicId, fallbackMusicId);
-        const difficulty = normalizeDifficulty(
-            rawResult.musicDifficultyType || rawResult.musicDifficulty || fallbackDifficulty
-        );
-        const rank = normalizePlayResult(rawResult);
-
-        if (musicId === null || !difficulty || !rank) continue;
-        upsertMusicResult(resultsMap, musicId, difficulty, rank);
-    }
-}
-
-function parseTopLevelMusicResults(data: unknown): Map<number, Record<string, PlayResult>> {
-    const resultsMap = new Map<number, Record<string, PlayResult>>();
-
-    if (Array.isArray(data)) {
-        addRawResultsToMap(resultsMap, data as RawUserMusicResult[]);
-        return resultsMap;
-    }
-
-    if (!data || typeof data !== "object") {
-        return resultsMap;
-    }
-
-    const topLevelResults = (data as { userMusicResults?: unknown }).userMusicResults;
-    if (Array.isArray(topLevelResults)) {
-        addRawResultsToMap(resultsMap, topLevelResults as RawUserMusicResult[]);
-    }
-
-    return resultsMap;
-}
-
-function parseLegacyMusicResults(data: unknown): Map<number, Record<string, PlayResult>> {
-    const resultsMap = new Map<number, Record<string, PlayResult>>();
-    if (!data || typeof data !== "object" || Array.isArray(data)) {
-        return resultsMap;
-    }
-
-    const userMusics = (data as { userMusics?: unknown }).userMusics;
-    if (!Array.isArray(userMusics)) {
-        return resultsMap;
-    }
-
-    for (const music of userMusics as RawUserMusic[]) {
-        const musicId = parseMusicId(music.musicId);
-        if (musicId === null) continue;
-
-        if (Array.isArray(music.userMusicResults)) {
-            addRawResultsToMap(resultsMap, music.userMusicResults, musicId);
-        }
-
-        const diffStatuses = Array.isArray(music.userMusicDifficultyStatuses)
-            ? music.userMusicDifficultyStatuses
-            : [];
-
-        for (const diffStatus of diffStatuses) {
-            const statusDifficulty = normalizeDifficulty(
-                diffStatus.musicDifficultyType || diffStatus.musicDifficulty
-            );
-
-            // Some legacy payloads store clear/fc/ap directly on difficulty status.
-            addRawResultsToMap(
-                resultsMap,
-                [diffStatus],
-                musicId,
-                statusDifficulty || undefined
-            );
-
-            const nestedResults = Array.isArray(diffStatus.userMusicResults)
-                ? diffStatus.userMusicResults
-                : [];
-            addRawResultsToMap(
-                resultsMap,
-                nestedResults,
-                musicId,
-                statusDifficulty || undefined
-            );
-        }
-    }
-
-    return resultsMap;
-}
-
-function mergeFallbackMusicResults(
-    primaryResultsMap: Map<number, Record<string, PlayResult>>,
-    fallbackResultsMap: Map<number, Record<string, PlayResult>>
-): Map<number, Record<string, PlayResult>> {
-    fallbackResultsMap.forEach((fallbackEntry, musicId) => {
-        const primaryEntry = primaryResultsMap.get(musicId);
-        if (!primaryEntry) {
-            primaryResultsMap.set(musicId, { ...fallbackEntry });
-            return;
-        }
-
-        Object.entries(fallbackEntry).forEach(([difficulty, rank]) => {
-            if (!primaryEntry[difficulty]) {
-                primaryEntry[difficulty] = rank;
-            }
-        });
-    });
-
-    return primaryResultsMap;
-}
-
 // ==================== Main Component ====================
 
 function MyMusicsContent() {
     const { t, formatDate } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
     // Theme context for asset source
     const { assetSource } = useTheme();
     const searchParams = useSearchParams();
@@ -1011,7 +826,7 @@ function MyMusicsContent() {
                 ) : filteredMusics.length === 0 ? (
                     <EmptyState icon={mdLibraryMusic} title={t("page.myMusics.noResult")} />
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
+                    <div ref={gridRef} className="relative grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {displayedMusicsWithSeparators.map((item, _index) => {
                             if (item.type === 'separator') {
                                 const sepData = item.data as { level: number, difficulty: string };
@@ -1060,22 +875,13 @@ function MyMusicsContent() {
 // ==================== Sub Components ====================
 
 function LevelSeparatorCard({ level, difficulty }: { level: number; difficulty: string }) {
-    // Difficulty color mapping
-    const difficultyColors: Record<string, string> = {
-        EASY: "from-green-400 to-green-500",
-        NORMAL: "from-blue-400 to-blue-500",
-        HARD: "from-yellow-400 to-yellow-500",
-        EXPERT: "from-red-400 to-red-500",
-        MASTER: "from-purple-500 to-purple-600",
-        APPEND: "from-pink-500 to-pink-600",
-    };
-
-    const gradientClass = difficultyColors[difficulty] || "from-outline to-outline";
-
     return (
-        <div className={`flex aspect-square flex-col items-center justify-center rounded-md3-md bg-gradient-to-br shadow-elev-1 ${gradientClass}`}>
-            <div className="text-white text-center px-2">
-                <div className="text-[10px] sm:text-xs font-bold opacity-90 mb-0.5">
+        <div
+            className="flex aspect-square flex-col items-center justify-center rounded-md3-md bg-surface-container-high text-on-surface shadow-elev-1"
+            style={difficultyFillStyle(difficulty.toLowerCase())}
+        >
+            <div className="text-center px-2">
+                <div className="text-[10px] sm:text-xs font-bold opacity-80 mb-0.5">
                     {difficulty}
                 </div>
                 <div className="text-2xl sm:text-3xl md:text-4xl font-black">
@@ -1090,7 +896,6 @@ function MyMusicsHeader() {
     const { t } = useI18n();
     return (
         <PageHeader
-            align="center"
             eyebrow={t("page.myMusics.badge")}
             title={t("page.myMusics.title")}
             highlight={t("page.myMusics.titleHighlight")}

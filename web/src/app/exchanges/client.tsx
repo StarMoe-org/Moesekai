@@ -41,7 +41,6 @@ function ExchangesPageHeader() {
 
     return (
         <PageHeader
-            align="center"
             eyebrow={t("page.exchanges.badge")}
             title={t("page.exchanges.title")}
             highlight={t("page.exchanges.titleHighlight")}

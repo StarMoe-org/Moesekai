@@ -1,6 +1,7 @@
 "use client";
 import React, { useState } from "react";
-import { Card } from "@/components/md3";
+import { Card, Icon } from "@/components/md3";
+import { mdCasino } from "@/components/md3/icons";
 import Image from "next/image";
 import { IGachaInfo } from "@/types/types";
 import { getGachaLogoUrl } from "@/lib/assets";
@@ -19,6 +20,7 @@ export default function GachaItem({ gacha }: GachaItemProps) {
     const isUnreleased = gacha.startAt > now;
     const isOngoing = gacha.startAt <= now && gacha.endAt >= now;
     const logoUrl = getGachaLogoUrl(gacha.assetbundleName, assetSource);
+    const [failedLogo, setFailedLogo] = useState<string | null>(null);
 
     const formatDate = (timestamp: number) => formatLocaleDate(timestamp, {
         year: "numeric",
@@ -31,17 +33,20 @@ export default function GachaItem({ gacha }: GachaItemProps) {
             <div className="relative">
                 {/* Logo Image */}
                 <div className="relative aspect-[16/9] bg-surface-container-high">
-                    <Image
-                        src={logoUrl}
-                        alt={gacha.name}
-                        fill
-                        className="object-contain p-2"
-                        unoptimized
-                        onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='112' viewBox='0 0 200 112'%3E%3Crect fill='%23f1f5f9' width='200' height='112'/%3E%3Ctext x='100' y='56' text-anchor='middle' fill='%2394a3b8' font-size='12'%3ENo Image%3C/text%3E%3C/svg%3E";
-                        }}
-                    />
+                    {failedLogo === logoUrl ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-on-surface-variant">
+                            <Icon path={mdCasino} size={40} />
+                        </div>
+                    ) : (
+                        <Image
+                            src={logoUrl}
+                            alt={gacha.name}
+                            fill
+                            className="object-contain p-2"
+                            unoptimized
+                            onError={() => setFailedLogo(logoUrl)}
+                        />
+                    )}
 
                     {/* Status Badges */}
                     <div className="absolute top-2 right-2 flex flex-col gap-1">

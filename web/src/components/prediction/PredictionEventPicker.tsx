@@ -10,6 +10,9 @@ import { getCharacterName } from "@/lib/i18n";
 import { findActiveWlChapter } from "@/lib/prediction/use-prediction-event";
 import type { PredictionEventState } from "@/lib/prediction/types";
 
+/** Marks the running event in the event selector. */
+export const ACTIVE_DOT = <span aria-hidden className="block size-2 rounded-full bg-success" />;
+
 interface PredictionEventPickerProps {
     state: PredictionEventState;
 }
@@ -40,11 +43,11 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
                     { value: "jp", label: <ServerRegionLabel server="jp" label={t("page.prediction.servers.jp")} /> },
                 ]}
                 showCheckmark={false}
-                className="max-w-xs shrink-0 sm:w-auto"
+                className="shrink-0 sm:w-auto"
             />
 
             {/* Event Selector */}
-            <div className="flex-1">
+            <div className="w-full sm:flex-1">
                 <Select
                     value={selectedEventId}
                     onValueChange={setSelectedEventId}
@@ -52,7 +55,7 @@ export function PredictionServerEventControls({ state, children }: PredictionSer
                     aria-label={t("page.prediction.title")}
                     options={[
                         ...(unlistedEventId != null ? [{ value: unlistedEventId, label: `#${unlistedEventId} ${masterEvent?.name ?? ""}` }] : []),
-                        ...events.map(event => ({ value: event.id, label: `${event.is_active ? "🟢 " : ""}#${event.id} ${event.name}` })),
+                        ...events.map(event => ({ value: event.id, label: `#${event.id} ${event.name}`, leading: event.is_active ? ACTIVE_DOT : undefined })),
                     ]}
                     placeholder={eventsLoading ? t("page.prediction.events.loading") : t("page.prediction.events.empty")}
                 />

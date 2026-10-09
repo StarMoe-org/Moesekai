@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "../styles/md3-schemes.css";
 @import "../styles/md3-tokens.css";
+@import "../styles/md3-loading.css";
 @import "../styles/legacy-games.css";
 
 /* Layout rails shared by MainLayout / Sidebar / FilterDrawer (MD3 docked panes).
@@ -13,6 +14,8 @@
   --sidebar-edge: var(--sidebar-w);
   --beside-sidebar: var(--sidebar-w);
   --dual-rail-w: calc(var(--sidebar-w) + var(--filter-drawer-w));
+  /* A collapsed docked filter sheet leaves a 3.5rem rail in its place (plus gutters). */
+  --filter-rail-w: 5rem;
 
 }
 
@@ -52,11 +55,20 @@ body {
    the character's color without tinting surfaces themselves. Static, follows the
    seed through container roles, and is dropped with background effects off. */
 :root {
-  --brand-wash-strength: 32%;
+  --brand-wash-strength: 55%;
+  /* A neighbouring hue for the second glow, so the glass panes over it show a
+     gradient rather than one flat tint. Plain seed where relative color fails. */
+  --brand-wash-alt: var(--md-sys-color-primary-container);
 }
 
 :root[data-theme="dark"] {
-  --brand-wash-strength: 34%;
+  --brand-wash-strength: 26%;
+}
+
+@supports (color: oklch(from red l c h)) {
+  :root {
+    --brand-wash-alt: oklch(from var(--md-sys-color-primary-container) l c calc(h - 40));
+  }
 }
 
 .brand-wash {
@@ -65,12 +77,26 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(64rem 36rem at 32% -8%, color-mix(in srgb, var(--md-sys-color-primary-container) var(--brand-wash-strength), transparent), transparent 70%),
-    radial-gradient(48rem 32rem at 100% 104%, color-mix(in srgb, var(--md-sys-color-tertiary-container) var(--brand-wash-strength), transparent), transparent 70%);
+    radial-gradient(64rem 52rem at 0% 0%, color-mix(in srgb, var(--md-sys-color-primary-container) var(--brand-wash-strength), transparent), transparent 72%),
+    radial-gradient(72rem 44rem at 62% -10%, color-mix(in srgb, var(--brand-wash-alt) calc(var(--brand-wash-strength) * 0.8), transparent), transparent 72%),
+    radial-gradient(68rem 52rem at 100% 100%, color-mix(in srgb, var(--md-sys-color-primary-container) calc(var(--brand-wash-strength) * 0.75), transparent), transparent 72%),
+    radial-gradient(56rem 44rem at 6% 100%, color-mix(in srgb, var(--brand-wash-alt) calc(var(--brand-wash-strength) * 0.7), transparent), transparent 72%);
 }
 
 :root[data-background-animation="off"] .brand-wash {
   display: none;
+}
+
+/* Brand mark: the character color as a highlighter stroke under heading text.
+   The text stays on-surface so it reads on every seed; the stroke carries the
+   color that pale seeds cannot give light-mode text (Mizuki #ddaacc is ~1.9:1 on
+   the page). --md-ext-brand-mark is generated per seed so text over it stays at
+   4.5:1: pale seeds keep their exact color, dark seeds are thinned. */
+.brand-mark {
+  padding-inline: 0.125em;
+  background-image: linear-gradient(transparent 50%, var(--md-ext-brand-mark) 50%, var(--md-ext-brand-mark) 88%, transparent 88%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 /* Outlined text field labels mask the outline with the nearest container's fill. */
@@ -81,6 +107,30 @@ body {
 .bg-surface-container { --md3-tf-label-bg: var(--md-sys-color-surface-container); }
 .bg-surface-container-high { --md3-tf-label-bg: var(--md-sys-color-surface-container-high); }
 .bg-surface-container-highest { --md3-tf-label-bg: var(--md-sys-color-surface-container-highest); }
+
+/* A failed asset (masterdata often ships before its files) would print its alt
+   text and the broken-image glyph across the card. Browsers draw ::before and
+   ::after on an image only once it has failed, so they cover the slot with a
+   quiet tile and an image icon. Fill images are already absolutely positioned. */
+img[data-nimg="1"] { position: relative; }
+img[data-nimg]::before,
+img[data-nimg]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+}
+img[data-nimg]::before {
+  background-color: var(--md-sys-color-surface-container-high);
+}
+img[data-nimg]::after {
+  margin: auto;
+  width: min(40px, 50%);
+  height: min(40px, 50%);
+  background-color: var(--md-sys-color-on-surface-variant);
+  opacity: 0.6;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm86-97h429q8.5 0 12.75-8t-.75-16L590-457q-5-6-12-6t-12 6L446-302l-81-111q-5-6-12-6t-12 6l-86 112q-6 8-1.75 16t12.75 8Z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 -960 960 960'%3E%3Cpath d='M180-120q-24 0-42-18t-18-42v-600q0-24 18-42t42-18h600q24 0 42 18t18 42v600q0 24-18 42t-42 18H180Zm0-60h600v-600H180v600Zm86-97h429q8.5 0 12.75-8t-.75-16L590-457q-5-6-12-6t-12 6L446-302l-81-111q-5-6-12-6t-12 6l-86 112q-6 8-1.75 16t12.75 8Z'/%3E%3C/svg%3E") center / contain no-repeat;
+}
 
 :root.theme-switching,
 :root.theme-switching *,
@@ -239,7 +289,7 @@ button[data-shortcut-load-more="true"]::after {
 
 .chart-preview-logo-fill {
   animation: logo-fill-right 2.4s ease-in-out infinite;
-  background: linear-gradient(to right, var(--md-sys-color-primary) 33%, var(--md-sys-color-secondary) 33%, color-mix(in srgb, var(--md-sys-color-on-surface) 15%, transparent) 66%, var(--md-sys-color-primary) 66%);
+  background: linear-gradient(to right, var(--md-sys-color-primary-container) 33%, var(--md-sys-color-secondary) 33%, color-mix(in srgb, var(--md-sys-color-on-surface) 15%, transparent) 66%, var(--md-sys-color-primary-container) 66%);
   background-size: 300% 100%;
 }
 

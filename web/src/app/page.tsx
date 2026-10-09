@@ -254,7 +254,7 @@ export default function Home() {
         <div className="flex flex-col items-center gap-1 animate-fade-in-up">
           <h1 className="flex items-center gap-2">
             <div
-              className="h-10 w-40 sm:h-12 sm:w-48 bg-primary"
+              className="h-10 w-40 sm:h-12 sm:w-48 bg-primary-container"
               style={{
                 maskImage: `url(${MOE_LOGO_URL})`,
                 maskSize: "contain",

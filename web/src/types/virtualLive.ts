@@ -7,7 +7,9 @@ export type VirtualLiveType =
     | "archive"
     | "cheerful_carnival"
     | "connect_live"
-    | "streaming";
+    | "streaming"
+    | "virtual_message"
+    | "solo_virtual_live";
 
 export interface IVirtualLiveSchedule {
     id: number;
@@ -91,7 +93,7 @@ export interface IVirtualLiveInfo {
     virtualLiveRewards?: IVirtualLiveReward[];
 }
 
-export const VIRTUAL_LIVE_TYPE_IDS = ["normal", "beginner", "archive", "cheerful_carnival", "connect_live", "streaming"] as const;
+export const VIRTUAL_LIVE_TYPE_IDS = ["normal", "beginner", "archive", "cheerful_carnival", "connect_live", "streaming", "virtual_message", "solo_virtual_live"] as const;
 export const VIRTUAL_LIVE_TYPE_LABEL_KEYS: Record<VirtualLiveType, string> = {
     normal: "common.virtualLiveTypes.normal",
     beginner: "common.virtualLiveTypes.beginner",
@@ -99,7 +101,16 @@ export const VIRTUAL_LIVE_TYPE_LABEL_KEYS: Record<VirtualLiveType, string> = {
     cheerful_carnival: "common.virtualLiveTypes.cheerful_carnival",
     connect_live: "common.virtualLiveTypes.connect_live",
     streaming: "common.virtualLiveTypes.streaming",
+    virtual_message: "common.virtualLiveTypes.virtual_message",
+    solo_virtual_live: "common.virtualLiveTypes.solo_virtual_live",
 };
+
+/** Masterdata gains types before the dictionaries do: show the raw id, not the missing key. */
+export function getVirtualLiveTypeLabel(type: string, t: (key: string) => string): string {
+    const key = `common.virtualLiveTypes.${type}`;
+    const label = t(key);
+    return label === key ? type : label;
+}
 
 // Virtual live type colors
 export const VIRTUAL_LIVE_TYPE_COLORS: Record<VirtualLiveType, string> = {
@@ -109,6 +120,8 @@ export const VIRTUAL_LIVE_TYPE_COLORS: Record<VirtualLiveType, string> = {
     cheerful_carnival: "#FFB74D",
     connect_live: "#AB47BC",
     streaming: "#26C6DA",
+    virtual_message: "#EC407A",
+    solo_virtual_live: "#5C6BC0",
 };
 
 /**

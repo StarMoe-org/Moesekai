@@ -625,7 +625,7 @@ export default function MusicDetailPage() {
                                                 key={cat.key}
                                                 onClick={() => setSelectedRankingCategory(cat.key)}
                                                 className={`state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l border transition-colors ${isSelected
-                                                    ? "border-transparent bg-secondary-container text-on-secondary-container"
+                                                    ? "border-transparent bg-primary-container text-on-primary-container"
                                                     : catRanking
                                                         ? "border-outline-variant text-on-surface-variant"
                                                         : "border-outline-variant text-on-surface-variant opacity-38 cursor-not-allowed"
@@ -671,43 +671,31 @@ export default function MusicDetailPage() {
                             <SectionTitle icon={mdLibraryMusic}>{t("page.music.difficultyInfo")}</SectionTitle>
 
                             {/* Difficulty Grid */}
-                            <div className={`p-4 grid gap-2 ${difficulties.length > 5 ? "grid-cols-6" : "grid-cols-5"}`}>
-                                {difficulties.map((diff) => (
-                                    <button
-                                        key={diff.musicDifficulty}
-                                        className={`state-layer focus-ring flex flex-col items-center p-2 rounded-md3-md transition-colors ${selectedDifficulty === diff.musicDifficulty
-                                            ? "ring-2 bg-surface-container-lowest"
-                                            : "border border-transparent"
-                                            }`}
-                                        style={
-                                            selectedDifficulty === diff.musicDifficulty
-                                                ? {
-                                                    borderColor: DIFFICULTY_COLORS[diff.musicDifficulty],
-                                                    boxShadow: `0 0 0 2px ${DIFFICULTY_COLORS[diff.musicDifficulty]}`
-                                                }
-                                                : {}
-                                        }
-                                        onClick={() => setSelectedDifficulty(diff.musicDifficulty)}
-                                    >
-                                        <span
-                                            className="text-[10px] font-bold uppercase"
-                                            style={{ color: DIFFICULTY_COLORS[diff.musicDifficulty] }}
+                            <div className={`p-4 grid gap-1.5 sm:gap-2 ${difficulties.length > 5 ? "grid-cols-6" : "grid-cols-5"}`}>
+                                {difficulties.map((diff) => {
+                                    const color = DIFFICULTY_COLORS[diff.musicDifficulty];
+                                    const selected = selectedDifficulty === diff.musicDifficulty;
+                                    const constant = songConstantsMap[musicId]?.[diff.musicDifficulty];
+                                    return (
+                                        <button
+                                            key={diff.musicDifficulty}
+                                            aria-pressed={selected}
+                                            // Selected is filled like the list's level badges; the others are a tint of their colour.
+                                            className={`state-layer focus-ring flex min-w-0 flex-col items-center rounded-md3-md py-2 transition-colors ${selected ? "text-white" : ""}`}
+                                            style={selected ? { backgroundColor: color } : { backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+                                            onClick={() => setSelectedDifficulty(diff.musicDifficulty)}
                                         >
-                                            {DIFFICULTY_NAMES[diff.musicDifficulty]?.slice(0, 3) ?? diff.musicDifficulty}
-                                        </span>
-                                        <span
-                                            className="text-lg font-black"
-                                            style={{ color: DIFFICULTY_COLORS[diff.musicDifficulty] }}
-                                        >
-                                            {diff.playLevel}
-                                        </span>
-                                        {songConstantsMap[musicId]?.[diff.musicDifficulty] !== undefined && (
-                                            <span className="text-[9px] font-bold text-on-surface-variant -mt-0.5">
-                                                {songConstantsMap[musicId][diff.musicDifficulty].toFixed(1)}
+                                            {/* Six full names share a phone's width: 10px keeps NORMAL and MASTER whole. */}
+                                            <span className="max-w-full truncate text-[10px] font-bold leading-4 tracking-tight sm:text-[11px] sm:tracking-normal">
+                                                {DIFFICULTY_NAMES[diff.musicDifficulty] ?? diff.musicDifficulty}
                                             </span>
-                                        )}
-                                    </button>
-                                ))}
+                                            <span className="text-xl font-black leading-7 tabular-nums">{diff.playLevel}</span>
+                                            {constant !== undefined && (
+                                                <span className="text-[11px] font-medium leading-4 tabular-nums opacity-80">{constant.toFixed(1)}</span>
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
 
                             {/* Selected Difficulty Details */}

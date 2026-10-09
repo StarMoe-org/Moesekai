@@ -490,14 +490,13 @@ export default function StickerMakerContent() {
             <PageContainer className="pb-12">
                 {/* Page Header */}
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.stickerMaker.badge")}
                     title={t("page.stickerMaker.title")}
                     highlight={t("page.stickerMaker.titleHighlight")}
                     description={t("page.stickerMaker.description")}
                 />
 
-                <div className="mx-auto flex max-w-6xl flex-col gap-6 lg:flex-row">
+                <div className="flex flex-col gap-6 lg:flex-row">
                     {/* Left Sidebar: Filters & Selection */}
                     <div className="w-full flex-shrink-0 space-y-6 lg:w-96">
                         {/* Unit Filter */}
@@ -709,7 +708,7 @@ export default function StickerMakerContent() {
                                             value={text}
                                             onChange={(e) => setText(e.target.value)}
                                             rows={3}
-                                            className="w-full resize-none rounded-md3-xs border border-outline bg-transparent px-4 py-3 type-body-l text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-2 focus:border-primary"
+                                            className="w-full resize-none rounded-md3-md border border-outline bg-transparent px-3 py-2 type-body-m text-on-surface outline-none transition-colors placeholder:text-on-surface-variant focus:border-2 focus:border-primary"
                                             placeholder={t("page.stickerMaker.textPlaceholder")}
                                         />
                                     </div>

@@ -469,7 +469,6 @@ function HonorsContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.honors.badge")}
                 title={t("page.honors.title")}
                 highlight={t("page.honors.titleHighlight")}
@@ -477,7 +476,7 @@ function HonorsContent() {
             />
 
             {/* Tab Switcher */}
-            <div className="mb-6 flex justify-center">
+            <div className="mb-6 flex">
                 <SegmentedButton
                     className="w-auto min-w-[16rem]"
                     value={activeTab}
@@ -663,7 +662,7 @@ function BondsCharacterPicker({
                 onClick={() => onChange(null)}
                 aria-pressed={value === null}
                 className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${value === null
-                    ? "bg-primary text-on-primary"
+                    ? "bg-primary-container text-on-primary-container"
                     : "border border-outline-variant text-on-surface-variant"
                     }`}
                 title={allLabel}

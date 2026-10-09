@@ -1,4 +1,5 @@
 // Music Types for Moesekai
+import type { CSSProperties } from "react";
 // Based on sekai.best and sekaimaster data structure
 
 export type MusicCategoryType = "mv" | "mv_2d" | "original" | "image";
@@ -201,6 +202,15 @@ export const DIFFICULTY_COLORS: Record<MusicDifficultyType, string> = {
     master: "#BB58B8",
     append: "#EE92BC",
 };
+
+/**
+ * Fill for a selected or labelled difficulty: the game's own color, fixed
+ * across themes, with near-black text, which every one of them is light enough to carry.
+ */
+export function difficultyFillStyle(difficulty: string): CSSProperties | undefined {
+    const color = DIFFICULTY_COLORS[difficulty as MusicDifficultyType];
+    return color ? { backgroundColor: color, borderColor: "transparent", color: "#17181a" } : undefined;
+}
 
 // Music Meta interface for external API data
 export interface IMusicMeta {

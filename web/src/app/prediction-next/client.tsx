@@ -201,7 +201,6 @@ export default function PredictionNextClient() {
         <MainLayout>
             <PageContainer>
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.prediction.badge")}
                     title={t("page.predictionNext.title")}
                     description={t("page.predictionNext.description")}

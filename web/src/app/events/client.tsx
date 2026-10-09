@@ -69,7 +69,6 @@ function EventsContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.events.badge")}
                 title={t("page.events.title")}
                 highlight={t("page.events.titleHighlight")}

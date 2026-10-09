@@ -335,7 +335,6 @@ function CostumesContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={tI18n("page.costumes.badge")}
                 title={tI18n("page.costumes.title")}
                 highlight={tI18n("page.costumes.titleHighlight")}

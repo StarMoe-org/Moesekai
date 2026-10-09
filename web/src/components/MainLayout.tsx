@@ -17,6 +17,14 @@ import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
 import DetailSeoSummary from "@/components/seo/DetailSeoSummary";
 import { useDetailSeoSummary } from "@/contexts/DetailSeoSummaryContext";
 
+/**
+ * How the content column follows the rails (navigation pane, docked filter pane) as they
+ * open or collapse. The panes animate with the same duration and easing so their edges and
+ * the content move as one. M3 "emphasized": the content stays on screen, so it eases in and
+ * out rather than jumping most of the way on the first frame like the decelerate curve did.
+ */
+const RAIL_SHIFT_TRANSITION = "transition-[margin] duration-400 ease-md3-emphasized";
+
 function ScreenshotParamsListener({ onChange }: { onChange: (isScreenshot: boolean) => void }) {
     const searchParams = useSearchParams();
     useEffect(() => {
@@ -94,6 +102,15 @@ export default function MainLayout({
      * a floating drawer is an overlay and must not reflow the grid underneath.
      */
     const isFilterDrawerDockedOpen = Boolean(hasFilters && isFilterDrawerOpen && isFilterDrawerDocked);
+    /** Docked but collapsed: the sheet shrinks to a narrow rail in place (see FilterDrawer). */
+    const isFilterRailCollapsed = Boolean(hasFilters && !isFilterDrawerOpen && isFilterDrawerDocked);
+
+    /**
+     * Whether the drawer is on screen as a modal sheet. The open preference
+     * outlives the page that set it, so it only counts while the current page
+     * has registered filters — otherwise nothing is showing.
+     */
+    const isFilterDrawerModal = Boolean(hasFilters && isFilterDrawerOpen && !isFilterDrawerDocked);
 
     // Mark overlays on <html> so CSS can pause heavy background animations and
     // tone down backdrop blur on mobile while an overlay is present. This is the
@@ -176,7 +193,7 @@ export default function MainLayout({
             // dismiss it rather than leave the page. A docked drawer is ordinary
             // page furniture and is left alone — closing it on back would be an
             // invisible change on a wide screen and would swallow the navigation.
-            if (isFilterDrawerOpen && !isFilterDrawerDocked) {
+            if (isFilterDrawerModal) {
                 closeFilterDrawer();
             }
         };
@@ -186,7 +203,7 @@ export default function MainLayout({
             cancelOverlayHistoryArm();
             window.removeEventListener("popstate", handlePopState);
         };
-    }, [cancelOverlayHistoryArm, isFilterDrawerOpen, isFilterDrawerDocked, closeFilterDrawer]);
+    }, [cancelOverlayHistoryArm, isFilterDrawerModal, closeFilterDrawer]);
 
     useEffect(() => {
         if (!immersiveMode) return;
@@ -235,16 +252,16 @@ export default function MainLayout({
      * Sidebar/drawer mutual exclusion, resolved at render rather than by writing
      * state back.
      *
-     * Below `lg` the sidebar and the filter drawer are both overlays competing
-     * for one narrow screen, and stacking them buries whichever lost. When the
-     * drawer is up, the sidebar therefore yields — treated as visually closed
+     * Below `xlarge` (1600px) the filter drawer is a modal sheet, and stacking
+     * it with the sidebar buries whichever lost. When the sheet is up, the
+     * sidebar therefore yields — treated as visually closed
      * without touching `isSidebarOpen`, so the user's menu preference survives
      * and the menu reappears the moment the drawer is dismissed.
      *
-     * From `lg` up (`isFilterDrawerDocked`) the two are designed to sit side by
-     * side, so nothing yields.
+     * From `xlarge` up (`isFilterDrawerDocked`) the two are designed to sit side
+     * by side, so nothing yields.
      */
-    const sidebarYieldsToDrawer = isFilterDrawerOpen && !isFilterDrawerDocked;
+    const sidebarYieldsToDrawer = isFilterDrawerModal;
     const effectiveSidebarOpen = isScreenshotMode || immersiveMode || sidebarYieldsToDrawer
         ? false
         : isSidebarOpen;
@@ -253,8 +270,8 @@ export default function MainLayout({
      * How far the content column is pushed right.
      *
      * Two independent rails can claim space: the navigation sidebar (from `md`)
-     * and a docked filter drawer (from `lg`). The offsets are declared per
-     * breakpoint rather than computed, because the drawer only docks at `lg` —
+     * and a docked filter drawer (from `xlarge`, 1600px). The offsets are declared
+     * per breakpoint rather than computed, because the drawer only docks at `xlarge` —
      * reserving `--dual-rail-w` any earlier would indent the page against a
      * drawer that is still floating, leaving a visibly empty gutter.
      *
@@ -263,11 +280,15 @@ export default function MainLayout({
      */
     const railOffsetClass = effectiveSidebarOpen
         ? (isFilterDrawerDockedOpen
-            ? "md:ml-[var(--sidebar-w)] lg:ml-[var(--dual-rail-w)]"
-            : "md:ml-[var(--sidebar-w)]")
+            ? "md:ml-[var(--sidebar-w)] xlarge:ml-[var(--dual-rail-w)]"
+            : isFilterRailCollapsed
+              ? "md:ml-[var(--sidebar-w)] xlarge:ml-[calc(var(--sidebar-w)+var(--filter-rail-w))]"
+              : "md:ml-[var(--sidebar-w)]")
         : (isFilterDrawerDockedOpen
-            ? "md:ml-0 lg:ml-[var(--filter-drawer-w)]"
-            : "md:ml-0");
+            ? "md:ml-0 xlarge:ml-[var(--filter-drawer-w)]"
+            : isFilterRailCollapsed
+              ? "md:ml-0 xlarge:ml-[var(--filter-rail-w)]"
+              : "md:ml-0");
 
     const handleMenuToggle = useCallback(() => {
         if (isScreenshotMode || immersiveMode) return;
@@ -278,12 +299,12 @@ export default function MainLayout({
             // the two overlays never stack. The reverse direction needs no action
             // here: `effectiveSidebarOpen` already treats the sidebar as closed
             // while a floating drawer is up.
-            if (newState && isFilterDrawerOpen && !isFilterDrawerDocked) {
+            if (newState && isFilterDrawerModal) {
                 closeFilterDrawer();
             }
             return newState;
         });
-    }, [immersiveMode, isScreenshotMode, isFilterDrawerOpen, isFilterDrawerDocked, closeFilterDrawer]);
+    }, [immersiveMode, isScreenshotMode, isFilterDrawerModal, closeFilterDrawer]);
 
     const handleSidebarClose = useCallback(() => {
         setIsSidebarOpen(false);
@@ -304,14 +325,7 @@ export default function MainLayout({
 
     // Keyboard shortcut handlers.
     const shortcutHandlers = useMemo(() => ({
-        onToggleSidebar: () => {
-            if (isScreenshotMode || immersiveMode) return;
-            setIsSidebarOpen(prev => {
-                const newState = !prev;
-                sessionStorage.setItem('sidebar_open', String(newState));
-                return newState;
-            });
-        },
+        onToggleSidebar: handleMenuToggle,
         onToggleSettings: () => setIsSettingsOpen(prev => !prev),
         onToggleSearch: () => setIsSearchOpen(prev => !prev),
         onToggleShortcutsHelp: () => setIsShortcutsHelpOpen(prev => !prev),
@@ -323,9 +337,11 @@ export default function MainLayout({
         onNavigateMusic: () => router.push(localizePathForBrowser("/music")),
         onNavigateEvents: () => router.push(localizePathForBrowser("/events")),
         onNavigateProfile: () => router.push(localizePathForBrowser("/profile")),
-    }), [router, useTrainedThumbnail, setUseTrainedThumbnail, immersiveMode, isScreenshotMode]);
+    }), [router, useTrainedThumbnail, setUseTrainedThumbnail, handleMenuToggle]);
 
-    const isShortcutScopeLocked = isSearchOpen || isSettingsOpen || isShortcutsHelpOpen || immersiveMode;
+    // The modal filter sheet traps focus like the other overlays, so page
+    // shortcuts must not act on the content behind it.
+    const isShortcutScopeLocked = isSearchOpen || isSettingsOpen || isShortcutsHelpOpen || immersiveMode || isFilterDrawerModal;
 
     useKeyboardShortcuts(shortcutHandlers, {
         disabled: isShortcutScopeLocked,
@@ -376,7 +392,7 @@ export default function MainLayout({
                 )}
 
                 {/* Main content area */}
-                <div ref={pageContentRef} data-shortcut-page-root="true" className={`relative z-10 w-full min-w-0 flex-grow ${hasMounted ? "transition-[margin] duration-300 ease-md3-emphasized-decelerate" : ""} ${railOffsetClass}`}>
+                <div ref={pageContentRef} data-shortcut-page-root="true" className={`relative z-10 w-full min-w-0 flex-grow ${hasMounted ? RAIL_SHIFT_TRANSITION : ""} ${railOffsetClass}`}>
                     {children}
                     {detailSeoSummary && (
                         <DetailSeoSummary
@@ -392,7 +408,7 @@ export default function MainLayout({
             {!immersiveMode && (
                 <>
                     {/* Footer */}
-                    <div className={`relative z-[5] ${hasMounted ? "transition-[margin] duration-300 ease-md3-emphasized-decelerate" : ""} ${railOffsetClass}`}>
+                    <div className={`relative z-[5] ${hasMounted ? RAIL_SHIFT_TRANSITION : ""} ${railOffsetClass}`}>
                         <MainFooter />
                     </div>
 

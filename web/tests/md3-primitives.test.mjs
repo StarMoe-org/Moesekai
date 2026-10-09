@@ -482,9 +482,10 @@ test("RangeSlider pointer chooses nearest handle, snaps to steps and stops after
     }
     await render(h(Example));
     const track = host.querySelector('[data-range-slider="true"]');
+    // The rail is inset by the handle radius (10px) at each end: x 20–100 spans the range.
     track.getBoundingClientRect = () => ({ left: 10, width: 100 });
     track.setPointerCapture = () => {};
-    await rangePointer(track, "pointerdown", 36);
+    await rangePointer(track, "pointerdown", 41);
     assert.deepEqual(updates.at(-1), [25, 80]);
     assertFocused(host.querySelector('[aria-label="Min"]'));
     await rangePointer(track, "pointermove", 200);
@@ -493,7 +494,7 @@ test("RangeSlider pointer chooses nearest handle, snaps to steps and stops after
     const count = updates.length;
     await rangePointer(track, "pointermove", 20);
     assert.equal(updates.length, count);
-    await rangePointer(track, "pointerdown", 100);
+    await rangePointer(track, "pointerdown", 92);
     assert.deepEqual(updates.at(-1), [80, 90], "coincident handles can separate upward");
     assertFocused(host.querySelector('[aria-label="Max"]'));
 });
@@ -642,4 +643,42 @@ test("progress indicators expose localized default names and preserve explicit l
         "common.md3.loading", "common.md3.loading", "common.md3.loading", "Playback",
     ]);
     assert.equal(indicators[3].getAttribute("aria-valuenow"), "25");
+});
+
+test("withOverrides drops the defaults a caller's className sets, whatever order Tailwind emits them in", () => {
+    const { withOverrides } = md3("cn.ts");
+    // Tailwind emits p-0 before p-4 and w-auto before w-full, so joining both would keep the default.
+    assert.equal(withOverrides("p-4 sm:p-5", "p-0"), "p-0");
+    assert.equal(withOverrides("inline-flex w-full", "w-auto"), "inline-flex w-auto");
+    assert.equal(withOverrides("mx-auto w-full max-w-7xl", "max-w-3xl"), "mx-auto w-full max-w-3xl");
+    // Several caller sides add up to the default shorthand; a single side does not.
+    assert.equal(withOverrides("px-4", "pl-0 pr-2"), "pl-0 pr-2");
+    assert.equal(withOverrides("p-4", "pt-0"), "p-4 pt-0");
+    // A wider-breakpoint default would take back what the caller set below it.
+    assert.equal(withOverrides("px-4 py-6 sm:py-8", "pb-12"), "px-4 py-6 pb-12");
+    assert.equal(withOverrides("p-4 sm:p-5", "sm:pt-0"), "p-4 sm:p-5 sm:pt-0");
+    // State variants and unrelated utilities stay; colour and size share the text- prefix.
+    assert.equal(withOverrides("bg-primary hover:shadow-elev-1 shadow-none", "bg-error"), "hover:shadow-elev-1 shadow-none bg-error");
+    assert.equal(withOverrides("border border-outline text-on-surface type-label-l", "border-error text-xs"), "border text-on-surface type-label-l border-error text-xs");
+    assert.equal(withOverrides("relative inline-flex", "absolute hidden sm:flex"), "absolute hidden sm:flex");
+    assert.equal(withOverrides("rounded-full active:rounded-md3-sm", "rounded-md3-md"), "active:rounded-md3-sm rounded-md3-md");
+    assert.equal(withOverrides("w-full", undefined), "w-full");
+});
+
+test("md3 roots and bodies let the caller's className replace their defaults", async () => {
+    const { SectionCard, PageContainer, EmptyState } = md3("Patterns.tsx");
+    await render(h(React.Fragment, null,
+        h(SectionCard, { title: "Media", bodyClassName: "p-0" }, h("img", { alt: "" })),
+        h(PageContainer, { className: "max-w-3xl" }, "narrow"),
+        h(EmptyState, { title: "Nothing", className: "py-10" }),
+        h(Button, { className: "absolute px-2" }, "Floating")));
+    const classes = (node) => node.className.split(" ");
+    const body = host.querySelector("section img").parentElement;
+    assert.deepEqual(classes(body).filter((c) => /(^|:)p[trblxy]?-/.test(c)), ["p-0"]);
+    const container = [...host.children].find((node) => node.textContent === "narrow");
+    assert.deepEqual(classes(container).filter((c) => c.startsWith("max-w-")), ["max-w-3xl"]);
+    assert.ok(!classes(host.querySelector(".py-10")).includes("py-16"));
+    const button = host.querySelector("button");
+    assert.ok(classes(button).includes("absolute") && !classes(button).includes("relative"));
+    assert.ok(classes(button).includes("px-2") && !classes(button).includes("px-4"));
 });

@@ -17,6 +17,7 @@ import { fetchMasterData } from "@/lib/fetch";
 import { getEventBannerUrl, getEventLogoUrl } from "@/lib/assets";
 import { Banner, EmptyState, ErrorState, Icon, LoadingState, PageContainer, PageHeader, Select, SegmentedButton, cn } from "@/components/md3";
 import { mdBarChart, mdInfo } from "@/components/md3/icons";
+import { ACTIVE_DOT } from "@/components/prediction/PredictionEventPicker";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 
 interface LegacyTierKline {
@@ -274,7 +275,6 @@ export default function PredictionClient() {
         <MainLayout>
             <PageContainer>
                 <PageHeader
-                    align="center"
                     eyebrow={t("page.prediction.badge")}
                     title={t("page.prediction.title")}
                     highlight={t("page.prediction.titleHighlight")}
@@ -303,7 +303,8 @@ export default function PredictionClient() {
                             aria-label={t("page.prediction.title")}
                             options={events.map(event => ({
                                 value: event.id,
-                                label: `${event.is_active ? "🟢 " : ""}#${event.id} ${event.name}`,
+                                label: `#${event.id} ${event.name}`,
+                                leading: event.is_active ? ACTIVE_DOT : undefined,
                             }))}
                             placeholder={eventsLoading ? t("page.prediction.events.loading") : t("page.prediction.events.empty")}
                             className="w-full"
@@ -312,7 +313,7 @@ export default function PredictionClient() {
                     {isWorldBloomEvent && (
                         <button
                             onClick={() => setIsWlNoticeOpen(true)}
-                            className="state-layer focus-ring inline-flex h-12 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-tertiary-container px-5 type-label-l text-on-tertiary-container shrink-0"
+                            className="state-layer focus-ring inline-flex h-10 w-full sm:w-auto items-center justify-center gap-2 rounded-full bg-tertiary-container px-5 type-label-l text-on-tertiary-container shrink-0"
                         >
                             <Icon path={mdInfo} size={18} />
                             {t("page.prediction.wl.noticeButton")}
@@ -389,7 +390,7 @@ export default function PredictionClient() {
                                                         </div>
                                                     </>
                                                 ) : (
-                                                    <div className="absolute inset-0 bg-primary-container flex items-center justify-center text-on-primary-container/40 type-headline-m">
+                                                    <div className="absolute inset-0 bg-surface-container-high flex items-center justify-center text-on-surface-variant/60 type-headline-m">
                                                         NO IMAGE
                                                     </div>
                                                 )}
@@ -582,7 +583,7 @@ export default function PredictionClient() {
                                                                 className={cn(
                                                                     "state-layer focus-ring h-8 px-3 rounded-md3-sm type-label-l whitespace-nowrap flex-shrink-0 snap-start border transition-colors",
                                                                     selectedRank === rank
-                                                                        ? "bg-secondary-container text-on-secondary-container border-transparent"
+                                                                        ? "bg-primary-container text-on-primary-container border-transparent"
                                                                         : "border-outline-variant text-on-surface-variant"
                                                                 )}
                                                             >

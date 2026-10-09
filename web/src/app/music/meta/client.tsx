@@ -73,12 +73,12 @@ const getRankingCategories = (mode: LiveMode): RankingCategory[] => {
     return base;
 };
 
-// Rank colors for top 3
+// Rank colors for top 3, drawn on the jacket's dark scrim
 const getRankColor = (rank: number): string => {
-    if (rank === 1) return "text-yellow-500"; // Gold
-    if (rank === 2) return "text-outline"; // Silver
-    if (rank === 3) return "text-amber-600"; // Bronze
-    return "text-outline-variant";
+    if (rank === 1) return "text-yellow-400"; // Gold
+    if (rank === 2) return "text-zinc-200"; // Silver
+    if (rank === 3) return "text-amber-500"; // Bronze
+    return "text-white";
 };
 
 // Hook to get responsive column count
@@ -442,6 +442,12 @@ function MusicMetaContent() {
                             />
                         )}
 
+                        {/* Rank sits on the jacket: at five columns the info column is
+                            too narrow to share a row with the score. */}
+                        <div className={`absolute left-1 top-1 min-w-7 rounded-md3-xs bg-scrim/60 px-1.5 py-0.5 text-center type-label-l type-emphasized tabular-nums select-none ${getRankColor(rank)}`}>
+                            #{rank}
+                        </div>
+
                         {/* Difficulty Badge - Only show if not hidden */}
                         {!category.hideDifficulty && (
                             <div
@@ -467,11 +473,6 @@ function MusicMetaContent() {
                             <span className="type-title-l type-emphasized text-primary">{category.format(value)}</span>
                             <span className="type-label-s text-on-surface-variant">{t(category.subtitleKey)}</span>
                         </div>
-                    </div>
-
-                    {/* Rank Badge - Bottom Right Corner, Large with special colors */}
-                    <div className={`absolute bottom-2 right-2 font-black text-2xl sm:text-3xl select-none ${getRankColor(rank)}`}>
-                        #{rank}
                     </div>
                 </div>
             </Link>
@@ -566,7 +567,6 @@ function MusicMetaContent() {
                     onValueChange={(size) => { setPageSize(size); setCurrentPage(1); }}
                     options={PAGE_SIZE_OPTIONS.map((size) => ({ value: size, label: String(size) }))}
                     aria-label={t("page.musicMeta.pagination.perPagePrefix")}
-                    dense
                     className="min-w-20"
                 />
                 <span>{t("page.musicMeta.pagination.perPageSuffix")}</span>
@@ -626,7 +626,6 @@ function MusicMetaContent() {
     return (
         <PageContainer wide>
             <PageHeader
-                align="center"
                 eyebrow={t("page.musicMeta.badge")}
                 title={t("page.musicMeta.title")}
                 highlight={t("page.musicMeta.titleHighlight")}
@@ -634,7 +633,7 @@ function MusicMetaContent() {
             />
 
             {/* Controls */}
-            <div className="flex flex-col sm:flex-row gap-4 items-center justify-center mb-8">
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center mb-8">
                 <SegmentedButton
                     className="w-auto"
                     value={liveMode}
@@ -672,7 +671,6 @@ function MusicMetaContent() {
                         <div className="relative w-full sm:max-w-md">
                             <TextField
                                 data-shortcut-search="true"
-                                dense
                                 icon={mdSearch}
                                 placeholder={t("page.musicMeta.searchPlaceholder")}
                                 value={searchQuery}

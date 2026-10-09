@@ -68,6 +68,7 @@ export interface UserGamedata {
     exp: number;
     userId: number;
     deck: number;
+    rank?: number;                    // Player rank
 }
 
 export interface UserDeck {

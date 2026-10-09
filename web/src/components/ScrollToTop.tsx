@@ -44,8 +44,8 @@ export default function ScrollToTop() {
                     aria-label={t("layout.nav.scrollToTop")}
                     title={t("layout.nav.scrollToTop")}
                     className={cn(
-                        "state-layer focus-ring fixed right-4 z-[69] flex h-10 w-10 cursor-pointer items-center justify-center rounded-md3-md",
-                        "bg-surface-container-high text-primary shadow-elev-3 hover:shadow-elev-4 sm:right-6",
+                        "state-layer focus-ring fixed right-4 z-[69] flex h-11 w-11 cursor-pointer items-center justify-center rounded-full",
+                        "glass text-primary sm:right-6",
                         "transition-[bottom] duration-300 ease-md3-spatial",
                         // 56px filter FAB + 16px gap above it when present; otherwise the FAB slot.
                         filterFabVisible

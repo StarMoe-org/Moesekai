@@ -500,7 +500,6 @@ function MyMaterialsHeader() {
     const { t } = useI18n();
     return (
         <PageHeader
-            align="center"
             eyebrow={t("page.myMaterials.badge")}
             title={t("page.myMaterials.title")}
             highlight={t("page.myMaterials.titleHighlight")}

@@ -243,7 +243,7 @@ export default function PowerBonusDetail({
                                         <div className={`relative rounded-full overflow-hidden bg-surface-container-highest ${isVirtualSinger ? "w-7 h-7" : "w-8 h-8"}`}>
                                             <Image src={getCharacterIconUrl(cid)} alt={characterName} fill className="object-cover" unoptimized />
                                         </div>
-                                        <span className={`font-medium text-on-surface-variant ${isVirtualSinger ? "text-[9px]" : "text-[10px]"}`}>
+                                        <span className="type-label-s tabular-nums text-on-surface-variant">
                                             {cb ? fmt(cb.total) : "-"}
                                         </span>
                                     </div>
@@ -280,10 +280,45 @@ export default function PowerBonusDetail({
         </div>
     );
 
+    // Summary view: one row per unit, like the character rank grid. Cells stack the
+    // icon over the value until the card is wide enough to set them side by side.
+    const renderUnitRows = () => (
+        <div className="@container divide-y divide-outline-variant/60">
+            {UNIT_ORDER.map((unitKey) => {
+                const unitBonus = bonus.unit.get(unitKey)!;
+                const unitLabel = t(UNIT_LABEL_KEYS[unitKey]);
+                return (
+                    <div key={unitKey} className="grid grid-cols-[3.5rem_minmax(0,1fr)] items-center gap-x-3 py-2.5 first:pt-0 @md:grid-cols-[6rem_minmax(0,1fr)]">
+                        <div className="flex flex-col items-center gap-1 @md:flex-row @md:gap-2" title={unitLabel}>
+                            <div className="relative size-7 shrink-0">
+                                <Image src={UNIT_ICON[unitKey]} alt={unitLabel} fill className="object-contain" unoptimized />
+                            </div>
+                            <span className="type-title-m tabular-nums text-on-surface">{fmt(unitBonus.total)}</span>
+                        </div>
+                        <div className="grid grid-cols-4 gap-2">
+                            {UNIT_CHAR_IDS[unitKey].map((cid) => {
+                                const cb = bonus.chara.get(cid);
+                                const name = getCharacterName(t, cid, "short");
+                                return (
+                                    <div key={cid} className="flex min-w-0 flex-col items-center gap-1 @md:flex-row @md:gap-2" title={name}>
+                                        <div className="relative size-7 shrink-0 overflow-hidden rounded-full bg-surface-container-high @md:size-8">
+                                            <Image src={getCharacterIconUrl(cid)} alt={name} fill className="object-cover" unoptimized />
+                                        </div>
+                                        <span className="type-label-l tabular-nums text-on-surface-variant">{cb ? fmt(cb.total) : "–"}</span>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+
     const renderAttrCards = () => (
         <div className="rounded-md3-md bg-surface-container p-3">
             <div className="type-title-s text-on-surface mb-3">{t("page.profile.stats.attributeBonus")}</div>
-            <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
                 {ATTR_ORDER.map((a) => {
                     const b = bonus.attr.get(a)!;
                     return (
@@ -316,7 +351,7 @@ export default function PowerBonusDetail({
 
             {!loading && !error && (
                 <div className="space-y-4">
-                    {renderUnitCards(false)}
+                    {renderUnitRows()}
                     {renderAttrCards()}
                 </div>
             )}

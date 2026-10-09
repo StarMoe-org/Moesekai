@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import LocalizedLink from "@/components/LocalizedLink";
 import { md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 
 /* ==========================================================================
@@ -13,7 +13,7 @@ import { Icon } from "./Icon";
 /* ── List ─────────────────────────────────────────────────────────────── */
 
 export function List({ className, ...rest }: React.HTMLAttributes<HTMLUListElement>) {
-    return <ul role="list" className={cn("py-2", className)} {...rest} />;
+    return <ul role="list" className={withOverrides("py-2", className)} {...rest} />;
 }
 
 export interface ListItemProps {
@@ -49,7 +49,7 @@ export function ListItem({
 }: ListItemProps) {
     const interactive = Boolean(href || onClick);
     const lines = (overline ? 1 : 0) + (supportingText ? 1 : 0);
-    const cls = cn(
+    const cls = withOverrides(
         "flex w-full items-center gap-4 px-4 text-left",
         lines === 0 ? "min-h-14 py-2" : lines === 1 ? "min-h-[72px] py-2" : "min-h-[88px] py-3",
         interactive && "state-layer focus-ring cursor-pointer",
@@ -104,7 +104,7 @@ export function Divider({ inset, vertical, className }: { inset?: boolean; verti
         <div
             role="separator"
             aria-orientation={vertical ? "vertical" : "horizontal"}
-            className={cn(vertical ? "w-px self-stretch bg-outline-variant" : "h-px w-full bg-outline-variant", inset && !vertical && "ml-4", className)}
+            className={withOverrides(vertical ? "w-px self-stretch bg-outline-variant" : "h-px w-full bg-outline-variant", inset && !vertical && "ml-4", className)}
         />
     );
 }
@@ -113,11 +113,11 @@ export function Divider({ inset, vertical, className }: { inset?: boolean; verti
 
 export function Badge({ value, max = 999, className }: { value?: number | string; max?: number; className?: string }) {
     if (value === undefined || value === "") {
-        return <span aria-hidden className={cn("inline-block h-1.5 w-1.5 rounded-full bg-error", className)} />;
+        return <span aria-hidden className={withOverrides("inline-block h-1.5 w-1.5 rounded-full bg-error", className)} />;
     }
     const text = typeof value === "number" && value > max ? `${max}+` : String(value);
     return (
-        <span className={cn("inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 type-label-s text-on-error", className)}>
+        <span className={withOverrides("inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-error px-1 type-label-s text-on-error", className)}>
             {text}
         </span>
     );
@@ -137,7 +137,7 @@ export function Tooltip({
     className?: string;
 }) {
     return (
-        <span className={cn("group/tt relative inline-flex", className)}>
+        <span className={withOverrides("group/tt relative inline-flex", className)}>
             {children}
             <span
                 role="tooltip"
@@ -189,7 +189,7 @@ export function Snackbar({ open, message, onClose, actionLabel, onAction, durati
                         animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0 }}
                         exit={reduced ? { opacity: 0 } : { opacity: 0, y: 12 }}
                         transition={reduced ? reducedMotionFade : md3SpatialDefault}
-                        className={cn(
+                        className={withOverrides(
                             "pointer-events-auto flex min-h-12 w-full max-w-[560px] items-center gap-2 rounded-md3-xs bg-inverse-surface py-1 pl-4 pr-2 text-inverse-on-surface shadow-elev-3",
                             className,
                         )}

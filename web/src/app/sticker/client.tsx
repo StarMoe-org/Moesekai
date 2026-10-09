@@ -13,6 +13,7 @@ import { useScrollRestore } from "@/hooks/useScrollRestore";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { Card, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 interface IStampInfo {
     id: number;
@@ -26,9 +27,18 @@ interface IStampInfo {
     description?: string;
 }
 
+/** Stamps with no known character (missing or out-of-range ids) are picked together as "Other". */
+const OTHER_CHARACTER = 0;
+const isKnownCharacter = (id: number | null | undefined): id is number => typeof id === "number" && id >= 1 && id <= 26;
+const matchesCharacter = (s: IStampInfo, selected: number) =>
+    selected === OTHER_CHARACTER
+        ? !isKnownCharacter(s.characterId1) && !isKnownCharacter(s.characterId2)
+        : s.characterId1 === selected || s.characterId2 === selected;
+
 function StickerContent() {
     const { isShowSpoiler, assetSource } = useTheme();
     const { t } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
 
     const [stamps, setStamps] = useState<IStampInfo[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -76,20 +86,10 @@ function StickerContent() {
             result = result.filter(s => {
                 // If both selected, must match both (in either order for stamps with 2 chars)
                 if (selectedChar1 !== null && selectedChar2 !== null) {
-                    const has1 = s.characterId1 === selectedChar1 || s.characterId2 === selectedChar1;
-                    const has2 = s.characterId1 === selectedChar2 || s.characterId2 === selectedChar2;
-                    return has1 && has2;
+                    return matchesCharacter(s, selectedChar1) && matchesCharacter(s, selectedChar2);
                 }
-
-                // If only char1 selected
-                if (selectedChar1 !== null) {
-                    return s.characterId1 === selectedChar1 || s.characterId2 === selectedChar1;
-                }
-
-                // If only char2 selected
-                if (selectedChar2 !== null) {
-                    return s.characterId1 === selectedChar2 || s.characterId2 === selectedChar2;
-                }
+                if (selectedChar1 !== null) return matchesCharacter(s, selectedChar1);
+                if (selectedChar2 !== null) return matchesCharacter(s, selectedChar2);
 
                 return true;
             });
@@ -127,11 +127,15 @@ function StickerContent() {
     const characters = useMemo(() => {
         const charIds = new Set<number>();
         stamps.forEach(s => {
-            charIds.add(s.characterId1);
-            if (s.characterId2) charIds.add(s.characterId2);
+            if (isKnownCharacter(s.characterId1)) charIds.add(s.characterId1);
+            if (isKnownCharacter(s.characterId2)) charIds.add(s.characterId2);
         });
         return Array.from(charIds).sort((a, b) => a - b);
     }, [stamps]);
+    const hasOtherCharacters = useMemo(
+        () => stamps.some(s => !isKnownCharacter(s.characterId1) && !isKnownCharacter(s.characterId2)),
+        [stamps],
+    );
 
     // Stamp types
     const stampTypes = useMemo(() => {
@@ -157,7 +161,7 @@ function StickerContent() {
                         key="all1"
                         onClick={() => setSelectedChar1(null)}
                         className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar1 === null
-                            ? "bg-primary text-on-primary"
+                            ? "bg-primary-container text-on-primary-container"
                             : "border border-outline-variant text-on-surface-variant"
                             }`}
                         title={t("page.sticker.anyCharacter")}
@@ -186,6 +190,20 @@ function StickerContent() {
                             </button>
                         );
                     })}
+                    {hasOtherCharacters && (
+                        <button
+                            key="other1"
+                            onClick={() => setSelectedChar1(selectedChar1 === OTHER_CHARACTER ? null : OTHER_CHARACTER)}
+                            aria-pressed={selectedChar1 === OTHER_CHARACTER}
+                            className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar1 === OTHER_CHARACTER
+                                ? "bg-primary-container text-on-primary-container"
+                                : "border border-outline-variant text-on-surface-variant"
+                                }`}
+                            title={t("page.sticker.otherCharacter")}
+                        >
+                            {t("page.sticker.otherCharacter")}
+                        </button>
+                    )}
                 </div>
             </FilterSection>
 
@@ -195,7 +213,7 @@ function StickerContent() {
                         key="all2"
                         onClick={() => setSelectedChar2(null)}
                         className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar2 === null
-                            ? "bg-primary text-on-primary"
+                            ? "bg-primary-container text-on-primary-container"
                             : "border border-outline-variant text-on-surface-variant"
                             }`}
                         title={t("page.sticker.anyCharacter")}
@@ -224,6 +242,20 @@ function StickerContent() {
                             </button>
                         );
                     })}
+                    {hasOtherCharacters && (
+                        <button
+                            key="other2"
+                            onClick={() => setSelectedChar2(selectedChar2 === OTHER_CHARACTER ? null : OTHER_CHARACTER)}
+                            aria-pressed={selectedChar2 === OTHER_CHARACTER}
+                            className={`state-layer focus-ring flex aspect-square items-center justify-center rounded-full type-label-m transition-colors duration-150 ease-md3-standard ${selectedChar2 === OTHER_CHARACTER
+                                ? "bg-primary-container text-on-primary-container"
+                                : "border border-outline-variant text-on-surface-variant"
+                                }`}
+                            title={t("page.sticker.otherCharacter")}
+                        >
+                            {t("page.sticker.otherCharacter")}
+                        </button>
+                    )}
                 </div>
             </FilterSection>
 
@@ -274,7 +306,6 @@ function StickerContent() {
             />
 
             <PageHeader
-                align="center"
                 eyebrow={t("page.sticker.badge")}
                 title={t("page.sticker.title")}
                 highlight={t("page.sticker.titleHighlight")}
@@ -293,7 +324,7 @@ function StickerContent() {
                     <LoadingState />
                 ) : (
                     <>
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-3">
+                        <div ref={gridRef} className="relative grid grid-cols-[repeat(auto-fill,minmax(90px,1fr))] gap-3">
                             {displayedStamps.map(stamp => (
                                 <Card
                                     variant="elevated"

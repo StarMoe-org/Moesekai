@@ -99,6 +99,7 @@ test("card tables show both available artworks, without inventing missing normal
         if (id === "./DatabaseTable") return { __esModule: true, default: ({ rows }) => React.createElement("div", null, rows.map(row => React.createElement("div", { key: row.id, "data-card": row.id }, row.thumbnail))) };
         if (id === "./SekaiCardThumbnail") return { __esModule: true, default: ({ trained }) => React.createElement("img", { "data-trained": String(trained) }) };
         if (id === "@/components/common/TranslatedText") return { TranslatedText: () => null };
+        if (id === "@/hooks/useGridReflowAnimation") return { useGridReflowAnimation: () => () => {} };
         return { __esModule: true, default: () => null };
     });
     const base = { id: 1, cardRarityType: "rarity_4", specialTrainingPower1BonusFixed: 1, specialTrainingPower2BonusFixed: 0, specialTrainingPower3BonusFixed: 0 };

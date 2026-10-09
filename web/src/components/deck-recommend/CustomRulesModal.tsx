@@ -195,7 +195,7 @@ function SingleCardOverrideRow({
                                     })}
                                     className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all ${
                                         isSelected
-                                            ? "bg-primary text-on-primary"
+                                            ? "bg-primary-container text-on-primary-container"
                                             : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high"
                                     }`}
                                 >
@@ -222,7 +222,7 @@ function SingleCardOverrideRow({
                                     })}
                                     className={`w-6 h-6 rounded-md text-[11px] font-bold transition-all ${
                                         isSelected
-                                            ? "bg-primary text-on-primary"
+                                            ? "bg-primary-container text-on-primary-container"
                                             : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-high"
                                     }`}
                                 >
@@ -246,7 +246,7 @@ function SingleCardOverrideRow({
                             }}
                             className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
                                 (entry.episodeReadCount ?? 0) >= 1
-                                    ? "bg-primary text-on-primary"
+                                    ? "bg-primary-container text-on-primary-container"
                                     : "bg-surface-container-lowest text-on-surface-variant"
                             }`}
                         >
@@ -261,7 +261,7 @@ function SingleCardOverrideRow({
                             }}
                             className={`px-2 py-0.5 rounded text-[11px] font-medium transition-all ${
                                 (entry.episodeReadCount ?? 0) === 2
-                                    ? "bg-primary text-on-primary"
+                                    ? "bg-primary-container text-on-primary-container"
                                     : "bg-surface-container-lowest text-on-surface-variant"
                             }`}
                         >
@@ -1021,7 +1021,7 @@ export default function CustomRulesModal({
                                                 onClick={() => onChange({ skillOrder: option })}
                                                 className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all ${
                                                     skillOrder === option
-                                                        ? "bg-primary text-on-primary"
+                                                        ? "bg-primary-container text-on-primary-container"
                                                         : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant"
                                                 }`}
                                             >
@@ -1052,7 +1052,7 @@ export default function CustomRulesModal({
                                                 onClick={() => onChange({ skillReference: option })}
                                                 className={`px-3 py-1.5 rounded-md3-md type-label-m transition-all ${
                                                     skillReference === option
-                                                        ? "bg-primary text-on-primary"
+                                                        ? "bg-primary-container text-on-primary-container"
                                                         : "bg-surface-container-lowest text-on-surface-variant border border-outline-variant"
                                                 }`}
                                             >

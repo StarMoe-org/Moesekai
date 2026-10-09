@@ -1,6 +1,6 @@
 "use client";
 import React from "react";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCheck, mdClose } from "./icons";
 
@@ -41,7 +41,7 @@ export function chipClassName({
         "state-layer focus-ring relative isolate inline-flex h-8 shrink-0 select-none items-center gap-2 rounded-md3-sm px-4 type-label-l",
         "cursor-pointer transition-[background-color,border-color,border-radius] duration-150 ease-md3-standard",
         selected
-            ? "bg-secondary-container text-on-secondary-container border border-transparent"
+            ? "bg-primary-container text-on-primary-container border border-transparent"
             : elevated
               ? "bg-surface-container-low text-on-surface-variant shadow-elev-1 border border-transparent"
               : "border border-outline-variant bg-transparent text-on-surface-variant",
@@ -74,7 +74,7 @@ export const Chip = React.forwardRef<HTMLButtonElement, ChipProps>(function Chip
     const hasLeading = Boolean(leading || avatar);
     const hasTrailing = Boolean(trailingIcon || onRemove);
     return (
-        <span className={cn("relative inline-flex", className)}>
+        <span className={withOverrides("relative inline-flex", className)}>
             <button
                 ref={ref}
                 type={type}

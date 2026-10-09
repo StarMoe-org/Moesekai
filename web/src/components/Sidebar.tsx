@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useSyncExternalStore } from "react";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { usePathname, useRouter } from "next/navigation";
@@ -256,6 +256,80 @@ const SIDEBAR_GROUP_LABEL_KEYS: Record<string, string> = {
     personal: "layout.nav.groups.personal",
 };
 
+/**
+ * Navigation groups the user has explicitly opened or closed, remembered
+ * across visits. Groups without an explicit choice follow the route: only the
+ * current page's group (the first group on pages outside the nav) starts open,
+ * so the drawer does not unroll ~50 links at once.
+ */
+const SIDEBAR_GROUPS_STORAGE_KEY = "sidebar_groups";
+const SIDEBAR_GROUPS_EVENT = "moesekai_sidebar_groups_change";
+
+type GroupPreferences = Readonly<Record<string, boolean>>;
+
+const NO_GROUP_PREFERENCES: GroupPreferences = {};
+// Parsed form of the last stored string, so the snapshot keeps its identity
+// until the stored value actually changes (written here, in another tab, or
+// while no Sidebar was mounted to hear the storage event).
+let groupPreferencesCache: { raw: string | null; value: GroupPreferences } | null = null;
+// Choices made while localStorage refuses writes; they last for this page only.
+let unsavedGroupPreferences: GroupPreferences | null = null;
+
+function parseGroupPreferences(raw: string | null): GroupPreferences {
+    try {
+        const parsed: unknown = raw ? JSON.parse(raw) : null;
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+            return Object.fromEntries(
+                Object.entries(parsed).filter((entry): entry is [string, boolean] => typeof entry[1] === "boolean")
+            );
+        }
+    } catch {
+    }
+    return NO_GROUP_PREFERENCES;
+}
+
+function readGroupPreferences(): GroupPreferences {
+    if (unsavedGroupPreferences) return unsavedGroupPreferences;
+    let raw: string | null = null;
+    try {
+        raw = localStorage.getItem(SIDEBAR_GROUPS_STORAGE_KEY);
+    } catch {
+    }
+    if (groupPreferencesCache?.raw !== raw) {
+        groupPreferencesCache = { raw, value: parseGroupPreferences(raw) };
+    }
+    return groupPreferencesCache.value;
+}
+
+function subscribeGroupPreferences(callback: () => void) {
+    const handleStorage = (e: StorageEvent) => {
+        if (e.key === SIDEBAR_GROUPS_STORAGE_KEY) callback();
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(SIDEBAR_GROUPS_EVENT, callback);
+    return () => {
+        window.removeEventListener("storage", handleStorage);
+        window.removeEventListener(SIDEBAR_GROUPS_EVENT, callback);
+    };
+}
+
+function writeGroupPreference(id: string, expanded: boolean) {
+    const next = { ...readGroupPreferences(), [id]: expanded };
+    const raw = JSON.stringify(next);
+    try {
+        localStorage.setItem(SIDEBAR_GROUPS_STORAGE_KEY, raw);
+        groupPreferencesCache = { raw, value: next };
+        unsavedGroupPreferences = null;
+    } catch {
+        unsavedGroupPreferences = next;
+    }
+    window.dispatchEvent(new Event(SIDEBAR_GROUPS_EVENT));
+}
+
+function subscribeNothing() {
+    return () => {};
+}
+
 export default function Sidebar({
     isOpen,
     onClose,
@@ -270,9 +344,39 @@ export default function Sidebar({
     // other pages it grows by a breadcrumb row (~32px + border). The sidebar
     // needs a matching top offset so it never collides with the navbar.
     const isHome = stripRouteLocale(pathname) === "/";
-    // Expand all groups by default.
-    const [expandedGroups, setExpandedGroups] = useState<string[]>(
-        navigationGroups.map(group => group.id)
+    const activeHref = useMemo(() => {
+        const unlocalizedPathname = stripRouteLocale(pathname);
+        if (unlocalizedPathname === "/") return "/";
+
+        let bestMatch = "";
+        for (const group of navigationGroups) {
+            for (const item of group.items) {
+                if (item.href === "/music" && unlocalizedPathname.startsWith("/music/meta")) {
+                    continue;
+                }
+                if (unlocalizedPathname === item.href || unlocalizedPathname.startsWith(item.href + "/")) {
+                    if (item.href.length > bestMatch.length) {
+                        bestMatch = item.href;
+                    }
+                }
+            }
+        }
+
+        return bestMatch;
+    }, [pathname]);
+
+    const activeGroupId = useMemo(
+        () => navigationGroups.find((group) => group.items.some((item) => item.href === activeHref))?.id ?? navigationGroups[0]?.id,
+        [activeHref]
+    );
+    const groupPreferences = useSyncExternalStore(subscribeGroupPreferences, readGroupPreferences, () => NO_GROUP_PREFERENCES);
+    // False while hydrating against the server snapshot. Hydration renders every
+    // group from the route alone; the stored choices land in the re-render that
+    // flips this, so layout-dependent work waits for it.
+    const hasClientSnapshot = useSyncExternalStore(subscribeNothing, () => true, () => false);
+    const expandedGroups = useMemo(
+        () => navigationGroups.map((group) => group.id).filter((id) => groupPreferences[id] ?? id === activeGroupId),
+        [groupPreferences, activeGroupId]
     );
     const [activeAccount, setActiveAccountState] = useState<MoesekaiAccount | null>(null);
     const activeAccountCardThumbnail = useCardThumbnail(activeAccount?.avatarCardId ?? null, assetSource);
@@ -310,13 +414,32 @@ export default function Sidebar({
         };
     }, []);
 
-    // Restore the sidebar scroll position.
+    // Restore the sidebar scroll position once the groups have their final
+    // layout. After a route change the saved offset was measured on the
+    // previous page, whose group may have folded since, so the current page's
+    // item is then brought into view; a reload keeps the offset as it was.
+    const hasRestoredScrollRef = useRef(false);
     useEffect(() => {
+        const nav = navRef.current;
+        if (!hasClientSnapshot || hasRestoredScrollRef.current || !nav) return;
+        hasRestoredScrollRef.current = true;
         const saved = sessionStorage.getItem('sidebar_scroll');
-        if (saved && navRef.current) {
-            navRef.current.scrollTop = parseInt(saved, 10);
+        if (saved) {
+            nav.scrollTop = parseInt(saved, 10);
         }
-    }, []);
+        const savedOnPath = sessionStorage.getItem('sidebar_scroll_path');
+        sessionStorage.setItem('sidebar_scroll_path', pathname);
+        if (savedOnPath === pathname) return;
+        const activeItem = nav.querySelector<HTMLElement>('[aria-current="page"]');
+        if (!activeItem) return;
+        const navRect = nav.getBoundingClientRect();
+        const itemRect = activeItem.getBoundingClientRect();
+        if (itemRect.top < navRect.top) {
+            nav.scrollTop -= navRect.top - itemRect.top;
+        } else if (itemRect.bottom > navRect.bottom) {
+            nav.scrollTop += itemRect.bottom - navRect.bottom;
+        }
+    }, [hasClientSnapshot, pathname]);
 
     // Save the sidebar scroll position.
     useEffect(() => {
@@ -388,31 +511,9 @@ export default function Sidebar({
     }, [isOpen]);
 
     const toggleGroup = (id: string) => {
-        setExpandedGroups((prev) =>
-            prev.includes(id) ? prev.filter((groupId) => groupId !== id) : [...prev, id]
-        );
+        writeGroupPreference(id, !expandedGroups.includes(id));
     };
 
-    const activeHref = useMemo(() => {
-        const unlocalizedPathname = stripRouteLocale(pathname);
-        if (unlocalizedPathname === "/") return "/";
-
-        let bestMatch = "";
-        for (const group of navigationGroups) {
-            for (const item of group.items) {
-                if (item.href === "/music" && unlocalizedPathname.startsWith("/music/meta")) {
-                    continue;
-                }
-                if (unlocalizedPathname === item.href || unlocalizedPathname.startsWith(item.href + "/")) {
-                    if (item.href.length > bestMatch.length) {
-                        bestMatch = item.href;
-                    }
-                }
-            }
-        }
-
-        return bestMatch;
-    }, [pathname]);
 
     const isActive = (href: string) => href === activeHref;
     const getGroupLabel = (id: string) => t(SIDEBAR_GROUP_LABEL_KEYS[id] ?? id);
@@ -441,14 +542,19 @@ export default function Sidebar({
                 aria-hidden="true"
             />
 
-            {/* MD3 navigation drawer: standard (docked) from md, modal below md */}
+            {/* MD3 navigation drawer: modal below md, docked from md. Docked, it is a glass
+                pane floating in its rail, inset like the filter pane beside it. */}
             <aside
                 aria-label={t("layout.nav.menu")}
                 className={cn(
-                    "fixed bottom-0 left-0 top-0 z-[110] flex w-[var(--sidebar-w)] md:z-[60] max-w-[calc(100vw-3.5rem)] flex-col bg-surface-container-low text-on-surface",
-                    "rounded-r-md3-lg md:top-16 md:rounded-none md:bg-surface",
-                    hasMounted && "transition-transform duration-300 ease-md3-emphasized-decelerate",
-                    isOpen ? "translate-x-0 shadow-elev-1 md:shadow-none" : "-translate-x-full",
+                    "fixed bottom-0 left-0 top-0 z-[110] flex w-[var(--sidebar-w)] max-w-[calc(100vw-3.5rem)] flex-col overflow-hidden text-on-surface",
+                    "glass-thick rounded-r-md3-xl",
+                    "md:glass md:bottom-3 md:left-3 md:top-[calc(var(--app-bar-h)+0.75rem)] md:z-[60] md:w-[calc(var(--sidebar-w)-1.5rem)] md:rounded-md3-xl",
+                    // Docked (md+), the pane moves with the content column's margin, so it shares its
+                    // duration and easing (MainLayout); the compact modal drawer keeps the enter curve.
+                    hasMounted && "transition-transform duration-300 ease-md3-emphasized-decelerate md:duration-400 md:ease-md3-emphasized",
+                    // The floating pane (md+) sits 0.75rem in and casts a shadow: clear both.
+                isOpen ? "translate-x-0" : "-translate-x-full md:-translate-x-[calc(100%+1.5rem)]",
                 )}
             >
                 {/* Modal drawer header (mobile only): mirrors the app bar logo */}
@@ -487,12 +593,15 @@ export default function Sidebar({
                                     <Icon
                                         path={mdKeyboardArrowDown}
                                         size={20}
-                                        className={cn("transition-transform duration-200 ease-md3-spatial-fast", isExpanded && "rotate-180")}
+                                        className={cn(hasMounted && "transition-transform duration-300 ease-md3-spatial", isExpanded && "rotate-180")}
                                     />
                                 </button>
                                 <div
                                     className={cn(
-                                        "grid transition-[grid-template-rows,opacity] duration-300 ease-md3-emphasized-decelerate",
+                                        // No transition until the drawer is shown, so stored choices
+                                        // applied right after hydration snap into place.
+                                        "grid",
+                                        hasMounted && "transition-[grid-template-rows,opacity] duration-300 ease-md3-emphasized-decelerate",
                                         isExpanded ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
                                     )}
                                 >

@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
 import Link from "@/components/LocalizedLink";
-import { ErrorState, Icon } from "@/components/md3";
+import { ErrorState, Icon, LinearProgress } from "@/components/md3";
 import { mdBolt } from "@/components/md3/icons";
 import Image from "next/image";
 import { IEventInfo, getEventStatus, EVENT_STATUS_DISPLAY } from "@/types/events";
@@ -149,20 +149,8 @@ export default function CurrentEventTab() {
                     </div>
 
                     {/* Right Side: Info (55%) */}
-                    <div className="w-[55%] relative flex flex-col justify-center p-3 sm:p-4 z-10 overflow-hidden">
-
-                        {/* Progress Background Overlay (Limited to right side) - Using Theme Color */}
-                        {status === "ongoing" && (
-                            <div
-                                className="absolute inset-y-0 left-0 bg-primary-container transition-[width] duration-500 ease-md3-standard z-0 pointer-events-none"
-                                style={{
-                                    width: `${progressPercent}%`,
-                                }}
-                            />
-                        )}
-
-                        {/* Content */}
-                        <div className="space-y-1 relative z-20">
+                    <div className="w-[55%] relative flex items-center p-3 sm:p-4 overflow-hidden">
+                        <div className="min-w-0 flex-1 space-y-1">
                             {/* Status Badge */}
                             <div className="flex items-center gap-2 mb-1.5 flex-wrap">
                                 <span
@@ -211,21 +199,27 @@ export default function CurrentEventTab() {
                                 {translatedName !== currentEvent.name ? translatedName : ""}
                             </p>
 
-                            {/* Date Range & Time */}
-                            <div className="pt-2 type-label-s text-on-surface-variant font-mono flex flex-col sm:flex-row sm:gap-2">
-                                <span>{formatDate(currentEvent.startAt)}</span>
-                                <span className="hidden sm:inline">-</span>
-                                <span>{formatDate(currentEvent.aggregateAt)}</span>
+                            {/* Date range, with the progress figure on the same row so the title keeps the full column width */}
+                            <div className="flex items-end justify-between gap-2 pt-2">
+                                <div className="min-w-0 type-label-s text-on-surface-variant tabular-nums flex flex-col sm:flex-row sm:gap-2">
+                                    <span>{formatDate(currentEvent.startAt)}</span>
+                                    <span className="hidden sm:inline">-</span>
+                                    <span>{formatDate(currentEvent.aggregateAt)}</span>
+                                </div>
+                                {status === "ongoing" && (
+                                    <div className="shrink-0 type-headline-s type-emphasized text-on-surface tabular-nums leading-none select-none sm:type-headline-m sm:leading-none">
+                                        {Math.floor(progressPercent)}<span className="type-title-s ml-0.5">%</span>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Big Percentage (Bottom Right) */}
                         {status === "ongoing" && (
-                            <div
-                                className="absolute bottom-0 right-2 type-display-s type-emphasized text-on-surface select-none z-10"
-                            >
-                                {Math.floor(progressPercent)}<span className="type-headline-s ml-1">%</span>
-                            </div>
+                            <LinearProgress
+                                value={progressPercent / 100}
+                                aria-label={t("page.home.currentEvent.progress")}
+                                className="absolute inset-x-0 bottom-0"
+                            />
                         )}
                     </div>
                 </div>

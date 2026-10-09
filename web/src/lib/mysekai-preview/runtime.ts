@@ -649,7 +649,15 @@ export class MysekaiScenePreviewRuntime {
         this.renderer.domElement.className = "absolute inset-0 h-full w-full";
         container.appendChild(this.renderer.domElement);
 
-        this.axesRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        try {
+            this.axesRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        } catch (error) {
+            // The caller only sees the throw: leave no canvas or live context behind.
+            this.renderer.domElement.remove();
+            this.renderer.dispose();
+            this.renderer.forceContextLoss();
+            throw error;
+        }
         this.axesRenderer.setPixelRatio(Math.min(window.devicePixelRatio, MAX_RENDER_PIXEL_RATIO));
         this.axesRenderer.setSize(axesContainer.clientWidth || 1, axesContainer.clientHeight || 1);
         this.axesRenderer.domElement.className = "absolute inset-0 h-full w-full";

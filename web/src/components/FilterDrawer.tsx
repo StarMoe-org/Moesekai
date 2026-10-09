@@ -8,7 +8,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Icon, IconButton, cn } from "@/components/md3";
-import { mdClose, mdFilterList, mdLeftPanelClose } from "@/components/md3/icons";
+import { mdClose, mdFilterList, mdLeftPanelClose, mdLeftPanelOpen } from "@/components/md3/icons";
 import { FilterDrawerContext } from "@/components/common/BaseFilters";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
 
@@ -34,16 +34,16 @@ interface FilterDrawerProps {
 /**
  * FilterDrawer — the single home for every page's filter panel (MD3 side sheet).
  *
- * - `>= 1024px (lg)`: standard (docked) side sheet, flush beside the navigation
+ * - `>= 1600px (xlarge)`: standard (docked) side sheet, flush beside the navigation
  *   drawer and below the top app bar. The content column is pushed over by
  *   `--dual-rail-w` (see MainLayout); no scrim, no focus trap.
- * - `640–1023px`: modal side sheet with a scrim.
+ * - `640–1599px`: modal side sheet with a scrim.
  * - `< 640px`: modal bottom sheet with a drag handle (swipe down to dismiss).
  */
 export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
     const { t } = useI18n();
     const pathname = usePathname();
-    const { filterContent, filterTitle, hasFilters, isOpen, isDocked, close } = useQuickFilterContext();
+    const { filterContent, filterTitle, hasFilters, isOpen, isDocked, open, close } = useQuickFilterContext();
     const titleId = useId();
     const reducedMotion = useReducedMotion();
     /** Compact window (< 640px): the modal sheet is a bottom sheet. */
@@ -56,6 +56,22 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
     // furniture and must NOT trap focus or eat Escape.
     const isModal = Boolean(isOpen && hasFilters && !isDocked);
     const shouldShow = Boolean(hasFilters && filterContent && isOpen);
+    // Docked, the pane stays mounted whether open or collapsed: collapsing narrows it to a
+    // rail in place, so the way back in stays beside the content instead of moving to the FAB.
+    const showDocked = Boolean(hasFilters && filterContent && isDocked);
+
+    // Keyboard focus follows the docked toggle: onto the rail after collapsing (the collapse
+    // button goes inert), back onto the collapse button after expanding.
+    const railRef = useRef<HTMLButtonElement>(null);
+    const collapseRef = useRef<HTMLButtonElement>(null);
+    const collapseDocked = useCallback(() => {
+        close();
+        requestAnimationFrame(() => railRef.current?.focus({ preventScroll: true }));
+    }, [close]);
+    const expandDocked = useCallback(() => {
+        open();
+        requestAnimationFrame(() => collapseRef.current?.focus({ preventScroll: true }));
+    }, [open]);
 
     // Track modal open timestamp to guard against click-through on mobile.
     useEffect(() => {
@@ -190,6 +206,50 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
 
     const resolvedTitle = filterTitle || t("common.filter.title");
 
+    // Header and filter body, shared by the floating sheet and the docked pane.
+    const sheet = (
+        <div ref={panelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
+            {/* Drag handle (bottom sheet only) */}
+            {isModal && (
+                <div className="flex shrink-0 cursor-grab justify-center pb-1 pt-3 active:cursor-grabbing sm:hidden" aria-hidden="true">
+                    <span className="h-1 w-8 rounded-full bg-on-surface-variant/40" />
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="flex h-14 shrink-0 items-center gap-2 pl-5 pr-2 sm:h-16">
+                <Icon path={mdFilterList} size={24} className="text-primary" />
+                <h2 id={titleId} className="min-w-0 flex-1 truncate type-title-m">
+                    {resolvedTitle}
+                </h2>
+                <IconButton
+                    ref={collapseRef}
+                    icon={isModal ? mdClose : mdLeftPanelClose}
+                    label={isModal ? t("common.action.close") : t("common.filter.collapse")}
+                    onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (isModal) close();
+                        else collapseDocked();
+                    }}
+                />
+            </div>
+
+            {/* The one and only mount point for page filters. */}
+            <FilterDrawerContext.Provider value={true}>
+                <div
+                    ref={scrollRef}
+                    data-filter-drawer-body="true"
+                    onScroll={handleBodyScroll}
+                    onPointerDownCapture={isModal && isCompact ? (e) => e.stopPropagation() : undefined}
+                    className="min-h-0 flex-grow overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-1"
+                >
+                    {filterContent}
+                </div>
+            </FilterDrawerContext.Provider>
+        </div>
+    );
+
     return (
         <>
             {/* Scrim — modal (floating) sheet only */}
@@ -209,81 +269,86 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
                 )}
             </AnimatePresence>
 
+            {/* Floating (modal) sheet: slides in from the side, or up from the bottom on compact screens. */}
             <AnimatePresence>
-                {shouldShow && (
+                {shouldShow && isModal && (
                     <motion.aside
-                        key={isModal ? "filter-drawer-modal" : "filter-drawer-docked"}
-                        initial={reducedMotion ? { opacity: 0 } : isModal && isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
-                        animate={reducedMotion ? { opacity: 1 } : isModal && isCompact ? { y: 0 } : { x: 0, opacity: 1 }}
-                        exit={reducedMotion ? { opacity: 0 } : isModal && isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
+                        key="filter-drawer-modal"
+                        initial={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
+                        animate={reducedMotion ? { opacity: 1 } : isCompact ? { y: 0 } : { x: 0, opacity: 1 }}
+                        exit={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
                         transition={reducedMotion ? reducedMotionFade : md3SpatialDefault}
-                        drag={isModal && isCompact && !reducedMotion ? "y" : false}
+                        drag={isCompact && !reducedMotion ? "y" : false}
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={{ top: 0, bottom: 0.6 }}
                         onDragEnd={(_, info) => {
                             if (info.offset.y > 120 || info.velocity.y > 600) close();
                         }}
                         id={FILTER_DRAWER_ID}
-                        role={isModal ? "dialog" : "complementary"}
-                        aria-modal={isModal ? true : undefined}
+                        role="dialog"
+                        aria-modal={true}
                         aria-labelledby={titleId}
                         className={cn(
-                            "fixed flex flex-col overflow-hidden text-on-surface",
-                            isModal
-                                ? cn(
-                                      "z-[120] bg-surface-container-low shadow-elev-1",
-                                      // compact: bottom sheet; medium: modal side sheet beside the nav drawer
-                                      "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-md3-xl",
-                                      "sm:inset-x-auto sm:bottom-0 sm:top-0 sm:max-h-none sm:w-[min(var(--filter-drawer-w),calc(100vw-3.5rem))] sm:rounded-none sm:rounded-r-md3-lg",
-                                      isSidebarOpen ? "sm:left-0 md:left-[var(--sidebar-w)]" : "sm:left-0",
-                                  )
-                                : cn(
-                                      "bottom-0 top-[var(--app-bar-h)] z-[58] w-[var(--filter-drawer-w)] border-r border-outline-variant bg-surface-container-low",
-                                      isSidebarOpen ? "left-[var(--sidebar-w)]" : "left-0",
-                                  ),
+                            "fixed z-[120] flex flex-col overflow-hidden text-on-surface glass-thick",
+                            // compact: bottom sheet; medium: modal side sheet beside the nav drawer
+                            "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-md3-xl",
+                            "sm:inset-x-auto sm:bottom-0 sm:top-0 sm:max-h-none sm:w-[min(var(--filter-drawer-w),calc(100vw-3.5rem))] sm:rounded-none sm:rounded-r-md3-lg",
+                            isSidebarOpen ? "sm:left-0 md:left-[var(--sidebar-w)]" : "sm:left-0",
                         )}
                     >
-                        <div ref={panelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
-                            {/* Drag handle (bottom sheet only) */}
-                            {isModal && (
-                                <div className="flex shrink-0 cursor-grab justify-center pb-1 pt-3 active:cursor-grabbing sm:hidden" aria-hidden="true">
-                                    <span className="h-1 w-8 rounded-full bg-on-surface-variant/40" />
-                                </div>
-                            )}
-
-                            {/* Header */}
-                            <div className="flex h-14 shrink-0 items-center gap-2 pl-5 pr-2 sm:h-16">
-                                <Icon path={mdFilterList} size={24} className="text-primary" />
-                                <h2 id={titleId} className="min-w-0 flex-1 truncate type-title-m">
-                                    {resolvedTitle}
-                                </h2>
-                                <IconButton
-                                    icon={isModal ? mdClose : mdLeftPanelClose}
-                                    label={isModal ? t("common.action.close") : t("common.filter.collapse")}
-                                    onClick={(e) => {
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        close();
-                                    }}
-                                />
-                            </div>
-
-                            {/* The one and only mount point for page filters. */}
-                            <FilterDrawerContext.Provider value={true}>
-                                <div
-                                    ref={scrollRef}
-                                    data-filter-drawer-body="true"
-                                    onScroll={handleBodyScroll}
-                                    onPointerDownCapture={isModal && isCompact ? (e) => e.stopPropagation() : undefined}
-                                    className="min-h-0 flex-grow overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-1"
-                                >
-                                    {filterContent}
-                                </div>
-                            </FilterDrawerContext.Provider>
-                        </div>
+                        {sheet}
                     </motion.aside>
                 )}
             </AnimatePresence>
+
+            {/* Docked pane: stays mounted and narrows to a rail in place when collapsed. Its width
+                eases exactly like the content column's margin in MainLayout, so the pane's edge and
+                the content move as one; the sheet fades out before the rail's contents fade in. */}
+            {showDocked && (
+                <aside
+                    id={FILTER_DRAWER_ID}
+                    role="complementary"
+                    aria-labelledby={titleId}
+                    className={cn(
+                        "glass fixed bottom-3 top-[calc(var(--app-bar-h)+0.75rem)] z-[58] overflow-hidden rounded-md3-xl text-on-surface",
+                        "transition-[width,left] duration-400 ease-md3-emphasized motion-reduce:transition-none",
+                        isSidebarOpen ? "left-[calc(var(--sidebar-w)+0.75rem)]" : "left-3",
+                        isOpen ? "w-[calc(var(--filter-drawer-w)-1.5rem)]" : "w-14",
+                    )}
+                >
+                    {/* Fixed width, so the sheet is clipped rather than reflowed while the pane narrows. */}
+                    <div
+                        inert={!isOpen}
+                        className={cn(
+                            "flex h-full w-[calc(var(--filter-drawer-w)-1.5rem)] flex-col transition-opacity ease-md3-standard",
+                            isOpen ? "opacity-100 delay-100 duration-200" : "opacity-0 duration-100",
+                        )}
+                    >
+                        {sheet}
+                    </div>
+                    <button
+                        ref={railRef}
+                        type="button"
+                        inert={isOpen}
+                        onClick={expandDocked}
+                        aria-controls={FILTER_DRAWER_ID}
+                        aria-expanded={false}
+                        aria-label={t("common.filter.expand")}
+                        title={t("common.filter.expand")}
+                        className={cn(
+                            "state-layer focus-ring absolute inset-y-0 left-0 flex w-14 cursor-pointer flex-col items-center rounded-md3-xl text-on-surface-variant transition-opacity ease-md3-standard",
+                            isOpen ? "opacity-0 duration-100" : "opacity-100 delay-100 duration-200",
+                        )}
+                    >
+                        {/* Same height as the sheet's header, so expand sits where collapse was. */}
+                        <span className="flex h-16 shrink-0 items-center">
+                            <Icon path={mdLeftPanelOpen} size={24} />
+                        </span>
+                        <Icon path={mdFilterList} size={20} className="text-primary" />
+                        <span className="mt-2 max-h-[60%] overflow-hidden type-label-l [writing-mode:vertical-rl]">{resolvedTitle}</span>
+                    </button>
+                </aside>
+            )}
         </>
     );
     }

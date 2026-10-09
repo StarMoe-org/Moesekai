@@ -86,7 +86,7 @@ const RANK_KEYS = {
 } as const;
 
 const INPUT_CLASS =
-    "focus-ring h-12 w-full px-4 bg-surface-container-highest border border-outline rounded-md3-xs type-body-l font-mono text-on-surface caret-primary focus:border-primary transition-colors duration-150 ease-md3-standard";
+    "focus-ring h-10 w-full px-3 bg-surface-container-low border border-outline rounded-md3-md type-body-m tabular-nums text-on-surface caret-primary hover:border-on-surface focus:border-primary transition-colors duration-150 ease-md3-standard";
 const LABEL_CLASS = "block type-label-l text-on-surface-variant mb-1.5";
 /** Chips share the row on phones so each keeps a usable tap size in the half-width column. */
 const CHIP_ROW_CLASS = "mt-1.5 flex gap-1.5";

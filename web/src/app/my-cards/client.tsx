@@ -40,6 +40,7 @@ import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 import { Banner, Chip, EmptyState, ErrorState, LinearProgress, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 // ==================== Types ====================
 
@@ -106,6 +107,7 @@ function getUserErrorMessageKey(code: AccountDataErrorCode): string {
 
 function MyCardsContent() {
     const { t, formatDate } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
     const searchParams = useSearchParams();
 
     // Account state
@@ -644,7 +646,7 @@ function MyCardsContent() {
                 ) : filteredCards.length === 0 ? (
                     <EmptyState title={t("page.myCards.noResult")} />
                 ) : (
-                    <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
+                    <div ref={gridRef} className="relative grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-3">
                         {displayedCards.map((card) => {
                             const uc = userCards.get(card.id);
                             return (
@@ -679,7 +681,6 @@ function MyCardsHeader() {
     const { t } = useI18n();
     return (
         <PageHeader
-            align="center"
             eyebrow={t("page.myCards.badge")}
             title={t("page.myCards.title")}
             highlight={t("page.myCards.titleHighlight")}

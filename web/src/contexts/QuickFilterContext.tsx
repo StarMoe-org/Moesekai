@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useCallback, useMemo, useSyncExternalStore } from "react";
 import { useI18n } from "./I18nContext";
-import { useIsLgScreen } from "@/hooks/useMediaQuery";
+import { useIsXlScreen } from "@/hooks/useMediaQuery";
 
 // ============================================================================
 // Storage & Store
@@ -93,7 +93,7 @@ interface QuickFilterContextValue {
     isOpen: boolean;
     /**
      * Whether the drawer is wide enough to sit beside the content instead of
-     * floating over it. True at `>= 1024px (lg)`.
+     * floating over it. True at `>= 1600px (xlarge, 100rem)`.
      */
     isDocked: boolean;
     /** Expand the drawer. */
@@ -121,7 +121,7 @@ export function QuickFilterProvider({ children }: { children: React.ReactNode })
     const [filterTitle, setFilterTitle] = useState(defaultFilterTitle);
 
     // Docking state from the SSR-safe media query hook.
-    const isDocked = useIsLgScreen();
+    const isDocked = useIsXlScreen();
 
     // User preference subscribed via useSyncExternalStore (SSR safe, avoids
     // setState cascades in effects).
@@ -210,8 +210,8 @@ export function useQuickFilterContext() {
  * Automatically unregisters on unmount.
  *
  * Registration is unconditional at every viewport width: the drawer is now the
- * single home for page filters, docking beside the content at `lg` and floating
- * over it below that. (It used to register only on mobile, back when desktop
+ * single home for page filters, docking beside the content at `xlarge` (1600px)
+ * and floating over it below that. (It used to register only on mobile, back when desktop
  * pages rendered their own inline filter panel.)
  *
  * @param title  Drawer title

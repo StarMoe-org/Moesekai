@@ -133,7 +133,7 @@ export default function InteractionsSettingsModal({
                         </div>
 
                         {/* Sound Toggle */}
-                        <div className="p-4 rounded-md3-lg bg-surface-container flex items-center justify-between gap-4">
+                        <div className="p-4 rounded-md3-lg bg-surface-container flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div>
                                 <h4 className="type-title-s text-on-surface">
                                     {t("page.mysekaiWorkspace.soundTitle")}

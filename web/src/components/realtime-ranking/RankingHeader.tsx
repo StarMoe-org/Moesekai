@@ -18,6 +18,8 @@ interface RankingHeaderProps {
     scopeLabel?: string;
     totalEntries: number;
     isRefreshing: boolean;
+    /** The last fetch failed, so the board may be stale or empty. */
+    syncFailed?: boolean;
     showChurn: boolean;
     onShowChurnChange: (value: boolean) => void;
     showChurnToggle?: boolean;
@@ -33,6 +35,7 @@ export default function RankingHeader({
     scopeLabel,
     totalEntries,
     isRefreshing,
+    syncFailed = false,
     showChurn,
     onShowChurnChange,
     showChurnToggle = true,
@@ -42,7 +45,6 @@ export default function RankingHeader({
     return (
         <>
             <PageHeader
-                align="center"
                 eyebrow={
                     <span className="inline-flex items-center gap-2">
                         {t("page.realtimeRanking.badge")}
@@ -126,9 +128,13 @@ export default function RankingHeader({
                     </span>
                     <span className={`rounded-md3-sm px-3 py-1.5 whitespace-nowrap ${isRefreshing
                         ? "bg-tertiary-container text-on-tertiary-container"
-                        : "bg-secondary-container text-on-secondary-container"
+                        : syncFailed
+                            ? "bg-error-container text-on-error-container"
+                            : "bg-secondary-container text-on-secondary-container"
                         }`}>
-                        {isRefreshing ? t("page.realtimeRanking.refreshing") : t("page.realtimeRanking.synced")}
+                        {isRefreshing
+                            ? t("page.realtimeRanking.refreshing")
+                            : syncFailed ? t("page.realtimeRanking.syncFailed") : t("page.realtimeRanking.synced")}
                     </span>
                     {updatedAt ? (
                         <span className="rounded-md3-sm bg-surface-container-high px-3 py-1.5 text-on-surface-variant whitespace-nowrap">

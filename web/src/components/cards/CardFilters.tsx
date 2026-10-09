@@ -281,7 +281,7 @@ export default function CardFilters({
                         key={`vs-subunit-${unitId}`}
                         onClick={() => toggleVirtualSingerUnitTag(supportUnit)}
                         className={`state-layer focus-ring relative rounded-full transition-[box-shadow,opacity] duration-150 ease-md3-standard ${isSelected
-                            ? "z-10 ring-2 ring-primary ring-offset-2 ring-offset-surface"
+                            ? "z-10 ring-2 ring-primary ring-offset-2 ring-offset-surface-card"
                             : "ring-2 ring-transparent opacity-80 hover:opacity-100 hover:ring-outline-variant"
                             }`}
                         title={t("common.virtualSingerWithUnit", { unit: getSupportUnitLabel(supportUnit) })}
@@ -353,8 +353,8 @@ export default function CardFilters({
                 </FilterSection>
             )}
 
-            {/* Attribute and Rarity Filters */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Attribute and Rarity Filters: stacked, the filter sheet is too narrow for two columns of chips. */}
+            <div className="space-y-5">
                 {/* Attribute Filter */}
                 <FilterSection label={t("common.filter.attribute")}>
                     <div className="flex flex-wrap gap-2">

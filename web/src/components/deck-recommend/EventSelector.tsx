@@ -340,7 +340,7 @@ export default function EventSelector({
 
             <button
                 onClick={() => setModalOpen(true)}
-                className="state-layer focus-ring group flex w-full items-center gap-3 rounded-md3-md border border-outline bg-surface-container-lowest p-3 text-left transition-colors hover:border-on-surface"
+                className="state-layer focus-ring group flex w-full items-center gap-3 rounded-md3-md border border-outline bg-surface-container-low p-3 text-left transition-colors hover:border-on-surface"
             >
                 {selectedEvent ? (
                     <>

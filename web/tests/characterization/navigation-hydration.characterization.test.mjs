@@ -160,7 +160,7 @@ async function getComponentHarness() {
     const md3Prelude = `
       const dependencies = globalThis.__moesekaiNavigationHydration;
       const React = dependencies.React;
-      const { cn, LocalizedLink } = dependencies;
+      const { cn, withOverrides, LocalizedLink } = dependencies;
     `;
     dependencies.Icon = await importTsxComponent("src/components/md3/Icon.tsx", md3Prelude, "Icon");
     const md3IconPrelude = `${md3Prelude}\nconst Icon = dependencies.Icon;`;
@@ -170,7 +170,7 @@ async function getComponentHarness() {
     const sidebarPrelude = `
       const dependencies = globalThis.__moesekaiNavigationHydration;
       const React = dependencies.React;
-      const { useState, useEffect, useRef, useMemo } = React;
+      const { useState, useEffect, useRef, useMemo, useSyncExternalStore } = React;
       const Image = dependencies.Image;
       const Link = dependencies.LocalizedLink;
       const {
@@ -372,8 +372,8 @@ test("LocalizedLink and Sidebar hydrate rewritten root and nested routes without
       assert.equal(beforeHydration.homeCurrent, scenario.active === "home" ? "page" : null);
       assert.equal(beforeHydration.cardsCurrent, scenario.active === "cards" ? "page" : null);
       assert.equal(container.querySelectorAll('aside a[aria-current="page"]').length, 1);
-      assert.equal(beforeHydration.homeClass.includes("bg-secondary-container"), scenario.active === "home");
-      assert.equal(beforeHydration.cardsClass.includes("bg-secondary-container"), scenario.active === "cards");
+      assert.equal(beforeHydration.homeClass.includes("glass-selected"), scenario.active === "home");
+      assert.equal(beforeHydration.cardsClass.includes("glass-selected"), scenario.active === "cards");
 
       dependencies.currentPathname = scenario.publicPath;
       const capture = captureHydrationErrors();

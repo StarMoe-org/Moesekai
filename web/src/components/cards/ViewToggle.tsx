@@ -1,6 +1,6 @@
 "use client";
 
-import { IconButton } from "@/components/md3";
+import { SegmentedButton } from "@/components/md3";
 import { mdGridView, mdViewList } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -11,13 +11,20 @@ interface ViewToggleProps {
     onChange: (value: ListViewMode) => void;
 }
 
+/** Grid/list switch: the same 40px track and spotlight fill as every other segmented control. */
 export default function ViewToggle({ value, onChange }: ViewToggleProps) {
     const { t } = useI18n();
-    const label = t("common.view.label");
     return (
-        <div className="flex items-center gap-1 rounded-full border border-outline-variant bg-surface-container p-1" role="group" aria-label={label}>
-            <IconButton icon={mdGridView} label={t("common.view.grid")} selected={value === "grid"} variant="tonal" size="s" onClick={() => onChange("grid")} />
-            <IconButton icon={mdViewList} label={t("common.view.table")} selected={value === "table"} variant="tonal" size="s" onClick={() => onChange("table")} />
-        </div>
+        <SegmentedButton
+            aria-label={t("common.view.label")}
+            iconOnly
+            className="w-auto"
+            value={value}
+            onValueChange={onChange}
+            options={[
+                { value: "grid", label: t("common.view.grid"), icon: mdGridView },
+                { value: "table", label: t("common.view.table"), icon: mdViewList },
+            ]}
+        />
     );
 }

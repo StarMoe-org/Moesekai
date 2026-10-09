@@ -112,7 +112,7 @@ export default function AccountSelectorBar({
                                 className={cn(
                                     "state-layer focus-ring flex h-8 min-w-0 max-w-full cursor-pointer items-center gap-1.5 rounded-md3-sm border pl-1.5 pr-2 type-label-l sm:gap-2",
                                     isActive
-                                        ? "border-transparent bg-secondary-container text-on-secondary-container"
+                                        ? "border-transparent bg-primary-container text-on-primary-container"
                                         : "border-outline-variant text-on-surface-variant",
                                 )}
                             >
@@ -134,7 +134,6 @@ export default function AccountSelectorBar({
                     <div className="mt-4 border-t border-outline-variant pt-4">
                         <div className="flex flex-wrap items-end gap-3">
                             <TextField
-                                dense
                                 label={t("common.form.uid")}
                                 value={gameId}
                                 onValueChange={setGameId}

@@ -2,7 +2,7 @@
 import React, { useCallback, useId, useImperativeHandle, useRef, useState } from "react";
 import { isKeyboardEventComposing } from "@/lib/shortcuts";
 import { useI18n } from "@/contexts/I18nContext";
-import { cn } from "./cn";
+import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { mdCancel, mdErrorFill } from "./icons";
 
@@ -38,8 +38,6 @@ export interface TextFieldProps extends Omit<React.InputHTMLAttributes<HTMLInput
     onValueChange?: (value: string) => void;
     /** Clear the value when Escape is pressed (IME-safe). Default true when clearable. */
     clearOnEscape?: boolean;
-    /** Compact density (48px instead of 56px). */
-    dense?: boolean;
     containerClassName?: string;
 }
 
@@ -59,7 +57,6 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
         clearLabel,
         onValueChange,
         clearOnEscape,
-        dense,
         className,
         containerClassName,
         id,
@@ -157,24 +154,24 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
 
     const showClear = clearable && populated && !disabled && !readOnly;
     const accessibleClearLabel = clearLabel ?? t("common.md3.clear");
-    const height = dense ? "h-12" : "h-14";
+    // 40px like Select and the segmented buttons; a filled field's inner label needs 48px.
+    const height = variant === "filled" && label ? "h-12" : "h-10";
     const filled = variant === "filled";
 
-    const container = cn(
+    const container = withOverrides(
         "group/tf relative flex w-full items-center gap-0 transition-colors duration-150 ease-md3-standard",
         height,
         filled
             ? cn(
-                  "rounded-t-md3-xs bg-surface-container-highest",
-                  "after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:transition-[height,background-color] after:duration-150",
+                  "rounded-md3-md bg-surface-container-high",
                   isError
-                      ? "after:h-[2px] after:bg-error"
+                      ? "ring-2 ring-inset ring-error"
                       : focused
-                        ? "after:h-[2px] after:bg-primary"
-                        : "after:h-px after:bg-on-surface-variant hover:after:bg-on-surface",
+                        ? "ring-2 ring-inset ring-primary"
+                        : "hover:bg-surface-container-highest",
               )
             : cn(
-                  "rounded-md3-xs border",
+                  "rounded-md3-md border",
                   isError
                       ? cn("border-error", focused && "border-2")
                       : focused
@@ -188,12 +185,12 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
     const labelColor = isError ? "text-error" : focused ? "text-primary" : "text-on-surface-variant";
 
     return (
-        <div className={cn("w-full", className)}>
+        <div className={withOverrides("w-full", className)}>
             <div className={container}>
-                {icon && <Icon path={icon} size={24} className="ml-3 text-on-surface-variant" />}
-                <div className={cn("relative flex h-full min-w-0 flex-1 items-center px-4", icon && "pl-3")}>
+                {icon && <Icon path={icon} size={20} className="ml-3 text-on-surface-variant" />}
+                <div className={cn("relative flex h-full min-w-0 flex-1 items-center px-3", icon && "pl-2")}>
                     {prefixText && (
-                        <span className={cn("type-body-l text-on-surface-variant", filled && label && "pt-4")}>{prefixText}</span>
+                        <span className={cn("type-body-m text-on-surface-variant", filled && label && "pt-4")}>{prefixText}</span>
                     )}
                     <input
                         ref={inputRef}
@@ -232,7 +229,8 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                             onBlur?.(e);
                         }}
                         className={cn(
-                            "h-full w-full min-w-0 bg-transparent type-body-l text-on-surface caret-primary outline-none",
+                            "h-full w-full min-w-0 bg-transparent text-on-surface caret-primary outline-none",
+                            "type-body-m",
                             "placeholder:text-on-surface-variant",
                             filled && label && "pt-4",
                             !filled && "py-0",
@@ -240,7 +238,7 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                         {...rest}
                     />
                     {suffixText && (
-                        <span className={cn("type-body-l text-on-surface-variant", filled && label && "pt-4")}>{suffixText}</span>
+                        <span className={cn("type-body-m text-on-surface-variant", filled && label && "pt-4")}>{suffixText}</span>
                     )}
                     {label && (
                         <label
@@ -250,11 +248,11 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                                 "max-w-[calc(100%-2rem)]",
                                 filled
                                     ? floated
-                                        ? "left-4 top-2 type-body-s"
-                                        : "left-4 top-1/2 -translate-y-1/2 type-body-l"
+                                        ? "left-3 top-1.5 type-body-s"
+                                        : "left-3 top-1/2 -translate-y-1/2 type-body-m"
                                     : floated
-                                      ? cn("-top-2 left-3 bg-[var(--md3-tf-label-bg,var(--md-sys-color-surface))] px-1 type-body-s")
-                                      : "left-4 top-1/2 -translate-y-1/2 type-body-l",
+                                      ? cn("-top-2 left-2 bg-[var(--md3-tf-label-bg,var(--md-sys-color-surface))] px-1 type-body-s")
+                                      : "left-3 top-1/2 -translate-y-1/2 type-body-m",
                                 labelColor,
                             )}
                         >
@@ -263,24 +261,24 @@ export const TextField = React.forwardRef<HTMLInputElement, TextFieldProps>(func
                         </label>
                     )}
                 </div>
-                {isError && !showClear && <Icon path={mdErrorFill} size={24} className="mr-3 text-error" />}
+                {isError && !showClear && <Icon path={mdErrorFill} size={20} className="mr-3 text-error" />}
                 {showClear ? (
                     <button
                         type="button"
                         onClick={handleClear}
                         aria-label={accessibleClearLabel}
                         title={accessibleClearLabel}
-                        className="state-layer focus-ring mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-on-surface-variant"
+                        className="state-layer focus-ring mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-on-surface-variant"
                     >
-                        <Icon path={mdCancel} size={24} />
+                        <Icon path={mdCancel} size={20} />
                     </button>
                 ) : (
-                    trailingIcon && !isError && <Icon path={trailingIcon} size={24} className="mr-3 text-on-surface-variant" />
+                    trailingIcon && !isError && <Icon path={trailingIcon} size={20} className="mr-3 text-on-surface-variant" />
                 )}
                 {trailing}
             </div>
             {(supportingText || errorText || maxLength) && (
-                <div id={supportId} className={cn("flex gap-4 px-4 pt-1 type-body-s", isError ? "text-error" : "text-on-surface-variant")}>
+                <div id={supportId} className={cn("flex gap-4 px-3 pt-1 type-body-s", isError ? "text-error" : "text-on-surface-variant")}>
                     <span className="flex-1">{errorText || supportingText}</span>
                     {maxLength && isControlled && (
                         <span>

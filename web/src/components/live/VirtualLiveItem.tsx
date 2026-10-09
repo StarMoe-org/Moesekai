@@ -1,8 +1,9 @@
 "use client";
+import { useState } from "react";
 import { Card, Icon } from "@/components/md3";
-import { mdCalendarMonth } from "@/components/md3/icons";
+import { mdCalendarMonth, mdLiveTv } from "@/components/md3/icons";
 import Image from "next/image";
-import { IVirtualLiveInfo, VIRTUAL_LIVE_TYPE_COLORS, getVirtualLiveStatus, VIRTUAL_LIVE_STATUS_DISPLAY, VirtualLiveType } from "@/types/virtualLive";
+import { IVirtualLiveInfo, VIRTUAL_LIVE_TYPE_COLORS, getVirtualLiveStatus, getVirtualLiveTypeLabel, VIRTUAL_LIVE_STATUS_DISPLAY, VirtualLiveType } from "@/types/virtualLive";
 import { getVirtualLiveBannerUrl } from "@/lib/assets";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -17,6 +18,7 @@ export default function VirtualLiveItem({ virtualLive, isSpoiler }: VirtualLiveI
     const { assetSource } = useTheme();
     const { t, formatDate: formatLocaleDate } = useI18n();
     const bannerUrl = getVirtualLiveBannerUrl(virtualLive.assetbundleName, assetSource);
+    const [failedBanner, setFailedBanner] = useState<string | null>(null);
     const status = getVirtualLiveStatus(virtualLive);
     const statusDisplay = VIRTUAL_LIVE_STATUS_DISPLAY[status];
 
@@ -32,13 +34,20 @@ export default function VirtualLiveItem({ virtualLive, isSpoiler }: VirtualLiveI
             <div>
                 {/* Banner Image */}
                 <div className="relative aspect-[16/7] bg-surface-container-high overflow-hidden">
-                    <Image
-                        src={bannerUrl}
-                        alt={virtualLive.name}
-                        fill
-                        className="object-contain"
-                        unoptimized
-                    />
+                    {failedBanner === bannerUrl ? (
+                        <div className="absolute inset-0 flex items-center justify-center text-on-surface-variant">
+                            <Icon path={mdLiveTv} size={40} />
+                        </div>
+                    ) : (
+                        <Image
+                            src={bannerUrl}
+                            alt={virtualLive.name}
+                            fill
+                            className="object-contain"
+                            unoptimized
+                            onError={() => setFailedBanner(bannerUrl)}
+                        />
+                    )}
 
                     {/* Status Badge */}
                     <div
@@ -53,7 +62,7 @@ export default function VirtualLiveItem({ virtualLive, isSpoiler }: VirtualLiveI
                         className="absolute top-1.5 left-1.5 sm:top-2 sm:left-2 px-1.5 sm:px-2 py-0.5 rounded-full type-label-s text-white shadow-elev-1"
                         style={{ backgroundColor: VIRTUAL_LIVE_TYPE_COLORS[virtualLive.virtualLiveType as VirtualLiveType] || "#9E9E9E" }}
                     >
-                        {t(`common.virtualLiveTypes.${virtualLive.virtualLiveType}`)}
+                        {getVirtualLiveTypeLabel(virtualLive.virtualLiveType, t)}
                     </div>
 
                     {/* Spoiler Badge */}

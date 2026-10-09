@@ -50,14 +50,14 @@ function LeavePageContent() {
         <div className="flex min-h-screen flex-col items-center justify-center bg-surface p-4">
             <Surface tone="card" elevation={1} className="relative w-full max-w-lg overflow-hidden p-8 md:p-10">
                 {/* Decorative accent bar */}
-                <div className="absolute left-0 top-0 h-1.5 w-full bg-primary" />
+                <div className="absolute left-0 top-0 h-1.5 w-full bg-primary-container" />
 
                 <div className="flex flex-col items-center text-center">
 
                     {/* Logo Section */}
                     <div className="mb-8 flex items-center gap-2">
                         <div
-                            className="h-9 w-[5.5rem] bg-primary"
+                            className="h-9 w-[5.5rem] bg-primary-container"
                             style={{
                                 maskImage: `url(${MOE_LOGO_URL})`,
                                 maskSize: "contain",

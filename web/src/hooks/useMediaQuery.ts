@@ -47,18 +47,20 @@ export function useMediaQuery(query: string, serverFallback = false): boolean {
 }
 
 /**
- * Specific hook for Tailwind lg breakpoint (min-width: 1024px).
+ * Specific hook for the M3 xlarge window class (min-width: 1600px).
  *
  * This is the breakpoint where the filter drawer stops floating over the
- * content and docks beside the sidebar instead.
+ * content and docks beside the sidebar instead. Docking any earlier leaves
+ * the content column squeezed between two 18-20rem rails.
  *
  * Server fallback is false (mobile-first baseline):
  * 1. Mobile-first design principle: default assumption without client viewport info is base viewport.
  * 2. Avoids rendering desktop-specific DOM during SSR that would immediately unmount on mobile/tablet.
  * 3. Matches initial empty filter registration state (QuickFilterContext starts with hasFilters=false).
  */
-export const LG_MEDIA_QUERY = "(min-width: 1024px)";
+// rem to match the `xlarge:` variant, which follows the browser's base font size.
+export const XL_MEDIA_QUERY = "(min-width: 100rem)";
 
-export function useIsLgScreen(): boolean {
-    return useMediaQuery(LG_MEDIA_QUERY, false);
+export function useIsXlScreen(): boolean {
+    return useMediaQuery(XL_MEDIA_QUERY, false);
 }

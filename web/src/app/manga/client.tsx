@@ -10,11 +10,13 @@ import { getMangaImageUrl } from "@/lib/assets";
 import { fetchMangaData } from "@/lib/fetch";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { Card, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader } from "@/components/md3";
+import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
 
 // ==================== Component ====================
 
 function MangaContent() {
     const { t, formatDate } = useI18n();
+    const gridRef = useGridReflowAnimation<HTMLDivElement>();
 
     const [mangas, setMangas] = useState<IMangaItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -105,7 +107,6 @@ function MangaContent() {
     return (
         <PageContainer>
             <PageHeader
-                align="center"
                 eyebrow={t("page.manga.badge")}
                 title={t("page.manga.title")}
                 highlight={t("page.manga.titleHighlight")}
@@ -124,7 +125,7 @@ function MangaContent() {
                     <LoadingState />
                 ) : (
                     <>
-                        <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
+                        <div ref={gridRef} className="relative grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-4">
                             {displayedMangas.map((manga) => (
                                 <Card
                                     variant="elevated"

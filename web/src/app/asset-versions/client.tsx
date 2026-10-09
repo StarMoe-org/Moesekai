@@ -577,7 +577,6 @@ function AssetVersionsContent() {
         <PageContainer>
             {/* Page Header */}
             <PageHeader
-                align="center"
                 eyebrow={t("page.assetVersions.badge")}
                 title={t("page.assetVersions.title")}
                 highlight={t("page.assetVersions.titleHighlight")}

@@ -14,6 +14,7 @@ import {
     IVirtualLiveReward,
     VIRTUAL_LIVE_TYPE_COLORS,
     getVirtualLiveStatus,
+    getVirtualLiveTypeLabel,
     VIRTUAL_LIVE_STATUS_DISPLAY,
     VirtualLiveType
 } from "@/types/virtualLive";
@@ -665,7 +666,7 @@ export default function VirtualLiveDetailClient() {
                             className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
                             style={{ backgroundColor: VIRTUAL_LIVE_TYPE_COLORS[virtualLive.virtualLiveType as VirtualLiveType] || "#9E9E9E" }}
                         >
-                            {t(`common.virtualLiveTypes.${virtualLive.virtualLiveType}`)}
+                            {getVirtualLiveTypeLabel(virtualLive.virtualLiveType, t)}
                         </span>
                         <span
                             className="inline-flex items-center h-7 px-3 rounded-md3-sm type-label-m text-white"
@@ -733,9 +734,7 @@ export default function VirtualLiveDetailClient() {
                                 />
                                 <InfoRow
                                     label={t("common.field.type")}
-                                    value={
-                                        t(`common.virtualLiveTypes.${virtualLive.virtualLiveType}`)
-                                    }
+                                    value={getVirtualLiveTypeLabel(virtualLive.virtualLiveType, t)}
                                 />
                                 <InfoRow label={t("page.live.platformLabel")} value={virtualLive.virtualLivePlatform} />
                                 <InfoRow label={t("page.live.startTimeLabel")} value={formatDate(virtualLive.startAt)} />
@@ -869,7 +868,7 @@ export default function VirtualLiveDetailClient() {
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
-                    <Button href="/live" variant="tonal" size="m" icon={mdArrowBack}>
+                    <Button href="/live" variant="tonal" size="s" icon={mdArrowBack}>
                         {t("page.live.backToList")}
                     </Button>
                 </div>

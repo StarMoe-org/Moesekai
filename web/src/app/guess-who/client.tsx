@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "@/components/LocalizedLink";
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
-import { Button, Icon, IconButton, TextField, LinearProgress, LoadingIndicator, LoadingState, ErrorState } from "@/components/md3";
+import { Button, Icon, IconButton, SegmentedButton, TextField, LinearProgress, LoadingIndicator, LoadingState, ErrorState } from "@/components/md3";
+import { FilterButton } from "@/components/common/BaseFilters";
 import { fetchMasterData } from "@/lib/fetch";
 import { ICardInfo, UNIT_DATA, CHAR_COLORS, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS } from "@/types/types";
 import { getCardFullUrl, getCharacterIconUrl } from "@/lib/assets";
@@ -606,7 +607,7 @@ function GuessWhoContent() {
                             <div className="p-8 text-center border-b border-outline-variant">
                                 {/* Header */}
                                 <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4">
-                                    <span className="text-primary type-label-m type-emphasized">GAME OVER</span>
+                                    <span className="text-on-primary-container type-label-m type-emphasized">GAME OVER</span>
                                 </div>
                                 <h1 className="type-headline-l type-emphasized text-on-surface mb-2">{t("page.guessWho.single.challengeComplete")}</h1>
                                 <p className="type-title-l text-on-surface-variant mb-6">{t("page.guessWho.single.finalScore")}</p>
@@ -896,7 +897,7 @@ function GuessWhoClientPlayingAndSetup({
                 <div className="container mx-auto px-4 max-w-2xl">
                     <div className="text-center mb-10">
                         <div className="inline-flex items-center gap-2 px-4 py-2 border border-outline-variant bg-primary-container rounded-full mb-4 shadow-elev-1">
-                            <span className="text-primary type-label-m type-emphasized">{t("page.guessWho.badge")}</span>
+                            <span className="text-on-primary-container type-label-m type-emphasized">{t("page.guessWho.badge")}</span>
                         </div>
                         <h1 className="type-headline-l type-emphasized text-on-surface mb-2 ">{t("page.guessWho.title")} <span className="text-primary">?</span></h1>
                         <p className="text-on-surface-variant font-medium">{t("page.guessWho.description")}</p>
@@ -909,86 +910,90 @@ function GuessWhoClientPlayingAndSetup({
                         </a>
                     </div>
 
-                    <div className="bg-surface-container-low text-on-surface p-4 sm:p-8 rounded-md3-xl space-y-6 sm:space-y-8">
-                        <div className="flex flex-col sm:flex-row gap-4">
-                            <div className="flex-1">
-                                <label className="block type-body-m font-bold text-on-surface mb-2">{t("page.guessWho.common.seed")}</label>
-                                <div className="flex gap-2">
-                                    <TextField type="text" value={settings.seed} onChange={(e) => setSettings({ ...settings, seed: e.target.value })} label={t("page.guessWho.common.seed")} containerClassName="min-w-0 flex-1" className="font-mono" />
-                                    <IconButton onClick={() => setSettings({ ...settings, seed: Math.random().toString(36).substring(7) })} variant="tonal" icon={mdRefresh} label={t("page.guessWho.single.regenerateSeed")} />
-                                </div>
-                            </div>
-                            <div className="flex items-end w-full sm:w-auto">
-                                <Button onClick={copyShareLink} variant="tonal" size="m" className="max-w-full">
-                                    <Icon path={mdShare} size={20} />
+                    {/* Every setting is a title-s label over its control: segmented buttons for single choices, filter chips for multiple. */}
+                    <div className="bg-surface-container-low text-on-surface p-4 sm:p-8 rounded-md3-xl space-y-6">
+                        <div>
+                            <label htmlFor="guess-who-seed" className="mb-2 block type-title-s text-on-surface">{t("page.guessWho.single.seedSetting")}</label>
+                            <div className="flex gap-2">
+                                <TextField
+                                    id="guess-who-seed"
+                                    type="text"
+                                    value={settings.seed}
+                                    onChange={(e) => setSettings({ ...settings, seed: e.target.value })}
+                                    containerClassName="min-w-0 flex-1" className="font-mono"
+                                    trailing={
+                                        <IconButton
+                                            onClick={() => setSettings({ ...settings, seed: Math.random().toString(36).substring(7) })}
+                                            icon={mdRefresh}
+                                            size="xs"
+                                            className="mr-1"
+                                            label={t("page.guessWho.single.regenerateSeed")}
+                                        />
+                                    }
+                                />
+                                <Button onClick={copyShareLink} variant="tonal" icon={mdShare}>
                                     {t("page.guessWho.single.share")}
                                 </Button>
                             </div>
                         </div>
 
                         <div>
-                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.difficultySetting")}</label>
-                            <div className="grid grid-cols-4 gap-2">
-                                {(["easy", "normal", "hard", "extreme"] as Difficulty[]).map(d => (
-                                    <Button
-                                        key={d}
-                                        onClick={() => setSettings({ ...settings, difficulty: d })}
-                                        variant="tonal" selected={settings.difficulty === d} className="min-w-0 px-2 "
-                                    >
-                                        {t(`page.guessWho.common.difficultyLabels.${d}`)}
-                                    </Button>
-                                ))}
-                            </div>
+                            <span className="mb-2 block type-title-s text-on-surface">{t("page.guessWho.single.difficultySetting")}</span>
+                            <SegmentedButton
+                                aria-label={t("page.guessWho.single.difficultySetting")}
+                                value={settings.difficulty}
+                                onValueChange={(difficulty) => setSettings({ ...settings, difficulty })}
+                                options={(["easy", "normal", "hard", "extreme"] as Difficulty[]).map((d) => ({ value: d, label: t(`page.guessWho.common.difficultyLabels.${d}`) }))}
+                            />
                         </div>
 
                         <div>
-                            <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.raritySetting")}</label>
+                            <span className="mb-2 block type-title-s text-on-surface">{t("page.guessWho.single.raritySetting")}</span>
                             <div className="flex flex-wrap gap-2">
-                                {RARITY_OPTIONS.map(({ id, num }) => {
-                                    const isSelected = settings.selectedRarities.includes(id);
-                                    return (
-                                        <Button key={id} onClick={() => handleRarityToggle(id)} variant="tonal" selected={isSelected} className="min-w-0 px-2 ">
-                                            {id === "rarity_birthday" ? (<div className="w-5 h-5 relative"><Image src="/data/icon/birthday.webp" alt="Birthday" fill className="object-contain" unoptimized /></div>) : (Array.from({ length: num }).map((_, i) => (<div key={i} className="w-4 h-4 relative"><Image src="/data/icon/star.webp" alt="Star" fill className="object-contain" unoptimized /></div>)))}
-                                        </Button>
-                                    );
-                                })}
+                                {RARITY_OPTIONS.map(({ id, num }) => (
+                                    <FilterButton key={id} selected={settings.selectedRarities.includes(id)} onClick={() => handleRarityToggle(id)} className="h-10 gap-0.5">
+                                        {id === "rarity_birthday" ? (<span className="relative h-5 w-5"><Image src="/data/icon/birthday.webp" alt="Birthday" fill className="object-contain" unoptimized /></span>) : (Array.from({ length: num }).map((_, i) => (<span key={i} className="relative h-4 w-4"><Image src="/data/icon/star.webp" alt="Star" fill className="object-contain" unoptimized /></span>)))}
+                                    </FilterButton>
+                                ))}
                             </div>
                         </div>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                             <div>
-                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.serverScope")}</label>
-                                <div className="flex gap-2 p-1 bg-surface-container-high rounded-md3-sm">
-                                    {(["jp", "cn"] as ServerScope[]).map(s => (
-                                        <Button key={s} onClick={() => setSettings({ ...settings, server: s })} variant="tonal" selected={settings.server === s} className="min-w-0 px-2 flex-1">
-                                            <ServerRegionLabel server={s} label={t(`page.guessWho.common.serverLabels.${s}`)} />
-                                        </Button>
-                                    ))}
-                                </div>
+                                <span className="mb-2 block type-title-s text-on-surface">{t("page.guessWho.single.serverScope")}</span>
+                                <SegmentedButton
+                                    aria-label={t("page.guessWho.single.serverScope")}
+                                    value={settings.server}
+                                    onValueChange={(server) => setSettings({ ...settings, server })}
+                                    options={(["jp", "cn"] as ServerScope[]).map((s) => ({ value: s, label: <ServerRegionLabel server={s} label={t(`page.guessWho.common.serverLabels.${s}`)} /> }))}
+                                />
                             </div>
                             <div>
-                                <label className="block type-body-m font-bold text-on-surface mb-3">{t("page.guessWho.single.guessTime")}</label>
-                                <TextField type="number" value={settings.timeLimit} onChange={(e) => setSettings({ ...settings, timeLimit: Math.max(3, Math.min(120, Number(e.target.value))) })} label={t("page.guessWho.single.guessTime")} containerClassName="w-full" className="font-mono" />
+                                <label htmlFor="guess-who-time" className="mb-2 block type-title-s text-on-surface">{t("page.guessWho.single.guessTime")}</label>
+                                <TextField id="guess-who-time" type="number" value={settings.timeLimit} onChange={(e) => setSettings({ ...settings, timeLimit: Math.max(3, Math.min(120, Number(e.target.value))) })} containerClassName="w-full" className="font-mono" />
                             </div>
                         </div>
-                    </div>
 
-                    <div className="border-t border-outline-variant pt-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <label className="type-body-m font-bold text-on-surface ">{t("page.guessWho.single.characterFilter")}</label>
-                            <button onClick={() => setSettings({ ...settings, selectedUnitIds: [] })} className="state-layer focus-ring type-label-m text-primary hover:underline">{t("page.guessWho.single.resetFilter")}</button>
+                        <div>
+                            <div className="mb-2 flex items-center justify-between">
+                                <span className="type-title-s text-on-surface">{t("page.guessWho.single.characterFilter")}</span>
+                                <Button onClick={() => setSettings({ ...settings, selectedUnitIds: [] })} variant="text" size="xs">{t("page.guessWho.single.resetFilter")}</Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {UNIT_DATA.map(unit => {
+                                    const unitLabel = t(UNIT_ID_LABEL_KEYS[unit.id] ?? `common.units.${unit.id}`);
+                                    const picked = settings.selectedUnitIds.includes(unit.id);
+                                    // No unit picked means every unit plays, so none is greyed out.
+                                    const muted = settings.selectedUnitIds.length > 0 && !picked;
+                                    return (
+                                        <button aria-pressed={picked} key={unit.id} onClick={() => handleUnitToggle(unit.id)} className={`state-layer focus-ring transition-[opacity,filter,background-color] p-1 rounded-full ${picked ? "bg-secondary-container ring-2 ring-primary" : muted ? "opacity-60 hover:opacity-100 grayscale hover:grayscale-0" : "bg-surface-container-high"}`}>
+                                            <Image src={`/data/icon/${UNIT_ICON_FILES[unit.id]}`} alt={unitLabel} width={40} height={40} className="w-10 h-10 object-contain" unoptimized />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                            <div className="mt-2 type-body-s text-on-surface-variant">{settings.selectedUnitIds.length > 0 ? t("page.guessWho.single.selectedCharacters", { count: availableCharacters.length }) : t("page.guessWho.single.selectedAllCharacters")}</div>
                         </div>
-                        <div className="flex flex-wrap gap-3 mb-4 justify-center">
-                            {UNIT_DATA.map(unit => {
-                                const unitLabel = t(UNIT_ID_LABEL_KEYS[unit.id] ?? `common.units.${unit.id}`);
-                                return (
-                                    <button aria-pressed={settings.selectedUnitIds.includes(unit.id)} key={unit.id} onClick={() => handleUnitToggle(unit.id)} className={`state-layer focus-ring transition-all p-1 rounded-full ${settings.selectedUnitIds.includes(unit.id) ? "bg-secondary-container ring-2 ring-primary " : "opacity-60 hover:opacity-100 grayscale hover:grayscale-0 hover:bg-surface-container-high"}`}>
-                                        <Image src={`/data/icon/${UNIT_ICON_FILES[unit.id]}`} alt={unitLabel} width={40} height={40} className="w-10 h-10 object-contain" unoptimized />
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <div className="type-label-m text-on-surface-variant text-center">{settings.selectedUnitIds.length > 0 ? t("page.guessWho.single.selectedCharacters", { count: availableCharacters.length }) : t("page.guessWho.single.selectedAllCharacters")}</div>
                     </div>
 
                     {loadError && (

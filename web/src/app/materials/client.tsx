@@ -254,7 +254,6 @@ function MaterialsPageHeader() {
 
     return (
         <PageHeader
-            align="center"
             eyebrow={t("page.materials.badge")}
             title={t("page.materials.title")}
             highlight={t("page.materials.titleHighlight")}

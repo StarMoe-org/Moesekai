@@ -18,7 +18,6 @@ export function StoryPageHeader({ storyKey }: StoryPageHeaderProps) {
                 {t("page.story.backToStory")}
             </Button>
             <PageHeader
-                align="center"
                 eyebrow={t("page.story.badge")}
                 title={t(storyType.nameKey)}
                 description={t(storyType.descKey)}

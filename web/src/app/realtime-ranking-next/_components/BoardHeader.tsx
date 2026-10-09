@@ -25,6 +25,8 @@ interface BoardHeaderProps {
     totalEntries: number;
     countdown: number;
     isRefreshing: boolean;
+    /** The last fetch failed, so the board may be stale or empty. */
+    syncFailed?: boolean;
     onRefresh: () => void;
     showChurn: boolean;
     onShowChurnChange: (value: boolean) => void;
@@ -40,6 +42,7 @@ export default function BoardHeader({
     totalEntries,
     countdown,
     isRefreshing,
+    syncFailed = false,
     onRefresh,
     showChurn,
     onShowChurnChange,
@@ -57,7 +60,7 @@ export default function BoardHeader({
         <div className="mb-6 space-y-4">
             {/* Title Header */}
             <PageHeader
-                className="mb-0 sm:mb-0"
+                className="mb-4"
                 title={
                     <span className="inline-flex flex-wrap items-center gap-2">
                         {t("page.realtimeRankingNext.title")}
@@ -129,10 +132,14 @@ export default function BoardHeader({
                         className={`rounded-md3-sm px-2.5 py-0.5 type-label-s ${
                             isRefreshing
                                 ? "bg-tertiary-container text-on-tertiary-container"
-                                : "bg-secondary-container text-on-secondary-container"
+                                : syncFailed
+                                  ? "bg-error-container text-on-error-container"
+                                  : "bg-secondary-container text-on-secondary-container"
                         }`}
                     >
-                        {isRefreshing ? t("page.realtimeRanking.refreshing") : t("page.realtimeRanking.synced")}
+                        {isRefreshing
+                            ? t("page.realtimeRanking.refreshing")
+                            : syncFailed ? t("page.realtimeRanking.syncFailed") : t("page.realtimeRanking.synced")}
                     </span>
 
                     <Button size="xs" variant="filled" icon={mdRefresh} onClick={onRefresh}>
