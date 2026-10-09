@@ -36,6 +36,7 @@ import { LYRICS_ENTRY_VISIBLE } from "@/lib/lyrics-visibility";
 import { fetchMusicBpmMap, getMusicBpm, formatBpmValue, formatBarValue, MusicBpmEntry } from "@/lib/musicBpm";
 import { fetchMusicAliases, getMusicAliases } from "@/lib/musicAliases";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
+import ChartAnalysisCard from "@/components/music/ChartAnalysisCard";
 import { useI18n } from "@/contexts/I18nContext";
 import { Button, EmptyState, Icon, LoadingState, PageContainer } from "@/components/md3";
 import { mdArrowBack, mdBarChart, mdCalendarMonth, mdDownload, mdInfo, mdKeyboardArrowDown, mdLibraryMusic, mdMic, mdOpenInNew, mdPause, mdPlayArrow, mdPlayCircle, mdSchedule, mdZoomIn } from "@/components/md3/icons";
@@ -754,6 +755,16 @@ export default function MusicDetailPage() {
                                 </div>
                             )}
                         </div>
+
+                        {/* Chart Analysis Card */}
+                        {selectedDifficultyInfo && (
+                            <ChartAnalysisCard
+                                musicId={musicId}
+                                difficulty={selectedDifficulty}
+                                playLevel={selectedDifficultyInfo.playLevel}
+                                officialNoteCount={selectedDifficultyInfo.totalNoteCount}
+                            />
+                        )}
 
                         {/* Vocals Card */}
                         {vocals.length > 0 && (
