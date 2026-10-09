@@ -54,8 +54,12 @@ func (w *gzipGuardWriter) WriteHeader(code int) {
 	}
 	w.wroteHeader = true
 
-	// If upstream already set Content-Encoding, don't compress
-	if w.ResponseWriter.Header().Get("Content-Encoding") != "" {
+	// If upstream already set Content-Encoding, or the body is already
+	// compressed media (audio clips, which also need exact Content-Length
+	// and byte ranges), don't compress.
+	contentType := w.ResponseWriter.Header().Get("Content-Type")
+	if w.ResponseWriter.Header().Get("Content-Encoding") != "" ||
+		strings.HasPrefix(contentType, "audio/") || strings.HasPrefix(contentType, "video/") {
 		w.ResponseWriter.WriteHeader(code)
 		return
 	}
@@ -108,7 +112,7 @@ func CORS(next http.Handler) http.Handler {
 				w.Header().Set("Vary", "Origin")
 			}
 		}
-		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)

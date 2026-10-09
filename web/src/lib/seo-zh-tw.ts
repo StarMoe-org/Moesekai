@@ -214,6 +214,11 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "和朋友連線遊玩 Project SEKAI 猜曲繪對戰。",
         ["猜曲繪連線", "多人對戰", "歌曲封面"],
     ),
+    guess_music: page(
+        "猜歌曲",
+        "遊玩 Project SEKAI 猜歌曲小遊戲，聽歌曲片段猜出曲名。每日挑戰可以衝排行榜，自由練習可以自訂難度。",
+        ["猜歌曲", "聽歌猜曲", "每日挑戰", "小遊戲"],
+    ),
     guess_who: page(
         "猜角色",
         "遊玩 Project SEKAI 猜角色小遊戲，根據線索猜出角色。",

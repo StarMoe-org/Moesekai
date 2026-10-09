@@ -15,12 +15,17 @@ import (
 
 	"snowy_viewer/internal/cache"
 	"snowy_viewer/internal/config"
+	"snowy_viewer/internal/guessmusic"
 	"snowy_viewer/internal/handlers"
 	"snowy_viewer/internal/htmlcache"
 	"snowy_viewer/internal/markdown"
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/mcp"
 	"snowy_viewer/internal/middleware"
+	"snowy_viewer/internal/starmoe"
+
+	// Embedded zoneinfo so DAILY_TIMEZONE works in minimal containers.
+	_ "time/tzdata"
 )
 
 const (
@@ -54,6 +59,13 @@ func main() {
 	// Register Model Context Protocol (MCP) server
 	mcpServer := mcp.New(store)
 	mcpServer.RegisterRoutes(mux)
+
+	// Guess-music daily challenge (both normal and API-only modes).
+	stopGuessMusic := make(chan struct{})
+	defer close(stopGuessMusic)
+	if gm := setupGuessMusic(cfg, stopGuessMusic); gm != nil {
+		gm.RegisterRoutes(mux)
+	}
 
 	// Prevent unknown /api/* paths from bouncing between Go and Next.js.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
@@ -317,4 +329,74 @@ func setupAPIOnlyMode(mux *http.ServeMux) {
 		}
 		http.NotFound(w, r)
 	})
+}
+
+func setupGuessMusic(cfg *config.Config, stop <-chan struct{}) *guessmusic.Service {
+	logf := func(format string, args ...interface{}) { fmt.Printf(format+"\n", args...) }
+	loc, err := time.LoadLocation(cfg.DailyTimezone)
+	if err != nil {
+		logf("guess-music: invalid DAILY_TIMEZONE %q (%v), using Asia/Shanghai", cfg.DailyTimezone, err)
+		loc, _ = time.LoadLocation("Asia/Shanghai")
+	}
+	store := guessmusic.NewStore(cfg.GuessMusicRedisURL, logf)
+	catalog := guessmusic.NewCatalog(guessmusic.FileOrHTTPLoader(cfg.MasterDataPath, nil))
+	catalog.StartLoading(stop, masterDataRetryInterval, masterDataRefreshInterval, logf)
+	verifier := starmoe.NewVerifier(starmoe.Config{Issuer: cfg.StarMoeIssuer, ClientID: cfg.StarMoeClientID})
+	// Private instrumentals for vocal removal; never logged by location.
+	inst, err := guessmusic.NewInstrumentalSource(cfg.GuessMusicInstSource)
+	if err != nil {
+		logf("guess-music: GUESS_MUSIC_INST_SOURCE ignored: %v", err)
+		inst = nil
+	}
+	trusted, err := guessmusic.ParseCIDRs(cfg.GuessMusicTrustedProxies)
+	if err != nil {
+		logf("guess-music: GUESS_MUSIC_TRUSTED_PROXIES ignored: %v", err)
+		trusted = nil
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+	svc, err := guessmusic.New(ctx, guessmusic.Options{
+		Store:                store,
+		Catalog:              catalog,
+		Audio:                guessmusic.NewHTTPAudioSource(cfg.GuessMusicAudioBaseURL),
+		Auth:                 verifier,
+		Games:                guessmusic.NewHarukiLinker(cfg.HarukiOAuth2BaseURL),
+		Secret:               cfg.GuessMusicSecret,
+		Location:             loc,
+		SessionsPerHour:      cfg.GuessMusicSessionLimit,
+		PracticeClipsPerHour: cfg.GuessMusicClipLimit,
+		TrustedProxies:       trusted,
+		CheckAudio:           true,
+		ClipCacheDir:         clipCacheDir(cfg.GuessMusicClipCacheDir),
+		Instrumentals:        inst,
+		Logf:                 logf,
+	})
+	if err != nil {
+		logf("guess-music: disabled: %v", err)
+		_ = store.Close()
+		return nil
+	}
+	if cfg.GuessMusicSecret == "" {
+		logf("guess-music: GUESS_MUSIC_SECRET not set, using a generated secret persisted in the %s store", store.Kind())
+	}
+	logf("guess-music: daily challenge enabled (timezone %s, auth %v, store %s, clip cache %q)", loc, verifier.Enabled(), store.Kind(), clipCacheDir(cfg.GuessMusicClipCacheDir))
+	if inst != nil {
+		logf("guess-music: vocal removal reads instrumentals from a %s source", inst.Kind())
+		inst.Start(stop, guessmusic.InstrumentalRefreshInterval, logf)
+	} else {
+		logf("guess-music: vocal removal unavailable (GUESS_MUSIC_INST_SOURCE not set)")
+	}
+	svc.StartPrewarm(stop)
+	return svc
+}
+
+// clipCacheDir maps GUESS_MUSIC_CLIP_CACHE_DIR to the cache directory; "off"
+// or "none" disables the disk cache.
+func clipCacheDir(dir string) string {
+	switch strings.ToLower(strings.TrimSpace(dir)) {
+	case "off", "none", "disabled":
+		return ""
+	}
+	return dir
 }

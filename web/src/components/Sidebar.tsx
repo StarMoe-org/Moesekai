@@ -125,6 +125,7 @@ import {
     mdKeyboardArrowDown,
     mdChevronRight,
     mdMenuOpen,
+    mdGraphicEq,
 } from "@/components/md3/icons";
 
 interface NavItem {
@@ -218,6 +219,7 @@ const navigationGroups: NavGroup[] = [
             { id: "goodsGacha", href: "/goods-gacha", icon: mdRedeem, activeIcon: mdRedeemFill },
             { id: "guessWho", href: "/guess-who", icon: mdQuiz, activeIcon: mdQuizFill },
             { id: "guessJacket", href: "/guess-jacket", icon: mdMusicNote, activeIcon: mdMusicNoteFill },
+            { id: "guessMusic", href: "/guess-music", icon: mdGraphicEq, activeIcon: mdGraphicEq },
         ],
     },
     {

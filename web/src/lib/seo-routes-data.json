@@ -43,6 +43,7 @@
   { "path": "/guess-who/multiplayer/", "pageKey": "guess_who_multiplayer", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state" },
   { "path": "/guess-jacket/", "pageKey": "guess_jacket", "priority": 0.5, "changefreq": "monthly", "indexable": true },
   { "path": "/guess-jacket/multiplayer/", "pageKey": "guess_jacket_multiplayer", "priority": 0.4, "changefreq": "monthly", "indexable": false, "excludeReason": "Interactive multiplayer lobby with transient, non-searchable room state" },
+  { "path": "/guess-music/", "pageKey": "guess_music", "priority": 0.5, "changefreq": "monthly", "indexable": true },
   { "path": "/chart-preview/", "pageKey": "chart_preview", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/chart-image/", "pageKey": "chart_image", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Parameter-driven chart image renderer; content depends entirely on query string" },
   { "path": "/mysekai-preview/", "pageKey": "mysekai_preview", "priority": 0.6, "changefreq": "daily", "indexable": true },
@@ -68,5 +69,6 @@
   { "path": "/design-system/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Development-only design system route" },
   { "path": "/leave/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "External-link interstitial route" },
   { "path": "/oauth2/connect/", "pageKey": "oauth2_connect", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth connection flow route" },
-  { "path": "/oauth2/callback/code/", "pageKey": "oauth2_callback", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth callback route" }
+  { "path": "/oauth2/callback/code/", "pageKey": "oauth2_callback", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth callback route" },
+  { "path": "/auth/starmoe/callback/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "StarMoe pass sign-in callback route" }
 ]

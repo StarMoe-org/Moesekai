@@ -880,6 +880,22 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["ジャケットクイズ マルチ", "対戦", "楽曲ジャケット"],
     },
   ),
+  guess_music: definePage(
+    "/guess-music",
+    { "zh-CN": "猜歌曲", "en-US": "Guess the Song", "ja-JP": "曲当てクイズ", "ko-KR": "곡 맞히기" },
+    {
+      "zh-CN": "游玩 Project SEKAI 猜歌曲小游戏，听歌曲片段猜出曲名。每日挑战可以冲排行榜，自由练习可以自定义难度。",
+      "en-US": "Play a Project SEKAI song quiz: hear a short clip and name the song. Take the daily challenge to climb the leaderboard, or set your own difficulty in free play.",
+      "ja-JP": "楽曲の一部を聴いて曲名を当てる Project SEKAI 楽曲クイズです。デイリーチャレンジでランキングに挑戦したり、フリープレイで難易度を自由に決めて遊んだりできます。",
+      "ko-KR": "곡의 일부분을 듣고 곡명을 맞히는 Project SEKAI 악곡 퀴즈입니다. 데일리 챌린지로 랭킹에 도전하거나, 자유 연습에서 난이도를 직접 정해 즐길 수 있습니다.",
+    },
+    {
+      "zh-CN": ["猜歌曲", "听歌识曲", "每日挑战", "小游戏"],
+      "en-US": ["guess the song", "music quiz", "daily challenge", "guessing game"],
+      "ja-JP": ["曲当てクイズ", "楽曲クイズ", "デイリーチャレンジ", "ミニゲーム"],
+      "ko-KR": ["곡 맞히기", "악곡 퀴즈", "데일리 챌린지", "미니 게임"],
+    },
+  ),
   guess_who: definePage(
     "/guess-who",
     { "zh-CN": "猜角色", "en-US": "Guess Who", "ja-JP": "キャラクタークイズ" },

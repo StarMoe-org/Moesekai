@@ -69,6 +69,7 @@ const allNavigationGroups: NavGroupData[] = [
             { href: "/goods-gacha" },
             { href: "/guess-who" },
             { href: "/guess-jacket" },
+            { href: "/guess-music" },
         ],
     },
     {
@@ -199,6 +200,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/goods-gacha", group: "games", keywords: ["goods gacha", "goods", "blind box"] },
     { href: "/guess-who", group: "games", keywords: ["guess who", "quiz", "game"] },
     { href: "/guess-jacket", group: "games", keywords: ["guess jacket", "guess music", "music quiz"] },
+    // "\u731c\u6b4c" is the Chinese for "guess song" (escaped: UI source files stay free of Han text).
+    { href: "/guess-music", group: "games", keywords: ["guess song", "guess music", "music quiz", "\u731c\u6b4c"] },
 
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
     { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
@@ -301,6 +304,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/goods-gacha": "layout.nav.items.goodsGacha",
     "/guess-who": "layout.nav.items.guessWho",
     "/guess-jacket": "layout.nav.items.guessJacket",
+    "/guess-music": "layout.nav.items.guessMusic",
     "/chart-preview": "layout.nav.items.chartPreview",
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
     "/asset-viewer": "layout.nav.items.assetViewer",
@@ -348,6 +352,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/goods-gacha": "layout.groupPages.goodsGacha",
     "/guess-who": "layout.groupPages.guessWho",
     "/guess-jacket": "layout.groupPages.guessJacket",
+    "/guess-music": "layout.groupPages.guessMusic",
     "/chart-preview": "layout.groupPages.chartPreview",
     "/mysekai-preview": "layout.groupPages.mysekaiPreview",
     "/mysekai-preview/scene": "layout.groupPages.mysekaiPreviewScene",
