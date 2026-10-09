@@ -237,6 +237,14 @@
     color-scheme: dark;
 }
 
+/* A vivid seed (Emu's #FF66BB) at 55% still glares on light glass: cap its chroma.
+   Seeds at or under the cap, Miku's included, keep their own color. */
+@supports (color: oklch(from red l c h)) {
+    :root:not([data-theme="dark"]) {
+        --md3-glass-selected: color-mix(in srgb, oklch(from var(--md-sys-color-primary-container) l min(c, 0.13) h) 55%, transparent);
+    }
+}
+
 /* Blur cost grows with its radius: phones get a lighter one. */
 @media (max-width: 767px), (pointer: coarse) {
     :root {

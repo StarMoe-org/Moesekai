@@ -53,21 +53,26 @@ body {
 
 /* Brand wash: a faint seed-tinted glow behind the MD3 surface so the page keeps
    the character's color without tinting surfaces themselves. Static, follows the
-   seed through container roles, and is dropped with background effects off. */
+   seed through container roles, and is dropped with background effects off.
+   --brand-tint is the primary container with its chroma capped: the fidelity
+   scheme keeps vivid seeds (Emu's #FF66BB) at full strength, which is right for
+   a button but loud across a whole page; pastel seeds sit under the cap. */
 :root {
-  --brand-wash-strength: 55%;
+  --brand-tint: var(--md-sys-color-primary-container);
+  --brand-wash-strength: 42%;
   /* A neighbouring hue for the second glow, so the glass panes over it show a
      gradient rather than one flat tint. Plain seed where relative color fails. */
-  --brand-wash-alt: var(--md-sys-color-primary-container);
+  --brand-wash-alt: var(--brand-tint);
 }
 
 :root[data-theme="dark"] {
-  --brand-wash-strength: 26%;
+  --brand-wash-strength: 24%;
 }
 
 @supports (color: oklch(from red l c h)) {
   :root {
-    --brand-wash-alt: oklch(from var(--md-sys-color-primary-container) l c calc(h - 40));
+    --brand-tint: oklch(from var(--md-sys-color-primary-container) l min(c, 0.1) h);
+    --brand-wash-alt: oklch(from var(--brand-tint) l c calc(h - 40));
   }
 }
 
@@ -77,9 +82,9 @@ body {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(64rem 52rem at 0% 0%, color-mix(in srgb, var(--md-sys-color-primary-container) var(--brand-wash-strength), transparent), transparent 72%),
+    radial-gradient(64rem 52rem at 0% 0%, color-mix(in srgb, var(--brand-tint) var(--brand-wash-strength), transparent), transparent 72%),
     radial-gradient(72rem 44rem at 62% -10%, color-mix(in srgb, var(--brand-wash-alt) calc(var(--brand-wash-strength) * 0.8), transparent), transparent 72%),
-    radial-gradient(68rem 52rem at 100% 100%, color-mix(in srgb, var(--md-sys-color-primary-container) calc(var(--brand-wash-strength) * 0.75), transparent), transparent 72%),
+    radial-gradient(68rem 52rem at 100% 100%, color-mix(in srgb, var(--brand-tint) calc(var(--brand-wash-strength) * 0.75), transparent), transparent 72%),
     radial-gradient(56rem 44rem at 6% 100%, color-mix(in srgb, var(--brand-wash-alt) calc(var(--brand-wash-strength) * 0.7), transparent), transparent 72%);
 }
 
@@ -91,26 +96,27 @@ body {
    shapes in the seed color and its opposite hue that drift as the page scrolls. Each layer
    is two stacked tiles moved by transform only, so it is painted once. */
 :root {
-  --brand-pattern-a: var(--md-sys-color-primary-container);
+  --brand-pattern-a: var(--brand-tint);
   --brand-pattern-b: var(--md-sys-color-tertiary);
   --brand-pattern-facet: color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 55%, transparent);
   --brand-pattern-tile: max(100vh, 62.5vw);
 }
 
+/* The opposite hue is an accent, kept softer than the seed's own. */
 @supports (color: oklch(from red l c h)) {
   :root {
-    --brand-pattern-b: oklch(from var(--md-sys-color-primary-container) l c calc(h + 180));
+    --brand-pattern-b: oklch(from var(--brand-tint) l calc(c * 0.7) calc(h + 180));
   }
 }
 
 :root[data-theme="dark"] {
-  --brand-pattern-a: color-mix(in srgb, var(--md-sys-color-primary-container) 60%, transparent);
+  --brand-pattern-a: color-mix(in srgb, var(--brand-tint) 60%, transparent);
   --brand-pattern-facet: color-mix(in srgb, var(--md-sys-color-surface-bright) 22%, transparent);
 }
 
 @supports (color: oklch(from red l c h)) {
   :root[data-theme="dark"] {
-    --brand-pattern-b: oklch(from var(--md-sys-color-primary-container) l c calc(h + 180) / 60%);
+    --brand-pattern-b: oklch(from var(--brand-tint) l calc(c * 0.7) calc(h + 180) / 60%);
   }
 }
 
@@ -145,8 +151,11 @@ body {
   height: var(--brand-pattern-tile);
 }
 
-.brand-pattern-a { fill: var(--brand-pattern-a); stroke: var(--brand-pattern-a); }
-.brand-pattern-b { fill: var(--brand-pattern-b); stroke: var(--brand-pattern-b); }
+/* Filled shapes have no outline: an opaque edge around a translucent fill reads as a sticker. */
+.brand-pattern-a { fill: var(--brand-pattern-a); stroke: none; }
+.brand-pattern-b { fill: var(--brand-pattern-b); stroke: none; }
+.brand-pattern-tile .brand-pattern-a.brand-pattern-stroke { stroke: var(--brand-pattern-a); }
+.brand-pattern-tile .brand-pattern-b.brand-pattern-stroke { stroke: var(--brand-pattern-b); }
 .brand-pattern-tile .brand-pattern-stroke {
   fill: none;
   stroke-width: 2;

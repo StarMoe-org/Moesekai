@@ -63,76 +63,112 @@ interface LayerSpec {
     count: number;
     /** Closest two shapes of the layer may sit, in tile units. */
     spacing: number;
+    /** Gaussian blur in tile units: the farther the layer, the softer, like depth of field. */
+    blur: number;
+    /** Chance a shape may sit in the middle of the tile, where the page content is. */
+    middle: number;
+    /** Distance from the center (0 center, 1 side edge) where shapes reach full density. */
+    sides: number;
     make: (rand: () => number, x: number, y: number, tone: Tone) => Shape;
 }
 
+/*
+ * Like the official site, shapes gather at both sides and leave the middle, where the content
+ * sits, nearly clear. Near shapes are small and sharp; far ones are big, faint and blurred.
+ */
 const LAYERS: LayerSpec[] = [
     {
-        count: 18,
+        count: 16,
         spacing: 150,
+        blur: 0,
+        middle: 0.15,
+        sides: 0.75,
         make: (rand, x, y, tone) => {
             const pick = rand();
-            if (pick < 0.45) return { kind: "ring", x, y, r: 7 + rand() * 5, tone, alpha: 0.85 };
-            if (pick < 0.8) return { kind: "dot", x, y, r: 3.5 + rand() * 3, tone, alpha: 0.8 };
-            const r = 9 + rand() * 4;
-            return { kind: "outline-triangle", x, y, r, tone, alpha: 0.85, points: trianglePoints(rand, x, y, r) };
+            if (pick < 0.45) return { kind: "ring", x, y, r: 7 + rand() * 5, tone, alpha: 0.6 };
+            if (pick < 0.75) return { kind: "dot", x, y, r: 3.5 + rand() * 3, tone, alpha: 0.55 };
+            const r = 9 + rand() * 5;
+            return { kind: "outline-triangle", x, y, r, tone, alpha: 0.6, points: trianglePoints(rand, x, y, r) };
         },
     },
     {
-        count: 8,
-        spacing: 280,
+        count: 9,
+        spacing: 240,
+        blur: 1.5,
+        middle: 0.06,
+        sides: 0.8,
         make: (rand, x, y, tone) => {
             const pick = rand();
             if (pick < 0.5) {
-                const r = 20 + rand() * 8;
-                return { kind: "triangle", x, y, r, tone, alpha: 0.5, points: trianglePoints(rand, x, y, r) };
+                const r = 16 + rand() * 8;
+                return { kind: "triangle", x, y, r, tone, alpha: 0.42, points: trianglePoints(rand, x, y, r) };
             }
-            if (pick < 0.8) return { kind: "dot", x, y, r: 16 + rand() * 8, tone, alpha: 0.3 };
-            const r = 16 + rand() * 4;
-            return { kind: "outline-triangle", x, y, r, tone, alpha: 0.7, points: trianglePoints(rand, x, y, r) };
+            if (pick < 0.75) return { kind: "dot", x, y, r: 8 + rand() * 5, tone, alpha: 0.35 };
+            const r = 14 + rand() * 5;
+            return { kind: "outline-triangle", x, y, r, tone, alpha: 0.5, points: trianglePoints(rand, x, y, r) };
         },
     },
     {
-        count: 3,
-        spacing: 520,
+        count: 4,
+        spacing: 420,
+        blur: 7,
+        middle: 0,
+        sides: 0.9,
         make: (rand, x, y, tone) => {
-            const r = 60 + rand() * 25;
-            return { kind: "triangle", x, y, r, tone, alpha: 0.32, points: trianglePoints(rand, x, y, r) };
+            if (rand() < 0.3) return { kind: "dot", x, y, r: 26 + rand() * 10, tone, alpha: 0.24 };
+            const r = 42 + rand() * 20;
+            return { kind: "triangle", x, y, r, tone, alpha: 0.3, points: trianglePoints(rand, x, y, r) };
         },
     },
 ];
+
+/** How likely a shape at x is kept: `middle` at the center, rising smoothly to 1 at `sides`. */
+function sideWeight(x: number, middle: number, sides: number): number {
+    const fromCenter = Math.abs(x - TILE_W / 2) / (TILE_W / 2);
+    const t = Math.min(1, Math.max(0, fromCenter / sides));
+    return middle + (1 - middle) * t * t * (3 - 2 * t);
+}
 
 /** Each layer's shapes, spread out and kept off the tile's top and bottom edges so tiles repeat seamlessly. */
 const TILES: Shape[][] = LAYERS.map((spec, index) => {
     const rand = mulberry32(0x5ec4a1 + index * 7919);
     const margin = 90;
     const shapes: Shape[] = [];
-    for (let attempt = 0; shapes.length < spec.count && attempt < spec.count * 60; attempt++) {
+    for (let attempt = 0; shapes.length < spec.count && attempt < spec.count * 200; attempt++) {
         const x = rand() * TILE_W;
         const y = margin + rand() * (TILE_H - margin * 2);
+        if (rand() > sideWeight(x, spec.middle, spec.sides)) continue;
         if (shapes.some((shape) => Math.hypot(shape.x - x, shape.y - y) < spec.spacing)) continue;
         shapes.push(spec.make(rand, x, y, shapes.length % 2 === 0 ? "a" : "b"));
     }
     return shapes;
 });
 
-function ShapeTile({ shapes }: { shapes: Shape[] }) {
+function ShapeTile({ shapes, blur, id }: { shapes: Shape[]; blur: number; id: string }) {
     return (
         <svg viewBox={`0 0 ${TILE_W} ${TILE_H}`} preserveAspectRatio="xMidYMid slice" className="brand-pattern-tile">
-            {shapes.map((shape, index) => {
-                const tone = `brand-pattern-${shape.tone}`;
-                const opacity = shape.alpha.toFixed(2);
-                switch (shape.kind) {
-                    case "ring":
-                        return <circle key={index} cx={shape.x.toFixed(1)} cy={shape.y.toFixed(1)} r={shape.r.toFixed(1)} className={`${tone} brand-pattern-stroke`} strokeOpacity={opacity} />;
-                    case "dot":
-                        return <circle key={index} cx={shape.x.toFixed(1)} cy={shape.y.toFixed(1)} r={shape.r.toFixed(1)} className={tone} fillOpacity={opacity} />;
-                    case "triangle":
-                        return <polygon key={index} points={shape.points} className={tone} fillOpacity={opacity} />;
-                    case "outline-triangle":
-                        return <polygon key={index} points={shape.points} className={`${tone} brand-pattern-stroke`} strokeOpacity={opacity} />;
-                }
-            })}
+            {/* Baked into the layer's single paint, so the blur costs nothing while scrolling. */}
+            {blur > 0 && (
+                <filter id={id} filterUnits="userSpaceOnUse" x={0} y={0} width={TILE_W} height={TILE_H}>
+                    <feGaussianBlur stdDeviation={blur} />
+                </filter>
+            )}
+            <g filter={blur > 0 ? `url(#${id})` : undefined}>
+                {shapes.map((shape, index) => {
+                    const tone = `brand-pattern-${shape.tone}`;
+                    const opacity = shape.alpha.toFixed(2);
+                    switch (shape.kind) {
+                        case "ring":
+                            return <circle key={index} cx={shape.x.toFixed(1)} cy={shape.y.toFixed(1)} r={shape.r.toFixed(1)} className={`${tone} brand-pattern-stroke`} strokeOpacity={opacity} />;
+                        case "dot":
+                            return <circle key={index} cx={shape.x.toFixed(1)} cy={shape.y.toFixed(1)} r={shape.r.toFixed(1)} className={tone} fillOpacity={opacity} />;
+                        case "triangle":
+                            return <polygon key={index} points={shape.points} className={tone} fillOpacity={opacity} />;
+                        case "outline-triangle":
+                            return <polygon key={index} points={shape.points} className={`${tone} brand-pattern-stroke`} strokeOpacity={opacity} />;
+                    }
+                })}
+            </g>
         </svg>
     );
 }
@@ -217,8 +253,8 @@ export default function BackgroundPattern() {
                     }}
                     className="brand-pattern-layer"
                 >
-                    <ShapeTile shapes={shapes} />
-                    <ShapeTile shapes={shapes} />
+                    <ShapeTile shapes={shapes} blur={LAYERS[index].blur} id={`brand-pattern-blur-${index}-0`} />
+                    <ShapeTile shapes={shapes} blur={LAYERS[index].blur} id={`brand-pattern-blur-${index}-1`} />
                 </div>
             ))}
         </div>
