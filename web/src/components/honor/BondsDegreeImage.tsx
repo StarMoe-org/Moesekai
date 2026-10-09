@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { IBondsHonor, IGameCharaUnit } from "@/types/honor";
-import { getBondsHonorCharacterUrl, getBondsHonorWordUrl } from "@/lib/assets";
+import { getBondsHonorCharacterUrl, getBondsHonorWordUrl, getHonorFrameUrl, getHonorLevelIconUrl } from "@/lib/assets";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 
 function useImageLoaded(url: string | undefined): boolean {
@@ -78,15 +78,10 @@ export default function BondsDegreeImage({
         ? getBondsHonorWordUrl(bondsHonorWordAssetbundleName, source)
         : undefined;
 
-    // Frame URL — use local files from /data/frame/
-    const rarityNumMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
-    const rarityNum = rarityNumMap[bondsHonor.honorRarity] || 1;
-    const frameSize = sub ? "s" : "m";
-    const frameUrl = `/data/frame/frame_degree_${frameSize}_${rarityNum}.png`;
-
-    // Level icon URLs
-    const levelIconUrl = "/data/frame/icon_degreeLv.png";
-    const levelIcon6Url = "/data/frame/icon_degreeLv6.png";
+    // Frame and level icons — sprites from the client package
+    const frameUrl = getHonorFrameUrl(bondsHonor.honorRarity, sub, source);
+    const levelIconUrl = getHonorLevelIconUrl(false, source);
+    const levelIcon6Url = getHonorLevelIconUrl(true, source);
 
     // Preload images
     const sdLeftLoaded = useImageLoaded(sdLeftUrl);
@@ -208,7 +203,7 @@ export default function BondsDegreeImage({
                     />
                 )}
                 {/* Level icons (1-5) */}
-                {levelCount > 0 && Array.from({ length: levelCount }).map((_, idx) => (
+                {levelIconUrl && levelCount > 0 && Array.from({ length: levelCount }).map((_, idx) => (
                     <image
                         key={`lv${idx}`}
                         href={levelIconUrl}
@@ -219,7 +214,7 @@ export default function BondsDegreeImage({
                     />
                 ))}
                 {/* Level icons (6+) */}
-                {level6Count > 0 && Array.from({ length: level6Count }).map((_, idx) => (
+                {levelIcon6Url && level6Count > 0 && Array.from({ length: level6Count }).map((_, idx) => (
                     <image
                         key={`lv6_${idx}`}
                         href={levelIcon6Url}

@@ -4,6 +4,8 @@ import { IHonorInfo, IHonorGroup } from "@/types/honor";
 import {
     getHonorBgUrl,
     getHonorCustomFrameUrl,
+    getHonorFrameUrl,
+    getHonorLevelIconUrl,
     getHonorRankUrl,
     getHonorRankMatchBgUrl,
 } from "@/lib/assets";
@@ -81,13 +83,14 @@ export default function DegreeImage({
     const rarityNumMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     const rarityNum = rarityNumMap[rarity] || 1;
 
-    let frameUrl: string | undefined;
-    if (honorGroup?.frameName) {
-        frameUrl = getHonorCustomFrameUrl(honorGroup.frameName, rarity, sub, source);
-    } else {
-        const size = sub ? "s" : "m";
-        frameUrl = `/data/frame/frame_degree_${size}_${rarityNum}.png`;
-    }
+    // Custom frame bundles only ship the high/highest variants (birthday also has middle);
+    // other rarities use the default frame, which is also the fallback when the custom one is missing.
+    const defaultFrameUrl = getHonorFrameUrl(rarity, sub, source);
+    const hasCustomFrame = !!honorGroup?.frameName
+        && (rarityNum >= 3 || (honorType === "birthday" && rarityNum === 2));
+    const customFrameUrl = hasCustomFrame
+        ? getHonorCustomFrameUrl(honorGroup!.frameName!, rarity, sub, source)
+        : undefined;
 
     // ── Rank / Scroll overlay ──
     let rankUrl: string | undefined;
@@ -107,8 +110,8 @@ export default function DegreeImage({
     }
 
     // ── Level icon logic ──
-    const levelIconUrl = "/data/frame/icon_degreeLv.png";
-    const levelIcon6Url = "/data/frame/icon_degreeLv6.png";
+    const levelIconUrl = getHonorLevelIconUrl(false, source);
+    const levelIcon6Url = getHonorLevelIconUrl(true, source);
 
     let shouldDrawLevel = false;
     let levelIconX = 50; // default x position
@@ -152,7 +155,8 @@ export default function DegreeImage({
 
     // ── Preload images to hide 404s ──
     const bgLoaded = useImageLoaded(bgUrl);
-    const frameLoaded = useImageLoaded(frameUrl);
+    const customFrameLoaded = useImageLoaded(customFrameUrl);
+    const frameUrl = customFrameUrl && customFrameLoaded ? customFrameUrl : defaultFrameUrl;
     const rankLoaded = useImageLoaded(rankUrl);
 
     // Level 1-5 icons and 6+ icons
@@ -177,7 +181,7 @@ export default function DegreeImage({
                 />
             )}
             {/* Frame */}
-            {frameUrl && frameLoaded && (
+            {frameUrl && (
                 <image
                     href={frameUrl}
                     x="0"
@@ -187,7 +191,7 @@ export default function DegreeImage({
                 />
             )}
             {/* Level icons (1-5) */}
-            {levelCount > 0 && Array.from({ length: levelCount }).map((_, idx) => (
+            {levelIconUrl && levelCount > 0 && Array.from({ length: levelCount }).map((_, idx) => (
                 <image
                     key={`lv${idx}`}
                     href={levelIconUrl}
@@ -198,7 +202,7 @@ export default function DegreeImage({
                 />
             ))}
             {/* Level icons (6+) */}
-            {level6Count > 0 && Array.from({ length: level6Count }).map((_, idx) => (
+            {levelIcon6Url && level6Count > 0 && Array.from({ length: level6Count }).map((_, idx) => (
                 <image
                     key={`lv6_${idx}`}
                     href={levelIcon6Url}
