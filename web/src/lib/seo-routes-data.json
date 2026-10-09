@@ -69,6 +69,5 @@
   { "path": "/design-system/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Development-only design system route" },
   { "path": "/leave/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "External-link interstitial route" },
   { "path": "/oauth2/connect/", "pageKey": "oauth2_connect", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth connection flow route" },
-  { "path": "/oauth2/callback/code/", "pageKey": "oauth2_callback", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth callback route" },
-  { "path": "/auth/starmoe/callback/", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "StarMoe pass sign-in callback route" }
+  { "path": "/oauth2/callback/code/", "pageKey": "oauth2_callback", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "OAuth callback route" }
 ]

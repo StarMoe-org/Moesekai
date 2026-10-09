@@ -179,11 +179,12 @@ export const jaJPMessages = {
       networkErrorShort: 'ネットワークエラー'
     },
     starmoe: {
-      disabled: 'StarMoe ログインは準備中です',
+      unavailable: 'StarMoe ログインは現在利用できません',
       signIn: 'StarMoe パスでログイン',
       signInShort: 'ログイン',
       accountMenu: 'StarMoe パスのアカウント：{name}',
       signOut: 'ログアウト',
+      signOutFailed: 'ログアウトできませんでした。しばらくしてからもう一度お試しください。',
       linkedGame: '紐付け済み：{name}',
       linkGame: 'ゲームアカウントを紐付け：{name}',
       authorizeGame: 'Haruki でゲームアカウントを連携',
@@ -193,20 +194,7 @@ export const jaJPMessages = {
       linkFailed: '紐付けに失敗しました。しばらくしてからもう一度お試しください。',
       unlinkFailed: '紐付けを解除できませんでした。しばらくしてからもう一度お試しください。',
       sessionExpired: 'ログインの有効期限が切れました。もう一度ログインしてください。',
-      harukiReauth: 'Haruki の認可が切れています。もう一度連携してからお試しください。',
-      callback: {
-        title: 'StarMoe パス',
-        signingIn: 'ログインしています…',
-        returning: '元のページに戻っています…',
-        failedTitle: 'ログインできませんでした',
-        back: '戻る',
-        errors: {
-          cancelled: 'ログインをキャンセルしました。',
-          expired: 'ログインの受付期限が切れました。もう一度ログインしてください。',
-          failed: 'ログインに失敗しました。しばらくしてからもう一度お試しください。',
-          disabled: 'StarMoe ログインは準備中です。'
-        }
-      }
+      harukiReauth: 'Haruki の認可が切れています。もう一度連携してからお試しください。'
     },
     oauthErrors: {
       accessDenied: 'You canceled authorization, so no account was linked.',

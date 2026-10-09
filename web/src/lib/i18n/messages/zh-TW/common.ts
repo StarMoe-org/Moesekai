@@ -177,11 +177,12 @@ export const zhTWCommon = {
         networkErrorShort: "網路連線錯誤",
     },
     starmoe: {
-        disabled: "StarMoe 登入尚未開放",
+        unavailable: "StarMoe 登入暫時無法使用",
         signIn: "使用 StarMoe 通行證登入",
         signInShort: "登入",
         accountMenu: "StarMoe 通行證帳號：{name}",
         signOut: "登出",
+        signOutFailed: "登出失敗，請稍後再試。",
         linkedGame: "已關聯：{name}",
         linkGame: "關聯遊戲帳號：{name}",
         authorizeGame: "綁定 Haruki 遊戲帳號",
@@ -192,19 +193,6 @@ export const zhTWCommon = {
         unlinkFailed: "解除關聯失敗，請稍後再試。",
         sessionExpired: "登入已過期，請重新登入。",
         harukiReauth: "Haruki 授權已失效，請重新綁定後再試。",
-        callback: {
-            title: "StarMoe 通行證",
-            signingIn: "正在完成登入……",
-            returning: "正在返回原頁面……",
-            failedTitle: "登入未完成",
-            back: "返回",
-            errors: {
-                cancelled: "你已取消登入。",
-                expired: "登入請求已過期，請重新登入。",
-                failed: "登入失敗，請稍後再試。",
-                disabled: "StarMoe 登入尚未開放。",
-            },
-        },
     },
     oauthErrors: {
         accessDenied: "你已取消授權，未綁定任何帳號。",

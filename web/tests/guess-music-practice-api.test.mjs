@@ -41,7 +41,13 @@ test("the catalog lists vocal ids only and reads anything odd as unavailable", a
     assert.equal(normalizeCatalog({ available: "yes", vocalIds: [1] }).available, false);
 });
 
-test("a clip request sends the vocal, length, seed and round, and resolves the clip URL", async () => {
+test("a clip request sends the vocal, length, seed and round, and resolves the clip URL", async (t) => {
+    const previous = process.env.NEXT_PUBLIC_API_URL;
+    process.env.NEXT_PUBLIC_API_URL = "https://other-api.example";
+    t.after(() => {
+        if (previous === undefined) delete process.env.NEXT_PUBLIC_API_URL;
+        else process.env.NEXT_PUBLIC_API_URL = previous;
+    });
     const { fetch, calls } = fakeFetch(() => ({ json: { clipUrl: "/api/guess-music/practice/clips/tok123", startSeconds: 61.25, clipSeconds: 5 } }));
     const api = createPracticeApi({ baseUrl: "https://api.example/", fetch });
     const clip = await api.clip({ vocalId: 42, clipSeconds: 5, seed: "x".repeat(80), round: 7 });
@@ -51,9 +57,11 @@ test("a clip request sends the vocal, length, seed and round, and resolves the c
     assert.deepEqual(calls[0].body, { vocalId: 42, clipSeconds: 5, seed: "x".repeat(64), round: 7 });
     assert.deepEqual(clip, { clipUrl: "https://api.example/api/guess-music/practice/clips/tok123/", startSeconds: 61.25, clipSeconds: 5 });
 
-    // Relative by default; a missing clipSeconds falls back to the requested one.
-    const { fetch: bare } = fakeFetch(() => ({ json: { clipUrl: "/api/guess-music/practice/clips/t", startSeconds: 9 } }));
-    const relative = await createPracticeApi({ baseUrl: "", fetch: bare }).clip({ vocalId: 1, clipSeconds: 15, seed: "s", round: 0 });
+    // Relative by default (the page's own origin, whatever NEXT_PUBLIC_API_URL says); a missing clipSeconds
+    // falls back to the requested one.
+    const { fetch: bare, calls: bareCalls } = fakeFetch(() => ({ json: { clipUrl: "/api/guess-music/practice/clips/t", startSeconds: 9 } }));
+    const relative = await createPracticeApi({ fetch: bare }).clip({ vocalId: 1, clipSeconds: 15, seed: "s", round: 0 });
+    assert.equal(bareCalls[0].url, "/api/guess-music/practice/clips/");
     assert.deepEqual(relative, { clipUrl: "/api/guess-music/practice/clips/t/", startSeconds: 9, clipSeconds: 15 });
 
     const { fetch: broken } = fakeFetch(() => ({ json: { startSeconds: 3 } }));

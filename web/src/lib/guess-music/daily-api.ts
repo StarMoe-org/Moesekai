@@ -2,8 +2,9 @@
  * Typed client for the daily guess-music challenge API v2 (Go backend, /api/guess-music/...).
  *
  * Four tiers (easy / normal / hard / hell), each with a ranked set and a
- * practice set per day. Every call may carry "Authorization: Bearer <StarMoe
- * ID token>" from `getIdToken`; ranked runs need it, practice does not.
+ * practice set per day. Calls carry moesekai-api's session cookie (same
+ * origin only); ranked runs need a signed-in session, practice does not, and
+ * a 401 (the session is gone) is reported through `onUnauthorized`.
  * Failures surface as DailyApiError with the server's error code, or a
  * synthetic one ("network", "bad_response", "http_<status>") when the server
  * sent none.
@@ -12,7 +13,7 @@
  */
 
 import { isAcceptedAliasKey, normalizeAnswer, type SongIndex } from "./answer.ts";
-import { apiUrl, defaultApiBaseUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
+import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
 export { isAbortError };
 
@@ -57,7 +58,7 @@ export interface DailyInfo {
     /** False until the server has loaded its master data. */
     ready: boolean;
     tiers: DailyTierInfo[];
-    /** Only with a valid token; tiers not played today are absent. */
+    /** Only with a signed-in session; tiers not played today are absent. */
     me?: { tiers: Partial<Record<DailyTierId, DailyTierStatus>> };
 }
 
@@ -221,7 +222,7 @@ export function classifyDailyError(error: unknown): DailyErrorKind {
     if (code === "clip_not_served") return "clipNotServed";
     if (code === "not_ready" || status === 503) return "notReady";
     if (code === "rate_limited" || status === 429) return "rateLimited";
-    if (status === 401 || code === "unauthorized" || code === "invalid_token") return "unauthorized";
+    if (status === 401 || code === "unauthorized") return "unauthorized";
     if (status === 404 || code === "session_not_found" || code === "not_found") return "sessionExpired";
     if (status === 409) return "conflict";
     if (code === "network" || status === 0) return "network";
@@ -229,11 +230,11 @@ export function classifyDailyError(error: unknown): DailyErrorKind {
 }
 
 export interface DailyApiOptions {
-    /** Prefix for the relative "/api/..." paths; defaults to NEXT_PUBLIC_API_URL or "". */
+    /** Prefix for the relative "/api/..." paths; defaults to "" (the page's own origin, which the session cookie belongs to). */
     baseUrl?: string;
     fetch?: FetchLike;
-    /** The signed-in player's ID token, or null for anonymous calls. */
-    getIdToken?: () => Promise<string | null>;
+    /** A request came back 401: the session cookie no longer signs anyone in. */
+    onUnauthorized?: () => void;
 }
 
 export interface LeaderboardQuery {
@@ -274,20 +275,12 @@ function normalizeInfo(info: DailyInfo): DailyInfo {
 }
 
 export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
-    const baseUrl = (options.baseUrl ?? defaultApiBaseUrl()).replace(/\/+$/, "");
+    const baseUrl = (options.baseUrl ?? "").replace(/\/+$/, "");
     const doFetch: FetchLike = options.fetch ?? ((input, init) => fetch(input, init));
-    const getIdToken = options.getIdToken ?? (async () => null);
 
     async function send(method: string, path: string, body?: unknown, signal?: AbortSignal, accept = "application/json"): Promise<Response> {
         const headers: Record<string, string> = { Accept: accept };
-        let token: string | null = null;
-        try {
-            token = await getIdToken();
-        } catch {
-            token = null;
-        }
-        if (token) headers.Authorization = `Bearer ${token}`;
-        const init: RequestInit = { method, headers, signal, cache: "no-store" };
+        const init: RequestInit = { method, headers, signal, cache: "no-store", credentials: "same-origin" };
         if (body !== undefined) {
             headers["Content-Type"] = "application/json";
             init.body = JSON.stringify(body);
@@ -299,7 +292,11 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
             if (isAbortError(error)) throw error;
             throw new DailyApiError("network", 0, error instanceof Error ? error.message : String(error));
         }
-        if (!response.ok) throw await toError(response);
+        if (!response.ok) {
+            // Only calls that need the player answer 401, so it always means the session is gone.
+            if (response.status === 401) options.onUnauthorized?.();
+            throw await toError(response);
+        }
         return response;
     }
 

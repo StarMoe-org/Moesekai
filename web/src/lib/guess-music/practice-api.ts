@@ -9,7 +9,7 @@
  * Kept free of path aliases and React so the tests can import it directly.
  */
 
-import { apiUrl, defaultApiBaseUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
+import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
 export interface InstrumentalCatalog {
     available: boolean;
@@ -67,7 +67,7 @@ export function classifyPracticeError(error: unknown): PracticeErrorKind {
 }
 
 export interface PracticeApiOptions {
-    /** Prefix for the relative "/api/..." paths; defaults to NEXT_PUBLIC_API_URL or "". */
+    /** Prefix for the relative "/api/..." paths; defaults to "" (the page's own origin, like the daily API). */
     baseUrl?: string;
     fetch?: FetchLike;
 }
@@ -90,7 +90,7 @@ export const PRACTICE_SEED_MAX_LENGTH = 64;
 export const PRACTICE_CLIP_REUSE_MS = 25 * 60 * 1000;
 
 export function createPracticeApi(options: PracticeApiOptions = {}): PracticeApi {
-    const baseUrl = (options.baseUrl ?? defaultApiBaseUrl()).replace(/\/+$/, "");
+    const baseUrl = (options.baseUrl ?? "").replace(/\/+$/, "");
     const doFetch: FetchLike = options.fetch ?? ((input, init) => fetch(input, init));
 
     async function json<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {

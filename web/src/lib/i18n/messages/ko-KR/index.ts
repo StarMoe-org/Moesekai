@@ -177,11 +177,12 @@ export const koKRMessages = {
             networkErrorShort: "네트워크 오류"
         },
         starmoe: {
-            disabled: "StarMoe 로그인은 아직 준비 중입니다",
+            unavailable: "지금은 StarMoe 로그인을 사용할 수 없습니다",
             signIn: "StarMoe 패스로 로그인",
             signInShort: "로그인",
             accountMenu: "StarMoe 패스 계정: {name}",
             signOut: "로그아웃",
+            signOutFailed: "로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.",
             linkedGame: "연결됨: {name}",
             linkGame: "게임 계정 연결: {name}",
             authorizeGame: "Haruki 게임 계정 연동하기",
@@ -192,19 +193,6 @@ export const koKRMessages = {
             unlinkFailed: "연결을 해제하지 못했습니다. 잠시 후 다시 시도해 주세요.",
             sessionExpired: "로그인이 만료되었습니다. 다시 로그인해 주세요.",
             harukiReauth: "Haruki 인증이 만료되었습니다. 다시 연동한 뒤 시도해 주세요.",
-            callback: {
-                title: "StarMoe 패스",
-                signingIn: "로그인을 마무리하는 중…",
-                returning: "원래 페이지로 돌아가는 중…",
-                failedTitle: "로그인하지 못했습니다",
-                back: "돌아가기",
-                errors: {
-                    cancelled: "로그인을 취소했습니다.",
-                    expired: "로그인 요청이 만료되었습니다. 다시 로그인해 주세요.",
-                    failed: "로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.",
-                    disabled: "StarMoe 로그인은 아직 준비 중입니다.",
-                },
-            },
         },
         oauthErrors: {
             accessDenied: "인증을 취소하여 연동된 계정이 없습니다.",

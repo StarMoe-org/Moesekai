@@ -43,8 +43,6 @@ export default function GuessMusicClient() {
     const [dailyPlaying, setDailyPlaying] = useState(false);
     const handlePlayingChange = useCallback((playing: boolean) => setFreePlaying(playing), []);
     const handleDailyPlayingChange = useCallback((playing: boolean) => setDailyPlaying(playing), []);
-    // The daily tab always loads the day's info; the header chip follows the backend's StarMoe setting from it.
-    const [backendAuthEnabled, setBackendAuthEnabled] = useState<boolean | undefined>(undefined);
     const showFree = tab === "free" || freeVisited;
 
     return (
@@ -54,7 +52,7 @@ export default function GuessMusicClient() {
                     eyebrow={t("page.guessMusic.badge")}
                     title={t("page.guessMusic.title")}
                     description={t("page.guessMusic.description")}
-                    actions={<StarMoeAccountChip backendAuthEnabled={backendAuthEnabled} />}
+                    actions={<StarMoeAccountChip />}
                 />
                 {/* A running game (either tab) hides the tabs: its clip and timer must not carry on behind the other tab. */}
                 {!freePlaying && !dailyPlaying && (
@@ -70,7 +68,7 @@ export default function GuessMusicClient() {
                     />
                 )}
                 <div role="tabpanel" aria-label={t("page.guessMusic.tabs.daily")} hidden={tab !== "daily"}>
-                    <DailyChallengePanel onAuthEnabledChange={setBackendAuthEnabled} onPlayingChange={handleDailyPlayingChange} />
+                    <DailyChallengePanel onPlayingChange={handleDailyPlayingChange} />
                 </div>
                 {showFree && freeSearch !== null && (
                     <div role="tabpanel" aria-label={t("page.guessMusic.tabs.free")} hidden={tab !== "free"}>

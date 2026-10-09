@@ -1,6 +1,6 @@
 /**
  * Daily guess-music API client v2 (src/lib/guess-music/daily-api.ts) against a fake fetch:
- * routes, methods, bodies, the bearer token, error-code mapping, typed answers and the reload store.
+ * routes, methods, bodies, the session cookie, error-code mapping, typed answers and the reload store.
  * Run with: node --test tests/guess-music-daily-api.test.mjs
  */
 import test from "node:test";
@@ -26,7 +26,7 @@ import { buildSongIndex } from "../src/lib/guess-music/answer.ts";
 function fakeFetch(responder) {
     const calls = [];
     const fetch = async (url, init = {}) => {
-        const call = { url, method: init.method ?? "GET", headers: init.headers ?? {}, body: init.body ? JSON.parse(init.body) : undefined };
+        const call = { url, method: init.method ?? "GET", headers: init.headers ?? {}, credentials: init.credentials, body: init.body ? JSON.parse(init.body) : undefined };
         calls.push(call);
         const { status = 200, json, body, contentType = "application/json" } = (await responder(call)) ?? {};
         const payload = json !== undefined ? JSON.stringify(json) : body ?? "";
@@ -131,26 +131,47 @@ test("info keeps known tiers in canonical order and the per-tier status", async 
     assert.equal(empty.me, undefined);
 });
 
-test("relative paths by default and the bearer token only when signed in", async () => {
+test("relative paths by default, and the session cookie instead of a token", async (t) => {
+    // The cookie is first-party to the page, so a split API host must not take these calls.
+    const previous = process.env.NEXT_PUBLIC_API_URL;
+    process.env.NEXT_PUBLIC_API_URL = "https://api.example";
+    t.after(() => {
+        if (previous === undefined) delete process.env.NEXT_PUBLIC_API_URL;
+        else process.env.NEXT_PUBLIC_API_URL = previous;
+    });
     const { fetch, calls } = fakeFetch(() => ({ json: INFO }));
-    let token = null;
-    const api = createDailyApi({ baseUrl: "", fetch, getIdToken: async () => token });
+    const api = createDailyApi({ fetch });
     await api.getInfo();
-    token = "id-token";
-    await api.getInfo();
+    await api.createSession("easy", "ranked");
     await api.fetchClip("/api/guess-music/daily/sessions/s1/rounds/0/clip");
     assert.equal(calls[0].url, "/api/guess-music/daily/");
     assert.equal(calls[2].url, "/api/guess-music/daily/sessions/s1/rounds/0/clip/");
-    assert.equal(calls[0].headers.Authorization, undefined);
-    assert.equal(calls[1].headers.Authorization, "Bearer id-token");
-    assert.equal(calls[2].headers.Authorization, "Bearer id-token");
+    for (const call of calls) {
+        assert.equal(call.credentials, "same-origin");
+        assert.equal(call.headers.Authorization, undefined);
+    }
 });
 
-test("a failing token provider falls back to an anonymous call", async () => {
-    const { fetch, calls } = fakeFetch(() => ({ json: INFO }));
-    const api = createDailyApi({ baseUrl: "", fetch, getIdToken: async () => { throw new Error("refresh failed"); } });
-    await api.getInfo();
-    assert.equal(calls[0].headers.Authorization, undefined);
+test("a 401 reports the lost session; other failures do not", async () => {
+    let lost = 0;
+    const responses = [
+        { status: 401, json: { error: "login_required", message: "" } },
+        { status: 403, json: { error: "forbidden", message: "" } },
+        { status: 404, json: { error: "session_not_found", message: "" } },
+        { status: 401, json: { error: "unauthorized", message: "" } },
+    ];
+    const { fetch } = fakeFetch(() => responses.shift());
+    const api = createDailyApi({ baseUrl: "", fetch, onUnauthorized: () => { lost += 1; } });
+    await assert.rejects(api.createSession("easy", "ranked"), (error) => error.kind === "loginRequired");
+    assert.equal(lost, 1);
+    await assert.rejects(api.answer("s1", 0, 1), (error) => error.status === 403);
+    await assert.rejects(api.finish("s1"), (error) => error.kind === "sessionExpired");
+    assert.equal(lost, 1);
+    await assert.rejects(api.me(), (error) => error.kind === "unauthorized");
+    assert.equal(lost, 2);
+    // Without a listener a 401 is still just an error.
+    const { fetch: bare } = fakeFetch(() => ({ status: 401, json: { error: "unauthorized", message: "" } }));
+    await assert.rejects(createDailyApi({ baseUrl: "", fetch: bare }).unlinkGame(), (error) => error.kind === "unauthorized");
 });
 
 test("already_played keeps its code, message and result", async () => {
@@ -176,7 +197,7 @@ test("error kinds from codes, statuses and network failures", async () => {
         [{ status: 503, json: { error: "auth_unavailable", message: "" } }, "authUnavailable"],
         [{ status: 429, json: { error: "rate_limited", message: "" } }, "rateLimited"],
         [{ status: 429, body: "slow down", contentType: "text/plain" }, "rateLimited"],
-        [{ status: 401, json: { error: "invalid_token", message: "" } }, "unauthorized"],
+        [{ status: 401, json: { error: "unauthorized", message: "" } }, "unauthorized"],
         [{ status: 404, json: { error: "session_not_found", message: "" } }, "sessionExpired"],
         [{ status: 409, json: { error: "clip_not_served", message: "" } }, "clipNotServed"],
         [{ status: 409, json: { error: "round_not_current", message: "" } }, "conflict"],

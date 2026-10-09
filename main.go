@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -15,17 +16,12 @@ import (
 
 	"snowy_viewer/internal/cache"
 	"snowy_viewer/internal/config"
-	"snowy_viewer/internal/guessmusic"
 	"snowy_viewer/internal/handlers"
 	"snowy_viewer/internal/htmlcache"
 	"snowy_viewer/internal/markdown"
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/mcp"
 	"snowy_viewer/internal/middleware"
-	"snowy_viewer/internal/starmoe"
-
-	// Embedded zoneinfo so DAILY_TIMEZONE works in minimal containers.
-	_ "time/tzdata"
 )
 
 const (
@@ -37,6 +33,11 @@ const (
 	masterDataRetryInterval   = 30 * time.Second
 	masterDataRefreshInterval = 6 * time.Hour
 )
+
+// moesekai-api (sign-in and guess-music) runs as its own service on the
+// private network. Forwarding its paths keeps the browser on one origin, so
+// the session cookie stays first-party and no CORS is involved.
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/"}
 
 func main() {
 	// Load configuration
@@ -60,12 +61,9 @@ func main() {
 	mcpServer := mcp.New(store)
 	mcpServer.RegisterRoutes(mux)
 
-	// Guess-music daily challenge (both normal and API-only modes).
-	stopGuessMusic := make(chan struct{})
-	defer close(stopGuessMusic)
-	if gm := setupGuessMusic(cfg, stopGuessMusic); gm != nil {
-		gm.RegisterRoutes(mux)
-	}
+	// Sign-in and guess-music live in moesekai-api (both normal and API-only
+	// modes); registered on the mux so they never reach the HTML cache.
+	registerMoesekaiAPIRoutes(mux, cfg.MoesekaiAPIURL)
 
 	// Prevent unknown /api/* paths from bouncing between Go and Next.js.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +72,7 @@ func main() {
 
 	// Set up frontend proxy or default to API-only mode.
 	if cfg.FrontendProxyURL != "" && cfg.FrontendProxyURL != "none" {
-		nextjsURL, err := parseFrontendProxyURL(cfg.FrontendProxyURL)
+		nextjsURL, err := parseProxyTargetURL(cfg.FrontendProxyURL)
 		if err != nil {
 			fmt.Printf("Invalid FRONTEND_PROXY_URL %q: %v\n", cfg.FrontendProxyURL, err)
 			registerAPIOnlyHealthRoute(mux)
@@ -168,7 +166,7 @@ func main() {
 	}
 }
 
-func parseFrontendProxyURL(raw string) (*url.URL, error) {
+func parseProxyTargetURL(raw string) (*url.URL, error) {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return nil, err
@@ -192,6 +190,72 @@ func newFrontendProxy(nextjsURL *url.URL) *httputil.ReverseProxy {
 		http.Error(w, "frontend upstream unavailable", http.StatusBadGateway)
 	}
 	return nextjsProxy
+}
+
+func registerMoesekaiAPIRoutes(mux *http.ServeMux, rawURL string) {
+	handler := http.Handler(http.HandlerFunc(serveMoesekaiAPIUnavailable))
+	if rawURL == "" {
+		fmt.Println("MOESEKAI_API_URL is not set; sign-in and guess-music are unavailable.")
+	} else if target, err := parseProxyTargetURL(rawURL); err != nil {
+		// Not echoed: a rejected value may carry credentials.
+		fmt.Println("Invalid MOESEKAI_API_URL (want an absolute HTTP(S) URL without credentials); sign-in and guess-music are unavailable.")
+	} else {
+		handler = newMoesekaiAPIProxy(target)
+		fmt.Printf("Proxying %s to moesekai-api on %s\n", strings.Join(moesekaiAPIPrefixes, ", "), target.Host)
+	}
+	for _, prefix := range moesekaiAPIPrefixes {
+		mux.Handle(prefix, handler)
+	}
+}
+
+// newMoesekaiAPIProxy forwards requests unchanged apart from the forwarding
+// headers: Cookie, Set-Cookie and Location pass through as they are, and
+// bodies stream instead of being buffered.
+func newMoesekaiAPIProxy(target *url.URL) *httputil.ReverseProxy {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{Timeout: 5 * time.Second, KeepAlive: 30 * time.Second}).DialContext
+	transport.TLSHandshakeTimeout = 5 * time.Second
+	transport.MaxIdleConnsPerHost = 32
+	transport.IdleConnTimeout = 90 * time.Second
+	transport.ResponseHeaderTimeout = 30 * time.Second
+	return &httputil.ReverseProxy{
+		Rewrite: func(r *httputil.ProxyRequest) {
+			r.SetURL(target)
+			// Append the peer to the incoming chain: moesekai-api walks
+			// X-Forwarded-For past private hops, and CF-Connecting-IP passes
+			// through untouched.
+			r.Out.Header["X-Forwarded-For"] = r.In.Header["X-Forwarded-For"]
+			r.SetXForwarded()
+			// The platform ingress terminates TLS; keep the public scheme and
+			// host it reported.
+			if proto := r.In.Header.Get("X-Forwarded-Proto"); proto == "http" || proto == "https" {
+				r.Out.Header.Set("X-Forwarded-Proto", proto)
+			}
+			if host := r.In.Header.Get("X-Forwarded-Host"); host != "" {
+				r.Out.Header.Set("X-Forwarded-Host", host)
+			}
+		},
+		Transport:     transport,
+		FlushInterval: -1,
+		ErrorHandler: func(w http.ResponseWriter, r *http.Request, err error) {
+			// A visitor leaving mid-request (a skipped clip) is not an outage.
+			if !errors.Is(err, context.Canceled) {
+				fmt.Printf("moesekai-api proxy error for %s %s: %v\n", r.Method, r.URL.Path, err)
+			}
+			writeJSONError(w, http.StatusBadGateway, "upstream_unavailable")
+		},
+	}
+}
+
+func serveMoesekaiAPIUnavailable(w http.ResponseWriter, _ *http.Request) {
+	writeJSONError(w, http.StatusServiceUnavailable, "unavailable")
+}
+
+func writeJSONError(w http.ResponseWriter, status int, code string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": code})
 }
 
 type frontendHealthCheck func(context.Context) error
@@ -329,74 +393,4 @@ func setupAPIOnlyMode(mux *http.ServeMux) {
 		}
 		http.NotFound(w, r)
 	})
-}
-
-func setupGuessMusic(cfg *config.Config, stop <-chan struct{}) *guessmusic.Service {
-	logf := func(format string, args ...interface{}) { fmt.Printf(format+"\n", args...) }
-	loc, err := time.LoadLocation(cfg.DailyTimezone)
-	if err != nil {
-		logf("guess-music: invalid DAILY_TIMEZONE %q (%v), using Asia/Shanghai", cfg.DailyTimezone, err)
-		loc, _ = time.LoadLocation("Asia/Shanghai")
-	}
-	store := guessmusic.NewStore(cfg.GuessMusicRedisURL, logf)
-	catalog := guessmusic.NewCatalog(guessmusic.FileOrHTTPLoader(cfg.MasterDataPath, nil))
-	catalog.StartLoading(stop, masterDataRetryInterval, masterDataRefreshInterval, logf)
-	verifier := starmoe.NewVerifier(starmoe.Config{Issuer: cfg.StarMoeIssuer, ClientID: cfg.StarMoeClientID})
-	// Private instrumentals for vocal removal; never logged by location.
-	inst, err := guessmusic.NewInstrumentalSource(cfg.GuessMusicInstSource)
-	if err != nil {
-		logf("guess-music: GUESS_MUSIC_INST_SOURCE ignored: %v", err)
-		inst = nil
-	}
-	trusted, err := guessmusic.ParseCIDRs(cfg.GuessMusicTrustedProxies)
-	if err != nil {
-		logf("guess-music: GUESS_MUSIC_TRUSTED_PROXIES ignored: %v", err)
-		trusted = nil
-	}
-
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-	defer cancel()
-	svc, err := guessmusic.New(ctx, guessmusic.Options{
-		Store:                store,
-		Catalog:              catalog,
-		Audio:                guessmusic.NewHTTPAudioSource(cfg.GuessMusicAudioBaseURL),
-		Auth:                 verifier,
-		Games:                guessmusic.NewHarukiLinker(cfg.HarukiOAuth2BaseURL),
-		Secret:               cfg.GuessMusicSecret,
-		Location:             loc,
-		SessionsPerHour:      cfg.GuessMusicSessionLimit,
-		PracticeClipsPerHour: cfg.GuessMusicClipLimit,
-		TrustedProxies:       trusted,
-		CheckAudio:           true,
-		ClipCacheDir:         clipCacheDir(cfg.GuessMusicClipCacheDir),
-		Instrumentals:        inst,
-		Logf:                 logf,
-	})
-	if err != nil {
-		logf("guess-music: disabled: %v", err)
-		_ = store.Close()
-		return nil
-	}
-	if cfg.GuessMusicSecret == "" {
-		logf("guess-music: GUESS_MUSIC_SECRET not set, using a generated secret persisted in the %s store", store.Kind())
-	}
-	logf("guess-music: daily challenge enabled (timezone %s, auth %v, store %s, clip cache %q)", loc, verifier.Enabled(), store.Kind(), clipCacheDir(cfg.GuessMusicClipCacheDir))
-	if inst != nil {
-		logf("guess-music: vocal removal reads instrumentals from a %s source", inst.Kind())
-		inst.Start(stop, guessmusic.InstrumentalRefreshInterval, logf)
-	} else {
-		logf("guess-music: vocal removal unavailable (GUESS_MUSIC_INST_SOURCE not set)")
-	}
-	svc.StartPrewarm(stop)
-	return svc
-}
-
-// clipCacheDir maps GUESS_MUSIC_CLIP_CACHE_DIR to the cache directory; "off"
-// or "none" disables the disk cache.
-func clipCacheDir(dir string) string {
-	switch strings.ToLower(strings.TrimSpace(dir)) {
-	case "off", "none", "disabled":
-		return ""
-	}
-	return dir
 }

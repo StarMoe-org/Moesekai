@@ -1,16 +1,16 @@
 /**
  * Plumbing shared by the guess-music API clients (daily-api.ts and
- * practice-api.ts): the base URL, the canonical request URL and error bodies.
+ * practice-api.ts): the canonical request URL and error bodies.
+ *
+ * Both clients call the page's own origin by default, never
+ * NEXT_PUBLIC_API_URL: /api/guess-music/* sits behind the same forwarding as
+ * /api/auth/*, and moesekai-api's session cookie is first-party to the page
+ * (see moesekai-account.ts), so another API host would never see it.
  *
  * Kept free of path aliases and React so the tests can import it directly.
  */
 
 export type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
-
-/** Prefix for the relative "/api/..." paths: NEXT_PUBLIC_API_URL, or "" for the page's own origin. */
-export function defaultApiBaseUrl(): string {
-    return ((typeof process !== "undefined" && process.env.NEXT_PUBLIC_API_URL) || "").replace(/\/+$/, "");
-}
 
 export function isAbortError(error: unknown): boolean {
     return typeof error === "object" && error !== null && (error as { name?: unknown }).name === "AbortError";

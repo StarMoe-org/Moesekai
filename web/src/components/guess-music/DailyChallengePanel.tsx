@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ErrorState, LoadingState } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
-import { useStarMoeAuth } from "@/lib/starmoe-auth";
+import { markSignedOut, retryMoesekaiAccount, signIn, useMoesekaiAccount } from "@/lib/moesekai-account";
 import {
     DailyApiError,
     classifyDailyError,
@@ -57,21 +57,15 @@ function freshRun(session: DailySession): StoredDailyRun {
 }
 
 export interface DailyChallengePanelProps {
-    /** Reports the backend's authEnabled whenever the day's info arrives (the header's account chip follows it). */
-    onAuthEnabledChange?: (enabled: boolean) => void;
     /** A run is on screen: the page hides its tabs, so the clip and the round timer never carry on behind another tab. */
     onPlayingChange?: (playing: boolean) => void;
 }
 
-export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChange }: DailyChallengePanelProps = {}) {
+export default function DailyChallengePanel({ onPlayingChange }: DailyChallengePanelProps = {}) {
     const { t } = useI18n();
-    const auth = useStarMoeAuth();
-    // One client for the panel's lifetime; it always asks the latest auth state for a token.
-    const tokenRef = useRef(auth.getIdToken);
-    useEffect(() => {
-        tokenRef.current = auth.getIdToken;
-    }, [auth.getIdToken]);
-    const api = useMemo(() => createDailyApi({ getIdToken: () => tokenRef.current() }), []);
+    const account = useMoesekaiAccount();
+    // The session cookie rides along with every call; a 401 means it is gone, and the account follows.
+    const api = useMemo(() => createDailyApi({ onUnauthorized: markSignedOut }), []);
     const songs = useDailySongData();
 
     const [info, setInfo] = useState<DailyInfo | null>(null);
@@ -86,10 +80,6 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
     // Bumped whenever this tab's stored runs change, so the tier cards re-read them.
     const [, setStoreVersion] = useState(0);
     const resetForRef = useRef<string | null>(null);
-    const authReportRef = useRef(onAuthEnabledChange);
-    useEffect(() => {
-        authReportRef.current = onAuthEnabledChange;
-    }, [onAuthEnabledChange]);
     const hasInfoRef = useRef(false);
     // The run on screen, for callbacks that must not change with every answer.
     const runRef = useRef<StoredDailyRun | null>(null);
@@ -101,17 +91,20 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
     }, [playing, onPlayingChange]);
     useEffect(() => () => onPlayingChange?.(false), [onPlayingChange]);
 
-    // "me" comes with a valid token: refetch when the sign-in state settles or changes.
-    const authKey = auth.status === "signed-in" ? `in:${auth.user?.sub ?? ""}` : auth.status;
+    // "me" follows the session cookie: ask again when the account turns out signed in, or changes
+    // under the page (a session found expired, a sign-in in another tab).
+    const accountKey = account.status === "signed-in" ? `in:${account.user.id}` : "out";
     useEffect(() => {
         const controller = new AbortController();
         api.getInfo(controller.signal)
             .then((data) => {
                 hasInfoRef.current = true;
                 setInfo(data);
-                authReportRef.current?.(data.authEnabled === true);
                 setInfoError(data.ready ? null : "notReady");
                 pruneStoredRuns(data.date);
+                // The API answers again (say, after the retry button): an account check that failed
+                // while it was down is asked again now rather than on its backoff.
+                void retryMoesekaiAccount();
             })
             .catch((error) => {
                 if (isAbortError(error)) return;
@@ -119,9 +112,9 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
                 if (!hasInfoRef.current) setInfoError(classifyDailyError(error));
             });
         return () => controller.abort();
-    }, [api, infoAttempt, authKey]);
+    }, [api, infoAttempt, accountKey]);
 
-    const ranked: RankedAccess = !info || auth.status === "loading" ? "loading" : !info.authEnabled || auth.status === "disabled" ? "unavailable" : auth.status === "signed-in" ? "ready" : "login";
+    const ranked: RankedAccess = !info || account.status === "loading" ? "loading" : !info.authEnabled || account.status === "unavailable" ? "unavailable" : account.status === "signed-in" ? "ready" : "login";
     const errorText = useCallback((kind: DailyErrorKind) => t(`page.guessMusicDaily.errors.${kind}`), [t]);
     const today = info?.date ?? "";
 
@@ -184,7 +177,7 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
         async (tier: DailyTierId, mode: DailyMode, fresh = false) => {
             if (!info || pending) return;
             if (mode === "ranked" && ranked === "login") {
-                auth.login();
+                signIn();
                 return;
             }
             setTierError(null);
@@ -228,7 +221,7 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
                 setPending(null);
             }
         },
-        [api, auth, errorText, info, pending, play, ranked, showResult],
+        [api, errorText, info, pending, play, ranked, showResult],
     );
 
     const onFatal = useCallback(
@@ -261,7 +254,7 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
         setInfoAttempt((n) => n + 1);
     }, [info]);
 
-    const login = useCallback(() => auth.login(), [auth]);
+    const login = useCallback(() => signIn(), []);
 
     if (!info) {
         if (!infoError) return <LoadingState label={t("page.guessMusicDaily.loading")} />;
@@ -350,7 +343,7 @@ export default function DailyChallengePanel({ onAuthEnabledChange, onPlayingChan
 
     return (
         <div className="flex flex-col gap-4">
-            <DailyInfoCard info={info} ranked={ranked} playerName={auth.user?.name} onLogin={login} onReset={onReset} />
+            <DailyInfoCard info={info} ranked={ranked} playerName={account.user?.name} onLogin={login} onReset={onReset} />
             <div className="grid gap-4 md:grid-cols-2">
                 {info.tiers.map((tier) => (
                     <DailyTierCard

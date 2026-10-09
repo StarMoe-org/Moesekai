@@ -20,28 +20,10 @@ type Config struct {
 	NextBuildID         string
 	StaticArchiveDir    string
 
-	// Guess-music daily challenge.
-	StarMoeIssuer    string
-	StarMoeClientID  string
-	GuessMusicSecret string
-	// GuessMusicRedisURL is the guess-music store (sessions, plans,
-	// leaderboards); defaults to REDIS_URL so the site cache is unaffected
-	// when only this one is set.
-	GuessMusicRedisURL     string
-	DailyTimezone          string
-	GuessMusicAudioBaseURL string
-	GuessMusicSessionLimit int
-	GuessMusicClipLimit    int
-	// GuessMusicTrustedProxies lists extra proxy networks (comma-separated
-	// CIDRs) in front of the backend; loopback, private ranges and Cloudflare
-	// are always recognised.
-	GuessMusicTrustedProxies string
-	GuessMusicClipCacheDir   string
-	// GuessMusicInstSource locates the private instrumentals (vocal removal):
-	// an absolute directory or a non-public http(s) base URL. Empty disables
-	// vocal removal.
-	GuessMusicInstSource string
-	HarukiOAuth2BaseURL  string
+	// MoesekaiAPIURL is the private address of moesekai-api (sign-in and
+	// guess-music), e.g. http://moesekai-api.zeabur.internal:8080. Empty
+	// leaves /api/auth/ and /api/guess-music/ unavailable.
+	MoesekaiAPIURL string
 }
 
 func Load() *Config {
@@ -58,20 +40,8 @@ func Load() *Config {
 		HTMLCacheWarmup:     getEnvBool("HTML_CACHE_WARMUP", true),
 		NextBuildID:         getEnv("NEXT_BUILD_ID", ""),
 		StaticArchiveDir:    getEnv("STATIC_ARCHIVE_DIR", "./data/static_archive"),
-
-		StarMoeIssuer:            getEnv("STARMOE_ISSUER", "https://passport.star.moe/oidc"),
-		StarMoeClientID:          os.Getenv("STARMOE_CLIENT_ID"),
-		GuessMusicSecret:         os.Getenv("GUESS_MUSIC_SECRET"),
-		DailyTimezone:            getEnv("DAILY_TIMEZONE", "Asia/Shanghai"),
-		GuessMusicAudioBaseURL:   getEnv("GUESS_MUSIC_AUDIO_BASE_URL", "https://storage.exmeaning.com/sekai-jp-assets"),
-		GuessMusicSessionLimit:   getEnvInt("GUESS_MUSIC_SESSIONS_PER_HOUR", 300),
-		GuessMusicClipLimit:      getEnvInt("GUESS_MUSIC_PRACTICE_CLIPS_PER_HOUR", 2000),
-		GuessMusicTrustedProxies: os.Getenv("GUESS_MUSIC_TRUSTED_PROXIES"),
-		GuessMusicClipCacheDir:   getEnv("GUESS_MUSIC_CLIP_CACHE_DIR", "./data/guess_music_clips"),
-		GuessMusicInstSource:     strings.TrimSpace(os.Getenv("GUESS_MUSIC_INST_SOURCE")),
-		HarukiOAuth2BaseURL:      getEnv("HARUKI_OAUTH2_BASE_URL", "https://toolbox-api-direct.haruki.seiunx.com/api/oauth2"),
+		MoesekaiAPIURL:      strings.TrimSpace(os.Getenv("MOESEKAI_API_URL")),
 	}
-	cfg.GuessMusicRedisURL = getEnv("GUESS_MUSIC_REDIS_URL", cfg.RedisURL)
 	return cfg
 }
 

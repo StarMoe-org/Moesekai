@@ -40,6 +40,9 @@ func New(redisURL string) *Cache {
 				Addr: redisURL,
 			}
 		}
+		// Skip CLIENT SETINFO on connect: when it timed out, go-redis before v9.7.3 kept the
+		// connection with unread replies and later commands got each other's answers (CVE-2025-29923)
+		opts.DisableIdentity = true
 
 		client := redis.NewClient(opts)
 

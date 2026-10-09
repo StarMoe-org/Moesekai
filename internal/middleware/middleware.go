@@ -93,6 +93,19 @@ func (w *gzipGuardWriter) Write(b []byte) (int, error) {
 	return w.ResponseWriter.Write(b)
 }
 
+// Flush passes streaming flushes on (the moesekai-api proxy flushes after
+// every write), draining the gzip buffer first; without it this wrapper would
+// hide the connection's Flusher and hold the bytes back.
+func (w *gzipGuardWriter) Flush() {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+	if w.gzWriter != nil {
+		_ = w.gzWriter.Flush()
+	}
+	_ = http.NewResponseController(w.ResponseWriter).Flush()
+}
+
 // CORS middleware for cross-origin requests
 func CORS(next http.Handler) http.Handler {
 	allowedOrigins := map[string]bool{

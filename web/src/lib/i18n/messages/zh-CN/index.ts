@@ -179,11 +179,12 @@ export const zhCNMessages = {
             networkErrorShort: "网络错误",
         },
         starmoe: {
-            disabled: "StarMoe 登录暂未开放",
+            unavailable: "StarMoe 登录暂不可用",
             signIn: "使用 StarMoe 通行证登录",
             signInShort: "登录",
             accountMenu: "StarMoe 通行证账号：{name}",
             signOut: "退出登录",
+            signOutFailed: "退出登录失败，请稍后重试。",
             linkedGame: "已关联：{name}",
             linkGame: "关联游戏账号：{name}",
             authorizeGame: "绑定 Haruki 游戏账号",
@@ -194,19 +195,6 @@ export const zhCNMessages = {
             unlinkFailed: "解除关联失败，请稍后重试。",
             sessionExpired: "登录已过期，请重新登录。",
             harukiReauth: "Haruki 授权已失效，请重新绑定后再试。",
-            callback: {
-                title: "StarMoe 通行证",
-                signingIn: "正在完成登录……",
-                returning: "正在返回原页面……",
-                failedTitle: "登录未完成",
-                back: "返回",
-                errors: {
-                    cancelled: "你已取消登录。",
-                    expired: "登录请求已过期，请重新登录。",
-                    failed: "登录失败，请稍后重试。",
-                    disabled: "StarMoe 登录暂未开放。",
-                },
-            },
         },
         oauthErrors: {
             accessDenied: "你已取消授权，未绑定任何账号。",

@@ -179,11 +179,12 @@ export const enUSMessages = {
             networkErrorShort: "Network error",
         },
         starmoe: {
-            disabled: "StarMoe sign-in isn't available yet",
+            unavailable: "StarMoe sign-in isn't available right now",
             signIn: "Sign in with StarMoe Pass",
             signInShort: "Sign in",
             accountMenu: "StarMoe Pass account: {name}",
             signOut: "Sign out",
+            signOutFailed: "Couldn't sign out. Please try again later.",
             linkedGame: "Linked: {name}",
             linkGame: "Link game account: {name}",
             authorizeGame: "Connect a Haruki game account",
@@ -194,19 +195,6 @@ export const enUSMessages = {
             unlinkFailed: "Couldn't unlink the game account. Please try again later.",
             sessionExpired: "Your sign-in has expired. Please sign in again.",
             harukiReauth: "The Haruki authorization has expired. Connect the account again, then retry.",
-            callback: {
-                title: "StarMoe Pass",
-                signingIn: "Finishing sign-in…",
-                returning: "Taking you back…",
-                failedTitle: "Sign-in didn't finish",
-                back: "Go back",
-                errors: {
-                    cancelled: "You canceled sign-in.",
-                    expired: "This sign-in request has expired. Please sign in again.",
-                    failed: "Sign-in failed. Please try again later.",
-                    disabled: "StarMoe sign-in isn't available yet.",
-                },
-            },
         },
         oauthErrors: {
             accessDenied: "You canceled authorization, so no account was linked.",
