@@ -2007,7 +2007,7 @@ export const enUSMessages = {
                 feverTime: "Fever (×1.5)",
                 noFever: "This chart has no Fever segment.",
                 comboMismatch: "The chart parses to {parsed} notes, but the official count is {official}; treat the figures below as approximate.",
-                footnote: "Times count from the start of the chart; skills last 5 seconds. Fever happens only in multi-player lives: notes in the first 90% of Fever Chance are charge notes (the note count shown), and each Great or better charges the gauge. Once the team reaches 70% the Fever starts (100% with a full room of 5 makes it a Super Fever, with the same bonus), and the next tenth of the song's notes score ×1.5. Score weight is the segment's share of the song's summed note score coefficients, before judgment, combo and skill bonuses.",
+                footnote: "Score weight is the segment's share of the song's summed note score coefficients, before judgment, combo and skill bonuses.",
             },
             bpmListToggle: "Expand / collapse BPM list",
             aliasesLabel: "Aliases",
