@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type PointerEvent } from "react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getAssetSourceFallbackOrder, getMusicScoreUrl } from "@/lib/assets";
@@ -13,15 +13,23 @@ const NOTE_KIND_ORDER: ChartNoteKind[] = ["tap", "flick", "trace", "holdStart", 
 
 const PLOT_HEIGHT = 100;
 
-/** Pixels per second in the strip render; only the aspect of the source image depends on it. */
-const STRIP_TIME_HEIGHT = 48;
+/** Pixels per second in the strip render; notes keep their size, so this sets how far apart they sit. */
+const STRIP_TIME_HEIGHT = 200;
+
+/** Height in CSS pixels the strip is shown at in the preview. */
+const PREVIEW_HEIGHT = 144;
+
+/** Seconds on either side of the cursor that get a tick label in the preview. */
+const PREVIEW_TICK_REACH = 10;
 
 /**
- * Text and per-bar decorations are unreadable at thumbnail size; the lane fill is left
- * to the themed container behind the image.
+ * Text would lie sideways in the strip and the flags hang off it; the lane fill is left
+ * to the themed container behind the image, so the lines are a grey that reads on both themes.
  */
-const STRIP_STYLE = `text, .bar-count-flag, .event-flag, .beat-line, .tick-line, .speed-line, .speed-line-condensed, .speed-trend-line, .speed-trend-head { display: none; }
-.background, .lane { fill: none; }`;
+const STRIP_STYLE = `text, .bar-count-flag, .event-flag, .tick-line, .speed-line, .speed-line-condensed, .speed-trend-line, .speed-trend-head { display: none; }
+.background, .lane { fill: none; }
+.lane-line, .beat-line { stroke: #888888; stroke-opacity: 0.25; }
+.bar-line { stroke: #888888; stroke-opacity: 0.6; }`;
 
 interface LoadedChart {
     text: string;
@@ -290,6 +298,8 @@ interface ChartStrip {
     text: string;
     /** Object URL of the rendered strip, or null when it could not be drawn. */
     url: string | null;
+    /** CSS pixels per second of chart time when the strip is shown PREVIEW_HEIGHT tall. */
+    pixelsPerSecond: number;
     /** Seconds from bar 0 that the strip covers. */
     seconds: number;
 }
@@ -316,9 +326,14 @@ function useChartStrip(susText: string): ChartStrip | null {
             const inlined = await inlineSvgImages(rendered.svg);
             if (!active) return;
             url = URL.createObjectURL(new Blob([inlined], { type: "image/svg+xml;charset=utf-8" }));
-            setStrip({ text: susText, url, seconds: rendered.width / STRIP_TIME_HEIGHT });
+            setStrip({
+                text: susText,
+                url,
+                pixelsPerSecond: (STRIP_TIME_HEIGHT * PREVIEW_HEIGHT) / rendered.height,
+                seconds: rendered.width / STRIP_TIME_HEIGHT,
+            });
         })().catch(() => {
-            if (active) setStrip({ text: susText, url: null, seconds: 0 });
+            if (active) setStrip({ text: susText, url: null, pixelsPerSecond: 0, seconds: 0 });
         });
         return () => {
             active = false;
@@ -342,7 +357,8 @@ function ChartTimeline({
     t: BodyProps["t"];
     formatNumber: BodyProps["formatNumber"];
 }) {
-    const [hoverSecond, setHoverSecond] = useState<number | null>(null);
+    // Stays where the pointer last was, so the preview below keeps showing that spot.
+    const [cursor, setCursor] = useState<number | null>(null);
     const strip = useChartStrip(susText);
 
     const { bins, duration, maxBin } = useMemo(() => {
@@ -369,10 +385,16 @@ function ChartTimeline({
     const ticks: number[] = [];
     for (let s = 0; s < duration - tickStep / 3; s += tickStep) ticks.push(s);
 
-    const hoverLabel = (() => {
-        if (hoverSecond === null) return null;
-        const inside = (w: ChartWindowStats) => hoverSecond >= w.start && hoverSecond <= w.end;
-        const skillIndex = analysis.skills.findIndex((skill) => hoverSecond >= skill.start && hoverSecond < skill.end);
+    const cursorSecond = cursor === null ? null : Math.min(Math.max(cursor, 0), duration);
+    const moveCursor = (e: PointerEvent<HTMLDivElement>) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setCursor(((e.clientX - rect.left) / rect.width) * duration);
+    };
+
+    const cursorLabel = (() => {
+        if (cursorSecond === null) return null;
+        const inside = (w: ChartWindowStats) => cursorSecond >= w.start && cursorSecond <= w.end;
+        const skillIndex = analysis.skills.findIndex((skill) => cursorSecond >= skill.start && cursorSecond < skill.end);
         const segment = skillIndex !== -1
             ? t("page.music.chartAnalysis.skillLabel", { index: skillIndex + 1 })
             : analysis.fevers.some((fever) => inside(fever.fever))
@@ -380,8 +402,8 @@ function ChartTimeline({
                 : analysis.fevers.some((fever) => inside(fever.chance))
                     ? t("page.music.chartAnalysis.feverChance")
                     : null;
-        const count = bins[Math.min(bins.length - 1, Math.floor(hoverSecond))] ?? 0;
-        const base = t("page.music.chartAnalysis.tooltip", { time: formatTime(hoverSecond), count: formatNumber(count) });
+        const count = bins[Math.min(bins.length - 1, Math.floor(cursorSecond))] ?? 0;
+        const base = t("page.music.chartAnalysis.tooltip", { time: formatTime(cursorSecond), count: formatNumber(count) });
         return segment ? `${base} · ${segment}` : base;
     })();
 
@@ -403,17 +425,11 @@ function ChartTimeline({
                 ))}
             </div>
             <div
-                className="relative touch-none select-none"
-                onPointerMove={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    setHoverSecond(((e.clientX - rect.left) / rect.width) * duration);
-                }}
-                onPointerLeave={() => setHoverSecond(null)}
-            >
-            <div
-                className="relative h-32 overflow-hidden rounded-md3-md bg-surface-container"
+                className="relative h-32 touch-none select-none overflow-hidden rounded-md3-md bg-surface-container"
                 role="img"
                 aria-label={t("page.music.chartAnalysis.timelineAria", { difficulty: DIFFICULTY_NAMES[difficulty] })}
+                onPointerDown={moveCursor}
+                onPointerMove={moveCursor}
             >
                 <svg viewBox={`0 0 ${duration} ${PLOT_HEIGHT}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
                     {analysis.fevers.map((fever, i) => (
@@ -436,31 +452,17 @@ function ChartTimeline({
                         {i + 1}
                     </span>
                 ))}
-                {hoverLabel && hoverSecond !== null && (
+                {cursorLabel && cursorSecond !== null && (
                     <span
                         className="pointer-events-none absolute bottom-1 whitespace-nowrap rounded-md3-xs bg-inverse-surface px-2 py-0.5 type-label-s text-inverse-on-surface"
-                        style={hoverSecond / duration > 0.5 ? { right: `calc(100% - ${xPercent(hoverSecond)} + 6px)` } : { left: `calc(${xPercent(hoverSecond)} + 6px)` }}
+                        style={cursorSecond / duration > 0.5 ? { right: `calc(100% - ${xPercent(cursorSecond)} + 6px)` } : { left: `calc(${xPercent(cursorSecond)} + 6px)` }}
                     >
-                        {hoverLabel}
+                        {cursorLabel}
                     </span>
                 )}
-            </div>
-            {strip?.url !== null && (
-                <div className="relative mt-1 h-16 overflow-hidden rounded-md3-sm bg-surface-container">
-                    {strip?.url && (
-                        <img
-                            src={strip.url}
-                            alt={t("page.music.chartAnalysis.stripAlt", { difficulty: DIFFICULTY_NAMES[difficulty] })}
-                            className="absolute inset-y-0 left-0 h-full max-w-none"
-                            style={{ width: `${(strip.seconds / duration) * 100}%` }}
-                            draggable={false}
-                        />
-                    )}
-                </div>
-            )}
-            {hoverSecond !== null && (
-                <div className="pointer-events-none absolute inset-y-0 w-px bg-on-surface" style={{ left: xPercent(hoverSecond) }} aria-hidden />
-            )}
+                {cursorSecond !== null && (
+                    <div className="pointer-events-none absolute inset-y-0 w-px bg-on-surface" style={{ left: xPercent(cursorSecond) }} aria-hidden />
+                )}
             </div>
             <div className="relative mt-1 h-4 type-label-s text-on-surface-variant tabular-nums">
                 {ticks.map((s) => (
@@ -468,6 +470,83 @@ function ChartTimeline({
                         {formatTime(s)}
                     </span>
                 ))}
+            </div>
+            {strip?.url !== null && (
+                <ChartPreview analysis={analysis} strip={strip} cursorSecond={cursorSecond} duration={duration} difficulty={difficulty} t={t} />
+            )}
+        </div>
+    );
+}
+
+/** A stretch of the chart at a readable size, centred on the timeline's cursor; time runs left to right. */
+function ChartPreview({
+    analysis,
+    strip,
+    cursorSecond,
+    duration,
+    difficulty,
+    t,
+}: {
+    analysis: ChartAnalysis;
+    strip: ChartStrip | null;
+    cursorSecond: number | null;
+    duration: number;
+    difficulty: MusicDifficultyType;
+    t: BodyProps["t"];
+}) {
+    const scale = strip?.pixelsPerSecond ?? 0;
+    const shown = strip !== null && cursorSecond !== null;
+    const band = (w: ChartWindowStats) => ({ left: w.start * scale, width: (w.end - w.start) * scale });
+    const tickSeconds: number[] = [];
+    if (cursorSecond !== null) {
+        const last = Math.min(duration, Math.ceil(cursorSecond + PREVIEW_TICK_REACH));
+        for (let s = Math.max(0, Math.floor(cursorSecond - PREVIEW_TICK_REACH)); s <= last; s += 1) tickSeconds.push(s);
+    }
+
+    return (
+        <div className="relative mt-3 overflow-hidden rounded-md3-md bg-surface-container">
+            <div className="relative" style={{ height: PREVIEW_HEIGHT }}>
+                {strip?.url && (
+                    <div
+                        className={`absolute inset-y-0 left-1/2${shown ? "" : " invisible"}`}
+                        style={{ transform: `translateX(${-(cursorSecond ?? 0) * scale}px)` }}
+                    >
+                        {analysis.fevers.map((fever, i) => (
+                            <div key={i} aria-hidden>
+                                <div className="absolute inset-y-0 bg-tertiary/20" style={band(fever.chance)} />
+                                <div className="absolute inset-y-0 bg-tertiary/45" style={band(fever.fever)} />
+                            </div>
+                        ))}
+                        {analysis.skills.map((skill, i) => (
+                            <div key={i} className="absolute inset-y-0 bg-primary/40" style={band(skill)} aria-hidden />
+                        ))}
+                        <img
+                            src={strip.url}
+                            alt={t("page.music.chartAnalysis.previewAlt", { difficulty: DIFFICULTY_NAMES[difficulty] })}
+                            className="absolute inset-y-0 left-0 h-full max-w-none"
+                            style={{ width: strip.seconds * scale }}
+                            draggable={false}
+                        />
+                    </div>
+                )}
+                {shown ? (
+                    <div className="pointer-events-none absolute inset-y-0 left-1/2 w-px bg-on-surface" aria-hidden />
+                ) : (
+                    <p className="absolute inset-0 flex items-center justify-center px-4 text-center type-body-s text-on-surface-variant">
+                        {strip === null ? t("page.music.chartAnalysis.loading") : t("page.music.chartAnalysis.previewHint")}
+                    </p>
+                )}
+            </div>
+            <div className="relative h-5 type-label-s text-on-surface-variant tabular-nums" aria-hidden>
+                {shown && (
+                    <div className="absolute inset-y-0 left-1/2" style={{ transform: `translateX(${-cursorSecond * scale}px)` }}>
+                        {tickSeconds.map((s) => (
+                            <span key={s} className="absolute top-0.5 -translate-x-1/2 whitespace-nowrap" style={{ left: s * scale }}>
+                                {formatTime(s)}
+                            </span>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
