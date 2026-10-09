@@ -492,11 +492,14 @@ export default function MusicDetailPage() {
                     </div>
                 </div>
 
-                {/* Main Content Grid - 2 Column Layout like Cards */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left Column: Jacket Image */}
-                    <div className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                {/* Two columns on desktop: the jacket and the wide chart analysis on the
+                    left, the info cards on the right, so neither column runs on alone.
+                    On mobile the columns dissolve (display: contents) and order-* puts
+                    the chart analysis right after the difficulty card. */}
+                <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
+                    {/* Left Column: Jacket Image, Chart Analysis */}
+                    <div className="contents lg:flex lg:flex-col lg:gap-6">
+                        <div className="order-1 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             {/* Jacket Image */}
                             <div
                                 className="relative aspect-square bg-surface-container cursor-zoom-in"
@@ -516,12 +519,24 @@ export default function MusicDetailPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Chart Analysis Card */}
+                        {selectedDifficultyInfo && (
+                            <div className="order-5">
+                                <ChartAnalysisCard
+                                    musicId={musicId}
+                                    difficulty={selectedDifficulty}
+                                    playLevel={selectedDifficultyInfo.playLevel}
+                                    officialNoteCount={selectedDifficultyInfo.totalNoteCount}
+                                />
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column: Info Cards */}
-                    <div className="space-y-6">
+                    <div className="contents lg:flex lg:flex-col lg:gap-6">
                         {/* Basic Info Card */}
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                        <div className="order-2 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdInfo}>{t("page.music.basicInfo")}</SectionTitle>
                             <div className="divide-y divide-outline-variant">
                                 <InfoRow label="ID" value={`#${music.id}`} />
@@ -613,7 +628,7 @@ export default function MusicDetailPage() {
 
                         {/* Ranking Card */}
                         {rankings && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                            <div className="order-3 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdBarChart}>{t("page.music.metaRanking")}</SectionTitle>
 
                                 {/* Category Tabs */}
@@ -668,7 +683,7 @@ export default function MusicDetailPage() {
                         )}
 
                         {/* Difficulty Card */}
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                        <div className="order-4 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdLibraryMusic}>{t("page.music.difficultyInfo")}</SectionTitle>
 
                             {/* Difficulty Grid */}
@@ -744,19 +759,9 @@ export default function MusicDetailPage() {
                             )}
                         </div>
 
-                        {/* Chart Analysis Card */}
-                        {selectedDifficultyInfo && (
-                            <ChartAnalysisCard
-                                musicId={musicId}
-                                difficulty={selectedDifficulty}
-                                playLevel={selectedDifficultyInfo.playLevel}
-                                officialNoteCount={selectedDifficultyInfo.totalNoteCount}
-                            />
-                        )}
-
                         {/* Vocals Card */}
                         {vocals.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                            <div className="order-6 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdMic}>{t("page.music.vocalVersions", { seconds: Math.round((music.fillerSec || 0) * 10) / 10 })}</SectionTitle>
                                 <div className="divide-y divide-outline-variant max-h-96 overflow-y-auto">
                                     {vocals.map((vocal) => (
@@ -776,7 +781,7 @@ export default function MusicDetailPage() {
 
                         {/* Related Events Card */}
                         {relatedEvents.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                            <div className="order-7 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                                 <SectionTitle icon={mdCalendarMonth}>{t("page.music.relatedEvents")}</SectionTitle>
                                 <div className="p-4 pt-2 space-y-3">
                                     {relatedEvents.map((event) => (
@@ -813,7 +818,9 @@ export default function MusicDetailPage() {
                             </div>
                         )}
 
-                        <DetailPageAdCard hidden={isScreenshotMode} />
+                        <div className="order-8 empty:hidden">
+                            <DetailPageAdCard hidden={isScreenshotMode} />
+                        </div>
                     </div>
                 </div>
 

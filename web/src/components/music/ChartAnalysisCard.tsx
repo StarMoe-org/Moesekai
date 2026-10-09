@@ -119,7 +119,7 @@ export default function ChartAnalysisCard({ musicId, difficulty, playLevel, offi
     const color = DIFFICULTY_COLORS[difficulty];
 
     return (
-        <div className="rounded-md3-xl bg-surface-container-low">
+        <div className="rounded-md3-xl border border-outline-variant/70 bg-surface-card">
             <div className="flex min-h-14 items-center gap-3 px-5 pt-4 pb-2">
                 <Icon path={mdAnalytics} size={24} className="text-primary" />
                 <h2 className="min-w-0 flex-1 truncate type-title-l text-on-surface">{t("page.music.chartAnalysis.title")}</h2>
