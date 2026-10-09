@@ -9,6 +9,11 @@
  *
  * Times are in seconds from chart bar 0 (audio time = chart time + fillerSec).
  * BPM changes take effect at their slot and are integrated piecewise.
+ *
+ * Fever exists only in multi-player lives. The chart marks FeverBegin and
+ * FeverStart; `Converter.ConvertEventList` pairs them and derives the rest:
+ * the scoring notes in the first 90% of [FeverBegin, FeverStart) are the charge
+ * notes, and Fever ends on the (combo / 10)-th scoring note from FeverStart.
  */
 
 // NoteCategory, in the game's numbering
@@ -32,6 +37,15 @@ const LONG_NOTE_COMBO_BEAT = 8;
 
 /** How long one skill stays active (`MultiSkillLogic.skillActiveInterval`). */
 export const SKILL_DURATION_SEC = 5;
+
+/** Share of [FeverBegin, FeverStart) whose notes charge the Fever gauge. */
+const FEVER_CHARGE_SPAN = 0.9;
+
+/** Fever lasts for this fraction of the chart's combo, counted in notes from FeverStart. */
+const FEVER_NOTE_DIVISOR = 10;
+
+/** Scores inside a Fever are multiplied by this (`MultiLiveUtility.CalcAddScore`). */
+export const FEVER_SCORE_FACTOR = 1.5;
 
 /** Categories whose notes have no judgment: they neither score nor count toward combo. */
 const NO_JUDGMENT = new Set([FRICTION_HIDE, FRICTION_HIDE_LONG, 9, 10, 11, HIDDEN]);
@@ -72,6 +86,13 @@ export interface ChartWindowStats {
     weightShare: number;
 }
 
+export interface ChartFever {
+    /** FeverBegin to FeverStart; its notes are the ones whose judgments charge the gauge. */
+    chance: ChartWindowStats;
+    /** FeverStart to FeverEnd; joined players score ×1.5 on these notes. */
+    fever: ChartWindowStats;
+}
+
 export interface ChartAnalysis {
     /** Every note that scores and counts toward combo, ordered by time. */
     notes: ChartScoringNote[];
@@ -85,10 +106,7 @@ export interface ChartAnalysis {
     peakNotesPerSecond: number;
     bpms: number[];
     skills: ChartWindowStats[];
-    /** From FeverBegin to FeverStart ("FEVER CHANCE!"). */
-    feverChance: ChartWindowStats | null;
-    /** From FeverStart to the last note ("SUPER FEVER!!"). */
-    superFever: ChartWindowStats | null;
+    fevers: ChartFever[];
 }
 
 interface NoteInfo {
@@ -190,25 +208,21 @@ function kindOf(note: TreeNote): ChartNoteKind {
     }
 }
 
-function windowStats(notes: ChartScoringNote[], start: number, end: number, totalWeight: number, includeEnd = false): ChartWindowStats {
-    let noteCount = 0;
-    let weight = 0;
-    for (const note of notes) {
-        if (note.time < start) continue;
-        if (note.time > end || (note.time === end && !includeEnd)) break;
-        noteCount += 1;
-        weight += note.coefficient;
-    }
-    return { start, end, noteCount, weight, weightShare: totalWeight > 0 ? weight / totalWeight : 0 };
+function stats(notes: ChartScoringNote[], start: number, end: number, totalWeight: number): ChartWindowStats {
+    const weight = notes.reduce((sum, note) => sum + note.coefficient, 0);
+    return { start, end, noteCount: notes.length, weight, weightShare: totalWeight > 0 ? weight / totalWeight : 0 };
+}
+
+function windowStats(notes: ChartScoringNote[], start: number, end: number, totalWeight: number): ChartWindowStats {
+    return stats(notes.filter((note) => note.time >= start && note.time < end), start, end, totalWeight);
 }
 
 export function analyzeSusChart(text: string): ChartAnalysis {
     const bpmMap = new Map<string, number>();
     const bpmRefs: { pos: number; id: string }[] = [];
     const signatures = new Map<number, number>();
-    const skillPositions: number[] = [];
-    const feverBeginPositions: number[] = [];
-    const feverStartPositions: number[] = [];
+    // EventType: 0 Skill, 1 FeverBegin, 2 FeverStart
+    const events: { key: number; pos: number; type: number }[] = [];
     // time key → lane → note, both in insertion order
     const noteInfoDict = new Map<number, Map<number, NoteInfo>>();
 
@@ -278,15 +292,14 @@ export function analyzeSusChart(text: string): ChartAnalysis {
                 const pos = bar + i / slots.length;
                 if (laneType === 1) {
                     if (lane === 13) {
-                        if (kind === 1) feverBeginPositions.push(pos);
-                        else if (kind === 2) feverStartPositions.push(pos);
+                        if (kind === 1 || kind === 2) events.push({ key: barKey(bar, progress), pos, type: kind });
                         return;
                     }
                     switch (kind) {
                         case 1: addNote(bar, progress, lane, width, NORMAL); break;
                         case 2: addNote(bar, progress, lane, width, NORMAL, NOTE_TYPE_CRITICAL); break;
                         case 3: addNote(bar, progress, lane, width, SKIP); break;
-                        case 4: skillPositions.push(pos); break;
+                        case 4: events.push({ key: barKey(bar, progress), pos, type: 0 }); break;
                         case 5: addNote(bar, progress, lane, width, FRICTION); break;
                         case 6: addNote(bar, progress, lane, width, FRICTION, NOTE_TYPE_CRITICAL); break;
                         case 7: addNote(bar, progress, lane, width, FRICTION_HIDE); break;
@@ -415,19 +428,31 @@ export function analyzeSusChart(text: string): ChartAnalysis {
     const firstNoteTime = notes.length > 0 ? notes[0].time : 0;
     const lastNoteTime = notes.length > 0 ? notes[notes.length - 1].time : 0;
 
-    const skills = skillPositions
-        .map((pos) => timeMap.timeAt(pos))
-        .sort((a, b) => a - b)
-        .map((start) => windowStats(notes, start, start + SKILL_DURATION_SEC, totalWeight));
-
-    const feverBegin = feverBeginPositions.length > 0 ? timeMap.timeAt(Math.min(...feverBeginPositions)) : null;
-    const feverStart = feverStartPositions.length > 0 ? timeMap.timeAt(Math.min(...feverStartPositions)) : null;
-    const feverChance = feverBegin !== null && feverStart !== null && feverStart > feverBegin
-        ? windowStats(notes, feverBegin, feverStart, totalWeight)
-        : null;
-    const superFever = feverStart !== null
-        ? windowStats(notes, feverStart, Math.max(lastNoteTime, feverStart), totalWeight, true)
-        : null;
+    // ConvertEventList: events by time key; a FeverBegin waits for the next FeverStart
+    events.sort((a, b) => a.key - b.key);
+    const skills: ChartWindowStats[] = [];
+    const fevers: ChartFever[] = [];
+    let pendingBegin: number | null = null;
+    for (const event of events) {
+        const time = timeMap.timeAt(event.pos);
+        if (event.type === 0) {
+            skills.push(windowStats(notes, time, time + SKILL_DURATION_SEC, totalWeight));
+        } else if (event.type === 1) {
+            pendingBegin = time;
+        } else if (pendingBegin !== null) {
+            const begin = pendingBegin;
+            pendingBegin = null;
+            const chargeEnd = Math.fround(begin + Math.fround(Math.fround(time - begin) * Math.fround(FEVER_CHARGE_SPAN)));
+            const chargeNotes = notes.filter((note) => note.time >= begin && note.time < chargeEnd);
+            const feverNotes = notes.filter((note) => note.time >= time).slice(0, Math.floor(notes.length / FEVER_NOTE_DIVISOR));
+            if (feverNotes.length === 0) continue;
+            fevers.push({
+                chance: stats(chargeNotes, begin, time, totalWeight),
+                fever: stats(feverNotes, time, feverNotes[feverNotes.length - 1].time, totalWeight),
+            });
+        }
+    }
+    skills.sort((a, b) => a.start - b.start);
 
     return {
         notes,
@@ -440,7 +465,6 @@ export function analyzeSusChart(text: string): ChartAnalysis {
         peakNotesPerSecond,
         bpms: [...new Set(bpmChanges.map((change) => change.bpm))],
         skills,
-        feverChance,
-        superFever,
+        fevers,
     };
 }

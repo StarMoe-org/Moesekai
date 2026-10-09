@@ -175,14 +175,14 @@ function ChartAnalysisBody({ analysis, difficulty, officialNoteCount, t, formatN
                 />
             )}
 
-            {analysis.feverChance || analysis.superFever ? (
+            {analysis.fevers.length > 0 ? (
                 <WindowTable
                     title={t("page.music.chartAnalysis.feverTitle")}
                     swatchClassName="bg-tertiary"
-                    rows={[
-                        ...(analysis.feverChance ? [{ key: "fever-chance", label: t("page.music.chartAnalysis.feverChance"), stats: analysis.feverChance }] : []),
-                        ...(analysis.superFever ? [{ key: "super-fever", label: t("page.music.chartAnalysis.superFever"), stats: analysis.superFever }] : []),
-                    ]}
+                    rows={analysis.fevers.flatMap((fever, i) => [
+                        { key: `fever-chance-${i}`, label: t("page.music.chartAnalysis.feverChance"), stats: fever.chance, hideShare: true },
+                        { key: `fever-${i}`, label: t("page.music.chartAnalysis.feverTime"), stats: fever.fever },
+                    ])}
                     t={t}
                     formatNumber={formatNumber}
                     percent={percent}
@@ -201,6 +201,8 @@ interface WindowRow {
     label: string;
     stats: ChartWindowStats;
     badge?: string;
+    /** The segment earns no extra score, so its share would mislead. */
+    hideShare?: boolean;
 }
 
 function WindowTable({
@@ -248,7 +250,7 @@ function WindowTable({
                                 {formatTime(row.stats.start, true)}–{formatTime(row.stats.end, true)}
                             </td>
                             <td className="py-2 text-right text-on-surface tabular-nums">{formatNumber(row.stats.noteCount)}</td>
-                            <td className="py-2 text-right text-on-surface tabular-nums">{percent(row.stats.weightShare)}</td>
+                            <td className="py-2 text-right text-on-surface tabular-nums">{row.hideShare ? "—" : percent(row.stats.weightShare)}</td>
                         </tr>
                     ))}
                 </tbody>
@@ -271,7 +273,7 @@ function ChartTimeline({
     const [hoverSecond, setHoverSecond] = useState<number | null>(null);
 
     const { bins, duration, maxBin } = useMemo(() => {
-        const end = Math.max(analysis.lastNoteTime, analysis.superFever?.end ?? 0) + 1;
+        const end = analysis.lastNoteTime + 1;
         const binCount = Math.max(1, Math.ceil(end));
         const counts = new Array<number>(binCount).fill(0);
         for (const note of analysis.notes) {
@@ -296,13 +298,13 @@ function ChartTimeline({
 
     const hoverLabel = (() => {
         if (hoverSecond === null) return null;
-        const inside = (w: ChartWindowStats | null) => w !== null && hoverSecond >= w.start && hoverSecond < w.end;
+        const inside = (w: ChartWindowStats) => hoverSecond >= w.start && hoverSecond <= w.end;
         const skillIndex = analysis.skills.findIndex((skill) => hoverSecond >= skill.start && hoverSecond < skill.end);
         const segment = skillIndex !== -1
             ? t("page.music.chartAnalysis.skillLabel", { index: skillIndex + 1 })
-            : inside(analysis.superFever)
-                ? t("page.music.chartAnalysis.superFever")
-                : inside(analysis.feverChance)
+            : analysis.fevers.some((fever) => inside(fever.fever))
+                ? t("page.music.chartAnalysis.feverTime")
+                : analysis.fevers.some((fever) => inside(fever.chance))
                     ? t("page.music.chartAnalysis.feverChance")
                     : null;
         const count = bins[Math.min(bins.length - 1, Math.floor(hoverSecond))] ?? 0;
@@ -314,7 +316,7 @@ function ChartTimeline({
         { key: "density", className: "bg-on-surface-variant/30", label: t("page.music.chartAnalysis.legendDensity") },
         { key: "skill", className: "bg-primary/40", label: t("page.music.chartAnalysis.skillsTitle") },
         { key: "fever-chance", className: "bg-tertiary/20", label: t("page.music.chartAnalysis.feverChance") },
-        { key: "super-fever", className: "bg-tertiary/45", label: t("page.music.chartAnalysis.superFever") },
+        { key: "fever", className: "bg-tertiary/45", label: t("page.music.chartAnalysis.feverTime") },
     ];
 
     return (
@@ -338,12 +340,12 @@ function ChartTimeline({
                 onPointerLeave={() => setHoverSecond(null)}
             >
                 <svg viewBox={`0 0 ${duration} ${PLOT_HEIGHT}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-                    {analysis.feverChance && (
-                        <rect x={analysis.feverChance.start} y={0} width={analysis.feverChance.end - analysis.feverChance.start} height={PLOT_HEIGHT} className="fill-tertiary/20" />
-                    )}
-                    {analysis.superFever && (
-                        <rect x={analysis.superFever.start} y={0} width={analysis.superFever.end - analysis.superFever.start} height={PLOT_HEIGHT} className="fill-tertiary/45" />
-                    )}
+                    {analysis.fevers.map((fever, i) => (
+                        <g key={i}>
+                            <rect x={fever.chance.start} y={0} width={fever.chance.end - fever.chance.start} height={PLOT_HEIGHT} className="fill-tertiary/20" />
+                            <rect x={fever.fever.start} y={0} width={fever.fever.end - fever.fever.start} height={PLOT_HEIGHT} className="fill-tertiary/45" />
+                        </g>
+                    ))}
                     {analysis.skills.map((skill, i) => (
                         <rect key={i} x={skill.start} y={0} width={skill.end - skill.start} height={PLOT_HEIGHT} className="fill-primary/40" />
                     ))}
