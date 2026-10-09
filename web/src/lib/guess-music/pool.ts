@@ -1,9 +1,9 @@
 import type { IMusicInfo, IMusicVocalInfo } from "@/types/music";
 
 /**
- * The song pool: every released song with at least one playable vocal.
- * Streaming-live recordings (and any vocal type the game adds later) stay out:
- * they are concert takes, not the song as the game ships it.
+ * The song pool: every released song with at least one playable vocal, medleys
+ * excepted. Streaming-live recordings (and any vocal type the game adds later)
+ * stay out: they are concert takes, not the song as the game ships it.
  */
 
 const PLAYABLE_VOCAL_TYPES: ReadonlySet<string> = new Set([
@@ -21,6 +21,19 @@ export function isPlayableVocalType(type: string): boolean {
 /** Inst.ver. tracks have no lyrics: there are no vocals to remove. */
 export function vocalHasLyrics(vocal: Pick<IMusicVocalInfo, "musicVocalType">): boolean {
     return vocal.musicVocalType !== "instrumental";
+}
+
+/**
+ * Medleys of other songs (such as "MASTER高難易度楽曲メドレー") credit no
+ * composer, lyricist or arranger. A clip of one is a clip of some other song,
+ * so they are never questions or answers. The title is no guide:
+ * "スターダストメドレー" is an ordinary song.
+ */
+export function isMedley(music: Pick<IMusicInfo, "composer" | "lyricist" | "arranger">): boolean {
+    return [music.composer, music.lyricist, music.arranger].every((credit) => {
+        const trimmed = (credit ?? "").trim();
+        return trimmed === "-" || trimmed === "－";
+    });
 }
 
 export interface PoolSong {
@@ -44,7 +57,7 @@ export function buildSongPool(
     const pool: PoolSong[] = [];
     for (const music of musics) {
         if (!music || music.id <= 0 || !music.title || !music.assetbundleName) continue;
-        if (!(music.publishedAt <= now)) continue;
+        if (!(music.publishedAt <= now) || isMedley(music)) continue;
         const list = byMusic.get(music.id);
         if (!list?.length) continue;
         pool.push({ music, vocals: [...list].sort((a, b) => a.seq - b.seq || a.id - b.id) });

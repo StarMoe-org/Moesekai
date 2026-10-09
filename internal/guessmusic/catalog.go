@@ -31,6 +31,23 @@ type Music struct {
 	AssetbundleName string  `json:"assetbundleName"`
 	PublishedAt     int64   `json:"publishedAt"`
 	FillerSec       float64 `json:"fillerSec"`
+	Composer        string  `json:"composer"`
+	Lyricist        string  `json:"lyricist"`
+	Arranger        string  `json:"arranger"`
+}
+
+// isMedley reports whether a music entry is a medley of other songs (such as
+// "MASTER高難易度楽曲メドレー"): the game credits no composer, lyricist or
+// arranger for those. A clip of one would be a clip of some other song, so
+// medleys never become questions or answers. The title alone is no guide:
+// "スターダストメドレー" is an ordinary song.
+func isMedley(m Music) bool {
+	for _, credit := range []string{m.Composer, m.Lyricist, m.Arranger} {
+		if c := strings.TrimSpace(credit); c != "-" && c != "－" {
+			return false
+		}
+	}
+	return true
 }
 
 // MusicVocal is the subset of musicVocals.json used by the game.
@@ -161,14 +178,14 @@ type poolEntry struct {
 }
 
 // pool returns the songs released at or before cutoff with their allowed
-// vocals, sorted by music ID.
+// vocals, sorted by music ID. Medleys are left out.
 func (c *Catalog) pool(cutoff time.Time) []poolEntry {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	cutoffMs := cutoff.UnixMilli()
 	out := make([]poolEntry, 0, len(c.musics))
 	for id, m := range c.musics {
-		if m.PublishedAt <= 0 || m.PublishedAt > cutoffMs || strings.TrimSpace(m.Title) == "" {
+		if m.PublishedAt <= 0 || m.PublishedAt > cutoffMs || strings.TrimSpace(m.Title) == "" || isMedley(m) {
 			continue
 		}
 		var allowed []MusicVocal

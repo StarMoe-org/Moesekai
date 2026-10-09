@@ -18,8 +18,8 @@ var testLoc = func() *time.Location {
 	return loc
 }()
 
-// testCatalog has 40 released songs (ids 1..40), one unreleased song (99)
-// and vocals of every type, including excluded streaming_live ones.
+// testCatalog has 40 released songs (ids 1..40), one unreleased song (99),
+// a medley (42) and vocals of every type, including excluded streaming_live ones.
 func testCatalog(now time.Time) *Catalog {
 	var musics []Music
 	var vocals []MusicVocal
@@ -43,6 +43,10 @@ func testCatalog(now time.Time) *Catalog {
 	// Song 41 only has a streaming_live vocal: never eligible.
 	musics = append(musics, Music{ID: 41, Title: "Live Only", PublishedAt: 1})
 	vocals = append(vocals, MusicVocal{ID: 1000, MusicID: 41, MusicVocalType: "streaming_live", AssetbundleName: "live_1000"})
+	// Song 42 is a medley (no credits): never eligible.
+	musics = append(musics, Music{ID: 42, Title: "MASTER高難易度楽曲メドレー", AssetbundleName: "m042", PublishedAt: 1,
+		Composer: "-", Lyricist: "-", Arranger: "-"})
+	vocals = append(vocals, MusicVocal{ID: 1001, MusicID: 42, MusicVocalType: "virtual_singer", AssetbundleName: "vocal_1001"})
 	return NewStaticCatalog(musics, vocals)
 }
 
@@ -256,5 +260,27 @@ func TestComputePoints(t *testing.T) {
 		if got := computePoints(c.elapsed, c.combo, c.wrong); got != c.want {
 			t.Errorf("computePoints(%v,%d,%d) = %d, want %d", c.elapsed, c.combo, c.wrong, got, c.want)
 		}
+	}
+}
+
+func TestPoolSkipsMedleys(t *testing.T) {
+	now := time.Date(2026, 10, 9, 12, 0, 0, 0, testLoc)
+	pool := testCatalog(now).pool(now)
+	if len(pool) != 40 {
+		t.Fatalf("pool has %d songs, want the 40 released ones", len(pool))
+	}
+	for _, e := range pool {
+		if e.music.ID == 42 {
+			t.Fatal("the medley is in the pool")
+		}
+	}
+	if isMedley(Music{Title: "スターダストメドレー", Composer: "きさら", Lyricist: "きさら", Arranger: "きさら"}) {
+		t.Fatal("a credited song named メドレー is an ordinary song")
+	}
+	if isMedley(Music{Title: "初音ミクの消失", Composer: "cosMo@暴走P", Lyricist: "cosMo@暴走P", Arranger: "-"}) {
+		t.Fatal("one missing credit does not make a medley")
+	}
+	if !isMedley(Music{Composer: " - ", Lyricist: "－", Arranger: "-"}) {
+		t.Fatal("no credits at all is a medley")
 	}
 }

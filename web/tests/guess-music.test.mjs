@@ -189,6 +189,18 @@ test("seeded rounds are deterministic and independent of the answer mode", () =>
     assert.equal(rounds.buildRounds(songPool.slice(0, 5), { seed: "x", rounds: 10, optionsCount: 0 }).length, 0);
 });
 
+test("medleys never enter the pool, but a song merely titled メドレー does", () => {
+    const { musics, vocals } = fakeSongs(3);
+    const credits = (name) => ({ composer: name, lyricist: name, arranger: name });
+    musics.push({ ...musics[0], id: 674, title: "MASTER高難易度楽曲メドレー", assetbundleName: "m674", ...credits("-") });
+    musics.push({ ...musics[0], id: 380, title: "スターダストメドレー", assetbundleName: "m380", ...credits("きさら") });
+    vocals.push({ ...vocals[1], id: 6740, musicId: 674, assetbundleName: "vs_674" });
+    vocals.push({ ...vocals[1], id: 3800, musicId: 380, assetbundleName: "vs_380" });
+    const ids = pool.buildSongPool(musics, vocals, NOW).map((song) => song.music.id);
+    assert.deepEqual(ids, [1, 2, 3, 380]);
+    assert.equal(pool.isMedley({ composer: "cosMo@暴走P", lyricist: "cosMo@暴走P", arranger: "-" }), false);
+});
+
 test("a longer game with the same seed starts with the shorter game's questions", () => {
     const { musics, vocals } = fakeSongs(40);
     const songPool = pool.buildSongPool(musics, vocals, NOW);
