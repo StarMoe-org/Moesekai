@@ -341,6 +341,31 @@ export function analyzeSusChart(text: string): ChartAnalysis {
     // ConvertNoteInfoDictionary: time keys ascending, lanes in insertion order
     const roots: TreeNote[][] = [];
     const openLongs = new Map<number, TreeNote[]>();
+
+    // LongJoinCheck: closes the open long with this number at `note`, adding hidden combo
+    // ticks every 1/8 bar strictly inside the hold. Returns false when none is open.
+    const joinLong = (note: TreeNote, longNo: number): boolean => {
+        const tree = longNo === -1 ? undefined : openLongs.get(longNo);
+        if (!tree) return false;
+        const head = tree[0];
+        const B = LONG_NOTE_COMBO_BEAT;
+        const first = head.bar * B + Math.floor(Math.fround(head.progress * B)) + 1;
+        const last = note.bar * B + Math.ceil(Math.fround(note.progress * B)) - 1;
+        for (let i = first; i <= last; i += 1) {
+            tree.push({
+                bar: Math.floor(i / B),
+                progress: Math.fround((i % B) / B),
+                category: COMBO,
+                critical: head.critical,
+                isTail: false,
+            });
+        }
+        note.critical = note.critical || head.critical;
+        tree.push(note);
+        openLongs.delete(longNo);
+        return true;
+    };
+
     const keys = [...noteInfoDict.keys()].sort((a, b) => a - b);
     for (const key of keys) {
         for (const info of noteInfoDict.get(key)!.values()) {
@@ -350,6 +375,9 @@ export function analyzeSusChart(text: string): ChartAnalysis {
             const note: TreeNote = { bar: info.bar, progress: info.progress, category, critical, isTail: false };
 
             if (category === LONG || category === FRICTION_LONG || category === FRICTION_HIDE_LONG) {
+                // A head whose number is still open also closes that long (the game logs an
+                // error and joins anyway), so it sits in both the old long and its own.
+                joinLong(note, info.longNo);
                 const tree = [note];
                 roots.push(tree);
                 openLongs.set(info.longNo, tree);
@@ -358,30 +386,10 @@ export function analyzeSusChart(text: string): ChartAnalysis {
                 if (!tree) continue;
                 note.critical = tree[0].critical;
                 tree.push(note);
-            } else {
-                const tree = info.longNo === -1 ? undefined : openLongs.get(info.longNo);
-                if (!tree) {
-                    roots.push([note]);
-                    continue;
-                }
-                // LongJoinCheck: hidden combo ticks every 1/8 bar strictly inside the hold
-                const head = tree[0];
-                const B = LONG_NOTE_COMBO_BEAT;
-                const first = head.bar * B + Math.floor(Math.fround(head.progress * B)) + 1;
-                const last = note.bar * B + Math.ceil(Math.fround(note.progress * B)) - 1;
-                for (let i = first; i <= last; i += 1) {
-                    tree.push({
-                        bar: Math.floor(i / B),
-                        progress: Math.fround((i % B) / B),
-                        category: COMBO,
-                        critical: head.critical,
-                        isTail: false,
-                    });
-                }
+            } else if (joinLong(note, info.longNo)) {
                 note.isTail = true;
-                note.critical = note.critical || head.critical;
-                tree.push(note);
-                openLongs.delete(info.longNo);
+            } else {
+                roots.push([note]);
             }
         }
     }
