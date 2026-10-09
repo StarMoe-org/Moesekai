@@ -1975,7 +1975,6 @@ export const jaJPMessages = {
         failed: '譜面の読み込みに失敗しました',
         timelineAria: '{difficulty} 譜面のノーツ密度・スキル・フィーバー区間',
         previewAlt: '{difficulty} 譜面プレビュー',
-        previewHint: '密度グラフ上でカーソルを動かすかタップすると、その位置の譜面を表示します',
         legendDensity: 'ノーツ密度',
         tooltip: '{time} · {count} ノーツ/秒',
         perSecond: '{value}/秒',

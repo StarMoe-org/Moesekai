@@ -1063,7 +1063,6 @@ export const zhTWPagePrimary = {
                 failed: "譜面載入失敗",
                 timelineAria: "{difficulty} 譜面的音符密度、技能與 Fever 區間",
                 previewAlt: "{difficulty} 譜面片段預覽",
-                previewHint: "在密度圖上移動或點按，查看該位置的譜面",
                 legendDensity: "音符密度",
                 tooltip: "{time} · {count} 個音符/秒",
                 perSecond: "{value}/秒",

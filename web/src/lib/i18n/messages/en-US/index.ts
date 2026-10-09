@@ -1976,7 +1976,6 @@ export const enUSMessages = {
                 failed: "Failed to load the chart",
                 timelineAria: "Note density, skill and Fever segments of the {difficulty} chart",
                 previewAlt: "{difficulty} chart preview",
-                previewHint: "Move over or tap the density chart to see the chart at that point",
                 legendDensity: "Note density",
                 tooltip: "{time} · {count} notes/s",
                 perSecond: "{value}/s",

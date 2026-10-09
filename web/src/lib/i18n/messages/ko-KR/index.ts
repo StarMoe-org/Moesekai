@@ -1973,7 +1973,6 @@ export const koKRMessages = {
                 failed: "채보를 불러오지 못했습니다",
                 timelineAria: "{difficulty} 채보의 노트 밀도, 스킬 및 피버 구간",
                 previewAlt: "{difficulty} 채보 미리보기",
-                previewHint: "밀도 그래프 위에서 움직이거나 탭하면 해당 위치의 채보를 볼 수 있습니다",
                 legendDensity: "노트 밀도",
                 tooltip: "{time} · 초당 {count}노트",
                 perSecond: "초당 {value}",
