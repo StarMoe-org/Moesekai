@@ -2,6 +2,7 @@ import {
     type AssetSourceType,
 } from "@/contexts/ThemeContext";
 import { defaultContentRegionForPathname } from "@/lib/locale-routing";
+import { sseWebSources } from "@/lib/sseWeb/config";
 
 export const MOE_STATIC_BASE_URL = "https://moe.exmeaning.com";
 export const MOE_ASSETS_BASE_URL = `${MOE_STATIC_BASE_URL}/assets`;
@@ -273,13 +274,6 @@ export function getHonorBgUrl(assetbundleName: string, sub: boolean = false, sou
     return buildImageAssetUrl(source, `honor/${assetbundleName}/degree_${sub ? "sub" : "main"}`);
 }
 
-export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
-    const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
-    const num = rarityMap[rarity] || 1;
-    const size = sub ? "s" : "m";
-    return buildImageAssetUrl(source, `honor/frame/frame_degree_${size}_${num}`);
-}
-
 export function getHonorCustomFrameUrl(frameName: string, rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     const num = rarityMap[rarity] || 1;
@@ -305,8 +299,30 @@ export function getBondsHonorCharacterUrl(characterId: number, source: AssetSour
     return buildImageAssetUrl(source, `bonds_honor/character/chr_sd_${paddedId}_01`);
 }
 
-export function getHonorLevelIconUrl(source: AssetSourceType = "main-jp"): string {
-    return buildImageAssetUrl(source, "honor/frame/icon_degreeLv");
+// ==================== In-app (client package) Asset URLs ====================
+
+/**
+ * A sprite the game client carries in its own package rather than in a downloadable bundle
+ * (the default honor frames, the honor level icons), read from the server's client unpack --
+ * the same unpack the story player uses. The CN client keeps these in `data.unity3d`, the JP
+ * unpack has them loose. A server left out of the player's unpacks falls back to JP's.
+ */
+export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = "main-jp"): string | undefined {
+    const hyphenIndex = source.indexOf("-");
+    const region = hyphenIndex !== -1 ? source.substring(hyphenIndex + 1) : getCurrentRegion();
+    const inapp = (sseWebSources(region) ?? sseWebSources("jp"))?.inapp;
+    if (!inapp) return undefined;
+    const playerDir = /\/cn-[^/]+\/$/.test(inapp) ? "data.unity3d" : "loose";
+    return `${inapp}player/${playerDir}/Sprite/${spriteName}.png`;
+}
+
+export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+    const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
+    return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
+}
+
+export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+    return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
 
 // ==================== Story/Scenario Asset URLs ====================
