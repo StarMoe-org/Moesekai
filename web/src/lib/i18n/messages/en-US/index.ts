@@ -96,6 +96,13 @@ export const enUSMessages = {
             kr: "KR",
             en: "EN",
         },
+        serverShort: {
+            cn: "CN",
+            jp: "JP",
+            tw: "HMT",
+            kr: "KR",
+            en: "EN",
+        },
         relayServers: {
             tokyo1: {
                 name: "Tokyo 1",
@@ -834,8 +841,8 @@ export const enUSMessages = {
             description: "When enabled, unreleased cards, events, and songs will be shown",
         },
         trainedThumbnail: {
-            label: "Use trained thumbnails by default for 3★/4★",
-            description: "When enabled, list pages will show trained thumbnails by default for 3★+ cards",
+            label: "Trained thumbnails for 3★/4★",
+            description: "When enabled, list pages show 3★+ cards with their trained thumbnails",
         },
         translation: {
             label: "Use English translations (Moe Translation)",
@@ -907,7 +914,7 @@ export const enUSMessages = {
             "navigate-back": "Go back",
             "navigate-forward": "Go forward",
             "toggle-sidebar": "Toggle sidebar",
-            "toggle-trained-thumbnail": "Use trained thumbnails by default for 3★/4★",
+            "toggle-trained-thumbnail": "Toggle trained thumbnails for 3★/4★",
             "toggle-settings": "Open settings",
             "list-focus-filters": "Focus filters",
             "list-load-more": "Load more",
@@ -1963,6 +1970,7 @@ export const enUSMessages = {
             loadMore: "Load More",
             allLoaded: "Showing all {count} songs",
             noResult: "No songs match the current filters",
+            thumbnailSection: "3★/4★ thumbnails",
             noResultHint: "Try adjusting the filters",
             notFoundTitle: "Song Not Found (404)",
             notFoundDesc: "Please verify if the song ID is correct. If this song was recently released, try going to Settings to switch or refresh the data server.",

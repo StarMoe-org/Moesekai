@@ -23,6 +23,7 @@
 
 1. **颜色只用语义角色**：`bg-surface*`、`bg-surface-container{-lowest|-low||-high|-highest}`、`text-on-surface`、`text-on-surface-variant`、`bg-primary text-on-primary`、`bg-primary-container text-on-primary-container`、`bg-secondary-container text-on-secondary-container`、`bg-tertiary*`、`bg-error*`、`bg-warning*` / `bg-success*`（固定语义色，不随种子变化）、`border-outline`、`border-outline-variant`、`bg-scrim/32`、`bg-inverse-surface text-inverse-on-surface`。
    - 禁止：`slate-*`、`gray-*`、`zinc-*`、`white`、`black`、`dark:*`、`miku`、`luka`、`text-primary-text`、`var(--color-miku)`、`glass-card`、`ios-glass-*`、`island-*`、`material-*`、`backdrop-blur*`、`pressable`、`type-title`/`type-body`/`type-caption`/`type-display`（旧）、`--surface-*`/`--text-*`/`--border-*` 等旧变量。
+   - 玻璃材质只用 `md3-tokens.css` 的 `glass` / `glass-thick` / `glass-selected`，且只用在悬浮于内容之上的外壳（顶栏胶囊、导航与筛选面板、浮动按钮；抽屉、底部面板这类长时间承载文字的用 `glass-thick`）。它们自带底色、模糊和阴影，旁边不要再加 `bg-*`、`shadow-*`。内容卡片、列表、正文面板不用玻璃，也不要手写 `backdrop-blur`。
    - 明暗模式由 token 自动处理，**不要写 `dark:`**。
    - 角色官方色（徽章、角色色条）用 `bg-char-<id>` / `text-char-<id>` 或 `var(--md-ext-color-char-<id>)`；属性色、稀有度色、谱面难度色等**游戏数据色**可保留原值（它们不是主题色）。
 2. **形状**：卡片 `rounded-md3-md`（默认）/`rounded-md3-lg`/`rounded-md3-xl`（大面板、hero）；chip `rounded-md3-sm`；执行动作的按钮 `rounded-full`；输入与选择类控件（输入框、下拉框、分段按钮、搜索框）统一 `rounded-md3-md`、默认 40px 高（只有带内嵌标签的填充式输入框是 48px），同一行里不要混用胶囊与方角；手写输入框也按这个尺寸（`h-10 px-3 type-body-m rounded-md3-md`）；对话框 `rounded-md3-xl`。不要用 `rounded-2xl/3xl`。
@@ -84,7 +85,7 @@
 迁移完成的文件运行：
 
 ```bash
-rg -nP "slate-|gray-|bg-white|text-white|dark:|glass|island-|material-(thin|regular|thick|chrome)|backdrop-blur|pressable|\bmiku\b|bg-miku|text-miku|primary-text" <file>
+rg -nP "slate-|gray-|bg-white|text-white|dark:|ios-glass|glass-card|liquid-glass|island-|material-(thin|regular|thick|chrome)|backdrop-blur|pressable|\bmiku\b|bg-miku|text-miku|primary-text" <file>
 ```
 
 结果只允许出现第 2.1 条中的游戏数据色例外。然后运行：

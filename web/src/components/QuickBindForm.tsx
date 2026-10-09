@@ -1,18 +1,17 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useId } from "react";
 import ExternalLink from "@/components/ExternalLink";
 import {
     verifyHarukiApi,
     createAccount,
     getTopCharacterId,
-    SERVER_OPTIONS,
     type ServerType,
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
-import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import { ServerPicker } from "@/components/common/ServerPicker";
 import { useI18n } from "@/contexts/I18nContext";
-import { Banner, Button, Chip, CircularProgress, Icon, Surface, TextField } from "@/components/md3";
+import { Banner, Button, CircularProgress, Icon, Surface, TextField } from "@/components/md3";
 import { mdPersonAdd } from "@/components/md3/icons";
 
 interface QuickBindFormProps {
@@ -40,6 +39,7 @@ export default function QuickBindForm({
     const [server, setServer] = useState<ServerType>("jp");
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const serverLabelId = useId();
 
     const handleSubmit = useCallback(async () => {
         if (!gameId.trim()) return;
@@ -101,21 +101,8 @@ export default function QuickBindForm({
                     disabled={isVerifying}
                 />
                 <div>
-                    <div className="mb-1.5 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
-                    <div className="flex flex-wrap gap-2">
-                        {SERVER_OPTIONS.map((s) => (
-                            <Chip
-                                key={s.value}
-                                selected={server === s.value}
-                                showCheckmark={false}
-                                onClick={() => setServer(s.value)}
-                                disabled={isVerifying}
-                                className="justify-center"
-                            >
-                                <ServerRegionLabel server={s.value} size={18} />
-                            </Chip>
-                        ))}
-                    </div>
+                    <div id={serverLabelId} className="mb-1.5 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
+                    <ServerPicker value={server} onValueChange={setServer} disabled={isVerifying} labelledBy={serverLabelId} />
                 </div>
 
                 {(error || oauthError) && (

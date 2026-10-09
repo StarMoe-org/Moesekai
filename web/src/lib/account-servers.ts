@@ -22,6 +22,15 @@ export const SERVER_LABEL_KEYS: Record<ServerType, string> = {
     en: "common.server.en",
 };
 
+/** A word or a code per server, for pickers that lay all five out in one row. */
+export const SERVER_SHORT_LABEL_KEYS: Record<ServerType, string> = {
+    cn: "common.serverShort.cn",
+    jp: "common.serverShort.jp",
+    tw: "common.serverShort.tw",
+    kr: "common.serverShort.kr",
+    en: "common.serverShort.en",
+};
+
 export const SERVER_OPTIONS: { value: ServerType; labelKey: string }[] = SERVER_IDS.map((value) => ({
     value,
     labelKey: SERVER_LABEL_KEYS[value],

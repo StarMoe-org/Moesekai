@@ -258,9 +258,9 @@ export default function CardFilters({
             hasActiveFilters={hasActiveFilters}
             onReset={handleReset}
         >
-            <FilterSection label={t("settings.trainedThumbnail.label")}>
+            <FilterSection label={t("page.cards.thumbnailSection")}>
                 <SegmentedButton
-                    aria-label={t("settings.trainedThumbnail.label")}
+                    aria-label={t("page.cards.thumbnailSection")}
                     value={useTrainedThumbnail ? "trained" : "normal"}
                     onValueChange={(value) => setUseTrainedThumbnail(value === "trained")}
                     options={[

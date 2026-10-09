@@ -96,6 +96,13 @@ export const jaJPMessages = {
       kr: '韓国版 (KR)',
       en: 'グローバル版 (EN)'
     },
+    serverShort: {
+      cn: 'CN',
+      jp: 'JP',
+      tw: 'HMT',
+      kr: 'KR',
+      en: 'EN'
+    },
     relayServers: {
       tokyo1: {
         name: '東京1'
@@ -833,7 +840,7 @@ export const jaJPMessages = {
       description: 'オンにすると、未公開のカード・イベント・楽曲を表示します'
     },
     trainedThumbnail: {
-      label: '3★/4★は特訓後サムネイルを既定表示',
+      label: '3★/4★は特訓後サムネイルを表示',
       description: 'オンにすると、一覧ページで3★以上のカードを特訓後サムネイルで表示します'
     },
     translation: {
@@ -906,7 +913,7 @@ export const jaJPMessages = {
       'navigate-back': 'Go back',
       'navigate-forward': 'Go forward',
       'toggle-sidebar': 'Toggle sidebar',
-      'toggle-trained-thumbnail': '3★/4★は特訓後サムネイルを既定表示',
+      'toggle-trained-thumbnail': '3★/4★サムネイルの特訓前後を切り替え',
       'toggle-settings': 'Open settings',
       'list-focus-filters': 'Focus filters',
       'list-load-more': 'Load more',
@@ -1928,8 +1935,9 @@ export const jaJPMessages = {
       totalPower: 'Total Power',
       skillTitle: 'Skill',
       skillNameLabel: 'Skill Name',
-      beforeTrained: 'Before Blooming',
-      afterTrained: 'After Blooming',
+      beforeTrained: '特訓前',
+      afterTrained: '特訓後',
+      thumbnailSection: '3★/4★のサムネイル',
       loadingSkill: 'Loading skill details...',
       costumeTitle: 'Card Costume',
       relatedEventTitle: 'Related Event',

@@ -96,6 +96,13 @@ export const zhCNMessages = {
             kr: "韩服 (KR)",
             en: "国际服 (EN)",
         },
+        serverShort: {
+            cn: "简中",
+            jp: "日服",
+            tw: "港澳台",
+            kr: "韩服",
+            en: "国际服",
+        },
         relayServers: {
             tokyo1: {
                 name: "东京1区",
@@ -833,8 +840,8 @@ export const zhCNMessages = {
             description: "开启后将显示尚未正式发布的卡牌、活动和音乐",
         },
         trainedThumbnail: {
-            label: "3★/4★缩略图默认特训后",
-            description: "开启后列表页3★及以上卡牌将默认显示花后缩略图",
+            label: "3★/4★缩略图显示特训后",
+            description: "开启后，列表页中3★及以上的卡牌显示特训后的缩略图",
         },
         translation: {
             label: "使用中文翻译（Moe汉化）",
@@ -906,7 +913,7 @@ export const zhCNMessages = {
             "navigate-back": "返回上一页",
             "navigate-forward": "前进下一页",
             "toggle-sidebar": "切换侧边栏",
-            "toggle-trained-thumbnail": "3★/4★缩略图默认特训后",
+            "toggle-trained-thumbnail": "切换3★/4★缩略图特训前后",
             "toggle-settings": "打开设置",
             "list-focus-filters": "聚焦筛选区",
             "list-load-more": "加载更多",
@@ -1962,6 +1969,7 @@ export const zhCNMessages = {
             loadMore: "加载更多",
             allLoaded: "已显示全部 {count} 首乐曲",
             noResult: "没有找到匹配的音乐",
+            thumbnailSection: "3★/4★缩略图",
             noResultHint: "尝试调整筛选条件",
             notFoundTitle: "未找到该乐曲数据 (Not Found)",
             notFoundDesc: "请确认乐曲 ID 是否正确。若该乐曲为最新实装，可以尝试前往「设置」切换或刷新外部数据服务器。",

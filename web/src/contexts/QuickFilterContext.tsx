@@ -110,6 +110,14 @@ interface QuickFilterContextValue {
 
 const QuickFilterContext = createContext<QuickFilterContextValue | null>(null);
 
+/**
+ * Just the stable registration callbacks, for pages. Kept apart from the drawer
+ * state so opening or collapsing the drawer does not re-render the whole page
+ * that registered the filters.
+ */
+type QuickFilterRegistry = Pick<QuickFilterContextValue, "registerFilters" | "unregisterFilters">;
+const QuickFilterRegistryContext = createContext<QuickFilterRegistry | null>(null);
+
 // ============================================================================
 // Provider
 // ============================================================================
@@ -183,10 +191,17 @@ export function QuickFilterProvider({ children }: { children: React.ReactNode })
         toggle,
     ]);
 
+    const registry = useMemo<QuickFilterRegistry>(
+        () => ({ registerFilters, unregisterFilters }),
+        [registerFilters, unregisterFilters],
+    );
+
     return (
-        <QuickFilterContext.Provider value={value}>
-            {children}
-        </QuickFilterContext.Provider>
+        <QuickFilterRegistryContext.Provider value={registry}>
+            <QuickFilterContext.Provider value={value}>
+                {children}
+            </QuickFilterContext.Provider>
+        </QuickFilterRegistryContext.Provider>
     );
 }
 
@@ -219,9 +234,9 @@ export function useQuickFilterContext() {
  * @param deps  Dependency array — content is re-registered when deps change
  */
 export function useQuickFilter(title: string, content: React.ReactNode, deps: React.DependencyList = []) {
-    const ctx = useContext(QuickFilterContext);
-    const registerFilters = ctx?.registerFilters;
-    const unregisterFilters = ctx?.unregisterFilters;
+    const registry = useContext(QuickFilterRegistryContext);
+    const registerFilters = registry?.registerFilters;
+    const unregisterFilters = registry?.unregisterFilters;
 
     React.useEffect(() => {
         if (!registerFilters || !unregisterFilters) return;

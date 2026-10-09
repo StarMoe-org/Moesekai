@@ -8,6 +8,7 @@ import ScrollToTop from "./ScrollToTop";
 import FilterDrawer from "./FilterDrawer";
 import FilterTabHandle from "./FilterTabHandle";
 import SekaiLoader from "./SekaiLoader";
+import BackgroundPattern from "./BackgroundPattern";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
@@ -361,8 +362,9 @@ export default function MainLayout({
             {/* Loading Animation */}
             {showLoader && <SekaiLoader />}
 
-            {/* Background: MD3 surface on <body> plus a faint seed-tinted wash (globals.css). */}
+            {/* Background: MD3 surface on <body>, a faint seed-tinted wash (globals.css), and shards and shapes drifting with the scroll. */}
             <div aria-hidden="true" className="brand-wash" />
+            <BackgroundPattern />
 
             {/* Navbar */}
             {!immersiveMode && (

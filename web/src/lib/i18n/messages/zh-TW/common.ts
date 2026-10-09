@@ -94,6 +94,13 @@ export const zhTWCommon = {
         kr: "韓服 (KR)",
         en: "國際服 (EN)",
     },
+    serverShort: {
+        cn: "簡中",
+        jp: "日服",
+        tw: "港澳台",
+        kr: "韓服",
+        en: "國際服",
+    },
     relayServers: {
         tokyo1: {
             name: "東京 1 區",

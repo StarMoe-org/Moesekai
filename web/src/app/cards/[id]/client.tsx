@@ -472,123 +472,243 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                     </div>
                 </div>
 
-                {/* Main Content Grid */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    {/* Left: Card Image */}
-                    <div className="lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar">
-                        {isScreenshotMode ? (
-                            /* Screenshot Mode: Show all images in flat layout */
-                            <div className="space-y-4">
-                                {/* Normal Image */}
-                                {!cardDefaultTrained && (
-                                    <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                        <div className="px-4 py-2 border-b border-outline-variant">
-                                            <span className="type-title-s text-on-surface-variant">{t("page.cards.viewNormal")}</span>
+                {/* Main Content: two columns on large screens, the image with what links out of the
+                    card on the left and its data on the right. The columns are `contents` below lg,
+                    so their sections fall into one column ordered by `order-*`: image, data, links. */}
+                <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
+                    {/* Left: card image, costumes, story, related event and gacha */}
+                    <div className="contents lg:flex lg:flex-col lg:gap-6">
+                        <div className="order-1">
+                            {isScreenshotMode ? (
+                                /* Screenshot Mode: Show all images in flat layout */
+                                <div className="space-y-4">
+                                    {/* Normal Image */}
+                                    {!cardDefaultTrained && (
+                                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                            <div className="px-4 py-2 border-b border-outline-variant">
+                                                <span className="type-title-s text-on-surface-variant">{t("page.cards.viewNormal")}</span>
+                                            </div>
+                                            <div className="relative aspect-[7/4] bg-surface-container">
+                                                <Image
+                                                    src={getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource)}
+                                                    alt={`${card.prefix} - ${t("page.cards.viewNormal")}`}
+                                                    fill
+                                                    className="object-contain"
+                                                    unoptimized
+                                                    priority
+                                                />
+                                            </div>
                                         </div>
-                                        <div className="relative aspect-[7/4] bg-surface-container">
-                                            <Image
-                                                src={getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource)}
-                                                alt={`${card.prefix} - ${t("page.cards.viewNormal")}`}
-                                                fill
-                                                className="object-contain"
-                                                unoptimized
-                                                priority
-                                            />
+                                    )}
+                                    {/* Trained Image */}
+                                    {(cardDefaultTrained || (trainable && !isBirthday)) && (
+                                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                            <div className="px-4 py-2 border-b border-outline-variant">
+                                                <span className="type-title-s text-on-surface-variant">{t("page.cards.viewTrained")}</span>
+                                            </div>
+                                            <div className="relative aspect-[7/4] bg-surface-container">
+                                                <Image
+                                                    src={getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource)}
+                                                    alt={`${card.prefix} - ${t("page.cards.viewTrained")}`}
+                                                    fill
+                                                    className="object-contain"
+                                                    unoptimized
+                                                />
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
-                                {/* Trained Image */}
-                                {(cardDefaultTrained || (trainable && !isBirthday)) && (
-                                    <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                        <div className="px-4 py-2 border-b border-outline-variant">
-                                            <span className="type-title-s text-on-surface-variant">{t("page.cards.viewTrained")}</span>
-                                        </div>
-                                        <div className="relative aspect-[7/4] bg-surface-container">
-                                            <Image
-                                                src={getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource)}
-                                                alt={`${card.prefix} - ${t("page.cards.viewTrained")}`}
-                                                fill
-                                                className="object-contain"
-                                                unoptimized
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        ) : (
-                            /* Normal Mode: Tabs and switchable view */
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                {/* Image Toggle (only for trainable non-birthday cards that have both images) */}
-                                {trainable && !isBirthday && !cardDefaultTrained && (
-                                    <div className="p-3 border-b border-outline-variant">
-                                        <SegmentedButton
-                                            className="w-full"
-                                            value={showTrained ? "trained" : "normal"}
-                                            onValueChange={(v) => setShowTrained(v === "trained")}
-                                            options={[
-                                                { value: "normal", label: t("page.cards.viewNormal") },
-                                                { value: "trained", label: t("page.cards.viewTrained") },
-                                            ]}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Main Image */}
-                                <div
-                                    className="relative aspect-[7/4] bg-surface-container cursor-zoom-in group"
-                                    onClick={() => setImageViewerOpen(true)}
-                                >
-                                    {/* Loading Spinner (behind image) */}
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <LoadingIndicator size={32} />
-                                    </div>
-
-                                    <Image
-                                        key={mainImageUrl} // Force remount on URL change for immediate switch
-                                        src={mainImageUrl}
-                                        alt={card.prefix}
-                                        fill
-                                        className="object-contain relative z-10"
-                                        unoptimized
-                                        priority
-                                    />
-                                    <div className="absolute bottom-3 right-3 z-20 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
-                                        <Icon path={mdZoomIn} size={16} />
-                                        {t("page.cards.clickExpand")}
-                                    </div>
+                                    )}
                                 </div>
+                            ) : (
+                                /* Normal Mode: Tabs and switchable view */
+                                <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                    {/* Image Toggle (only for trainable non-birthday cards that have both images) */}
+                                    {trainable && !isBirthday && !cardDefaultTrained && (
+                                        <div className="p-3 border-b border-outline-variant">
+                                            <SegmentedButton
+                                                className="w-full"
+                                                value={showTrained ? "trained" : "normal"}
+                                                onValueChange={(v) => setShowTrained(v === "trained")}
+                                                options={[
+                                                    { value: "normal", label: t("page.cards.viewNormal") },
+                                                    { value: "trained", label: t("page.cards.viewTrained") },
+                                                ]}
+                                            />
+                                        </div>
+                                    )}
 
-                                {/* Thumbnails: only when there are two states to pick between. */}
-                                {trainable && !isBirthday && !cardDefaultTrained && (
-                                <div className="p-4 flex gap-3 justify-center">
-                                    {[false, true].map((trained) => (
-                                        <button
-                                            key={String(trained)}
-                                            type="button"
-                                            aria-pressed={effectiveShowTrained === trained}
-                                            aria-label={t(trained ? "page.cards.viewTrained" : "page.cards.viewNormal")}
-                                            className={`focus-ring relative w-16 h-16 rounded-md3-sm overflow-hidden ring-2 transition-[box-shadow] duration-150 ${effectiveShowTrained === trained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"}`}
-                                            onClick={() => setShowTrained(trained)}
-                                        >
+                                    {/* Main Image */}
+                                    <div
+                                        className="relative aspect-[7/4] bg-surface-container cursor-zoom-in group"
+                                        onClick={() => setImageViewerOpen(true)}
+                                    >
+                                        {/* Loading Spinner (behind image) */}
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <LoadingIndicator size={32} />
+                                        </div>
+
+                                        <Image
+                                            key={mainImageUrl} // Force remount on URL change for immediate switch
+                                            src={mainImageUrl}
+                                            alt={card.prefix}
+                                            fill
+                                            className="object-contain relative z-10"
+                                            unoptimized
+                                            priority
+                                        />
+                                        <div className="absolute bottom-3 right-3 z-20 bg-inverse-surface/80 text-inverse-on-surface type-label-m px-2 py-1 rounded-md3-sm flex items-center gap-1">
+                                            <Icon path={mdZoomIn} size={16} />
+                                            {t("page.cards.clickExpand")}
+                                        </div>
+                                    </div>
+
+                                    {/* Thumbnails: only when there are two states to pick between. */}
+                                    {trainable && !isBirthday && !cardDefaultTrained && (
+                                    <div className="p-4 flex gap-3 justify-center">
+                                        {[false, true].map((trained) => (
+                                            <button
+                                                key={String(trained)}
+                                                type="button"
+                                                aria-pressed={effectiveShowTrained === trained}
+                                                aria-label={t(trained ? "page.cards.viewTrained" : "page.cards.viewNormal")}
+                                                className={`focus-ring relative w-16 h-16 rounded-md3-sm overflow-hidden ring-2 transition-[box-shadow] duration-150 ${effectiveShowTrained === trained ? "ring-primary" : "ring-transparent hover:ring-outline-variant"}`}
+                                                onClick={() => setShowTrained(trained)}
+                                            >
+                                                <Image
+                                                    src={getCardThumbnailUrl(card.characterId, card.assetbundleName, trained, assetSource)}
+                                                    alt=""
+                                                    fill
+                                                    className="object-cover"
+                                                    unoptimized
+                                                />
+                                            </button>
+                                        ))}
+                                    </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Costumes Card */}
+                        {relatedCostumes.length > 0 && (
+                            <div className="order-5 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                <SectionTitle icon={mdApparel}>{t("page.cards.costumeTitle")}</SectionTitle>
+                                <div className="p-5">
+                                    <CostumeGrid costumes={relatedCostumes} assetSource={assetSource} />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Card Story Card */}
+                        {hasCardStory && (
+                            <div className="order-6 rounded-md3-xl bg-secondary-container text-on-secondary-container overflow-hidden">
+                                <Link href={`/story/card/${cardId}`} className="state-layer focus-ring block rounded-md3-xl">
+                                    <div className="flex min-h-14 items-center gap-3 px-5 pt-4">
+                                        <Icon path={mdMenuBook} size={24} />
+                                        <h2 className="type-title-l">{t("page.cards.storyTitle")}</h2>
+                                    </div>
+                                    <div className="p-5 pt-2 flex items-center justify-between gap-4">
+                                        <div>
+                                            <p className="type-title-m">
+                                                {t("page.cards.storyReadBtn")}
+                                            </p>
+                                            <p className="type-body-s opacity-80 mt-1">
+                                                {t("page.cards.storyReadDesc")}
+                                            </p>
+                                        </div>
+                                        <span className="w-10 h-10 rounded-full bg-surface-container text-primary flex items-center justify-center shrink-0">
+                                            <Icon path={mdChevronRight} size={24} />
+                                        </span>
+                                    </div>
+                                </Link>
+                            </div>
+                        )}
+
+                        {/* Related Event Card */}
+                        {relatedEvent && (
+                            <div className="order-7 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                <SectionTitle icon={mdCalendarMonth}>{t("page.cards.relatedEventTitle")}</SectionTitle>
+                                <div className="p-4 pt-2">
+                                    <Link href={`/events/${relatedEvent.id}`} className="focus-ring block group rounded-md3-lg overflow-hidden">
+                                        <div className="relative aspect-[2/1] w-full">
                                             <Image
-                                                src={getCardThumbnailUrl(card.characterId, card.assetbundleName, trained, assetSource)}
-                                                alt=""
+                                                src={getEventBannerUrl(relatedEvent.assetbundleName, assetSource)}
+                                                alt={relatedEvent.name}
                                                 fill
                                                 className="object-cover"
                                                 unoptimized
                                             />
-                                        </button>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
+                                            <div className="absolute bottom-0 left-0 w-full p-4">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
+                                                        Event #{relatedEvent.id}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-white type-title-l leading-tight truncate">
+                                                    <TranslatedText
+                                                        original={relatedEvent.name}
+                                                        category="events"
+                                                        field="name"
+                                                        originalClassName="truncate block"
+                                                        translationClassName="text-sm font-medium text-white/90 truncate block mt-0.5"
+                                                    />
+                                                </h3>
+                                            </div>
+                                        </div>
+                                    </Link>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Related Gacha Card */}
+                        {relatedGachas.length > 0 && (
+                            <div className="order-8 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                                <SectionTitle icon={mdPaid}>{t("page.cards.relatedGachaTitle")}</SectionTitle>
+                                <div className="p-4 pt-2 grid grid-cols-1 gap-3">
+                                    {relatedGachas.map((gacha) => (
+                                        <Link key={gacha.id} href={`/gacha/${gacha.id}`} className="state-layer focus-ring block group relative h-32 bg-surface-container-lowest rounded-md3-lg overflow-hidden shadow-elev-1 transition-shadow duration-200 hover:shadow-elev-2">
+                                            {/* Logo Container with Padding */}
+                                            <div className="absolute inset-3 z-0 flex items-center justify-center">
+                                                <Image
+                                                    src={getGachaLogoUrl(gacha.assetbundleName, assetSource)}
+                                                    alt={gacha.name}
+                                                    fill
+                                                    className="object-contain opacity-90 transition-opacity group-hover:opacity-100"
+                                                    unoptimized
+                                                />
+                                            </div>
+
+                                            {/* Gradient Overlay for Text Readability - Lighter for light mode, or white fade */}
+                                            <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/95 via-surface-container-lowest/50 to-transparent z-10" />
+
+                                            {/* Text Content */}
+                                            <div className="absolute bottom-0 left-0 w-full p-3 z-20">
+                                                <div className="flex items-center gap-2 mb-1">
+                                                    <span className="text-[10px] font-mono bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded-md3-xs">
+                                                        #{gacha.id}
+                                                    </span>
+                                                </div>
+                                                <h3 className="text-on-surface type-title-s w-full line-clamp-2">
+                                                    <TranslatedText
+                                                        original={gacha.name}
+                                                        category="gacha"
+                                                        field="name"
+                                                        originalClassName="truncate block"
+                                                        translationClassName="type-body-s text-on-surface-variant truncate block mt-0.5"
+                                                    />
+                                                </h3>
+                                            </div>
+                                        </Link>
                                     ))}
                                 </div>
-                                )}
                             </div>
                         )}
                     </div>
 
                     {/* Right: Card Info */}
-                    <div className="space-y-6">
+                    <div className="contents lg:flex lg:flex-col lg:gap-6">
                         {/* Basic Info Card */}
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                        <div className="order-2 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdInfo}>{t("page.cards.basicInfo")}</SectionTitle>
                             <div className="divide-y divide-outline-variant">
                                 <InfoRow label={t("page.cards.cardIdLabel")} value={`#${card.id}`} />
@@ -712,7 +832,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
 
                         {/* Stats Card */}
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                        <div className="order-3 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdBarChart}>{t("page.cards.powerLabel")}</SectionTitle>
 
                             {/* Level Slider - Compact */}
@@ -744,7 +864,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
 
                         {/* Skill Card */}
-                        <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
+                        <div className="order-4 rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
                             <SectionTitle icon={mdBolt}>{t("page.cards.skillTitle")}</SectionTitle>
                             <div className="p-5">
                                 {/* Skill Level Slider */}
@@ -822,123 +942,9 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                             </div>
                         </div>
 
-                        {/* Costumes Card */}
-                        {relatedCostumes.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                <SectionTitle icon={mdApparel}>{t("page.cards.costumeTitle")}</SectionTitle>
-                                <div className="p-5">
-                                    <CostumeGrid costumes={relatedCostumes} assetSource={assetSource} />
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Card Story Card */}
-                        {hasCardStory && (
-                            <div className="rounded-md3-xl bg-secondary-container text-on-secondary-container overflow-hidden">
-                                <Link href={`/story/card/${cardId}`} className="state-layer focus-ring block rounded-md3-xl">
-                                    <div className="flex min-h-14 items-center gap-3 px-5 pt-4">
-                                        <Icon path={mdMenuBook} size={24} />
-                                        <h2 className="type-title-l">{t("page.cards.storyTitle")}</h2>
-                                    </div>
-                                    <div className="p-5 pt-2 flex items-center justify-between gap-4">
-                                        <div>
-                                            <p className="type-title-m">
-                                                {t("page.cards.storyReadBtn")}
-                                            </p>
-                                            <p className="type-body-s opacity-80 mt-1">
-                                                {t("page.cards.storyReadDesc")}
-                                            </p>
-                                        </div>
-                                        <span className="w-10 h-10 rounded-full bg-surface-container text-primary flex items-center justify-center shrink-0">
-                                            <Icon path={mdChevronRight} size={24} />
-                                        </span>
-                                    </div>
-                                </Link>
-                            </div>
-                        )}
-
-                        {/* Related Event Card */}
-                        {relatedEvent && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                <SectionTitle icon={mdCalendarMonth}>{t("page.cards.relatedEventTitle")}</SectionTitle>
-                                <div className="p-4 pt-2">
-                                    <Link href={`/events/${relatedEvent.id}`} className="focus-ring block group rounded-md3-lg overflow-hidden">
-                                        <div className="relative aspect-[2/1] w-full">
-                                            <Image
-                                                src={getEventBannerUrl(relatedEvent.assetbundleName, assetSource)}
-                                                alt={relatedEvent.name}
-                                                fill
-                                                className="object-cover"
-                                                unoptimized
-                                            />
-                                            <div className="absolute inset-0 bg-gradient-to-t from-scrim/80 via-transparent to-transparent opacity-80 group-hover:opacity-60 transition-opacity" />
-                                            <div className="absolute bottom-0 left-0 w-full p-4">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-scrim/40 text-white px-2 py-0.5 rounded-md3-xs">
-                                                        Event #{relatedEvent.id}
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-white type-title-l leading-tight truncate">
-                                                    <TranslatedText
-                                                        original={relatedEvent.name}
-                                                        category="events"
-                                                        field="name"
-                                                        originalClassName="truncate block"
-                                                        translationClassName="text-sm font-medium text-white/90 truncate block mt-0.5"
-                                                    />
-                                                </h3>
-                                            </div>
-                                        </div>
-                                    </Link>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Related Gacha Card */}
-                        {relatedGachas.length > 0 && (
-                            <div className="rounded-md3-xl bg-surface-card border border-outline-variant/70 overflow-hidden">
-                                <SectionTitle icon={mdPaid}>{t("page.cards.relatedGachaTitle")}</SectionTitle>
-                                <div className="p-4 pt-2 grid grid-cols-1 gap-3">
-                                    {relatedGachas.map((gacha) => (
-                                        <Link key={gacha.id} href={`/gacha/${gacha.id}`} className="state-layer focus-ring block group relative h-32 bg-surface-container-lowest rounded-md3-lg overflow-hidden shadow-elev-1 transition-shadow duration-200 hover:shadow-elev-2">
-                                            {/* Logo Container with Padding */}
-                                            <div className="absolute inset-3 z-0 flex items-center justify-center">
-                                                <Image
-                                                    src={getGachaLogoUrl(gacha.assetbundleName, assetSource)}
-                                                    alt={gacha.name}
-                                                    fill
-                                                    className="object-contain opacity-90 transition-opacity group-hover:opacity-100"
-                                                    unoptimized
-                                                />
-                                            </div>
-
-                                            {/* Gradient Overlay for Text Readability - Lighter for light mode, or white fade */}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-surface-container-lowest/95 via-surface-container-lowest/50 to-transparent z-10" />
-
-                                            {/* Text Content */}
-                                            <div className="absolute bottom-0 left-0 w-full p-3 z-20">
-                                                <div className="flex items-center gap-2 mb-1">
-                                                    <span className="text-[10px] font-mono bg-secondary-container text-on-secondary-container px-1.5 py-0.5 rounded-md3-xs">
-                                                        #{gacha.id}
-                                                    </span>
-                                                </div>
-                                                <h3 className="text-on-surface type-title-s w-full line-clamp-2">
-                                                    <TranslatedText
-                                                        original={gacha.name}
-                                                        category="gacha"
-                                                        field="name"
-                                                        originalClassName="truncate block"
-                                                        translationClassName="type-body-s text-on-surface-variant truncate block mt-0.5"
-                                                    />
-                                                </h3>
-                                            </div>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        <DetailPageAdCard hidden={isScreenshotMode} />
+                        <div className="order-9 empty:hidden">
+                            <DetailPageAdCard hidden={isScreenshotMode} />
+                        </div>
                     </div>
                 </div>
 

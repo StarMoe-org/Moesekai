@@ -28,17 +28,16 @@ import {
     getLeaderCardId,
     refreshOAuthAccountData,
     disconnectOAuthAccount,
-    SERVER_OPTIONS,
     type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
 import { startOAuthConnect } from "@/lib/oauth";
+import { ServerPicker } from "@/components/common/ServerPicker";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     Banner,
     Button,
-    Chip,
     CircularProgress,
     EmptyState,
     Icon,
@@ -539,19 +538,8 @@ export default function ProfileClient() {
                                         disabled={isVerifying}
                                     />
                                     <div>
-                                        <div className="mb-2 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
-                                        <div className="flex flex-wrap gap-2">
-                                            {SERVER_OPTIONS.map((s) => (
-                                                <Chip
-                                                    key={s.value}
-                                                    selected={formServer === s.value}
-                                                    onClick={() => setFormServer(s.value)}
-                                                    disabled={isVerifying}
-                                                >
-                                                    <ServerRegionLabel server={s.value} />
-                                                </Chip>
-                                            ))}
-                                        </div>
+                                        <div id="profile-server-label" className="mb-2 type-label-l text-on-surface-variant">{t("common.form.server")}</div>
+                                        <ServerPicker value={formServer} onValueChange={setFormServer} disabled={isVerifying} labelledBy="profile-server-label" />
                                     </div>
     
                                     {verifyError && (

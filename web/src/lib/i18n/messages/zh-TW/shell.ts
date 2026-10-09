@@ -239,8 +239,8 @@ export const zhTWSettings = {
         description: "啟用後將顯示尚未正式公開的卡牌、活動及歌曲",
     },
     trainedThumbnail: {
-        label: "3★/4★ 縮圖預設顯示特訓後",
-        description: "啟用後，清單頁中的 3★ 以上卡牌將預設顯示特訓後縮圖",
+        label: "3★/4★ 縮圖顯示特訓後",
+        description: "啟用後，清單頁中 3★ 以上的卡牌顯示特訓後的縮圖",
     },
     translation: {
         label: "使用中文翻譯（Moe 中文化）",
@@ -313,7 +313,7 @@ export const zhTWShortcuts = {
         "navigate-back": "回到上一頁",
         "navigate-forward": "前往下一頁",
         "toggle-sidebar": "切換側邊欄",
-        "toggle-trained-thumbnail": "3★/4★ 縮圖預設顯示特訓後",
+        "toggle-trained-thumbnail": "切換 3★/4★ 縮圖特訓前後",
         "toggle-settings": "開啟設定",
         "list-focus-filters": "聚焦篩選區",
         "list-load-more": "載入更多",

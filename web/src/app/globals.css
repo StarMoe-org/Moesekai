@@ -87,6 +87,77 @@ body {
   display: none;
 }
 
+/* Brand pattern (BackgroundPattern.tsx): light shards over the wash, and three layers of
+   shapes in the seed color and its opposite hue that drift as the page scrolls. Each layer
+   is two stacked tiles moved by transform only, so it is painted once. */
+:root {
+  --brand-pattern-a: var(--md-sys-color-primary-container);
+  --brand-pattern-b: var(--md-sys-color-tertiary);
+  --brand-pattern-facet: color-mix(in srgb, var(--md-sys-color-surface-container-lowest) 55%, transparent);
+  --brand-pattern-tile: max(100vh, 62.5vw);
+}
+
+@supports (color: oklch(from red l c h)) {
+  :root {
+    --brand-pattern-b: oklch(from var(--md-sys-color-primary-container) l c calc(h + 180));
+  }
+}
+
+:root[data-theme="dark"] {
+  --brand-pattern-a: color-mix(in srgb, var(--md-sys-color-primary-container) 60%, transparent);
+  --brand-pattern-facet: color-mix(in srgb, var(--md-sys-color-surface-bright) 22%, transparent);
+}
+
+@supports (color: oklch(from red l c h)) {
+  :root[data-theme="dark"] {
+    --brand-pattern-b: oklch(from var(--md-sys-color-primary-container) l c calc(h + 180) / 60%);
+  }
+}
+
+.brand-pattern {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+}
+
+.brand-pattern-facets {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: var(--brand-pattern-facet);
+}
+
+.brand-pattern-layer {
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: calc(var(--brand-pattern-tile) * 2);
+  will-change: transform;
+}
+
+.brand-pattern-tile {
+  display: block;
+  width: 100%;
+  height: var(--brand-pattern-tile);
+}
+
+.brand-pattern-a { fill: var(--brand-pattern-a); stroke: var(--brand-pattern-a); }
+.brand-pattern-b { fill: var(--brand-pattern-b); stroke: var(--brand-pattern-b); }
+.brand-pattern-tile .brand-pattern-stroke {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+
+:root[data-background-animation="off"] .brand-pattern {
+  display: none;
+}
+
 /* Brand mark: the character color as a highlighter stroke under heading text.
    The text stays on-surface so it reads on every seed; the stroke carries the
    color that pale seeds cannot give light-mode text (Mizuki #ddaacc is ~1.9:1 on

@@ -39,7 +39,9 @@ export default function AboutClient() {
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
                     <Surface tone="card" className={cn(panelCls, "md:col-span-2")}>
                         <div className="mb-4 flex items-center gap-4">
-                            <div className="flex h-12 w-12 items-center justify-center rounded-md3-lg bg-primary-container text-on-primary-container">
+                            {/* The heart takes the seed color on a soft tile: on-primary-container turns near
+                                black on pale seeds, and a black heart reads as heartless. */}
+                            <div className="flex h-12 w-12 items-center justify-center rounded-md3-lg bg-secondary-container text-primary">
                                 <Icon path={mdFavoriteFill} size={28} />
                             </div>
                             <div className="flex flex-col justify-center">

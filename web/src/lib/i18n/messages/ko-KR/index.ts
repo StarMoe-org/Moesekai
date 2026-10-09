@@ -94,6 +94,13 @@ export const koKRMessages = {
             kr: "KR",
             en: "EN"
         },
+        serverShort: {
+            cn: "CN",
+            jp: "JP",
+            tw: "HMT",
+            kr: "KR",
+            en: "EN"
+        },
         relayServers: {
             tokyo1: {
                 name: "도쿄 1"
@@ -904,7 +911,7 @@ export const koKRMessages = {
             "navigate-back": "이전 페이지로",
             "navigate-forward": "다음 페이지로",
             "toggle-sidebar": "사이드바 열기/닫기",
-            "toggle-trained-thumbnail": "3★/4★ 썸네일 특훈 후 표시",
+            "toggle-trained-thumbnail": "3★/4★ 썸네일 특훈 전후 전환",
             "toggle-settings": "설정 열기",
             "list-focus-filters": "필터 영역으로 포커스",
             "list-load-more": "더 불러오기",
@@ -1960,6 +1967,7 @@ export const koKRMessages = {
             loadMore: "더 불러오기",
             allLoaded: "악곡 {count}곡을 모두 표시했습니다",
             noResult: "일치하는 악곡이 없습니다",
+            thumbnailSection: "3★/4★ 썸네일",
             noResultHint: "필터 조건을 바꿔 보세요",
             notFoundTitle: "악곡 데이터를 찾을 수 없습니다 (Not Found)",
             notFoundDesc: "악곡 ID가 맞는지 확인해 주세요. 막 추가된 악곡이라면 「설정」에서 데이터 서버를 바꾸거나 새로고침해 보세요.",

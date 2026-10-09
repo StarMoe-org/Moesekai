@@ -8,15 +8,19 @@ const emphasized = cubicBezier(0.2, 0, 0, 1);
 /** Share of the time an item that changes rows spends leaving its old row, then arriving in the new one. */
 const EXIT_SHARE = 0.3;
 const ENTER_SHARE = 0.45;
+/** Keyframes per item; the compositor interpolates linearly between them. */
+const SAMPLES = 24;
 /** Items this far outside the viewport just snap; nobody sees them move. */
 const VIEWPORT_MARGIN_PX = 200;
 /** Ancestor transitions that can change the grid's width. */
 const LAYOUT_TRANSITION = /^(margin|padding|width|min-width|max-width|left|right|inset)/;
+const ANIMATION_ID = "grid-reflow";
 
 interface Slot {
     x: number;
     y: number;
     w: number;
+    h: number;
     /** Row within its section, see `layoutOf`. Rows shift a few pixels as items resize, so compare this, not `y`. */
     row: number;
     /** Opacity; below 1 only for an item caught half-way through changing rows. */
@@ -39,19 +43,23 @@ interface Wrap {
     enter: Anchor | null;
 }
 
+/** What a running reflow is doing to one item, enough to pick it up again half-way. */
+interface Moving {
+    begin: Slot;
+    end: Slot;
+    wrap: Wrap | undefined;
+}
+
 interface Run {
-    from: Map<HTMLElement, Slot>;
-    to: Map<HTMLElement, Slot>;
-    wraps: Map<HTMLElement, Wrap>;
-    /** Items the run draws. */
-    animated: HTMLElement[];
-    /** Those plus the neighbors they are placed against. */
-    tracked: HTMLElement[];
-    gap: number;
     /** Time fraction, 0 to 1. */
     progress: () => number;
     /** The ancestor transitions the run follows; none when it keeps its own time. */
     transitions: CSSTransition[];
+    from: Map<HTMLElement, Slot>;
+    to: Map<HTMLElement, Slot>;
+    gap: number;
+    moving: Map<HTMLElement, Moving>;
+    settleTimer: number;
 }
 
 function cubicBezier(x1: number, y1: number, x2: number, y2: number): (x: number) => number {
@@ -104,7 +112,7 @@ function layoutOf(grid: HTMLElement, items: HTMLElement[]): Map<HTMLElement, Slo
             rowOf.set(top, section * 1e6 + row);
         }
     }
-    return new Map(items.map((el) => [el, { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, row: rowOf.get(el.offsetTop) ?? 0, o: 1 }]));
+    return new Map(items.map((el) => [el, { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight, row: rowOf.get(el.offsetTop) ?? 0, o: 1 }]));
 }
 
 /** For each item that changes rows, the row-mates it leaves alongside and arrives alongside. */
@@ -141,6 +149,34 @@ function planWraps(items: HTMLElement[], from: Map<HTMLElement, Slot>, to: Map<H
     return wraps;
 }
 
+/** Where an item is drawn, relative to the grid, a time fraction `t` into the reflow. */
+function placeAt(t: number, start: Slot, end: Slot, wrap: Wrap | undefined, from: Map<HTMLElement, Slot>, to: Map<HTMLElement, Slot>, gap: number): Omit<Slot, "h" | "row"> {
+    const p = emphasized(t);
+    if (!wrap) return { x: lerp(start.x, end.x, p), y: lerp(start.y, end.y, p), w: lerp(start.w, end.w, p), o: lerp(start.o, 1, p) };
+
+    // Past the end of the old row, keeping pace with the row-mates that stay there.
+    const exitAnchor = wrap.exit && to.get(wrap.exit.el)!;
+    const exitX = exitAnchor && exitAnchor.x + wrap.exit!.k * (exitAnchor.w + gap);
+    // Past the other end of the new row, keeping pace with the row-mates already there.
+    const enterAnchor = wrap.enter && from.get(wrap.enter.el)!;
+    const enterX = enterAnchor && enterAnchor.x + wrap.enter!.k * (enterAnchor.w + gap);
+
+    if (t < EXIT_SHARE) {
+        return {
+            x: lerp(start.x, exitX ?? start.x + (end.x - enterX!), p),
+            y: lerp(start.y, exitAnchor?.y ?? start.y, p),
+            w: lerp(start.w, exitAnchor?.w ?? end.w, p),
+            o: start.o * (1 - t / EXIT_SHARE),
+        };
+    }
+    return {
+        x: lerp(enterX ?? end.x - (exitX! - start.x), end.x, p),
+        y: lerp(enterAnchor?.y ?? end.y, end.y, p),
+        w: lerp(enterAnchor?.w ?? start.w, end.w, p),
+        o: clamp01((t - EXIT_SHARE) / ENTER_SHARE),
+    };
+}
+
 /**
  * Animates an auto-fill grid whose column count changes, typically while a side pane opens or
  * collapses and the grid's width eases past one or more column boundaries, so its items reflow
@@ -153,6 +189,9 @@ function planWraps(items: HTMLElement[], from: Map<HTMLElement, Slot>, to: Map<H
  * boundaries the width crosses. Other column changes (resizing the window) get the same reflow
  * on its own 400ms clock.
  *
+ * With the columns locked the items' layout holds still, so each item's whole path is worked out
+ * up front and handed to the compositor as keyframes: nothing runs on the main thread per frame.
+ *
  * The grid must be the offset parent of its items (give it `relative`). Returns a callback ref,
  * so a grid that mounts later (after a loading skeleton) is picked up.
  */
@@ -164,21 +203,15 @@ export function useGridReflowAnimation<T extends HTMLElement>(): RefCallback<T> 
         let columns = columnCount(grid);
         let baseline = layoutOf(grid, itemsOf(grid));
         let run: Run | null = null;
-        let frame = 0;
-        /** What the running reflow last drew, so a new one can pick up from there. */
-        const drawn = new Map<HTMLElement, Slot>();
 
-        /** Drops the running reflow's drawing, leaving the grid's column lock in place. */
+        /** Drops the running reflow's animations, leaving the grid's column lock in place. */
         const halt = () => {
             if (!run) return;
-            cancelAnimationFrame(frame);
-            for (const el of run.animated) {
-                el.style.removeProperty("transform");
-                el.style.removeProperty("transform-origin");
-                el.style.removeProperty("opacity");
+            window.clearTimeout(run.settleTimer);
+            for (const el of run.moving.keys()) {
+                for (const animation of el.getAnimations()) if (animation.id === ANIMATION_ID) animation.cancel();
             }
             run = null;
-            drawn.clear();
         };
 
         const settle = () => {
@@ -190,92 +223,87 @@ export function useGridReflowAnimation<T extends HTMLElement>(): RefCallback<T> 
             baseline = layoutOf(grid, itemsOf(grid));
         };
 
-        const draw = () => {
-            if (!run) return;
+        /**
+         * What is on screen now, relative to the grid: the last measured layout, with the items a
+         * running reflow moves placed where its keyframes have them. Worked out rather than read
+         * back, so it costs no style or layout pass; call it before halting.
+         */
+        const onScreenNow = (): Map<HTMLElement, Slot> => {
+            const items = itemsOf(grid);
+            if (items.some((el) => !baseline.has(el))) baseline = layoutOf(grid, items);
+            const slots = new Map(items.map((el) => [el, baseline.get(el)!]));
+            if (!run) return slots;
             const t = clamp01(run.progress());
-            const p = emphasized(t);
-            const { from, to, wraps, gap } = run;
-
-            // Read everything first, then write, so the frame lays out once.
-            const live = new Map(run.tracked.map((el) => [el, { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth }]));
-
-            for (const el of run.animated) {
-                const start = from.get(el)!;
-                const end = live.get(el)!;
-                const wrap = wraps.get(el);
-                let x = lerp(start.x, end.x, p);
-                let y = lerp(start.y, end.y, p);
-                let w = lerp(start.w, end.w, p);
-                let o = lerp(start.o, 1, p);
-                let row = start.row;
-
-                if (wrap) {
-                    // Past the end of the old row, keeping pace with the row-mates that stay there.
-                    const exitAnchor = wrap.exit && live.get(wrap.exit.el)!;
-                    const exitX = exitAnchor && exitAnchor.x + wrap.exit!.k * (exitAnchor.w + gap);
-                    // Past the other end of the new row, keeping pace with the row-mates already there.
-                    const enterAnchor = wrap.enter && from.get(wrap.enter.el)!;
-                    const enterX = enterAnchor && enterAnchor.x + wrap.enter!.k * (enterAnchor.w + gap);
-
-                    if (t < EXIT_SHARE) {
-                        // Leaving.
-                        x = lerp(start.x, exitX ?? start.x + (end.x - enterX!), p);
-                        y = lerp(start.y, exitAnchor?.y ?? start.y, p);
-                        w = lerp(start.w, exitAnchor?.w ?? end.w, p);
-                        o = start.o * (1 - t / EXIT_SHARE);
-                    } else {
-                        // Arriving.
-                        x = lerp(enterX ?? end.x - (exitX! - start.x), end.x, p);
-                        y = lerp(enterAnchor?.y ?? end.y, end.y, p);
-                        w = lerp(enterAnchor?.w ?? start.w, end.w, p);
-                        o = clamp01((t - EXIT_SHARE) / ENTER_SHARE);
-                        row = to.get(el)!.row;
-                    }
-                }
-
-                drawn.set(el, { x, y, w, row, o });
-                el.style.transform = `translate(${x - end.x}px, ${y - end.y}px) scale(${end.w ? w / end.w : 1})`;
-                el.style.opacity = String(o);
+            for (const [el, { begin, end, wrap }] of run.moving) {
+                if (!slots.has(el)) continue;
+                const at = placeAt(t, begin, end, wrap, run.from, run.to, run.gap);
+                const s = end.w ? at.w / end.w : 1;
+                slots.set(el, { ...at, h: end.h * s, row: wrap && t >= EXIT_SHARE ? end.row : begin.row });
             }
-
-            if (t >= 1) settle();
-            else frame = requestAnimationFrame(draw);
+            return slots;
         };
 
-        /** Moves from `from` (what is on screen) to the grid's current layout, on the given clock. */
-        const start = (from: Map<HTMLElement, Slot>, progress: () => number, transitions: CSSTransition[]) => {
+        /**
+         * Moves from `from` (what is on screen) to the grid's current layout over `duration`,
+         * `elapsed` of which has already gone by.
+         */
+        const start = (from: Map<HTMLElement, Slot>, duration: number, elapsed: number, progress: () => number, transitions: CSSTransition[]) => {
             const items = itemsOf(grid);
             const to = layoutOf(grid, items);
             const wraps = planWraps(items, from, to);
+            const gap = parseFloat(getComputedStyle(grid).columnGap) || 0;
 
             const gridTop = grid.getBoundingClientRect().top;
             const viewportBottom = window.innerHeight + VIEWPORT_MARGIN_PX;
-            const onScreen = (el: HTMLElement, y: number) => gridTop + y + el.offsetHeight > -VIEWPORT_MARGIN_PX && gridTop + y < viewportBottom;
-            const animated = items.filter((el) => onScreen(el, from.get(el)!.y) || onScreen(el, to.get(el)!.y));
-            const tracked = new Set(animated);
-            for (const el of animated) {
-                const wrap = wraps.get(el);
-                if (wrap?.exit) tracked.add(wrap.exit.el);
-                if (wrap?.enter) tracked.add(wrap.enter.el);
-                el.style.transformOrigin = "0 0";
-            }
+            const onScreen = (y: number, h: number) => gridTop + y + h > -VIEWPORT_MARGIN_PX && gridTop + y < viewportBottom;
+
+            // Everything is measured above; from here on only writes, so nothing forces a layout.
             // Items wrap out of and into view across the grid's sides.
             grid.style.overflowX = "clip";
             grid.style.setProperty("overflow-clip-margin", "8px");
 
-            run = { from, to, wraps, animated, tracked: [...tracked], gap: parseFloat(getComputedStyle(grid).columnGap) || 0, progress, transitions };
-            draw();
+            const moving = new Map<HTMLElement, Moving>();
+            for (const el of items) {
+                const begin = from.get(el)!;
+                const end = to.get(el)!;
+                const h = end.h;
+                if (!onScreen(begin.y, h) && !onScreen(end.y, h)) continue;
+                const wrap = wraps.get(el);
+                if (!wrap && Math.abs(begin.x - end.x) < 0.5 && Math.abs(begin.y - end.y) < 0.5 && Math.abs(begin.w - end.w) < 0.5 && begin.o === 1) continue;
+
+                const keyframes: Keyframe[] = [];
+                for (let i = 0; i <= SAMPLES; i++) {
+                    const t = i / SAMPLES;
+                    const at = placeAt(t, begin, end, wrap, from, to, gap);
+                    const s = end.w ? at.w / end.w : 1;
+                    // Scaled about the item's center (no transform-origin to restyle), so shift the
+                    // translation by what the scale moves the top-left corner.
+                    const tx = at.x - end.x - ((1 - s) * end.w) / 2;
+                    const ty = at.y - end.y - ((1 - s) * h) / 2;
+                    keyframes.push({ offset: t, transform: `translate(${tx}px, ${ty}px) scale(${s})`, opacity: at.o });
+                }
+                const animation = el.animate(keyframes, { duration, easing: "linear" });
+                animation.id = ANIMATION_ID;
+                animation.currentTime = elapsed;
+                moving.set(el, { begin, end, wrap });
+            }
+
+            // The keyframes are relative to this layout; a later change picks up from it.
+            baseline = to;
+            run = { progress, transitions, from, to, gap, moving, settleTimer: window.setTimeout(settle, Math.max(0, duration - elapsed) + 50) };
         };
 
-        /** What is on screen now: the running reflow's last frame, or the layout as of `layout`. */
-        const onScreenNow = (layout: Map<HTMLElement, Slot>): Map<HTMLElement, Slot> => {
-            const items = itemsOf(grid);
-            if (items.some((el) => !layout.has(el))) layout = layoutOf(grid, items);
-            return new Map(items.map((el) => [el, drawn.get(el) ?? layout.get(el)!]));
-        };
+        /**
+         * The grid's columns once an ancestor's transitions end, by the window width and where the
+         * transitions are heading. Toggling a pane back and forth reuses them instead of measuring
+         * the end state again on every click.
+         */
+        const finalTracks = new Map<string, string>();
 
         // An ancestor starting to transition its width: jump its transitions to the end to see the
-        // grid's final columns (nothing is painted in between), lock them in, and follow along.
+        // grid's final columns (nothing is painted in between; remembered in `finalTracks`), lock
+        // them in, and follow along. Runs inside the frame the click starts, so it measures
+        // layout once at most past the first time: everything else is worked out, not read.
         const onTransitionRun = (event: TransitionEvent) => {
             const target = event.target;
             if (!(target instanceof Element) || target === grid || !target.contains(grid)) return;
@@ -287,24 +315,30 @@ export function useGridReflowAnimation<T extends HTMLElement>(): RefCallback<T> 
             if (!transitions.length || (run && transitions.every((animation) => run!.transitions.includes(animation)))) return;
 
             const wasRunning = run !== null;
-            const from = onScreenNow(layoutOf(grid, itemsOf(grid)));
+            const from = onScreenNow();
             halt();
-            grid.style.removeProperty("grid-template-columns");
 
-            const times = transitions.map((animation) => animation.currentTime);
-            for (const animation of transitions) animation.currentTime = endTimeOf(animation) - 0.5;
-            const finalTracks = getComputedStyle(grid).gridTemplateColumns;
-            transitions.forEach((animation, index) => {
-                animation.currentTime = times[index];
-            });
+            const key = `${window.innerWidth}|${transitions.map((animation) => JSON.stringify((animation.effect as KeyframeEffect | null)?.getKeyframes().at(-1))).join()}`;
+            let tracks = finalTracks.get(key);
+            if (!tracks) {
+                grid.style.removeProperty("grid-template-columns");
+                const times = transitions.map((animation) => animation.currentTime);
+                for (const animation of transitions) animation.currentTime = endTimeOf(animation) - 0.5;
+                tracks = getComputedStyle(grid).gridTemplateColumns;
+                transitions.forEach((animation, index) => {
+                    animation.currentTime = times[index];
+                });
+                finalTracks.set(key, tracks);
+            }
 
             // Same columns at both ends: the items just stretch with the grid.
-            if (!wasRunning && finalTracks.split(" ").filter(Boolean).length === columns) return;
+            if (!wasRunning && tracks.split(" ").filter(Boolean).length === columns) return;
 
-            grid.style.gridTemplateColumns = finalTracks;
+            grid.style.gridTemplateColumns = tracks;
             const longest = transitions.reduce((a, b) => (endTimeOf(b) > endTimeOf(a) ? b : a));
             const end = endTimeOf(longest) || 1;
-            start(from, () => (longest.playState === "running" ? Number(longest.currentTime ?? end) / end : 1), transitions);
+            const elapsed = Number(longest.currentTime ?? 0);
+            start(from, end, elapsed, () => (longest.playState === "running" ? Number(longest.currentTime ?? end) / end : 1), transitions);
         };
 
         const resizeObserver = new ResizeObserver(() => {
@@ -314,15 +348,15 @@ export function useGridReflowAnimation<T extends HTMLElement>(): RefCallback<T> 
                 if (!run) baseline = layoutOf(grid, itemsOf(grid));
                 return;
             }
-            const from = onScreenNow(baseline);
+            const from = onScreenNow();
             halt();
             columns = nextColumns;
             if (reducedMotion.matches) {
-                baseline = layoutOf(grid, itemsOf(grid));
+                settle();
                 return;
             }
             const startedAt = performance.now();
-            start(from, () => (performance.now() - startedAt) / DURATION_MS, []);
+            start(from, DURATION_MS, 0, () => (performance.now() - startedAt) / DURATION_MS, []);
         });
 
         // Items added, removed or reordered (filters, "load more"): settle at once and re-measure.

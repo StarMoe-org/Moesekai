@@ -1012,6 +1012,7 @@ export const zhTWPagePrimary = {
             skillNameLabel: "技能名稱",
             beforeTrained: "開花前",
             afterTrained: "開花後",
+            thumbnailSection: "3★/4★ 縮圖",
             loadingSkill: "載入技能詳細資訊中...",
             costumeTitle: "卡片服裝",
             relatedEventTitle: "相關活動",
