@@ -290,13 +290,16 @@ export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = f
     return buildImageAssetUrl(source, `rank_live/honor/${assetbundleName}/degree_${sub ? "sub" : "main"}`);
 }
 
+// Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
 export function getBondsHonorWordUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
-    return buildImageAssetUrl(source, `bonds_honor/word/${assetbundleName}_01`);
+    const name = `${assetbundleName}_01`;
+    return buildImageAssetUrl(source, `bonds_honor/word/${name}/${name}`);
 }
 
 export function getBondsHonorCharacterUrl(characterId: number, source: AssetSourceType = "main-jp"): string {
     const paddedId = String(characterId).padStart(2, "0");
-    return buildImageAssetUrl(source, `bonds_honor/character/chr_sd_${paddedId}_01`);
+    const name = `chr_sd_${paddedId}_01`;
+    return buildImageAssetUrl(source, `bonds_honor/character/${name}/${name}`);
 }
 
 // ==================== In-app (client package) Asset URLs ====================
