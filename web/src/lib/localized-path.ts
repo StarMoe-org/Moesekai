@@ -29,11 +29,39 @@ export function localizePathForBrowser(path: string): string {
     return localizePath(path, getRouteLocaleFromPathname(window.location.pathname) ?? DEFAULT_ROUTE_LOCALE);
 }
 
+// Safari throws a SecurityError once a page calls replaceState more than 100
+// times in a short window, which a dragged filter slider reaches in seconds.
+// Writes are therefore coalesced: at most one per interval, latest value wins.
+const URL_REPLACE_INTERVAL_MS = 300;
+let lastUrlReplaceAt = 0;
+let pendingUrlReplace: { href: string; pathname: string } | null = null;
+let pendingUrlReplaceTimer: ReturnType<typeof setTimeout> | undefined;
+
+function flushUrlReplace(): void {
+    pendingUrlReplaceTimer = undefined;
+    const pending = pendingUrlReplace;
+    pendingUrlReplace = null;
+    // The page navigated away before the write was due; its URL is no longer ours.
+    if (!pending || window.location.pathname !== pending.pathname) return;
+    if (pending.href === window.location.href) return;
+    lastUrlReplaceAt = Date.now();
+    try {
+        window.history.replaceState({}, "", pending.href);
+    } catch {
+        // Losing a URL sync must never break the page itself.
+    }
+}
+
 export function replaceCurrentUrlSearchParams(params: URLSearchParams): void {
     if (typeof window === "undefined") return;
 
     const url = new URL(window.location.href);
     const query = params.toString();
     url.search = query ? `?${query}` : "";
-    window.history.replaceState({}, "", url.toString());
+    pendingUrlReplace = { href: url.toString(), pathname: url.pathname };
+    if (pendingUrlReplaceTimer !== undefined) return;
+
+    const wait = lastUrlReplaceAt + URL_REPLACE_INTERVAL_MS - Date.now();
+    if (wait <= 0) flushUrlReplace();
+    else pendingUrlReplaceTimer = setTimeout(flushUrlReplace, wait);
 }
