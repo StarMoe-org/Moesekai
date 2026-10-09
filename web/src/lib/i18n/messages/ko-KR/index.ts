@@ -1972,6 +1972,7 @@ export const koKRMessages = {
                 loading: "채보 분석 중…",
                 failed: "채보를 불러오지 못했습니다",
                 timelineAria: "{difficulty} 채보의 노트 밀도, 스킬 및 피버 구간",
+                stripAlt: "{difficulty} 채보 썸네일",
                 legendDensity: "노트 밀도",
                 tooltip: "{time} · 초당 {count}노트",
                 perSecond: "초당 {value}",

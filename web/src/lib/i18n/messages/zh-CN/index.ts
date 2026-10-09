@@ -1974,6 +1974,7 @@ export const zhCNMessages = {
                 loading: "正在解析谱面…",
                 failed: "谱面加载失败",
                 timelineAria: "{difficulty} 谱面的音符密度、技能与 Fever 区间",
+                stripAlt: "{difficulty} 谱面缩略图",
                 legendDensity: "音符密度",
                 tooltip: "{time} · {count} 个音符/秒",
                 perSecond: "{value}/秒",

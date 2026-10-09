@@ -1975,6 +1975,7 @@ export const enUSMessages = {
                 loading: "Analyzing chart…",
                 failed: "Failed to load the chart",
                 timelineAria: "Note density, skill and Fever segments of the {difficulty} chart",
+                stripAlt: "{difficulty} chart thumbnail",
                 legendDensity: "Note density",
                 tooltip: "{time} · {count} notes/s",
                 perSecond: "{value}/s",

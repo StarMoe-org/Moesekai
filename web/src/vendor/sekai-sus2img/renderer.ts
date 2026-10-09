@@ -1362,6 +1362,18 @@ class DrawingRenderer {
         this.styleSheet = `${DEFAULT_STYLE}\n${WHITE_STYLE}${options.styleSheet ? `\n${options.styleSheet}` : ''}`
     }
 
+    // Local change (Moesekai): shared by render() and renderScoreToStripSvg()
+    renderDefinitions(): string {
+        return [
+            '<defs>',
+            `<style><![CDATA[${this.styleSheet}]]></style>`,
+            `<linearGradient id="decoration-gradient" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--color-start)" /><stop offset="1" stop-color="var(--color-stop)" /></linearGradient>`,
+            `<linearGradient id="decoration-critical-gradient" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--color-start)" /><stop offset="1" stop-color="var(--color-stop)" /></linearGradient>`,
+            this.renderNoteDefinitions(),
+            '</defs>',
+        ].join('\n')
+    }
+
     private renderNoteDefinitions(): string {
         const ratio = 1200
         const defs: string[] = []
@@ -1494,16 +1506,7 @@ class DrawingRenderer {
                 height,
             )}" viewBox="0 0 ${fmt(width)} ${fmt(height)}">`,
         )
-        parts.push('<defs>')
-        parts.push(`<style><![CDATA[${this.styleSheet}]]></style>`)
-        parts.push(
-            `<linearGradient id="decoration-gradient" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--color-start)" /><stop offset="1" stop-color="var(--color-stop)" /></linearGradient>`,
-        )
-        parts.push(
-            `<linearGradient id="decoration-critical-gradient" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="var(--color-start)" /><stop offset="1" stop-color="var(--color-stop)" /></linearGradient>`,
-        )
-        parts.push(this.renderNoteDefinitions())
-        parts.push('</defs>')
+        parts.push(this.renderDefinitions())
 
         parts.push(
             `<rect x="0" y="0" width="${fmt(width)}" height="${fmt(
@@ -1576,6 +1579,28 @@ class DrawingRenderer {
 export const renderScoreToSvg = (score: Score, options: RenderOptions): RenderedSvg => {
     const renderer = new DrawingRenderer(score, options)
     return renderer.render()
+}
+
+// Local change (Moesekai): the whole song as one column turned into a horizontal strip.
+// Time runs left to right from bar 0 (x = timeHeight × seconds + timePadding) and lanes
+// run top to bottom; the root uses preserveAspectRatio="none" so it can be stretched
+// onto a time axis.
+export const renderScoreToStripSvg = (score: Score, options: RenderOptions): RenderedSvg => {
+    if (!score.notes.length) {
+        throw new Error('谱面中没有可渲染的音符')
+    }
+    const drawing = new DrawingRenderer(score, options)
+    const nBars = Math.ceil(score.notes[score.notes.length - 1].bar.toNumber())
+    const column = new SentenceRenderer(drawing, 0, nBars).render()
+    const width = column.height
+    const height = column.width
+    const svg = [
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${fmt(width)}" height="${fmt(height)}" viewBox="0 0 ${fmt(width)} ${fmt(height)}" preserveAspectRatio="none">`,
+        drawing.renderDefinitions(),
+        `<g transform="matrix(0 1 -1 0 ${fmt(width)} 0)">${column.content}</g>`,
+        '</svg>',
+    ].join('\n')
+    return { svg, width, height }
 }
 
 export const defaultSus2ImgStyleSheet = `${DEFAULT_STYLE}\n${WHITE_STYLE}`

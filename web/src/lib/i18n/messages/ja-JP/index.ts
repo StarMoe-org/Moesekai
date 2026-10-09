@@ -1974,6 +1974,7 @@ export const jaJPMessages = {
         loading: '譜面を解析中…',
         failed: '譜面の読み込みに失敗しました',
         timelineAria: '{difficulty} 譜面のノーツ密度・スキル・フィーバー区間',
+        stripAlt: '{difficulty} 譜面サムネイル',
         legendDensity: 'ノーツ密度',
         tooltip: '{time} · {count} ノーツ/秒',
         perSecond: '{value}/秒',

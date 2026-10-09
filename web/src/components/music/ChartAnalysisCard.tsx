@@ -4,6 +4,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getAssetSourceFallbackOrder, getMusicScoreUrl } from "@/lib/assets";
 import { analyzeSusChart, type ChartAnalysis, type ChartNoteKind, type ChartWindowStats } from "@/lib/sekaiChart";
+import { inlineSvgImages } from "@/lib/svgInline";
 import { DIFFICULTY_COLORS, DIFFICULTY_NAMES, type MusicDifficultyType } from "@/types/music";
 import { CircularProgress, Icon } from "@/components/md3";
 import { mdAnalytics } from "@/components/md3/icons";
@@ -12,9 +13,24 @@ const NOTE_KIND_ORDER: ChartNoteKind[] = ["tap", "flick", "trace", "holdStart", 
 
 const PLOT_HEIGHT = 100;
 
-const analysisCache = new Map<string, Promise<ChartAnalysis>>();
+/** Pixels per second in the strip render; only the aspect of the source image depends on it. */
+const STRIP_TIME_HEIGHT = 48;
 
-function loadAnalysis(musicId: number, difficulty: string, sources: string[]): Promise<ChartAnalysis> {
+/**
+ * Text and per-bar decorations are unreadable at thumbnail size; the lane fill is left
+ * to the themed container behind the image.
+ */
+const STRIP_STYLE = `text, .bar-count-flag, .event-flag, .beat-line, .tick-line, .speed-line, .speed-line-condensed, .speed-trend-line, .speed-trend-head { display: none; }
+.background, .lane { fill: none; }`;
+
+interface LoadedChart {
+    text: string;
+    analysis: ChartAnalysis;
+}
+
+const analysisCache = new Map<string, Promise<LoadedChart>>();
+
+function loadAnalysis(musicId: number, difficulty: string, sources: string[]): Promise<LoadedChart> {
     const key = `${sources[0]}:${musicId}:${difficulty}`;
     let pending = analysisCache.get(key);
     if (!pending) {
@@ -22,7 +38,10 @@ function loadAnalysis(musicId: number, difficulty: string, sources: string[]): P
             for (const source of sources) {
                 try {
                     const res = await fetch(getMusicScoreUrl(musicId, difficulty, source as Parameters<typeof getMusicScoreUrl>[2]));
-                    if (res.ok) return analyzeSusChart(await res.text());
+                    if (res.ok) {
+                        const text = await res.text();
+                        return { text, analysis: analyzeSusChart(text) };
+                    }
                 } catch {
                     // try the next asset source
                 }
@@ -46,7 +65,7 @@ function formatTime(seconds: number, precise = false): string {
 type LoadState =
     | { status: "loading" }
     | { status: "error" }
-    | { status: "ready"; analysis: ChartAnalysis };
+    | { status: "ready"; chart: LoadedChart };
 
 type LoadResult = Exclude<LoadState, { status: "loading" }> & { key: string };
 
@@ -67,8 +86,8 @@ export default function ChartAnalysisCard({ musicId, difficulty, playLevel, offi
     useEffect(() => {
         let active = true;
         loadAnalysis(musicId, difficulty, getAssetSourceFallbackOrder(assetSource))
-            .then((analysis) => {
-                if (active) setResult({ key: requestKey, status: "ready", analysis });
+            .then((chart) => {
+                if (active) setResult({ key: requestKey, status: "ready", chart });
             })
             .catch(() => {
                 if (active) setResult({ key: requestKey, status: "error" });
@@ -100,7 +119,14 @@ export default function ChartAnalysisCard({ musicId, difficulty, playLevel, offi
                 <div className="px-5 py-10 text-center type-body-m text-on-surface-variant">{t("page.music.chartAnalysis.failed")}</div>
             )}
             {state.status === "ready" && (
-                <ChartAnalysisBody analysis={state.analysis} difficulty={difficulty} officialNoteCount={officialNoteCount} t={t} formatNumber={formatNumber} />
+                <ChartAnalysisBody
+                    analysis={state.chart.analysis}
+                    susText={state.chart.text}
+                    difficulty={difficulty}
+                    officialNoteCount={officialNoteCount}
+                    t={t}
+                    formatNumber={formatNumber}
+                />
             )}
         </div>
     );
@@ -108,13 +134,14 @@ export default function ChartAnalysisCard({ musicId, difficulty, playLevel, offi
 
 interface BodyProps {
     analysis: ChartAnalysis;
+    susText: string;
     difficulty: MusicDifficultyType;
     officialNoteCount?: number;
     t: ReturnType<typeof useI18n>["t"];
     formatNumber: ReturnType<typeof useI18n>["formatNumber"];
 }
 
-function ChartAnalysisBody({ analysis, difficulty, officialNoteCount, t, formatNumber }: BodyProps) {
+function ChartAnalysisBody({ analysis, susText, difficulty, officialNoteCount, t, formatNumber }: BodyProps) {
     const span = Math.max(analysis.lastNoteTime - analysis.firstNoteTime, 0);
     const averageDensity = span > 0 ? analysis.combo / span : 0;
     const bestSkill = analysis.skills.reduce<number>(
@@ -148,7 +175,7 @@ function ChartAnalysisBody({ analysis, difficulty, officialNoteCount, t, formatN
                 ))}
             </div>
 
-            <ChartTimeline analysis={analysis} difficulty={difficulty} t={t} formatNumber={formatNumber} />
+            <ChartTimeline analysis={analysis} susText={susText} difficulty={difficulty} t={t} formatNumber={formatNumber} />
 
             <div className="flex flex-wrap gap-1.5">
                 {NOTE_KIND_ORDER.filter((kind) => analysis.kindCounts[kind] > 0).map((kind) => (
@@ -259,18 +286,64 @@ function WindowTable({
     );
 }
 
+interface ChartStrip {
+    text: string;
+    /** Object URL of the rendered strip, or null when it could not be drawn. */
+    url: string | null;
+    /** Seconds from bar 0 that the strip covers. */
+    seconds: number;
+}
+
+/** Renders the chart as a horizontal strip whose x axis is chart time, like the chart image page does vertically. */
+function useChartStrip(susText: string): ChartStrip | null {
+    const [strip, setStrip] = useState<ChartStrip | null>(null);
+
+    useEffect(() => {
+        let active = true;
+        let url: string | null = null;
+        (async () => {
+            const [{ parseSusText }, { renderScoreToStripSvg }] = await Promise.all([
+                import("@/vendor/sekai-sus2img/parser"),
+                import("@/vendor/sekai-sus2img/renderer"),
+            ]);
+            const rendered = renderScoreToStripSvg(parseSusText(susText), {
+                noteHost: "/notes_new/custom01",
+                timeHeight: STRIP_TIME_HEIGHT,
+                timePadding: 0,
+                lanePadding: 4,
+                styleSheet: STRIP_STYLE,
+            });
+            const inlined = await inlineSvgImages(rendered.svg);
+            if (!active) return;
+            url = URL.createObjectURL(new Blob([inlined], { type: "image/svg+xml;charset=utf-8" }));
+            setStrip({ text: susText, url, seconds: rendered.width / STRIP_TIME_HEIGHT });
+        })().catch(() => {
+            if (active) setStrip({ text: susText, url: null, seconds: 0 });
+        });
+        return () => {
+            active = false;
+            if (url) URL.revokeObjectURL(url);
+        };
+    }, [susText]);
+
+    return strip?.text === susText ? strip : null;
+}
+
 function ChartTimeline({
     analysis,
+    susText,
     difficulty,
     t,
     formatNumber,
 }: {
     analysis: ChartAnalysis;
+    susText: string;
     difficulty: MusicDifficultyType;
     t: BodyProps["t"];
     formatNumber: BodyProps["formatNumber"];
 }) {
     const [hoverSecond, setHoverSecond] = useState<number | null>(null);
+    const strip = useChartStrip(susText);
 
     const { bins, duration, maxBin } = useMemo(() => {
         const end = analysis.lastNoteTime + 1;
@@ -330,14 +403,17 @@ function ChartTimeline({
                 ))}
             </div>
             <div
-                className="relative h-32 touch-none select-none overflow-hidden rounded-md3-md bg-surface-container"
-                role="img"
-                aria-label={t("page.music.chartAnalysis.timelineAria", { difficulty: DIFFICULTY_NAMES[difficulty] })}
+                className="relative touch-none select-none"
                 onPointerMove={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();
                     setHoverSecond(((e.clientX - rect.left) / rect.width) * duration);
                 }}
                 onPointerLeave={() => setHoverSecond(null)}
+            >
+            <div
+                className="relative h-32 overflow-hidden rounded-md3-md bg-surface-container"
+                role="img"
+                aria-label={t("page.music.chartAnalysis.timelineAria", { difficulty: DIFFICULTY_NAMES[difficulty] })}
             >
                 <svg viewBox={`0 0 ${duration} ${PLOT_HEIGHT}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
                     {analysis.fevers.map((fever, i) => (
@@ -350,9 +426,6 @@ function ChartTimeline({
                         <rect key={i} x={skill.start} y={0} width={skill.end - skill.start} height={PLOT_HEIGHT} className="fill-primary/40" />
                     ))}
                     <path d={areaPath} className="fill-on-surface-variant/20 stroke-on-surface-variant" strokeWidth={1.25} vectorEffect="non-scaling-stroke" />
-                    {hoverSecond !== null && (
-                        <line x1={hoverSecond} x2={hoverSecond} y1={0} y2={PLOT_HEIGHT} className="stroke-on-surface" strokeWidth={1} vectorEffect="non-scaling-stroke" />
-                    )}
                 </svg>
                 {analysis.skills.map((skill, i) => (
                     <span
@@ -371,6 +444,23 @@ function ChartTimeline({
                         {hoverLabel}
                     </span>
                 )}
+            </div>
+            {strip?.url !== null && (
+                <div className="relative mt-1 h-16 overflow-hidden rounded-md3-sm bg-surface-container">
+                    {strip?.url && (
+                        <img
+                            src={strip.url}
+                            alt={t("page.music.chartAnalysis.stripAlt", { difficulty: DIFFICULTY_NAMES[difficulty] })}
+                            className="absolute inset-y-0 left-0 h-full max-w-none"
+                            style={{ width: `${(strip.seconds / duration) * 100}%` }}
+                            draggable={false}
+                        />
+                    )}
+                </div>
+            )}
+            {hoverSecond !== null && (
+                <div className="pointer-events-none absolute inset-y-0 w-px bg-on-surface" style={{ left: xPercent(hoverSecond) }} aria-hidden />
+            )}
             </div>
             <div className="relative mt-1 h-4 type-label-s text-on-surface-variant tabular-nums">
                 {ticks.map((s) => (
