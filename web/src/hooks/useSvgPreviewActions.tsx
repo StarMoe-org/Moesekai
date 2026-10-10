@@ -71,8 +71,7 @@ export function useSvgPreviewActions({
         setCopySuccess(false);
 
         try {
-            const blob = await createSvgPreviewBlob(previewSvg);
-            await copyImageBlob(blob);
+            await copyImageBlob(createSvgPreviewBlob(previewSvg));
             setCopySuccess(true);
             if (copyResetTimerRef.current) {
                 window.clearTimeout(copyResetTimerRef.current);

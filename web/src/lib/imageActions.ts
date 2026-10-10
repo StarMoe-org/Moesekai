@@ -118,18 +118,30 @@ function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
         };
         image.onerror = () => {
             URL.revokeObjectURL(objectUrl);
-            reject(new Error("Failed to load svg preview"));
+            reject(new Error("Failed to load image"));
         };
         image.src = objectUrl;
     });
 }
 
-async function rasterizeSvgBlob(svgBlob: Blob): Promise<Blob> {
-    const image = await loadImageFromBlob(svgBlob);
+export function canvasToPngBlob(canvas: HTMLCanvasElement): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+        canvas.toBlob(blob => {
+            if (!blob) {
+                reject(new Error("Failed to export png"));
+                return;
+            }
+            resolve(blob);
+        }, "image/png");
+    });
+}
+
+async function rasterizeToPng(imageBlob: Blob): Promise<Blob> {
+    const image = await loadImageFromBlob(imageBlob);
     const width = image.naturalWidth || image.width;
     const height = image.naturalHeight || image.height;
     if (!width || !height) {
-        throw new Error("Invalid svg preview size");
+        throw new Error("Invalid image size");
     }
 
     const canvas = document.createElement("canvas");
@@ -142,23 +154,14 @@ async function rasterizeSvgBlob(svgBlob: Blob): Promise<Blob> {
     }
 
     context.drawImage(image, 0, 0, width, height);
-
-    return new Promise((resolve, reject) => {
-        canvas.toBlob(blob => {
-            if (!blob) {
-                reject(new Error("Failed to export png preview"));
-                return;
-            }
-            resolve(blob);
-        }, "image/png");
-    });
+    return canvasToPngBlob(canvas);
 }
 
 export async function createSvgPreviewBlob(svgElement: SVGSVGElement): Promise<Blob> {
     const svgBlob = await createSvgImageBlob(svgElement);
 
     try {
-        return await rasterizeSvgBlob(svgBlob);
+        return await rasterizeToPng(svgBlob);
     } catch {
         return svgBlob;
     }
@@ -178,21 +181,27 @@ export async function saveImageBlob(blob: Blob, fileName: string): Promise<void>
     }
 }
 
-export async function copyImageBlob(blob: Blob): Promise<void> {
+/**
+ * Copies an image to the clipboard as PNG, the one image type every browser writes (assets are
+ * mostly WebP). The clipboard item is created at once from a promise of the image, because Safari
+ * only allows a write that starts inside the click: call this before the handler's first await.
+ */
+export function copyImageBlob(image: Blob | Promise<Blob>): Promise<void> {
     if (!navigator.clipboard?.write) {
-        throw new Error("Clipboard API is not supported");
+        return Promise.reject(new Error("Clipboard API is not supported"));
     }
 
-    type ClipboardItemConstructor = new (items: Record<string, Blob>) => ClipboardItem;
+    type ClipboardItemConstructor = new (items: Record<string, Blob | Promise<Blob>>) => ClipboardItem;
     const ClipboardItemCtor = (window as Window & { ClipboardItem?: ClipboardItemConstructor }).ClipboardItem;
     if (!ClipboardItemCtor) {
-        throw new Error("ClipboardItem is not supported");
+        return Promise.reject(new Error("ClipboardItem is not supported"));
     }
 
-    const mimeType = blob.type.startsWith("image/") ? blob.type : "image/png";
-
-    await navigator.clipboard.write([
-        new ClipboardItemCtor({ [mimeType]: blob }),
+    const png = Promise.resolve(image).then(blob => blob.type === "image/png" ? blob : rasterizeToPng(blob));
+    // A refused write settles first; the image's own failure is then reported by the write.
+    png.catch(() => {});
+    return navigator.clipboard.write([
+        new ClipboardItemCtor({ "image/png": png }),
     ]);
 }
 
@@ -204,7 +213,6 @@ export async function saveImageFromUrl(
     await saveImageBlob(blob, fileName);
 }
 
-export async function copyImageFromUrl(imageUrl: string): Promise<void> {
-    const blob = await fetchImageBlob(imageUrl);
-    await copyImageBlob(blob);
+export function copyImageFromUrl(imageUrl: string): Promise<void> {
+    return copyImageBlob(fetchImageBlob(imageUrl));
 }

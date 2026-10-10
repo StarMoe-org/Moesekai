@@ -8,6 +8,7 @@ import Modal from "@/components/common/Modal";
 import { Button, IconButton, LinearProgress, LoadingIndicator } from "@/components/md3";
 import { mdCheck, mdContentCopy, mdDownload, mdRefresh } from "@/components/md3/icons";
 import { getMusicJacketUrl } from "@/lib/assets";
+import { canvasToPngBlob, copyImageBlob } from "@/lib/imageActions";
 
 // ==================== Types ====================
 
@@ -653,23 +654,14 @@ export default function Best30ShareImage({
 
         setCopied(false);
         try {
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                try {
-                    await navigator.clipboard.write([
-                        new ClipboardItem({ "image/png": blob }),
-                    ]);
-                    setCopied(true);
-                    if (copyResetTimerRef.current) {
-                        window.clearTimeout(copyResetTimerRef.current);
-                    }
-                    copyResetTimerRef.current = window.setTimeout(() => {
-                        setCopied(false);
-                    }, 1800);
-                } catch {
-                    alert(t("page.best30Share.copyFailed"));
-                }
-            });
+            await copyImageBlob(canvasToPngBlob(canvas));
+            setCopied(true);
+            if (copyResetTimerRef.current) {
+                window.clearTimeout(copyResetTimerRef.current);
+            }
+            copyResetTimerRef.current = window.setTimeout(() => {
+                setCopied(false);
+            }, 1800);
         } catch {
             alert(t("page.best30Share.copyFailed"));
         }

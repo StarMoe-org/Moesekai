@@ -6,6 +6,7 @@ import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS } from "@/types/types";
 import { getCharacterIconUrl } from "@/lib/assets";
+import { canvasToPngBlob, copyImageBlob } from "@/lib/imageActions";
 import { getCharacterName } from "@/lib/i18n";
 import { Button, EmptyState, Icon, PageContainer, PageHeader, SectionCard, SegmentedButton, Surface, Switch } from "@/components/md3";
 import { mdAdd, mdCheck, mdContentCopy, mdDownload, mdFormatColorReset, mdSentimentSatisfied, mdUpload } from "@/components/md3/icons";
@@ -465,21 +466,14 @@ export default function StickerMakerContent() {
     const handleCopy = async () => {
         const canvas = canvasRef.current;
         if (!canvas) return;
+        if (!navigator.clipboard?.write || typeof ClipboardItem === "undefined") {
+            alert(t("page.stickerMaker.errors.clipboardUnsupported"));
+            return;
+        }
         try {
-            canvas.toBlob(async (blob) => {
-                if (!blob) return;
-                type ClipboardItemConstructor = new (items: Record<string, Blob>) => ClipboardItem;
-                const ClipboardItemCtor = (window as Window & { ClipboardItem?: ClipboardItemConstructor }).ClipboardItem;
-                if (!ClipboardItemCtor) {
-                    alert(t("page.stickerMaker.errors.clipboardUnsupported"));
-                    return;
-                }
-                await navigator.clipboard.write([
-                    new ClipboardItemCtor({ "image/png": blob }),
-                ]);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 2000);
-            });
+            await copyImageBlob(canvasToPngBlob(canvas));
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         } catch {
             alert(t("page.stickerMaker.errors.copyFailed"));
         }
