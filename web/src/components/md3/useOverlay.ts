@@ -23,6 +23,18 @@ let bodyOverflowBeforeLock = "";
 let pendingHistoryBack = false;
 let listenersInstalled = false;
 let redirectingFocus = false;
+// Safari never focuses a clicked button, so it rings whatever script focuses next. Focus an
+// overlay moves after a pointer press asks for no ring; after a key press the browser decides.
+let pointerInputLast = false;
+if (typeof document !== "undefined") {
+    document.addEventListener("pointerdown", () => { pointerInputLast = true; }, true);
+    document.addEventListener("keydown", () => { pointerInputLast = false; }, true);
+}
+
+function moveFocus(target: HTMLElement) {
+    // focusVisible is not in TypeScript's DOM types yet; browsers without it ignore it.
+    target.focus({ preventScroll: true, ...(pointerInputLast ? { focusVisible: false } : {}) } as FocusOptions);
+}
 
 function topEntry() {
     return overlayStack[overlayStack.length - 1];
@@ -55,7 +67,7 @@ function focusEntry(entry: OverlayEntry, preferred?: HTMLElement | null) {
     if (!root || !root.isConnected || entry !== topEntry()) return;
     const target = preferred && root.contains(preferred) && !preferred.matches(":disabled") && isVisible(preferred)
         ? preferred : focusableNodes(root)[0] ?? root;
-    target.focus({ preventScroll: true });
+    moveFocus(target);
 }
 
 function handleKeyDown(event: KeyboardEvent) {
@@ -197,7 +209,7 @@ export function useOverlay(isOpen: boolean, onClose: () => void, { syncHistory =
             if (shouldRestore) {
                 const next = topEntry();
                 if (next?.modal) focusEntry(next, entry.previousFocus);
-                else if (entry.previousFocus?.isConnected) entry.previousFocus.focus({ preventScroll: true });
+                else if (entry.previousFocus?.isConnected) moveFocus(entry.previousFocus);
             }
             entry.previousFocus = null;
             removeGlobalListeners();
