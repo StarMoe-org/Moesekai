@@ -29,7 +29,8 @@ bun run --cwd web copy:wasm
 | `NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE` | 各区服剧情库的上级目录，剧情库是 `<它>/<jp\|cn\|tw\|kr\|en>/` | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
 | `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
-| `NEXT_PUBLIC_SSE_WEB_FONT_BASE` | 放开源字体的目录（见下「字体」）；不设则用客户端解包里的字体 | 不设 |
+| `NEXT_PUBLIC_SSE_WEB_FONT_BASE` | 另一个放开源字体的目录（见下「字体」） | 仓库里的 `public/story-fonts/` |
+| `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS` | 设为 `1` 时日服改用客户端解包里的字体（商业字体，见下「字体」） | 不设 |
 
 `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
 
@@ -65,20 +66,26 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 ## 字体
 
-日服客户端的字体是商业字体（Fontworks 的 Rodin），站点不应该把它的文件发给访客。设了 `NEXT_PUBLIC_SSE_WEB_FONT_BASE` 以后：
+日服客户端的字体是商业字体（Fontworks 的 Rodin），站点不应该把它的文件发给访客。所以日服的剧情默认用开源字体画：
 
-- 日服的剧情改用开源字体：正文和名字用 **M PLUS 1**（可变字重，正文 460、名字 820，是与客户端两个字体实测笔画粗细相同的值），M PLUS 1 缺的字用**思源黑体 JP** 补（正文补 Medium，名字补 Heavy）。
+- 正文和名字用 **M PLUS 1**（可变字重，正文 460、名字 820，是与客户端两个字体实测笔画粗细相同的值），M PLUS 1 缺的字用**思源黑体 JP** 补（正文补 Medium，名字补 Heavy）。
 - 播放器这时不读也不下载客户端的字体文件。
 - 其他区服不变：它们用的国服解包里本来就是思源黑体。
 - 播放时页面上有一行说明：字体不是游戏内的，字形和个别句子的换行略有不同（全角字符宽度相同，差别来自拉丁字母和数字的宽度）。
 
-目录里要放这三个文件，用上游的文件名，并把各自的许可文本（都是 SIL OFL 1.1）放在旁边：
+三个字体文件放在仓库的 `web/public/story-fonts/`，是上游的原文件、用上游的文件名，许可文本（都是 SIL OFL 1.1）在旁边，`SOURCE.json` 记着各自的来源提交和 SHA-256（`test:sse-web-config` 会核对）：
 
 | 文件 | 来源 |
 |---|---|
 | `MPLUS1[wght].ttf` | Google Fonts 仓库 `google/fonts` 的 `ofl/mplus1/` |
 | `SourceHanSansJP-Medium.otf` | Adobe 仓库 `adobe-fonts/source-han-sans` 的 `SubsetOTF/JP/` |
 | `SourceHanSansJP-Heavy.otf` | 同上 |
+
+用哪套字体按下面的顺序定：
+
+1. 设了 `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS=1`：用客户端解包里的字体（从资源站下载）。
+2. 设了 `NEXT_PUBLIC_SSE_WEB_FONT_BASE`：用那个目录里的三个开源字体（文件名同上，许可文本放在旁边）。
+3. 否则用仓库里的开源字体。构建时 `next.config.ts` 检查 `public/story-fonts/` 里三个文件是否齐全，缺了才退回客户端的字体。
 
 字体由播放器的 Worker 用 `fetch` 取，跨源时那台主机要放行本站。字重和文件名写在 `src/lib/sseWeb/config.ts` 里。
 
@@ -102,11 +109,8 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 ```
 NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=http://127.0.0.1:8787/remote/
-NEXT_PUBLIC_SSE_WEB_FONT_BASE=http://127.0.0.1:8787/fonts/
 ```
 
 要试还没提交的播放器改动，用上面「发布物」一节的 `sync-sse-web.mjs --allow-dirty`。
-
-最后一行可选：把上面「字体」一节的三个文件放进 `target/web-dev/fonts/` 即可。
 
 `bun run --cwd web test:sse-web-config` 检查变量的校验规则。

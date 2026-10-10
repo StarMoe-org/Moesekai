@@ -11,7 +11,7 @@ import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EffectsFast, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import type { ServerType } from "@/lib/account-servers";
-import { sseWebCoreUrl, sseWebFonts, sseWebSources } from "@/lib/sseWeb/config";
+import { sseWebCoreUrl, sseWebFonts, sseWebSources, type SseWebFontFile } from "@/lib/sseWeb/config";
 import {
     loadSsePlayer, sseWebScriptBase,
     type SsePlayer, type SsePlayerError, type SsePlayerNode, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
@@ -153,6 +153,11 @@ function storeFrame(frame: Frame) {
 
 const subscribeNever = () => () => {};
 
+/** A font file with its address as a whole URL (the repository's own fonts are named by path). */
+function absolute(font: SseWebFontFile): SseWebFontFile {
+    return { ...font, url: new URL(font.url, window.location.origin).href };
+}
+
 /**
  * The Live2D mode of the story reader: plays the episode as the game does,
  * rendered in the browser by sse-web. Nothing is downloaded until the reader
@@ -266,7 +271,8 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                 pkg: "pkg/",
                 ...(core ? { core } : {}),
                 sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
-                ...(fonts ? { fonts } : {}),
+                // the workers fetch the fonts: a path of this origin has to be a whole URL for them
+                ...(fonts ? { fonts: { body: fonts.body.map(absolute), name: fonts.name.map(absolute) } } : {}),
                 selector,
                 width,
                 height,

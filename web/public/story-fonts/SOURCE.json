@@ -1,0 +1,32 @@
+{
+  "note": "Open fonts the Live2D story player draws the JP stories with (docs/story-live2d-player.md). Unmodified upstream files, each under the SIL Open Font License 1.1; the licence texts are beside them.",
+  "fonts": [
+    {
+      "file": "MPLUS1[wght].ttf",
+      "family": "M PLUS 1 (variable weight)",
+      "repository": "google/fonts",
+      "path": "ofl/mplus1/MPLUS1[wght].ttf",
+      "commit": "badb95c58fcc",
+      "licence": "OFL-MPLUS1.txt",
+      "sha256": "32dab296a06c3e87841ecd2bc9912434a964ad541e22ea19f764969dae93fced"
+    },
+    {
+      "file": "SourceHanSansJP-Medium.otf",
+      "family": "Source Han Sans JP Medium",
+      "repository": "adobe-fonts/source-han-sans",
+      "path": "SubsetOTF/JP/SourceHanSansJP-Medium.otf",
+      "commit": "a4f7cf94edfb",
+      "licence": "LICENSE-SourceHanSans.txt",
+      "sha256": "5d39f8eaaa9ad2aed93166b0a4fc4a43ac82de8a5c6112992446c24d88b595f9"
+    },
+    {
+      "file": "SourceHanSansJP-Heavy.otf",
+      "family": "Source Han Sans JP Heavy",
+      "repository": "adobe-fonts/source-han-sans",
+      "path": "SubsetOTF/JP/SourceHanSansJP-Heavy.otf",
+      "commit": "a4f7cf94edfb",
+      "licence": "LICENSE-SourceHanSans.txt",
+      "sha256": "f875de9c62ace2082b90ab1da940f3e8ceffa933f500e49d205cb74e6e5d03bb"
+    }
+  ]
+}
