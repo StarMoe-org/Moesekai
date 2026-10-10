@@ -153,6 +153,24 @@ function storeFrame(frame: Frame) {
 
 const subscribeNever = () => () => {};
 
+/** The StarMoe wordmark as a mask, to be filled with the element's background colour. */
+const STARMOE_MARK = {
+    maskImage: "url(/starmoe.svg)",
+    maskSize: "contain",
+    maskPosition: "center",
+    maskRepeat: "no-repeat",
+    WebkitMaskImage: "url(/starmoe.svg)",
+    WebkitMaskSize: "contain",
+    WebkitMaskPosition: "center",
+    WebkitMaskRepeat: "no-repeat",
+} as const;
+
+/**
+ * The square Live2D logo for dark grounds, as Live2D Inc. publishes it (live2d.jp/en/brand): it
+ * may not be recoloured, cropped, given effects or set on a ground that hides it.
+ */
+const LIVE2D_LOGO = "/images/brand/live2d-logo-square-word-white.png";
+
 /** A font file with its address as a whole URL (the repository's own fonts are named by path). */
 function absolute(font: SseWebFontFile): SseWebFontFile {
     return { ...font, url: new URL(font.url, window.location.origin).href };
@@ -764,27 +782,71 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                         onPointerMove={wakeToolbar}
                         onPointerDown={wakeToolbar}
                         className={cn(
-                            "relative w-full select-none overflow-hidden bg-scrim",
+                            // a container of its own: what lies over the picture is sized by the picture's
+                            // width, in the window and in full screen alike
+                            "@container relative w-full select-none overflow-hidden bg-scrim",
                             // in full screen the pointer rests with the toolbar (the site's themed
                             // pointer outranks `cursor-none` on an element that also has a cursor class)
                             fullscreen && !toolbarShown ? "cursor-none" : phase === "ready" && "cursor-pointer",
                         )}
                         style={fullscreen ? undefined : { aspectRatio: ratio }}
                     >
+                        {/*
+                          * Who made this: over the picture's top left corner, while loading and while playing.
+                          * The mark keeps its proportion to the picture: 4% of its width high.
+                          */}
+                        {(phase === "loading" || phase === "ready") && (
+                            // the shadow keeps the white mark readable on a bright picture; it is on the
+                            // wrapper because a filter is applied before the element's own mask
+                            <span
+                                role="img"
+                                aria-label="StarMoe"
+                                className="pointer-events-none absolute left-[3.2cqw] top-[2.4cqw] h-[4cqw] w-[14.5cqw] opacity-90 [filter:drop-shadow(0_0_0.25cqw_rgb(0_0_0/0.7))_drop-shadow(0_0.15cqw_0.5cqw_rgb(0_0_0/0.45))]"
+                            >
+                                <span className="block size-full bg-white" style={STARMOE_MARK} />
+                            </span>
+                        )}
                         {phase === "loading" && (
-                            <div className="absolute inset-0 flex items-center justify-center p-3">
-                                <div className="flex w-72 max-w-full flex-col items-center gap-2 rounded-md3-lg bg-surface-container-high px-4 py-3 text-center text-on-surface">
-                                    {progress.fraction === undefined
-                                        ? <LoadingIndicator size={40} aria-label={t("page.story.live2d.preparing")} />
-                                        : <LinearProgress value={progress.fraction} className="mt-1" aria-label={t("page.story.live2d.title")} />}
-                                    <p className="type-title-s tabular-nums">
+                            <div className="absolute inset-0 flex flex-col">
+                                {/*
+                                  * What draws the characters, at the top right while the episode loads. It is
+                                  * Live2D's own file, unaltered; its clear space is part of the image, which is
+                                  * sized and placed so that its figure (the three bars, without the word
+                                  * below them) is as tall as the StarMoe mark across from it, 4% of the
+                                  * picture's width, level with it and as far from the corner.
+                                  */}
+                                <div className="pointer-events-none flex shrink-0 justify-end">
+                                    <img
+                                        src={LIVE2D_LOGO}
+                                        alt="Live2D"
+                                        width={411}
+                                        height={411}
+                                        draggable={false}
+                                        className="mr-[1.55cqw] mt-[1.58cqw] aspect-square h-[6.45cqw] w-auto shrink-0"
+                                    />
+                                </div>
+                                <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3">
+                                    {/* in a narrow window the indicator sits beside the words, so the card clears the marks above */}
+                                    <div
+                                        className={cn(
+                                            "flex w-72 max-w-full items-center gap-2 rounded-md3-lg bg-surface-container-high px-4 py-2 text-center text-on-surface @min-[400px]:flex-col @min-[400px]:py-3",
+                                            progress.fraction !== undefined && "flex-col",
+                                        )}
+                                    >
                                         {progress.fraction === undefined
-                                            ? t("page.story.live2d.preparing")
-                                            : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
-                                    </p>
-                                    <p className="type-body-s tabular-nums text-on-surface-variant">
-                                        {t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}
-                                    </p>
+                                            ? <LoadingIndicator size={40} aria-label={t("page.story.live2d.preparing")} />
+                                            : <LinearProgress value={progress.fraction} className="mt-1" aria-label={t("page.story.live2d.title")} />}
+                                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 @min-[400px]:flex-none @min-[400px]:gap-2">
+                                            <p className="type-title-s tabular-nums">
+                                                {progress.fraction === undefined
+                                                    ? t("page.story.live2d.preparing")
+                                                    : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
+                                            </p>
+                                            <p className="type-body-s tabular-nums text-on-surface-variant">
+                                                {t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
