@@ -333,7 +333,7 @@ export const zhTWPageSecondaryB = {
             summary: "四個難度各出 {rounds} 道題，當天所有人的題目都一樣。",
             resetIn: "{time} 後換題",
             rules: {
-                time: "每題限時 {seconds} 秒，片段開始播放才計時，載入時間不算。",
+                time: "每題限時 {seconds} 秒，片段開始播放才計時，載入時間不算在內。",
                 attempts: "每題最多猜 3 次，每猜錯一次，這題的得分減半。",
                 score: "答得越快，得分越高；連續首猜即中還有連擊加成。",
             },
