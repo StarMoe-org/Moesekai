@@ -811,8 +811,9 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                                 {/*
                                   * What draws the characters, at the top right while the episode loads. It is
                                   * Live2D's own file, unaltered; its clear space is part of the image, which is
-                                  * sized and placed so that the logo itself is as tall as the StarMoe mark
-                                  * across from it (4% of the picture's width) and as far from the corner.
+                                  * sized and placed so that its figure (the three bars, without the word
+                                  * below them) is as tall as the StarMoe mark across from it, 4% of the
+                                  * picture's width, level with it and as far from the corner.
                                   */}
                                 <div className="pointer-events-none flex shrink-0 justify-end">
                                     <img
@@ -821,7 +822,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                                         width={411}
                                         height={411}
                                         draggable={false}
-                                        className="mr-[1.84cqw] mt-[1.73cqw] aspect-square h-[5.32cqw] w-auto shrink-0"
+                                        className="mr-[1.55cqw] mt-[1.58cqw] aspect-square h-[6.45cqw] w-auto shrink-0"
                                     />
                                 </div>
                                 <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3">
