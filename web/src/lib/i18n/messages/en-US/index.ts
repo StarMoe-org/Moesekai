@@ -4658,7 +4658,7 @@ export const enUSMessages = {
                 summary: "Each of the four tiers has {rounds} songs, and everyone gets the same ones today.",
                 resetIn: "New songs in {time}",
                 rules: {
-                    time: "You have {seconds} seconds per round, counted from when the clip starts loading.",
+                    time: "You have {seconds} seconds per round, counted from when the clip starts playing; loading time doesn't count.",
                     attempts: "Up to 3 guesses per round. Each wrong guess halves that round's points.",
                     score: "Faster answers score more, and first-try streaks add a combo bonus.",
                 },

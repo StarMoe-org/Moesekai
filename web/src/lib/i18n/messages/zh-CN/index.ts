@@ -4657,7 +4657,7 @@ export const zhCNMessages = {
                 summary: "四个难度各出 {rounds} 道题，当天所有人的题目都一样。",
                 resetIn: "{time} 后换题",
                 rules: {
-                    time: "每题限时 {seconds} 秒，片段一开始加载就计时。",
+                    time: "每题限时 {seconds} 秒，片段开始播放才计时，加载时间不算。",
                     attempts: "每题最多猜 3 次，每猜错一次，这题的得分减半。",
                     score: "答得越快，得分越高；连续首猜即中还有连击加成。",
                 },
