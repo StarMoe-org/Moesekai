@@ -224,7 +224,8 @@ test("music list/detail preserve responsive layouts and use light/dark semantic 
 
   assert.ok(layout.includes(`MUSIC_GRID_CLASS = "${baseline.musicUi.gridClass}"`));
   assert.ok(detail.includes(`className="${baseline.musicUi.detailGridClass}"`));
-  assert.ok(detail.includes(`className="${baseline.musicUi.detailStickyClass}"`));
+  // Two columns on desktop; on mobile they dissolve so order-* can interleave the cards.
+  assert.ok(detail.includes(`className="${baseline.musicUi.detailColumnClass}"`));
   assert.match(detail, /<PageContainer>[\s\S]*<h1/, "music content must use the shared page gutters");
   assert.match(pageContainer, /mx-auto w-full px-4 py-6 sm:px-6 sm:py-8/);
   assert.match(pageContainer, /"max-w-7xl"/, "ordinary pages retain a bounded desktop content width");

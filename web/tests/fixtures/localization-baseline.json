@@ -158,8 +158,8 @@
   },
   "musicUi": {
     "gridClass": "grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-[repeat(auto-fill,minmax(140px,1fr))] gap-3 sm:gap-4",
-    "detailGridClass": "grid grid-cols-1 lg:grid-cols-2 gap-8",
-    "detailStickyClass": "lg:sticky lg:top-24 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scrollbar",
+    "detailGridClass": "flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-8",
+    "detailColumnClass": "contents lg:flex lg:flex-col lg:gap-6",
     "itemHrefTemplate": "/music/${music.id}",
     "itemComposerClass": "text-xs type-caption text-slate-500 dark:text-slate-400 mt-1"
   }

@@ -24,10 +24,10 @@ export function vocalHasLyrics(vocal: Pick<IMusicVocalInfo, "musicVocalType">): 
 }
 
 /**
- * Medleys of other songs (such as "MASTER高難易度楽曲メドレー") credit no
- * composer, lyricist or arranger. A clip of one is a clip of some other song,
- * so they are never questions or answers. The title is no guide:
- * "スターダストメドレー" is an ordinary song.
+ * Medleys of other songs (music 674-676 on JP, the "MASTER" and anniversary
+ * medleys) credit no composer, lyricist or arranger. A clip of one is a clip
+ * of some other song, so they are never questions or answers. The title is no
+ * guide: music 380 has "medley" in its name and is an ordinary song.
  */
 export function isMedley(music: Pick<IMusicInfo, "composer" | "lyricist" | "arranger">): boolean {
     return [music.composer, music.lyricist, music.arranger].every((credit) => {

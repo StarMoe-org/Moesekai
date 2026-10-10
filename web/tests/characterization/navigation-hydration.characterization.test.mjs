@@ -211,6 +211,7 @@ async function getComponentHarness() {
         isDocked: false,
         close: () => {},
       }),
+      useMediaQuery: (_query, serverFallback = false) => serverFallback,
     });
     const mainLayoutPrelude = `
       const dependencies = globalThis.__moesekaiNavigationHydration;
@@ -222,6 +223,7 @@ async function getComponentHarness() {
         localizePathForBrowser, stripRouteLocale, DetailSeoSummary, useDetailSeoSummary } = dependencies;
       const useTheme = dependencies.useMainLayoutTheme;
       const useQuickFilterContext = dependencies.useQuickFilterContext;
+      const useMediaQuery = dependencies.useMediaQuery;
     `;
     const MainLayout = await importTsxComponent("src/components/MainLayout.tsx", mainLayoutPrelude);
 
