@@ -13,6 +13,7 @@
  */
 
 import { isAcceptedAliasKey, normalizeAnswer, type SongIndex } from "./answer.ts";
+import { MOESEKAI_API_ORIGIN, apiCredentials } from "../moesekai-api-origin.ts";
 import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
 export { isAbortError };
@@ -230,7 +231,7 @@ export function classifyDailyError(error: unknown): DailyErrorKind {
 }
 
 export interface DailyApiOptions {
-    /** Prefix for the relative "/api/..." paths; defaults to "" (the page's own origin, which the session cookie belongs to). */
+    /** Prefix for the relative "/api/..." paths; defaults to moesekai-api's origin (MOESEKAI_API_ORIGIN, "" for the page's own). */
     baseUrl?: string;
     fetch?: FetchLike;
     /** A request came back 401: the session cookie no longer signs anyone in. */
@@ -275,12 +276,13 @@ function normalizeInfo(info: DailyInfo): DailyInfo {
 }
 
 export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
-    const baseUrl = (options.baseUrl ?? "").replace(/\/+$/, "");
+    const baseUrl = (options.baseUrl ?? MOESEKAI_API_ORIGIN).replace(/\/+$/, "");
+    const credentials = apiCredentials(baseUrl);
     const doFetch: FetchLike = options.fetch ?? ((input, init) => fetch(input, init));
 
     async function send(method: string, path: string, body?: unknown, signal?: AbortSignal, accept = "application/json"): Promise<Response> {
         const headers: Record<string, string> = { Accept: accept };
-        const init: RequestInit = { method, headers, signal, cache: "no-store", credentials: "same-origin" };
+        const init: RequestInit = { method, headers, signal, cache: "no-store", credentials };
         if (body !== undefined) {
             headers["Content-Type"] = "application/json";
             init.body = JSON.stringify(body);

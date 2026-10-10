@@ -324,3 +324,13 @@ test("time and date helpers", () => {
     assert.equal(dates[1], "2026-02-28");
     assert.equal(dates[30], "2026-01-30");
 });
+
+test("moesekai-api on another origin gets the session cookie", async () => {
+    const { fetch, calls } = fakeFetch(() => ({ json: INFO }));
+    const api = createDailyApi({ baseUrl: "https://passport.pjsk.moe", fetch });
+    await api.getInfo();
+    await api.fetchClip("/api/guess-music/daily/sessions/s1/rounds/0/clip");
+    assert.equal(calls[0].url, "https://passport.pjsk.moe/api/guess-music/daily/");
+    assert.equal(calls[1].url, "https://passport.pjsk.moe/api/guess-music/daily/sessions/s1/rounds/0/clip/");
+    for (const call of calls) assert.equal(call.credentials, "include");
+});

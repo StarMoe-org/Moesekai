@@ -2,10 +2,10 @@
  * Plumbing shared by the guess-music API clients (daily-api.ts and
  * practice-api.ts): the canonical request URL and error bodies.
  *
- * Both clients call the page's own origin by default, never
- * NEXT_PUBLIC_API_URL: /api/guess-music/* sits behind the same forwarding as
- * /api/auth/*, and moesekai-api's session cookie is first-party to the page
- * (see moesekai-account.ts), so another API host would never see it.
+ * Both clients call moesekai-api's origin by default (moesekai-api-origin.ts),
+ * never NEXT_PUBLIC_API_URL: /api/guess-music/* lives next to /api/auth/*, and
+ * the session cookie belongs to that origin (see moesekai-account.ts), so
+ * another API host would never see it.
  *
  * Kept free of path aliases and React so the tests can import it directly.
  */

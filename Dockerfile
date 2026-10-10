@@ -45,6 +45,10 @@ ENV NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=$NEXT_PUBLIC_SSE_WEB_ASSET_PROXY
 # the secret is available to this build step only and is never copied into the image.
 ARG NEXT_PUBLIC_LYRICS_BASE_URL=https://translation.exmeaning.com/files/translation/lyrics
 ENV NEXT_PUBLIC_LYRICS_BASE_URL=$NEXT_PUBLIC_LYRICS_BASE_URL
+# moesekai-api (sign-in and guess-music) on its own origin: pjsk.moe's /api/ is cached by a Cloudflare rule
+# whatever Cache-Control says, so per-user answers are fetched from here with credentials instead.
+ARG NEXT_PUBLIC_MOESEKAI_API_ORIGIN=https://passport.pjsk.moe
+ENV NEXT_PUBLIC_MOESEKAI_API_ORIGIN=$NEXT_PUBLIC_MOESEKAI_API_ORIGIN
 # Build-time data sources. Multiple URLs allow Docker builds to survive flaky DNS/proxy/CDN paths.
 ARG MASTER_DATA_URLS=https://metadata.exmeaning.com/{region}/master,https://metadata.pjsk.moe/{region}/master
 ARG MANGA_DATA_URLS=https://moe.exmeaning.com/mangas/mangas.json

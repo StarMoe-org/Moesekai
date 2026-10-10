@@ -34,15 +34,17 @@ function installFetch() {
     return { calls, responses };
 }
 
-/** A fresh copy of the module: its store is module-level state. */
-function loadModule() {
+/** A fresh copy of the module: its store is module-level state. `apiOrigin` stands in for NEXT_PUBLIC_MOESEKAI_API_ORIGIN. */
+function loadModule(apiOrigin = "") {
     const loaded = { exports: {} };
-    new Function("require", "exports", "module", compiled)(require, loaded.exports, loaded);
+    const origin = { MOESEKAI_API_ORIGIN: apiOrigin, apiCredentials: (base) => (base ? "include" : "same-origin") };
+    const localRequire = (id) => (id === "./moesekai-api-origin.ts" ? origin : require(id));
+    new Function("require", "exports", "module", compiled)(localRequire, loaded.exports, loaded);
     return loaded.exports;
 }
 
 /** The module in a minimal fake browser whose navigations are recorded. */
-function loadAccount({ path = "/zh-cn/guess-music/", search = "?tab=daily", lang = "zh-CN" } = {}) {
+function loadAccount({ path = "/zh-cn/guess-music/", search = "?tab=daily", lang = "zh-CN", apiOrigin = "" } = {}) {
     const assigned = [];
     globalThis.window = {
         location: { origin: "https://pjsk.moe", pathname: path, search, assign: (url) => assigned.push(url) },
@@ -50,7 +52,7 @@ function loadAccount({ path = "/zh-cn/guess-music/", search = "?tab=daily", lang
         removeEventListener() {},
     };
     globalThis.document = { documentElement: { lang } };
-    return { account: loadModule(), assigned, ...installFetch() };
+    return { account: loadModule(apiOrigin), assigned, ...installFetch() };
 }
 
 function cleanup() {
@@ -313,4 +315,22 @@ test("a failed first check is asked again on a backoff while the account is in u
     await React.act(async () => again.unmount());
     await React.act(async () => t.mock.timers.tick(120_000));
     assert.equal(calls.length, 4);
+});
+
+test("with moesekai-api on its own origin, every request goes there with credentials", async (t) => {
+    t.after(cleanup);
+    const api = "https://passport.pjsk.moe";
+    const { account, assigned, calls, responses } = loadAccount({ apiOrigin: api, path: "/zh-cn/guess-music/", search: "" });
+    responses.push({ body: { user: MIZUKI } });
+    await account.refreshMoesekaiAccount();
+    assert.equal(calls[0].url, `${api}/api/auth/me`);
+    assert.equal(calls[0].credentials, "include");
+
+    account.signIn();
+    assert.deepEqual(assigned, [`${api}/api/auth/login?return=%2Fzh-cn%2Fguess-music%2F&locale=zh-CN`]);
+
+    responses.push({ body: { redirect: "https://passport.star.moe/oidc/session/end?client_id=c" } });
+    await account.signOut();
+    assert.equal(calls.at(-1).url, `${api}/api/auth/logout`);
+    assert.equal(calls.at(-1).credentials, "include");
 });

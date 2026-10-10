@@ -9,6 +9,7 @@
  * Kept free of path aliases and React so the tests can import it directly.
  */
 
+import { MOESEKAI_API_ORIGIN } from "../moesekai-api-origin.ts";
 import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
 export interface InstrumentalCatalog {
@@ -67,7 +68,7 @@ export function classifyPracticeError(error: unknown): PracticeErrorKind {
 }
 
 export interface PracticeApiOptions {
-    /** Prefix for the relative "/api/..." paths; defaults to "" (the page's own origin, like the daily API). */
+    /** Prefix for the relative "/api/..." paths; defaults to moesekai-api's origin, like the daily API. Practice needs no cookie. */
     baseUrl?: string;
     fetch?: FetchLike;
 }
@@ -90,7 +91,7 @@ export const PRACTICE_SEED_MAX_LENGTH = 64;
 export const PRACTICE_CLIP_REUSE_MS = 25 * 60 * 1000;
 
 export function createPracticeApi(options: PracticeApiOptions = {}): PracticeApi {
-    const baseUrl = (options.baseUrl ?? "").replace(/\/+$/, "");
+    const baseUrl = (options.baseUrl ?? MOESEKAI_API_ORIGIN).replace(/\/+$/, "");
     const doFetch: FetchLike = options.fetch ?? ((input, init) => fetch(input, init));
 
     async function json<T>(method: string, path: string, body?: unknown, signal?: AbortSignal): Promise<T> {

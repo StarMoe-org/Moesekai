@@ -14,11 +14,13 @@
  * shows as unavailable for now, and the server is asked again on a backoff
  * until it answers.
  *
- * The auth routes are always same-origin paths, never NEXT_PUBLIC_API_URL:
- * the session cookie is first-party to the page.
+ * The auth routes live on moesekai-api's origin (moesekai-api-origin.ts):
+ * https://passport.pjsk.moe in production, whose session cookie the requests
+ * carry with credentials; the page's own origin in development.
  */
 
 import { useSyncExternalStore } from "react";
+import { MOESEKAI_API_ORIGIN, apiCredentials } from "./moesekai-api-origin.ts";
 
 export type MoesekaiAccountStatus = "loading" | "signed-out" | "signed-in" | "unavailable";
 
@@ -95,11 +97,11 @@ export function parseAccountResponse(body: unknown): MoesekaiAccountState | null
     };
 }
 
-/** The sign-in entry point; moesekai-api only accepts a same-origin path as `return`. */
+/** The sign-in entry point; moesekai-api only accepts a path on the site as `return`. */
 export function buildSignInUrl(returnTo: string, locale: string | null): string {
     const params = new URLSearchParams({ return: returnTo });
     if (locale && LOCALE_PATTERN.test(locale)) params.set("locale", locale);
-    return `${LOGIN_PATH}?${params.toString()}`;
+    return `${MOESEKAI_API_ORIGIN}${LOGIN_PATH}?${params.toString()}`;
 }
 
 /** Where to go after signing out: the redirect the server answered (http/https only), else the home page. */
@@ -135,10 +137,10 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-        return await fetch(path, {
+        return await fetch(`${MOESEKAI_API_ORIGIN}${path}`, {
             ...init,
             headers: { Accept: "application/json" },
-            credentials: "same-origin",
+            credentials: apiCredentials(MOESEKAI_API_ORIGIN),
             cache: "no-store",
             signal: controller.signal,
         });
