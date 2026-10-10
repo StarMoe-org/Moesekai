@@ -105,6 +105,9 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
     const submittingRef = useRef(false);
     // Rounds skipped in a row because the server already had them final.
     const skippedRef = useRef(0);
+    // The next round, started while the answer shows. Starting runs no timer (the clip's key does),
+    // so "next" then only waits for the key; its clip is usually downloaded by then too.
+    const nextStartRef = useRef<{ round: number; start: Promise<DailyRoundStart> } | null>(null);
 
     const releaseClip = useCallback(() => {
         clipAbortRef.current?.abort();
@@ -194,7 +197,10 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
         setStart(null);
         setNotice(null);
         setErrorKind(null);
-        api.startRound(run.sessionId, round)
+        const early = nextStartRef.current?.round === round ? nextStartRef.current.start : null;
+        nextStartRef.current = null;
+        // A failed early start is simply made again, so any error shown is this one's.
+        (early ? early.catch(() => api.startRound(run.sessionId, round)) : api.startRound(run.sessionId, round))
             .then((roundStart) => {
                 if (cancelled) return;
                 skippedRef.current = 0;
@@ -226,6 +232,14 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
         // run.sessionId is fixed for the life of this view.
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [round, reveal, startAttempt]);
+
+    useEffect(() => {
+        const upcoming = reveal ? reveal.round + 1 : -1;
+        if (upcoming < 0 || upcoming >= total || nextStartRef.current?.round === upcoming) return;
+        const early = api.startRound(run.sessionId, upcoming);
+        early.catch(() => {});
+        nextStartRef.current = { round: upcoming, start: early };
+    }, [api, reveal, run.sessionId, total]);
 
     // Countdown ticker while guessing.
     useEffect(() => {
