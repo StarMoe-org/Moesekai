@@ -4728,6 +4728,7 @@ export const koKRMessages = {
                 progress: "재생 위치",
                 clipLength: "{seconds}초 구간",
                 tapToPlay: "브라우저가 자동 재생을 막았어요. 눌러서 재생하기",
+                tapToStart: "브라우저가 자동 재생을 막았어요. 누르면 재생되고 그때부터 타이머가 시작돼요",
             },
             round: {
                 back: "돌아가기",

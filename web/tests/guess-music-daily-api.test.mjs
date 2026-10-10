@@ -14,6 +14,7 @@ import {
     formatCountdown,
     formatDuration,
     isDailyTierId,
+    isSealedClip,
     loadStoredRun,
     msUntil,
     pruneStoredRuns,
@@ -81,7 +82,7 @@ test("every contract route uses the right method, path and body", async () => {
     await api.createSession("easy", "ranked");
     await api.createSession("hell", "practice");
     await api.startRound("s/1", 3);
-    const blob = await api.fetchClip("/api/guess-music/daily/sessions/s1/rounds/3/clip");
+    const { clip: blob, timerFromServer } = await api.downloadRoundClip({ clipUrl: "/api/guess-music/daily/sessions/s1/rounds/3/clip" });
     await api.answer("s1", 3, 42);
     await api.answer("s1", 3, null);
     await api.finish("s1");
@@ -93,6 +94,7 @@ test("every contract route uses the right method, path and body", async () => {
 
     assert.equal(await blob.text(), "ID3?");
     assert.equal(blob.type, "audio/mpeg");
+    assert.equal(timerFromServer, false);
     assert.deepEqual(
         calls.map((c) => `${c.method} ${c.url}`),
         [
@@ -152,7 +154,7 @@ test("relative paths by default, and the session cookie instead of a token", asy
     const api = createDailyApi({ fetch });
     await api.getInfo();
     await api.createSession("easy", "ranked");
-    await api.fetchClip("/api/guess-music/daily/sessions/s1/rounds/0/clip");
+    await api.downloadRoundClip({ clipUrl: "/api/guess-music/daily/sessions/s1/rounds/0/clip" });
     assert.equal(calls[0].url, "/api/guess-music/daily/");
     assert.equal(calls[2].url, "/api/guess-music/daily/sessions/s1/rounds/0/clip/");
     for (const call of calls) {
@@ -338,10 +340,50 @@ test("moesekai-api on another origin gets the session cookie", async () => {
     const { fetch, calls } = fakeFetch(() => ({ json: INFO }));
     const api = createDailyApi({ baseUrl: "https://passport.pjsk.moe", fetch });
     await api.getInfo();
-    await api.fetchClip("/api/guess-music/daily/sessions/s1/rounds/0/clip");
+    await api.downloadRoundClip({ clipUrl: "/api/guess-music/daily/sessions/s1/rounds/0/clip" });
     assert.equal(calls[0].url, "https://passport.pjsk.moe/api/guess-music/daily/");
     assert.equal(calls[1].url, "https://passport.pjsk.moe/api/guess-music/daily/sessions/s1/rounds/0/clip/");
     for (const call of calls) assert.equal(call.credentials, "include");
+});
+
+test("a sealed clip downloads without its key, then opens with it; the timer comes from the server", async () => {
+    const raw = crypto.getRandomValues(new Uint8Array(32));
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encryptKey = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt"]);
+    const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, encryptKey, new TextEncoder().encode("ID3 clip")));
+    const sealedBody = new Uint8Array([...iv, ...ciphertext]);
+    const keyFor = (bytes) => ({ json: { key: Buffer.from(bytes).toString("base64url"), contentType: "audio/mpeg", elapsedMs: 1500 } });
+    const { fetch, calls } = fakeFetch(({ url }) => {
+        if (url.endsWith("/sealed/")) return { body: sealedBody, contentType: "application/octet-stream" };
+        if (url.endsWith("/key/")) return keyFor(raw);
+        return { status: 500 };
+    });
+    const api = createDailyApi({ fetch });
+    const round = "/api/guess-music/daily/sessions/s1/rounds/0";
+    const start = { round: 0, clipSeconds: 30, timeLimitSeconds: 45, clipUrl: `${round}/clip`, sealedClipUrl: `${round}/sealed`, keyUrl: `${round}/key` };
+
+    const downloaded = await api.downloadRoundClip(start);
+    assert.ok(isSealedClip(downloaded));
+    assert.deepEqual(calls.map((c) => `${c.method} ${c.url}`), [`GET ${round}/sealed/`]);
+    assert.ok(calls[0].nonce);
+
+    const before = Date.now();
+    const { clip, timerStartedAt, timerFromServer } = await api.unlockRoundClip(downloaded);
+    assert.equal(await clip.text(), "ID3 clip");
+    assert.equal(clip.type, "audio/mpeg");
+    assert.equal(timerFromServer, true);
+    assert.ok(timerStartedAt >= before - 1500 && timerStartedAt <= Date.now() - 1500, "the countdown starts where the server's did");
+    assert.deepEqual(calls.slice(1).map((c) => `${c.method} ${c.url} ${c.nonce ?? ""}`), [`POST ${round}/key/ `]);
+
+    // A key that does not fit fails as a clip error, not a crash.
+    const wrong = fakeFetch(({ url }) => (url.endsWith("/key/") ? keyFor(new Uint8Array(32)) : { body: sealedBody, contentType: "application/octet-stream" }));
+    const wrongApi = createDailyApi({ fetch: wrong.fetch });
+    await assert.rejects(wrongApi.unlockRoundClip(await wrongApi.downloadRoundClip(start)), (error) => error instanceof DailyApiError && error.code === "bad_clip");
+
+    // Servers without sealed clips: the clip in the clear, timed from its arrival.
+    const plain = await createDailyApi({ fetch: fakeFetch(() => ({ body: "ID3?", contentType: "audio/mpeg" })).fetch }).downloadRoundClip({ ...start, sealedClipUrl: undefined, keyUrl: undefined });
+    assert.ok(!isSealedClip(plain));
+    assert.equal(plain.timerFromServer, false);
 });
 
 test("every GET carries its own cache-busting parameter; writes do not", async () => {

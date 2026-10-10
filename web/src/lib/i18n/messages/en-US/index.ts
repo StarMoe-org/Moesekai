@@ -4707,6 +4707,7 @@ export const enUSMessages = {
                 progress: "Playback progress",
                 clipLength: "{seconds}s clip",
                 tapToPlay: "Your browser blocked autoplay. Tap to listen",
+                tapToStart: "Your browser blocked autoplay. Tap to listen; the timer starts then",
             },
             round: {
                 back: "Back",

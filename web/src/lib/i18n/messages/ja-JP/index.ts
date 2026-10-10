@@ -4732,6 +4732,7 @@ export const jaJPMessages = {
         progress: '再生位置',
         clipLength: '{seconds}秒の音源',
         tapToPlay: '自動再生がブロックされました。タップして再生',
+        tapToStart: '自動再生がブロックされました。タップして再生（タイマーはそこから始まります）',
       },
       round: {
         back: '戻る',

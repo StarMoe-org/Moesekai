@@ -4706,6 +4706,7 @@ export const zhCNMessages = {
                 progress: "播放进度",
                 clipLength: "{seconds} 秒片段",
                 tapToPlay: "浏览器拦下了自动播放，点这里开始听",
+                tapToStart: "浏览器拦下了自动播放，点这里开始听，倒计时从这时算起",
             },
             round: {
                 back: "返回",

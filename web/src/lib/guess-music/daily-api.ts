@@ -6,8 +6,8 @@
  * origin only); ranked runs need a signed-in session, practice does not, and
  * a 401 (the session is gone) is reported through `onUnauthorized`.
  * Failures surface as DailyApiError with the server's error code, or a
- * synthetic one ("network", "bad_response", "http_<status>") when the server
- * sent none.
+ * synthetic one ("network", "bad_response", "bad_clip", "http_<status>") when
+ * the server sent none or a sealed clip would not open.
  *
  * Kept free of path aliases and React so the tests can import it directly.
  */
@@ -84,9 +84,41 @@ export interface DailyRoundStart {
     round: number;
     clipSeconds: number;
     timeLimitSeconds: number;
+    /** The clip in the clear: its first serve starts the round timer, download time included. */
     clipUrl: string;
+    /** The clip encrypted: downloading it starts nothing (absent from servers before sealed clips). */
+    sealedClipUrl?: string;
+    /** POST: the sealed clip's key; the first request starts the round timer. */
+    keyUrl?: string;
     /** Choice mode: the music ids to choose from (shuffled, the answer among them). */
     options?: number[];
+}
+
+/** A round's clip, ready to play. */
+export interface DailyRoundClip {
+    clip: Blob;
+    /** When (Date.now() clock) the server's round timer started. */
+    timerStartedAt: number;
+    /** timerStartedAt comes from the server (sealed clips); otherwise it is the clip's arrival. */
+    timerFromServer: boolean;
+}
+
+/** A downloaded sealed clip: silent, and the round timer not started, until unlockRoundClip fetches its key. */
+export interface DailySealedClip {
+    bytes: ArrayBuffer;
+    keyUrl: string;
+}
+
+export function isSealedClip(clip: DailyRoundClip | DailySealedClip): clip is DailySealedClip {
+    return "keyUrl" in clip;
+}
+
+interface DailyClipKey {
+    /** AES-256-GCM key, base64url. */
+    key: string;
+    contentType: string;
+    /** How long the round timer has run: 0 when this request started it. */
+    elapsedMs: number;
 }
 
 /** The answer of a round; only sent once the round is final. */
@@ -192,7 +224,7 @@ export type DailyErrorKind =
     | "server";
 
 export class DailyApiError extends Error {
-    /** Server error code, or "network" / "bad_response" / "http_<status>". */
+    /** Server error code, or "network" / "bad_response" / "bad_clip" / "http_<status>". */
     readonly code: string;
     /** HTTP status; 0 when the request never got a response. */
     readonly status: number;
@@ -249,8 +281,14 @@ export interface DailyApi {
     /** Ranked: resumes today's unfinished run (resumeRound > 0) or rejects with already_played. Practice: always a new run. */
     createSession(tier: DailyTierId, mode: DailyMode): Promise<DailySession>;
     startRound(sessionId: string, round: number): Promise<DailyRoundStart>;
-    /** The pre-cut clip bytes (mp3, every tier); the server's round timer starts on the first fetch. */
-    fetchClip(clipUrl: string, signal?: AbortSignal): Promise<Blob>;
+    /**
+     * The round's pre-cut clip (mp3, every tier). Sealed when the server offers it: the download
+     * starts nothing, so neither a slow cut nor a slow connection costs the player time. Otherwise
+     * (older servers, pages without WebCrypto) the clip in the clear, whose serve started the timer.
+     */
+    downloadRoundClip(start: DailyRoundStart, signal?: AbortSignal): Promise<DailyRoundClip | DailySealedClip>;
+    /** Fetches a sealed clip's key, which starts the round timer (or says how long it has run), and opens the clip. */
+    unlockRoundClip(sealed: DailySealedClip, signal?: AbortSignal): Promise<DailyRoundClip>;
     answer(sessionId: string, round: number, musicId: number | null): Promise<DailyAnswerResult>;
     finish(sessionId: string): Promise<DailyFinishResult>;
     leaderboard(query: LeaderboardQuery, signal?: AbortSignal): Promise<DailyLeaderboard>;
@@ -261,6 +299,31 @@ export interface DailyApi {
 
 const ROOT = "/api/guess-music";
 const CLIP_ACCEPT = "audio/mpeg, audio/*;q=0.8";
+/** AES-GCM nonce length in front of a sealed clip. */
+const SEAL_NONCE_BYTES = 12;
+
+function base64UrlBytes(value: string): Uint8Array<ArrayBuffer> {
+    const base64 = value.replace(/-/g, "+").replace(/_/g, "/");
+    const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+}
+
+/** Decrypts a sealed clip: a 12-byte nonce, then AES-256-GCM ciphertext and tag. */
+async function openSealedClip(sealed: ArrayBuffer, key: DailyClipKey): Promise<Blob> {
+    try {
+        const cryptoKey = await crypto.subtle.importKey("raw", base64UrlBytes(key.key), "AES-GCM", false, ["decrypt"]);
+        const plain = await crypto.subtle.decrypt(
+            { name: "AES-GCM", iv: new Uint8Array(sealed, 0, SEAL_NONCE_BYTES) },
+            cryptoKey,
+            new Uint8Array(sealed, SEAL_NONCE_BYTES),
+        );
+        return new Blob([plain], { type: key.contentType || "audio/mpeg" });
+    } catch (error) {
+        throw new DailyApiError("bad_clip", 0, error instanceof Error ? error.message : String(error));
+    }
+}
 
 function seg(value: string | number): string {
     return encodeURIComponent(String(value));
@@ -318,9 +381,19 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
         getInfo: async (signal) => normalizeInfo(await json<DailyInfo>("GET", `${ROOT}/daily`, undefined, signal)),
         createSession: (tier, mode) => json<DailySession>("POST", `${ROOT}/daily/sessions`, { tier, mode }),
         startRound: (sessionId, round) => json<DailyRoundStart>("POST", `${session(sessionId)}/rounds/${seg(round)}/start`, {}),
-        async fetchClip(clipUrl, signal) {
-            const response = await send("GET", clipUrl, undefined, signal, CLIP_ACCEPT);
-            return response.blob();
+        async downloadRoundClip(start, signal) {
+            // WebCrypto needs a secure context; a page served over plain http (a phone on the LAN) plays the clip in the clear.
+            if (!start.sealedClipUrl || !start.keyUrl || !globalThis.crypto?.subtle) {
+                const clip = await (await send("GET", start.clipUrl, undefined, signal, CLIP_ACCEPT)).blob();
+                return { clip, timerStartedAt: Date.now(), timerFromServer: false };
+            }
+            const bytes = await (await send("GET", start.sealedClipUrl, undefined, signal, "application/octet-stream")).arrayBuffer();
+            return { bytes, keyUrl: start.keyUrl };
+        },
+        async unlockRoundClip(sealed, signal) {
+            const key = await json<DailyClipKey>("POST", sealed.keyUrl, {}, signal);
+            const timerStartedAt = Date.now() - Math.max(0, Number(key.elapsedMs) || 0);
+            return { clip: await openSealedClip(sealed.bytes, key), timerStartedAt, timerFromServer: true };
         },
         answer: (sessionId, round, musicId) =>
             json<DailyAnswerResult>("POST", `${session(sessionId)}/rounds/${seg(round)}/answer`, { musicId }),

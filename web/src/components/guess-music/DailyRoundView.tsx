@@ -23,10 +23,13 @@ import { getMusicJacketUrl } from "@/lib/assets";
 import { formatClock } from "@/lib/guess-music/rounds";
 import {
     classifyDailyError,
+    isSealedClip,
     type DailyAnswerResult,
     type DailyApi,
     type DailyErrorKind,
+    type DailyRoundClip,
     type DailyRoundStart,
+    type DailySealedClip,
     type DailyTierInfo,
     type RoundReveal,
     type StoredDailyRun,
@@ -74,6 +77,8 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
     const [phase, setPhase] = useState<Phase>("starting");
     const [start, setStart] = useState<DailyRoundStart | null>(null);
     const [clipSrc, setClipSrc] = useState<string | null>(null);
+    // Downloaded but still locked: the player unlocks it once the page may play sound.
+    const [sealedClip, setSealedClip] = useState<DailySealedClip | null>(null);
     const [clipFailed, setClipFailed] = useState(false);
     const [reveal, setReveal] = useState<RevealState | null>(null);
     const [notice, setNotice] = useState<{ tone: "error" | "warning"; text: string } | null>(null);
@@ -105,11 +110,38 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
         if (clipUrlRef.current) URL.revokeObjectURL(clipUrlRef.current);
         clipUrlRef.current = null;
         setClipSrc(null);
+        setSealedClip(null);
     }, []);
 
     useEffect(() => releaseClip, [releaseClip]);
 
     const errorText = useCallback((kind: DailyErrorKind) => t(`page.guessMusicDaily.errors.${kind}`), [t]);
+
+    const failClip = useCallback(
+        (error: unknown) => {
+            const kind = classifyDailyError(error);
+            if (kind === "sessionExpired" || kind === "unauthorized") {
+                onFatal(kind);
+                return;
+            }
+            setClipFailed(true);
+        },
+        [onFatal],
+    );
+
+    const showClip = useCallback(
+        (round: number, { clip, timerStartedAt, timerFromServer }: DailyRoundClip) => {
+            const current = runRef.current;
+            // Count down with the server's timer; its own figure also resyncs a reloaded page.
+            if (current.round === round && (timerFromServer || !current.clipStartedAt)) {
+                commit({ ...current, clipStartedAt: timerStartedAt });
+            }
+            const url = URL.createObjectURL(clip);
+            clipUrlRef.current = url;
+            setClipSrc(url);
+        },
+        [commit],
+    );
 
     const loadClip = useCallback(
         async (roundStart: DailyRoundStart) => {
@@ -118,28 +150,30 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
             const controller = new AbortController();
             clipAbortRef.current = controller;
             try {
-                const blob = await api.fetchClip(roundStart.clipUrl, controller.signal);
+                const downloaded = await api.downloadRoundClip(roundStart, controller.signal);
                 if (controller.signal.aborted) return;
-                const current = runRef.current;
-                if (current.round === roundStart.round && !current.clipStartedAt) {
-                    // The server's round timer starts once the clip is cut and sent, so loading time is not counted: count down from arrival.
-                    commit({ ...current, clipStartedAt: Date.now() });
-                }
-                const url = URL.createObjectURL(blob);
-                clipUrlRef.current = url;
-                setClipSrc(url);
+                if (isSealedClip(downloaded)) setSealedClip(downloaded);
+                else showClip(roundStart.round, downloaded);
             } catch (error) {
-                if (controller.signal.aborted) return;
-                const kind = classifyDailyError(error);
-                if (kind === "sessionExpired" || kind === "unauthorized") {
-                    onFatal(kind);
-                    return;
-                }
-                setClipFailed(true);
+                if (!controller.signal.aborted) failClip(error);
             }
         },
-        [api, commit, onFatal, releaseClip],
+        [api, failClip, releaseClip, showClip],
     );
+
+    // The key starts the round timer: the player asks for it only once the clip can be heard.
+    const unlockClip = useCallback(async () => {
+        const sealed = sealedClip;
+        const controller = clipAbortRef.current;
+        if (!sealed || !controller) return;
+        setSealedClip(null);
+        try {
+            const clip = await api.unlockRoundClip(sealed, controller.signal);
+            if (!controller.signal.aborted) showClip(round, clip);
+        } catch (error) {
+            if (!controller.signal.aborted) failClip(error);
+        }
+    }, [api, failClip, round, sealedClip, showClip]);
 
     // Start the current round (or recover when the stored progress lags behind the server).
     useEffect(() => {
@@ -361,7 +395,14 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
                 <LoadingState label={t("page.guessMusicDaily.round.starting")} className="min-h-48" />
             ) : (
                 <>
-                    <DailyClipPlayer src={clipSrc} clipSeconds={clipSeconds} failed={clipFailed} onRetry={() => start && void loadClip(start)} autoPlay={!reveal} />
+                    <DailyClipPlayer
+                        src={clipSrc}
+                        clipSeconds={clipSeconds}
+                        failed={clipFailed}
+                        onRetry={() => start && void loadClip(start)}
+                        onUnlock={sealedClip ? () => void unlockClip() : undefined}
+                        autoPlay={!reveal}
+                    />
                     {reveal ? (
                         <RevealCard reveal={reveal} songs={songs} last={last} onNext={next} />
                     ) : (

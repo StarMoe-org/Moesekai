@@ -382,6 +382,7 @@ export const zhTWPageSecondaryB = {
             progress: "播放進度",
             clipLength: "{seconds} 秒片段",
             tapToPlay: "瀏覽器擋下了自動播放，點這裡開始聽",
+            tapToStart: "瀏覽器擋下了自動播放，點這裡開始聽，倒數從這時算起",
         },
         round: {
             back: "返回",
