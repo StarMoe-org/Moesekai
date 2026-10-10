@@ -23,10 +23,19 @@ import {
 } from "../src/lib/guess-music/daily-api.ts";
 import { buildSongIndex } from "../src/lib/guess-music/answer.ts";
 
+/** `url` without the one-off `_` parameter every GET carries, and that parameter. */
+function splitNonce(url) {
+    const match = /([?&])_=([^&#]*)(&?)/.exec(url);
+    if (!match) return { url, nonce: undefined };
+    const [whole, separator, nonce, next] = match;
+    return { url: url.slice(0, match.index) + (next ? separator : "") + url.slice(match.index + whole.length), nonce };
+}
+
 function fakeFetch(responder) {
     const calls = [];
-    const fetch = async (url, init = {}) => {
-        const call = { url, method: init.method ?? "GET", headers: init.headers ?? {}, credentials: init.credentials, body: init.body ? JSON.parse(init.body) : undefined };
+    const fetch = async (rawUrl, init = {}) => {
+        const { url, nonce } = splitNonce(rawUrl);
+        const call = { url, nonce, method: init.method ?? "GET", headers: init.headers ?? {}, credentials: init.credentials, body: init.body ? JSON.parse(init.body) : undefined };
         calls.push(call);
         const { status = 200, json, body, contentType = "application/json" } = (await responder(call)) ?? {};
         const payload = json !== undefined ? JSON.stringify(json) : body ?? "";
@@ -333,4 +342,19 @@ test("moesekai-api on another origin gets the session cookie", async () => {
     assert.equal(calls[0].url, "https://passport.pjsk.moe/api/guess-music/daily/");
     assert.equal(calls[1].url, "https://passport.pjsk.moe/api/guess-music/daily/sessions/s1/rounds/0/clip/");
     for (const call of calls) assert.equal(call.credentials, "include");
+});
+
+test("every GET carries its own cache-busting parameter; writes do not", async () => {
+    const { fetch, calls } = fakeFetch(() => ({ json: INFO }));
+    const api = createDailyApi({ baseUrl: "https://passport.pjsk.moe", fetch });
+    await api.getInfo();
+    await api.getInfo();
+    await api.leaderboard({ tier: "easy" });
+    await api.createSession("easy", "ranked");
+    const [first, second, board, write] = calls;
+    assert.ok(first.nonce && second.nonce && board.nonce, "GETs carry _");
+    assert.notEqual(first.nonce, second.nonce, "never the same twice");
+    assert.equal(board.url, "https://passport.pjsk.moe/api/guess-music/daily/leaderboard/?tier=easy");
+    assert.equal(write.method, "POST");
+    assert.equal(write.nonce, undefined);
 });

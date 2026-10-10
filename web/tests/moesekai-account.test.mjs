@@ -25,7 +25,8 @@ function installFetch() {
     const calls = [];
     const responses = [];
     globalThis.fetch = async (url, init = {}) => {
-        calls.push({ url: String(url), method: init.method ?? "GET", credentials: init.credentials, headers: init.headers ?? {} });
+        const nonce = /[?&]_=([^&]*)$/.exec(String(url))?.[1];
+        calls.push({ url: String(url).replace(/[?&]_=[^&]*$/, ""), nonce, method: init.method ?? "GET", credentials: init.credentials, headers: init.headers ?? {} });
         const next = responses.shift();
         if (!next) throw new TypeError("Failed to fetch");
         if (next.pending) return next.pending;
@@ -37,7 +38,12 @@ function installFetch() {
 /** A fresh copy of the module: its store is module-level state. `apiOrigin` stands in for NEXT_PUBLIC_MOESEKAI_API_ORIGIN. */
 function loadModule(apiOrigin = "") {
     const loaded = { exports: {} };
-    const origin = { MOESEKAI_API_ORIGIN: apiOrigin, apiCredentials: (base) => (base ? "include" : "same-origin") };
+    let counter = 0;
+    const origin = {
+        MOESEKAI_API_ORIGIN: apiOrigin,
+        apiCredentials: (base) => (base ? "include" : "same-origin"),
+        uncachedUrl: (url) => `${url}${url.includes("?") ? "&" : "?"}_=n${++counter}`,
+    };
     const localRequire = (id) => (id === "./moesekai-api-origin.ts" ? origin : require(id));
     new Function("require", "exports", "module", compiled)(localRequire, loaded.exports, loaded);
     return loaded.exports;
@@ -325,6 +331,7 @@ test("with moesekai-api on its own origin, every request goes there with credent
     await account.refreshMoesekaiAccount();
     assert.equal(calls[0].url, `${api}/api/auth/me`);
     assert.equal(calls[0].credentials, "include");
+    assert.ok(calls[0].nonce, "the check carries a cache-busting parameter");
 
     account.signIn();
     assert.deepEqual(assigned, [`${api}/api/auth/login?return=%2Fzh-cn%2Fguess-music%2F&locale=zh-CN`]);
@@ -333,4 +340,5 @@ test("with moesekai-api on its own origin, every request goes there with credent
     await account.signOut();
     assert.equal(calls.at(-1).url, `${api}/api/auth/logout`);
     assert.equal(calls.at(-1).credentials, "include");
+    assert.equal(calls.at(-1).nonce, undefined, "a POST needs none");
 });

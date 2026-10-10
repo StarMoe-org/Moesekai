@@ -20,7 +20,7 @@
  */
 
 import { useSyncExternalStore } from "react";
-import { MOESEKAI_API_ORIGIN, apiCredentials } from "./moesekai-api-origin.ts";
+import { MOESEKAI_API_ORIGIN, apiCredentials, uncachedUrl } from "./moesekai-api-origin.ts";
 
 export type MoesekaiAccountStatus = "loading" | "signed-out" | "signed-in" | "unavailable";
 
@@ -137,7 +137,8 @@ async function request(path: string, init: RequestInit = {}): Promise<Response> 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
     try {
-        return await fetch(`${MOESEKAI_API_ORIGIN}${path}`, {
+        const url = `${MOESEKAI_API_ORIGIN}${path}`;
+        return await fetch((init.method ?? "GET") === "GET" ? uncachedUrl(url) : url, {
             ...init,
             headers: { Accept: "application/json" },
             credentials: apiCredentials(MOESEKAI_API_ORIGIN),

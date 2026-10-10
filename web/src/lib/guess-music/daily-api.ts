@@ -13,7 +13,7 @@
  */
 
 import { isAcceptedAliasKey, normalizeAnswer, type SongIndex } from "./answer.ts";
-import { MOESEKAI_API_ORIGIN, apiCredentials } from "../moesekai-api-origin.ts";
+import { MOESEKAI_API_ORIGIN, apiCredentials, uncachedUrl } from "../moesekai-api-origin.ts";
 import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
 export { isAbortError };
@@ -289,7 +289,8 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
         }
         let response: Response;
         try {
-            response = await doFetch(apiUrl(baseUrl, path), init);
+            const url = apiUrl(baseUrl, path);
+            response = await doFetch(method === "GET" ? uncachedUrl(url) : url, init);
         } catch (error) {
             if (isAbortError(error)) throw error;
             throw new DailyApiError("network", 0, error instanceof Error ? error.message : String(error));
