@@ -14,6 +14,7 @@ import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilterContext } from "@/contexts/QuickFilterContext";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
 import DetailSeoSummary from "@/components/seo/DetailSeoSummary";
 import { useDetailSeoSummary } from "@/contexts/DetailSeoSummaryContext";
@@ -253,16 +254,19 @@ export default function MainLayout({
      * Sidebar/drawer mutual exclusion, resolved at render rather than by writing
      * state back.
      *
-     * Below `xlarge` (1600px) the filter drawer is a modal sheet, and stacking
-     * it with the sidebar buries whichever lost. When the sheet is up, the
-     * sidebar therefore yields — treated as visually closed
-     * without touching `isSidebarOpen`, so the user's menu preference survives
-     * and the menu reappears the moment the drawer is dismissed.
+     * Below `md` the sidebar is itself a modal drawer, and stacking two modals
+     * buries whichever lost. When the filter sheet is up, the sidebar therefore
+     * yields — treated as visually closed without touching `isSidebarOpen`, so
+     * the user's menu preference survives and the menu reappears the moment
+     * the sheet is dismissed.
      *
-     * From `xlarge` up (`isFilterDrawerDocked`) the two are designed to sit side
-     * by side, so nothing yields.
+     * From `md` up the sidebar is docked on the left and the modal filter sheet
+     * opens on the right, beside its FAB; from `xlarge` the filter sheet docks
+     * beside the sidebar. Nothing yields, so opening the filters never shifts
+     * the page under the scrim.
      */
-    const sidebarYieldsToDrawer = isFilterDrawerModal;
+    const isMediumUp = useMediaQuery("(min-width: 48rem)", false);
+    const sidebarYieldsToDrawer = isFilterDrawerModal && !isMediumUp;
     const effectiveSidebarOpen = isScreenshotMode || immersiveMode || sidebarYieldsToDrawer
         ? false
         : isSidebarOpen;
@@ -296,10 +300,10 @@ export default function MainLayout({
         setIsSidebarOpen(prev => {
             const newState = !prev;
             sessionStorage.setItem('sidebar_open', String(newState));
-            // Opening the menu on a narrow screen dismisses the filter drawer, so
-            // the two overlays never stack. The reverse direction needs no action
-            // here: `effectiveSidebarOpen` already treats the sidebar as closed
-            // while a floating drawer is up.
+            // Opening the menu dismisses a floating filter sheet, so a menu
+            // drawer and a filter sheet never stack. The reverse direction needs
+            // no action here: below `md`, `effectiveSidebarOpen` already treats
+            // the sidebar as closed while the sheet is up.
             if (newState && isFilterDrawerModal) {
                 closeFilterDrawer();
             }

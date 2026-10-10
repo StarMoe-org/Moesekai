@@ -16,7 +16,7 @@ import { isKeyboardEventComposing } from "@/lib/shortcuts";
  * Stable id shared by the trigger's `aria-controls` and the drawer's `id`.
  *
  * A constant rather than `useId()` because the two ends live in different
- * components (`FilterTabHandle` at the left edge, this drawer near the end of
+ * components (`FilterTabHandle`'s FAB, this drawer near the end of
  * the layout) and would otherwise each mint their own value. The pairing is
  * only ever one-to-one — there is a single drawer per document — so a literal
  * is both correct and inspectable in devtools.
@@ -37,7 +37,8 @@ interface FilterDrawerProps {
  * - `>= 1600px (xlarge)`: standard (docked) side sheet, flush beside the navigation
  *   drawer and below the top app bar. The content column is pushed over by
  *   `--dual-rail-w` (see MainLayout); no scrim, no focus trap.
- * - `640–1599px`: modal side sheet with a scrim.
+ * - `640–1599px`: modal side sheet with a scrim, on the right edge beside the FAB
+ *   that opens it (FilterTabHandle); the navigation drawer stays where it is.
  * - `< 640px`: modal bottom sheet with a drag handle (swipe down to dismiss).
  */
 export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
@@ -269,14 +270,15 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
                 )}
             </AnimatePresence>
 
-            {/* Floating (modal) sheet: slides in from the side, or up from the bottom on compact screens. */}
+            {/* Floating (modal) sheet: slides in from the right edge, on the side of the FAB that
+                opens it, or up from the bottom on compact screens. */}
             <AnimatePresence>
                 {shouldShow && isModal && (
                     <motion.aside
                         key="filter-drawer-modal"
-                        initial={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
+                        initial={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "100%", opacity: 0 }}
                         animate={reducedMotion ? { opacity: 1 } : isCompact ? { y: 0 } : { x: 0, opacity: 1 }}
-                        exit={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "-100%", opacity: 0 }}
+                        exit={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "100%", opacity: 0 }}
                         transition={reducedMotion ? reducedMotionFade : md3SpatialDefault}
                         drag={isCompact && !reducedMotion ? "y" : false}
                         dragConstraints={{ top: 0, bottom: 0 }}
@@ -290,10 +292,9 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
                         aria-labelledby={titleId}
                         className={cn(
                             "fixed z-[120] flex flex-col overflow-hidden text-on-surface glass-thick",
-                            // compact: bottom sheet; medium: modal side sheet beside the nav drawer
+                            // compact: bottom sheet; medium: modal side sheet on the right edge
                             "inset-x-0 bottom-0 max-h-[85dvh] rounded-t-md3-xl",
-                            "sm:inset-x-auto sm:bottom-0 sm:top-0 sm:max-h-none sm:w-[min(var(--filter-drawer-w),calc(100vw-3.5rem))] sm:rounded-none sm:rounded-r-md3-lg",
-                            isSidebarOpen ? "sm:left-0 md:left-[var(--sidebar-w)]" : "sm:left-0",
+                            "sm:inset-x-auto sm:bottom-0 sm:right-0 sm:top-0 sm:max-h-none sm:w-[min(var(--filter-drawer-w),calc(100vw-3.5rem))] sm:rounded-none sm:rounded-l-md3-lg",
                         )}
                     >
                         {sheet}
