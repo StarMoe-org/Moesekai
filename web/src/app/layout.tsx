@@ -96,6 +96,16 @@ export default async function RootLayout({
 
       document.documentElement.dataset.showAds = showAds ? 'true' : 'false';
 
+      // Failed images get data-failed for the broken-image tile (globals.css); a later load clears it.
+      document.addEventListener('error', function(event) {
+        var target = event.target;
+        if (target && target.tagName === 'IMG') target.setAttribute('data-failed', '');
+      }, true);
+      document.addEventListener('load', function(event) {
+        var target = event.target;
+        if (target && target.tagName === 'IMG' && target.hasAttribute('data-failed')) target.removeAttribute('data-failed');
+      }, true);
+
       try {
         var savedBackgroundAnimationBudget = localStorage.getItem('${BACKGROUND_ANIMATION_BUDGET_STORAGE_KEY}');
         var backgroundAnimationBudget = savedBackgroundAnimationBudget === 'off' ? 'off' : 'on';
