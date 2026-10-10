@@ -1,13 +1,13 @@
 /**
  * Where moesekai-api (sign-in and guess-music) is reached from the browser.
  *
- * Production builds set NEXT_PUBLIC_MOESEKAI_API_ORIGIN to
- * https://passport.pjsk.moe, next to the passport. The session cookie belongs
- * to that origin, and requests carry it with `credentials: "include"` (the
- * API allows exactly this site with CORS).
+ * Empty (production and development) means the page's own origin: the main
+ * server (or the dev server) forwards /api/auth/ and /api/guess-music/ to
+ * moesekai-api, and the session cookie is first-party to the page.
  *
- * Empty (local development) means the page's own origin, where the dev server
- * forwards /api/auth/ and /api/guess-music/.
+ * NEXT_PUBLIC_MOESEKAI_API_ORIGIN can name moesekai-api's own origin instead;
+ * the session cookie then belongs to that origin, and requests carry it with
+ * `credentials: "include"` (the API allows exactly the site with CORS).
  *
  * Kept free of path aliases and React so the tests can import it directly.
  */
@@ -21,8 +21,8 @@ export function apiCredentials(baseUrl: string): RequestCredentials {
 /**
  * `url` with a one-off `_` parameter, for every GET to moesekai-api.
  *
- * Cloudflare caches every 200 on the pjsk.moe zone (passport.pjsk.moe
- * included) for a minute whatever the response says, and cookies are not part
+ * Cloudflare caches every 200 on the pjsk.moe zone (its /api/ and every
+ * subdomain) for a minute whatever the response says, and cookies are not part
  * of its cache key: without this, one visitor's answer (who is signed in,
  * today's ranked status, the "me" row of a leaderboard) would be handed to the
  * next. The query string is part of the key, so a value only this request

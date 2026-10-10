@@ -14,9 +14,10 @@
  * shows as unavailable for now, and the server is asked again on a backoff
  * until it answers.
  *
- * The auth routes live on moesekai-api's origin (moesekai-api-origin.ts):
- * https://passport.pjsk.moe in production, whose session cookie the requests
- * carry with credentials; the page's own origin in development.
+ * The auth routes live on moesekai-api's origin (moesekai-api-origin.ts): the
+ * page's own, where the main server forwards them, unless
+ * NEXT_PUBLIC_MOESEKAI_API_ORIGIN names another (requests then carry that
+ * origin's session cookie with credentials).
  */
 
 import { useSyncExternalStore } from "react";
