@@ -115,16 +115,16 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
         async (roundStart: DailyRoundStart) => {
             releaseClip();
             setClipFailed(false);
-            const current = runRef.current;
-            if (current.round === roundStart.round && !current.clipStartedAt) {
-                // The server's round timer starts with the first clip request: count down from now.
-                commit({ ...current, clipStartedAt: Date.now() });
-            }
             const controller = new AbortController();
             clipAbortRef.current = controller;
             try {
                 const blob = await api.fetchClip(roundStart.clipUrl, controller.signal);
                 if (controller.signal.aborted) return;
+                const current = runRef.current;
+                if (current.round === roundStart.round && !current.clipStartedAt) {
+                    // The server's round timer starts once the clip is cut and sent, so loading time is not counted: count down from arrival.
+                    commit({ ...current, clipStartedAt: Date.now() });
+                }
                 const url = URL.createObjectURL(blob);
                 clipUrlRef.current = url;
                 setClipSrc(url);
