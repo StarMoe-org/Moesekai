@@ -845,7 +845,7 @@ function GuessWhoClientPlayingAndSetup({
 
                             <div className="space-y-2">
                                 <div className="text-center type-label-l text-on-surface tabular-nums">{formatTime(timeLeft)}</div>
-                                <LinearProgress value={timeLeft / settings.timeLimit} aria-label={t("page.guessWho.common.timeLimit")} />
+                                <LinearProgress value={timeLeft / settings.timeLimit} tickMs={100} aria-label={t("page.guessWho.common.timeLimit")} />
                             </div>
                         </div>
 

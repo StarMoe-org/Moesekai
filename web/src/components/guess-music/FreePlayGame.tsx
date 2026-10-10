@@ -232,7 +232,7 @@ export default function FreePlayGame({ state, dispatch, library, assetSource, pr
                             {t("page.guessMusic.hud.seconds", { seconds: (leftMs / 1000).toFixed(1) })}
                         </span>
                     </div>
-                    <LinearProgress value={limitMs > 0 ? leftMs / limitMs : 0} aria-label={t("page.guessMusic.hud.timeLeft")} />
+                    <LinearProgress value={limitMs > 0 ? leftMs / limitMs : 0} tickMs={TICK_MS} aria-label={t("page.guessMusic.hud.timeLeft")} />
                 </div>
             </section>
 
@@ -278,6 +278,7 @@ export default function FreePlayGame({ state, dispatch, library, assetSource, pr
                     canGiveUp={!revealed && vocal !== null}
                     onGuess={handleGuess}
                     onGiveUp={handleGiveUp}
+                    assetSource={assetSource}
                 />
             )}
         </div>

@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import Image from "next/image";
 import { TextField, cn } from "@/components/md3";
 import { mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { getMusicJacketUrl } from "@/lib/assets";
 import { searchSongs } from "@/lib/guess-music/answer";
 import type { DailySongData } from "./DailySongData";
+import SongSuggestionOption from "./SongSuggestionOption";
 
 interface DailyAnswerInputProps {
     songs: DailySongData;
@@ -100,35 +99,18 @@ export default function DailyAnswerInput({ songs, excludeIds, disabled, onPick, 
                     const song = songs.index.byId.get(hit.id)?.entry;
                     const music = songs.musics.get(hit.id);
                     if (!song) return null;
-                    const secondary = hit.kind === "alias" ? hit.text : song.localizedTitle && song.localizedTitle !== song.title ? song.localizedTitle : "";
+                    const localized = song.localizedTitle && song.localizedTitle !== song.title ? song.localizedTitle : "";
                     return (
-                        <li
+                        <SongSuggestionOption
                             key={hit.id}
                             id={optionId(index)}
-                            role="option"
-                            aria-selected={index === activeIndex}
-                            onMouseDown={(event) => event.preventDefault()}
-                            onMouseEnter={() => setActive(index)}
-                            onClick={() => pick(hit.id)}
-                            className={cn(
-                                "state-layer flex cursor-pointer items-center gap-3 rounded-md3-md px-3 py-2 transition-colors",
-                                index === activeIndex ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container text-on-surface",
-                            )}
-                        >
-                            {music?.assetbundleName ? (
-                                <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md3-sm bg-surface-container-highest">
-                                    <Image src={getMusicJacketUrl(music.assetbundleName, "main-jp")} alt="" fill sizes="40px" className="object-cover" unoptimized />
-                                </span>
-                            ) : null}
-                            <span className="min-w-0 flex-1">
-                                <span className="block truncate type-body-l">{song.title}</span>
-                                {secondary ? (
-                                    <span className={cn("block truncate type-body-s", index === activeIndex ? "text-on-secondary-container" : "text-on-surface-variant")}>
-                                        {hit.kind === "alias" ? t("page.guessMusicDaily.round.aliasMatch", { alias: secondary }) : secondary}
-                                    </span>
-                                ) : null}
-                            </span>
-                        </li>
+                            title={song.title}
+                            secondary={hit.kind === "alias" ? t("page.guessMusicDaily.round.aliasMatch", { alias: hit.text }) : localized}
+                            jacket={music?.assetbundleName}
+                            active={index === activeIndex}
+                            onActivate={() => setActive(index)}
+                            onPick={() => pick(hit.id)}
+                        />
                     );
                 })}
             </ul>

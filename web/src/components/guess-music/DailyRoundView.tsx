@@ -63,6 +63,8 @@ interface DailyRoundViewProps {
 }
 
 const MAX_STRIKES = 3;
+/** How often the round countdown updates; the timer bar glides between updates. */
+const COUNTDOWN_TICK_MS = 200;
 
 /** One run of a tier: the rounds against the server, one at a time, with the reveal after each. */
 export default function DailyRoundView({ api, tier, run, songs, onRunChange, onDone, onFatal, onExit }: DailyRoundViewProps) {
@@ -187,7 +189,7 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
     // Countdown ticker while guessing.
     useEffect(() => {
         if (phase !== "guessing" && phase !== "submitting") return;
-        const id = window.setInterval(() => setNow(Date.now()), 200);
+        const id = window.setInterval(() => setNow(Date.now()), COUNTDOWN_TICK_MS);
         return () => window.clearInterval(id);
     }, [phase]);
 
@@ -376,7 +378,7 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
                                         ))}
                                     </span>
                                 </div>
-                                <LinearProgress value={remainingMs / timeLimitMs} aria-label={t("page.guessMusicDaily.round.timeLeft", { seconds: Math.ceil(remainingMs / 1000) })} />
+                                <LinearProgress value={remainingMs / timeLimitMs} tickMs={COUNTDOWN_TICK_MS} aria-label={t("page.guessMusicDaily.round.timeLeft", { seconds: Math.ceil(remainingMs / 1000) })} />
                             </div>
                             {notice ? <Banner tone={notice.tone} title={notice.text} /> : null}
                             {tier.answerMode === "choice" ? (

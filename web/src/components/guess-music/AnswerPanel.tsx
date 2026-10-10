@@ -8,6 +8,8 @@ import { isSameSong, matchesTypedAnswer, normalizeAnswer, searchSongs, type Song
 import type { Guess } from "@/lib/guess-music/game";
 import type { SongLibrary } from "@/lib/guess-music/library";
 import type { AnswerMode } from "@/lib/guess-music/scoring";
+import type { AssetSourceType } from "@/contexts/ThemeContext";
+import SongSuggestionOption from "./SongSuggestionOption";
 
 export interface AnswerPanelProps {
     mode: AnswerMode;
@@ -22,6 +24,8 @@ export interface AnswerPanelProps {
     canGiveUp: boolean;
     onGuess: (guess: Guess, correct: boolean) => void;
     onGiveUp: () => void;
+    /** Where suggestion jackets come from (the game's server). */
+    assetSource?: AssetSourceType;
     className?: string;
 }
 
@@ -134,7 +138,7 @@ function ChoiceGrid({ library, answerId, optionIds, wrongGuesses, enabled, onGue
     );
 }
 
-function SuggestBox({ library, answerId, wrongGuesses, enabled, onGuess }: AnswerPanelProps) {
+function SuggestBox({ library, answerId, wrongGuesses, enabled, onGuess, assetSource }: AnswerPanelProps) {
     const { t } = useI18n();
     const listId = useId();
     const inputRef = useRef<HTMLInputElement>(null);
@@ -210,39 +214,23 @@ function SuggestBox({ library, answerId, wrongGuesses, enabled, onGuess }: Answe
                 id={listId}
                 role="listbox"
                 aria-label={t("page.guessMusic.answer.suggestions")}
-                className={cn("overflow-hidden rounded-md3-md bg-surface-container-high", !expanded && "hidden")}
+                className={cn("flex flex-col gap-1", !expanded && "hidden")}
             >
                 {suggestions.map((suggestion, index) => {
-                    const guessed = wrongIds.has(suggestion.id);
                     const entry = library.entryById.get(suggestion.id);
                     return (
-                        <li
+                        <SongSuggestionOption
                             key={suggestion.id}
                             id={`${listId}-${index}`}
-                            role="option"
-                            aria-selected={index === active}
-                            aria-disabled={guessed || undefined}
-                            onMouseDown={(event) => event.preventDefault()}
-                            onMouseMove={() => setActive(index)}
-                            onClick={() => pick(suggestion)}
-                            className={cn(
-                                "state-layer flex cursor-pointer items-center gap-3 px-4 py-2",
-                                index === active && "bg-secondary-container text-on-secondary-container",
-                                guessed && "cursor-not-allowed opacity-38",
-                            )}
-                        >
-                            <span className="min-w-0 flex-1">
-                                <span className="block truncate type-body-l">{entry?.title ?? suggestion.text}</span>
-                                {(entry?.localizedTitle || suggestion.kind === "alias") && (
-                                    <span className="block truncate type-body-s text-on-surface-variant">
-                                        {suggestion.kind === "alias"
-                                            ? t("page.guessMusic.answer.aliasMatch", { alias: suggestion.text })
-                                            : entry?.localizedTitle}
-                                    </span>
-                                )}
-                            </span>
-                            {guessed && <Icon path={mdClose} size={18} className="shrink-0 text-error" />}
-                        </li>
+                            title={entry?.title ?? suggestion.text}
+                            secondary={suggestion.kind === "alias" ? t("page.guessMusic.answer.aliasMatch", { alias: suggestion.text }) : entry?.localizedTitle}
+                            jacket={library.musicById.get(suggestion.id)?.assetbundleName}
+                            assetSource={assetSource}
+                            active={index === active}
+                            guessed={wrongIds.has(suggestion.id)}
+                            onActivate={() => setActive(index)}
+                            onPick={() => pick(suggestion)}
+                        />
                     );
                 })}
             </ul>

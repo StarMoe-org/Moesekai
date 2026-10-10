@@ -23,9 +23,15 @@ export interface LinearProgressProps extends ProgressProps {
      * that can pause passes whether it is running.
      */
     wavy?: boolean;
+    /**
+     * For a value that moves continuously (a countdown): how often it is
+     * updated, in ms. The bar then glides linearly from one value to the next
+     * instead of easing toward each, which reads as a stutter.
+     */
+    tickMs?: number;
 }
 
-export function LinearProgress({ value, wavy, className, "aria-label": label }: LinearProgressProps) {
+export function LinearProgress({ value, wavy, tickMs, className, "aria-label": label }: LinearProgressProps) {
     const { t } = useI18n();
     const determinate = typeof value === "number";
     if (determinate && wavy !== undefined) {
@@ -39,15 +45,19 @@ export function LinearProgress({ value, wavy, className, "aria-label": label }: 
             aria-valuemin={0}
             aria-valuemax={100}
             aria-valuenow={determinate ? Math.round(pct) : undefined}
-            className={withOverrides("relative h-1 w-full overflow-hidden", className)}
+            className={withOverrides(cn("relative h-1 w-full overflow-hidden", determinate && "flex gap-1"), className)}
         >
             {determinate ? (
                 <>
-                    <span className="absolute inset-y-0 left-0 rounded-full bg-primary transition-[width] duration-300 ease-md3-standard" style={{ width: `${pct}%` }} />
-                    <span
-                        className="absolute inset-y-0 right-0 rounded-full bg-secondary-container"
-                        style={{ width: `calc(${100 - pct}% - 4px)` }}
-                    />
+                    {/* One row: the track fills whatever the active part leaves, 4px after it, so the two
+                        move as one while the active part animates. */}
+                    {pct > 0 && (
+                        <span
+                            className={cn("rounded-full bg-primary transition-[width]", tickMs ? "ease-linear" : "duration-300 ease-md3-standard")}
+                            style={{ width: `${pct}%`, transitionDuration: tickMs ? `${tickMs}ms` : undefined }}
+                        />
+                    )}
+                    {pct < 100 && <span className="min-w-0 flex-1 rounded-full bg-secondary-container" />}
                     <span className="absolute right-0 top-0 h-1 w-1 rounded-full bg-primary" />
                 </>
             ) : (
