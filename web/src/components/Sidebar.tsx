@@ -454,6 +454,20 @@ export default function Sidebar({
         return () => nav.removeEventListener('scroll', handleScroll);
     }, []);
 
+    // The modal drawer (below md) closes with Escape, like any modal. It listens in the capture
+    // phase: the page's own shortcuts must not take the key first (in Safari a tapped button
+    // keeps no focus, so the key goes to <body>, which page shortcuts also handle).
+    useEffect(() => {
+        if (!isOpen) return;
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key !== "Escape" || e.defaultPrevented || isKeyboardEventComposing(e) || window.innerWidth >= 768) return;
+            e.preventDefault();
+            onClose();
+        };
+        document.addEventListener("keydown", handleKeyDown, true);
+        return () => document.removeEventListener("keydown", handleKeyDown, true);
+    }, [isOpen, onClose]);
+
     // Keyboard navigation: move with arrow keys, open with Enter, cancel with Escape.
     useEffect(() => {
         if (!isOpen || disableKeyboardNavigation || window.innerWidth < 768) return;

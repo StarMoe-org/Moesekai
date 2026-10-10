@@ -308,7 +308,8 @@ export function usePageListShortcuts({ rootRef, disabled = false }: UsePageListS
 
             const isClearFocus = LIST_CLEAR_COMBOS.some((combo) => matchesShortcutCombo(event, combo));
             if (isClearFocus) {
-                event.preventDefault();
+                // Only a focused item claims Escape: with none, it stays free for whatever else is open.
+                if (focusedItemRef.current) event.preventDefault();
                 clearFocusedItem(true);
                 return;
             }
