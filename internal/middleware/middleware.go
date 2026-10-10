@@ -56,10 +56,13 @@ func (w *gzipGuardWriter) WriteHeader(code int) {
 
 	// If upstream already set Content-Encoding, or the body is already
 	// compressed media (audio clips, which also need exact Content-Length
-	// and byte ranges), don't compress.
+	// and byte ranges) or opaque binary (sealed guess-music clips: encrypted,
+	// so incompressible, and the page shows download progress from their
+	// Content-Length), don't compress.
 	contentType := w.ResponseWriter.Header().Get("Content-Type")
 	if w.ResponseWriter.Header().Get("Content-Encoding") != "" ||
-		strings.HasPrefix(contentType, "audio/") || strings.HasPrefix(contentType, "video/") {
+		strings.HasPrefix(contentType, "audio/") || strings.HasPrefix(contentType, "video/") ||
+		strings.HasPrefix(contentType, "application/octet-stream") {
 		w.ResponseWriter.WriteHeader(code)
 		return
 	}

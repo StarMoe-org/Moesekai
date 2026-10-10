@@ -400,3 +400,52 @@ test("every GET carries its own cache-busting parameter; writes do not", async (
     assert.equal(write.method, "POST");
     assert.equal(write.nonce, undefined);
 });
+
+test("the next round's sealed clip is fetched ahead and taken once its round starts", async () => {
+    const body = new Uint8Array(4096).map((_, i) => i % 251);
+    const counts = new Map();
+    let failNext = false;
+    const fetch = async (rawUrl) => {
+        const { url } = splitNonce(rawUrl);
+        counts.set(url, (counts.get(url) ?? 0) + 1);
+        if (failNext) {
+            failNext = false;
+            return new Response(JSON.stringify({ error: "round_not_started" }), { status: 409, headers: { "Content-Type": "application/json" } });
+        }
+        return new Response(body, { status: 200, headers: { "Content-Type": "application/octet-stream", "Content-Length": String(body.byteLength) } });
+    };
+    const api = createDailyApi({ fetch });
+    const base = "/api/guess-music/daily/sessions/s1/rounds";
+    const start = (n, last = false) => ({
+        round: n,
+        clipSeconds: 30,
+        timeLimitSeconds: 45,
+        clipUrl: `${base}/${n}/clip`,
+        sealedClipUrl: `${base}/${n}/sealed`,
+        keyUrl: `${base}/${n}/key`,
+        nextSealedClipUrl: last ? undefined : `${base}/${n + 1}/sealed`,
+    });
+
+    api.prefetchNextClip(start(0));
+    api.prefetchNextClip(start(0));
+    const progress = [];
+    const taken = await api.downloadRoundClip(start(1), undefined, (fraction) => progress.push(fraction));
+    assert.deepEqual(new Uint8Array(taken.bytes), body);
+    assert.equal(counts.get(`${base}/1/sealed/`), 1, "downloaded once, ahead of its round");
+    assert.equal(progress.at(-1), 1);
+
+    // Taken once: the same round again downloads afresh.
+    await api.downloadRoundClip(start(1));
+    assert.equal(counts.get(`${base}/1/sealed/`), 2);
+
+    // A failed fetch ahead is no failure: the round downloads its clip itself.
+    failNext = true;
+    api.prefetchNextClip(start(1));
+    const retried = await api.downloadRoundClip(start(2));
+    assert.deepEqual(new Uint8Array(retried.bytes), body);
+    assert.equal(counts.get(`${base}/2/sealed/`), 2);
+
+    // The last round has nothing to fetch ahead.
+    api.prefetchNextClip(start(19, true));
+    assert.equal(counts.get(`${base}/20/sealed/`), undefined);
+});

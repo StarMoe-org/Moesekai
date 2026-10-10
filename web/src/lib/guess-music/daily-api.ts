@@ -90,6 +90,8 @@ export interface DailyRoundStart {
     sealedClipUrl?: string;
     /** POST: the sealed clip's key; the first request starts the round timer. */
     keyUrl?: string;
+    /** The next round's sealed clip, downloadable while this round plays (absent on the last round). */
+    nextSealedClipUrl?: string;
     /** Choice mode: the music ids to choose from (shuffled, the answer among them). */
     options?: number[];
 }
@@ -286,7 +288,12 @@ export interface DailyApi {
      * starts nothing, so neither a slow cut nor a slow connection costs the player time. Otherwise
      * (older servers, pages without WebCrypto) the clip in the clear, whose serve started the timer.
      */
-    downloadRoundClip(start: DailyRoundStart, signal?: AbortSignal): Promise<DailyRoundClip | DailySealedClip>;
+    downloadRoundClip(start: DailyRoundStart, signal?: AbortSignal, onProgress?: (fraction: number) => void): Promise<DailyRoundClip | DailySealedClip>;
+    /**
+     * Downloads the next round's sealed clip in the background, for downloadRoundClip to take when
+     * that round starts. It stays sealed until then, so this costs the player nothing; one is kept.
+     */
+    prefetchNextClip(start: DailyRoundStart): void;
     /** Fetches a sealed clip's key, which starts the round timer (or says how long it has run), and opens the clip. */
     unlockRoundClip(sealed: DailySealedClip, signal?: AbortSignal): Promise<DailyRoundClip>;
     answer(sessionId: string, round: number, musicId: number | null): Promise<DailyAnswerResult>;
@@ -377,18 +384,59 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
 
     const session = (sessionId: string) => `${ROOT}/daily/sessions/${seg(sessionId)}`;
 
+    async function fetchSealed(url: string, signal: AbortSignal | undefined, onProgress?: (fraction: number) => void): Promise<ArrayBuffer> {
+        return readBytes(await send("GET", url, undefined, signal, "application/octet-stream"), onProgress);
+    }
+
+    // The next round's sealed clip, downloading while the current round plays.
+    let ahead: { url: string; bytes: Promise<ArrayBuffer>; controller: AbortController; fraction: number; report?: (fraction: number) => void } | null = null;
+
+    /** The clip prefetched for url, or null (none, or its download failed: fetch it again). */
+    async function takeAhead(url: string, signal: AbortSignal | undefined, onProgress?: (fraction: number) => void): Promise<ArrayBuffer | null> {
+        const pending = ahead;
+        if (!pending || pending.url !== url) return null;
+        ahead = null;
+        pending.report = onProgress;
+        onProgress?.(pending.fraction);
+        const abort = () => pending.controller.abort();
+        if (signal?.aborted) abort();
+        signal?.addEventListener("abort", abort, { once: true });
+        try {
+            return await pending.bytes;
+        } catch (error) {
+            if (signal?.aborted) throw error;
+            return null;
+        } finally {
+            signal?.removeEventListener("abort", abort);
+        }
+    }
+
     return {
         getInfo: async (signal) => normalizeInfo(await json<DailyInfo>("GET", `${ROOT}/daily`, undefined, signal)),
         createSession: (tier, mode) => json<DailySession>("POST", `${ROOT}/daily/sessions`, { tier, mode }),
         startRound: (sessionId, round) => json<DailyRoundStart>("POST", `${session(sessionId)}/rounds/${seg(round)}/start`, {}),
-        async downloadRoundClip(start, signal) {
+        async downloadRoundClip(start, signal, onProgress) {
             // WebCrypto needs a secure context; a page served over plain http (a phone on the LAN) plays the clip in the clear.
             if (!start.sealedClipUrl || !start.keyUrl || !globalThis.crypto?.subtle) {
                 const clip = await (await send("GET", start.clipUrl, undefined, signal, CLIP_ACCEPT)).blob();
                 return { clip, timerStartedAt: Date.now(), timerFromServer: false };
             }
-            const bytes = await (await send("GET", start.sealedClipUrl, undefined, signal, "application/octet-stream")).arrayBuffer();
+            const bytes = (await takeAhead(start.sealedClipUrl, signal, onProgress)) ?? (await fetchSealed(start.sealedClipUrl, signal, onProgress));
             return { bytes, keyUrl: start.keyUrl };
+        },
+        prefetchNextClip(start) {
+            const url = start.nextSealedClipUrl;
+            if (!url || !globalThis.crypto?.subtle || ahead?.url === url) return;
+            ahead?.controller.abort();
+            const controller = new AbortController();
+            const entry: NonNullable<typeof ahead> = { url, controller, fraction: 0, bytes: Promise.resolve(new ArrayBuffer(0)) };
+            entry.bytes = fetchSealed(url, controller.signal, (fraction) => {
+                entry.fraction = fraction;
+                entry.report?.(fraction);
+            });
+            // Nobody may take it; a failure is handled by the round that does.
+            entry.bytes.catch(() => {});
+            ahead = entry;
         },
         async unlockRoundClip(sealed, signal) {
             const key = await json<DailyClipKey>("POST", sealed.keyUrl, {}, signal);
@@ -410,6 +458,29 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
             await send("DELETE", `${ROOT}/me/game-link`);
         },
     };
+}
+
+/** The body's bytes, reporting how much has arrived when the length is known. */
+async function readBytes(response: Response, onProgress?: (fraction: number) => void): Promise<ArrayBuffer> {
+    const length = Number(response.headers.get("Content-Length"));
+    if (!onProgress || !response.body || !(length > 0)) return response.arrayBuffer();
+    const reader = response.body.getReader();
+    const chunks: Uint8Array[] = [];
+    let received = 0;
+    for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        chunks.push(value);
+        received += value.byteLength;
+        onProgress(Math.min(1, received / length));
+    }
+    const bytes = new Uint8Array(received);
+    let offset = 0;
+    for (const chunk of chunks) {
+        bytes.set(chunk, offset);
+        offset += chunk.byteLength;
+    }
+    return bytes.buffer;
 }
 
 async function toError(response: Response): Promise<DailyApiError> {

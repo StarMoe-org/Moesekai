@@ -80,6 +80,8 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
     // Downloaded but still locked: the player unlocks it once the page may play sound.
     const [sealedClip, setSealedClip] = useState<DailySealedClip | null>(null);
     const [clipFailed, setClipFailed] = useState(false);
+    // How much of the clip has arrived (0-1), while its length is known.
+    const [clipProgress, setClipProgress] = useState<number | undefined>(undefined);
     const [reveal, setReveal] = useState<RevealState | null>(null);
     const [notice, setNotice] = useState<{ tone: "error" | "warning"; text: string } | null>(null);
     const [errorKind, setErrorKind] = useState<DailyErrorKind | null>(null);
@@ -147,13 +149,18 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
         async (roundStart: DailyRoundStart) => {
             releaseClip();
             setClipFailed(false);
+            setClipProgress(undefined);
             const controller = new AbortController();
             clipAbortRef.current = controller;
             try {
-                const downloaded = await api.downloadRoundClip(roundStart, controller.signal);
+                const downloaded = await api.downloadRoundClip(roundStart, controller.signal, (fraction) => {
+                    if (!controller.signal.aborted) setClipProgress(fraction);
+                });
                 if (controller.signal.aborted) return;
                 if (isSealedClip(downloaded)) setSealedClip(downloaded);
                 else showClip(roundStart.round, downloaded);
+                // This clip is here: fetch the next one while this round plays, so it starts at once.
+                api.prefetchNextClip(roundStart);
             } catch (error) {
                 if (!controller.signal.aborted) failClip(error);
             }
@@ -399,6 +406,7 @@ export default function DailyRoundView({ api, tier, run, songs, onRunChange, onD
                         src={clipSrc}
                         clipSeconds={clipSeconds}
                         failed={clipFailed}
+                        loadProgress={clipProgress}
                         onRetry={() => start && void loadClip(start)}
                         onUnlock={sealedClip ? () => void unlockClip() : undefined}
                         autoPlay={!reveal}

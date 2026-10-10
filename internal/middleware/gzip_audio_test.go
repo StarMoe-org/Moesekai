@@ -24,6 +24,23 @@ func TestGzipSkipsAudio(t *testing.T) {
 	}
 }
 
+// Sealed guess-music clips are encrypted: gzip cannot shrink them, and the page
+// reads download progress from their Content-Length.
+func TestGzipSkipsOpaqueBinary(t *testing.T) {
+	h := Gzip(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/octet-stream")
+		w.Header().Set("Content-Length", "4")
+		_, _ = w.Write([]byte{0x01, 0x02, 0x03, 0x04})
+	}))
+	req := httptest.NewRequest(http.MethodGet, "/api/guess-music/daily/sessions/x/rounds/0/sealed", nil)
+	req.Header.Set("Accept-Encoding", "gzip")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Header().Get("Content-Encoding") != "" || rec.Header().Get("Content-Length") != "4" || rec.Body.Len() != 4 {
+		t.Fatalf("sealed clip was compressed: %v", rec.Header())
+	}
+}
+
 // A streaming proxy flushes after every write; the bytes written so far must
 // reach the client then, compressed or not.
 func TestGzipFlushesWrittenBytes(t *testing.T) {

@@ -11,6 +11,8 @@ interface DailyClipPlayerProps {
     src: string | null;
     clipSeconds: number;
     failed?: boolean;
+    /** How much of the clip has downloaded (0-1) while it loads; absent when unknown. */
+    loadProgress?: number;
     onRetry?: () => void;
     /** Start playing as soon as the clip is ready (falls back to a button when the browser blocks it). */
     autoPlay?: boolean;
@@ -29,7 +31,7 @@ const SILENCE = "data:audio/wav;base64,UklGRnQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfA
  * A minimal player for the server-cut daily clip: always plays from 0,
  * shows progress, and offers replay.
  */
-export default function DailyClipPlayer({ src, clipSeconds, failed, onRetry, autoPlay = true, onUnlock, className }: DailyClipPlayerProps) {
+export default function DailyClipPlayer({ src, clipSeconds, failed, loadProgress, onRetry, autoPlay = true, onUnlock, className }: DailyClipPlayerProps) {
     const { t } = useI18n();
     const audioRef = useRef<HTMLAudioElement>(null);
     const frameRef = useRef<number | null>(null);
@@ -231,7 +233,7 @@ export default function DailyClipPlayer({ src, clipSeconds, failed, onRetry, aut
                             className="[&>span]:transition-none"
                         />
                     ) : (
-                        <LinearProgress aria-label={t("page.guessMusicDaily.player.loading")} />
+                        <LinearProgress value={loadProgress} aria-label={t("page.guessMusicDaily.player.loading")} />
                     )}
                 </div>
                 {ready && playing && (
