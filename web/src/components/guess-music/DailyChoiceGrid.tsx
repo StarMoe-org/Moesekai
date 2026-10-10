@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import Image from "next/image";
 import { Icon, cn } from "@/components/md3";
 import { mdClose } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
+import { getMusicJacketUrl } from "@/lib/assets";
 import type { DailySongData } from "./DailySongData";
 
 interface DailyChoiceGridProps {
@@ -81,6 +83,9 @@ export default function DailyChoiceGrid({ songs, options, wrongIds, disabled, on
                             )}
                         >
                             {isWrong ? <Icon path={mdClose} size={18} /> : index + 1}
+                        </span>
+                        <span className={cn("relative h-10 w-10 shrink-0 overflow-hidden rounded-md3-sm bg-surface-container-highest", isWrong && "opacity-38")}>
+                            {music ? <Image src={getMusicJacketUrl(music.assetbundleName, "main-jp")} alt="" fill sizes="40px" className="object-cover" unoptimized /> : null}
                         </span>
                         <span className="block min-w-0 flex-1">
                             <span className="block truncate type-body-l">{title}</span>
