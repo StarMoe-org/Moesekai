@@ -14,4 +14,6 @@
 *.mp4 binary
 *.wasm binary
 *.woff2 binary
+*.ttf binary
+*.otf binary
 *.zip binary

@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
+import { existsSync } from "node:fs";
 import os from "node:os";
+import path from "node:path";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
-import { sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
+import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -22,8 +24,13 @@ const molyProxyBase = (() => {
 })();
 const enableLocalHarukiProxy = process.env.NODE_ENV !== "production";
 
-// The Live2D story player (sse-web): a malformed setting fails the build here
-// rather than in a reader's browser.
+// The Live2D story player (sse-web) draws the JP stories with the open fonts in
+// public/story-fonts. Whether all of them are there is told to the client code,
+// which falls back to the client's own fonts when they are not.
+const storyFontsBundled = SSE_WEB_FONT_FILES.every(file => existsSync(path.join(process.cwd(), "public", SSE_WEB_FONT_PATH, file)));
+process.env.NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS = storyFontsBundled ? "1" : "";
+
+// A malformed setting fails the build here rather than in a reader's browser.
 try {
   sseWebCoreUrl();
   sseWebCheckSources();
@@ -58,6 +65,9 @@ function getAllowedDevOrigins(): string[] {
 }
 
 const nextConfig: NextConfig = {
+  env: {
+    NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS: storyFontsBundled ? "1" : "",
+  },
   // Keep QA builds separate from a running standalone server on Windows.
   distDir: process.env.MOE_NEXT_DIST_DIR || ".next",
   output: "standalone",

@@ -124,15 +124,21 @@ export interface SseWebFonts {
 }
 
 /*
- * The JP client's own typeface is a commercial one, which this site does not hand out. With
- * `NEXT_PUBLIC_SSE_WEB_FONT_BASE` set (a directory holding the three files below, under
- * their upstream names, with their licence), the JP stories are drawn with open fonts
- * instead, and the player does not fetch the client's font files at all:
+ * The JP client's own typeface is a commercial one, which this site does not hand out: the JP
+ * stories are drawn with open fonts instead, and the player then does not fetch the client's
+ * font files at all.
  *
  * - M PLUS 1 (variable; SIL OFL 1.1) for the text. Its weights are set to what measures the
  *   same stroke weight as the client's two faces: 460 for the words, 820 for the names.
  * - Source Han Sans JP (SIL OFL 1.1) for the characters M PLUS 1 lacks (it has the common
  *   kanji but not all of the rarer ones): Medium behind the words, Heavy behind the names.
+ *
+ * The three files are kept in this repository under their upstream names, with their licence
+ * (`public/story-fonts`), and served from the site's own origin. `NEXT_PUBLIC_SSE_WEB_FONT_BASE`
+ * names another directory holding them. The client's fonts are used only when
+ * `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS` asks for them, or when the build found the three files
+ * missing and no other directory is named (next.config.ts tells through
+ * `NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS`).
  *
  * The other servers' text is drawn with Source Han Sans SC, an open font their client unpack
  * carries, and is left as it is.
@@ -143,10 +149,31 @@ const FONT_FILL_NAME = "SourceHanSansJP-Heavy.otf";
 const WEIGHT_BODY = 460;
 const WEIGHT_NAME = 820;
 
-/** The fonts that replace the client's for `region`'s stories, or null when the client's are used. */
+/** Same-origin directory of the open fonts this repository keeps (`public/story-fonts`). */
+export const SSE_WEB_FONT_PATH = "/story-fonts/";
+
+/** The font files that directory has to hold. */
+export const SSE_WEB_FONT_FILES: readonly string[] = [FONT_TEXT, FONT_FILL_BODY, FONT_FILL_NAME];
+
+/** A switch: unset, empty, `0` or `false` is off; `1` or `true` is on. */
+function enabled(raw: string | undefined, name: string): boolean {
+    const value = raw?.trim().toLowerCase();
+    if (!value || value === "0" || value === "false") return false;
+    if (value === "1" || value === "true") return true;
+    throw new Error(`sse_web_config_invalid:${name}`);
+}
+
+/**
+ * The fonts that replace the client's for `region`'s stories, or null when the client's are
+ * used. The URLs are those of the configured directory, or paths of this origin for the fonts
+ * the repository keeps.
+ */
 export function sseWebFonts(region: string): SseWebFonts | null {
-    const base = directory(process.env.NEXT_PUBLIC_SSE_WEB_FONT_BASE, "NEXT_PUBLIC_SSE_WEB_FONT_BASE");
-    if (!base || region !== "jp") return null;
+    const named = directory(process.env.NEXT_PUBLIC_SSE_WEB_FONT_BASE, "NEXT_PUBLIC_SSE_WEB_FONT_BASE");
+    const client = enabled(process.env.NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS, "NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS");
+    const bundled = enabled(process.env.NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS, "NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS");
+    const base = named ?? (bundled ? SSE_WEB_FONT_PATH : null);
+    if (region !== "jp" || client || !base) return null;
     const file = (name: string) => `${base}${encodeURIComponent(name)}`;
     return {
         body: [{ url: file(FONT_TEXT), weight: WEIGHT_BODY }, { url: file(FONT_FILL_BODY) }],
