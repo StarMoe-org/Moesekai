@@ -166,10 +166,10 @@ const STARMOE_MARK = {
 } as const;
 
 /**
- * The Live2D logo for dark grounds, as Live2D Inc. publishes it (live2d.jp/en/brand): it may not
- * be recoloured, cropped, given effects or set on a ground that hides it.
+ * The square Live2D logo for dark grounds, as Live2D Inc. publishes it (live2d.jp/en/brand): it
+ * may not be recoloured, cropped, given effects or set on a ground that hides it.
  */
-const LIVE2D_LOGO = "/images/brand/live2d-logo-rectangle-word-white.png";
+const LIVE2D_LOGO = "/images/brand/live2d-logo-square-word-white.png";
 
 /** A font file with its address as a whole URL (the repository's own fonts are named by path). */
 function absolute(font: SseWebFontFile): SseWebFontFile {
@@ -791,22 +791,22 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                     >
                         {phase === "loading" && (
                             <div className="absolute inset-0 flex flex-col">
-                                {/* who made this and what draws the characters, shown while the episode loads */}
-                                <div className="pointer-events-none flex shrink-0 items-center gap-1 pl-3 pt-1.5 @min-[400px]:pl-4 @min-[400px]:pt-2.5">
+                                {/* who made this, at the top left, and what draws the characters, at the top right, while the episode loads */}
+                                <div className="pointer-events-none flex shrink-0 items-start justify-between">
                                     <span
                                         role="img"
                                         aria-label="StarMoe"
-                                        className="h-4 w-[58px] bg-white @min-[400px]:h-5 @min-[400px]:w-[72px]"
+                                        className="ml-3 mt-2 h-4 w-[58px] shrink-0 bg-white @min-[400px]:ml-4 @min-[400px]:mt-3 @min-[400px]:h-5 @min-[400px]:w-[72px]"
                                         style={STARMOE_MARK}
                                     />
                                     {/* Live2D's own file, unaltered: its clear space is part of the image */}
                                     <img
                                         src={LIVE2D_LOGO}
                                         alt="Live2D"
-                                        width={1001}
-                                        height={258}
+                                        width={411}
+                                        height={411}
                                         draggable={false}
-                                        className="h-7 w-auto @min-[400px]:h-9"
+                                        className="aspect-square h-[clamp(2.75rem,18cqw,7.5rem)] w-auto shrink-0"
                                     />
                                 </div>
                                 <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3">
