@@ -782,31 +782,46 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                         onPointerMove={wakeToolbar}
                         onPointerDown={wakeToolbar}
                         className={cn(
-                            "relative w-full select-none overflow-hidden bg-scrim",
+                            // a container of its own: what lies over the picture is sized by the picture's
+                            // width, in the window and in full screen alike
+                            "@container relative w-full select-none overflow-hidden bg-scrim",
                             // in full screen the pointer rests with the toolbar (the site's themed
                             // pointer outranks `cursor-none` on an element that also has a cursor class)
                             fullscreen && !toolbarShown ? "cursor-none" : phase === "ready" && "cursor-pointer",
                         )}
                         style={fullscreen ? undefined : { aspectRatio: ratio }}
                     >
+                        {/*
+                          * Who made this: over the picture's top left corner, while loading and while playing.
+                          * The mark keeps its proportion to the picture: 4% of its width high.
+                          */}
+                        {(phase === "loading" || phase === "ready") && (
+                            // the shadow keeps the white mark readable on a bright picture; it is on the
+                            // wrapper because a filter is applied before the element's own mask
+                            <span
+                                role="img"
+                                aria-label="StarMoe"
+                                className="pointer-events-none absolute left-[3.2cqw] top-[2.4cqw] h-[4cqw] w-[14.5cqw] opacity-90 [filter:drop-shadow(0_0_0.25cqw_rgb(0_0_0/0.7))_drop-shadow(0_0.15cqw_0.5cqw_rgb(0_0_0/0.45))]"
+                            >
+                                <span className="block size-full bg-white" style={STARMOE_MARK} />
+                            </span>
+                        )}
                         {phase === "loading" && (
                             <div className="absolute inset-0 flex flex-col">
-                                {/* who made this, at the top left, and what draws the characters, at the top right, while the episode loads */}
-                                <div className="pointer-events-none flex shrink-0 items-start justify-between">
-                                    <span
-                                        role="img"
-                                        aria-label="StarMoe"
-                                        className="ml-3 mt-2 h-4 w-[58px] shrink-0 bg-white @min-[400px]:ml-4 @min-[400px]:mt-3 @min-[400px]:h-5 @min-[400px]:w-[72px]"
-                                        style={STARMOE_MARK}
-                                    />
-                                    {/* Live2D's own file, unaltered: its clear space is part of the image */}
+                                {/*
+                                  * What draws the characters, at the top right while the episode loads. It is
+                                  * Live2D's own file, unaltered; its clear space is part of the image, which is
+                                  * sized and placed so that the logo itself is as tall as the StarMoe mark
+                                  * across from it (4% of the picture's width) and as far from the corner.
+                                  */}
+                                <div className="pointer-events-none flex shrink-0 justify-end">
                                     <img
                                         src={LIVE2D_LOGO}
                                         alt="Live2D"
                                         width={411}
                                         height={411}
                                         draggable={false}
-                                        className="aspect-square h-[clamp(2.75rem,18cqw,7.5rem)] w-auto shrink-0"
+                                        className="mr-[1.84cqw] mt-[1.73cqw] aspect-square h-[5.32cqw] w-auto shrink-0"
                                     />
                                 </div>
                                 <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3">
