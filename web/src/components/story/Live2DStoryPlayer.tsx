@@ -153,6 +153,24 @@ function storeFrame(frame: Frame) {
 
 const subscribeNever = () => () => {};
 
+/** The StarMoe wordmark as a mask, to be filled with the element's background colour. */
+const STARMOE_MARK = {
+    maskImage: "url(/starmoe.svg)",
+    maskSize: "contain",
+    maskPosition: "center",
+    maskRepeat: "no-repeat",
+    WebkitMaskImage: "url(/starmoe.svg)",
+    WebkitMaskSize: "contain",
+    WebkitMaskPosition: "center",
+    WebkitMaskRepeat: "no-repeat",
+} as const;
+
+/**
+ * The Live2D logo for dark grounds, as Live2D Inc. publishes it (live2d.jp/en/brand): it may not
+ * be recoloured, cropped, given effects or set on a ground that hides it.
+ */
+const LIVE2D_LOGO = "/images/brand/live2d-logo-rectangle-word-white.png";
+
 /** A font file with its address as a whole URL (the repository's own fonts are named by path). */
 function absolute(font: SseWebFontFile): SseWebFontFile {
     return { ...font, url: new URL(font.url, window.location.origin).href };
@@ -772,19 +790,47 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                         style={fullscreen ? undefined : { aspectRatio: ratio }}
                     >
                         {phase === "loading" && (
-                            <div className="absolute inset-0 flex items-center justify-center p-3">
-                                <div className="flex w-72 max-w-full flex-col items-center gap-2 rounded-md3-lg bg-surface-container-high px-4 py-3 text-center text-on-surface">
-                                    {progress.fraction === undefined
-                                        ? <LoadingIndicator size={40} aria-label={t("page.story.live2d.preparing")} />
-                                        : <LinearProgress value={progress.fraction} className="mt-1" aria-label={t("page.story.live2d.title")} />}
-                                    <p className="type-title-s tabular-nums">
+                            <div className="absolute inset-0 flex flex-col">
+                                {/* who made this and what draws the characters, shown while the episode loads */}
+                                <div className="pointer-events-none flex shrink-0 items-center gap-1 pl-3 pt-1.5 @min-[400px]:pl-4 @min-[400px]:pt-2.5">
+                                    <span
+                                        role="img"
+                                        aria-label="StarMoe"
+                                        className="h-4 w-[58px] bg-white @min-[400px]:h-5 @min-[400px]:w-[72px]"
+                                        style={STARMOE_MARK}
+                                    />
+                                    {/* Live2D's own file, unaltered: its clear space is part of the image */}
+                                    <img
+                                        src={LIVE2D_LOGO}
+                                        alt="Live2D"
+                                        width={1001}
+                                        height={258}
+                                        draggable={false}
+                                        className="h-7 w-auto @min-[400px]:h-9"
+                                    />
+                                </div>
+                                <div className="flex min-h-0 flex-1 items-center justify-center px-3 pb-3">
+                                    {/* in a narrow window the indicator sits beside the words, so the card clears the marks above */}
+                                    <div
+                                        className={cn(
+                                            "flex w-72 max-w-full items-center gap-2 rounded-md3-lg bg-surface-container-high px-4 py-2 text-center text-on-surface @min-[400px]:flex-col @min-[400px]:py-3",
+                                            progress.fraction !== undefined && "flex-col",
+                                        )}
+                                    >
                                         {progress.fraction === undefined
-                                            ? t("page.story.live2d.preparing")
-                                            : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
-                                    </p>
-                                    <p className="type-body-s tabular-nums text-on-surface-variant">
-                                        {t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}
-                                    </p>
+                                            ? <LoadingIndicator size={40} aria-label={t("page.story.live2d.preparing")} />
+                                            : <LinearProgress value={progress.fraction} className="mt-1" aria-label={t("page.story.live2d.title")} />}
+                                        <div className="flex min-w-0 flex-1 flex-col gap-0.5 @min-[400px]:flex-none @min-[400px]:gap-2">
+                                            <p className="type-title-s tabular-nums">
+                                                {progress.fraction === undefined
+                                                    ? t("page.story.live2d.preparing")
+                                                    : t("page.story.live2d.loading", { percent: Math.floor(progress.fraction * 100) })}
+                                            </p>
+                                            <p className="type-body-s tabular-nums text-on-surface-variant">
+                                                {t("page.story.live2d.loadedSize", { size: progress.megabytes.toFixed(1) })}
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         )}
