@@ -96,7 +96,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 | `setAuto(bool)` | AUTO 与手动模式，随时可切换 |
 | `click(x, y)` | 在画布坐标（渲染尺寸的像素）处点击：点中选项按钮即作答，其余是对话、地点字幕、等待的点击；不带坐标时就是点击 |
 | `nodes` | 播放的全部节点，按顺序：点击会作用到的指令——对话、字幕（telop）、全屏文字、选项。每个是 `{kind, snippet, …}`：`kind` 为 `talk`（带 `speaker`、`body`）、`telop` 或 `text`（带 `body`）、`choices`（带 `options`）；`snippet` 是这条指令在剧本 `Snippets` 里的位置，站点用它对到自己的文本行 |
-| `unsupported` | 这一话里网页端不播放的内容：`{reason, name?}`，`reason` 为 `movie`（影片：黑底加名称，声音照常）、`music_video`（3D MV）、`input_name`、`selectable`、`unknown_effect_type`、`unknown_action`。站点可在开播前提示 |
+| `unsupported` | 这一话里网页端不播放的内容：`{reason, name?}`，`reason` 为 `movie`（library 里没有视频文件的影片：黑底加名称，声音照常；有视频文件的影片正常播放，不在此列）、`music_video`（3D MV）、`input_name`、`selectable`、`unknown_effect_type`、`unknown_action`。站点可在开播前提示 |
 | `node` | 当前所在的节点序号（从 0 起；播完最后一个后等于 `nodes.length`） |
 | `seek(k)` / `next()` / `previous()` | 跳到第 k 个节点、下一个、上一个的开头：画面与从头 AUTO 播放到那里时相同 |
 | `setVolume(v)` | 总音量 0–1 |
@@ -136,7 +136,10 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 - 一个页面同时只放一个播放器：两个 Worker 各持有这一话的文件（长的一话合计约 240 MB），桌面 Chrome 上 1080p 播放最重的一话时，页面进程约占 540 MB，另有 GPU 进程约 510 MB。离开或换一话时要 `destroy()`。
 - 浏览器里留下的缓存：Cache API 的 `sse-ui-kit-v1`（派生好的 UI 套件，每个客户端版本约 8 MB）。
 - 用户把标签页切到后台时，声音和模拟照常进行（时钟在音频线程），画面在回到前台时追上。
+- 影片（片头、片尾等）在渲染 Worker 里用编入的解码器播放（ADR-0033）：加载时多取这一话的视频文件（多数 10 MB 左右，最大 58 MB），画面与导出不是逐像素相同。library 里没有视频文件的影片显示黑底和影片名。
 
 ## 许可
 
-见同目录的 `LICENSE`（AGPL-3.0-or-later）与 `LICENSE-EXCEPTION`。对外发布的 wasm 标注什么许可尚未决定（ADR-0032）。
+见同目录的 `LICENSE`（AGPL-3.0-or-later）与 `LICENSE-EXCEPTION`；wasm 的许可与仓库相同（ADR-0032）。
+
+wasm 里编入了第三方代码 [pl_mpeg](https://github.com/phoboslab/pl_mpeg)（MPEG-1 解码器，Dominic Szablewski，MIT 许可），有一处改动，见仓库的 `crates/sse-mpeg/c/README.md`。其余第三方 Rust 依赖的许可声明还没有随发布物提供。

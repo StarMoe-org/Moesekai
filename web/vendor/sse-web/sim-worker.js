@@ -300,7 +300,9 @@ async function init(o, frames, audio) {
   // Pass 1 reads a BGM's ACB (an interactive BGM's block structure); sound effects play without it
   for (const cue of Object.values(index.bgm ?? {})) if (cue.acb) files.push(SseLoader.resolve(index, cue.acb));
   for (const movie of Object.values(index.movies ?? {})) {
-    for (const f of movie.files) if (f.endsWith(".wav")) files.push(SseLoader.resolve(index, f));
+    // a movie's sound; of one without sound, the video stream, whose headers give its length
+    const sound = movie.files.filter((f) => f.endsWith(".wav"));
+    for (const f of sound.length ? sound : movie.files.filter((f) => f.endsWith(".m2v"))) files.push(SseLoader.resolve(index, f));
   }
   const report = (phase) => (done, total) => postMessage({ type: "progress", phase, done, total, bytes: loader.bytes });
   let listed = 0;
