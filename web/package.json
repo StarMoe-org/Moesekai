@@ -47,7 +47,8 @@
     "react-dom": "19.2.4",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1",
-    "three": "^0.162.0"
+    "three": "^0.162.0",
+    "wanakana": "5.3.1"
   },
   "devDependencies": {
     "@material-symbols/svg-400": "^0.47.6",

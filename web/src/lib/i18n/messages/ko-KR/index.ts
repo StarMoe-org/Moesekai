@@ -5131,7 +5131,7 @@ export const koKRMessages = {
                 noSuggestions: "일치하는 곡이 없어요.",
                 typeLabel: "곡명 입력",
                 typePlaceholder: "곡명, 읽는 법, 별칭",
-                typeHint: "일본어 곡명, 가나 읽기, 번역 제목, 자주 쓰는 별칭 모두 정답으로 인정돼요.",
+                typeHint: "일본어 곡명, 읽기(가나 또는 로마자), 번역 제목, 자주 쓰는 별칭 모두 정답으로 인정돼요.",
                 submit: "제출",
                 wrongGuesses: "틀린 답",
                 giveUp: "이 문제 포기",

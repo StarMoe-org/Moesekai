@@ -5109,7 +5109,7 @@ export const zhCNMessages = {
                 noSuggestions: "没有找到匹配的歌曲。",
                 typeLabel: "输入歌名",
                 typePlaceholder: "歌名、读音、别名或拼音",
-                typeHint: "日文歌名、假名读音、中文译名、常用别名，以及中文名的全拼都算对。",
+                typeHint: "日文歌名、读音（假名或罗马音）、中文译名、常用别名，以及中文名的全拼都算对。",
                 submit: "提交",
                 wrongGuesses: "猜错的答案",
                 giveUp: "放弃这题",

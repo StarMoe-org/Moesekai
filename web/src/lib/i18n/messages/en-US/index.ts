@@ -5110,7 +5110,7 @@ export const enUSMessages = {
                 noSuggestions: "No matching songs.",
                 typeLabel: "Song title",
                 typePlaceholder: "Title, reading or alias",
-                typeHint: "The Japanese title, its kana reading, a translated title or a common alias all count.",
+                typeHint: "The Japanese title, its reading in kana or romaji, a translated title or a common alias all count.",
                 submit: "Submit",
                 wrongGuesses: "Wrong guesses",
                 giveUp: "Give up",

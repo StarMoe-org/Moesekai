@@ -256,7 +256,7 @@ function TypeBox({ library, answerId, wrongGuesses, enabled, onGuess }: AnswerPa
         const key = normalizeAnswer(text);
         if (!enabled || !key) return;
         const entry = library.entryById.get(answerId);
-        const correct = Boolean(entry && matchesTypedAnswer(entry, text));
+        const correct = Boolean(entry && matchesTypedAnswer(entry, text, library.index.romanize));
         onGuess({ key: `text:${key}`, label: text.trim(), musicId: null }, correct);
         setText("");
     };

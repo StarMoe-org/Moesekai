@@ -27,6 +27,8 @@ function load(name) {
 
 const answer = load("answer");
 const pinyin = load("pinyin");
+const readings = load("readings");
+const romaji = load("romaji");
 const scoring = load("scoring");
 const random = load("random");
 const pool = load("pool");
@@ -360,4 +362,40 @@ test("songs with Chinese names answer to their pinyin; initials only suggest", (
     assert.equal(answer.matchesTypedAnswer(entries[0], "feng"), false);
     // Titles beat pinyin: a song titled in Latin letters takes its own spelling.
     assert.deepEqual(answer.searchSongs(index, "cuimianshu").map((hit) => hit.id), [4, 1]);
+});
+
+test("romaji of a reading meets every common way of typing it", () => {
+    const same = (reading, typed) => assert.equal(romaji.romanizeQuery(answer.normalizeAnswer(typed)), romaji.romajiOfReading(reading), `${typed} → ${reading}`);
+    same("めずまらいざー", "mezumaraiza");
+    same("めずまらいざー", "mezumaraizaa");
+    same("めずまらいざー", "Mezumaraiza-");
+    same("しゃるる", "syaruru");
+    same("ちゅーりっぷ", "tyuurippu");
+    same("ちゅーりっぷ", "churippu");
+    same("げっこう", "gekko");
+    same("げっこう", "gekkou");
+    same("はじめてのおと", "hazimetenooto");
+    assert.equal(romaji.romanizeQuery("ハジメテ"), "", "only Latin letters are romanized");
+    assert.equal(romaji.romajiOfReading("tell your world"), "");
+});
+
+test("songs answer to the romaji of their reading, after titles", () => {
+    const entries = [
+        { id: 1, title: "メズマライザー", pronunciation: "めずまらいざー", localizedTitle: "催眠术" },
+        { id: 2, title: "月光", pronunciation: "げっこう" },
+        { id: 3, title: "Gekko", pronunciation: "げっこー" },
+        { id: 4, title: "Tell Your World", pronunciation: "てるゆあわーるど" },
+    ].map(readings.withReadings);
+    const index = answer.buildSongIndex(entries, { romanize: readings.romanizeQuery });
+
+    assert.deepEqual(answer.searchSongs(index, "mezuma").map((hit) => [hit.id, hit.kind]), [[1, "romaji"]]);
+    assert.equal(answer.matchesTypedAnswer(entries[0], "mezumaraiza", index.romanize), true);
+    assert.equal(answer.matchesTypedAnswer(entries[0], "mezumaraiza"), false, "no romanizer, no romaji");
+    assert.equal(answer.matchesTypedAnswer(entries[1], "gekkou", index.romanize), true);
+    // A song titled in Latin letters keeps its own spelling first.
+    assert.deepEqual(answer.searchSongs(index, "gekko").map((hit) => hit.id).slice(0, 2), [3, 2]);
+    // English titles still match as typed.
+    assert.deepEqual(answer.searchSongs(index, "tell your").map((hit) => hit.id), [4]);
+    // Without the romanizer the index has no romaji keys.
+    assert.equal(answer.buildSongIndex(entries).songs.some((song) => song.keys.some((key) => key.kind === "romaji")), false);
 });

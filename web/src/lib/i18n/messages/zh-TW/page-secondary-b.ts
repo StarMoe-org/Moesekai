@@ -785,7 +785,7 @@ export const zhTWPageSecondaryB = {
             noSuggestions: "沒有找到相符的歌曲。",
             typeLabel: "輸入歌名",
             typePlaceholder: "歌名、讀音、別名或拼音",
-            typeHint: "日文歌名、假名讀音、中文譯名、常用別名，以及中文名的全拼都算對。",
+            typeHint: "日文歌名、讀音（假名或羅馬拼音）、中文譯名、常用別名，以及中文名的全拼都算對。",
             submit: "送出",
             wrongGuesses: "猜錯的答案",
             giveUp: "放棄這題",

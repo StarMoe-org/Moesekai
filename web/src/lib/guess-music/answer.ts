@@ -10,10 +10,12 @@
  *
  * Songs with Chinese names are also found by their pinyin (pinyin.ts adds it
  * to the entries): the full spelling ("cuimianshu", the Chinese title of
- * Mesmerizer) everywhere, the initials ("cms") in suggestions only.
+ * Mesmerizer) everywhere, the initials ("cms") in suggestions only. Every
+ * song is found by the romaji of its reading too ("mezumaraiza"; romaji.ts
+ * adds the key, and the index carries how to read a typed query).
  */
 
-export type MatchKind = "title" | "localized" | "pronunciation" | "alias" | "pinyin" | "initials";
+export type MatchKind = "title" | "localized" | "pronunciation" | "romaji" | "alias" | "pinyin" | "initials";
 
 /** Pinyin of one of a song's Chinese names. */
 export interface PinyinName {
@@ -39,6 +41,8 @@ export interface SongSearchEntry {
     aliases?: readonly string[];
     /** Pinyin of the Chinese names among the above (withPinyin in pinyin.ts). */
     pinyin?: readonly PinyinName[];
+    /** Loose romaji of the reading (romaji.ts), matched against queries the index romanizes. */
+    romaji?: string;
 }
 
 export interface IndexedKey {
@@ -57,9 +61,14 @@ export interface IndexedSong {
     keys: IndexedKey[];
 }
 
+/** Turns a normalized query into the loose romaji of romaji.ts ("" when it is not Latin letters). */
+export type Romanize = (normalizedQuery: string) => string;
+
 export interface SongIndex {
     songs: IndexedSong[];
     byId: Map<number, IndexedSong>;
+    /** Present when the entries carry romaji keys. */
+    romanize?: Romanize;
 }
 
 export interface SongSuggestion {
@@ -76,7 +85,7 @@ export function matchedAlias(suggestion: SongSuggestion): string | null {
     return suggestion.kind === "alias" || suggestion.source === "alias" ? suggestion.text : null;
 }
 
-const KIND_ORDER: Record<MatchKind, number> = { title: 0, localized: 1, pronunciation: 2, alias: 3, pinyin: 4, initials: 5 };
+const KIND_ORDER: Record<MatchKind, number> = { title: 0, localized: 1, pronunciation: 2, romaji: 3, alias: 4, pinyin: 5, initials: 6 };
 const STRIPPED = /[\p{P}\p{S}\p{Z}\p{Cc}\p{Cf}\s]/gu;
 // Combining marks of Latin letters only: kana voicing marks (U+3099, U+309A) stay.
 const LATIN_MARKS = /[\u0300-\u036f]/g;
@@ -113,7 +122,7 @@ export function isAcceptedAliasKey(key: string): boolean {
     return [...key].length >= 2 && !isNumericKey(key);
 }
 
-export function buildSongIndex(entries: readonly SongSearchEntry[]): SongIndex {
+export function buildSongIndex(entries: readonly SongSearchEntry[], options: { romanize?: Romanize } = {}): SongIndex {
     const songs: IndexedSong[] = [];
     const byId = new Map<number, IndexedSong>();
     for (const entry of entries) {
@@ -122,14 +131,17 @@ export function buildSongIndex(entries: readonly SongSearchEntry[]): SongIndex {
         const add = (text: string | undefined, kind: MatchKind, spelled = text, source?: PinyinName["source"]) => {
             if (!text || !spelled) return;
             const key = normalizeAnswer(spelled);
-            if (!key || seen.has(key)) return;
+            // Romaji keys meet the romanized query, not the query itself: they dedupe among themselves.
+            const seenAs = kind === "romaji" ? `romaji:${key}` : key;
+            if (!key || seen.has(seenAs)) return;
             if (kind !== "title" && kind !== "localized" && kind !== "pronunciation" && isNumericKey(key)) return;
-            seen.add(key);
+            seen.add(seenAs);
             keys.push(source ? { key, kind, text, source } : { key, kind, text });
         };
         add(entry.title, "title");
         add(entry.localizedTitle, "localized");
         add(entry.pronunciation, "pronunciation");
+        if (options.romanize) add(entry.pronunciation, "romaji", entry.romaji);
         for (const alias of entry.aliases ?? []) add(alias, "alias");
         for (const name of entry.pinyin ?? []) {
             for (const spelling of name.spellings) add(name.text, "pinyin", spelling, name.source);
@@ -139,7 +151,12 @@ export function buildSongIndex(entries: readonly SongSearchEntry[]): SongIndex {
         songs.push(song);
         byId.set(entry.id, song);
     }
-    return { songs, byId };
+    return options.romanize ? { songs, byId, romanize: options.romanize } : { songs, byId };
+}
+
+/** The query to compare a key of this kind with: romaji keys take the query romanized. */
+export function queryFor(kind: MatchKind, query: string, romaji: string): string {
+    return kind === "romaji" ? romaji : query;
 }
 
 /**
@@ -150,11 +167,14 @@ export function buildSongIndex(entries: readonly SongSearchEntry[]): SongIndex {
 export function searchSongs(index: SongIndex, query: string, limit = 8): SongSuggestion[] {
     const q = normalizeAnswer(query);
     if (!q) return [];
+    const romaji = index.romanize?.(q) ?? "";
     const hits: Array<{ song: IndexedSong; key: IndexedKey; rank: number }> = [];
     for (const song of index.songs) {
         let best: { key: IndexedKey; rank: number } | null = null;
         for (const key of song.keys) {
-            const rank = key.key === q ? 0 : key.key.startsWith(q) ? 1 : key.key.includes(q) ? 2 : -1;
+            const wanted = queryFor(key.kind, q, romaji);
+            if (!wanted) continue;
+            const rank = key.key === wanted ? 0 : key.key.startsWith(wanted) ? 1 : key.key.includes(wanted) ? 2 : -1;
             if (rank < 0) continue;
             if (!best || compareHit(rank, key, best.rank, best.key) < 0) best = { key, rank };
         }
@@ -197,9 +217,12 @@ export function acceptedAnswerKeys(entry: SongSearchEntry): Set<string> {
     return keys;
 }
 
-export function matchesTypedAnswer(entry: SongSearchEntry, input: string): boolean {
+/** Whether typed text names the entry; romanize (the index's) also accepts the reading in romaji. */
+export function matchesTypedAnswer(entry: SongSearchEntry, input: string, romanize?: Romanize): boolean {
     const key = normalizeAnswer(input);
-    return key.length > 0 && acceptedAnswerKeys(entry).has(key);
+    if (!key) return false;
+    if (acceptedAnswerKeys(entry).has(key)) return true;
+    return Boolean(romanize && entry.romaji && romanize(key) === entry.romaji);
 }
 
 /** A picked song is right when it is the answer or shares its title (re-releases). */

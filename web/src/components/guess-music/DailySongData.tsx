@@ -31,10 +31,10 @@ export function useDailySongData(): { data: DailySongData | null; error: boolean
             fetchMasterDataForServer<IMusicInfo[]>("jp", "musics.json"),
             loadTranslations(locale).catch(() => null as TranslationData | null),
             fetchMusicAliases().catch(() => new Map<number, string[]>()),
-            // Pinyin is a bonus: without its module the songs are still found by everything else.
-            import("@/lib/guess-music/pinyin").then((module) => module.withPinyin).catch(() => null),
+            // Pinyin and romaji are a bonus: without their module the songs are still found by everything else.
+            import("@/lib/guess-music/readings").catch(() => null),
         ])
-            .then(([musics, translations, aliases, withPinyin]) => {
+            .then(([musics, translations, aliases, readings]) => {
                 if (cancelled) return;
                 const now = Date.now();
                 const titles = translations?.music?.title ?? {};
@@ -48,10 +48,10 @@ export function useDailySongData(): { data: DailySongData | null; error: boolean
                         localizedTitle: titles[music.title] || undefined,
                         aliases: aliases.get(music.id),
                     };
-                    return withPinyin ? withPinyin(entry) : entry;
+                    return readings ? readings.withReadings(entry) : entry;
                 });
                 setData({
-                    index: buildSongIndex(entries),
+                    index: buildSongIndex(entries, { romanize: readings?.romanizeQuery }),
                     // Every song, released or not: a reveal always finds its jacket.
                     musics: new Map(musics.map((music) => [music.id, music])),
                     localizedTitle: (title) => titles[title] ?? "",

@@ -1,6 +1,6 @@
 import type { IMusicInfo, IMusicVocalInfo } from "@/types/music";
 import type { TranslationData } from "@/lib/translations";
-import { buildSongIndex, type SongIndex, type SongSearchEntry } from "./answer";
+import { buildSongIndex, type Romanize, type SongIndex, type SongSearchEntry } from "./answer";
 import { buildSongPool, type PoolSong } from "./pool";
 import type { ServerScope } from "./settings";
 
@@ -26,12 +26,12 @@ export interface SongLibraryInput {
     vocals: readonly IMusicVocalInfo[];
     translations?: Pick<TranslationData, "music"> | null;
     aliases?: ReadonlyMap<number, readonly string[]>;
-    /** Adds the pinyin of the Chinese names (pinyin.ts, loaded on demand). */
-    withPinyin?: ((entry: SongSearchEntry) => SongSearchEntry) | null;
+    /** Pinyin and romaji (readings.ts, loaded on demand): what adds them to an entry, and reads a query. */
+    readings?: { withReadings: (entry: SongSearchEntry) => SongSearchEntry; romanizeQuery: Romanize } | null;
     now?: number;
 }
 
-export function buildSongLibrary({ server, musics, vocals, translations, aliases, withPinyin, now = Date.now() }: SongLibraryInput): SongLibrary {
+export function buildSongLibrary({ server, musics, vocals, translations, aliases, readings, now = Date.now() }: SongLibraryInput): SongLibrary {
     const pool = buildSongPool(musics, vocals, now);
     const titleTranslations = translations?.music?.title ?? {};
     const musicById = new Map<number, IMusicInfo>();
@@ -48,7 +48,7 @@ export function buildSongLibrary({ server, musics, vocals, translations, aliases
             localizedTitle: localized && localized !== song.music.title ? localized : undefined,
             aliases: aliases?.get(song.music.id) ?? [],
         };
-        entries.push(withPinyin ? withPinyin(entry) : entry);
+        entries.push(readings ? readings.withReadings(entry) : entry);
     }
     return {
         server,
@@ -56,7 +56,7 @@ export function buildSongLibrary({ server, musics, vocals, translations, aliases
         musicById,
         vocalById,
         entryById: new Map(entries.map((entry) => [entry.id, entry])),
-        index: buildSongIndex(entries),
+        index: buildSongIndex(entries, { romanize: readings?.romanizeQuery }),
         captionTranslations: translations?.music?.vocalCaption ?? {},
     };
 }

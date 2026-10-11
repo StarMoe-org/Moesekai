@@ -283,6 +283,22 @@ test("typed pinyin names a song, after titles and aliases; initials do not", asy
     assert.deepEqual(resolveTypedAnswer(index, "zcdsy"), { status: "none" });
 });
 
+test("typed romaji names a song by its reading; a Latin title wins over it", async () => {
+    const { withReadings, romanizeQuery } = await import("../src/lib/guess-music/readings.ts");
+    const index = buildSongIndex(
+        [
+            { id: 1, title: "月光", pronunciation: "げっこう" },
+            { id: 2, title: "Gekko", pronunciation: "げっこー" },
+            { id: 3, title: "シャルル", pronunciation: "しゃるる" },
+        ].map(withReadings),
+        { romanize: romanizeQuery },
+    );
+    assert.deepEqual(resolveTypedAnswer(index, "syaruru"), { status: "match", musicId: 3 });
+    assert.deepEqual(resolveTypedAnswer(index, "Sharuru"), { status: "match", musicId: 3 });
+    assert.deepEqual(resolveTypedAnswer(index, "gekko"), { status: "match", musicId: 2 });
+    assert.deepEqual(resolveTypedAnswer(index, "gekkou"), { status: "ambiguous", musicIds: [1, 2] });
+});
+
 test("the reload store keeps one run per date, tier and mode", () => {
     const store = new Map();
     globalThis.sessionStorage = {

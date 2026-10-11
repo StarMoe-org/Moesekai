@@ -33,12 +33,12 @@ export function useSongLibrary(server: ServerScope): SongLibraryState {
             fetchMasterDataForServer<IMusicVocalInfo[]>(server, "musicVocals.json"),
             loadTranslations(locale).catch(() => null),
             fetchMusicAliases().catch(() => new Map<number, string[]>()),
-            // Pinyin is a bonus: without its module the songs are still found by everything else.
-            import("@/lib/guess-music/pinyin").then((module) => module.withPinyin).catch(() => null),
+            // Pinyin and romaji are a bonus: without their module the songs are still found by everything else.
+            import("@/lib/guess-music/readings").catch(() => null),
         ]).then(
-            ([musics, vocals, translations, aliases, withPinyin]) => {
+            ([musics, vocals, translations, aliases, readings]) => {
                 if (cancelled) return;
-                setLibrary(buildSongLibrary({ server, musics, vocals, translations, aliases, withPinyin }));
+                setLibrary(buildSongLibrary({ server, musics, vocals, translations, aliases, readings }));
             },
             (error) => {
                 if (cancelled) return;

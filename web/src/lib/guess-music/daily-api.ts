@@ -12,7 +12,7 @@
  * Kept free of path aliases and React so the tests can import it directly.
  */
 
-import { isAcceptedAliasKey, normalizeAnswer, type SongIndex } from "./answer.ts";
+import { isAcceptedAliasKey, normalizeAnswer, queryFor, type SongIndex } from "./answer.ts";
 import { MOESEKAI_API_ORIGIN, apiCredentials, uncachedUrl } from "../moesekai-api-origin.ts";
 import { apiUrl, isAbortError, readApiError, type FetchLike } from "./api-client.ts";
 
@@ -500,28 +500,32 @@ export type TypedAnswer =
 
 /**
  * The song a typed answer names, by the same keys free play accepts: the
- * title, the reading, the localized title, an alias of 2+ characters that
- * is not just digits, or the full pinyin of a Chinese name (not its
- * initials). Titles, readings and localized titles beat aliases, which beat
- * pinyin; songs sharing a title count as one (the lowest id is sent).
+ * title, the reading (in kana or romaji), the localized title, an alias of
+ * 2+ characters that is not just digits, or the full pinyin of a Chinese
+ * name (not its initials). Titles, kana readings and localized titles beat
+ * romaji, then aliases, then pinyin; songs sharing a title count as one
+ * (the lowest id is sent).
  */
 export function resolveTypedAnswer(index: SongIndex, input: string): TypedAnswer {
     const key = normalizeAnswer(input);
     if (!key) return { status: "empty" };
+    const romaji = index.romanize?.(key) ?? "";
     const direct = new Map<string, number>();
+    const byRomaji = new Map<string, number>();
     const byAlias = new Map<string, number>();
     const byPinyin = new Map<string, number>();
     for (const song of index.songs) {
         for (const candidate of song.keys) {
-            if (candidate.key !== key || candidate.kind === "initials") continue;
+            if (candidate.kind === "initials" || !candidate.key || candidate.key !== queryFor(candidate.kind, key, romaji)) continue;
             const loose = candidate.kind === "alias" || candidate.kind === "pinyin";
             if (loose && !isAcceptedAliasKey(candidate.key)) continue;
-            const bucket = candidate.kind === "alias" ? byAlias : candidate.kind === "pinyin" ? byPinyin : direct;
+            const bucket =
+                candidate.kind === "romaji" ? byRomaji : candidate.kind === "alias" ? byAlias : candidate.kind === "pinyin" ? byPinyin : direct;
             const known = bucket.get(song.titleKey);
             if (known === undefined || song.entry.id < known) bucket.set(song.titleKey, song.entry.id);
         }
     }
-    const hits = direct.size ? direct : byAlias.size ? byAlias : byPinyin;
+    const hits = [direct, byRomaji, byAlias, byPinyin].find((bucket) => bucket.size > 0) ?? direct;
     if (hits.size === 0) return { status: "none" };
     const ids = [...hits.values()].sort((a, b) => a - b);
     return ids.length === 1 ? { status: "match", musicId: ids[0] } : { status: "ambiguous", musicIds: ids };

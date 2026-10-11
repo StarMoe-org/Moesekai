@@ -5135,7 +5135,7 @@ export const jaJPMessages = {
         noSuggestions: '一致する曲が見つかりません。',
         typeLabel: '曲名を入力',
         typePlaceholder: '曲名・読み・別名',
-        typeHint: '曲名、かなの読み、翻訳タイトル、よく使われる別名のどれでも正解になります。',
+        typeHint: '曲名、読み（かなでもローマ字でも）、翻訳タイトル、よく使われる別名のどれでも正解になります。',
         submit: '回答',
         wrongGuesses: '不正解だった回答',
         giveUp: 'ギブアップ'
