@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { TextField, cn } from "@/components/md3";
 import { mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { searchSongs } from "@/lib/guess-music/answer";
+import { matchedAlias, searchSongs } from "@/lib/guess-music/answer";
 import type { DailySongData } from "./DailySongData";
 import SongSuggestionOption from "./SongSuggestionOption";
 
@@ -100,12 +100,13 @@ export default function DailyAnswerInput({ songs, excludeIds, disabled, onPick, 
                     const music = songs.musics.get(hit.id);
                     if (!song) return null;
                     const localized = song.localizedTitle && song.localizedTitle !== song.title ? song.localizedTitle : "";
+                    const alias = matchedAlias(hit);
                     return (
                         <SongSuggestionOption
                             key={hit.id}
                             id={optionId(index)}
                             title={song.title}
-                            secondary={hit.kind === "alias" ? t("page.guessMusicDaily.round.aliasMatch", { alias: hit.text }) : localized}
+                            secondary={alias ? t("page.guessMusicDaily.round.aliasMatch", { alias }) : localized}
                             jacket={music?.assetbundleName}
                             active={index === activeIndex}
                             onActivate={() => setActive(index)}

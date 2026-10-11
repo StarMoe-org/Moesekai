@@ -500,26 +500,28 @@ export type TypedAnswer =
 
 /**
  * The song a typed answer names, by the same keys free play accepts: the
- * title, the reading, the localized title, or an alias of 2+ characters that
- * is not just digits. Titles, readings and localized titles beat aliases;
- * songs sharing a title count as one (the lowest id is sent).
+ * title, the reading, the localized title, an alias of 2+ characters that
+ * is not just digits, or the full pinyin of a Chinese name (not its
+ * initials). Titles, readings and localized titles beat aliases, which beat
+ * pinyin; songs sharing a title count as one (the lowest id is sent).
  */
 export function resolveTypedAnswer(index: SongIndex, input: string): TypedAnswer {
     const key = normalizeAnswer(input);
     if (!key) return { status: "empty" };
     const direct = new Map<string, number>();
     const byAlias = new Map<string, number>();
+    const byPinyin = new Map<string, number>();
     for (const song of index.songs) {
         for (const candidate of song.keys) {
-            if (candidate.key !== key) continue;
-            const alias = candidate.kind === "alias";
-            if (alias && !isAcceptedAliasKey(candidate.key)) continue;
-            const bucket = alias ? byAlias : direct;
+            if (candidate.key !== key || candidate.kind === "initials") continue;
+            const loose = candidate.kind === "alias" || candidate.kind === "pinyin";
+            if (loose && !isAcceptedAliasKey(candidate.key)) continue;
+            const bucket = candidate.kind === "alias" ? byAlias : candidate.kind === "pinyin" ? byPinyin : direct;
             const known = bucket.get(song.titleKey);
             if (known === undefined || song.entry.id < known) bucket.set(song.titleKey, song.entry.id);
         }
     }
-    const hits = direct.size ? direct : byAlias;
+    const hits = direct.size ? direct : byAlias.size ? byAlias : byPinyin;
     if (hits.size === 0) return { status: "none" };
     const ids = [...hits.values()].sort((a, b) => a - b);
     return ids.length === 1 ? { status: "match", musicId: ids[0] } : { status: "ambiguous", musicIds: ids };

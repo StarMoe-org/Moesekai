@@ -269,6 +269,20 @@ test("typed answers resolve to one song, nothing, or an ambiguous alias", () => 
     assert.deepEqual(resolveTypedAnswer(index, "メル"), { status: "none" });
 });
 
+test("typed pinyin names a song, after titles and aliases; initials do not", async () => {
+    const { withPinyin } = await import("../src/lib/guess-music/pinyin.ts");
+    const index = buildSongIndex(
+        [
+            { id: 1, title: "メズマライザー", pronunciation: "めずまらいざー", localizedTitle: "催眠术" },
+            { id: 2, title: "Cuimianshu", pronunciation: "くいみあんしゅ" },
+            { id: 3, title: "ハジメテノオト", pronunciation: "はじめてのおと", localizedTitle: "最初的声音" },
+        ].map(withPinyin),
+    );
+    assert.deepEqual(resolveTypedAnswer(index, "zuichudeshengyin"), { status: "match", musicId: 3 });
+    assert.deepEqual(resolveTypedAnswer(index, "cuimianshu"), { status: "match", musicId: 2 });
+    assert.deepEqual(resolveTypedAnswer(index, "zcdsy"), { status: "none" });
+});
+
 test("the reload store keeps one run per date, tier and mode", () => {
     const store = new Map();
     globalThis.sessionStorage = {

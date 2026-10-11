@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Button, Icon, TextField, cn } from "@/components/md3";
 import { mdCheck, mdClose, mdFlag, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { isSameSong, matchesTypedAnswer, normalizeAnswer, searchSongs, type SongSuggestion } from "@/lib/guess-music/answer";
+import { isSameSong, matchedAlias, matchesTypedAnswer, normalizeAnswer, searchSongs, type SongSuggestion } from "@/lib/guess-music/answer";
 import type { Guess } from "@/lib/guess-music/game";
 import type { SongLibrary } from "@/lib/guess-music/library";
 import type { AnswerMode } from "@/lib/guess-music/scoring";
@@ -218,12 +218,13 @@ function SuggestBox({ library, answerId, wrongGuesses, enabled, onGuess, assetSo
             >
                 {suggestions.map((suggestion, index) => {
                     const entry = library.entryById.get(suggestion.id);
+                    const alias = matchedAlias(suggestion);
                     return (
                         <SongSuggestionOption
                             key={suggestion.id}
                             id={`${listId}-${index}`}
                             title={entry?.title ?? suggestion.text}
-                            secondary={suggestion.kind === "alias" ? t("page.guessMusic.answer.aliasMatch", { alias: suggestion.text }) : entry?.localizedTitle}
+                            secondary={alias ? t("page.guessMusic.answer.aliasMatch", { alias }) : entry?.localizedTitle}
                             jacket={library.musicById.get(suggestion.id)?.assetbundleName}
                             assetSource={assetSource}
                             active={index === active}

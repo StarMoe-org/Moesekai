@@ -18,7 +18,7 @@ function load(name) {
     const loaded = { exports: {} };
     modules.set(name, loaded);
     new Function("require", "exports", "module", compiled)(
-        (id) => (id.startsWith("./") ? load(id.slice(2)) : require(id)),
+        (id) => (id.startsWith("./") ? load(id.slice(2).replace(/\.ts$/, "")) : require(id)),
         loaded.exports,
         loaded,
     );
@@ -26,6 +26,7 @@ function load(name) {
 }
 
 const answer = load("answer");
+const pinyin = load("pinyin");
 const scoring = load("scoring");
 const random = load("random");
 const pool = load("pool");
@@ -322,4 +323,41 @@ test("share links restore the settings and presets are detected", () => {
     assert.equal(clamped.timeLimit, 120);
     assert.equal(clamped.clipSeconds, base.clipSeconds);
     assert.equal(clamped.answerMode, base.answerMode);
+});
+
+test("normalization drops Latin accents and tone marks, writes ü as v, and keeps kana voicing", () => {
+    assert.equal(answer.normalizeAnswer("lǜ"), "lv");
+    assert.equal(answer.normalizeAnswer("Lü Xíng"), "lvxing");
+    assert.equal(answer.normalizeAnswer("Mélt"), "melt");
+    assert.equal(answer.normalizeAnswer("がぎぐげご パピプ"), "がぎぐげごぱぴぷ");
+});
+
+test("songs with Chinese names answer to their pinyin; initials only suggest", () => {
+    const entries = [
+        { id: 1, title: "メズマライザー", pronunciation: "めずまらいざー", localizedTitle: "催眠术", aliases: ["魔法少女曲", "疯"] },
+        { id: 2, title: "月光", pronunciation: "げっこう" },
+        { id: 3, title: "緑のメロディ", pronunciation: "みどりのめろでぃ", localizedTitle: "绿色旋律" },
+        { id: 4, title: "Cuimianshu", pronunciation: "くいみあんしゅ" },
+    ].map(pinyin.withPinyin);
+    const index = answer.buildSongIndex(entries);
+
+    // Full pinyin, spaced or with tones, names the song.
+    assert.equal(answer.matchesTypedAnswer(entries[0], "cui mian shu"), true);
+    assert.equal(answer.matchesTypedAnswer(entries[0], "cuī mián shù"), true);
+    // A title in kanji alone reads as Chinese; one with kana does not.
+    assert.equal(answer.matchesTypedAnswer(entries[1], "yueguang"), true);
+    assert.equal(entries[2].pinyin.some((name) => name.source === "title"), false);
+    // ü typed as v or u.
+    assert.equal(answer.matchesTypedAnswer(entries[2], "lvsexuanlv"), true);
+    assert.equal(answer.matchesTypedAnswer(entries[2], "lusexuanlu"), true);
+    // Initials suggest, but are no answer.
+    assert.equal(answer.matchesTypedAnswer(entries[0], "cms"), false);
+    assert.deepEqual(answer.searchSongs(index, "cms").map((hit) => [hit.id, hit.kind]), [[1, "initials"]]);
+    // An alias found by its pinyin shows as that alias.
+    const byAlias = answer.searchSongs(index, "mofashaonv");
+    assert.deepEqual(byAlias.map((hit) => [hit.id, answer.matchedAlias(hit)]), [[1, "魔法少女曲"]]);
+    // A one-character alias is no answer, and neither is its pinyin.
+    assert.equal(answer.matchesTypedAnswer(entries[0], "feng"), false);
+    // Titles beat pinyin: a song titled in Latin letters takes its own spelling.
+    assert.deepEqual(answer.searchSongs(index, "cuimianshu").map((hit) => hit.id), [4, 1]);
 });

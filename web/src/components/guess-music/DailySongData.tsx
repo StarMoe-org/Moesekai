@@ -31,20 +31,25 @@ export function useDailySongData(): { data: DailySongData | null; error: boolean
             fetchMasterDataForServer<IMusicInfo[]>("jp", "musics.json"),
             loadTranslations(locale).catch(() => null as TranslationData | null),
             fetchMusicAliases().catch(() => new Map<number, string[]>()),
+            // Pinyin is a bonus: without its module the songs are still found by everything else.
+            import("@/lib/guess-music/pinyin").then((module) => module.withPinyin).catch(() => null),
         ])
-            .then(([musics, translations, aliases]) => {
+            .then(([musics, translations, aliases, withPinyin]) => {
                 if (cancelled) return;
                 const now = Date.now();
                 const titles = translations?.music?.title ?? {};
                 const captions = translations?.music?.vocalCaption ?? {};
                 const released = musics.filter((music) => music && music.id > 0 && music.title && music.publishedAt <= now);
-                const entries: SongSearchEntry[] = released.map((music) => ({
-                    id: music.id,
-                    title: music.title,
-                    pronunciation: music.pronunciation,
-                    localizedTitle: titles[music.title] || undefined,
-                    aliases: aliases.get(music.id),
-                }));
+                const entries: SongSearchEntry[] = released.map((music) => {
+                    const entry: SongSearchEntry = {
+                        id: music.id,
+                        title: music.title,
+                        pronunciation: music.pronunciation,
+                        localizedTitle: titles[music.title] || undefined,
+                        aliases: aliases.get(music.id),
+                    };
+                    return withPinyin ? withPinyin(entry) : entry;
+                });
                 setData({
                     index: buildSongIndex(entries),
                     // Every song, released or not: a reveal always finds its jacket.
