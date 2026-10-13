@@ -462,9 +462,10 @@ let wasm_bindgen = (function(exports) {
         }
         /**
          * The JSON of what a browser does not play in the episode, in order: `[{"reason", "name"?}]`
-         * with `reason` one of `movie` (shown black with its name; its sound plays), `music_video`,
-         * `input_name`, `selectable`, `unknown_effect_type` and `unknown_action` (left out, timed as
-         * the export times them).
+         * with `reason` one of `movie` (a movie the library has no video stream of: shown black
+         * with its name; its sound plays), `music_video`, `input_name`, `selectable`,
+         * `unknown_effect_type` and `unknown_action` (left out, timed as the export times them).
+         * A movie with a video stream is played and not listed.
          * @returns {string}
          */
         unsupported() {
@@ -1923,22 +1924,22 @@ let wasm_bindgen = (function(exports) {
                 arg0.writeTexture(arg1, getArrayU8FromWasm0(arg2, arg3), arg4, arg5);
             }, arguments); },
             __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 391, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 397, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 266, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 272, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 266, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 272, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__44);
                 return ret;
             },
             __wbindgen_generic_0000000000000004: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 266, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 272, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__45);
                 return ret;
             },

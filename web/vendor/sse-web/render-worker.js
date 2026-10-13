@@ -99,6 +99,7 @@ function needs(state) {
     out.push(index.assets?.[b] && b.endsWith(".png") ? `webp:${b}` : `file:${SseLoader.resolve(index, b)}`);
   }
   for (const e of state.effects ?? []) out.push(`bundle:${e.bundle}`);
+  if (state.movie?.file) out.push(`file:${SseLoader.resolve(index, state.movie.file)}`);
   return out;
 }
 
@@ -204,6 +205,10 @@ async function init(o, canvas, port) {
   const lists = await Promise.all([...bundles].map((b) => loader.bundleFiles(b)
     .then((files) => { report("listing", ++listed, bundles.size); return files; })));
   const singles = backgrounds.filter((b) => !(index.assets?.[b] && b.endsWith(".png"))).map((b) => SseLoader.resolve(index, b));
+  // a movie's picture: its video stream, decoded here as it plays (its sound is the simulation's)
+  for (const movie of Object.values(index.movies ?? {})) {
+    for (const f of movie.files) if (f.endsWith(".m2v")) singles.push(SseLoader.resolve(index, f));
+  }
   const webps = backgrounds.filter((b) => index.assets?.[b] && b.endsWith(".png"));
   const total = lists.flat().length + singles.length + webps.length;
   let done = 0;
