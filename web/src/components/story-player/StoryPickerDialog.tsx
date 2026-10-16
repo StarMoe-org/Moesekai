@@ -37,6 +37,12 @@ const OWN_VIEW_LABEL_KEYS: Partial<Record<StoryKind, string>> = {
     area: "page.storyPlayer.byArea",
 };
 
+/**
+ * A row of the list. It runs the dialog's full width, so its focus ring is drawn inside it
+ * (the list's scroll box would cut one drawn outside).
+ */
+const ROW = "state-layer focus-ring flex w-full items-center gap-4 text-left focus-visible:outline-offset-[-3px]";
+
 /** Card stories, the newest card first and each card's first part before its second. */
 function newestCardsFirst(episodes: readonly StoryEpisode[]): StoryEpisode[] {
     const card = (episode: StoryEpisode) => Number(episode.selector.slice("card:".length, episode.selector.indexOf("/")));
@@ -44,12 +50,13 @@ function newestCardsFirst(episodes: readonly StoryEpisode[]): StoryEpisode[] {
 }
 
 /**
- * Chooses an episode: the five kinds of story in tabs, each grouped as the story pages group
- * it (events, unit chapters, characters, special stories, areas; cards and area talks also by
- * event), with a search over the kind shown and the current episode marked. Only the
- * episodes the server's story library holds are listed.
- *
- * The tabs and the search stay put above the list, which scrolls on its own.
+ * Chooses an episode, as a Material 3 dialog: full screen with a top app bar on a compact
+ * window, a basic dialog (560 wide) on a larger one. Under its title come the search, the
+ * five kinds of story as primary tabs and, for card stories and area talks, how to group
+ * them; these never scroll. Below them only the list scrolls: each group (an event, a unit
+ * chapter, a character, a special story, an area or an area talk category) is a list item
+ * that opens to its episodes, its header staying on top of its open list. Only the episodes
+ * the server's story library holds are listed; the current one is marked.
  */
 export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange, catalog, onRetry, current, onSelect }: StoryPickerDialogProps) {
     const { t } = useI18n();
@@ -113,51 +120,62 @@ export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange,
             isOpen={isOpen}
             onClose={onClose}
             title={t("page.storyPlayer.chooseStory")}
-            size="xl"
+            size="md"
             fullscreenOnMobile
-            // as tall as it may be whichever list is shown, so switching tabs does not resize it
-            className="sm:h-[85vh]"
-            bodyClassName="flex flex-col overflow-hidden px-0 pb-0"
+            // a basic dialog at most 560 wide; a fixed height, so changing tabs does not resize it
+            className="max-w-[560px] sm:h-[min(85vh,56rem)]"
+            // the body holds its own parts: the controls above, the list that scrolls
+            bodyClassName="flex flex-col overflow-hidden px-0 pt-0 pb-0"
         >
-            <div className="flex shrink-0 flex-col gap-3 px-4 pb-3 sm:px-6">
-                <Tabs
-                    items={STORY_KINDS.map(value => ({ value, label: t(STORY_KIND_LABEL_KEYS[value]) }))}
-                    value={kind}
-                    onValueChange={onKindChange}
-                    scrollable
-                    aria-label={t("page.storyPlayer.kinds")}
+            <div role="search" className="shrink-0 px-4 pb-2 pt-2 sm:px-6 sm:pt-4">
+                <TextField
+                    variant="filled"
+                    icon={mdSearch}
+                    value={query}
+                    onValueChange={setQuery}
+                    clearable
+                    clearLabel={t("common.md3.clear")}
+                    placeholder={t("page.storyPlayer.searchPlaceholder")}
+                    aria-label={t("page.storyPlayer.searchPlaceholder")}
+                    // a filled field one tone above the dialog's surface
+                    containerClassName="bg-surface-container-highest hover:bg-surface-container-highest"
                 />
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                    <div className="min-w-0 flex-1">
-                    <TextField
-                        icon={mdSearch}
-                        value={query}
-                        onValueChange={setQuery}
-                        clearable
-                        clearLabel={t("common.md3.clear")}
-                        placeholder={t("page.storyPlayer.searchPlaceholder")}
-                        aria-label={t("page.storyPlayer.searchPlaceholder")}
-                    />
-                    </div>
-                    {ready?.byEvent && ownViewLabel && (
-                        <SegmentedButton<PickerView>
-                            value={view}
-                            onValueChange={next => setViews(previous => ({ ...previous, [kind]: next }))}
-                            options={[
-                                { value: "own", label: t(ownViewLabel) },
-                                { value: "event", label: t("page.storyPlayer.byEvent") },
-                            ]}
-                            aria-label={t("page.storyPlayer.grouping")}
-                            className="w-full shrink-0 sm:w-64"
-                        />
-                    )}
-                </div>
             </div>
+            <Tabs
+                items={STORY_KINDS.map(value => ({ value, label: t(STORY_KIND_LABEL_KEYS[value]) }))}
+                value={kind}
+                onValueChange={onKindChange}
+                scrollable
+                aria-label={t("page.storyPlayer.kinds")}
+                className="shrink-0 px-2 sm:px-4"
+            />
+            {ready?.byEvent && ownViewLabel && (
+                <div className="shrink-0 px-4 pt-3 sm:px-6">
+                    <SegmentedButton<PickerView>
+                        value={view}
+                        onValueChange={next => setViews(previous => ({ ...previous, [kind]: next }))}
+                        options={[
+                            { value: "own", label: t(ownViewLabel) },
+                            { value: "event", label: t("page.storyPlayer.byEvent") },
+                        ]}
+                        density={-2}
+                        aria-label={t("page.storyPlayer.grouping")}
+                        className="w-fit"
+                    />
+                </div>
+            )}
 
-            <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto border-t border-outline-variant px-4 pb-6 pt-3 sm:px-6">
+            <div
+                ref={listRef}
+                role="tabpanel"
+                aria-label={t(STORY_KIND_LABEL_KEYS[kind])}
+                // no padding at its top: an open group's header sticks to the very top, with no gap above it to show the list through
+                className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4"
+            >
                 {catalog.status === "loading" && <LoadingState label={t("page.storyPlayer.loadingList")} className="min-h-[30vh]" />}
                 {catalog.status === "error" && (
                     <ErrorState
+                        className="mx-4 sm:mx-6"
                         title={t("page.storyPlayer.listFailed")}
                         message={catalog.message}
                         retryLabel={t("common.action.retry")}
@@ -167,17 +185,21 @@ export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange,
                 {ready && groups.length === 0 && (
                     <EmptyState title={needle ? t("page.storyPlayer.noMatches") : t("page.storyPlayer.noEpisodes")} />
                 )}
-                {groups.map(group => (
-                    <PickerGroup
-                        key={group.key}
-                        group={group}
-                        region={region}
-                        open={isOpenGroup(group.key)}
-                        onToggle={() => toggle(group.key)}
-                        current={current}
-                        onPick={pick}
-                    />
-                ))}
+                {groups.length > 0 && (
+                    <ul role="list" className="pt-2">
+                        {groups.map(group => (
+                            <PickerGroup
+                                key={group.key}
+                                group={group}
+                                region={region}
+                                open={isOpenGroup(group.key)}
+                                onToggle={() => toggle(group.key)}
+                                current={current}
+                                onPick={pick}
+                            />
+                        ))}
+                    </ul>
+                )}
             </div>
         </Dialog>
     );
@@ -194,7 +216,7 @@ function EventBanner({ assetbundleName, region }: { assetbundleName: string; reg
         ? [getEventStoryBannerUrl(assetbundleName, source), getEventLogoUrl(assetbundleName, source)]
         : [];
     const [failed, setFailed] = useState(0);
-    const box = "aspect-[488/208] w-24 shrink-0 rounded-md3-sm bg-surface-container-highest sm:w-32";
+    const box = "aspect-[488/208] h-12 shrink-0 rounded-md3-sm bg-surface-container-highest";
     if (failed >= candidates.length) return <span aria-hidden className={box} />;
     return (
         <img
@@ -208,6 +230,11 @@ function EventBanner({ assetbundleName, region }: { assetbundleName: string; reg
     );
 }
 
+/**
+ * A group as a list item that opens to its episodes: a picture (an event's banner, a
+ * character), its number (events), its name and how many episodes it has. While open, its
+ * header stays at the top of the list above its episodes.
+ */
 function PickerGroup({ group, region, open, onToggle, current, onPick }: {
     group: StoryGroup;
     region: SseWebRegion;
@@ -220,79 +247,91 @@ function PickerGroup({ group, region, open, onToggle, current, onPick }: {
     const holdsCurrent = current !== null && group.episodes.some(episode => episode.selector === current);
     const panelId = `story-picker-${group.key.replace(/[^A-Za-z0-9_-]/g, "-")}`;
     return (
-        <section className="overflow-hidden rounded-md3-lg bg-surface-container-low">
+        <li className="border-b border-outline-variant last:border-b-0">
             <button
                 type="button"
                 onClick={onToggle}
                 aria-expanded={open}
                 aria-controls={panelId}
-                className="state-layer focus-ring flex w-full items-center gap-3 p-3 text-left sm:px-4"
+                className={cn(
+                    ROW,
+                    "min-h-[72px] px-4 py-2 sm:px-6",
+                    // over the open list it heads, on the dialog's own surface
+                    open && "sticky top-0 z-10 bg-surface-container-high",
+                )}
             >
                 {group.event && <EventBanner assetbundleName={group.event.assetbundleName} region={region} />}
                 {group.character !== undefined && (
                     <img src={getCharacterIconUrl(group.character)} alt="" loading="lazy" className="size-10 shrink-0 rounded-full bg-surface-container-highest" />
                 )}
                 <span className="min-w-0 flex-1">
-                    {group.event && (
-                        <span className="mb-1 inline-flex rounded-md3-xs bg-surface-container-highest px-1.5 py-px font-mono type-label-s text-on-surface-variant">
-                            #{group.event.id}
-                        </span>
-                    )}
-                    <span className="line-clamp-2 type-title-s text-on-surface">{storyGroupTitle(group, t)}</span>
-                    <span className="mt-0.5 flex flex-wrap items-center gap-x-2 type-label-m text-on-surface-variant">
-                        <span>{t("page.storyPlayer.episodeCount", { count: group.episodes.length })}</span>
-                        {holdsCurrent && <span className="text-primary">{t("page.storyPlayer.playingHere")}</span>}
+                    {group.event && <span className="block font-mono type-label-s text-on-surface-variant">#{group.event.id}</span>}
+                    <span className="block truncate type-body-l text-on-surface">{storyGroupTitle(group, t)}</span>
+                    <span className="block truncate type-body-m text-on-surface-variant">
+                        {t("page.storyPlayer.episodeCount", { count: group.episodes.length })}
+                        {holdsCurrent && <span className="text-primary"> · {t("page.storyPlayer.playingHere")}</span>}
                     </span>
                 </span>
-                <Icon path={mdKeyboardArrowDown} size={24} className={cn("shrink-0 text-on-surface-variant transition-transform duration-200 ease-md3-standard", open && "rotate-180")} />
+                <Icon
+                    path={mdKeyboardArrowDown}
+                    size={24}
+                    className={cn("shrink-0 text-on-surface-variant transition-transform duration-200 ease-md3-standard", open && "rotate-180")}
+                />
             </button>
             {open && (
-                <ul id={panelId} className="grid gap-2 px-3 pb-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,15rem),1fr))]">
+                <ul id={panelId} role="list" className="pb-2">
                     {group.episodes.map(episode => (
-                        <li key={episode.selector}>
-                            <PickerEpisode
-                                episode={episode}
-                                // a group of one character has its picture already
-                                showCharacters={group.character === undefined}
-                                current={episode.selector === current}
-                                onPick={() => onPick(episode.selector)}
-                            />
-                        </li>
+                        <PickerEpisode
+                            key={episode.selector}
+                            episode={episode}
+                            // a group of one character has its picture already
+                            showCharacters={group.character === undefined}
+                            current={episode.selector === current}
+                            onPick={() => onPick(episode.selector)}
+                        />
                     ))}
                 </ul>
             )}
-        </section>
+        </li>
     );
 }
 
+/**
+ * An episode as a two-line list item: where it is in its group over its title, and who is
+ * in it where that helps. The current one has the list's selected colours and says so.
+ */
 function PickerEpisode({ episode, showCharacters, current, onPick }: { episode: StoryEpisode; showCharacters: boolean; current: boolean; onPick: () => void }) {
     const { t } = useI18n();
     const label = storyEpisodeLabel(episode, t);
+    const title = episode.title && episode.title !== label ? episode.title : null;
+    const characters = showCharacters ? episode.characters ?? [] : [];
     return (
-        <button
-            type="button"
-            onClick={onPick}
-            data-selector={episode.selector}
-            aria-current={current ? "true" : undefined}
-            className={cn(
-                "state-layer focus-ring flex h-full w-full min-w-0 flex-col gap-1 rounded-md3-md px-3 py-2 text-left",
-                current ? "bg-primary-container text-on-primary-container" : "bg-surface-container text-on-surface",
-            )}
-        >
-            <span className={cn("flex min-w-0 items-center gap-2 type-label-m", current ? "text-on-primary-container" : "text-primary")}>
-                <span className="truncate">{label}</span>
-                {current && (
-                    <span className="shrink-0 rounded-full bg-primary px-2 py-px type-label-s text-on-primary">{t("page.storyPlayer.current")}</span>
+        <li>
+            <button
+                type="button"
+                onClick={onPick}
+                data-selector={episode.selector}
+                aria-current={current ? "true" : undefined}
+                className={cn(
+                    ROW,
+                    // set in under its group's header
+                    "min-h-14 py-2 pl-8 pr-4 sm:pl-10 sm:pr-6",
+                    current ? "bg-secondary-container text-on-secondary-container" : "text-on-surface",
                 )}
-            </span>
-            {episode.title && episode.title !== label && <span className="line-clamp-2 type-body-m">{episode.title}</span>}
-            {showCharacters && episode.characters && episode.characters.length > 0 && (
-                <span className="flex flex-wrap gap-1">
-                    {episode.characters.map(character => (
-                        <img key={character} src={getCharacterIconUrl(character)} alt="" loading="lazy" className="size-7 rounded-full bg-surface-container-highest" />
-                    ))}
+            >
+                <span className="min-w-0 flex-1">
+                    {title && <span className={cn("block type-label-m", current ? "text-on-secondary-container" : "text-on-surface-variant")}>{label}</span>}
+                    <span className="block truncate type-body-l">{title ?? label}</span>
                 </span>
-            )}
-        </button>
+                {characters.length > 0 && (
+                    <span className="flex shrink-0 -space-x-1.5">
+                        {characters.slice(0, 4).map(character => (
+                            <img key={character} src={getCharacterIconUrl(character)} alt="" loading="lazy" className="size-7 rounded-full bg-surface-container-highest ring-2 ring-surface-container-high" />
+                        ))}
+                    </span>
+                )}
+                {current && <span className="shrink-0 type-label-m text-on-secondary-container">{t("page.storyPlayer.current")}</span>}
+            </button>
+        </li>
     );
 }
