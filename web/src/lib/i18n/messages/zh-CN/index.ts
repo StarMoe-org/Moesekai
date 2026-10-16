@@ -1748,6 +1748,7 @@ export const zhCNMessages = {
                 title: "Live2D 播放",
                 hint: "在浏览器里实时渲染这一话的 Live2D 演出，节奏与游戏内一致。需要先下载这一话的全部资源（长的一话有两百多 MB），建议在 Wi-Fi 下使用。",
                 start: "加载并播放",
+                openInStoryPlayer: "在剧情浏览器中打开",
                 preparing: "正在准备…",
                 loading: "正在加载… {percent}%",
                 loadedSize: "已下载 {size} MB",

@@ -1749,6 +1749,7 @@ export const enUSMessages = {
                 title: "Live2D playback",
                 hint: "Renders this episode's Live2D performance in your browser, paced as in the game. The whole episode is downloaded first (over 200 MB for a long one), so Wi-Fi is recommended.",
                 start: "Load and play",
+                openInStoryPlayer: "Open in Story Player",
                 preparing: "Preparing…",
                 loading: "Loading… {percent}%",
                 loadedSize: "{size} MB downloaded",

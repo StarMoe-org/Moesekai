@@ -3,11 +3,12 @@ import { useEffect, useImperativeHandle, useRef, useState, useSyncExternalStore 
 import { createPortal } from "react-dom";
 import { motion, useReducedMotion } from "framer-motion";
 import { Button, Icon, IconButton, LinearProgress, Surface, cn } from "@/components/md3";
-import { mdClose, mdFullscreen, mdPlayArrowFill, mdSmartDisplay, mdTune } from "@/components/md3/icons";
+import { mdClose, mdFullscreen, mdOpenInNew, mdPlayArrowFill, mdSmartDisplay, mdTune } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { md3EffectsFast, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import type { SsePlayerNode } from "@/lib/sseWeb/player";
 import { sseWebAspectRatio } from "@/lib/sseWeb/settings";
+import { storyPlayerHref } from "@/lib/storyPlayer/episodes";
 import { Live2DPlayerSettings } from "./Live2DPlayerSettings";
 import { Live2DControls, Live2DFailureBanner, Live2DStage } from "./Live2DStage";
 import { useLive2DPlayer } from "./useLive2DPlayer";
@@ -209,6 +210,12 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
 
     // what stays in the page while the picture is in its window, a line each
     const notes = [t("page.story.live2d.windowHint"), ...player.notes];
+    // the same episode on the story player page, its script beside a larger stage
+    const playerPageLink = (
+        <Button variant="text" icon={mdOpenInNew} href={storyPlayerHref(region, selector)} className="shrink-0">
+            {t("page.story.live2d.openInStoryPlayer")}
+        </Button>
+    );
 
     // a corner's mark follows the window's rounding
     const corner = "absolute bottom-0 z-10 flex h-7 w-7 touch-none items-center justify-center text-on-surface-variant/60 focus-ring rounded-md3-sm";
@@ -230,9 +237,12 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                             </h3>
                             <p className="mt-1 type-body-s text-on-surface-variant">{t("page.story.live2d.hint")}</p>
                         </div>
-                        <Button variant="tonal" icon={mdPlayArrowFill} onClick={start} className="shrink-0">
-                            {t("page.story.live2d.start")}
-                        </Button>
+                        <div className="flex shrink-0 flex-wrap items-center justify-center gap-2">
+                            {playerPageLink}
+                            <Button variant="tonal" icon={mdPlayArrowFill} onClick={start} className="shrink-0">
+                                {t("page.story.live2d.start")}
+                            </Button>
+                        </div>
                     </div>
                 )}
 
@@ -248,11 +258,12 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md3-md bg-primary-container text-on-primary-container">
                             <Icon path={mdSmartDisplay} size={24} />
                         </span>
-                        <div className="min-w-0">
+                        <div className="min-w-0 flex-1">
                             <h3 className="type-title-m text-on-surface">{t("page.story.live2d.title")}</h3>
                             <ul className="mt-1 space-y-1 type-body-s text-on-surface-variant">
                                 {notes.map(line => <li key={line}>{line}</li>)}
                             </ul>
+                            <div className="-ml-3 mt-2">{playerPageLink}</div>
                         </div>
                     </div>
                 )}

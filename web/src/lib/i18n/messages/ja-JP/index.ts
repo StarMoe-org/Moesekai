@@ -1748,6 +1748,7 @@ export const jaJPMessages = {
         title: "Live2D 再生",
         hint: "このエピソードの Live2D 演出をブラウザーでリアルタイムに描画します。テンポはゲーム内と同じです。再生前にエピソード全体をダウンロードします（長いものは 200 MB 以上）。Wi-Fi での利用をおすすめします。",
         start: "読み込んで再生",
+        openInStoryPlayer: "ストーリープレイヤーで開く",
         preparing: "準備中…",
         loading: "読み込み中… {percent}%",
         loadedSize: "{size} MB ダウンロード済み",

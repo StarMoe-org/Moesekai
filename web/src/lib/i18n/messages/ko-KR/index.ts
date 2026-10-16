@@ -1746,6 +1746,7 @@ export const koKRMessages = {
                 title: "Live2D 재생",
                 hint: "이 에피소드의 Live2D 연출을 브라우저에서 실시간으로 렌더링합니다. 템포는 게임과 같습니다. 재생 전에 에피소드 전체를 내려받으며(긴 에피소드는 200 MB 이상), Wi-Fi 사용을 권장합니다.",
                 start: "불러와서 재생",
+                openInStoryPlayer: "스토리 플레이어에서 열기",
                 preparing: "준비 중…",
                 loading: "불러오는 중… {percent}%",
                 loadedSize: "{size} MB 내려받음",
