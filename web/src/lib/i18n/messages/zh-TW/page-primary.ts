@@ -801,6 +801,7 @@ export const zhTWPagePrimary = {
                 title: "Live2D 播放",
                 hint: "在瀏覽器裡即時渲染這一話的 Live2D 演出，節奏與遊戲內一致。需要先下載這一話的全部資源（長的一話有兩百多 MB），建議在 Wi-Fi 下使用。",
                 start: "載入並播放",
+                openInStoryPlayer: "在劇情瀏覽器中開啟",
                 preparing: "正在準備…",
                 loading: "正在載入… {percent}%",
                 loadedSize: "已下載 {size} MB",

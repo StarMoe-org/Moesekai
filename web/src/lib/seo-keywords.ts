@@ -672,6 +672,24 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["譜面プレビュー", "3D譜面", "SUS", "MikuMikuWorld"],
     },
   ),
+  story_player: definePage(
+    "/story-player",
+    { "zh-CN": "剧情浏览器", "en-US": "Story Player", "ja-JP": "ストーリープレイヤー", "ko-KR": "스토리 플레이어", "zh-TW": "劇情瀏覽器" },
+    {
+      "zh-CN": "在浏览器里播放 Project SEKAI 活动、主线、卡面、特别剧情和区域对话的 Live2D 演出，旁边对照剧本，可切换日服、简中、繁中、韩服与国际服。",
+      "en-US": "Play Project Sekai event, main, card, special and area stories as Live2D in your browser, with the script beside the stage, for the JP, CN, TW, KR and EN servers.",
+      "ja-JP": "Project SEKAI のイベント・メイン・カード・特別ストーリーとエリア会話を Live2D でブラウザ再生し、台本と並べて読めます。サーバーの切り替えにも対応。",
+      "ko-KR": "Project SEKAI의 이벤트·메인·카드·스페셜 스토리와 에어리어 대화를 브라우저에서 Live2D로 재생하고 대본과 함께 볼 수 있습니다.",
+      "zh-TW": "在瀏覽器裡播放 Project SEKAI 活動、主線、卡面、特別劇情與區域對話的 Live2D 演出，並在旁對照劇本，可切換各伺服器。",
+    },
+    {
+      "zh-CN": ["剧情浏览器", "Live2D 剧情", "剧情播放", "活动剧情"],
+      "en-US": ["story player", "Live2D story", "story viewer", "event story"],
+      "ja-JP": ["ストーリープレイヤー", "Live2D ストーリー", "ストーリー再生", "イベントストーリー"],
+      "ko-KR": ["스토리 플레이어", "Live2D 스토리", "스토리 재생"],
+      "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
+    },
+  ),
   chart_image: definePage(
     "/chart-image",
     { "zh-CN": "谱面图片预览", "en-US": "Chart Image Viewer", "ja-JP": "譜面画像プレビュー" },

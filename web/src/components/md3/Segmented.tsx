@@ -290,7 +290,8 @@ export function Tabs<T extends string>({
                             disabled={item.disabled}
                             onClick={() => onValueChange(item.value)}
                             className={cn(
-                                "state-layer focus-ring relative flex shrink-0 cursor-pointer items-center justify-center px-4 type-title-s",
+                                // the focus ring inside the tab: a scrolling tab row would cut one drawn outside it
+                                "state-layer focus-ring relative flex shrink-0 cursor-pointer items-center justify-center px-4 type-title-s focus-visible:outline-offset-[-3px]",
                                 scrollable ? "" : "flex-1",
                                 variant === "primary" && item.icon ? "h-16" : "h-12",
                                 selected ? (variant === "primary" ? "text-primary" : "text-on-surface") : "text-on-surface-variant",

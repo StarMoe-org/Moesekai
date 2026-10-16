@@ -2,6 +2,8 @@
 
 剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读自己的剧情库。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web）。发布物原样放在本仓库的 `web/vendor/sse-web/`，站点另有加载它的组件。
 
+同一个播放器还用在「工具」里的剧情浏览器（`/story-player`，舞台与剧本并排，可以在页面里换服务器和剧集），见 [story-player.md](story-player.md)。
+
 ## 发布物
 
 `web/vendor/sse-web/` 是 SekaiStoryExporter 的 `crates/sse-web/dist.sh` 的输出，没有改动：`player.js`、各 Worker 脚本、`pkg/` 里的 wasm、许可证（AGPL-3.0-or-later 加链接例外）和它自带的嵌入说明 `README.md`。`manifest.json` 记着它的版本、构建它的提交、工具链和其余每个文件的 SHA-256。里面没有 Cubism Core。
@@ -40,7 +42,8 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 - 读的是设置里所选资源服务器的剧情库，画面里的文字是那个服务器的原文。目前只有日服和国服的客户端解包；繁中、韩、英三个服务器的剧情库配国服的解包播放，文字能正常显示，但对话框和字体是国服客户端的，播放时页面上有一行说明。等这三个服务器的客户端解包收录后，改 `NEXT_PUBLIC_SSE_WEB_INAPPS` 即可。
 - 各类剧情在剧情库里的名字：活动 `event:<活动>/<话>`，主线 `unit:<章节的 assetbundleName>/<话>`，卡面 `card:<卡>/former`（前篇）、`card:<卡>/latter`（后篇），特别 `special:<id>/<话>`，区域对话 `area:<区域>/<actionSet>`。角色自我介绍不在剧情库里，没有入口。剧情库里没有的一话（例如资源还没上线）点了以后提示「这一话还没有 Live2D 数据」。
-- 一个页面上可以有几个入口（卡面的前后篇、特别剧情的各话），同一时间只有一个在播：开始另一个时，前一个自动关闭。
+- 一个页面上可以有几个入口（卡面的前后篇、特别剧情的各话），同一时间只有一个在播：开始另一个时，前一个自动关闭。剧情浏览器也遵守这条。
+- 说明卡片上有「在剧情浏览器中打开」，跳到 `/story-player?server=<所选资源服务器>&ep=<这一话的选择器>`。
 - 点「加载并播放」之前不下载任何东西。之后先下载这一话的全部资源（长的一话两百多 MB）再开始。
 - 画面在一个悬浮窗里，浮在页面上方（站点顶栏之下）：拖标题栏移动，拖下方两角调整大小（画面保持 16:9），也可以用方向键。窗口不会超出页面；位置和大小记在浏览器的 `localStorage`（`story-live2d-window`）里。默认在页面右下角，窄屏上在顶栏下方、占满宽度。窗口窄时音量只留静音按钮。
 - 标题栏上的「播放设置」（记在 `localStorage` 的 `story-live2d-settings`，改了立即生效）：
@@ -96,7 +99,10 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 |---|---|
 | `src/lib/sseWeb/config.ts` | 读取并校验上面的变量 |
 | `src/lib/sseWeb/player.ts` | 播放器接口的类型声明，运行时加载 `player.js` |
-| `src/components/story/Live2DStoryPlayer.tsx` | 播放器组件 |
+| `src/components/story/useLive2DPlayer.ts` | 播放器的生命周期、状态与操作，悬浮窗和剧情浏览器共用 |
+| `src/components/story/Live2DStage.tsx` | 舞台与画面上的浮层、控制工具栏、出错提示，悬浮窗和剧情浏览器共用 |
+| `src/components/story/Live2DStoryPlayer.tsx` | 悬浮窗：位置、拖动、缩放，以及页面上的说明卡片（含「在剧情浏览器中打开」） |
+| `src/components/story/live2dRows.ts` | 节点与列表行的对应 |
 | `src/lib/sseWeb/settings.ts` | 播放设置：读写与渲染尺寸的计算 |
 | `src/components/story/Live2DPlayerSettings.tsx` | 播放设置的对话框 |
 | `src/components/story/StoryReader.tsx` | `live2dSelector` 属性：传入剧集（如 `event:219/1`）就提供 Live2D 播放；区服取自设置里的资源服务器 |

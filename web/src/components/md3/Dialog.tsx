@@ -7,7 +7,7 @@ import { md3EasingEmphasizedAccelerate, md3EffectsDefault, md3SpatialDefault, re
 import { cn, withOverrides } from "./cn";
 import { Icon } from "./Icon";
 import { IconButton } from "./Button";
-import { mdArrowBack, mdClose } from "./icons";
+import { mdClose } from "./icons";
 import { OverlayParentContext, useOverlay } from "./useOverlay";
 
 /* ==========================================================================
@@ -112,7 +112,8 @@ export function Dialog({
                     >
                         {fullscreenOnMobile && (
                             <div className="flex h-14 shrink-0 items-center gap-1 px-1 sm:hidden">
-                                <IconButton icon={mdArrowBack} label={t("common.md3.close")} onClick={close} />
+                                {/* a full-screen dialog's top app bar leads with its close button (M3 Dialogs) */}
+                                <IconButton icon={mdClose} label={t("common.md3.close")} onClick={close} />
                                 {title && (
                                     <h2 id={titleId} className="flex-1 truncate type-title-l">
                                         {title}
