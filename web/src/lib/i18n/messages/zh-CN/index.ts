@@ -4583,7 +4583,7 @@ export const zhCNMessages = {
             noEventCards: "不属于活动的卡",
             otherTalks: "其他对话",
             noEpisodeTitle: "还没有选择剧情",
-            readStory: "阅读这一话的剧情",
+            readOnStoryPage: "在剧情页中阅读",
             previousEpisode: "上一话",
             nextEpisode: "下一话",
             server: "服务器",

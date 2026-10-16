@@ -4605,7 +4605,7 @@ export const koKRMessages = {
             noEventCards: "이벤트에 속하지 않는 카드",
             otherTalks: "기타 대화",
             noEpisodeTitle: "아직 스토리를 선택하지 않았습니다",
-            readStory: "이 화의 스토리 읽기",
+            readOnStoryPage: "스토리 페이지에서 읽기",
             previousEpisode: "이전 화",
             nextEpisode: "다음 화",
             server: "서버",

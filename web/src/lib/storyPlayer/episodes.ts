@@ -91,6 +91,8 @@ export interface StoryGroup {
     title: string | null;
     /** A game character to show beside the group (a card group's). */
     character?: number;
+    /** The unit a main story chapter is of (`unitStories`' `unit`), for its logo. */
+    unit?: string;
     /** The event the group is (its number and banner are shown with it). */
     event?: { id: number; assetbundleName: string };
     /**
@@ -221,6 +223,7 @@ const buildUnits: Builder = async (region, library) => {
         kind: "unit" as const,
         id: chapter.assetbundleName,
         title: chapter.title ?? profiles.find(profile => profile.seq === story.seq)?.unitName ?? null,
+        unit: story.unit,
         episodes: [...chapter.episodes].sort((a, b) => a.episodeNo - b.episodeNo).map(episode => ({
             selector: `unit:${chapter.assetbundleName}/${episode.episodeNo}`,
             kind: "unit" as const,

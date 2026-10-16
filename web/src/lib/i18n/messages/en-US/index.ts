@@ -4584,7 +4584,7 @@ export const enUSMessages = {
             noEventCards: "Cards from no event",
             otherTalks: "Other talks",
             noEpisodeTitle: "No story chosen yet",
-            readStory: "Read this episode",
+            readOnStoryPage: "Read on the story page",
             previousEpisode: "Previous episode",
             nextEpisode: "Next episode",
             server: "Server",

@@ -4609,7 +4609,7 @@ export const jaJPMessages = {
       noEventCards: 'イベント以外のカード',
       otherTalks: 'その他の会話',
       noEpisodeTitle: 'ストーリーが選ばれていません',
-      readStory: 'この話のストーリーを読む',
+      readOnStoryPage: 'ストーリーページで読む',
       previousEpisode: '前の話',
       nextEpisode: '次の話',
       server: 'サーバー',

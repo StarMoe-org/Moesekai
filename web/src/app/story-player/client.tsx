@@ -2,17 +2,17 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
-import LocalizedLink from "@/components/LocalizedLink";
 import { Banner, Button, IconButton, LoadingState, PageContainer, PageHeader, Select, Slider, Surface } from "@/components/md3";
 import {
-    mdChevronLeft, mdChevronRight, mdFullscreen, mdListAlt, mdPlayArrowFill, mdReplay, mdSkipNext, mdTune,
+    mdChevronLeft, mdChevronRight, mdFullscreen, mdListAlt, mdMenuBook, mdPlayArrowFill, mdReplay, mdSkipNext, mdTune,
 } from "@/components/md3/icons";
 import { Live2DPlayerSettings } from "@/components/story/Live2DPlayerSettings";
 import { Live2DControls, Live2DFailureBanner, Live2DStage } from "@/components/story/Live2DStage";
 import { live2dActiveRow, live2dRows } from "@/components/story/live2dRows";
 import { useLive2DPlayer } from "@/components/story/useLive2DPlayer";
-import { STORY_KIND_LABEL_KEYS, storyEpisodeLabel, storyGroupTitle } from "@/components/story-player/labels";
+import { storyEpisodeLabel } from "@/components/story-player/labels";
 import { StoryPickerDialog } from "@/components/story-player/StoryPickerDialog";
+import { StoryPlayerHeader } from "@/components/story-player/StoryPlayerHeader";
 import { StoryScriptPanel, type StoryScriptState } from "@/components/story-player/StoryScriptPanel";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -158,8 +158,11 @@ function StoryPlayerContent() {
         setChosen({ region: next, selector });
     };
 
+    // each opening of the picker starts afresh (its search, groups and grouping)
+    const [pickerSession, setPickerSession] = useState(0);
     const openPicker = () => {
         setPickerKind(kind ?? "event");
+        setPickerSession(previous => previous + 1);
         setPickerOpen(true);
     };
 
@@ -173,70 +176,54 @@ function StoryPlayerContent() {
     const lastNode = Math.max(0, position.nodes - 1);
     const groupOfEpisode = episode && catalog ? catalog.groups.find(group => group.key === episode.group) : undefined;
 
-    const heading = episode && groupOfEpisode && kind ? (
-        <>
-            <span className="block truncate type-label-l text-primary">
-                {t(STORY_KIND_LABEL_KEYS[kind])} · {storyGroupTitle(groupOfEpisode, t)}
-            </span>
-            <span className="mt-0.5 line-clamp-2 type-title-l text-on-surface group-hover:text-primary">
-                {storyEpisodeLabel(episode, t)}{episode.title && episode.title !== storyEpisodeLabel(episode, t) && ` — ${episode.title}`}
-            </span>
-        </>
-    ) : selector ? (
-        <>
-            <span className="block truncate type-label-l text-primary">{kind ? t(STORY_KIND_LABEL_KEYS[kind]) : null}</span>
-            <span className="mt-0.5 block truncate font-mono type-title-m text-on-surface">{selector}</span>
-        </>
-    ) : (
-        <span className="block type-title-m text-on-surface-variant">{t("page.storyPlayer.noEpisodeTitle")}</span>
-    );
-
     return (
         <PageContainer wide>
             <PageHeader title={t("page.storyPlayer.title")} description={t("page.storyPlayer.description")} />
 
             {/* Laid out by the width the page has beside the site's navigation, not the window's. */}
             <div className="@container">
-            <Surface tone="default" radius="xl" className="mb-4 flex flex-col gap-3 p-3 sm:p-4 @3xl:flex-row @3xl:items-center">
-                <div className="min-w-0 flex-1">
-                    {episode?.readerHref ? (
-                        <LocalizedLink
-                            href={episode.readerHref}
-                            title={t("page.storyPlayer.readStory")}
-                            className="group state-layer focus-ring -m-1 block rounded-md3-md p-1"
-                        >
-                            {heading}
-                        </LocalizedLink>
-                    ) : heading}
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    <IconButton
-                        icon={mdChevronLeft}
-                        label={previousEpisode ? `${t("page.storyPlayer.previousEpisode")}: ${previousEpisode.title || storyEpisodeLabel(previousEpisode, t)}` : t("page.storyPlayer.previousEpisode")}
-                        variant="tonal"
-                        disabled={!previousEpisode}
-                        onClick={() => previousEpisode && choose(previousEpisode.selector)}
-                    />
-                    <IconButton
-                        icon={mdChevronRight}
-                        label={nextEpisode ? `${t("page.storyPlayer.nextEpisode")}: ${nextEpisode.title || storyEpisodeLabel(nextEpisode, t)}` : t("page.storyPlayer.nextEpisode")}
-                        variant="tonal"
-                        disabled={!nextEpisode}
-                        onClick={() => nextEpisode && choose(nextEpisode.selector)}
-                    />
-                    <Select<SseWebRegion>
-                        value={region}
-                        onValueChange={changeRegion}
-                        options={REGIONS.map(value => ({ value, label: t(SERVER_LABEL_KEYS[value]) }))}
-                        aria-label={t("page.storyPlayer.server")}
-                        disabled={!region}
-                        className="w-48"
-                    />
-                    <Button variant="filled" icon={mdListAlt} onClick={openPicker} disabled={!region}>
-                        {t("page.storyPlayer.chooseStory")}
-                    </Button>
-                </div>
-            </Surface>
+            {region && (
+                <StoryPlayerHeader
+                    region={region}
+                    episode={episode}
+                    group={groupOfEpisode}
+                    selector={selector}
+                    kind={kind}
+                    actions={(
+                        <>
+                            <IconButton
+                                icon={mdChevronLeft}
+                                label={previousEpisode ? `${t("page.storyPlayer.previousEpisode")}: ${previousEpisode.title || storyEpisodeLabel(previousEpisode, t)}` : t("page.storyPlayer.previousEpisode")}
+                                variant="tonal"
+                                disabled={!previousEpisode}
+                                onClick={() => previousEpisode && choose(previousEpisode.selector)}
+                            />
+                            <IconButton
+                                icon={mdChevronRight}
+                                label={nextEpisode ? `${t("page.storyPlayer.nextEpisode")}: ${nextEpisode.title || storyEpisodeLabel(nextEpisode, t)}` : t("page.storyPlayer.nextEpisode")}
+                                variant="tonal"
+                                disabled={!nextEpisode}
+                                onClick={() => nextEpisode && choose(nextEpisode.selector)}
+                            />
+                            <Select<SseWebRegion>
+                                value={region}
+                                onValueChange={changeRegion}
+                                options={REGIONS.map(value => ({ value, label: t(SERVER_LABEL_KEYS[value]) }))}
+                                aria-label={t("page.storyPlayer.server")}
+                                className="w-48"
+                            />
+                            {episode?.readerHref && (
+                                <Button variant="tonal" icon={mdMenuBook} href={episode.readerHref}>
+                                    {t("page.storyPlayer.readOnStoryPage")}
+                                </Button>
+                            )}
+                            <Button variant="filled" icon={mdListAlt} onClick={openPicker}>
+                                {t("page.storyPlayer.chooseStory")}
+                            </Button>
+                        </>
+                    )}
+                />
+            )}
 
             {!region ? (
                 <LoadingState />
@@ -355,6 +342,7 @@ function StoryPlayerContent() {
             </div>
 
             {region && <StoryPickerDialog
+                key={pickerSession}
                 isOpen={pickerOpen}
                 region={region}
                 onClose={() => setPickerOpen(false)}

@@ -48,6 +48,8 @@ export function StoryReaderHeader({
     badges,
     footer,
     trailing,
+    actions,
+    titleAs: Title = "h1",
     href,
     className,
 }: {
@@ -57,23 +59,40 @@ export function StoryReaderHeader({
     badges?: React.ReactNode;
     footer?: React.ReactNode;
     trailing?: React.ReactNode;
+    /**
+     * Controls that belong with the header (beside it on a wide card, under it on a narrow
+     * one): the card is then laid out by its own width.
+     */
+    actions?: React.ReactNode;
+    /** The title's heading level: `h2` on a page with a title of its own. */
+    titleAs?: "h1" | "h2";
     /** Render the header as an interactive link card. */
     href?: string;
     className?: string;
 }) {
-    const body = (
-        <div className="flex items-center gap-4 p-4">
+    const heading = (
+        <>
             {media && <div className="hidden shrink-0 sm:block">{media}</div>}
             <div className="min-w-0 flex-1">
                 {eyebrow && <p className="truncate type-label-l text-on-surface-variant">{eyebrow}</p>}
                 <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                    <h1 className="type-title-l text-on-surface">{title}</h1>
+                    <Title className="type-title-l text-on-surface">{title}</Title>
                     {badges}
                 </div>
                 {footer}
             </div>
             {trailing}
+        </>
+    );
+    const body = actions ? (
+        <div className="@container">
+            <div className="flex flex-col gap-3 p-4 @3xl:flex-row @3xl:items-center">
+                <div className="flex min-w-0 flex-1 items-center gap-4">{heading}</div>
+                <div className="flex flex-wrap items-center gap-2">{actions}</div>
+            </div>
         </div>
+    ) : (
+        <div className="flex items-center gap-4 p-4">{heading}</div>
     );
     if (href) {
         return (

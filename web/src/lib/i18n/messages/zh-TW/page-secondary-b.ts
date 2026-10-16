@@ -256,7 +256,7 @@ export const zhTWPageSecondaryB = {
         noEventCards: "不屬於活動的卡",
         otherTalks: "其他對話",
         noEpisodeTitle: "還沒有選擇劇情",
-        readStory: "閱讀這一話的劇情",
+        readOnStoryPage: "在劇情頁中閱讀",
         previousEpisode: "上一話",
         nextEpisode: "下一話",
         server: "伺服器",

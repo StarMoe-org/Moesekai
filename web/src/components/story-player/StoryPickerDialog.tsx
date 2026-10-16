@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, EmptyState, ErrorState, Icon, LoadingState, SegmentedButton, Tabs, TextField, cn } from "@/components/md3";
 import { mdKeyboardArrowDown, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -64,10 +64,12 @@ export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange,
     const [views, setViews] = useState<Partial<Record<StoryKind, PickerView>>>({});
     /** Groups the reader opened or closed against their default. */
     const [toggled, setToggled] = useState<ReadonlySet<string>>(new Set());
-    const listRef = useRef<HTMLDivElement | null>(null);
+    // the list's element as state: the dialog mounts its body a moment after it opens
+    const [list, setList] = useState<HTMLDivElement | null>(null);
     const needle = query.trim().toLocaleLowerCase();
     const ready = catalog.status === "ready" ? catalog.catalog : null;
-    const view: PickerView = ready?.byEvent ? views[kind] ?? "own" : "own";
+    // a kind that can be listed by event is, until the reader chooses otherwise (for this opening)
+    const view: PickerView = ready?.byEvent ? views[kind] ?? "event" : "own";
     const source = view === "event" ? ready?.byEvent : ready?.groups;
     const currentGroup = current ? source?.find(group => group.episodes.some(episode => episode.selector === current))?.key ?? null : null;
 
@@ -93,14 +95,13 @@ export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange,
         return toggled.has(key) ? !byDefault : byDefault;
     };
 
-    // Opening the dialog, or the current episode's list, brings that episode into view.
+    // Opening the dialog, or the current episode's list, brings that episode to the list's middle.
+    // Layout offsets, not the screen's: the dialog opens with a scale, which they do not see.
     useEffect(() => {
-        if (!isOpen || !current || !ready) return;
-        const frame = requestAnimationFrame(() => {
-            listRef.current?.querySelector(`[data-selector="${CSS.escape(current)}"]`)?.scrollIntoView({ block: "center" });
-        });
-        return () => cancelAnimationFrame(frame);
-    }, [isOpen, current, ready, view]);
+        if (!isOpen || !current || !ready || !list) return;
+        const row = list.querySelector<HTMLElement>(`[data-selector="${CSS.escape(current)}"]`);
+        if (row) list.scrollTo({ top: Math.max(0, row.offsetTop - (list.clientHeight - row.offsetHeight) / 2) });
+    }, [isOpen, current, ready, view, list]);
 
     const toggle = (key: string) => setToggled(previous => {
         const next = new Set(previous);
@@ -166,11 +167,12 @@ export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange,
             )}
 
             <div
-                ref={listRef}
+                ref={setList}
                 role="tabpanel"
                 aria-label={t(STORY_KIND_LABEL_KEYS[kind])}
                 // no padding at its top: an open group's header sticks to the very top, with no gap above it to show the list through
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4"
+                // `relative`: the rows' offsets are taken from it
+                className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain pb-4"
             >
                 {catalog.status === "loading" && <LoadingState label={t("page.storyPlayer.loadingList")} className="min-h-[30vh]" />}
                 {catalog.status === "error" && (
