@@ -4,6 +4,7 @@ import { mdClose, mdGraphicEq, mdLandscape, mdMyLocation, mdPauseFill, mdPlayArr
 import { useState, useEffect, useMemo, useRef } from "react";
 import { LIVE2D_STORY_PLAYER_ID, Live2DStoryPlayer, live2dStoryPlayerTop, type Live2DStoryPlayerHandle } from "@/components/story/Live2DStoryPlayer";
 import { StorySnippet } from "@/components/story/StorySnippet";
+import { live2dActiveRow, live2dRows as mapLive2dRows } from "@/components/story/live2dRows";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { IProcessedScenarioData, SnippetAction, type StoryTranslationSource } from "@/types/story";
@@ -72,18 +73,8 @@ export function StoryReader({
     const [live2dActive, setLive2dActive] = useState(false);
     const [live2dNode, setLive2dNode] = useState(0);
     const [live2dNodes, setLive2dNodes] = useState<readonly SsePlayerNode[] | null>(null);
-    const live2dRows = useMemo(() => {
-        const rowOfSnippet = new Map<number, number>();
-        scenarioData?.actions.forEach((act, idx) => {
-            if (act.snippetIndex !== undefined) rowOfSnippet.set(act.snippetIndex, idx);
-        });
-        const rows = (live2dNodes ?? []).map(node => rowOfSnippet.get(node.snippet) ?? -1);
-        return { rows, nodeOfRow: new Map(rows.flatMap((row, node) => (row >= 0 ? [[row, node] as const] : []))) };
-    }, [scenarioData, live2dNodes]);
-    // The row of the node playback is in; a node without a row leaves the last one before it marked.
-    const live2dIndex = live2dActive
-        ? live2dRows.rows.slice(0, Math.min(live2dNode, live2dRows.rows.length - 1) + 1).findLast(row => row >= 0) ?? -1
-        : -1;
+    const live2dRows = useMemo(() => mapLive2dRows(scenarioData?.actions, live2dNodes), [scenarioData, live2dNodes]);
+    const live2dIndex = live2dActive ? live2dActiveRow(live2dRows, live2dNode) : -1;
 
     // Keep the current talk's row in view: below the site's header, and clear of the player's
     // window where that lies over the list.
