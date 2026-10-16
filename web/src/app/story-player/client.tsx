@@ -354,8 +354,9 @@ function StoryPlayerContent() {
             )}
             </div>
 
-            <StoryPickerDialog
+            {region && <StoryPickerDialog
                 isOpen={pickerOpen}
+                region={region}
                 onClose={() => setPickerOpen(false)}
                 kind={pickerKind}
                 onKindChange={setPickerKind}
@@ -363,7 +364,7 @@ function StoryPlayerContent() {
                 onRetry={() => catalogs.retry(pickerKind)}
                 current={selector}
                 onSelect={choose}
-            />
+            />}
             <Live2DPlayerSettings
                 isOpen={settingsOpen && phase === "ready"}
                 onClose={() => setSettingsOpen(false)}

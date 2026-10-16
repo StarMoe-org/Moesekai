@@ -13,8 +13,20 @@ export const STORY_KIND_LABEL_KEYS: Record<StoryKind, string> = {
 };
 
 /** A group's name: masterdata's, or the story pages' fallback for its id. */
-export function storyGroupTitle(group: Pick<StoryGroup, "kind" | "id" | "title">, t: Translate): string {
+export function storyGroupTitle(group: Pick<StoryGroup, "kind" | "id" | "title" | "event" | "category">, t: Translate): string {
+    switch (group.category) {
+        case "grade1": return t("page.story.area.grade1Label");
+        case "grade2": return t("page.story.area.grade2Label");
+        case "theater": return t("page.story.area.theaterLabel");
+        case "limited": return group.title
+            ? t("page.story.area.limitedCategoryWithName", { name: group.title })
+            : t("page.story.area.limitedCategoryFallback", { id: group.id });
+        case "aprilfool": return t("page.story.area.aprilFoolCategory", { year: group.id });
+        case "noEvent": return t("page.storyPlayer.noEventCards");
+        case "other": return t("page.storyPlayer.otherTalks");
+    }
     if (group.title) return group.title;
+    if (group.event) return t("page.story.event.fallbackEventName", { id: group.event.id });
     switch (group.kind) {
         case "event": return t("page.story.event.fallbackEventName", { id: group.id });
         case "special": return t("page.story.special.fallbackTitle", { id: group.id });

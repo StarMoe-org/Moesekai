@@ -75,7 +75,7 @@ export interface StoryEpisode {
     actionSet?: number;
     /** The masterdata's title, in the server's language (none for an area talk). */
     title: string;
-    /** The characters of an area talk (game character ids). */
+    /** Who is in it (game character ids): an area talk's characters, a card's character. */
     characters?: number[];
     /** This episode on the story pages, or null where they have no page for it. */
     readerHref: string | null;
@@ -91,6 +91,13 @@ export interface StoryGroup {
     title: string | null;
     /** A game character to show beside the group (a card group's). */
     character?: number;
+    /** The event the group is (its number and banner are shown with it). */
+    event?: { id: number; assetbundleName: string };
+    /**
+     * What a group masterdata gives no name of its own is (the categories of the area talk
+     * pages; the cards of no event): its name comes from the UI's words.
+     */
+    category?: "grade1" | "grade2" | "theater" | "limited" | "aprilfool" | "noEvent" | "other";
     episodes: StoryEpisode[];
 }
 
@@ -98,6 +105,12 @@ export interface StoryGroup {
 export interface StoryCatalog {
     kind: StoryKind;
     groups: StoryGroup[];
+    /**
+     * The same episodes by event, for the kinds the story pages also list that way (card
+     * stories by the event a card came with, area talks by the area pages' categories), in
+     * the order they are shown: newest event first.
+     */
+    byEvent?: StoryGroup[];
     /** Every episode by its selector. */
     episodes: Map<string, StoryEpisode>;
     /** Every episode in order, for the previous and next ones. */
@@ -143,7 +156,8 @@ export function fetchLibraryEpisodes(region: SseWebRegion): Promise<Set<string>>
     return loading;
 }
 
-interface IEventInfo { id: number; name: string }
+interface IEventInfo { id: number; name: string; assetbundleName: string }
+interface IEventCard { cardId: number; eventId: number }
 interface IEventStory {
     eventId: number;
     assetbundleName: string;
@@ -166,7 +180,12 @@ interface ISpecialStory {
 interface IArea { id: number; name: string; subName?: string }
 interface ICharacter2D { id: number; characterType: string; characterId: number }
 
-type Builder = (region: SseWebRegion, library: Set<string>) => Promise<StoryGroup[]>;
+type Builder = (region: SseWebRegion, library: Set<string>) => Promise<{ groups: StoryGroup[]; byEvent?: StoryGroup[] }>;
+
+/** A group for an event, named and pictured as the event is. */
+function eventGroup(key: string, kind: StoryKind, event: IEventInfo | undefined, id: number): StoryGroup {
+    return { key, kind, id, title: event?.name ?? null, event: { id, assetbundleName: event?.assetbundleName ?? "" }, episodes: [] };
+}
 
 const buildEvents: Builder = async (region, library) => {
     const [events, stories] = await Promise.all([
@@ -174,11 +193,12 @@ const buildEvents: Builder = async (region, library) => {
         master<IEventStory[]>(region, "eventStories.json"),
     ]);
     const names = new Map(events.map(event => [event.id, event.name]));
-    return [...stories].sort((a, b) => a.eventId - b.eventId).map(story => ({
+    return { groups: [...stories].sort((a, b) => a.eventId - b.eventId).map(story => ({
         key: `event:${story.eventId}`,
         kind: "event" as const,
         id: story.eventId,
         title: names.get(story.eventId) ?? null,
+        event: { id: story.eventId, assetbundleName: story.assetbundleName },
         episodes: [...story.eventStoryEpisodes].sort((a, b) => a.episodeNo - b.episodeNo).map(episode => ({
             selector: `event:${story.eventId}/${episode.episodeNo}`,
             kind: "event" as const,
@@ -188,7 +208,7 @@ const buildEvents: Builder = async (region, library) => {
             readerHref: `/story/event/${story.eventId}/${episode.episodeNo}`,
             script: { type: "event" as const, params: { assetbundleName: story.assetbundleName, scenarioId: episode.scenarioId }, voices: "scenario" as const },
         })).filter(episode => library.has(episode.selector)),
-    }));
+    })) };
 };
 
 const buildUnits: Builder = async (region, library) => {
@@ -196,7 +216,7 @@ const buildUnits: Builder = async (region, library) => {
         master<IUnitStory[]>(region, "unitStories.json"),
         master<IUnitProfile[]>(region, "unitProfiles.json"),
     ]);
-    return [...stories].sort((a, b) => a.seq - b.seq).flatMap(story => story.chapters.map((chapter, index) => ({
+    return { groups: [...stories].sort((a, b) => a.seq - b.seq).flatMap(story => story.chapters.map((chapter, index) => ({
         key: `unit:${chapter.assetbundleName}`,
         kind: "unit" as const,
         id: chapter.assetbundleName,
@@ -212,15 +232,25 @@ const buildUnits: Builder = async (region, library) => {
             readerHref: index === 0 ? `/story/unit/${story.seq}/${encodeURIComponent(episode.scenarioId)}` : null,
             script: { type: "unit" as const, params: { assetbundleName: chapter.assetbundleName, scenarioId: episode.scenarioId }, voices: "scenario" as const },
         })).filter(episode => library.has(episode.selector)),
-    })));
+    }))) };
 };
 
 const buildCards: Builder = async (region, library) => {
-    const [cards, episodes, characters] = await Promise.all([
+    const [cards, episodes, characters, events, eventCards] = await Promise.all([
         master<ICard[]>(region, "cards.json"),
         master<ICardStoryEpisode[]>(region, "cardEpisodes.json"),
         master<IGameCharacter[]>(region, "gameCharacters.json"),
+        master<IEventInfo[]>(region, "events.json").catch(() => [] as IEventInfo[]),
+        master<IEventCard[]>(region, "eventCards.json").catch(() => [] as IEventCard[]),
     ]);
+    // a card that came with two events (a few did) is listed with the first
+    const eventOfCard = new Map<number, number>();
+    for (const { cardId, eventId } of eventCards) {
+        if (!eventOfCard.has(cardId) || eventId < eventOfCard.get(cardId)!) eventOfCard.set(cardId, eventId);
+    }
+    const eventById = new Map(events.map(event => [event.id, event]));
+    const byEvent = new Map<number, StoryGroup>();
+    const noEvent: StoryGroup = { key: "card-event:none", kind: "card", id: "none", title: null, category: "noEvent", episodes: [] };
     const byCard = new Map<number, ICardStoryEpisode[]>();
     for (const episode of episodes) byCard.set(episode.cardId, [...(byCard.get(episode.cardId) ?? []), episode]);
     const groups = new Map<number, StoryGroup>();
@@ -239,27 +269,39 @@ const buildCards: Builder = async (region, library) => {
         const parts = selectCardStoryParts(byCard.get(card.id) ?? []);
         const group = groups.get(card.characterId);
         if (!parts || !group) continue;
+        const eventId = eventOfCard.get(card.id);
+        let eventGroupOfCard = noEvent;
+        if (eventId !== undefined) {
+            eventGroupOfCard = byEvent.get(eventId) ?? eventGroup(`card-event:${eventId}`, "card", eventById.get(eventId), eventId);
+            byEvent.set(eventId, eventGroupOfCard);
+        }
         parts.forEach((episode, index) => {
             const part = index === 0 ? "former" : "latter";
             const selector = `card:${card.id}/${part}`;
             if (!library.has(selector)) return;
-            group.episodes.push({
+            const entry: StoryEpisode = {
                 selector,
                 kind: "card",
                 group: group.key,
                 part,
                 title: card.prefix,
+                characters: [card.characterId],
                 readerHref: `/story/card/${card.id}#part-episode-${index + 1}`,
                 script: { type: "card", params: { assetbundleName: card.assetbundleName, scenarioId: episode.scenarioId }, voices: "card" },
-            });
+            };
+            group.episodes.push(entry);
+            eventGroupOfCard.episodes.push(entry);
         });
     }
-    return [...groups.values()];
+    return {
+        groups: [...groups.values()],
+        byEvent: [...[...byEvent.values()].sort((a, b) => (b.event?.id ?? 0) - (a.event?.id ?? 0)), noEvent],
+    };
 };
 
 const buildSpecials: Builder = async (region, library) => {
     const stories = await master<ISpecialStory[]>(region, "specialStories.json");
-    return [...stories].sort((a, b) => a.seq - b.seq || a.id - b.id).map(story => ({
+    return { groups: [...stories].sort((a, b) => a.seq - b.seq || a.id - b.id).map(story => ({
         key: `special:${story.id}`,
         kind: "special" as const,
         id: story.id,
@@ -274,15 +316,36 @@ const buildSpecials: Builder = async (region, library) => {
             readerHref: story.id === 2 ? null : `/story/special/${story.id}`,
             script: { type: "special" as const, params: { assetbundleName: episode.assetbundleName, scenarioId: episode.scenarioId }, voices: "special" as const },
         })).filter(episode => library.has(episode.selector)),
-    }));
+    })) };
 };
 
 const buildAreas: Builder = async (region, library) => {
-    const [actionSets, areas, character2ds] = await Promise.all([
+    const [actionSets, areas, character2ds, events] = await Promise.all([
         master<IActionSet[]>(region, "actionSets.json"),
         master<IArea[]>(region, "areas.json"),
         master<ICharacter2D[]>(region, "character2ds.json").catch(() => [] as ICharacter2D[]),
+        master<IEventInfo[]>(region, "events.json").catch(() => [] as IEventInfo[]),
     ]);
+    const eventById = new Map(events.map(event => [event.id, event]));
+    const areaById = new Map(areas.map(area => [area.id, area]));
+    // the area talk pages' categories (`getAreaCategory`), each a group
+    const categories = new Map<string, StoryGroup>();
+    const categoryGroup = (category: ReturnType<typeof getAreaCategory>): StoryGroup => {
+        const key = `area-event:${category === "" ? "other" : category}`;
+        const known = categories.get(key);
+        if (known) return known;
+        let group: StoryGroup;
+        if (typeof category === "number") group = eventGroup(key, "area", eventById.get(category), category);
+        else if (category === "grade1" || category === "grade2" || category === "theater") group = { key, kind: "area", id: category, title: null, category, episodes: [] };
+        else if (category.startsWith("limited_")) {
+            const areaId = Number(category.slice("limited_".length));
+            const area = areaById.get(areaId);
+            group = { key, kind: "area", id: areaId, title: area ? (area.subName ? `${area.name} - ${area.subName}` : area.name) : null, category: "limited", episodes: [] };
+        } else if (category.startsWith("aprilfool")) group = { key, kind: "area", id: category.slice("aprilfool".length), title: null, category: "aprilfool", episodes: [] };
+        else group = { key, kind: "area", id: "other", title: null, category: "other", episodes: [] };
+        categories.set(key, group);
+        return group;
+    };
     const characterOf = new Map(character2ds.filter(c => c.characterType === "game_character").map(c => [c.id, c.characterId]));
     const groups = new Map<number, StoryGroup>(
         [...areas].sort((a, b) => a.id - b.id).map(area => [area.id, {
@@ -302,7 +365,7 @@ const buildAreas: Builder = async (region, library) => {
             groups.set(action.areaId, group);
         }
         const category = getAreaCategory(action);
-        group.episodes.push({
+        const entry: StoryEpisode = {
             selector,
             kind: "area",
             group: group.key,
@@ -311,9 +374,18 @@ const buildAreas: Builder = async (region, library) => {
             characters: [...new Set((action.characterIds ?? []).flatMap(id => characterOf.get(id) ?? []))],
             readerHref: category === "" ? null : `/story/area/${encodeURIComponent(categoryToUrlParam(category))}/${encodeURIComponent(action.scenarioId)}`,
             script: { type: "talk", params: { scenarioId: action.scenarioId, group: Math.floor(action.id / 100) }, voices: "talk" },
-        });
+        };
+        group.episodes.push(entry);
+        categoryGroup(category).episodes.push(entry);
     }
-    return [...groups.values()];
+    // as the area talk pages order them: daily and theater, the events newest first, the
+    // limited areas, April Fools', then what has no category
+    const ranks: Partial<Record<NonNullable<StoryGroup["category"]>, number>> = { grade1: 0, grade2: 1, theater: 2, limited: 4, aprilfool: 5, other: 6 };
+    const rank = (group: StoryGroup) => (group.event ? 3 : ranks[group.category ?? "other"] ?? 6);
+    const byEvent = [...categories.values()].sort((a, b) => rank(a) - rank(b)
+        || (b.event?.id ?? 0) - (a.event?.id ?? 0)
+        || String(a.id).localeCompare(String(b.id), undefined, { numeric: true }));
+    return { groups: [...groups.values()], byEvent };
 };
 
 const BUILDERS: Record<StoryKind, Builder> = {
@@ -336,10 +408,11 @@ export function fetchStoryCatalog(region: SseWebRegion, kind: StoryKind): Promis
     if (known) return known;
     const loading = fetchLibraryEpisodes(region)
         .then(library => BUILDERS[kind](region, library))
-        .then(all => {
-            const groups = all.filter(group => group.episodes.length > 0);
+        .then(built => {
+            const groups = built.groups.filter(group => group.episodes.length > 0);
+            const byEvent = built.byEvent?.filter(group => group.episodes.length > 0);
             const order = groups.flatMap(group => group.episodes);
-            return { kind, groups, order, episodes: new Map(order.map(episode => [episode.selector, episode])) };
+            return { kind, groups, ...(byEvent ? { byEvent } : {}), order, episodes: new Map(order.map(episode => [episode.selector, episode])) };
         });
     catalogs.set(key, loading);
     loading.catch(() => catalogs.delete(key));

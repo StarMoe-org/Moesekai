@@ -31,7 +31,12 @@
 
 ## 选剧情对话框
 
-五个分页：活动（按活动，新的在前）、主线（按团体的章节）、卡面（按角色，每个角色的卡新的在前，前篇在后篇之前）、特别剧情（按特别剧情）、区域对话（按区域，带出场角色的头像）。搜索只在当前分页里找（分组名、标题、话数、选择器）。当前这一话所在的分组默认展开，并滚到这一话；主线和特别剧情的分组都默认展开，其余点开才列出各话。
+五个分页：活动（按活动，新的在前，每个活动带编号和横幅）、主线（按团体的章节）、卡面（按角色，每个角色的卡新的在前，前篇在后篇之前）、特别剧情（按特别剧情）、区域对话（按区域，带出场角色的头像）。卡面和区域对话还可以切换成「按活动」，与剧情页的做法一致：
+
+- 卡面按卡所属的活动（`eventCards.json`；属于两个活动的卡归到前一个），新的活动在前，最后是不属于活动的卡。
+- 区域对话按区域对话页的分类（`getAreaCategory`）：日常（第一、第二学年）、剧场版、各活动（新的在前）、限定区域、愚人节，最后是没有分类的。
+
+活动分组都显示活动编号和横幅（活动剧情的横幅，没有时用活动标志，都取自所选服务器的资源站）。搜索只在当前分页里找（分组名、活动编号、标题、话数、选择器）。当前这一话所在的分组默认展开，并滚到这一话；主线和特别剧情的分组都默认展开，其余点开才列出各话。对话框里分页和搜索框固定在上方，下面的列表自己滚动。
 
 列表来自所选服务器的 masterdata（`fetchMasterData(path, false, server)`：站点设置的服务器用缓存的那份，其他服务器直接取），只保留剧情库确实有的话：
 
@@ -45,9 +50,9 @@
 |---|---|
 | 活动 | `events.json`、`eventStories.json` |
 | 主线 | `unitStories.json`、`unitProfiles.json` |
-| 卡面 | `cards.json`、`cardEpisodes.json`、`gameCharacters.json` |
+| 卡面 | `cards.json`、`cardEpisodes.json`、`gameCharacters.json`、`events.json`、`eventCards.json` |
 | 特别 | `specialStories.json` |
-| 区域对话 | `actionSets.json`、`areas.json`、`character2ds.json` |
+| 区域对话 | `actionSets.json`、`areas.json`、`character2ds.json`、`events.json` |
 
 ## 代码
 
