@@ -66,7 +66,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 
 剧集与区服：
 
-- `selector` 与导出的写法相同，五类剧情都能播：活动 `event:<活动>/<话>`、主线 `unit:<章节的 assetbundleName>/<话>`（如 `unit:idol-story-chapter/1`）、卡面 `card:<卡>/first` 与 `card:<卡>/second`、特别 `special:<id>/<话>`、区域对话 `area:<区域>/<actionSet>`。剧情库的 `ripper.lock.json` 里有全部剧集的列表（`episodes`）。
+- `selector` 与导出的写法相同，五类剧情都能播：活动 `event:<活动>/<话>`、主线 `unit:<章节的 assetbundleName>/<话>`（如 `unit:idol-story-chapter/1`）、卡面 `card:<卡>/former`（前篇）与 `card:<卡>/latter`（后篇，旧写法 `first` / `second` 仍可用）、特别 `special:<id>/<话>`、区域对话 `area:<区域>/<actionSet>`。剧情库的 `ripper.lock.json` 里有全部剧集的列表（`episodes`）。
 - 区服由 `sources.library` 决定：`…/sekai-story/ripper/<jp|cn|tw|kr|en>/`。界面贴图和字体来自 `sources.inapp`，目前只有日服（`jp-7.0.0`）和国服（`cn-6.4.0`）两份客户端解包；繁中、韩、英三个区服的剧情库可以配国服的解包播放，文字能正常显示，但界面和字体是国服客户端的，与这三个区服的游戏不一定相同。
 
 字体：
@@ -137,6 +137,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 - 浏览器里留下的缓存：Cache API 的 `sse-ui-kit-v1`（派生好的 UI 套件，每个客户端版本约 8 MB）。
 - 用户把标签页切到后台时，声音和模拟照常进行（时钟在音频线程），画面在回到前台时追上。
 - 影片（片头、片尾等）在渲染 Worker 里用编入的解码器播放（ADR-0033）：加载时多取这一话的视频文件（多数 10 MB 左右，最大 58 MB），画面与导出不是逐像素相同。library 里没有视频文件的影片显示黑底和影片名。
+- 背景 prefab（粒子背景、影片背景）与导出相同：加载时多取 library 解包的背景 bundle（模拟 Worker 取对象图，多数 1 MB 左右，最大约 5.6 MB；渲染 Worker 取整个 bundle），影片背景的视频文件随影片一起取。library 里没有影片文件的影片背景，遮罩照样退去，背景是空的（黑色）。
 
 ## 许可
 

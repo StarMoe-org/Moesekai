@@ -22,7 +22,7 @@ interface StoryReaderProps {
     storyType?: "event" | "unit" | "card" | "area" | "self" | "special";
     storyId?: number;
     /**
-     * The episode in the Live2D story library (e.g. `event:219/1`, `card:1/first`), when it
+     * The episode in the Live2D story library (e.g. `event:219/1`, `card:1/former`), when it
      * has one: offers the Live2D mode, whose picture and this list follow each other. It is
      * read from the library of the server the reader chose.
      */

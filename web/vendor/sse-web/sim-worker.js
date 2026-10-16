@@ -3,7 +3,9 @@
 //
 // Before playback it fetches every file the episode index lists that Pass 1 and the mix read: the
 // scenario, the motions, the models' files other than textures, the voices, BGM (with an
-// interactive BGM's ACB), sound effects, movie sound and the sounds of effect prefabs; playback then reads nothing more. (Should
+// interactive BGM's ACB), sound effects, movie sound, the sounds of effect prefabs and the object
+// graphs of the backgrounds the library unpacked (whether one is a prefab, and the movie it
+// plays, is read from it); playback then reads nothing more. (Should
 // a file still be missing, the worker fetches it and waits: it does not step into an instruction
 // whose audio has not arrived, and Session.step holds a frame whose models are not in.)
 //
@@ -313,7 +315,10 @@ async function init(o, frames, audio) {
   // waveforms (the raw ACB is not read)
   const effects = new Set(Object.values(index.effects ?? {}));
   const effectFiles = await Promise.all([...effects].map((b) => loader.bundleFiles(b, (f) => f.kind !== "png" && !f.path.endsWith(".acb"))));
-  await loader.getAll([...files, ...modelFiles.flat(), ...effectFiles.flat()], report("files"));
+  // a background the library lacks (its download failed) is drawn from its texture, if at all
+  const backgroundFiles = await Promise.all(sseBackgroundBundles(index).map((b) => loader.bundleFiles(b, (f) => f.kind === "object-graph")
+    .catch((e) => { console.warn(`${b}: ${e?.message ?? e}`); return []; })));
+  await loader.getAll([...files, ...modelFiles.flat(), ...effectFiles.flat(), ...backgroundFiles.flat()], report("files"));
   // the UI's sound effects (the choice dialog's): the kit has them when the client unpack does
   const ui = await kit;
   for (const [name, bytes] of ui.files) putFile(`${ui.dir}/${name}`, bytes);
