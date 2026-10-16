@@ -216,14 +216,6 @@ export interface ICharacter2D {
     assetName: string;
 }
 
-// Mob character info from master data
-export interface IMobCharacter {
-    id: number;
-    seq: number;
-    name: string;
-    gender: string;
-}
-
 // Public label of a published story translation (episode or file).
 export type StoryTranslationSource = 'official_cn' | 'official_en' | 'llm' | 'human';
 
