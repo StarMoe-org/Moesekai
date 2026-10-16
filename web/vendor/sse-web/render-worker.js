@@ -4,7 +4,8 @@
 // comes from the page, derived by a worker of its own (kit-worker.js).
 //
 // Before playback it fetches everything the episode index lists that frames can show (every
-// model, effect and particle bundle, every background); playback then
+// model, effect and particle bundle, every background, the bundles background prefabs are in, the
+// bundles effect and background prefabs depend on, and every movie's video stream); playback then
 // fetches nothing (should a frame still lack a file, it is fetched and playback waits). Files
 // stay in the file table; the renderer drops textures it has not drawn for a while and decodes
 // them again from there (ADR-0029). Backgrounds from the asset source are fetched as its WebP and
@@ -100,6 +101,12 @@ function needs(state) {
   }
   for (const e of state.effects ?? []) out.push(`bundle:${e.bundle}`);
   if (state.movie?.file) out.push(`file:${SseLoader.resolve(index, state.movie.file)}`);
+  // a background prefab, drawn instead of the background's texture, and the movie it plays
+  const prefab = state.background?.prefab;
+  if (prefab) {
+    out.push(`bundle:${prefab.bundle}`);
+    if (prefab.movie?.file) out.push(`file:${SseLoader.resolve(index, prefab.movie.file)}`);
+  }
   return out;
 }
 
@@ -199,11 +206,24 @@ async function init(o, canvas, port) {
   // a costume whose model the library does not have (the index warns of it) is not drawn
   for (const c of Object.values(index.characters)) for (const costume of c.costumes) if (costume.modelBundle) bundles.add(costume.modelBundle);
   for (const b of Object.values(index.effects ?? {})) bundles.add(b);
+  // background prefabs: a bundle the library lacks (its download failed) is left out, and its
+  // background drawn from the texture
+  const prefabs = sseBackgroundBundles(index).filter((b) => !bundles.has(b));
+  // what effect and background prefabs use from other bundles is in their manifest
+  // dependencies: those too (one the library lacks is left out, like a prefab's bundle, and
+  // what points into it is drawn without it)
+  const deps = (await sseDependencyBundles(loader, index, [...Object.values(index.effects ?? {}), ...prefabs]))
+    .filter((b) => !bundles.has(b) && !prefabs.includes(b));
+  const optional = [...prefabs, ...deps];
   const backgrounds = Object.values(index.backgrounds ?? {}).map((b) => b.path);
   let listed = 0;
-  report("listing", 0, bundles.size);
-  const lists = await Promise.all([...bundles].map((b) => loader.bundleFiles(b)
-    .then((files) => { report("listing", ++listed, bundles.size); return files; })));
+  const listing = bundles.size + optional.length;
+  report("listing", 0, listing);
+  const lists = await Promise.all([
+    ...[...bundles].map((b) => loader.bundleFiles(b)),
+    ...optional.map((b) => loader.bundleFiles(b).then((files) => { bundles.add(b); return files; },
+      (e) => { console.warn(`${b}: ${e?.message ?? e}`); return []; })),
+  ].map((p) => p.then((files) => { report("listing", ++listed, listing); return files; })));
   const singles = backgrounds.filter((b) => !(index.assets?.[b] && b.endsWith(".png"))).map((b) => SseLoader.resolve(index, b));
   // a movie's picture: its video stream, decoded here as it plays (its sound is the simulation's)
   for (const movie of Object.values(index.movies ?? {})) {

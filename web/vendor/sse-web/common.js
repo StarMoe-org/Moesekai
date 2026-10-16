@@ -74,14 +74,15 @@ function sseOwnFonts(fonts) {
 
 /**
  * Where the index of the episode `selector` is in the library: `episodes/<kind>/<key>/<number>.json`.
- * A selector ends in the episode number, except a card's, which names its part: `first` is
- * episode 1 and `second` episode 2 (as `sse_assets` reads them).
+ * A selector ends in the episode number, except a card's, which names its part: `former` (前篇,
+ * or the older `first`) is episode 1 and `latter` (后篇, or `second`) episode 2 (as `sse_assets`
+ * reads them).
  */
 function sseEpisodeIndexPath(selector) {
   const [kind, rest = ""] = selector.split(":");
   const cut = rest.lastIndexOf("/");
   let number = rest.slice(cut + 1);
-  if (kind === "card") number = { first: "1", second: "2" }[number] ?? number;
+  if (kind === "card") number = { former: "1", first: "1", latter: "2", second: "2" }[number] ?? number;
   return `episodes/${kind}/${rest.slice(0, cut + 1)}${number}.json`;
 }
 
@@ -99,6 +100,55 @@ async function sseEpisodeIndex(loader, selector) {
     missing.url = e.url;
     throw missing;
   }
+}
+
+/**
+ * The background bundles of the episode index `index` that the library unpacked: every one the
+ * asset source does not serve the texture of. A background prefab (`ScenarioBGData.BackgroundPrefab`,
+ * particles or a movie) can only be in one of these; Pass 1 reads their object graphs, Pass 2
+ * the whole bundle.
+ */
+function sseBackgroundBundles(index) {
+  const served = new Set(Object.values(index.backgrounds ?? {})
+    .filter((b) => index.assets?.[b.path]).map((b) => b.bundle));
+  return index.bundles.filter((b) => b.startsWith("scenario/background/") && !served.has(b));
+}
+
+/**
+ * The manifest dependencies (an AssetBundle's `m_Dependencies`, in the bundle's object graph) of
+ * the library bundles `bundles`, and theirs in turn, that the episode index `index` lists: the
+ * renderer finds what effect and background prefabs use from other bundles (`m_FileID` ≠ 0) in
+ * them. A bundle without an object graph, or whose listing fails, adds none.
+ */
+async function sseDependencyBundles(loader, index, bundles) {
+  const listed = new Set(index.bundles);
+  const seen = new Set(bundles);
+  const out = [];
+  for (let next = [...seen]; next.length;) {
+    const graphs = await Promise.all(next.map(async (b) => {
+      try {
+        const [path] = await loader.bundleFiles(b, (f) => f.kind === "object-graph");
+        if (!path) return undefined;
+        const graph = await loader.json(path);
+        // the file stays in the table for the renderer; the parsed copy is not needed again
+        loader.jsonCache.delete(path);
+        return graph;
+      } catch (e) {
+        console.warn(`${b}: ${e?.message ?? e}`);
+        return undefined;
+      }
+    }));
+    next = [];
+    for (const graph of graphs) {
+      for (const o of Object.values(graph?.objects ?? {})) {
+        if (o.classId !== 142) continue;
+        for (const d of o.tree?.m_Dependencies ?? []) {
+          if (listed.has(d) && !seen.has(d)) { seen.add(d); out.push(d); next.push(d); }
+        }
+      }
+    }
+  }
+  return out;
 }
 
 /** Fetches `files` (paths relative to `base`) into the file table at `/<path>`. */
