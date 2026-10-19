@@ -423,27 +423,38 @@ export default function Sidebar({
     // layout. After a route change the saved offset was measured on the
     // previous page, whose group may have folded since, so the current page's
     // item is then brought into view; a reload keeps the offset as it was.
-    const hasRestoredScrollRef = useRef(false);
+    // The sidebar stays mounted across navigations, so later route changes
+    // only bring the new page's item into view.
+    const scrolledForPathRef = useRef<string | null>(null);
     useEffect(() => {
         const nav = navRef.current;
-        if (!hasClientSnapshot || hasRestoredScrollRef.current || !nav) return;
-        hasRestoredScrollRef.current = true;
+        if (!hasClientSnapshot || !nav || scrolledForPathRef.current === pathname) return;
+        const isFirstRun = scrolledForPathRef.current === null;
+        scrolledForPathRef.current = pathname;
+        const savedOnPath = sessionStorage.getItem('sidebar_scroll_path');
+        sessionStorage.setItem('sidebar_scroll_path', pathname);
+        const revealActiveItem = () => {
+            const activeItem = nav.querySelector<HTMLElement>('[aria-current="page"]');
+            if (!activeItem) return;
+            const navRect = nav.getBoundingClientRect();
+            const itemRect = activeItem.getBoundingClientRect();
+            if (itemRect.top < navRect.top) {
+                nav.scrollTop -= navRect.top - itemRect.top;
+            } else if (itemRect.bottom > navRect.bottom) {
+                nav.scrollTop += itemRect.bottom - navRect.bottom;
+            }
+        };
+        if (!isFirstRun) {
+            // Wait out the group expand transition (300ms) so the nav has its final height.
+            const timer = window.setTimeout(revealActiveItem, 320);
+            return () => window.clearTimeout(timer);
+        }
         const saved = sessionStorage.getItem('sidebar_scroll');
         if (saved) {
             nav.scrollTop = parseInt(saved, 10);
         }
-        const savedOnPath = sessionStorage.getItem('sidebar_scroll_path');
-        sessionStorage.setItem('sidebar_scroll_path', pathname);
         if (savedOnPath === pathname) return;
-        const activeItem = nav.querySelector<HTMLElement>('[aria-current="page"]');
-        if (!activeItem) return;
-        const navRect = nav.getBoundingClientRect();
-        const itemRect = activeItem.getBoundingClientRect();
-        if (itemRect.top < navRect.top) {
-            nav.scrollTop -= navRect.top - itemRect.top;
-        } else if (itemRect.bottom > navRect.bottom) {
-            nav.scrollTop += itemRect.bottom - navRect.bottom;
-        }
+        revealActiveItem();
     }, [hasClientSnapshot, pathname]);
 
     // Save the sidebar scroll position.
@@ -582,8 +593,9 @@ export default function Sidebar({
                     <span className="type-title-l text-on-surface-variant">{t("layout.nav.menu")}</span>
                 </div>
 
-                {/* Navigation groups - scrollable area */}
-                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:pt-1">
+                {/* Navigation groups - scrollable area. Docked, nothing sits above it, so it starts below
+                    the pane's rounded top corners to keep its scrollbar out of the curve. */}
+                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:mt-4">
                     {/* Home */}
                     <NavigationDrawerItem
                         density="compact"

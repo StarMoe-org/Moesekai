@@ -165,6 +165,9 @@ func (c *Cache) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if !c.ready || !eligibleRequest(r) {
 		w.Header().Set("X-Moesekai-Cache", "BYPASS")
+		if sharesDocumentCacheKey(r) {
+			w = &privateResponseWriter{ResponseWriter: w}
+		}
 		c.next.ServeHTTP(w, r)
 		return
 	}
@@ -231,6 +234,53 @@ func eligibleRequest(r *http.Request) bool {
 		return false
 	}
 }
+
+// sharesDocumentCacheKey reports whether a request is an RSC request without the `_rsc`
+// cache-busting param, so a CDN would store its response under the plain document URL. Next
+// answers it with a payload or a 307 that depend on headers the CDN does not key on, and the
+// proxy (which never sees those headers) marks it public: Cloudflare kept such a 307 for
+// /zh-cn/events/ and sent every visitor into a redirect loop.
+func sharesDocumentCacheKey(r *http.Request) bool {
+	if r.Header.Get("RSC") == "" && r.Header.Get("Next-Router-State-Tree") == "" &&
+		r.Header.Get("Next-Router-Prefetch") == "" && r.Header.Get("Next-Router-Segment-Prefetch") == "" {
+		return false
+	}
+	return !r.URL.Query().Has("_rsc")
+}
+
+// privateResponseWriter keeps a response out of shared caches whatever the upstream says.
+type privateResponseWriter struct {
+	http.ResponseWriter
+	wroteHeader bool
+}
+
+func (p *privateResponseWriter) WriteHeader(code int) {
+	if code >= http.StatusOK && !p.wroteHeader {
+		p.wroteHeader = true
+		p.Header().Set("Cache-Control", "private, no-store")
+		p.Header().Del(OriginCacheHeader)
+	}
+	p.ResponseWriter.WriteHeader(code)
+}
+
+func (p *privateResponseWriter) Write(b []byte) (int, error) {
+	if !p.wroteHeader {
+		p.WriteHeader(http.StatusOK)
+	}
+	return p.ResponseWriter.Write(b)
+}
+
+// Flush keeps streamed RSC payloads streaming through the wrapper.
+func (p *privateResponseWriter) Flush() {
+	if !p.wroteHeader {
+		p.WriteHeader(http.StatusOK)
+	}
+	if f, ok := p.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+func (p *privateResponseWriter) Unwrap() http.ResponseWriter { return p.ResponseWriter }
 
 func cacheKey(r *http.Request) string {
 	sum := sha256.Sum256([]byte(r.URL.EscapedPath()))

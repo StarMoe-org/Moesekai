@@ -8,6 +8,7 @@ import { MasterDataProvider } from "@/contexts/MasterDataContext";
 import { TranslationProvider } from "@/contexts/TranslationContext";
 import { QuickFilterProvider } from "@/contexts/QuickFilterContext";
 import { BreadcrumbProvider } from "@/contexts/BreadcrumbContext";
+import AppShell from "@/components/AppShell";
 import ServiceWorkerRegistrar from "@/components/ServiceWorkerRegistrar";
 import { DEFAULT_THEME_SEED_ID, THEME_SEED_COLORS } from "@/lib/theme-seeds";
 import { MD3_DEFAULT_SURFACE } from "@/styles/md3-default-surface.generated";
@@ -197,7 +198,8 @@ export default async function RootLayout({
               <TranslationProvider>
                 <QuickFilterProvider>
                   <BreadcrumbProvider>
-                    {children}
+                    {/* The chrome stays mounted across navigations; only the page inside it changes. */}
+                    <AppShell>{children}</AppShell>
                   </BreadcrumbProvider>
                 </QuickFilterProvider>
               </TranslationProvider>

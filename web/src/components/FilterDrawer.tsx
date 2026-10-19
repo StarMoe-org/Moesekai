@@ -146,32 +146,28 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
     }, [isModal]);
 
     const scrollRef = useRef<HTMLDivElement>(null);
-    const hasRestoredRef = useRef(false);
+    const restoredKeyRef = useRef<string | null>(null);
     // Scroll restoration for the filter drawer per route.
     const cleanPathname = stripRouteLocale(pathname);
     const scrollStorageKey = `filter_drawer_scroll:${cleanPathname}`;
 
-    // Restore scroll position when drawer opens and content is mounted (once per open)
+    // Restore scroll position when drawer opens and content is mounted (once per open). The
+    // drawer outlives the page, so a docked one that stays open restores again for the next route.
     useEffect(() => {
         if (!isOpen) {
-            hasRestoredRef.current = false;
+            restoredKeyRef.current = null;
             return;
         }
 
-        if (hasRestoredRef.current || !filterContent) return;
+        if (restoredKeyRef.current === scrollStorageKey || !filterContent) return;
 
-        const saved = sessionStorage.getItem(scrollStorageKey);
-        if (saved) {
-            const top = parseInt(saved, 10);
-            if (!Number.isNaN(top) && top > 0) {
-                requestAnimationFrame(() => {
-                    if (scrollRef.current) {
-                        scrollRef.current.scrollTop = top;
-                    }
-                });
+        const top = parseInt(sessionStorage.getItem(scrollStorageKey) ?? "", 10);
+        requestAnimationFrame(() => {
+            if (scrollRef.current) {
+                scrollRef.current.scrollTop = Number.isNaN(top) ? 0 : top;
             }
-        }
-        hasRestoredRef.current = true;
+        });
+        restoredKeyRef.current = scrollStorageKey;
     }, [isOpen, scrollStorageKey, filterContent]);
 
     // Save scroll position on user scrolling

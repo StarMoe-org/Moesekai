@@ -193,7 +193,6 @@ async function getComponentHarness() {
       FilterDrawer: () => null,
       FilterTabHandle: () => null,
       FilterDrawerGuide: () => null,
-      SekaiLoader: () => null,
       BackgroundPattern: () => null,
       KeyboardShortcutsHelp: () => null,
       useKeyboardShortcuts: () => {},
@@ -203,8 +202,6 @@ async function getComponentHarness() {
         setUseTrainedThumbnail: () => {},
         backgroundAnimationBudget: "off",
       }),
-      DetailSeoSummary: () => null,
-      useDetailSeoSummary: () => null,
       useQuickFilterContext: () => ({
         hasFilters: false,
         isOpen: false,
@@ -213,21 +210,21 @@ async function getComponentHarness() {
       }),
       useMediaQuery: (_query, serverFallback = false) => serverFallback,
     });
-    const mainLayoutPrelude = `
+    const appShellPrelude = `
       const dependencies = globalThis.__moesekaiNavigationHydration;
       const React = dependencies.React;
-      const { useState, useEffect, useCallback, useMemo, useRef, Suspense } = React;
+      const { useState, useEffect, useLayoutEffect, useCallback, useMemo, useRef, useContext, createContext, Suspense } = React;
       const { usePathname, useRouter, useSearchParams, MainNavbar, Sidebar, MainFooter,
-        ScrollToTop, FilterDrawer, FilterTabHandle, FilterDrawerGuide, SekaiLoader, BackgroundPattern,
+        ScrollToTop, FilterDrawer, FilterTabHandle, FilterDrawerGuide, BackgroundPattern,
         KeyboardShortcutsHelp, useKeyboardShortcuts, usePageListShortcuts,
-        localizePathForBrowser, stripRouteLocale, DetailSeoSummary, useDetailSeoSummary } = dependencies;
+        localizePathForBrowser, stripRouteLocale } = dependencies;
       const useTheme = dependencies.useMainLayoutTheme;
       const useQuickFilterContext = dependencies.useQuickFilterContext;
       const useMediaQuery = dependencies.useMediaQuery;
     `;
-    const MainLayout = await importTsxComponent("src/components/MainLayout.tsx", mainLayoutPrelude);
+    const AppShell = await importTsxComponent("src/components/AppShell.tsx", appShellPrelude);
 
-    return { dependencies, LocalizedLink, MainLayout, Sidebar };
+    return { dependencies, LocalizedLink, AppShell, Sidebar };
   })();
 
   return componentHarnessPromise;
@@ -484,13 +481,13 @@ test("post-hydration storage, keyboard navigation, and mobile close remain inter
   await unmount(mobileRoot, mobileDom, mobileCapture);
 });
 
-test("MainLayout restores the saved sidebar preference only after hydration", async () => {
-  const { dependencies, MainLayout } = await getComponentHarness();
+test("AppShell restores the saved sidebar preference only after hydration", async () => {
+  const { dependencies, AppShell } = await getComponentHarness();
   clearDomGlobals();
   dependencies.currentPathname = "/";
   const element = localeProvider(
     "zh-CN",
-    React.createElement(MainLayout, null, React.createElement("div", null, "content")),
+    React.createElement(AppShell, null, React.createElement("div", null, "content")),
   );
   const serverHtml = renderToString(element);
   const dom = installDom("https://pjsk.moe/zh-cn/");
@@ -510,4 +507,46 @@ test("MainLayout restores the saved sidebar preference only after hydration", as
   assert.match(container.querySelector("aside").className, /transition-transform/);
   capture.assertNone("saved sidebar preference");
   await unmount(root, dom, capture);
+});
+
+test("AppShell keeps the chrome mounted when the page changes", async () => {
+  const { dependencies, AppShell } = await getComponentHarness();
+  clearDomGlobals();
+  dependencies.currentPathname = "/cards/";
+  const page = (name) => localeProvider(
+    "zh-CN",
+    React.createElement(AppShell, null, React.createElement("div", { id: "page" }, name)),
+  );
+  const dom = installDom("https://pjsk.moe/cards/");
+  const root = document.getElementById("root");
+  root.innerHTML = renderToString(page("cards"));
+  const capture = captureHydrationErrors();
+  const reactRoot = await hydrate(page("cards"), root, capture);
+  const aside = root.querySelector("aside");
+  assert.ok(aside, "the chrome renders the navigation drawer");
+
+  dependencies.currentPathname = "/music/";
+  await act(async () => {
+    reactRoot.render(page("music"));
+    await new Promise((resolve) => setImmediate(resolve));
+  });
+  assert.equal(root.querySelector("#page").textContent, "music");
+  assert.equal(root.querySelector("aside"), aside, "navigating must not remount the navigation drawer");
+  capture.assertNone("page change inside the shell");
+  await unmount(reactRoot, dom, capture);
+});
+
+test("AppShell leaves bare routes without chrome", async () => {
+  const { dependencies, AppShell } = await getComponentHarness();
+  clearDomGlobals();
+  for (const pathname of ["/leave/", "/zh-cn/blank/", "/guess-who/multiplayer/"]) {
+    dependencies.currentPathname = pathname;
+    const html = renderToString(localeProvider(
+      "zh-CN",
+      React.createElement(AppShell, null, React.createElement("div", { id: "page" }, "bare")),
+    ));
+    assert.doesNotMatch(html, /<aside|<header/, `${pathname} renders without the app chrome`);
+    assert.match(html, /id="page"/);
+  }
+  dependencies.currentPathname = "/";
 });
