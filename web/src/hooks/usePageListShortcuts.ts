@@ -13,6 +13,8 @@ import {
 interface UsePageListShortcutsOptions {
     rootRef: RefObject<HTMLElement | null>;
     disabled?: boolean;
+    /** Changing it (e.g. on navigation, when the root outlives the page) forgets the focused item. */
+    resetKey?: string;
 }
 
 const LIST_ITEM_FALLBACK_SELECTOR = "a.group.block[href], a.block.group[href]";
@@ -123,7 +125,7 @@ function getCurrentFocusedIndex(items: HTMLElement[], focusedItem: HTMLElement |
     return -1;
 }
 
-export function usePageListShortcuts({ rootRef, disabled = false }: UsePageListShortcutsOptions) {
+export function usePageListShortcuts({ rootRef, disabled = false, resetKey }: UsePageListShortcutsOptions) {
     const focusedItemRef = useRef<HTMLElement | null>(null);
     const lastFocusedIndexRef = useRef<number>(-1);
 
@@ -265,6 +267,8 @@ export function usePageListShortcuts({ rootRef, disabled = false }: UsePageListS
             clearFocusedItem(true);
         }
     }, [clearFocusedItem, disabled]);
+
+    useEffect(() => () => clearFocusedItem(true), [clearFocusedItem, resetKey]);
 
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
