@@ -107,6 +107,49 @@ func TestBypassesUnsafeRequestVariants(t *testing.T) {
 	}
 }
 
+func TestRSCRequestsWithoutCacheBustingParamStayPrivate(t *testing.T) {
+	// Next answers an RSC request that lacks `_rsc` with a 307 to the hashed URL; the
+	// upstream marks it public because the proxy cannot see the RSC headers.
+	redirecting := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "public, max-age=60, s-maxage=3600")
+		w.Header().Set(OriginCacheHeader, "max-age=3600")
+		if !r.URL.Query().Has("_rsc") {
+			w.Header().Set("Location", "/events/?_rsc=abc")
+			w.WriteHeader(http.StatusTemporaryRedirect)
+			return
+		}
+		w.Header().Set("Content-Type", "text/x-component")
+		_, _ = w.Write([]byte("0:payload"))
+	})
+	tests := []struct {
+		name, query, header, wantCacheControl string
+		wantStatus                            int
+	}{
+		{"rsc without _rsc", "", "RSC", "private, no-store", http.StatusTemporaryRedirect},
+		{"prefetch without _rsc", "", "Next-Router-Prefetch", "private, no-store", http.StatusTemporaryRedirect},
+		{"rsc with _rsc keeps its own cache key", "_rsc=abc", "RSC", "public, max-age=60, s-maxage=3600", http.StatusOK},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := New(redirecting, testConfig(t))
+			req := documentRequest("/zh-cn/events/")
+			req.URL.RawQuery = tt.query
+			req.Header.Set(tt.header, "1")
+			rr := httptest.NewRecorder()
+			c.ServeHTTP(rr, req)
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d", rr.Code, tt.wantStatus)
+			}
+			if got := rr.Header().Get("Cache-Control"); got != tt.wantCacheControl {
+				t.Fatalf("Cache-Control = %q, want %q", got, tt.wantCacheControl)
+			}
+			if tt.wantCacheControl == "private, no-store" && rr.Header().Get(OriginCacheHeader) != "" {
+				t.Fatal("origin-only cache header leaked to client")
+			}
+		})
+	}
+}
+
 func TestDoesNotCachePrivate404OrOversizedResponses(t *testing.T) {
 	tests := []struct {
 		name      string
