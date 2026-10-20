@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "@/components/LocalizedLink";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import { Banner, Button, Chip, EmptyState, ErrorState, Icon, PageContainer, PageHeader, Surface } from "@/components/md3";
@@ -145,13 +145,17 @@ function RankingCard({
 
 export default function MysekaiPreviewClient() {
     const { t, formatNumber, formatDate } = useI18n();
-    const { serverSource, setServerSource } = useTheme();
-    const [server, setServer] = useState<BaijingServer>(serverSource === "cn" ? "cn" : "jp");
+    const { serverSource, setServerSource, hasHydratedThemeSettings } = useTheme();
+    const server: BaijingServer = serverSource === "cn" ? "cn" : "jp";
     const [rankings, setRankings] = useState<BaijingRankingSnapshot[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const latestLoadRef = useRef(0);
 
     const loadRankings = useCallback(async (targetServer: BaijingServer) => {
+        // Only the latest load may touch the list: a slower answer for the previous server would
+        // otherwise replace it.
+        const load = ++latestLoadRef.current;
         setLoading(true);
         setError(null);
         try {
@@ -163,25 +167,24 @@ export default function MysekaiPreviewClient() {
                 server: (snapshot.server || targetServer) as BaijingServer,
                 top100: Array.isArray(snapshot.top100) ? snapshot.top100 : [],
             }));
+            if (load !== latestLoadRef.current) return;
             setRankings(nextRankings);
         } catch (loadError) {
+            if (load !== latestLoadRef.current) return;
             setRankings([]);
             setError(loadError instanceof Error ? loadError.message : String(loadError));
         } finally {
-            setLoading(false);
+            if (load === latestLoadRef.current) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        setServer(serverSource === "cn" ? "cn" : "jp");
-    }, [serverSource]);
-
-    useEffect(() => {
+        // Until the theme settings hydrate, serverSource is the default rather than the saved one.
+        if (!hasHydratedThemeSettings) return;
         void loadRankings(server);
-    }, [loadRankings, server]);
+    }, [hasHydratedThemeSettings, loadRankings, server]);
 
     const handleServerChange = (nextServer: BaijingServer) => {
-        setServer(nextServer);
         setServerSource(nextServer as ServerSourceType);
     };
 

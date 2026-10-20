@@ -17,7 +17,7 @@ import { IProcessedScenarioData } from "@/types/story";
 
 export default function StorySelfReaderClient() {
     const params = useParams();
-    const { serverSource, assetSource } = useTheme();
+    const { serverSource, assetSource, hasHydratedThemeSettings } = useTheme();
     const { t } = useI18n();
     const charaId = Number(params.charaId);
     const lang: "jp" | "cn" = serverSource === "cn" ? "cn" : "jp";
@@ -32,7 +32,10 @@ export default function StorySelfReaderClient() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!charaId) return;
+        // Until the theme settings hydrate, serverSource and assetSource are the defaults rather than
+        // the saved ones; a late answer for those would replace the story.
+        if (!charaId || !hasHydratedThemeSettings) return;
+        let cancelled = false;
         async function load() {
             setIsLoading(true);
             try {
@@ -41,7 +44,7 @@ export default function StorySelfReaderClient() {
                     fetchMasterData<ICharaProfile[]>("characterProfiles.json"),
                 ]);
                 const c = charasData.find(x => x.id === charaId);
-                if (!c) return;
+                if (cancelled || !c) return;
                 setChara(c);
 
                 const profile = profilesData.find(p => p.characterId === charaId);
@@ -53,8 +56,10 @@ export default function StorySelfReaderClient() {
                 const loadPart = async (scenarioId: string, setData: typeof setYear1, setMissing: typeof setMissing1, setErr: typeof setError1) => {
                     try {
                         const raw = await fetchStoryAssetFromMirror("self", assetSource, { scenarioId });
-                        setData(await processScenarioForDisplay(raw, "scenario", assetSource, serverSource));
+                        const processed = await processScenarioForDisplay(raw, "scenario", assetSource, serverSource);
+                        if (!cancelled) setData(processed);
                     } catch (err) {
+                        if (cancelled) return;
                         if (err instanceof StoryAssetMissingError) setMissing(err.missingPaths);
                         else setErr(err instanceof Error ? err.message : t("common.state.loadingFailed"));
                     }
@@ -68,12 +73,15 @@ export default function StorySelfReaderClient() {
                     loadPart(scenarioId2, setYear2, setMissing2, setError2),
                 ]);
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         }
         load();
+        return () => {
+            cancelled = true;
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [charaId, lang, t]);
+    }, [charaId, lang, t, hasHydratedThemeSettings]);
 
     const charaName = chara ? `${chara.firstName ?? ""}${chara.givenName}` : t("page.story.self.fallbackCharacterName", { id: charaId });
 
