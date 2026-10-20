@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/common/Modal";
 
@@ -288,9 +288,10 @@ function AnnouncementModal({
 
 export default function InformationClient() {
     const { t } = useI18n();
-    const { serverSource } = useTheme();
+    const { serverSource, hasHydratedThemeSettings } = useTheme();
     const { translations } = useTranslation();
     const server: InformationServer = normalizeInformationServer(serverSource);
+    const latestLoadRef = useRef(0);
     const [items, setItems] = useState<InformationItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -304,25 +305,33 @@ export default function InformationClient() {
     const [selectedItem, setSelectedItem] = useState<InformationItem | null>(null);
 
     const loadInformation = useCallback(async (targetServer: InformationServer) => {
+        // Only the latest load may touch the list: a slower answer for the server shown before
+        // would otherwise replace it.
+        const load = ++latestLoadRef.current;
         setLoading(true);
         setError(null);
         try {
             const list = await fetchInformationList(targetServer);
+            if (load !== latestLoadRef.current) return;
             setItems(list);
         } catch (loadError) {
+            if (load !== latestLoadRef.current) return;
             setItems([]);
             setError(loadError instanceof Error ? loadError.message : String(loadError));
         } finally {
-            setLoading(false);
+            if (load === latestLoadRef.current) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
+        // The saved server is only known once the theme settings hydrate; before that serverSource
+        // is the default, and loading it would fetch a list the page is about to drop.
+        if (!hasHydratedThemeSettings) return;
         setTagFilter(ALL_FILTER);
         setTypeFilter(ALL_FILTER);
         setStatusFilter(ALL_FILTER);
         void loadInformation(server);
-    }, [loadInformation, server]);
+    }, [hasHydratedThemeSettings, loadInformation, server]);
 
     useEffect(() => {
         const timer = window.setInterval(() => setNow(Date.now()), 60_000);

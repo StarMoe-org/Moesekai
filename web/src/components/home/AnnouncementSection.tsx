@@ -100,20 +100,25 @@ function AnnouncementModal({
 
 export default function AnnouncementSection() {
     const { t, formatDate } = useI18n();
-    const { serverSource } = useTheme();
+    const { serverSource, hasHydratedThemeSettings } = useTheme();
     const [activeServer, setActiveServer] = useState<InformationServer>(normalizeInformationServer(serverSource));
+    const [syncedServerSource, setSyncedServerSource] = useState(serverSource);
     const [announcements, setAnnouncements] = useState<InformationItem[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [selectedItem, setSelectedItem] = useState<InformationItem | null>(null);
     const [imageFailures, setImageFailures] = useState<Record<number, boolean>>({});
 
-    // Sync activeServer with serverSource on mount or when serverSource changes
-    useEffect(() => {
+    // Follow serverSource when it changes. Adjusted during render, so the fetch below never runs
+    // for the server it is replacing.
+    if (syncedServerSource !== serverSource) {
+        setSyncedServerSource(serverSource);
         setActiveServer(normalizeInformationServer(serverSource));
-    }, [serverSource]);
+    }
 
     useEffect(() => {
+        // Until the theme settings hydrate, serverSource is the default rather than the saved one.
+        if (!hasHydratedThemeSettings) return;
         let isMounted = true;
         async function fetchAnnouncements() {
             try {
@@ -167,7 +172,7 @@ export default function AnnouncementSection() {
         return () => {
             isMounted = false;
         };
-    }, [activeServer, t]);
+    }, [activeServer, hasHydratedThemeSettings, t]);
 
     const formatInfoDate = (timestamp?: number | null) => {
         if (!timestamp) return t("page.information.noEndAt");
