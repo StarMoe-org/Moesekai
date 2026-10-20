@@ -25,7 +25,7 @@ type EpResult = { data: IProcessedScenarioData | null; missing: string[] | null;
 
 export default function StorySpecialReaderClient() {
     const params = useParams();
-    const { serverSource, assetSource } = useTheme();
+    const { serverSource, assetSource, hasHydratedThemeSettings } = useTheme();
     const { t } = useI18n();
     const spId = Number(params.spId);
     const lang: "jp" | "cn" = serverSource === "cn" ? "cn" : "jp";
@@ -35,13 +35,16 @@ export default function StorySpecialReaderClient() {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        if (!spId) return;
+        // Until the theme settings hydrate, serverSource and assetSource are the defaults rather than
+        // the saved ones; a late answer for those would replace the story.
+        if (!spId || !hasHydratedThemeSettings) return;
+        let cancelled = false;
         async function load() {
             setIsLoading(true);
             try {
                 const data = await fetchMasterData<ISpecialStory[]>("specialStories.json");
                 const s = data.find(x => x.id === spId);
-                if (!s || s.id === 2) return;
+                if (cancelled || !s || s.id === 2) return;
                 setStory(s);
                 const title = s.title ?? s.episodes[0]?.title ?? `SP${spId}`;
                 document.title = t("page.story.special.documentTitle", { name: title });
@@ -61,14 +64,17 @@ export default function StorySpecialReaderClient() {
                         }
                     })
                 );
-                setResults(epResults);
+                if (!cancelled) setResults(epResults);
             } finally {
-                setIsLoading(false);
+                if (!cancelled) setIsLoading(false);
             }
         }
         load();
+        return () => {
+            cancelled = true;
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [spId, lang, t]);
+    }, [spId, lang, t, hasHydratedThemeSettings]);
 
     const storyTitle = story?.title ?? story?.episodes[0]?.title ?? t("page.story.special.fallbackTitle", { id: spId });
     const multiEp = (story?.episodes.length ?? 0) > 1;

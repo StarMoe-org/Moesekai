@@ -26,10 +26,12 @@ interface SnapshotEventInfo {
  *  - realtime-ranking events.json provides the name / assetbundle / type,
  *  - the live snapshot timestamps take precedence when they match.
  * Falls back to a snapshot-derived placeholder event when lookups fail.
+ * Nothing is looked up while `enabled` is false (the region is not settled yet).
  */
 export function useCurrentEvent(
     region: RealtimeRankingRegion,
     snapshot: SnapshotEventInfo | null,
+    enabled: boolean,
 ): IEventInfo | null {
     const { t } = useI18n();
     const [currentEvent, setCurrentEvent] = useState<IEventInfo | null>(null);
@@ -42,6 +44,7 @@ export function useCurrentEvent(
     const endAt = snapshot?.endAt;
 
     useEffect(() => {
+        if (!enabled) return;
         let cancelled = false;
 
         const snapshotEvent: SnapshotEventInfo | null =
@@ -141,7 +144,7 @@ export function useCurrentEvent(
         return () => {
             cancelled = true;
         };
-    }, [region, eventId, startAt, endAt, t]);
+    }, [enabled, region, eventId, startAt, endAt, t]);
 
     return currentEvent;
 }

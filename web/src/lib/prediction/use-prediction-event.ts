@@ -104,10 +104,13 @@ export function findActiveWlChapter(
 
 export function usePredictionEvent(options: UsePredictionEventOptions = {}): UsePredictionEventResult {
     const { t } = useI18n();
-    const { serverSource } = useTheme();
-    const [server, setServerState] = useState<ServerType>(() => options.initialServer ?? (serverSource === "jp" ? "jp" : "cn"));
-    // An explicit initial server (e.g. from the URL) must not be replaced by the global server setting.
-    const hasManualServerOverride = useRef(options.initialServer !== undefined);
+    const { serverSource, hasHydratedThemeSettings } = useTheme();
+    // An explicit server (from the URL, or picked on the page) wins over the global server setting.
+    const [manualServer, setManualServer] = useState<ServerType | null>(options.initialServer ?? null);
+    const server: ServerType = manualServer ?? (serverSource === "jp" ? "jp" : "cn");
+    // Until the theme settings hydrate, serverSource is the default rather than the saved one, so
+    // nothing may be fetched for it: a late answer for the default server would win the race.
+    const serverReady = manualServer !== null || hasHydratedThemeSettings;
     const [events, setEvents] = useState<EventListItem[]>([]);
     const [masterEvents, setMasterEvents] = useState<IEventInfo[]>([]);
     const [selectedEventId, setSelectedEventIdState] = useState<number | null>(() => options.initialEventId ?? null);
@@ -131,45 +134,45 @@ export function usePredictionEvent(options: UsePredictionEventOptions = {}): Use
         return () => clearInterval(timer);
     }, []);
 
-    // Sync server selection when global data server setting changes
-    useEffect(() => {
-        if (!hasManualServerOverride.current) {
-            const targetServer: ServerType = serverSource === "jp" ? "jp" : "cn";
-            if (targetServer !== server) {
-                setServerState(targetServer);
-                setSelectedEventIdState(null);
-                setSelectedWlChapter("overall");
-                setEvents([]);
-                setPredictionData(null);
-                setEventsLoading(true);
-            }
+    // A server change drops the selection made for the previous server. Adjusted during render, so
+    // no effect runs with the new server and the old selection. The first settled server keeps
+    // the initial selection (e.g. an event from the URL).
+    const [settledServer, setSettledServer] = useState<ServerType | null>(null);
+    if (serverReady && settledServer !== server) {
+        setSettledServer(server);
+        if (settledServer !== null) {
+            setEventsLoading(true);
+            setError(null);
+            setSelectedEventIdState(null);
+            setSelectedWlChapter("overall");
+            setEvents([]);
+            setPredictionData(null);
         }
-    }, [serverSource, server]);
+    }
 
     // Fetch master data for assets matching currently selected server
     useEffect(() => {
+        if (!serverReady) return;
+        let cancelled = false;
+        const keep = <T,>(set: (value: T) => void) => (value: T) => { if (!cancelled) set(value); };
         fetchMasterDataForServer<IEventInfo[]>(server, "events.json")
-            .then(setMasterEvents)
+            .then(keep(setMasterEvents))
             .catch(() => {
-                fetchMasterData<IEventInfo[]>("events.json").then(setMasterEvents).catch(console.error);
+                fetchMasterData<IEventInfo[]>("events.json").then(keep(setMasterEvents)).catch(console.error);
             });
         fetchMasterDataForServer<WorldBloomChapterRow[]>(server, "worldBlooms.json")
-            .then(setWorldBlooms)
+            .then(keep(setWorldBlooms))
             .catch(() => {
-                fetchMasterData<WorldBloomChapterRow[]>("worldBlooms.json").then(setWorldBlooms).catch(console.error);
+                fetchMasterData<WorldBloomChapterRow[]>("worldBlooms.json").then(keep(setWorldBlooms)).catch(console.error);
             });
-    }, [server]);
+        return () => {
+            cancelled = true;
+        };
+    }, [server, serverReady]);
 
     const setServer = useCallback((newServer: ServerType) => {
         if (newServer === server) return;
-        hasManualServerOverride.current = true;
-        setEventsLoading(true);
-        setError(null);
-        setServerState(newServer);
-        setSelectedEventIdState(null); // Clear selection to prevent invalid fetch
-        setSelectedWlChapter("overall");
-        setEvents([]);
-        setPredictionData(null);
+        setManualServer(newServer);
     }, [server]);
 
     const setSelectedEventId = useCallback((eventId: number | null) => {
@@ -183,8 +186,11 @@ export function usePredictionEvent(options: UsePredictionEventOptions = {}): Use
 
     // Fetch events list when server changes
     useEffect(() => {
+        if (!serverReady) return;
+        let cancelled = false;
         fetchEventList(server)
             .then(data => {
+                if (cancelled) return;
                 if (!Array.isArray(data)) {
                     setEvents([]);
                     return;
@@ -210,13 +216,19 @@ export function usePredictionEvent(options: UsePredictionEventOptions = {}): Use
                 }
             })
             .catch(err => {
+                if (cancelled) return;
                 console.error("Failed to fetch events:", err);
                 setError(t("page.prediction.errors.eventsFetchFailed"));
                 setEvents([]);
             })
-            .finally(() => setEventsLoading(false));
+            .finally(() => {
+                if (!cancelled) setEventsLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [server, t]);
+    }, [server, serverReady, t]);
 
     // Fetch prediction data when event changes; a reply for an event that is no longer selected is dropped.
     useEffect(() => {

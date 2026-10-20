@@ -42,30 +42,21 @@ const EMPTY_MASTER_DATA: RealtimeRankingMasterData = {
 
 function RealtimeRankingNextContent() {
     const { t } = useI18n();
-    const { themeColor, serverSource } = useTheme();
+    const { themeColor, serverSource, hasHydratedThemeSettings } = useTheme();
     const searchParams = useSearchParams();
-    const hasManualRegionOverride = useRef(false);
 
-    const [region, setRegion] = useState<RealtimeRankingRegion>(() => {
-        const fromUrl = searchParams.get("region");
-        if (isRealtimeRankingRegion(fromUrl)) return fromUrl;
-        return isRealtimeRankingRegion(serverSource) ? serverSource : DEFAULT_REGION;
-    });
-
-    useEffect(() => {
-        const fromUrl = searchParams.get("region");
-        if (isRealtimeRankingRegion(fromUrl)) {
-            setRegion(fromUrl);
-            return;
-        }
-        if (!hasManualRegionOverride.current && isRealtimeRankingRegion(serverSource)) {
-            setRegion(serverSource);
-        }
-    }, [searchParams, serverSource]);
+    // A region picked on the page wins, then one in the URL, then the global server setting.
+    const [manualRegion, setManualRegion] = useState<RealtimeRankingRegion | null>(null);
+    const urlRegion = searchParams.get("region");
+    const region: RealtimeRankingRegion = manualRegion
+        ?? (isRealtimeRankingRegion(urlRegion) ? urlRegion : null)
+        ?? (isRealtimeRankingRegion(serverSource) ? serverSource : DEFAULT_REGION);
+    // Until the theme settings hydrate, serverSource is the default rather than the saved one:
+    // loading it, or writing it into the URL (which then outranks the setting), would stick.
+    const regionReady = manualRegion !== null || isRealtimeRankingRegion(urlRegion) || hasHydratedThemeSettings;
 
     const handleRegionChange = useCallback((newRegion: RealtimeRankingRegion) => {
-        hasManualRegionOverride.current = true;
-        setRegion(newRegion);
+        setManualRegion(newRegion);
     }, []);
     const line = useRealtimeRankingLine();
     const [boardMode, setBoardMode] = useState<RealtimeRankingNextBoardMode>("overall");
@@ -106,35 +97,38 @@ function RealtimeRankingNextContent() {
         [effectiveLine, region],
     );
 
-    const board = useRealtimeBoard(region, boardMode, true);
+    const board = useRealtimeBoard(region, boardMode, regionReady);
     const worldLinkCharacterId = board.isWorldLinkMode && board.activeGroup ? board.activeGroup.gameCharacterId : null;
-    const churnData = useChurnData(region, worldLinkCharacterId, true);
+    const churnData = useChurnData(region, worldLinkCharacterId, regionReady);
     const currentEvent = useCurrentEvent(
         region,
         board.snapshot
             ? { eventId: board.snapshot.eventId, startAt: board.snapshot.startAt, endAt: board.snapshot.endAt }
             : null,
+        regionReady,
     );
 
     const selectedParkingChurnEntry = parkingModalUserId ? churnData.get(parkingModalUserId) : undefined;
 
     // Master data per region.
     useEffect(() => {
+        if (!regionReady) return;
         let cancelled = false;
         setMasterData(EMPTY_MASTER_DATA);
         fetchRealtimeRankingMasterData(region)
             .then((data) => { if (!cancelled) setMasterData(data); })
             .catch(() => { if (!cancelled) setMasterData(EMPTY_MASTER_DATA); });
         return () => { cancelled = true; };
-    }, [region]);
+    }, [region, regionReady]);
 
     // Sync region to URL.
     useEffect(() => {
+        if (!regionReady) return;
         const params = new URLSearchParams(Array.from(searchParams.entries()));
         params.set("region", region);
         replaceCurrentUrlSearchParams(params);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [region]);
+    }, [region, regionReady]);
 
     // Countdown ticker.
     useEffect(() => {
