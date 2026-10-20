@@ -13,7 +13,8 @@ interface MainLayoutProps {
 
 /**
  * A page's content inside the app chrome. The chrome itself (AppShell) is mounted once by the
- * root layout and survives navigations, so this renders only what belongs to the page.
+ * root layout and survives navigations, so this renders only what belongs to the page. Leaving
+ * MainLayout out does not drop the chrome: a full-screen page goes in AppShell's BARE_ROUTE.
  */
 export default function MainLayout({
     children,
