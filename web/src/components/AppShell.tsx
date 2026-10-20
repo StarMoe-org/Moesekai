@@ -43,8 +43,10 @@ function hasOverlayHistoryState() {
 }
 
 /**
- * Routes drawn without the chrome: they never render MainLayout. Decided by route, not by
- * whether the page mounts MainLayout, so the server renders the same shell the client hydrates.
+ * Routes drawn without the chrome (header, navigation pane, background, footer). Every other route
+ * gets it, whether or not the page renders MainLayout, so a new full-screen page (a player, an
+ * embed, a popup) must be added here. Decided by route rather than by the page so the server
+ * renders the same shell the client hydrates.
  */
 const BARE_ROUTE = /^\/(?:blank|leave|chart-image|(?:guess-who|guess-jacket)\/multiplayer)(?:\/|$)/;
 
