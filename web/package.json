@@ -19,6 +19,7 @@
     "test:mysekai-workspace": "node --experimental-strip-types scripts/test-mysekai-workspace.mjs",
     "test:mysekai-character-filter": "node --experimental-strip-types scripts/test-mysekai-character-filter.mjs",
     "test:mysekai-runtime-selection": "node --experimental-strip-types scripts/test-mysekai-runtime-selection.mjs",
+    "test:costume3d": "node --experimental-strip-types scripts/test-costume3d.mjs",
     "sitemap": "node scripts/generate-sitemaps.mjs",
     "generate:metadata": "node scripts/generate-metadata-map.mjs",
     "start": "next start",

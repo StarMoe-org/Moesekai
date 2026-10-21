@@ -83,6 +83,7 @@ const allNavigationGroups: NavGroupData[] = [
             { href: "/sticker-maker" },
             { href: "/chart-preview" },
             { href: "/story-player" },
+            { href: "/costume-3d" },
             { href: "/mysekai-preview/scene" },
         ],
     },
@@ -211,6 +212,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/score-control", group: "tools", keywords: ["score control", "score", "calculator"] },
     { href: "/chart-preview", group: "tools", keywords: ["chart preview", "chart", "mmw", "preview", "sus"] },
     { href: "/story-player", group: "tools", keywords: ["story player", "story viewer", "live2d", "story", "scenario", "adv"] },
+    // "\u670d\u88c5" / "\u6362\u88c5" / "\u8863\u88c5" / "\uc758\uc0c1": costume and dress-up in Chinese, Japanese and Korean (escaped like the one above).
+    { href: "/costume-3d", group: "tools", keywords: ["3d costume", "costume", "3d", "model", "outfit", "dress up", "\u670d\u88c5", "\u6362\u88c5", "\u8863\u88c5", "\uc758\uc0c1"] },
     { href: "/mysekai-preview/scene", group: "tools", keywords: ["mysekai preview", "scene preview", "mysekai", "3d", "obj", "scene"] },
     { href: "/sticker-maker", group: "tools", keywords: ["sticker maker", "meme"] },
 
@@ -309,6 +312,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/guess-music": "layout.nav.items.guessMusic",
     "/chart-preview": "layout.nav.items.chartPreview",
     "/story-player": "layout.nav.items.storyPlayer",
+    "/costume-3d": "layout.nav.items.costume3d",
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
     "/asset-viewer": "layout.nav.items.assetViewer",
     "/asset-versions": "layout.nav.items.assetVersions",
@@ -358,6 +362,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/guess-music": "layout.groupPages.guessMusic",
     "/chart-preview": "layout.groupPages.chartPreview",
     "/story-player": "layout.groupPages.storyPlayer",
+    "/costume-3d": "layout.groupPages.costume3d",
     "/mysekai-preview": "layout.groupPages.mysekaiPreview",
     "/mysekai-preview/scene": "layout.groupPages.mysekaiPreviewScene",
     "/asset-viewer": "layout.groupPages.assetViewer",

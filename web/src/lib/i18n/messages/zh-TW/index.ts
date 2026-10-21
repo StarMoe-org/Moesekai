@@ -1,3 +1,4 @@
+import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 import { zhTWCommon } from "./common";
@@ -19,6 +20,7 @@ export const zhTWMessages = {
     shortcuts: zhTWShortcuts,
     page: {
         mysekaiWorkspace: mysekaiWorkspaceMessages,
+        costume3d: costume3dMessages,
         ...zhTWPagePrimary,
         ...zhTWPageSecondaryA,
         ...zhTWPageSecondaryB,
