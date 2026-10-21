@@ -15,7 +15,7 @@ import { getCostumeThumbnailUrl } from "@/lib/assets";
 import { costume3dRegions, type Costume3dRegion } from "@/lib/costume3d/config";
 import { Costume3dUnavailableError, loadCatalog, loadCostume, openOutput, type Costume3dOutput } from "@/lib/costume3d/data";
 import {
-    hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams, type Costume3dSelection, type RoleCostume,
+    hairOptions, headGroups, parseSelection, released, resolveLook, roleCostumes, selectionParams, type Costume3dSelection, type RoleCostume,
 } from "@/lib/costume3d/look";
 import type { StageLoad } from "@/lib/costume3d/stage";
 import { fetchMasterData } from "@/lib/fetch";
@@ -124,7 +124,7 @@ function Costume3dContent() {
     // output leaves unnamed (CN, TW, KR) take the site's names of the costume's colours.
     const costumes = useMemo(() => (catalog
         ? roleCostumes(catalog)
-            .filter(costume => isShowSpoiler || (costume.publishedAt != null && costume.publishedAt <= now))
+            .filter(costume => isShowSpoiler || released(costume.publishedAt, now))
             .map(costume => {
                 const info = costumeData.value?.get(costume.costumeNumber);
                 if (!info || costume.colors.every(color => color.colorName)) return costume;

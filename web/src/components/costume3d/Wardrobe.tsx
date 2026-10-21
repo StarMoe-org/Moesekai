@@ -1,12 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button, Icon, Tabs, TextField, cn } from "@/components/md3";
 import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { blocked, type Costume3dLook, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
+import { blocked, released, type Costume3dLook, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
 import type { Costume3dCatalog, Costume3dPart, Costume3dVariant } from "@/types/costume3d";
 
 /** Cards rendered at first and added each time the end of the grid comes into view. */
@@ -171,34 +171,30 @@ export function Wardrobe(props: WardrobeProps) {
     const { t: translate } = useTranslation();
     const [queries, setQueries] = useState<Record<WardrobeTab, string>>({ costume: "", hair: "", head: "" });
     const query = queries[tab].trim().toLowerCase();
-    const name = (original: string) => translate("costumes", "name", original) || original;
+    const name = useCallback((original: string) => translate("costumes", "name", original) || original, [translate]);
     const named = (color: { colorName: string; colorId: number }, costume: number) => {
         const raw = color.colorName || colorName(costume, color.colorId);
         return raw ? translate("costumes", "colorName", raw) || raw : t("page.costume3d.colorNumber", { number: color.colorId });
     };
-    const matches = (number: number, original: string) => !query || String(number) === query
-        || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query);
-    const released = (publishedAt: number | null) => showSpoilers || (publishedAt != null && publishedAt <= now);
+    const matches = useCallback((number: number, original: string) => !query || String(number) === query
+        || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query), [query, name]);
+    const listed = useCallback((publishedAt: number | null) => showSpoilers || released(publishedAt, now), [showSpoilers, now]);
 
-    const costumeList = useMemo(() => costumes.filter(costume => matches(costume.costumeNumber, costume.name)),
-        // matches() reads the query and translations, which the dependencies stand for
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [costumes, query]);
-    const hairList = useMemo(() => hairs.filter(part => (part.costumeNumber === 0 || released(part.publishedAt)) && matches(part.costumeNumber, part.name)),
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-        [hairs, query, showSpoilers, now]);
-    const ownHeads = new Set([variant?.head, ...(variant?.alternativeHeads ?? [])]);
+    // What each tab lists (all of it, for the counts), and what it shows for the search.
+    const listedHairs = useMemo(() => hairs.filter(part => part.costumeNumber === 0 || listed(part.publishedAt)), [hairs, listed]);
+    const listedHeads = useMemo(() => heads.filter(group => listed(group.publishedAt)), [heads, listed]);
+    const costumeList = useMemo(() => costumes.filter(costume => matches(costume.costumeNumber, costume.name)), [costumes, matches]);
+    const hairList = useMemo(() => listedHairs.filter(part => matches(part.costumeNumber, part.name)), [listedHairs, matches]);
+    const ownHeads = useMemo(() => new Set([variant?.head, ...(variant?.alternativeHeads ?? [])]), [variant]);
     const wornHead = look?.head?.costume3dId ?? null;
     const headList = useMemo(() => {
-        const list = heads.filter(group => released(group.publishedAt) && matches(group.costumeNumber, group.name));
         // The worn head and the costume's own first.
         const rank = (group: HeadGroup) => (group.parts.some(part => part.costume3dId === wornHead) ? 2 : group.parts.some(part => ownHeads.has(part.costume3dId)) ? 1 : 0);
-        return list.sort((a, b) => rank(b) - rank(a));
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [heads, query, showSpoilers, now, wornHead, variant]);
+        return listedHeads.filter(group => matches(group.costumeNumber, group.name)).sort((a, b) => rank(b) - rank(a));
+    }, [listedHeads, matches, wornHead, ownHeads]);
 
     const selectedIndex = tab === "costume" ? costumeList.findIndex(costume => costume.costumeNumber === costumeNumber) : -1;
-    const paged = usePaged<unknown>(
+    const { shown: page, sentinel } = usePaged<unknown>(
         tab === "costume" ? costumeList : tab === "hair" ? hairList : headList,
         `${tab}|${query}|${catalog.role.characterId}-${catalog.role.unit}`,
         selectedIndex + 1,
@@ -227,7 +223,7 @@ export function Wardrobe(props: WardrobeProps) {
     const grid = "grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-x-3 gap-y-4";
     let body: React.ReactNode;
     if (tab === "costume") {
-        const shown = paged.shown as RoleCostume[];
+        const shown = page as RoleCostume[];
         body = (
             <div className={grid}>
                 {shown.map(costume => {
@@ -259,7 +255,7 @@ export function Wardrobe(props: WardrobeProps) {
             </div>
         );
     } else if (tab === "hair") {
-        const shown = paged.shown as Costume3dPart[];
+        const shown = page as Costume3dPart[];
         body = (
             <>
                 {fullHead && look?.head && (
@@ -287,7 +283,7 @@ export function Wardrobe(props: WardrobeProps) {
             </>
         );
     } else {
-        const shown = paged.shown as HeadGroup[];
+        const shown = page as HeadGroup[];
         body = (
             <div className={grid}>
                 {!query && (
@@ -346,8 +342,8 @@ export function Wardrobe(props: WardrobeProps) {
             <Tabs
                 items={[
                     { value: "costume", icon: mdApparel, label: <span>{t("page.costume3d.costumes")}{count(costumes.length)}</span> },
-                    { value: "hair", icon: mdFace3, label: <span>{t("page.costume3d.hair")}{count(hairs.filter(part => part.costumeNumber === 0 || released(part.publishedAt)).length)}</span> },
-                    { value: "head", icon: mdCrown, label: <span>{t("page.costume3d.head")}{count(heads.filter(group => released(group.publishedAt)).length)}</span> },
+                    { value: "hair", icon: mdFace3, label: <span>{t("page.costume3d.hair")}{count(listedHairs.length)}</span> },
+                    { value: "head", icon: mdCrown, label: <span>{t("page.costume3d.head")}{count(listedHeads.length)}</span> },
                 ]}
                 value={tab}
                 onValueChange={onTab}
@@ -372,7 +368,7 @@ export function Wardrobe(props: WardrobeProps) {
                 {(tab === "costume" ? costumeList : tab === "hair" ? hairList : headList).length === 0 && (
                     <p className="py-8 text-center type-body-m text-on-surface-variant">{t("page.costume3d.noMatches")}</p>
                 )}
-                <div ref={paged.sentinel} className="h-px" />
+                <div ref={sentinel} className="h-px" />
             </div>
         </div>
     );

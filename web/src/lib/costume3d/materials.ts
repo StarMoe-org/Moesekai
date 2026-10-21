@@ -87,7 +87,7 @@ const lightDir = { value: new THREE.Vector3(-0.35, 0.55, 0.76).normalize() };
 const blank = new THREE.DataTexture(new Uint8Array([255, 255, 255, 255]), 1, 1);
 blank.needsUpdate = true;
 
-export interface ToonOptions {
+interface ToonOptions {
     main: THREE.Texture | null;
     shadow?: THREE.Texture | null;
     value?: THREE.Texture | null;
@@ -96,7 +96,7 @@ export interface ToonOptions {
     outline?: boolean;
 }
 
-export function toonMaterial({ main, shadow = null, value = null, shade, skin, outline = false }: ToonOptions): THREE.ShaderMaterial {
+function toonMaterial({ main, shadow = null, value = null, shade, skin, outline = false }: ToonOptions): THREE.ShaderMaterial {
     const material = new THREE.ShaderMaterial({
         uniforms: {
             mainTex: { value: main ?? blank },
@@ -120,7 +120,7 @@ export function toonMaterial({ main, shadow = null, value = null, shade, skin, o
 }
 
 /** Loads a texture of `library/`: shared between looks, so it is fetched and uploaded once. */
-export type TextureSource = (file: string, srgb: boolean) => Promise<THREE.Texture | null>;
+type TextureSource = (file: string, srgb: boolean) => Promise<THREE.Texture | null>;
 
 /** Colour-variation textures by suffix: `_C` → `_MainTex`, `_S` → `_ShadowTex`, `_H` → `_ValueTex`. */
 export type ColorTextures = Partial<Record<"_C" | "_S" | "_H", string>>;
