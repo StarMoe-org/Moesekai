@@ -3,6 +3,7 @@ export const costume3dMessages = {
     "description": "Pick a character and see them in every costume in 3D, with colours, hairstyles and head accessories to switch.",
     "characters": "Characters",
     "unit": "Unit",
+    "version": "Version",
     "costumes": "Costumes",
     "searchPlaceholder": "Costume name or number",
     "clearSearch": "Clear",

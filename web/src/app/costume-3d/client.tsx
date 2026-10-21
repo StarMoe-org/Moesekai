@@ -219,6 +219,13 @@ function Costume3dContent() {
         : t("page.costume3d.colorNumber", { number: colorId });
 
     const header = <PageHeader title={t("page.costume3d.title")} description={t("page.costume3d.description")} />;
+    // Beside the stage the page fits the window: a one-line title, then stage and panel at full height.
+    const compactHeader = (
+        <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h1 className="type-headline-s text-on-surface">{t("page.costume3d.title")}</h1>
+            <p className="type-body-m text-on-surface-variant">{t("page.costume3d.description")}</p>
+        </div>
+    );
 
     // ---------------------------------------------------------------- what keeps the page from showing
     if (!hydrated || (!region && !regionMissing)) return <PageContainer wide>{header}<LoadingState /></PageContainer>;
@@ -246,45 +253,28 @@ function Costume3dContent() {
     }
     if (!output.value || !role) return <PageContainer wide>{header}<LoadingState /></PageContainer>;
 
+    const pill = "rounded-full bg-surface-container-lowest/80 px-2.5 py-0.5 type-label-m text-on-surface";
     const caption = costume && (
-        <div className="drop-shadow-sm">
-            <p className="type-headline-s text-on-surface">{costumeName}</p>
-            <p className="type-body-m text-on-surface-variant">{`${characterName} · ${unitName} · ${colorName}`}</p>
-            {(hair != null && look?.hair || head != null) && (
-                <p className="type-body-s text-on-surface-variant">
-                    {[
-                        hair != null && look?.hair && !look.fullHead && t("page.costume3d.captionHair", {
-                            name: look.hair.costumeNumber === 0 ? t("page.costume3d.defaultHair") : translate("costumes", "name", look.hair.name) || look.hair.name,
-                        }),
-                        head != null && t("page.costume3d.captionHead", {
-                            name: look?.head ? translate("costumes", "name", look.head.name) || look.head.name : t("page.costume3d.noHead"),
-                        }),
-                    ].filter(Boolean).join(" · ")}
-                </p>
-            )}
-        </div>
-    );
-
-    const unitPicker = characterRoles.length > 1 && (
-        <div className="flex flex-wrap gap-2" role="group" aria-label={t("page.costume3d.unit")}>
-            {characterRoles.map(entry => {
-                const isSelected = entry.unit === role.unit;
-                return (
-                    <button
-                        key={entry.unit}
-                        type="button"
-                        aria-pressed={isSelected}
-                        onClick={() => selectUnit(entry.unit)}
-                        className={cn(
-                            "state-layer focus-ring flex items-center gap-2 rounded-md3-sm px-3 py-1.5 type-label-l",
-                            isSelected ? "bg-secondary-container text-on-secondary-container" : "border border-outline-variant text-on-surface-variant",
-                        )}
-                    >
-                        <span className="h-2.5 w-2.5 rounded-full" style={{ background: unitColor(entry.unit) }} />
-                        {t(UNIT_FIELD_LABEL_KEYS[entry.unit] ?? entry.unit)}
-                    </button>
-                );
-            })}
+        <div className="flex flex-col items-start gap-2">
+            <p className="type-headline-s text-on-surface [text-shadow:0_1px_8px_var(--md-sys-color-surface)]">{costumeName}</p>
+            <div className="flex flex-wrap gap-1.5">
+                <span className={cn(pill, "flex items-center gap-1.5")}>
+                    <span className="h-2 w-2 rounded-full" style={{ background: unitColor(role.unit) }} />
+                    {characterName}
+                    {characterRoles.length > 1 && <span className="text-on-surface-variant">{unitName}</span>}
+                </span>
+                <span className={pill}>{colorName}</span>
+                {hair != null && look?.hair && !look.fullHead && (
+                    <span className={pill}>{t("page.costume3d.captionHair", {
+                        name: look.hair.costumeNumber === 0 ? t("page.costume3d.defaultHair") : translate("costumes", "name", look.hair.name) || look.hair.name,
+                    })}</span>
+                )}
+                {head != null && (
+                    <span className={pill}>{t("page.costume3d.captionHead", {
+                        name: look?.head ? translate("costumes", "name", look.head.name) || look.head.name : t("page.costume3d.noHead"),
+                    })}</span>
+                )}
+            </div>
         </div>
     );
 
@@ -337,23 +327,29 @@ function Costume3dContent() {
         <p className="py-8 text-center type-body-m text-error">{t("page.costume3d.loadFailed")}</p>
     ) : <LoadingState className="min-h-[20vh]" />;
 
+    // Stage and panel fill the window beside each other; the header above is the only page scroll.
+    const column = "@3xl:sticky @3xl:top-20 @3xl:h-[calc(100dvh-10.5rem)] @3xl:min-h-[540px]";
     return (
-        <PageContainer wide>
-            {header}
+        <PageContainer wide className="sm:py-5">
+            {compactHeader}
             {/* Laid out by the width the page has beside the site's navigation, not the window's. */}
             <div className="@container">
-                {/* Who: every character in one row, and the unit when there are several. */}
-                <div className="mb-3 flex flex-col gap-2">
-                    <CharacterPicker available={available} selected={role.characterId} onSelect={selectCharacter} />
-                    {unitPicker}
-                </div>
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @5xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
-                    {/* The stage: kept in view while the wardrobe scrolls below it on narrow screens. */}
-                    <div className="sticky top-[6.5rem] z-10 h-[46dvh] min-h-[320px] sm:top-16 @5xl:top-20 @5xl:h-[calc(100dvh-17rem)] @5xl:min-h-[560px]">
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @3xl:grid-cols-[minmax(0,1fr)_minmax(340px,400px)] @6xl:grid-cols-[minmax(0,1fr)_440px]">
+                    {/* The stage: on narrow screens kept in view while the panel scrolls under it. */}
+                    <div className={cn("sticky top-[6.5rem] z-10 h-[46dvh] min-h-[320px] sm:top-16", column)}>
                         {viewport}
                     </div>
-                    {/* The wardrobe: beside the stage on wide screens, with its own scroll. */}
-                    <Surface tone="card" className="flex min-h-0 flex-col p-3 @5xl:sticky @5xl:top-20 @5xl:h-[calc(100dvh-17rem)] @5xl:min-h-[560px] @5xl:p-4">
+                    {/* The panel: who, then what they wear. */}
+                    <Surface tone="card" radius="xl" className={cn("flex min-h-0 flex-col gap-4 p-4", column)}>
+                        <CharacterPicker
+                            available={available}
+                            selected={role.characterId}
+                            onSelect={selectCharacter}
+                            units={characterRoles.map(entry => entry.unit)}
+                            unit={role.unit}
+                            onUnit={selectUnit}
+                        />
+                        <div className="h-px shrink-0 bg-outline-variant" />
                         {wardrobe}
                     </Surface>
                 </div>

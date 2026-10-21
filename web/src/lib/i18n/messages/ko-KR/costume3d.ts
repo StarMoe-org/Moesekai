@@ -3,6 +3,7 @@ export const costume3dMessages = {
     "description": "캐릭터를 골라 각 의상을 입은 모습을 3D로 볼 수 있습니다. 색상·헤어스타일·헤어 액세서리도 바꿀 수 있습니다.",
     "characters": "캐릭터",
     "unit": "유닛",
+    "version": "버전",
     "costumes": "의상",
     "searchPlaceholder": "의상 이름 또는 번호",
     "clearSearch": "지우기",
