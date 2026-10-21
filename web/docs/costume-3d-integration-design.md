@@ -341,7 +341,7 @@ interface Costume3dSelection {
 - **ripper 0.14.0**：新增 `index/version.json`（`costume3d-version`），CN 输出已补写。
 - **代码位置**：
   - 页面：`web/src/app/costume-3d/`，路由 `/costume-3d`，放在「工具」分组。
-  - 组件：`web/src/components/costume3d/`（`Costume3dViewport`、`CharacterPicker`、`CostumeList`、`LookPanel`）。
+  - 组件：`web/src/components/costume3d/`（`Costume3dViewport`、`CharacterPicker`、`Wardrobe`）。
   - 引擎与数据：`web/src/lib/costume3d/`（`config` / `data` / `look` / `stage` / `materials` / `motion`），从验收页移植。
   - 类型：`web/src/types/costume3d.ts`。
 - **配置**：
@@ -353,7 +353,14 @@ interface Costume3dSelection {
   - 服装详情页颜色选择下方的「3D 预览」；
   - 可穿角色的头像改为链接，带上该角色。
 - **与设计稿的出入**：
-  - 布局按页面内容宽度（容器查询）切换：内容宽 ≥ 1024 px 三栏，否则单栏，舞台吸顶，下方是「服装 / 搭配」两个标签页。没有单独做平板的 SideSheet。
+  - 选择器改成衣柜式（2026-10-22，参考 Haruki 换装页的交互，未使用其代码）：
+    - 全部角色排成一行，按团体分组，每组下方是团体色条；
+    - 舞台在左，衣柜在右；
+    - 衣柜是「服装 / 发型 / 头饰」三个带数量的标签页，各自有搜索，下面是大缩略图卡片网格；
+    - 卡片右上角是「N 色」，下面一排颜色小图，点一下直接换色；
+    - 头饰按服装分组，第一张是「无头饰」；
+    - 列表滚到底时再加载下一批。
+  - 布局按页面内容宽度（容器查询）切换：内容宽 ≥ 1024 px 时，舞台和衣柜左右并排；更窄时上下排列，舞台吸顶。没有单独做平板的 SideSheet。
   - 加载进度按部件组计数（模型、颜色贴图、动作），不是按字节。
   - 截图、全屏、复制链接、描边开关属于 P1，留到 M2。
 - **上线前还需要**：

@@ -5,9 +5,8 @@ import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { CharacterPicker } from "@/components/costume3d/CharacterPicker";
 import { Costume3dViewport } from "@/components/costume3d/Costume3dViewport";
-import { CostumeList } from "@/components/costume3d/CostumeList";
-import { LookPanel } from "@/components/costume3d/LookPanel";
-import { Banner, Button, EmptyState, LoadingState, PageContainer, PageHeader, Surface, Tabs, cn } from "@/components/md3";
+import { Wardrobe, type WardrobeTab } from "@/components/costume3d/Wardrobe";
+import { Banner, Button, EmptyState, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
 import { mdViewInAr } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { replaceAssetSourceRegion, useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
@@ -16,7 +15,7 @@ import { getCostumeThumbnailUrl } from "@/lib/assets";
 import { costume3dRegions, type Costume3dRegion } from "@/lib/costume3d/config";
 import { Costume3dUnavailableError, loadCatalog, loadCostume, openOutput, type Costume3dOutput } from "@/lib/costume3d/data";
 import {
-    hairOptions, headOptions, parseSelection, resolveLook, roleCostumes, selectionParams, type Costume3dSelection, type RoleCostume,
+    hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams, type Costume3dSelection, type RoleCostume,
 } from "@/lib/costume3d/look";
 import type { StageLoad } from "@/lib/costume3d/stage";
 import { fetchMasterData } from "@/lib/fetch";
@@ -142,7 +141,7 @@ function Costume3dContent() {
     const costume = costumes.find(entry => entry.costumeNumber === want.costumeNumber) ?? costumes[0] ?? null;
     const colorId = costume?.colors.some(color => color.colorId === want.colorId) ? want.colorId as number : costume?.colors[0]?.colorId ?? 1;
     const hairs = useMemo(() => (catalog ? hairOptions(catalog) : []), [catalog]);
-    const heads = useMemo(() => (catalog ? headOptions(catalog) : []), [catalog]);
+    const heads = useMemo(() => (catalog ? headGroups(catalog) : []), [catalog]);
     const known = (id: number | null | undefined, slot: "hair" | "head") =>
         id != null && (id === 0 && slot === "head" || Boolean(catalog?.parts.some(part => part.costume3dId === id && part.slot === slot)));
     const hair = known(want.hair, "hair") ? want.hair as number : null;
@@ -188,7 +187,7 @@ function Costume3dContent() {
         const name = role ? thumbnailName(costumeData.value?.get(costumeNumber), partType, color, role.characterId) : null;
         return name ? getCostumeThumbnailUrl(name, regionAssets) : null;
     }, [costumeData.value, role, regionAssets]);
-    const costumeThumbnail = useCallback((entry: RoleCostume, color: number) => thumbnailOf(entry.costumeNumber, "body", color), [thumbnailOf]);
+    const costumeThumbnail = useCallback((costumeNumber: number, color: number) => thumbnailOf(costumeNumber, "body", color), [thumbnailOf]);
     const partThumbnail = useCallback((part: Costume3dPart) => thumbnailOf(part.costumeNumber, part.slot, part.colorId), [thumbnailOf]);
     const colorNameOf = useCallback((costumeNumber: number, color: number) =>
         catalog?.parts.find(part => part.slot === "body" && part.costumeNumber === costumeNumber && part.colorId === color)?.colorName
@@ -201,11 +200,11 @@ function Costume3dContent() {
     const selectUnit = useCallback((unit: string) => {
         setWant(current => ({ ...current, characterId: role?.characterId, unit, hair: null, head: null }));
     }, [role]);
-    const selectCostume = useCallback((entry: RoleCostume) => {
-        setWant(current => ({ ...current, costumeNumber: entry.costumeNumber }));
+    const selectCostume = useCallback((costumeNumber: number, color?: number) => {
+        setWant(current => ({ ...current, costumeNumber, ...(color != null ? { colorId: color } : {}) }));
     }, []);
 
-    const [tab, setTab] = useState<"costumes" | "look">("costumes");
+    const [tab, setTab] = useState<WardrobeTab>("costume");
     // The character's own unit first, then the site's unit order.
     const unitOrder = (unit: string) => (role && unit === homeUnit(role.characterId) ? -1 : UNIT_DATA.findIndex(entry => entry.id === UNIT_FIELD_TO_ID[unit]));
     const characterRoles = (output.value?.roles.filter(entry => entry.characterId === role?.characterId) ?? [])
@@ -289,36 +288,6 @@ function Costume3dContent() {
         </div>
     );
 
-    const lookNotes = look && (look.hairReplaced || look.hairIgnored) ? (
-        <Banner tone="info">
-            {look.hairIgnored
-                ? t("page.costume3d.hairIgnored")
-                : t("page.costume3d.hairReplaced", { name: translate("costumes", "name", look.hairReplaced?.name ?? "") || look.hairReplaced?.name || "" })}
-        </Banner>
-    ) : null;
-
-    const lookPanel = catalog && costume ? (
-        <LookPanel
-            costume={costume}
-            colorId={colorId}
-            onColor={id => setWant(current => ({ ...current, costumeNumber: costume.costumeNumber, colorId: id }))}
-            catalog={catalog}
-            variant={variant}
-            look={look}
-            hairs={hairs}
-            heads={heads}
-            hair={hair}
-            head={head}
-            onHair={id => setWant(current => ({ ...current, hair: id }))}
-            onHead={id => setWant(current => ({ ...current, head: id }))}
-            colorThumbnail={color => thumbnailOf(costume.costumeNumber, "body", color)}
-            partThumbnail={partThumbnail}
-            colorNameOf={colorNameOf}
-            now={now}
-            showSpoilers={isShowSpoiler}
-        />
-    ) : null;
-
     const stageMessage = catalogState.error || costumeState.error
         ? t("page.costume3d.loadFailed")
         : costumeState.value && !variant
@@ -340,14 +309,29 @@ function Costume3dContent() {
         </div>
     );
 
-    const costumeList = catalog ? (
-        <CostumeList
+    const wardrobe = catalog ? (
+        <Wardrobe
+            tab={tab}
+            onTab={setTab}
+            tint={unitColor(role.unit)}
+            catalog={catalog}
+            variant={variant}
+            look={look}
             costumes={costumes}
-            selected={costume?.costumeNumber ?? null}
-            onSelect={selectCostume}
-            thumbnail={costumeThumbnail}
+            costumeNumber={costume?.costumeNumber ?? null}
+            colorId={colorId}
+            onCostume={selectCostume}
+            hairs={hairs}
+            hair={hair}
+            onHair={id => setWant(current => ({ ...current, hair: id }))}
+            heads={heads}
+            head={head}
+            onHead={id => setWant(current => ({ ...current, head: id }))}
+            costumeThumbnail={costumeThumbnail}
+            partThumbnail={partThumbnail}
+            colorName={colorNameOf}
             now={now}
-            className="min-h-0 flex-1"
+            showSpoilers={isShowSpoiler}
         />
     ) : catalogState.error ? (
         <p className="py-8 text-center type-body-m text-error">{t("page.costume3d.loadFailed")}</p>
@@ -358,47 +342,19 @@ function Costume3dContent() {
             {header}
             {/* Laid out by the width the page has beside the site's navigation, not the window's. */}
             <div className="@container">
-                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @5xl:grid-cols-[280px_minmax(0,1fr)_300px]">
-                    {/* Who and which costume. */}
-                    <Surface tone="card" className="hidden min-h-0 flex-col gap-4 p-4 @5xl:sticky @5xl:top-20 @5xl:flex @5xl:h-[calc(100dvh-12rem)] @5xl:min-h-[560px]">
-                        <CharacterPicker available={available} selected={role.characterId} onSelect={selectCharacter} />
-                        {unitPicker}
-                        {costumeList}
-                    </Surface>
-
-                    {/* Narrow screens: who, above the stage. */}
-                    <div className="@5xl:hidden">
-                        <CharacterPicker available={available} selected={role.characterId} onSelect={selectCharacter} compact />
-                        {unitPicker && <div className="pt-1">{unitPicker}</div>}
-                    </div>
-
-                    {/* The stage: kept in view while the lists below scroll on narrow screens; the middle column on wide ones. */}
-                    <div className="sticky top-[6.5rem] z-10 h-[46dvh] min-h-[320px] sm:top-16 @5xl:top-20 @5xl:h-[calc(100dvh-12rem)] @5xl:min-h-[560px]">
+                {/* Who: every character in one row, and the unit when there are several. */}
+                <div className="mb-3 flex flex-col gap-2">
+                    <CharacterPicker available={available} selected={role.characterId} onSelect={selectCharacter} />
+                    {unitPicker}
+                </div>
+                <div className="grid grid-cols-[minmax(0,1fr)] gap-4 @5xl:grid-cols-[minmax(0,1fr)_minmax(360px,440px)]">
+                    {/* The stage: kept in view while the wardrobe scrolls below it on narrow screens. */}
+                    <div className="sticky top-[6.5rem] z-10 h-[46dvh] min-h-[320px] sm:top-16 @5xl:top-20 @5xl:h-[calc(100dvh-17rem)] @5xl:min-h-[560px]">
                         {viewport}
                     </div>
-
-                    {/* How it is worn. */}
-                    <Surface tone="card" className="hidden min-h-0 flex-col gap-3 overflow-y-auto p-4 @5xl:sticky @5xl:top-20 @5xl:flex @5xl:h-[calc(100dvh-12rem)] @5xl:min-h-[560px]">
-                        {lookNotes}
-                        {lookPanel}
-                    </Surface>
-
-                    {/* Narrow screens: costumes and the look under the stage, as tabs. */}
-                    <Surface tone="card" className="flex flex-col gap-3 p-3 @5xl:hidden">
-                        <Tabs
-                            items={[
-                                { value: "costumes", label: t("page.costume3d.tabs.costumes") },
-                                { value: "look", label: t("page.costume3d.tabs.look") },
-                            ]}
-                            value={tab}
-                            onValueChange={setTab}
-                            aria-label={t("page.costume3d.title")}
-                        />
-                        {tab === "costumes" ? (
-                            <div className="flex flex-col">{costumeList}</div>
-                        ) : (
-                            <div className="flex flex-col gap-3">{lookNotes}{lookPanel}</div>
-                        )}
+                    {/* The wardrobe: beside the stage on wide screens, with its own scroll. */}
+                    <Surface tone="card" className="flex min-h-0 flex-col p-3 @5xl:sticky @5xl:top-20 @5xl:h-[calc(100dvh-17rem)] @5xl:min-h-[560px] @5xl:p-4">
+                        {wardrobe}
                     </Surface>
                 </div>
             </div>
