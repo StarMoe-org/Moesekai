@@ -362,6 +362,8 @@ export default function StickerMakerContent() {
 
         // Draw Text
         ctx.lineWidth = 9;
+        // The default miter joins push the thick outline out into spikes at sharp glyph corners.
+        ctx.lineJoin = "round";
         ctx.save();
         ctx.translate(position.x, position.y);
         ctx.rotate(rotate / 10);
