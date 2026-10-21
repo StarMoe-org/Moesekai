@@ -1703,6 +1703,8 @@ export const zhTWPagePrimary = {
             },
             filters: {
                 categoryTitle: "選擇原聲帶板塊",
+                scrollCategoriesBack: "向左查看板塊",
+                scrollCategoriesForward: "向右查看板塊",
                 searchPlaceholder: "搜尋原聲帶或拼音假名...",
                 sortBySeq: "按序號排序",
                 sortByTitle: "按標題排序",

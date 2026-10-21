@@ -2673,6 +2673,8 @@ export const koKRMessages = {
             },
             filters: {
                 categoryTitle: "사운드트랙 분류 선택",
+                scrollCategoriesBack: "분류 왼쪽으로 스크롤",
+                scrollCategoriesForward: "분류 오른쪽으로 스크롤",
                 searchPlaceholder: "사운드트랙 제목 또는 가나 검색...",
                 sortBySeq: "순번순 정렬",
                 sortByTitle: "제목순 정렬"
