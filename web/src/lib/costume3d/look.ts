@@ -40,11 +40,6 @@ export interface Costume3dLook {
     hairIgnored: boolean;
 }
 
-/** A part's model and colour: parts of different costumes that look the same share it. */
-export function modelKey(part: Costume3dPart | null | undefined): string {
-    return part?.model ? `${part.model.bundle}|${part.model.color ?? ""}` : "none";
-}
-
 export function released(publishedAt: number | null, now: number): boolean {
     return publishedAt != null && publishedAt <= now;
 }
@@ -85,18 +80,37 @@ export function hairOptions(catalog: Costume3dCatalog): Costume3dPart[] {
         .sort((a, b) => (a.costumeNumber === 0 ? -1 : b.costumeNumber === 0 ? 1 : newestFirst(a, b)));
 }
 
-/** The heads a role can pick, newest first, each model and colour once (many costumes share one). */
-export function headOptions(catalog: Costume3dCatalog): Costume3dPart[] {
-    const seen = new Set<string>();
-    return catalog.parts
-        .filter(part => part.slot === "head" && part.model)
-        .sort(newestFirst)
-        .filter(part => {
-            const key = modelKey(part);
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
-        });
+/** The heads of one costume, as a wardrobe shows them: one card, a swatch per colour. */
+export interface HeadGroup {
+    key: string;
+    costumeNumber: number;
+    name: string;
+    headType: Costume3dPart["headType"];
+    publishedAt: number | null;
+    /** One part per colour, in colour order. */
+    parts: Costume3dPart[];
+}
+
+/**
+ * The heads a role can pick, grouped by costume (an accessory and a complete head of the same
+ * costume are two groups), newest first.
+ */
+export function headGroups(catalog: Costume3dCatalog): HeadGroup[] {
+    const groups = new Map<string, HeadGroup>();
+    for (const part of catalog.parts) {
+        if (part.slot !== "head" || !part.model) continue;
+        const key = `${part.costumeNumber}:${part.headType ?? ""}`;
+        let group = groups.get(key);
+        if (!group) {
+            group = { key, costumeNumber: part.costumeNumber, name: part.name, headType: part.headType, publishedAt: null, parts: [] };
+            groups.set(key, group);
+        }
+        if (part.publishedAt != null && (group.publishedAt == null || part.publishedAt < group.publishedAt)) group.publishedAt = part.publishedAt;
+        if (!group.parts.some(other => other.colorId === part.colorId)) group.parts.push(part);
+    }
+    const list = [...groups.values()];
+    for (const group of list) group.parts.sort((a, b) => a.colorId - b.colorId);
+    return list.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0) || b.costumeNumber - a.costumeNumber);
 }
 
 export function blocked(catalog: Costume3dCatalog, headId: number | null | undefined, hairId: number | null | undefined): boolean {

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 const { COSTUME3D_FORMATS, costume3dCheckConfig, costume3dRegions, costume3dSource } = await import("../src/lib/costume3d/config.ts");
 const {
-    blocked, costume3dHref, hairOptions, headOptions, modelKey, parseSelection, resolveLook, roleCostumes, selectionParams,
+    blocked, costume3dHref, hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams,
 } = await import("../src/lib/costume3d/look.ts");
 
 // ---------------------------------------------------------------- config
@@ -79,10 +79,12 @@ assert.deepEqual(roleCostumes(catalog), [
 
 // Hairs: the default first, then newest first.
 assert.deepEqual(hairOptions(catalog).map(p => p.costume3dId), [201, 6161, 5161]);
-// Heads: newest first, one per model and colour (6001 looks like 5001), none without a model.
-assert.deepEqual(headOptions(catalog).map(p => p.costume3dId), [5003, 7001, 6001]);
-assert.equal(modelKey(catalog.parts[9]), "acc/5/a02|");
-assert.equal(modelKey(null), "none");
+// Head groups: one per costume and kind of head, colours in order, newest first.
+assert.deepEqual(headGroups(catalog).map(g => [g.costumeNumber, g.headType, g.publishedAt, g.parts.map(p => p.costume3dId)]), [
+    [7, "head_and_hair", 260, [7001]],
+    [6, "head_only", 250, [6001]],
+    [5, "head_only", 200, [5001, 5003]],
+]);
 assert.equal(blocked(catalog, 5001, 6161), true);
 assert.equal(blocked(catalog, 6001, 6161), false);
 
