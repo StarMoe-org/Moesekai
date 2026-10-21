@@ -141,4 +141,46 @@ assert.deepEqual(panBy({ zoom: 2, x: 0, y: 0 }, 50, 25, 100, 100), { zoom: 2, x:
 assert.deepEqual(panBy(IDENTITY_VIEW, 50, 0, 100, 100), IDENTITY_VIEW);
 assert.deepEqual(toNdc(150, 50, { left: 100, top: 0, width: 100, height: 100 }), [0, 0]);
 
+// --- motions and facials ---
+
+const { groupLive2DMotions, groupLive2DFacials, live2dMotionStyle } = await import("../src/lib/live2dViewer/clips.ts");
+const motions = groupLive2DMotions([
+    "w-cute01-tilthead", "w-cute01-tilthead02", "w-cute11-nbtilthead", "w-cute01-posenod", "w-cute02-tiltheadb",
+    "w-normal16-nod", "w-noromal16-nod", "w-adult01-thumb", "w-cool01-thumb", "w-special11-wandahoi", "idle",
+]);
+// styles in their order, the unknown and the unparsed last
+assert.deepEqual(motions.map(group => group.style), ["normal", "cute", "cool", "adult", "special", "other"]);
+const cute = motions.find(group => group.style === "cute");
+// a row per action: the plain head tilt (with its variants), the no-blink one, then a compound
+assert.deepEqual(cute.rows.map(row => [row.words.join("+"), row.tag, row.clips.map(clip => clip.code)]), [
+    ["tilthead", null, ["01", "01·02", "02·b"]],
+    ["tilthead", "nb", ["11"]],
+    ["pose+nod", null, ["01"]],
+]);
+// the game's misspelling files with the real word, and the twin is told apart
+assert.deepEqual(motions[0].rows[0].clips.map(clip => [clip.name, clip.code]), [["w-normal16-nod", "16"], ["w-noromal16-nod", "16 (2)"]]);
+// `thumb` is a word, not `thum` with a variant `b`
+assert.deepEqual(motions.find(group => group.style === "cool").rows[0].words, ["thumb"]);
+// a word without a translation is shown as spelled
+assert.deepEqual(motions.find(group => group.style === "special").rows[0], { key: "wandahoi|", words: [], raw: "wandahoi", tag: null, clips: [{ name: "w-special11-wandahoi", code: "11" }] });
+assert.equal(motions.at(-1).rows[0].raw, "idle");
+assert.equal(live2dMotionStyle(motions, "w-cute01-posenod"), "cute");
+assert.equal(live2dMotionStyle(motions, null), null);
+
+const facials = groupLive2DFacials([
+    "face_smile_02", "face_smile_01", "face_smile_10", "face_ncsmile_01", "face_night_smile_01", "face_angry_01_nokira",
+    "face_closeeyes_01", "face_desperate01", "face_lookaway_01l", "face_wonder_train_01", "face_e",
+]);
+assert.deepEqual(facials.map(row => [row.words.join("+") || row.raw, row.tag, row.clips.map(clip => clip.code)]), [
+    ["smile", null, ["01", "02", "10"]],
+    ["smile", "nc", ["01"]],
+    ["smile", "night", ["01"]],
+    ["angry", null, ["01_nokira"]],
+    ["desperate", null, ["01"]],
+    ["closeeye", null, ["01"]],
+    ["lookaway", null, ["01l"]],
+    ["e", null, [""]],
+    ["wonder_train", null, ["01"]],
+]);
+
 console.log("live2d viewer: ok");

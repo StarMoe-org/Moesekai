@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Dispatch, type ReactNode, type RefObject, type SetStateAction } from "react";
 import { Button, IconButton, LinearProgress, LoadingIndicator, cn } from "@/components/md3";
-import { mdFullscreen, mdFullscreenExit, mdRemove, mdAdd } from "@/components/md3/icons";
+import { mdAdd, mdFullscreen, mdFullscreenExit, mdPause, mdPlayArrowFill, mdRemove, mdRestartAlt } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { IDENTITY_VIEW, MAX_ZOOM, isIdentityView, panBy, toNdc, zoomAbout, type Live2DView } from "@/lib/live2dViewer/view";
 import type { Live2DViewerPhase } from "./useLive2DViewer";
@@ -10,11 +10,11 @@ import type { Live2DViewerPhase } from "./useLive2DViewer";
 const STARMOE_MARK = {
     maskImage: "url(/starmoe.svg)",
     maskSize: "contain",
-    maskPosition: "left center",
+    maskPosition: "left bottom",
     maskRepeat: "no-repeat",
     WebkitMaskImage: "url(/starmoe.svg)",
     WebkitMaskSize: "contain",
-    WebkitMaskPosition: "left center",
+    WebkitMaskPosition: "left bottom",
     WebkitMaskRepeat: "no-repeat",
 } as const;
 
@@ -31,14 +31,24 @@ interface Live2DModelStageProps {
     onRetry: () => void;
     /** What to show over an empty stage (no model chosen). */
     empty?: ReactNode;
+    /** The model shown, named in the stage's corner. */
+    caption?: ReactNode;
+    /** Whether the model is paused; the toolbar's play button and reset. */
+    paused: boolean;
+    onTogglePause: () => void;
+    onReset: () => void;
+    className?: string;
 }
 
 /**
  * The stage of the Live2D viewer: the model's canvas over a story background or the surface
- * colours, zoom and pan by wheel, drag and pinch (a double click resets), a zoom capsule and a
- * full screen button, and what the viewer is doing (loading, not supported, failed).
+ * colours, zoom and pan by wheel, drag and pinch (a double click resets), the model's name, a
+ * toolbar (play and pause, back to the default motion and facial, zoom, full screen), and what
+ * the viewer is doing (loading, not supported, failed).
  */
-export function Live2DModelStage({ phase, hostRef, view, setView, background, onRetry, empty }: Live2DModelStageProps) {
+export function Live2DModelStage({
+    phase, hostRef, view, setView, background, onRetry, empty, caption, paused, onTogglePause, onReset, className,
+}: Live2DModelStageProps) {
     const { t } = useI18n();
     const frameRef = useRef<HTMLDivElement | null>(null);
     const [fullscreen, setFullscreen] = useState(false);
@@ -66,8 +76,8 @@ export function Live2DModelStage({ phase, hostRef, view, setView, background, on
             role="region"
             aria-label={t("page.live2d.stage")}
             className={cn(
-                "relative w-full overflow-hidden bg-linear-to-b from-surface-container-highest to-surface-container-low",
-                fullscreen ? "h-screen" : "aspect-[3/4] max-h-[80vh] rounded-md3-xl @lg:aspect-square",
+                "@container relative w-full overflow-hidden bg-linear-to-b from-surface-container-highest to-surface-container-low",
+                fullscreen ? "h-screen" : cn("rounded-md3-xl", className),
             )}
         >
             {background && (
@@ -77,47 +87,60 @@ export function Live2DModelStage({ phase, hostRef, view, setView, background, on
 
             <div
                 aria-hidden
-                className="pointer-events-none absolute left-4 top-3 z-10 h-5 w-24 bg-on-surface/70 select-none sm:h-6 sm:w-28"
+                className="pointer-events-none absolute bottom-4 left-4 z-10 hidden h-5 w-24 bg-on-surface/60 select-none @lg:block"
                 style={STARMOE_MARK}
             />
 
-            {canFullscreen && ready && (
-                <div className="absolute right-3 top-3 z-20">
-                    <IconButton
-                        icon={fullscreen ? mdFullscreenExit : mdFullscreen}
-                        label={t(fullscreen ? "page.live2d.exitFullscreen" : "page.live2d.fullscreen")}
-                        onClick={toggleFullscreen}
-                        className="glass"
-                    />
-                </div>
-            )}
+            {caption && <div className="pointer-events-none absolute left-3 top-3 z-20 max-w-[calc(100%-1.5rem)]">{caption}</div>}
 
             {ready && (
-                <div className="glass absolute bottom-3 right-3 z-20 flex items-center gap-1 rounded-full p-1">
-                    <IconButton
-                        icon={mdRemove}
-                        size="xs"
-                        label={t("page.live2d.zoomOut")}
-                        disabled={view.zoom <= 1}
-                        onClick={() => setView(current => zoomAbout(current, 1 / 1.25, 0, 0))}
-                    />
-                    <Button
-                        variant="text"
-                        size="xs"
-                        onClick={() => setView(IDENTITY_VIEW)}
-                        disabled={isIdentityView(view)}
-                        aria-label={t("page.live2d.zoomReset")}
-                        className="min-w-14 font-mono"
-                    >
-                        {Math.round(view.zoom * 100)}%
-                    </Button>
-                    <IconButton
-                        icon={mdAdd}
-                        size="xs"
-                        label={t("page.live2d.zoomIn")}
-                        disabled={view.zoom >= MAX_ZOOM}
-                        onClick={() => setView(current => zoomAbout(current, 1.25, 0, 0))}
-                    />
+                <div className="absolute inset-x-0 bottom-3 z-20 flex justify-center px-3">
+                    <div role="toolbar" aria-label={t("page.live2d.stageTools")} className="glass flex items-center gap-0.5 rounded-full p-1">
+                        <IconButton
+                            icon={paused ? mdPlayArrowFill : mdPause}
+                            size="s"
+                            label={t(paused ? "page.live2d.resume" : "page.live2d.pause")}
+                            onClick={onTogglePause}
+                        />
+                        <IconButton icon={mdRestartAlt} size="s" label={t("page.live2d.reset")} onClick={onReset} />
+                        <span aria-hidden className="mx-1 h-5 w-px bg-outline-variant" />
+                        <IconButton
+                            icon={mdRemove}
+                            size="s"
+                            label={t("page.live2d.zoomOut")}
+                            disabled={view.zoom <= 1}
+                            onClick={() => setView(current => zoomAbout(current, 1 / 1.25, 0, 0))}
+                        />
+                        <Button
+                            variant="text"
+                            size="xs"
+                            onClick={() => setView(IDENTITY_VIEW)}
+                            disabled={isIdentityView(view)}
+                            aria-label={t("page.live2d.zoomReset")}
+                            title={t("page.live2d.zoomReset")}
+                            className="min-w-14 font-mono"
+                        >
+                            {Math.round(view.zoom * 100)}%
+                        </Button>
+                        <IconButton
+                            icon={mdAdd}
+                            size="s"
+                            label={t("page.live2d.zoomIn")}
+                            disabled={view.zoom >= MAX_ZOOM}
+                            onClick={() => setView(current => zoomAbout(current, 1.25, 0, 0))}
+                        />
+                        {canFullscreen && (
+                            <>
+                                <span aria-hidden className="mx-1 h-5 w-px bg-outline-variant" />
+                                <IconButton
+                                    icon={fullscreen ? mdFullscreenExit : mdFullscreen}
+                                    size="s"
+                                    label={t(fullscreen ? "page.live2d.exitFullscreen" : "page.live2d.fullscreen")}
+                                    onClick={toggleFullscreen}
+                                />
+                            </>
+                        )}
+                    </div>
                 </div>
             )}
 

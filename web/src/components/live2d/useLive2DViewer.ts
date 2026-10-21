@@ -179,9 +179,9 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
     /**
      * Runs `change` on the viewer, then shows what it did. A motion or facial is fetched the first
      * time it is used, so a change may be a promise: what it did is shown once it settles, and a
-     * clip that could not be fetched is told.
+     * clip that could not be fetched is told. Settles when the change has (failed or not).
      */
-    const act = useCallback((change: (viewer: Live2DViewer) => void | Promise<unknown>) => {
+    const act = useCallback(async (change: (viewer: Live2DViewer) => void | Promise<unknown>): Promise<void> => {
         const viewer = viewerRef.current;
         if (!viewer || !key) return;
         const show = () => {
@@ -197,7 +197,7 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
         show();
         if (result instanceof Promise) {
             setClipErrorOf(null);
-            result.then(show, (error: unknown) => {
+            await result.then(show, (error: unknown) => {
                 if (viewerRef.current !== viewer) return;
                 const detail = error as Live2DViewerError | undefined;
                 setClipErrorOf({ key, url: detail?.url ?? (error instanceof Error ? error.message : String(error)) });

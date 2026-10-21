@@ -1,6 +1,6 @@
 # Live2D 预览
 
-`/live2d`（工具分组）在浏览器里显示剧情用到的 Live2D 模型：游戏原本的动作、表情、眨眼、呼吸与物理，可以缩放、全屏，并垫一张剧情背景。地址记着服务器和模型（`?server=jp&model=v2_01ichika_casual`）；角色详情页的「查看 Live2D 模型」链接到 `?character=<id>`，页面按这个角色筛选并打开他的第一个模型。
+`/live2d`（工具分组）在浏览器里显示剧情用到的 Live2D 模型：游戏原本的动作、表情、眨眼、呼吸与物理，可以缩放、全屏，并垫一张剧情背景。地址记着服务器和模型（`?server=jp&model=v2_01ichika_casual`），没有指定模型时显示第一个角色的模型；角色详情页的「查看 Live2D 模型」链接到 `?character=<id>`，打开这个角色的第一个模型。
 
 它不属于剧情：页面、组件和数据层都不依赖剧情页和剧情播放器（`components/story`、`lib/sseWeb`）。
 
@@ -49,9 +49,15 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 
 ## 界面
 
-- 舞台：模型画布在剧情背景或 `surface-container` 渐变之上；滚轮以光标为中心缩放，放大后拖动平移，双指缩放，双击复位。缩放由播放器的相机完成（`setView`），放大后不会模糊。右下角的缩放胶囊和右上角的全屏按钮用 `glass`。
-- 面板（容器宽度够时在舞台右侧，否则在下方）：当前模型、按角色分组的模型列表（配角和路人排在后面）、动作、表情、循环播放、物理、呼吸、暂停、恢复默认、背景。
-- 筛选抽屉：搜索、类型（角色、配角、路人）、团体与角色、只看新版模型。
+宽屏时舞台和面板并排，高度占满一屏，页面本身不滚动；窄屏时面板在舞台下方。这个页面不用筛选抽屉：选模型靠面板里的角色头像。
+
+- 舞台：模型画布在剧情背景或 `surface-container` 渐变之上；左上角是当前模型（角色头像、名字、服装）；底部居中一条 `glass` 工具栏：暂停/继续、恢复默认动作和表情、缩小/比例/放大、全屏。滚轮以光标为中心缩放，放大后拖动平移，双指缩放，双击复位。缩放由播放器的相机完成（`setView`），放大后不会模糊。
+- 面板分四页，每页只有一个滚动区域：
+  - 模型：按团体排列的 26 个角色头像，加上「配角」「路人」；点一个，下面列出它的模型（服装、模型名、v2、首次下载大小）。
+  - 动作：先按风格分（普通、可爱、酷……，默认是正在播放的动作所在的风格），每个动作一行，同一动作的变体是一排编号按钮；另有循环播放和默认动作。
+  - 表情：每种情绪一行，变体是编号按钮（一个模型的一百多个表情收成几十行）；另有默认表情。
+  - 场景：物理、呼吸，以及剧情背景的缩略图（第一格是无背景，可按名称搜索、分页加载）。
+- 动作和表情的名字来自游戏的片段名（`w-cute01-tilthead02`、`face_smile_03`），由 `src/lib/live2dViewer/clips.ts` 拆成风格、动作或情绪与变体编号；常见的词翻译（`page.live2d.motionStyle.*`、`motionAction.*`、`emotion.*`），其余按原样显示，`nb`、`dark`、`night` 这类前缀作为小标签显示在行名下面。
 - 状态：加载进度（已取到的文件数）、浏览器不支持（列出缺少的能力）、剧情库里没有文件、网络错误与重试。动作和表情第一次用到时才下载（约 1 KB），下载失败时面板上有提示，模型继续原来的动作。没有动作包的模型（`motion` 为 `null`）只有呼吸和物理。
 
 ## 代码
@@ -63,10 +69,13 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 | `src/lib/live2dViewer/models.ts` | 索引解析、模型名解析、排序、地址 |
 | `src/lib/live2dViewer/client.ts` | 读取模型索引和剧情背景列表 |
 | `src/lib/live2dViewer/view.ts` | 缩放与平移的计算 |
+| `src/lib/live2dViewer/clips.ts` | 动作与表情的分组 |
 | `src/components/live2d/useLive2DViewer.ts` | 播放器的生命周期、状态与操作 |
-| `src/components/live2d/Live2DModelStage.tsx` | 舞台、手势、浮层 |
-| `src/components/live2d/Live2DModelPanel.tsx` | 控制面板 |
-| `src/components/live2d/BackgroundPickerDialog.tsx` | 背景选择 |
+| `src/components/live2d/Live2DModelStage.tsx` | 舞台、工具栏、手势、浮层 |
+| `src/components/live2d/Live2DInspector.tsx` | 面板（模型、动作、表情、场景四页） |
+| `src/components/live2d/Live2DModelPicker.tsx` | 角色头像与模型列表 |
+| `src/components/live2d/Live2DClipRows.tsx` | 动作和表情的行与变体按钮 |
+| `src/components/live2d/Live2DBackgroundGrid.tsx` | 背景缩略图 |
 | `src/app/live2d/` | 页面 |
 
-`bun run --cwd web test:live2d-viewer` 检查变量校验、模型名与索引解析、地址和缩放计算。
+`bun run --cwd web test:live2d-viewer` 检查变量校验、模型名与索引解析、地址、缩放计算和动作表情的分组。
