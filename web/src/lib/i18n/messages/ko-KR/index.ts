@@ -1,3 +1,4 @@
+import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
     common: {
@@ -678,6 +679,7 @@ export const koKRMessages = {
                 guessMusic: "곡 맞히기",
                 chartPreview: "채보 미리보기",
                 storyPlayer: "스토리 플레이어",
+                costume3d: "3D 의상",
                 mysekaiPreviewScene: "MYSEKAI 미리보기",
                 assetViewer: "에셋 브라우저",
                 assetVersions: "버전 업데이트 기록",
@@ -750,6 +752,7 @@ export const koKRMessages = {
             guessMusic: "짧은 구간을 듣고 악곡 맞히기",
             chartPreview: "채보 파일 미리보기",
             storyPlayer: "스토리를 Live2D로 재생하고 대본과 함께 보기",
+            costume3d: "캐릭터의 의상을 3D로 보기",
             mysekaiPreview: "MYSEKAI 백경 이벤트의 상위 투고 보기",
             mysekaiPreviewRanking: "MYSEKAI 백경 랭킹 작품 미리보기",
             mysekaiPreviewScene: "UID 또는 브라우저의 JSON으로 3D MYSEKAI 씬 미리보기",
@@ -1032,6 +1035,7 @@ export const koKRMessages = {
             selectSearchLabel: "옵션 검색",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
+        costume3d: costume3dMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
             r6: {"engineSource":"장면 엔진 소스:"},
@@ -1910,6 +1914,7 @@ export const koKRMessages = {
             notFoundTitle: "의상 {id}을(를) 찾을 수 없습니다",
             notFoundDesc: "아직 수록되지 않은 의상일 수 있습니다",
             backToList: "의상 도감으로 돌아가기",
+            view3d: "3D로 보기",
             colorSchemesLabel: "컬러 배리에이션",
             noPartsData: "아직 파츠 데이터가 없습니다",
             extraPartTag: "{label}(전용)",
