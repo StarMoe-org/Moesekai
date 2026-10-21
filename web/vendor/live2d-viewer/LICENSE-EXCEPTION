@@ -1,0 +1,26 @@
+Additional permission under GNU AGPL version 3 section 7
+附加许可（依据 GNU AGPL 第 3 版第 7 条）
+
+As an additional permission under section 7 of the GNU Affero General Public
+License version 3, the copyright holders of this program give you permission
+to link this program with the Live2D Cubism Core library (or a modified
+version of that library), and to convey the resulting work. You must obey the
+GNU Affero General Public License version 3 in all respects for all of the
+code used other than the Live2D Cubism Core library.
+
+This additional permission does not grant you any rights to the Live2D Cubism
+SDK itself. You remain responsible for obtaining the Live2D Cubism SDK from
+Live2D Inc. and for complying with its own licence terms.
+
+If you modify this program, you may extend this exception to your version of
+the program, but you are not obliged to do so. If you do not wish to do so,
+delete this exception statement from your version.
+
+---
+
+作为 GNU AGPL 第 3 版第 7 条下的附加许可，本程序的版权持有者允许你将本程序
+与 Live2D Cubism Core 库（或其修改版本）链接，并分发由此产生的作品。除
+Live2D Cubism Core 库之外的所有代码，你仍须在各方面遵守 GNU AGPL 第 3 版。
+
+本附加许可不授予你对 Live2D Cubism SDK 本身的任何权利。你仍需自行从
+Live2D Inc. 取得 Live2D Cubism SDK 并遵守其许可条款。

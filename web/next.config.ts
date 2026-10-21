@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { live2dCheckConfig } from "./src/lib/live2dViewer/config";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
 import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 
@@ -36,6 +37,11 @@ try {
   sseWebCheckSources();
 } catch (error) {
   throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /; NEXT_PUBLIC_SSE_WEB_INAPPS is region=unpack pairs`);
+}
+try {
+  live2dCheckConfig();
+} catch (error) {
+  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /`);
 }
 
 function getAllowedDevOrigins(): string[] {
