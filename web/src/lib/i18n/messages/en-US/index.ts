@@ -2647,6 +2647,8 @@ export const enUSMessages = {
             },
             filters: {
                 categoryTitle: "Choose a soundtrack section",
+                scrollCategoriesBack: "Scroll sections left",
+                scrollCategoriesForward: "Scroll sections right",
                 searchPlaceholder: "Search soundtrack titles or kana...",
                 sortBySeq: "Sort by No.",
                 sortByTitle: "Sort by Title",

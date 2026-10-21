@@ -2670,6 +2670,8 @@ export const jaJPMessages = {
       },
       filters: {
         categoryTitle: 'Choose a soundtrack section',
+        scrollCategoriesBack: 'セクションを左へスクロール',
+        scrollCategoriesForward: 'セクションを右へスクロール',
         searchPlaceholder: 'Search soundtrack titles or kana...',
         sortBySeq: 'Sort by No.',
         sortByTitle: 'Sort by Title'
