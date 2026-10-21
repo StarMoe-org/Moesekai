@@ -30,7 +30,8 @@ import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { formatCharacterDisplayName } from "@/lib/character-name";
 import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, SegmentedButton, Surface } from "@/components/md3";
-import { mdArrowBack, mdBadge, mdPerson, mdPlayingCards, mdZoomIn } from "@/components/md3/icons";
+import { mdArrowBack, mdBadge, mdFace, mdPerson, mdPlayingCards, mdZoomIn } from "@/components/md3/icons";
+import { live2dCharacterHref } from "@/lib/live2dViewer/models";
 
 // Derive unit field → icon filename from centralized maps
 const UNIT_FIELD_ICONS: Record<string, string> = Object.fromEntries(
@@ -214,6 +215,11 @@ export default function CharacterDetailClient() {
                         <div className="flex items-center justify-center gap-1.5 p-3 type-label-m text-on-surface-variant">
                             <Icon path={mdZoomIn} size={16} />
                             {t("page.character.clickExpand")}
+                        </div>
+                        <div className="flex justify-center px-3 pb-3">
+                            <Button variant="tonal" icon={mdFace} href={live2dCharacterHref(character.id)}>
+                                {t("page.character.viewLive2D")}
+                            </Button>
                         </div>
                     </Surface>
                 </div>
