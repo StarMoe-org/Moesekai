@@ -116,7 +116,7 @@ export default function StickerMakerContent() {
     const [position, setPosition] = useState({ x: 148, y: 58 });
     const [fontSize, setFontSize] = useState(47);
     const [textColor, setTextColor] = useState("");
-    const [spaceSize, setSpaceSize] = useState(1);
+    const [spaceSize, setSpaceSize] = useState(47);
     const [charSpacing, setCharSpacing] = useState(0);
     const [rotate, setRotate] = useState(-2);
     const [curve, setCurve] = useState(false);
@@ -302,7 +302,8 @@ export default function StickerMakerContent() {
         setPosition({ x: sticker.defaultText.x, y: sticker.defaultText.y });
         setRotate(sticker.defaultText.r);
         setFontSize(sticker.defaultText.s);
-        setSpaceSize(1);
+        // One line per font size. At 1 every line landed on the first, below the slider's minimum of 18.
+        setSpaceSize(Math.max(18, sticker.defaultText.s));
         setTextColor("");
         setCurve(false);
         // setFontFamily("YurukaStd"); // Keep previous font selection or reset? Let's keep.
@@ -362,6 +363,8 @@ export default function StickerMakerContent() {
 
         // Draw Text
         ctx.lineWidth = 9;
+        // The default miter joins push the thick outline out into spikes at sharp glyph corners.
+        ctx.lineJoin = "round";
         ctx.save();
         ctx.translate(position.x, position.y);
         ctx.rotate(rotate / 10);

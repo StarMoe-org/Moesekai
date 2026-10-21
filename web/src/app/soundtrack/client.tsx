@@ -13,6 +13,7 @@ import { Banner, Button, Chip, CircularProgress, EmptyState, Icon, IconButton, L
 import {
     mdArrowDownward,
     mdArrowUpward,
+    mdChevronLeft,
     mdChevronRight,
     mdDownload,
     mdError,
@@ -728,6 +729,38 @@ function SoundtrackContent() {
 
         setVisibleTrackLimit(limit => Math.min(limit + SOUNDTRACK_LIST_BATCH_SIZE, filteredTracks.length));
     }, [filteredTracks.length, hasMoreTracks]);
+
+    // The category strip only scrolls sideways, which takes a trackpad or a shift+wheel, so it gets
+    // previous/next buttons that are disabled at either end.
+    const categoryStripRef = useRef<HTMLDivElement>(null);
+    const categoryRowRef = useRef<HTMLDivElement>(null);
+    const [categoryStripEdges, setCategoryStripEdges] = useState({ atStart: true, atEnd: true });
+
+    const updateCategoryStripEdges = useCallback(() => {
+        const strip = categoryStripRef.current;
+        if (!strip) return;
+        const atStart = strip.scrollLeft <= 1;
+        const atEnd = strip.scrollLeft + strip.clientWidth >= strip.scrollWidth - 1;
+        setCategoryStripEdges(prev => (prev.atStart === atStart && prev.atEnd === atEnd ? prev : { atStart, atEnd }));
+    }, []);
+
+    useEffect(() => {
+        const strip = categoryStripRef.current;
+        const row = categoryRowRef.current;
+        if (!strip || !row) return;
+        // Reports once on observe, then whenever the strip resizes or the tiles inside it change.
+        const observer = new ResizeObserver(updateCategoryStripEdges);
+        observer.observe(strip);
+        observer.observe(row);
+        return () => observer.disconnect();
+    }, [updateCategoryStripEdges]);
+
+    const scrollCategoryStrip = useCallback((direction: -1 | 1) => {
+        const strip = categoryStripRef.current;
+        if (!strip) return;
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        strip.scrollBy({ left: direction * strip.clientWidth * 0.8, behavior: reduceMotion ? "auto" : "smooth" });
+    }, []);
 
     const updateTrackUrlParam = useCallback((track: MysekaiMusicSoundTrackMaster | null) => {
         if (typeof window === "undefined") return;
@@ -1570,81 +1603,107 @@ function SoundtrackContent() {
 
                         {/* Category Cards Filter Carousel */}
                         <div className="w-full">
-                            <h3 className="mb-3 flex items-center gap-2 type-title-s text-on-surface">
-                                <Icon path={mdSell} size={20} className="text-primary" />
-                                {t("page.soundtrack.filters.categoryTitle")}
-                            </h3>
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                                <h3 className="flex items-center gap-2 type-title-s text-on-surface">
+                                    <Icon path={mdSell} size={20} className="text-primary" />
+                                    {t("page.soundtrack.filters.categoryTitle")}
+                                </h3>
+                                <div className="flex gap-1">
+                                    <IconButton
+                                        icon={mdChevronLeft}
+                                        variant="tonal"
+                                        size="xs"
+                                        label={t("page.soundtrack.filters.scrollCategoriesBack")}
+                                        disabled={categoryStripEdges.atStart}
+                                        onClick={() => scrollCategoryStrip(-1)}
+                                    />
+                                    <IconButton
+                                        icon={mdChevronRight}
+                                        variant="tonal"
+                                        size="xs"
+                                        label={t("page.soundtrack.filters.scrollCategoriesForward")}
+                                        disabled={categoryStripEdges.atEnd}
+                                        onClick={() => scrollCategoryStrip(1)}
+                                    />
+                                </div>
+                            </div>
 
                             {/* Horizontal sliding categories list (scrollbars hidden via no-scrollbar) */}
-                            <div className="no-scrollbar -mx-1 flex gap-3 overflow-x-auto px-1 pb-3 pt-1">
-                                {/* "ALL" Card */}
-                                <button
-                                    type="button"
-                                    aria-pressed={selectedCategoryId === null}
-                                    onClick={() => selectCategory(null)}
-                                    className={`${CATEGORY_TILE_CLASS} w-24 ${selectedCategoryId === null ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
-                                >
-                                    <span className="type-label-s text-on-surface-variant">ALL</span>
-                                    <span className="type-label-l">{t("page.soundtrack.allCategory")}</span>
-                                </button>
-
-                                {/* Spoiler-only supplemental BGM category */}
-                                {isShowSpoiler && (
+                            <div
+                                ref={categoryStripRef}
+                                onScroll={updateCategoryStripEdges}
+                                className="no-scrollbar -mx-1 overflow-x-auto px-1 pb-3 pt-1"
+                            >
+                                <div ref={categoryRowRef} className="flex w-max gap-3">
+                                    {/* "ALL" Card */}
                                     <button
                                         type="button"
-                                        aria-pressed={selectedCategoryId === SPOILER_CATEGORY_FILTER}
-                                        onClick={() => selectCategory(SPOILER_CATEGORY_FILTER)}
-                                        className={`${CATEGORY_TILE_CLASS} w-32 ${selectedCategoryId === SPOILER_CATEGORY_FILTER ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
+                                        aria-pressed={selectedCategoryId === null}
+                                        onClick={() => selectCategory(null)}
+                                        className={`${CATEGORY_TILE_CLASS} w-24 ${selectedCategoryId === null ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
                                     >
-                                        <span className="relative z-10 flex items-center gap-1.5 type-label-s text-on-surface-variant">
-                                            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: SPOILER_CATEGORY_THEME.from }} />
-                                            {t("common.badge.spoiler")} · {formatNumber(spoilerTrackCount)}
-                                        </span>
-                                        <span className="relative z-10 block max-w-full truncate type-label-l">
-                                            {t("page.soundtrack.spoiler.categoryName")}
-                                        </span>
+                                        <span className="type-label-s text-on-surface-variant">ALL</span>
+                                        <span className="type-label-l">{t("page.soundtrack.allCategory")}</span>
                                     </button>
-                                )}
 
-                                {/* List of Categories */}
-                                {categories.map(cat => {
-                                    const active = selectedCategoryId === cat.id;
-                                    const theme = CATEGORY_THEMES[cat.id] ?? DEFAULT_THEME;
-
-                                    return (
+                                    {/* Spoiler-only supplemental BGM category */}
+                                    {isShowSpoiler && (
                                         <button
                                             type="button"
-                                            key={cat.id}
-                                            aria-pressed={active}
-                                            onClick={() => selectCategory(cat.id)}
-                                            className={`group ${CATEGORY_TILE_CLASS} w-32 ${active ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
+                                            aria-pressed={selectedCategoryId === SPOILER_CATEGORY_FILTER}
+                                            onClick={() => selectCategory(SPOILER_CATEGORY_FILTER)}
+                                            className={`${CATEGORY_TILE_CLASS} w-32 ${selectedCategoryId === SPOILER_CATEGORY_FILTER ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
                                         >
-                                            {/* Faint jacket background */}
-                                            {isPerformanceVisuals && (
-                                                <div className="pointer-events-none absolute inset-0 opacity-15">
-                                                    <Image
-                                                        src={getMysekaiRawAssetUrl(`music_record_soundtrack/jacket/${cat.assetbundleName}/${cat.assetbundleName}.webp`, assetSource)}
-                                                        alt=""
-                                                        fill
-                                                        className="object-cover"
-                                                        unoptimized
-                                                    />
-                                                </div>
-                                            )}
-
-                                            {/* Category Indicator Tag */}
                                             <span className="relative z-10 flex items-center gap-1.5 type-label-s text-on-surface-variant">
-                                                <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: theme.from }} />
-                                                CAT #{cat.id}
+                                                <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: SPOILER_CATEGORY_THEME.from }} />
+                                                {t("common.badge.spoiler")} · {formatNumber(spoilerTrackCount)}
                                             </span>
-
-                                            {/* Name */}
                                             <span className="relative z-10 block max-w-full truncate type-label-l">
-                                                {cat.name}
+                                                {t("page.soundtrack.spoiler.categoryName")}
                                             </span>
                                         </button>
-                                    );
-                                })}
+                                    )}
+
+                                    {/* List of Categories */}
+                                    {categories.map(cat => {
+                                        const active = selectedCategoryId === cat.id;
+                                        const theme = CATEGORY_THEMES[cat.id] ?? DEFAULT_THEME;
+
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={cat.id}
+                                                aria-pressed={active}
+                                                onClick={() => selectCategory(cat.id)}
+                                                className={`group ${CATEGORY_TILE_CLASS} w-32 ${active ? CATEGORY_TILE_SELECTED : CATEGORY_TILE_IDLE}`}
+                                            >
+                                                {/* Faint jacket background */}
+                                                {isPerformanceVisuals && (
+                                                    <div className="pointer-events-none absolute inset-0 opacity-15">
+                                                        <Image
+                                                            src={getMysekaiRawAssetUrl(`music_record_soundtrack/jacket/${cat.assetbundleName}/${cat.assetbundleName}.webp`, assetSource)}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover"
+                                                            unoptimized
+                                                        />
+                                                    </div>
+                                                )}
+
+                                                {/* Category Indicator Tag */}
+                                                <span className="relative z-10 flex items-center gap-1.5 type-label-s text-on-surface-variant">
+                                                    <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: theme.from }} />
+                                                    CAT #{cat.id}
+                                                </span>
+
+                                                {/* Name */}
+                                                <span className="relative z-10 block max-w-full truncate type-label-l">
+                                                    {cat.name}
+                                                </span>
+                                            </button>
+                                        );
+                                    })}
+                                </div>
                             </div>
                         </div>
 

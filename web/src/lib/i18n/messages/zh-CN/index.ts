@@ -2651,6 +2651,8 @@ export const zhCNMessages = {
             },
             filters: {
                 categoryTitle: "选择原声带板块",
+                scrollCategoriesBack: "向左查看板块",
+                scrollCategoriesForward: "向右查看板块",
                 searchPlaceholder: "搜索原声带或拼音假名...",
                 sortBySeq: "按序号排序",
                 sortByTitle: "按标题排序",
