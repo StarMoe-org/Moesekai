@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button, Icon, Tabs, TextField, cn } from "@/components/md3";
-import { mdBlock, mdCheckroom, mdSearch } from "@/components/md3/icons";
+import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { blocked, type Costume3dLook, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
@@ -31,8 +31,8 @@ function Thumbnail({ src, className }: { src: string | null; className?: string 
 }
 
 /**
- * One choice of the wardrobe: a large thumbnail, its name, and a swatch per colour that picks
- * that colour at once. The tile takes the unit's colour, as the stage does.
+ * One choice of the wardrobe: a large thumbnail on a tile tinted with the unit's colour, its
+ * name, and a round swatch per colour that picks that colour at once.
  */
 function Card({ thumbnail, title, subtitle, colors, tags, selected, disabled, hint, swatches, onClick, tint, icon }: {
     thumbnail: string | null;
@@ -49,7 +49,7 @@ function Card({ thumbnail, title, subtitle, colors, tags, selected, disabled, hi
     icon?: string;
 }) {
     return (
-        <div className={cn("flex min-w-0 flex-col gap-1", disabled && "opacity-40")}>
+        <div className={cn("group flex min-w-0 flex-col gap-1.5", disabled && "opacity-40")} data-selected={selected || undefined}>
             <button
                 type="button"
                 onClick={onClick}
@@ -57,21 +57,31 @@ function Card({ thumbnail, title, subtitle, colors, tags, selected, disabled, hi
                 aria-pressed={selected}
                 title={hint ?? title}
                 className={cn(
-                    "state-layer focus-ring relative aspect-square w-full overflow-hidden rounded-md3-md transition-shadow disabled:cursor-not-allowed",
-                    selected ? "ring-2 ring-primary ring-offset-2 ring-offset-surface-container-low" : "",
+                    "state-layer focus-ring relative aspect-square w-full overflow-hidden rounded-md3-lg transition-[outline-color,transform] duration-200 ease-md3-standard disabled:cursor-not-allowed",
+                    "outline outline-[3px] -outline-offset-[3px]",
+                    selected ? "outline-primary" : "outline-transparent group-hover:-translate-y-0.5",
                 )}
-                style={{ background: `color-mix(in srgb, ${tint} 22%, var(--md-sys-color-surface-container-high))` }}
+                style={{
+                    background: `linear-gradient(160deg, color-mix(in srgb, ${tint} 30%, var(--md-sys-color-surface-container-highest)), color-mix(in srgb, ${tint} 8%, var(--md-sys-color-surface-container)))`,
+                }}
             >
-                {icon ? <Icon path={icon} className="absolute inset-0 m-auto h-1/3 w-1/3 text-on-surface-variant" /> : <Thumbnail src={thumbnail} />}
-                {colors && (
-                    <span className="absolute right-1 top-1 rounded-md3-xs bg-surface-container-highest/90 px-1 type-label-s text-on-surface-variant">{colors}</span>
+                {icon ? <Icon path={icon} className="absolute inset-0 m-auto h-1/3 w-1/3 text-on-surface-variant" /> : <Thumbnail src={thumbnail} className="p-1" />}
+                {selected && (
+                    <span className="absolute left-1.5 top-1.5 grid h-5 w-5 place-items-center rounded-full bg-primary text-on-primary">
+                        <Icon path={mdCheck} className="h-3.5 w-3.5" />
+                    </span>
                 )}
-                {tags && <span className="absolute bottom-1 left-1 flex flex-wrap gap-0.5">{tags}</span>}
+                {colors && (
+                    <span className="absolute right-1.5 top-1.5 rounded-full bg-surface-container-lowest/85 px-1.5 type-label-s text-on-surface">{colors}</span>
+                )}
+                {tags && <span className="absolute bottom-1.5 left-1.5 flex flex-wrap gap-0.5">{tags}</span>}
             </button>
-            <span className={cn("truncate type-label-m", selected ? "font-bold text-primary" : "text-on-surface")} title={title}>{title}</span>
-            {subtitle && <span className="-mt-1 truncate type-label-s text-on-surface-variant">{subtitle}</span>}
+            <div className="min-w-0 px-0.5">
+                <p className={cn("truncate type-label-l", selected ? "text-primary" : "text-on-surface")} title={title}>{title}</p>
+                {subtitle && <p className="truncate type-label-s text-on-surface-variant">{subtitle}</p>}
+            </div>
             {swatches && swatches.length > 1 && (
-                <div className="flex flex-wrap gap-[3px]">
+                <div className="flex flex-wrap gap-1 px-0.5">
                     {swatches.map(swatch => (
                         <button
                             key={swatch.key}
@@ -82,11 +92,13 @@ function Card({ thumbnail, title, subtitle, colors, tags, selected, disabled, hi
                             aria-label={`${title} · ${swatch.label}`}
                             title={swatch.label}
                             className={cn(
-                                "focus-ring relative h-5 w-5 overflow-hidden rounded-md3-xs bg-surface-container-high disabled:cursor-not-allowed",
-                                swatch.selected ? "ring-2 ring-primary" : "ring-1 ring-outline-variant",
+                                "focus-ring relative h-5 w-5 overflow-hidden rounded-full bg-surface-container-high transition-shadow disabled:cursor-not-allowed",
+                                swatch.selected
+                                    ? "shadow-[0_0_0_2px_var(--md-sys-color-surface-container-low),0_0_0_4px_var(--md-sys-color-primary)]"
+                                    : "shadow-[0_0_0_1px_var(--md-sys-color-outline-variant)]",
                             )}
                         >
-                            <Thumbnail src={swatch.thumbnail} />
+                            <Thumbnail src={swatch.thumbnail} className="scale-150" />
                         </button>
                     ))}
                 </div>
@@ -192,10 +204,15 @@ export function Wardrobe(props: WardrobeProps) {
         selectedIndex + 1,
     );
 
-    // The selected costume is scrolled into view when the role or the costume changes from outside.
-    const selectedRef = useRef<HTMLDivElement>(null);
+    // The selected card is brought into view when the role or the tab changes, within the
+    // wardrobe's own scroll only (on narrow screens the grid scrolls with the page: left alone).
+    const scrollerRef = useRef<HTMLDivElement>(null);
     useEffect(() => {
-        if (tab === "costume") selectedRef.current?.scrollIntoView({ block: "nearest" });
+        const scroller = scrollerRef.current;
+        const card = scroller?.querySelector<HTMLElement>("[data-selected]");
+        if (!scroller || !card || scroller.scrollHeight <= scroller.clientHeight) return;
+        const offset = card.getBoundingClientRect().top - scroller.getBoundingClientRect().top;
+        if (offset < 0 || offset > scroller.clientHeight - card.offsetHeight) scroller.scrollTop += offset - 8;
     }, [tab, catalog]);
 
     const fullHead = Boolean(look?.fullHead);
@@ -207,7 +224,7 @@ export function Wardrobe(props: WardrobeProps) {
         </Banner>
     ) : null;
 
-    const grid = "grid grid-cols-[repeat(auto-fill,minmax(5.5rem,1fr))] gap-x-2 gap-y-3";
+    const grid = "grid grid-cols-[repeat(auto-fill,minmax(6.25rem,1fr))] gap-x-3 gap-y-4";
     let body: React.ReactNode;
     if (tab === "costume") {
         const shown = paged.shown as RoleCostume[];
@@ -218,7 +235,7 @@ export function Wardrobe(props: WardrobeProps) {
                     const shownColor = selected ? colorId : costume.colors[0]?.colorId ?? 1;
                     const upcoming = costume.publishedAt == null || costume.publishedAt > now;
                     return (
-                        <div key={costume.costumeNumber} ref={selected ? selectedRef : undefined}>
+                        <div key={costume.costumeNumber} className="min-w-0">
                             <Card
                                 tint={tint}
                                 thumbnail={costumeThumbnail(costume.costumeNumber, shownColor)}
@@ -324,13 +341,13 @@ export function Wardrobe(props: WardrobeProps) {
     const placeholder = tab === "costume" ? t("page.costume3d.searchPlaceholder") : tab === "hair" ? t("page.costume3d.hairSearchPlaceholder") : t("page.costume3d.headSearchPlaceholder");
 
     return (
-        // Inside the page's @container: on wide screens the grid scrolls within the wardrobe.
-        <div className="flex min-h-0 flex-col gap-3 @5xl:h-full">
+        // Inside the page's @container: beside the stage the grid scrolls within the wardrobe.
+        <div className="flex min-h-0 flex-col gap-3 @3xl:flex-1">
             <Tabs
                 items={[
-                    { value: "costume", label: <span>{t("page.costume3d.costumes")}{count(costumes.length)}</span> },
-                    { value: "hair", label: <span>{t("page.costume3d.hair")}{count(hairs.filter(part => part.costumeNumber === 0 || released(part.publishedAt)).length)}</span> },
-                    { value: "head", label: <span>{t("page.costume3d.head")}{count(heads.filter(group => released(group.publishedAt)).length)}</span> },
+                    { value: "costume", icon: mdApparel, label: <span>{t("page.costume3d.costumes")}{count(costumes.length)}</span> },
+                    { value: "hair", icon: mdFace3, label: <span>{t("page.costume3d.hair")}{count(hairs.filter(part => part.costumeNumber === 0 || released(part.publishedAt)).length)}</span> },
+                    { value: "head", icon: mdCrown, label: <span>{t("page.costume3d.head")}{count(heads.filter(group => released(group.publishedAt)).length)}</span> },
                 ]}
                 value={tab}
                 onValueChange={onTab}
@@ -350,7 +367,7 @@ export function Wardrobe(props: WardrobeProps) {
                 {follow && <Button variant="tonal" size="s" onClick={follow}>{t("page.costume3d.followCostume")}</Button>}
             </div>
             {tab !== "costume" && notes}
-            <div className="flex flex-col gap-3 pt-1 @5xl:min-h-0 @5xl:flex-1 @5xl:overflow-y-auto @5xl:pr-1">
+            <div ref={scrollerRef} className="-mx-1 flex flex-col gap-3 px-1 pb-2 pt-1 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto">
                 {body}
                 {(tab === "costume" ? costumeList : tab === "hair" ? hairList : headList).length === 0 && (
                     <p className="py-8 text-center type-body-m text-on-surface-variant">{t("page.costume3d.noMatches")}</p>
