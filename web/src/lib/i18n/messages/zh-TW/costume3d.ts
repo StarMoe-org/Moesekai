@@ -1,7 +1,6 @@
 export const costume3dMessages = {
     "title": "3D 服裝",
     "description": "選一個角色，查看其每套服裝的 3D 效果，可以切換顏色、髮型與頭飾。",
-    "characters": "角色",
     "unit": "團體",
     "version": "版本",
     "costumes": "服裝",

@@ -1,7 +1,6 @@
 export const costume3dMessages = {
     "title": "3D衣装",
     "description": "キャラクターを選んで、各衣装を着た姿を 3D で見られます。カラー・髪型・ヘアアクセも切り替えられます。",
-    "characters": "キャラクター",
     "unit": "ユニット",
     "version": "バージョン",
     "costumes": "衣装",

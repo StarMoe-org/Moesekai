@@ -12,7 +12,7 @@ import type { Costume3dCurve, Costume3dMotion } from "@/types/costume3d";
 
 type Evaluate = (t: number) => number;
 
-export function curveEvaluator(curve: Costume3dCurve): Evaluate {
+function curveEvaluator(curve: Costume3dCurve): Evaluate {
     if (curve.kind === "constant") {
         const value = curve.value;
         return () => value;
@@ -85,7 +85,7 @@ function unityRest(node: THREE.Object3D): Rest {
 }
 
 /** The nodes below the body root by transform path, with their rest transforms. */
-export interface Rig {
+interface Rig {
     nodes: Map<string, THREE.Object3D>;
     rest: Map<THREE.Object3D, Rest>;
 }
@@ -115,7 +115,7 @@ interface Track {
     scale: Evaluate[];
 }
 
-export interface BoundClip {
+interface BoundClip {
     clip: Clip;
     tracks: Track[];
     shapes: Array<{ name: string; evaluate: Evaluate }>;
