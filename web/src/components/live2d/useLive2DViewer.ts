@@ -56,6 +56,9 @@ function failure(error: unknown): Live2DViewerPhase {
     };
 }
 
+/** How long the stage keeps one size before the drawing buffer follows it. */
+const RESIZE_SETTLE_MS = 150;
+
 /** Device pixels per CSS pixel the stage is drawn at: sharp on high-density screens, capped at 2. */
 function pixelRatio(): number {
     return Math.min(window.devicePixelRatio || 1, 2);
@@ -108,14 +111,25 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
         canvas.className = "absolute inset-0 size-full";
         host.replaceChildren(canvas);
 
-        const follow = () => {
+        const measure = () => {
             const rect = host.getBoundingClientRect();
-            const width = Math.max(1, Math.round(rect.width * pixelRatio()));
-            const height = Math.max(1, Math.round(rect.height * pixelRatio()));
-            viewer?.resize(width, height);
-            return [width, height] as const;
+            return [Math.max(1, Math.round(rect.width * pixelRatio())), Math.max(1, Math.round(rect.height * pixelRatio()))] as const;
         };
-        const observer = new ResizeObserver(() => follow());
+        // The drawing buffer follows the stage once its size has settled. Resizing the buffer
+        // clears it until the next frame, so a stage resized on every frame (iOS Safari's toolbars
+        // sliding as the page scrolls) would flicker; meanwhile the canvas stretches the last frame.
+        let applied = "";
+        let settling = 0;
+        const follow = () => {
+            const [width, height] = measure();
+            if (`${width}x${height}` === applied) return;
+            applied = `${width}x${height}`;
+            viewer?.resize(width, height);
+        };
+        const observer = new ResizeObserver(() => {
+            window.clearTimeout(settling);
+            settling = window.setTimeout(follow, RESIZE_SETTLE_MS);
+        });
         const refresh = () => {
             if (viewer && !signal.aborted) setStateOf({ key, state: read(viewer) });
         };
@@ -128,7 +142,8 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
                 setPhase({ kind: "unsupported", missing });
                 return;
             }
-            const [width, height] = follow();
+            const [width, height] = measure();
+            applied = `${width}x${height}`;
             const core = live2dCoreUrl();
             const created = await Viewer.create({
                 canvas,
@@ -166,6 +181,7 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
         return () => {
             controller.abort();
             observer.disconnect();
+            window.clearTimeout(settling);
             viewerRef.current = null;
             viewer?.destroy();
             host.replaceChildren();
