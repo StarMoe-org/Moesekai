@@ -966,6 +966,7 @@ export const zhTWPagePrimary = {
             notFoundTitle: "服裝 {id} 找不到",
             notFoundDesc: "該服裝可能尚未收錄",
             backToList: "返回服裝圖鑒",
+            view3d: "3D 預覽",
             colorSchemesLabel: "配色方案",
             noPartsData: "目前沒有部件資料",
             extraPartTag: "{label} (專屬)",

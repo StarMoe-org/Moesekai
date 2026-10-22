@@ -1,3 +1,4 @@
+import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -680,6 +681,7 @@ export const jaJPMessages = {
         guessMusic: '曲当てクイズ',
         chartPreview: '譜面プレビュー',
         storyPlayer: 'ストーリープレイヤー',
+        costume3d: '3D衣装',
         live2dViewer: 'Live2D ビューア',
         mysekaiPreviewScene: 'マイセカイプレビュー',
         assetViewer: 'アセットブラウザ',
@@ -753,6 +755,7 @@ export const jaJPMessages = {
       guessMusic: '短いフレーズを聴いて曲を当てる',
       chartPreview: 'Preview chart files',
       storyPlayer: 'ストーリーを Live2D で再生し台本と並べて読む',
+      costume3d: 'キャラクターの衣装を 3D で見る',
       live2dViewer: 'ストーリーの Live2D モデルとモーション・表情を見る',
       mysekaiPreview: 'Browse the top MySekai entries',
       mysekaiPreviewRanking: 'View ranked MySekai preview works',
@@ -1036,6 +1039,7 @@ export const jaJPMessages = {
       selectSearchLabel: "選択肢を検索",
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
+      costume3d: costume3dMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},
             r6: {"engineSource":"シーンエンジンのソース："},
@@ -1915,6 +1919,7 @@ export const jaJPMessages = {
       notFoundTitle: 'Costume {id} Not Found',
       notFoundDesc: 'This costume may not be cataloged yet',
       backToList: 'Back to Costume Encyclopedia',
+      view3d: '3D で見る',
       colorSchemesLabel: 'Color Variants',
       noPartsData: 'No parts data yet',
       extraPartTag: '{label} (Exclusive)',
