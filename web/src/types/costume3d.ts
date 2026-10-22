@@ -102,6 +102,8 @@ export interface Costume3dPartRecord {
     bundle: string;
     kind: "body" | "face" | "accessory" | "textures" | "motion" | "settings";
     model: string | null;
+    /** `components.json`: the prefab's non-geometry components (springs, colliders, constraints). */
+    components: string | null;
     /** `file` is relative to `library/`. */
     textures: Array<{ name: string; file: string }>;
     motions: Array<{ name: string; file: string; stopTime: number; loopTime: boolean }>;

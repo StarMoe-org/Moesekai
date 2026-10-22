@@ -321,7 +321,7 @@ interface Costume3dSelection {
 |---|---|
 | M1 首发 | 第 3.1 节全部 P0：独立页面、角色 / 服装 / 颜色 / 发型 / 头饰、舞台与动作、URL 状态、服装详情入口、错误处理。数据先用 CN（JP 跑完后加上） |
 | M2 | P1：卡牌和角色详情入口、截图、全屏、转台、复制链接；JP 数据 |
-| M3 保真度 | SpringBone 物理（头发、裙摆）、`CharacterAccessoryTransformData` 头饰按脸偏移、身高缩放、眉毛透过头发（模板）、脸部 SDF 阴影；与游戏截图逐项对比 |
+| M3 保真度 | SpringBone 物理（头发、裙摆）与 Unity 约束已实现（2026-10-22，见文末「物理」）。其余待做：头发与身体的碰撞（`colliderFlag` 的含义待逆向）、`CharacterAccessoryTransformData` 头饰按脸偏移、身高缩放、眉毛透过头发（模板）、脸部 SDF 阴影、`ExtraBone` 手臂扭转 |
 | M4 | 服装详情页内嵌舞台、表情预设、按服装生成 OG 图 |
 
 ## 9. 决策（2026-10-21 已确认）
@@ -370,3 +370,21 @@ interface Costume3dSelection {
 - **上线前还需要**：
   - 把 CN 输出发布到 `s3://sekai-extra-assets/costume3d/cn/`（需维护者批准）；
   - 确认资源站对 pjsk.moe 的跨域放行。
+
+## 物理（2026-10-22）
+
+此前舞台上的裙摆和头发不会动，动作时腿直接穿过裙子。现在 `web/src/lib/costume3d/physics.ts` 读取 body 和 face 的 `components.json`，在每帧动作之后运行：
+
+- **Unity 约束**：
+  - 支持的类型：`AimConstraint`（裙摆前后的支点朝向两膝之间）、`PositionConstraint`（大腿碰撞体跟随两膝中点）、`RotationConstraint`（后发跟随胸部）、`ParentConstraint`。
+  - 偏移按静止姿势计算，相当于 Unity「Activate」时记下的值，再按权重与静止姿势混合。这样不用复刻 Unity 的欧拉角约定，在镜像坐标下也保持正确。
+- **SpringBone**：按 UTJ SpringBone（MIT）的算法实现，游戏的 SekaiSpringBone / SpringManager 就基于它：
+  - 以固定 60 Hz 步长做 Verlet 积分，刚度把骨骼拉回静止方向，阻尼抵消速度；
+  - 保持骨骼长度；
+  - 用球形和胶囊碰撞体把骨尖和骨骼中点推出去（胶囊沿节点本地 +Y 延伸 `height`）；
+  - 绕支点的 y / z 角度限制：数据里裙摆都只允许向外摆，不允许向身体内侧摆；
+  - 最后由骨尖位置反推骨骼旋转，按 `dynamicRatio` 与动作给的旋转混合。
+- **实测**：用固定步长逐帧驱动 CN 的 10 套服装，覆盖女性、男性体型和虚拟歌手：
+  - 没有 NaN，骨骼最大摆角 47°；
+  - 穿模基本消失：初音未来「时髦少女连衣裙」从 100% 的采样帧穿模、最深 4.4 cm，降到 2%、1.5 cm；星乃一歌「振奋色彩」从 6.7 cm 降到 1.3 cm；
+  - 每帧耗时约 0.1 ms（38 根骨骼）。
