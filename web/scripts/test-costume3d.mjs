@@ -154,4 +154,79 @@ assert.equal(selectionParams({ ...selection, head: null, hair: 5 }, "jp").toStri
 assert.equal(costume3dHref({ costumeNumber: 880, colorId: 2, characterId: 1 }), "/costume-3d?ch=1&c=880&col=2");
 assert.equal(costume3dHref({}), "/costume-3d");
 
+// ---------------------------------------------------------------- physics
+const THREE = await import("three");
+const { Costume3dPhysics, pinned, resolverFor } = await import("../src/lib/costume3d/physics.ts");
+
+// A skirt-like chain: a pivot, a spring bone hanging down 10 cm (its tip is its child at +X), a
+// sphere collider in front of where it hangs, and a knee the pivot would aim at.
+function rig() {
+    const root = new THREE.Group();
+    const body = new THREE.Object3D(); body.name = "body"; root.add(body);
+    const hip = new THREE.Object3D(); hip.name = "Hip"; hip.position.set(0, 1, 0); body.add(hip);
+    const pivot = new THREE.Object3D(); pivot.name = "Skirt_offset";
+    pivot.quaternion.setFromUnitVectors(new THREE.Vector3(1, 0, 0), new THREE.Vector3(0, -1, 0)); hip.add(pivot);
+    const bone = new THREE.Object3D(); bone.name = "EX_Skirt"; pivot.add(bone);
+    const tip = new THREE.Object3D(); tip.name = "Skirt_end"; tip.position.set(0.1, 0, 0); bone.add(tip);
+    const knee = new THREE.Object3D(); knee.name = "Knee"; knee.position.set(0, -0.4, 0); hip.add(knee);
+    const collider = new THREE.Object3D(); collider.name = "KneeSphere"; knee.add(collider);
+    const holder = new THREE.Object3D(); holder.name = "Holder"; hip.add(holder);
+    return { root, body, hip, pivot, bone, tip, knee, collider, holder };
+}
+const components = [
+    { class: "SpringManager", node: "Hip", enabled: true, fields: { dynamicRatio: 1, enableCollision: 1, enableAngleLimits: 1, gravity: { x: 0, y: 0, z: 0 }, springBones: [{ $ref: { component: 1 } }] } },
+    { class: "SekaiSpringBone", node: "Hip/Skirt_offset/EX_Skirt", enabled: true, fields: {
+        stiffnessForce: 300, dragForce: 0.4, radius: 0.03, springForce: { x: 0, y: 0, z: 0 },
+        pivotNode: { $ref: { node: "Hip/Skirt_offset" } }, sphereColliders: [{ $ref: { component: 2 } }], capsuleColliders: [],
+        yAngleLimits: { active: 0, min: 0, max: 0 }, zAngleLimits: { active: 0, min: 0, max: 0 } } },
+    { class: "SpringSphereCollider", node: "Hip/Knee/KneeSphere", enabled: true, fields: { radius: 0.03 } },
+    { class: "PositionConstraint", node: "Hip/Holder", enabled: true, fields: { m_Active: true, m_Weight: 1, m_Sources: [{ sourceTransform: { $ref: { node: "Hip/Knee" } }, weight: 1 }] } },
+];
+const step = (physics, r, frames, move) => { for (let i = 0; i < frames; i++) { move?.(i); physics.update(r.root, 1 / 60); } };
+const world = (node) => node.getWorldPosition(new THREE.Vector3());
+
+let r = rig();
+let physics = Costume3dPhysics.build(r.root, [{ components, resolve: pinned(components, resolverFor(r.body)) }]);
+assert.equal(physics.springCount, 1);
+assert.equal(physics.constraintCount, 1);
+// At rest nothing moves: the tip hangs 10 cm below the hip.
+step(physics, r, 30);
+assert.ok(world(r.tip).distanceTo(new THREE.Vector3(0, 0.9, 0)) < 1e-4);
+
+// The knee comes up into the skirt: the tip is pushed out of the knee's sphere, and keeps its length.
+step(physics, r, 120, i => { r.knee.position.set(0, -0.4 + Math.min(i, 60) * 0.005, 0.015); });
+const tip = world(r.tip), center = world(r.collider), head = world(r.bone);
+assert.ok(tip.distanceTo(center) >= 0.06 - 1e-3, `tip ${tip.distanceTo(center).toFixed(3)} m from the knee`);
+assert.ok(Math.abs(tip.distanceTo(head) - 0.1) < 1e-4);
+assert.ok([tip.x, tip.y, tip.z].every(Number.isFinite));
+// The position constraint carried its node with the knee, at the offset it had in the rest pose (40 cm above).
+assert.ok(world(r.holder).distanceTo(world(r.knee).add(new THREE.Vector3(0, 0.4, 0))) < 1e-6);
+
+// Angle limits: the bone may swing towards the pivot's +Y (up to 30 degrees) but not past -Y.
+r = rig();
+const limited = structuredClone(components);
+limited[1].fields.yAngleLimits = { active: 1, min: -30, max: 0 };
+limited[1].fields.sphereColliders = [];
+physics = Costume3dPhysics.build(r.root, [{ components: limited, resolve: pinned(limited, resolverFor(r.body)) }]);
+// Swing the hip hard one way and the other: inertia throws the tip both ways.
+for (const dz of [0.02, -0.02]) step(physics, r, 40, () => { r.hip.position.z += dz; });
+const pivotQ = r.pivot.getWorldQuaternion(new THREE.Quaternion());
+const v = world(r.tip).sub(world(r.bone));
+const forward = new THREE.Vector3(1, 0, 0).applyQuaternion(pivotQ), down = new THREE.Vector3(0, -1, 0).applyQuaternion(pivotQ);
+const normal = new THREE.Vector3(0, 0, -1).applyQuaternion(pivotQ);
+const projection = v.clone().addScaledVector(normal, -v.dot(normal));
+const angle = THREE.MathUtils.radToDeg(Math.atan2(projection.dot(down), projection.dot(forward)));
+assert.ok(angle <= 0.5 && angle >= -30.5, `angle ${angle.toFixed(1)}`);
+
+// The face's paths are pinned before its nodes move, and its bones are the body's of the same name.
+r = rig();
+const face = new THREE.Object3D(); face.name = "face";
+const faceHip = new THREE.Object3D(); faceHip.name = "Hip"; face.add(faceHip);
+const hair = new THREE.Object3D(); hair.name = "EX_Hair"; faceHip.add(hair);
+const shared = new Map([["Hip", r.hip]]);
+const resolve = pinned([{ class: "SekaiSpringBone", node: "Hip/EX_Hair", enabled: true, fields: { pivotNode: { $ref: { node: "Hip" } } } }], resolverFor(face, shared));
+r.hip.add(hair);
+assert.equal(resolve("Hip/EX_Hair"), hair);
+assert.equal(resolve("Hip"), r.hip);
+
 console.log("costume3d: ok");

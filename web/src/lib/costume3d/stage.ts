@@ -20,6 +20,7 @@ import { loadLibraryJson } from "./data";
 import type { Costume3dLook } from "./look";
 import { addOutlines, dress, type ColorTextures } from "./materials";
 import { bindClip, clipOf, MotionPlayer, rigOf, type Clip, type ClipPair, type MotionPhase } from "./motion";
+import { Costume3dPhysics, pinned, resolverFor, type Costume3dComponent, type PhysicsSource } from "./physics";
 
 const STAGE_RADIUS = 0.5;
 const STAGE_HEIGHT = 0.04;
@@ -160,7 +161,7 @@ export class Costume3dStage {
     private readonly clips = new Map<string, Promise<Clip | null>>();
     private readonly resizeObserver: ResizeObserver;
     private readonly intersectionObserver: IntersectionObserver;
-    private current: { group: THREE.Group; key: string } | null = null;
+    private current: { group: THREE.Group; key: string; physics: Costume3dPhysics | null } | null = null;
     private onScreen = true;
     private disposed = false;
     playing: boolean;
@@ -228,6 +229,8 @@ export class Costume3dStage {
     private readonly frame = () => {
         const dt = Math.min(this.clock.getDelta(), 0.1);
         if (this.playing) this.player.tick(dt);
+        // Springs keep moving while the motion is paused: they settle as they would in the game.
+        if (this.current?.physics) this.current.physics.update(this.current.group, dt);
         this.controls.update();
         this.renderer.render(this.scene, this.camera);
     };
@@ -304,12 +307,20 @@ export class Costume3dStage {
 
     replay(): void {
         this.player.reset();
+        this.player.tick(0);
+        this.resetPhysics();
         this.playing = true;
+    }
+
+    /** Springs at rest in the current pose: after the pose jumped. */
+    private resetPhysics(): void {
+        if (this.current?.physics) this.current.physics.reset(this.current.group);
     }
 
     restPose(): void {
         this.playing = false;
         this.player.restPose();
+        this.resetPhysics();
     }
 
     play(): void {
@@ -376,6 +387,14 @@ export class Costume3dStage {
         return textures;
     }
 
+    private async components(library: string, bundle: string | null | undefined): Promise<Costume3dComponent[]> {
+        if (!bundle) return [];
+        const record = await this.part(library, bundle);
+        if (!record.components) return [];
+        const file = await loadLibraryJson<{ components: Costume3dComponent[] }>(library, `${bundle}/${record.components}`);
+        return file.components ?? [];
+    }
+
     private clip(library: string, bundle: string, record: Costume3dPartRecord, name: string): Promise<Clip | null> {
         const key = `${library}${bundle}#${name}`;
         let pending = this.clips.get(key);
@@ -417,12 +436,14 @@ export class Costume3dStage {
             glb(variant.bodyBundle), glb(look.face), glb(look.accessory?.bundle),
             this.colorTextures(library, variant.bodyColor), this.colorTextures(library, look.accessory?.color),
             this.motion(library, variant.motion),
+            this.components(library, variant.bodyBundle), this.components(library, look.face),
         ];
         let done = 0;
         onProgress?.(0, tasks.length);
         for (const task of tasks) task.then(() => onProgress?.(++done, tasks.length), () => {});
-        const [body, face, accessory, bodyColors, accessoryColors, motion] = await Promise.all(tasks) as [
+        const [body, face, accessory, bodyColors, accessoryColors, motion, bodyComponents, faceComponents] = await Promise.all(tasks) as [
             GLTF | null, GLTF | null, GLTF | null, ColorTextures | null, ColorTextures | null, Awaited<ReturnType<Costume3dStage["motion"]>>,
+            Costume3dComponent[], Costume3dComponent[],
         ];
         const texture = (file: string, srgb: boolean) => this.texture(file, srgb, library);
         await Promise.all([
@@ -438,6 +459,19 @@ export class Costume3dStage {
 
         group.position.y = STAGE_HEIGHT;
         const faceMeshes: THREE.Mesh[] = [];
+        // The components name nodes by path below each prefab's root; the face's are found before
+        // attachFace moves them, and the bones it shares with the body are the body's.
+        const bodyRoot = body ? body.scene.getObjectByName("body") ?? body.scene : null;
+        const physicsSources: PhysicsSource[] = [];
+        if (bodyRoot && bodyComponents.length) {
+            physicsSources.push({ components: bodyComponents, resolve: pinned(bodyComponents, resolverFor(bodyRoot)) });
+        }
+        if (bodyRoot && face && faceComponents.length) {
+            const bodyNodes = new Map<string, THREE.Object3D>();
+            bodyRoot.traverse(object => { if (object !== bodyRoot && !bodyNodes.has(object.name)) bodyNodes.set(object.name, object); });
+            const faceRoot = face.scene.getObjectByName("face") ?? face.scene;
+            physicsSources.push({ components: faceComponents, resolve: pinned(faceComponents, resolverFor(faceRoot, bodyNodes)) });
+        }
         if (body) group.add(body.scene);
         if (face) {
             face.scene.traverse(object => {
@@ -459,7 +493,8 @@ export class Costume3dStage {
         addOutlines(group);
         group.traverse(object => { if (object.userData.isOutline) object.visible = this.outlines; });
 
-        const bodyRoot = body ? body.scene.getObjectByName("body") ?? body.scene : null;
+        // In the rest pose, before the motion: constraints keep the offsets they have here.
+        const physics = physicsSources.length ? Costume3dPhysics.build(group, physicsSources) : null;
         const rig = bodyRoot ? rigOf(bodyRoot) : null;
         const pair = (bodyClip: Clip | null, faceClip: Clip | null): ClipPair | null => (rig && (bodyClip || faceClip)
             ? { body: bodyClip && bindClip(bodyClip, rig), face: faceClip && bindClip(faceClip, rig) }
@@ -473,7 +508,7 @@ export class Costume3dStage {
             disposeGroup(this.current.group);
         }
         this.scene.add(group);
-        this.current = { group, key };
+        this.current = { group, key, physics };
         this.player.attach(rig, faceMeshes, pair(motion?.intro ?? null, motion?.introFace ?? null), pair(motion?.loop ?? null, motion?.loopFace ?? null));
         if (sameModels && phase !== "rest") {
             this.player.time = time;
@@ -485,6 +520,7 @@ export class Costume3dStage {
         } else {
             this.player.loopStart();
         }
+        this.resetPhysics();
         void this.trimTextures(group);
     }
 
