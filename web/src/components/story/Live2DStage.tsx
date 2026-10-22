@@ -117,22 +117,24 @@ interface Live2DStageProps {
 export function Live2DStage({ player, stageRef, className, style, children }: Live2DStageProps) {
     const { t } = useI18n();
     const reducedMotion = useReducedMotion();
-    const { phase, progress, playing, position, buffering, stats, fullscreen, toolbarShown, shown, onStageClick, wakeToolbar } = player;
+    const { phase, progress, playing, position, buffering, stats, fullscreen, toolbarShown, pointerShown, shown, onStageClick, followPointer, leavePointer, onStageKeyDown, onToolbarBlur } = player;
     const fade = reducedMotion ? reducedMotionFade : md3EffectsFast;
 
     return (
         <div
             ref={stageRef}
             onClick={onStageClick}
-            onPointerMove={wakeToolbar}
-            onPointerDown={wakeToolbar}
+            onPointerMove={followPointer}
+            onPointerDown={followPointer}
+            onPointerLeave={leavePointer}
+            onKeyDown={onStageKeyDown}
             className={cn(
                 // a container of its own: what lies over the picture is sized by the picture's
                 // width, in the page and in full screen alike
                 "@container relative w-full select-none overflow-hidden bg-scrim",
-                // in full screen the pointer rests with the toolbar (the site's themed
-                // pointer outranks `cursor-none` on an element that also has a cursor class)
-                fullscreen && !toolbarShown ? "cursor-none" : phase === "ready" && "cursor-pointer",
+                // in full screen the pointer hides once it rests (the site's themed pointer
+                // outranks `cursor-none` on an element that also has a cursor class)
+                fullscreen && !pointerShown ? "cursor-none" : phase === "ready" && "cursor-pointer",
                 className,
             )}
             style={style}
@@ -249,6 +251,7 @@ export function Live2DStage({ player, stageRef, className, style, children }: Li
                         <div
                             role="toolbar"
                             aria-label={t("page.story.live2d.controls")}
+                            onBlur={onToolbarBlur}
                             className="flex h-16 max-w-full items-center gap-2 rounded-full bg-surface-container px-3 text-on-surface shadow-elev-3"
                         >
                             <Live2DControls player={player} floating />
