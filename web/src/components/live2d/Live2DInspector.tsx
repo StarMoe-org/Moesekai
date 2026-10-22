@@ -81,14 +81,14 @@ export function Live2DInspector({
     );
 
     return (
-        <Surface as="aside" tone="low" radius="xl" className={cn("flex min-h-0 flex-col overflow-hidden", className)} aria-label={t("page.live2d.controls")}>
+        <Surface as="aside" tone="low" radius="xl" className={cn("flex flex-col overflow-hidden @4xl:min-h-0", className)} aria-label={t("page.live2d.controls")}>
             <Tabs items={tabs} value={tab} onValueChange={setTab} aria-label={t("page.live2d.controls")} className="shrink-0" />
             {clipError && (
                 <p role="alert" className="mx-3 mt-3 rounded-md3-md bg-error-container px-3 py-2 type-body-s text-on-error-container">
                     {t("page.live2d.clipFailed")}
                 </p>
             )}
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-3">
+            <div className="p-3 @4xl:min-h-0 @4xl:flex-1 @4xl:overflow-y-auto">
                 {tab === "models" && (
                     listStatus === "loading" ? (
                         <LoadingState className="min-h-40" label={t("page.live2d.listLoading")} />
