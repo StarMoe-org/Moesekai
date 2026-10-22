@@ -1,3 +1,4 @@
+import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -680,6 +681,7 @@ export const zhCNMessages = {
                 guessMusic: "猜歌曲",
                 chartPreview: "谱面预览器",
                 storyPlayer: "剧情浏览器",
+                costume3d: "3D 服装",
                 live2dViewer: "Live2D 预览",
                 mysekaiPreviewScene: "烤森预览器",
                 assetViewer: "资产浏览器",
@@ -753,6 +755,7 @@ export const zhCNMessages = {
             guessMusic: "听片段猜出歌曲",
             chartPreview: "预览谱面文件",
             storyPlayer: "播放 Live2D 剧情演出并对照剧本",
+            costume3d: "按角色查看服装的 3D 模型与动作",
             live2dViewer: "查看剧情里的 Live2D 模型、动作和表情",
             mysekaiPreview: "浏览烤森百景活动 TOP 投稿排行",
             mysekaiPreviewRanking: "查看烤森百景排行作品预览",
@@ -1036,6 +1039,7 @@ export const zhCNMessages = {
             selectSearchLabel: "搜索选项",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
+        costume3d: costume3dMessages,
         mysekaiInteractions: {
             r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},
             r6: {"engineSource":"场景引擎开源仓库："},
@@ -1915,6 +1919,7 @@ export const zhCNMessages = {
             notFoundTitle: "服装 {id} 未找到",
             notFoundDesc: "该服装可能尚未收录",
             backToList: "返回服装图鉴",
+            view3d: "3D 预览",
             colorSchemesLabel: "配色方案",
             noPartsData: "暂无部件数据",
             extraPartTag: "{label} (专属)",

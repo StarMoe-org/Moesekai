@@ -23,7 +23,8 @@ import {
 import { fetchMasterData } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
 import { Button, EmptyState, LoadingState, PageContainer, SectionCard, Surface } from "@/components/md3";
-import { mdArrowBack, mdCheckroom, mdGroup, mdInfo, mdLayers, mdPlayingCards } from "@/components/md3/icons";
+import { mdArrowBack, mdCheckroom, mdGroup, mdInfo, mdLayers, mdPlayingCards, md3dRotation } from "@/components/md3/icons";
+import { costume3dHref } from "@/lib/costume3d/look";
 
 // Helper to extract base name (remove _XX color suffix)
 function getVariantBaseName(assetName: string): string {
@@ -402,6 +403,21 @@ export default function CostumeDetailClient() {
                                     </div>
                                 </div>
                             )}
+
+                            {/* 3D: the first character who can wear it, in the colour shown */}
+                            <div className="border-t border-outline-variant p-4">
+                                <Button
+                                    variant="filled"
+                                    icon={md3dRotation}
+                                    href={costume3dHref({
+                                        costumeNumber,
+                                        colorId: selectedColorId,
+                                        characterId: representative.characterIds?.find(charId => charId <= 26),
+                                    })}
+                                >
+                                    {tI18n("page.costumes.view3d")}
+                                </Button>
+                            </div>
                         </Surface>
                     </div>
 
@@ -474,10 +490,11 @@ export default function CostumeDetailClient() {
                                         .map(charId => {
                                             const characterName = getCharacterName(tI18n, charId);
                                             return (
-                                                <div
+                                                <Link
                                                     key={charId}
-                                                    className="flex items-center gap-2 rounded-full bg-surface-container py-1 pl-1 pr-3"
-                                                    title={characterName}
+                                                    href={costume3dHref({ costumeNumber, colorId: selectedColorId, characterId: charId })}
+                                                    className="state-layer focus-ring flex items-center gap-2 rounded-full bg-surface-container py-1 pl-1 pr-3"
+                                                    title={`${characterName} · ${tI18n("page.costumes.view3d")}`}
                                                 >
                                                     <div className="h-8 w-8 overflow-hidden rounded-full bg-surface-container-lowest">
                                                         <Image
@@ -492,7 +509,7 @@ export default function CostumeDetailClient() {
                                                     <span className="type-label-l text-on-surface">
                                                         {characterName}
                                                     </span>
-                                                </div>
+                                                </Link>
                                             );
                                         })}
                                 </div>

@@ -5,6 +5,7 @@ import path from "node:path";
 import { live2dCheckConfig } from "./src/lib/live2dViewer/config";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
 import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
+import { costume3dCheckConfig } from "./src/lib/costume3d/config";
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -37,6 +38,11 @@ try {
   sseWebCheckSources();
 } catch (error) {
   throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /; NEXT_PUBLIC_SSE_WEB_INAPPS is region=unpack pairs`);
+}
+try {
+  costume3dCheckConfig();
+} catch (error) {
+  throw new Error(`${error instanceof Error ? error.message : error}: NEXT_PUBLIC_COSTUME3D_BASE is a canonical https URL (http on localhost) ending in /; NEXT_PUBLIC_COSTUME3D_REGIONS is servers separated by commas`);
 }
 try {
   live2dCheckConfig();

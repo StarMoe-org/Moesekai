@@ -1,3 +1,4 @@
+import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -681,6 +682,7 @@ export const enUSMessages = {
                 guessMusic: "Guess the Song",
                 chartPreview: "Chart Preview",
                 storyPlayer: "Story Player",
+                costume3d: "3D Costumes",
                 live2dViewer: "Live2D Viewer",
                 mysekaiPreviewScene: "MySekai Previewer",
                 assetViewer: "Asset Browser",
@@ -754,6 +756,7 @@ export const enUSMessages = {
             guessMusic: "Guess the song from a short clip",
             chartPreview: "Preview chart files",
             storyPlayer: "Play stories in Live2D beside their script",
+            costume3d: "See each character's costumes in 3D",
             live2dViewer: "View the stories' Live2D models, motions and facials",
             mysekaiPreview: "Browse the top MySekai entries",
             mysekaiPreviewRanking: "View ranked MySekai preview works",
@@ -1037,6 +1040,7 @@ export const enUSMessages = {
             selectSearchLabel: "Search options",
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
+        costume3d: costume3dMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
             r6: {"engineSource":"Scene engine source:"},
@@ -1916,6 +1920,7 @@ export const enUSMessages = {
             notFoundTitle: "Costume {id} Not Found",
             notFoundDesc: "This costume may not be cataloged yet",
             backToList: "Back to Costume Encyclopedia",
+            view3d: "View in 3D",
             colorSchemesLabel: "Color Variants",
             noPartsData: "No parts data yet",
             extraPartTag: "{label} (Exclusive)",

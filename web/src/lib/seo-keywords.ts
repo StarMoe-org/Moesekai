@@ -690,6 +690,24 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
     },
   ),
+  costume_3d: definePage(
+    "/costume-3d",
+    { "zh-CN": "3D 服装", "en-US": "3D Costumes", "ja-JP": "3D衣装", "ko-KR": "3D 의상", "zh-TW": "3D 服裝" },
+    {
+      "zh-CN": "按角色查看 Project SEKAI 服装的 3D 模型，播放服装展示动作，自由切换颜色、发型与头饰。",
+      "en-US": "See Project Sekai characters in every costume in 3D, with the costume screen's motions and switchable colours, hairstyles and head accessories.",
+      "ja-JP": "Project SEKAI のキャラクターごとに衣装を 3D で表示。衣装画面のモーション付きで、カラー・髪型・ヘアアクセも切り替えられます。",
+      "ko-KR": "Project SEKAI 캐릭터별로 의상을 3D로 보고, 의상 화면의 모션과 함께 색상·헤어스타일·액세서리를 바꿀 수 있습니다.",
+      "zh-TW": "按角色查看 Project SEKAI 服裝的 3D 模型，播放服裝展示動作，自由切換顏色、髮型與頭飾。",
+    },
+    {
+      "zh-CN": ["3D 服装", "服装预览", "换装", "3D 模型"],
+      "en-US": ["3D costumes", "costume viewer", "dress up", "3D model"],
+      "ja-JP": ["3D衣装", "衣装プレビュー", "着せ替え", "3Dモデル"],
+      "ko-KR": ["3D 의상", "의상 미리보기", "코디"],
+      "zh-TW": ["3D 服裝", "服裝預覽", "換裝"],
+    },
+  ),
   live2d_viewer: definePage(
     "/live2d",
     { "zh-CN": "Live2D 预览", "en-US": "Live2D Viewer", "ja-JP": "Live2D ビューア", "ko-KR": "Live2D 뷰어", "zh-TW": "Live2D 預覽" },
