@@ -155,7 +155,7 @@ function Live2DViewerContent() {
                 <LoadingState />
             ) : (
                 <div className="@container">
-                    <div className="grid gap-3 @4xl:h-[clamp(36rem,calc(100dvh-13rem),64rem)] @4xl:grid-cols-[minmax(0,1fr)_24rem]">
+                    <div className="grid gap-3 @4xl:h-[clamp(36rem,calc(100svh-13rem),64rem)] @4xl:grid-cols-[minmax(0,1fr)_24rem]">
                         <Live2DModelStage
                             phase={phase}
                             hostRef={hostRef}
@@ -171,7 +171,7 @@ function Live2DViewerContent() {
                                 viewer.defaultMotion ? viewer.playMotion(viewer.defaultMotion, { loop }) : false,
                                 viewer.defaultFacial ? viewer.setFacial(viewer.defaultFacial) : false,
                             ]))}
-                            className="h-[min(60dvh,36rem)] min-h-80 @4xl:h-full"
+                            className="h-[min(60svh,36rem)] min-h-80 @4xl:h-full"
                         />
                         <Live2DInspector
                             region={region}
