@@ -929,6 +929,7 @@ export const zhTWPagePrimary = {
             introductionTitle: "自我介紹",
             relatedCardsTitle: "相關卡牌",
             relatedCardsCount: "共 {count} 張",
+            viewLive2D: "查看 Live2D 模型",
             genders: {
                 female: "女性",
                 male: "男性",

@@ -47,6 +47,7 @@
   { "path": "/chart-preview/", "pageKey": "chart_preview", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/story-player/", "pageKey": "story_player", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/costume-3d/", "pageKey": "costume_3d", "priority": 0.6, "changefreq": "monthly", "indexable": true },
+  { "path": "/live2d/", "pageKey": "live2d_viewer", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/chart-image/", "pageKey": "chart_image", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Parameter-driven chart image renderer; content depends entirely on query string" },
   { "path": "/mysekai-preview/", "pageKey": "mysekai_preview", "priority": 0.6, "changefreq": "daily", "indexable": true },
   { "path": "/mysekai-preview/ranking/", "pageKey": "mysekai_preview_ranking", "priority": 0.5, "changefreq": "daily", "indexable": true },

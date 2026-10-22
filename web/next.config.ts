@@ -2,6 +2,7 @@ import type { NextConfig } from "next";
 import { existsSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { live2dCheckConfig } from "./src/lib/live2dViewer/config";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
 import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 import { costume3dCheckConfig } from "./src/lib/costume3d/config";
@@ -42,6 +43,11 @@ try {
   costume3dCheckConfig();
 } catch (error) {
   throw new Error(`${error instanceof Error ? error.message : error}: NEXT_PUBLIC_COSTUME3D_BASE is a canonical https URL (http on localhost) ending in /; NEXT_PUBLIC_COSTUME3D_REGIONS is servers separated by commas`);
+}
+try {
+  live2dCheckConfig();
+} catch (error) {
+  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /`);
 }
 
 function getAllowedDevOrigins(): string[] {
