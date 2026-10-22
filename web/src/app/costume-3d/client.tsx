@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
+import ExternalLink from "@/components/ExternalLink";
 import { CharacterPicker } from "@/components/costume3d/CharacterPicker";
 import { Costume3dViewport } from "@/components/costume3d/Costume3dViewport";
 import { Wardrobe, type WardrobeTab } from "@/components/costume3d/Wardrobe";
@@ -354,6 +355,21 @@ function Costume3dContent() {
                     </Surface>
                 </div>
             </div>
+            {/* What Haruki's projects gave this page; the models, motions and renderer are the site's own. */}
+            <section className="mt-6 rounded-md3-lg bg-surface-container-low px-4 py-3 type-body-s text-on-surface-variant">
+                <h2 className="mb-1 type-label-l text-on-surface">{t("page.costume3d.credits.title")}</h2>
+                <ul className="list-disc space-y-1 pl-5">
+                    <li>
+                        <ExternalLink href="https://github.com/Team-Haruki" target="_blank" className="text-primary underline-offset-2 hover:underline">Team-Haruki</ExternalLink>
+                        {t("page.costume3d.credits.masterdata")}
+                    </li>
+                    <li>
+                        <ExternalLink href="https://haruki.seiunx.com/costumes" target="_blank" className="text-primary underline-offset-2 hover:underline">{t("page.costume3d.credits.toolboxLink")}</ExternalLink>
+                        {t("page.costume3d.credits.toolbox")}
+                    </li>
+                </ul>
+                <p className="mt-1">{t("page.costume3d.credits.own")}</p>
+            </section>
         </PageContainer>
     );
 }

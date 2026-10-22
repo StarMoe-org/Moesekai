@@ -50,5 +50,12 @@ export const costume3dMessages = {
         "networkTitle": "3D リソースに接続できません",
         "networkMessage": "通信状況を確認してページを再読み込みしてください。",
         "useRegion": "{region} サーバーで見る"
+    },
+    "credits": {
+        "title": "クレジット",
+        "masterdata": "：3D データの生成に使う Project SEKAI のマスターデータとゲームのバージョン情報は、Team-Haruki が公開しているマスターデータリポジトリによるものです。",
+        "toolboxLink": "Haruki ツールボックスの「衣装コーデ」",
+        "toolbox": "：着せ替えの機能範囲と、ワードローブ形式の選択（衣装・髪型・ヘアアクセのカードとカラーの小画像）はこのページを参考にしています。",
+        "own": "3D モデル・テクスチャ・モーションは Moesekai がゲームのリソースから独自に書き出し、描画も独自実装です。Haruki のコードやホストされたリソースは使用していません。"
     }
 };

@@ -50,5 +50,12 @@ export const costume3dMessages = {
         "networkTitle": "Can't reach the 3D resources",
         "networkMessage": "Check your connection and reload the page.",
         "useRegion": "View {region}"
+    },
+    "credits": {
+        "title": "Credits",
+        "masterdata": ": the Project SEKAI masterdata and game version information the 3D data is generated from come from the masterdata repositories Team-Haruki maintains in public.",
+        "toolboxLink": "Haruki Toolbox's costume coordination page",
+        "toolbox": ": the scope of the dress-up and its wardrobe-style picking (costume, hair and head cards with colour swatches) follow this page.",
+        "own": "The 3D models, textures and motions are exported by Moesekai from the game's resources and rendered by its own code; no Haruki code or hosted resources are used."
     }
 };
