@@ -83,8 +83,14 @@ const NOT_PLAYED_KEY = {
 
 /** A stall shorter than this is not shown: decoding a model's textures holds a frame or two. */
 const BUFFERING_AFTER_MS = 400;
-/** In full screen the toolbar leaves this long after the pointer last moved, while it plays. */
+/** In full screen the pointer hides this long after it last moved; a touch's toolbar leaves as long after. */
 const TOOLBAR_IDLE_MS = 3000;
+/**
+ * In full screen the toolbar shows only while the pointer is this close to the stage's bottom: the
+ * toolbar's own 88px (64px high, 24px above the edge) and some room above it. Anywhere else it
+ * would cover the talk window's text.
+ */
+const TOOLBAR_ZONE_PX = 112;
 
 /**
  * Closes the player that is loading or playing now, for the next one to take its place: one
@@ -125,9 +131,14 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
     const [buffering, setBuffering] = useState(false);
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
     const [fullscreen, setFullscreen] = useState(false);
-    /** In full screen: the pointer moved lately, so the toolbar is there. */
-    const [toolbarAwake, setToolbarAwake] = useState(false);
-    const toolbarTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    /** In full screen: the pointer moved lately, so it is shown. */
+    const [pointerAwake, setPointerAwake] = useState(false);
+    const pointerTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    /** In full screen: the pointer is at the stage's bottom, or a touch was there lately. */
+    const [pointerAtBottom, setPointerAtBottom] = useState(false);
+    const touchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+    /** In full screen: the keyboard went to the toolbar (Tab), so it stays while focus is in it. */
+    const [toolbarFocused, setToolbarFocused] = useState(false);
     const [settings, setSettings] = useState<SseWebSettings>(SSE_WEB_DEFAULT_SETTINGS);
     const [stats, setStats] = useState<Live2DStats | null>(null);
     const ratio = sseWebAspectRatio(settings);
@@ -314,6 +325,9 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         follow();
         const onFullscreen = () => {
             setFullscreen(document.fullscreenElement === stage);
+            // a full screen starts with the toolbar down, wherever the pointer was before
+            setPointerAtBottom(false);
+            setToolbarFocused(false);
             follow();
         };
         const observer = new ResizeObserver(follow);
@@ -349,7 +363,10 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         };
     }, [phase, settings.showStats]);
 
-    useEffect(() => () => clearTimeout(toolbarTimerRef.current), []);
+    useEffect(() => () => {
+        clearTimeout(pointerTimerRef.current);
+        clearTimeout(touchTimerRef.current);
+    }, []);
 
     // Leaving the page, or another episode or server in the same reader, ends the player.
     useEffect(() => () => close(), [close, selector, region]);
@@ -390,12 +407,35 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         else void stage.requestFullscreen().catch(() => {});
     };
 
-    /** In full screen: shows the toolbar, to leave again once the pointer has rested. */
-    const wakeToolbar = () => {
+    /**
+     * In full screen: follows the pointer over the stage. The pointer shows while it moves; the
+     * toolbar only while the pointer is at the stage's bottom (a touch there shows it for a while,
+     * a touch has no hover).
+     */
+    const followPointer = (event: React.PointerEvent<HTMLElement>) => {
         if (!fullscreen) return;
-        setToolbarAwake(true);
-        clearTimeout(toolbarTimerRef.current);
-        toolbarTimerRef.current = setTimeout(() => setToolbarAwake(false), TOOLBAR_IDLE_MS);
+        setPointerAwake(true);
+        clearTimeout(pointerTimerRef.current);
+        pointerTimerRef.current = setTimeout(() => setPointerAwake(false), TOOLBAR_IDLE_MS);
+        const atBottom = event.currentTarget.getBoundingClientRect().bottom - event.clientY <= TOOLBAR_ZONE_PX;
+        if (event.pointerType === "mouse" || event.pointerType === "pen") {
+            setPointerAtBottom(atBottom);
+        } else if (event.type === "pointerdown" && atBottom) {
+            setPointerAtBottom(true);
+            clearTimeout(touchTimerRef.current);
+            touchTimerRef.current = setTimeout(() => setPointerAtBottom(false), TOOLBAR_IDLE_MS);
+        }
+    };
+    const leavePointer = (event: React.PointerEvent<HTMLElement>) => {
+        if (event.pointerType === "mouse" || event.pointerType === "pen") setPointerAtBottom(false);
+    };
+    /** In full screen: Tab brings the toolbar up for the keyboard to reach it. */
+    const onStageKeyDown = (event: React.KeyboardEvent<HTMLElement>) => {
+        if (fullscreen && event.key === "Tab") setToolbarFocused(true);
+    };
+    /** Focus left the toolbar (not for one of its own buttons): it goes with the pointer again. */
+    const onToolbarBlur = (event: React.FocusEvent<HTMLElement>) => {
+        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setToolbarFocused(false);
     };
 
     const changeAuto = (next: boolean) => {
@@ -474,9 +514,12 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         buffering,
         notes,
         fullscreen,
-        // In full screen the toolbar floats over the picture and rests with the pointer; a paused
-        // picture, or one waiting for its reader, keeps it.
-        toolbarShown: fullscreen && (toolbarAwake || !playing || position.waitsForClick || position.waitsForAnswer),
+        // In full screen the toolbar floats over the picture's bottom, where the talk window's text
+        // is: it shows only while the pointer is down there (or the keyboard is in it), whether
+        // the story plays, is paused or waits for its reader.
+        toolbarShown: fullscreen && (pointerAtBottom || toolbarFocused),
+        /** In full screen: the pointer is shown (it moved lately, or the toolbar is up). */
+        pointerShown: fullscreen && (pointerAwake || pointerAtBottom || toolbarFocused),
         settings,
         ratio,
         stats,
@@ -488,7 +531,10 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         seek,
         onStageClick,
         toggleFullscreen,
-        wakeToolbar,
+        followPointer,
+        leavePointer,
+        onStageKeyDown,
+        onToolbarBlur,
         changeAuto,
         changeVolume,
         toggleMute,
