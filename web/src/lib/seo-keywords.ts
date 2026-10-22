@@ -708,6 +708,24 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["3D 服裝", "服裝預覽", "換裝"],
     },
   ),
+  live2d_viewer: definePage(
+    "/live2d",
+    { "zh-CN": "Live2D 预览", "en-US": "Live2D Viewer", "ja-JP": "Live2D ビューア", "ko-KR": "Live2D 뷰어", "zh-TW": "Live2D 預覽" },
+    {
+      "zh-CN": "在浏览器里查看 Project SEKAI 剧情的 Live2D 模型，播放游戏原本的动作与表情，可切换服装、缩放并垫上剧情背景，支持日服、简中、繁中、韩服与国际服。",
+      "en-US": "View Project Sekai's story Live2D models in your browser with the game's own motions and facials; switch costumes, zoom in and set a story background, for the JP, CN, TW, KR and EN servers.",
+      "ja-JP": "Project SEKAI のストーリーの Live2D モデルをブラウザで表示し、ゲームそのままのモーションと表情を再生できます。衣装の切り替え、拡大、背景の変更にも対応。",
+      "ko-KR": "Project SEKAI 스토리의 Live2D 모델을 브라우저에서 보고 게임 그대로의 모션과 표정을 재생할 수 있습니다. 의상 전환, 확대, 배경 변경을 지원합니다.",
+      "zh-TW": "在瀏覽器裡查看 Project SEKAI 劇情的 Live2D 模型，播放遊戲原本的動作與表情，可切換服裝、縮放並墊上劇情背景。",
+    },
+    {
+      "zh-CN": ["Live2D 预览", "Live2D 模型", "角色模型", "动作", "表情"],
+      "en-US": ["Live2D viewer", "Live2D model", "character model", "motions", "facials"],
+      "ja-JP": ["Live2D ビューア", "Live2D モデル", "キャラクターモデル", "モーション", "表情"],
+      "ko-KR": ["Live2D 뷰어", "Live2D 모델", "캐릭터 모델", "모션"],
+      "zh-TW": ["Live2D 預覽", "Live2D 模型", "角色模型"],
+    },
+  ),
   chart_image: definePage(
     "/chart-image",
     { "zh-CN": "谱面图片预览", "en-US": "Chart Image Viewer", "ja-JP": "譜面画像プレビュー" },

@@ -126,3 +126,6 @@ web/public/wasm/allium-deck_bg.wasm
 # 这里是 web/scripts/copy-sse-web.mjs 在 dev / build 前拷出来给浏览器加载的副本。
 # src/lib/sseWeb/release.ts 由 web/scripts/sync-sse-web.mjs 生成，同样**入库**。
 web/public/sse-web/
+# Live2D 模型查看器（SekaiLive2DViewer）的发布物，同上：入库的是 web/vendor/live2d-viewer/，
+# 这里是 web/scripts/copy-live2d-viewer.mjs 拷出来的副本；src/lib/live2dViewer/release.ts 入库。
+web/public/live2d-viewer/
