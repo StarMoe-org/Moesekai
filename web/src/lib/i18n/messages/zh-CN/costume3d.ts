@@ -55,7 +55,6 @@ export const costume3dMessages = {
         "title": "致谢",
         "masterdata": "：生成 3D 数据所用的 Project SEKAI masterdata 和游戏版本信息来自 Team-Haruki 公开维护的 masterdata 仓库。",
         "toolboxLink": "Haruki 工具箱「服装搭配」",
-        "toolbox": "：换装的功能范围和衣柜式的选择交互（服装 / 发型 / 头饰卡片、颜色小图）参考了这个页面。",
-        "own": "3D 模型、贴图和动作由 Moesekai 自行从游戏资源导出，渲染为自行实现，没有使用 Haruki 的代码或托管资源。"
+        "toolbox": "：换装的功能范围和衣柜式的选择交互（服装 / 发型 / 头饰卡片、颜色小图）参考了这个页面。"
     }
 };
