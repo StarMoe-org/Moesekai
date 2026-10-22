@@ -355,7 +355,7 @@ function Costume3dContent() {
                     </Surface>
                 </div>
             </div>
-            {/* What Haruki's projects gave this page; the models, motions and renderer are the site's own. */}
+            {/* What Haruki's projects gave this page. */}
             <section className="mt-6 rounded-md3-lg bg-surface-container-low px-4 py-3 type-body-s text-on-surface-variant">
                 <h2 className="mb-1 type-label-l text-on-surface">{t("page.costume3d.credits.title")}</h2>
                 <ul className="list-disc space-y-1 pl-5">
@@ -368,7 +368,6 @@ function Costume3dContent() {
                         {t("page.costume3d.credits.toolbox")}
                     </li>
                 </ul>
-                <p className="mt-1">{t("page.costume3d.credits.own")}</p>
             </section>
         </PageContainer>
     );
