@@ -5,7 +5,7 @@
  * - `NEXT_PUBLIC_COSTUME3D_BASE`: the directory of those per-server directories; the default
  *   is the published one on assets.pjsk.moe.
  * - `NEXT_PUBLIC_COSTUME3D_REGIONS`: the servers that have been published there, separated by
- *   commas (default `cn`). A server left out has no 3D costumes.
+ *   commas (default `jp,cn`). A server left out has no 3D costumes.
  *
  * Values must already be canonical (what the URL parser gives back), https, or http on a
  * loopback host for development.
@@ -17,7 +17,7 @@ export const COSTUME3D_REGIONS = ["jp", "cn", "tw", "kr", "en"] as const;
 export type Costume3dRegion = (typeof COSTUME3D_REGIONS)[number];
 
 const DEFAULT_BASE = "https://assets.pjsk.moe/sekai-extra-assets/costume3d/";
-const DEFAULT_REGIONS = "cn";
+const DEFAULT_REGIONS = "jp,cn";
 
 /**
  * The format versions this reader understands. An output whose `index/version.json` lists
