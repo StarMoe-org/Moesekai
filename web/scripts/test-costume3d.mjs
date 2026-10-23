@@ -12,13 +12,14 @@ const set = (values) => {
     Object.assign(process.env, values);
 };
 
-// With nothing set (Docker passes empty strings) only CN, published on assets.pjsk.moe.
+// With nothing set (Docker passes empty strings) JP and CN, published on assets.pjsk.moe.
 for (const empty of [{}, { NEXT_PUBLIC_COSTUME3D_BASE: "", NEXT_PUBLIC_COSTUME3D_REGIONS: " " }]) {
     set(empty);
     costume3dCheckConfig();
-    assert.deepEqual(costume3dRegions(), ["cn"]);
+    assert.deepEqual(costume3dRegions(), ["jp", "cn"]);
     assert.equal(costume3dSource("cn"), "https://assets.pjsk.moe/sekai-extra-assets/costume3d/cn/");
-    assert.equal(costume3dSource("jp"), null);
+    assert.equal(costume3dSource("jp"), "https://assets.pjsk.moe/sekai-extra-assets/costume3d/jp/");
+    assert.equal(costume3dSource("tw"), null);
     assert.equal(costume3dSource("xx"), null);
 }
 
