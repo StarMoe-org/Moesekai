@@ -6,7 +6,7 @@ import CharacterFilter from "@/components/common/CharacterFilter";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { Select } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
-import { getMysekaiFixtureThumbnailUrl } from "@/lib/assets";
+import { getMysekaiFixtureThumbnailUrls } from "@/lib/assets";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
 import type { CatalogEntry, ResourceSnapshot } from "@/lib/moly/catalog";
 import type { FurnitureData, FixtureRelations } from "@/lib/moly/furnitureData";
@@ -23,7 +23,7 @@ interface Props {
     relations: Map<number, FixtureRelations>;
     runtimeEntries: Map<string, CatalogEntry>;
     artworkPending: boolean;
-    assetSource: Parameters<typeof getMysekaiFixtureThumbnailUrl>[1];
+    assetSource: Parameters<typeof getMysekaiFixtureThumbnailUrls>[1];
     browse: BrowseState;
     filters: FurnitureFilters;
     selected: MolyKey | null;
@@ -111,7 +111,7 @@ export default function FurnitureBrowser({ data, snapshot, results, relations, r
                 return <button type="button" className="workspace-fixture-card" key={key} aria-pressed={selected === key}
                     onClick={() => select(key)} data-content-key={key}>
                     <span className="workspace-fixture-image"><FurnitureThumbnail snapshot={snapshot} image={runtime?.image} pending={artworkPending}
-                        fallback={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt="" width={180} height={160} />
+                        fallbacks={getMysekaiFixtureThumbnailUrls(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt="" width={180} height={160} />
                         <span className="workspace-fixture-id">#{fixture.id}</span>
                         {runtime?.available && <span className="workspace-scene-mark" aria-label={t("page.mysekaiWorkspace.sceneAvailable")}><svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="1.4" aria-hidden="true"><path d="m10 2 7 4v8l-7 4-7-4V6l7-4Z M3 6l7 4 7-4 M10 10v8" /></svg></span>}
                     </span>

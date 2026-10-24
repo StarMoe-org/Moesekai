@@ -10,7 +10,7 @@ import { TranslatedText } from "@/components/common/TranslatedText";
 import { ServerRegionIcon } from "@/components/common/ServerRegion";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
-import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
+import { getMysekaiFixtureThumbnailUrls, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
 import { getMysekaiGenreDisplayName, getMysekaiTagDisplayName } from "@/lib/mysekai-i18n";
 import { mysekaiDatabaseHref } from "@/lib/mysekai-source";
 import { useFurnitureMaterials, type FurnitureData, type FixtureRelations } from "@/lib/moly/furnitureData";
@@ -28,7 +28,7 @@ interface Props {
     runtimeEntry?: MolyEntry;
     artworkPending: boolean;
     relation?: FixtureRelations;
-    assetSource: Parameters<typeof getMysekaiFixtureThumbnailUrl>[1];
+    assetSource: Parameters<typeof getMysekaiFixtureThumbnailUrls>[1];
     canPlay: boolean;
     preparing: boolean;
     play(): void;
@@ -56,7 +56,7 @@ export default function FurnitureDetail({ fixture, data, snapshot, runtimeEntry,
     return <section className="workspace-fixture-detail" data-selected-content={`fixture:${fixture.id}`} aria-labelledby="workspace-fixture-title">
         <div className="workspace-detail-art">
             <FurnitureThumbnail snapshot={snapshot} image={runtimeEntry?.image} pending={artworkPending}
-                fallback={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt={fixture.name}
+                fallbacks={getMysekaiFixtureThumbnailUrls(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt={fixture.name}
                 width={300} height={240} priority />
             <span className="workspace-fixture-id">#{fixture.id}</span>
         </div>
