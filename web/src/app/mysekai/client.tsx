@@ -2,7 +2,6 @@
 import { useState, useEffect, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
-import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
 import DatabaseTable from "@/components/cards/DatabaseTable";
 import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
@@ -13,7 +12,8 @@ import { useTheme, replaceAssetSourceRegion, type ServerSourceType } from "@/con
 import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
 import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
 
-import { getMysekaiFixtureThumbnailUrl } from "@/lib/assets";
+import { getMysekaiFixtureThumbnailUrls } from "@/lib/assets";
+import FallbackImage from "@/components/common/FallbackImage";
 import {
     IMysekaiFixtureInfo,
     IMysekaiFixtureGenre,
@@ -423,7 +423,7 @@ function MysekaiContent() {
                         {view === "table" ? <DatabaseTable rows={displayedFixtures.map(fixture => ({
                             id: fixture.id,
                             href: mysekaiDatabaseHref(dataSource ?? serverSource, fixture.id, serverSource),
-                            thumbnail: <Image src={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt={fixture.name} fill className="object-contain" unoptimized />,
+                            thumbnail: <FallbackImage srcs={getMysekaiFixtureThumbnailUrls(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)} alt={fixture.name} fill className="object-contain" unoptimized />,
                             name: <TranslatedText original={fixture.name} category="mysekai" field="fixtureName" />,
                             details: getGenreName(fixture.mysekaiFixtureMainGenreId),
                         }))} /> : <div className="grid grid-cols-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4">
@@ -436,8 +436,8 @@ function MysekaiContent() {
                                     className="group flex h-full flex-col p-3"
                                 >
                                     <div className="relative aspect-square mb-2 bg-surface-container rounded-md3-sm overflow-hidden">
-                                        <Image
-                                            src={getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)}
+                                        <FallbackImage
+                                            srcs={getMysekaiFixtureThumbnailUrls(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId)}
                                             alt={fixture.name}
                                             fill
                                             className="object-contain p-2"

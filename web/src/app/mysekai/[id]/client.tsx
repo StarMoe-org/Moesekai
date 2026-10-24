@@ -12,7 +12,8 @@ import FixtureCharacterEntries from "@/components/mysekai-interactions/FixtureCh
 import InteractionEntryLink from "@/components/mysekai-interactions/InteractionEntryLink";
 import { mysekaiSource, mysekaiDatabaseHref } from "@/lib/mysekai-source";
 
-import { getMysekaiFixtureThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
+import { getMysekaiFixtureThumbnailUrls, getMysekaiMaterialThumbnailUrl } from "@/lib/assets";
+import FallbackImage from "@/components/common/FallbackImage";
 import {
     IMysekaiFixtureInfo,
     IMysekaiFixtureGenre,
@@ -258,7 +259,7 @@ function MysekaiFixtureDetailContent() {
         );
     }
 
-    const thumbnailUrl = getMysekaiFixtureThumbnailUrl(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId);
+    const thumbnailUrls = getMysekaiFixtureThumbnailUrls(fixture.assetbundleName, assetSource, fixture.mysekaiFixtureMainGenreId);
     const gridSize = fixture.gridSize;
 
     return (
@@ -296,8 +297,8 @@ function MysekaiFixtureDetailContent() {
                         <SectionCard title={t("page.mysekai.detail.thumbnail")} icon={mdImage} className="lg:sticky lg:top-24" bodyClassName="p-0">
                             <div className="relative aspect-[4/3] bg-surface-container flex items-center justify-center">
                                 <div className="relative w-32 h-32">
-                                    <Image
-                                        src={thumbnailUrl}
+                                    <FallbackImage
+                                        srcs={thumbnailUrls}
                                         alt={fixture.name}
                                         fill
                                         className="object-contain"

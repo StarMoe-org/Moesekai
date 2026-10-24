@@ -24,23 +24,15 @@ function getCurrentRegion(): string {
     }
 }
 
-export function getAssetBaseUrl(source: AssetSourceType): string {
-    let line: "main" | "overseas" = "main";
-    let region: string = "";
-
-    if (source.startsWith("overseas")) {
-        line = "overseas";
-    }
-
+function getAssetRegion(source: AssetSourceType): string {
     const hyphenIndex = source.indexOf("-");
-    if (hyphenIndex !== -1) {
-        region = source.substring(hyphenIndex + 1);
-    } else {
-        region = getCurrentRegion();
-    }
+    return hyphenIndex !== -1 ? source.substring(hyphenIndex + 1) : getCurrentRegion();
+}
 
+export function getAssetBaseUrl(source: AssetSourceType): string {
+    const line: "main" | "overseas" = source.startsWith("overseas") ? "overseas" : "main";
     const domain = line === "main" ? ASSET_DOMAIN_MAIN : ASSET_DOMAIN_OVERSEAS;
-    return `${domain}/sekai-${region}-assets`;
+    return `${domain}/sekai-${getAssetRegion(source)}-assets`;
 }
 
 function buildImageAssetUrl(source: AssetSourceType, assetPath: string): string {
@@ -226,16 +218,30 @@ export function getVirtualLiveBannerUrl(assetbundleName: string, source: AssetSo
 
 // ==================== MySEKAI Asset URLs ====================
 
-export function getMysekaiFixtureThumbnailUrl(assetbundleName: string, source: AssetSourceType = "main-jp", genreId: number = 0): string {
+// JP and EN ship each fixture thumbnail as its own bundle, so the image is stored
+// under a directory named after that bundle; CN, TW and KR pack them into a single
+// `mysekai/thumbnail/fixture` bundle and store the image directly in it. A fixture
+// only reaches the other layout once a region using it has released the fixture.
+const NESTED_FIXTURE_THUMBNAIL_REGIONS = new Set(["jp", "en"]);
+
+/** Candidate thumbnail URLs for a fixture, in the order they should be tried. */
+export function getMysekaiFixtureThumbnailUrls(assetbundleName: string, source: AssetSourceType = "main-jp", genreId: number = 0): string[] {
     if (genreId === 7) {
-        return buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_wall_appearance_1`);
+        return [buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_wall_appearance_1`)];
     }
 
     if (genreId === 8) {
-        return buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_floor_appearance_1`);
+        return [buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_floor_appearance_1`)];
     }
 
-    return buildPngImageAssetUrl(source, `mysekai/thumbnail/fixture/${assetbundleName}_1`);
+    const name = `${assetbundleName}_1`;
+    const nested = buildPngImageAssetUrl(source, `mysekai/thumbnail/fixture/${name}/${name}`);
+    const flat = buildPngImageAssetUrl(source, `mysekai/thumbnail/fixture/${name}`);
+    return NESTED_FIXTURE_THUMBNAIL_REGIONS.has(getAssetRegion(source)) ? [nested, flat] : [flat, nested];
+}
+
+export function getMysekaiFixtureThumbnailUrl(assetbundleName: string, source: AssetSourceType = "main-jp", genreId: number = 0): string {
+    return getMysekaiFixtureThumbnailUrls(assetbundleName, source, genreId)[0];
 }
 
 export function getPracticeTicketThumbnailUrl(resourceId: number, source: AssetSourceType = "main-jp"): string {
