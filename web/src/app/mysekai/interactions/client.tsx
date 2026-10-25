@@ -112,10 +112,10 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const page = Math.min(nav.page, pageCount);
     const contextFixture = nav.browse.fixture ? entries.get(`fixture:${nav.browse.fixture}`)?.title : undefined;
     const activeKey = live?.status.activeKey ?? null;
-    const phase = closing ? "restoring" : live?.status.phase ?? (session ? "preparing" : "idle");
+    const phase = closing ? "restoring" : runtimeError ? "error" : live?.status.phase ?? (session ? "preparing" : "idle");
     const preparing = Boolean(session && !live?.ready && !runtimeError);
     const currentAdmission = live?.selected?.key === nav.content && live.mode === "current" ? live.selected : null;
-    const canPlay = !preparing && !closing && Boolean(snapshot?.available && selected && (mode === "independent" ? selected.available : currentAdmission?.available));
+    const canPlay = !preparing && !closing && !runtimeError && Boolean(snapshot?.available && selected && (mode === "independent" ? selected.available : currentAdmission?.available));
     const reason = mode === "current" ? currentAdmission?.reasonCode ?? null : selected?.reasonCode ?? null;
     const catalogLoading = sourceReady && Boolean(region && !manifestFailed && (!manifest || (snapshot && !catalog && !catalogFailed)));
     const browserReady = !catalogLoading;
@@ -247,7 +247,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         requestAnimationFrame(() => document.querySelector(expanded ? ".workspace-stage" : ".workspace-body")?.scrollIntoView({ block: "start", behavior: "instant" }));
     };
     const launch = (key: MolyKey | null, preview = false, sound = soundEnabled) => {
-        if (!snapshot?.available || !manifest || closeInFlight.current) return;
+        if (!snapshot?.available || !manifest || closeInFlight.current || runtimeError) return;
         setRuntimeError(null); setNotice(null);
         if (session) {
             player.current?.setTextSession(key, key === nav.content ? translationPreview?.session ?? null : null);
@@ -578,7 +578,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                         <strong>{live?.status.activeTitle ?? t("page.mysekaiWorkspace.scene")}</strong>
                         <span>{t("page.mysekaiWorkspace.openScene")} ↑</span>
                     </button>
-                    {live?.status.canStop && (
+                    {!runtimeError && live?.status.canStop && (
                         <button
                             className="interaction-text-button"
                             disabled={closing}

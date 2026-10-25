@@ -61,7 +61,7 @@ export default function WorkspaceStage({
     const [expiredWeatherKey, setExpiredWeatherKey] = useState<string | null>(null);
     const weatherKey = session ? `${session.epoch}:${session.snapshot.id}` : null;
     const hasWeather = Boolean(live?.weather);
-    const sceneReady = Boolean(live?.ready);
+    const sceneReady = Boolean(!error && live?.scene?.ready);
 
     useEffect(() => {
         if (!weatherKey || !sceneReady || hasWeather) return;
@@ -72,8 +72,8 @@ export default function WorkspaceStage({
     const presentation = useStagePresentation(root, Boolean(session));
     if (!session) return null;
 
-    const phase = closing ? "restoring" : live?.status.phase ?? "preparing";
-    const busy = Boolean(live?.status.canStop);
+    const phase = closing ? "restoring" : error ? "error" : !sceneReady ? "preparing" : live?.status.phase ?? "preparing";
+    const busy = Boolean(!error && live?.status.canStop);
     const show = expanded || presentation.immersive;
     const weatherUnavailable = sceneReady && expiredWeatherKey === weatherKey;
 
