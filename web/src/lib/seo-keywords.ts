@@ -618,7 +618,7 @@ export const SEO_PAGE_METADATA = {
     "/prediction-next/planner",
     { "zh-CN": "冲榜规划器", "en-US": "Ranking Goal Planner", "ja-JP": "ランキングプランナー", "ko-KR": "랭킹 목표 플래너" },
     {
-      "zh-CN": "按 Project SEKAI 每期活动各自的规则（World Link 章节、终章、疲劳槽、Auto 特殊措施等）与你的卡组、时间预算，计算达成目标档位所需的每日打歌时长、火数与体力。",
+      "zh-CN": "按 Project SEKAI 每期活动各自的规则（World Link 章节、终章、休息槽、Auto 特殊措施等）与你的卡组、时间预算，计算达成目标档位所需的每日打歌时长、火数与体力。",
       "en-US": "Plan a Project SEKAI ranking goal: from each event's own rules (World Link chapters, finales, refresh gauge, Auto special measures), your deck and your time budget, work out the daily play time and stamina needed to reach a target tier.",
       "ja-JP": "Project SEKAI の各イベント固有のルール（ワールドリンクのチャプター、フィナーレ、リフレッシュゲージ、オートライブ特別措置など）と編成・プレイ可能時間から、目標順位に必要な1日のプレイ時間とライブボーナスを計算します。",
       "ko-KR": "Project SEKAI 각 이벤트 고유의 규칙(월드 링크 챕터, 피날레, 리프레시 게이지, 오토 특별 조치 등)과 덱, 가용 시간을 바탕으로 목표 순위에 필요한 하루 플레이 시간과 라이브 보너스를 계산합니다.",

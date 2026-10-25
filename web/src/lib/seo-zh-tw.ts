@@ -126,7 +126,7 @@ export const ZH_TW_SEO_PAGE_METADATA = {
     ),
     prediction_planner: page(
         "衝榜規劃器",
-        "依 Project SEKAI 每期活動各自的規則（World Link 章節、終章、疲勞槽、Auto 特殊措施等）與你的隊伍、時間預算，計算達成目標檔位所需的每日打歌時長、火數與體力。",
+        "依 Project SEKAI 每期活動各自的規則（World Link 章節、終章、休息槽、Auto 特殊措施等）與你的隊伍、時間預算，計算達成目標檔位所需的每日打歌時長、火數與體力。",
         ["衝榜規劃器", "衝榜規劃", "活動檔位", "火數計算", "體力計算", "World Link"],
     ),
     deck_recommend: page(
