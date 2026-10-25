@@ -30,6 +30,8 @@ export interface PlayerSession {
     /** Text locale captured by the initial Play, independent of later UI changes. */
     textLocale: MolyLocale;
     textSession?: MolyTextSession | null;
+    /** Retry discovers current publications before pinning reading and playback. */
+    refreshText?: boolean;
 }
 export interface RuntimeStageHandle {
     setTextSession(key: MolyKey | null, session: MolyTextSession | null): void;
@@ -56,7 +58,7 @@ type EmbedModule = { mountMoly(container: HTMLElement, options: MountOptions): M
 
 async function playbackText(request: PlayerSession, key: MolyKey, locale: MolyLocale,
     override: MolyTextSession | null, refresh: boolean): Promise<{ session: MolyTextSession | null; result?: EntryTextResult }> {
-    if (override) return { session: override };
+    if (override?.locale === locale) return { session: override };
     if (!request.snapshot.textSource) return { session: null };
     const signal = AbortSignal.timeout(15000);
     const catalog = await fetchContentCatalog(request.snapshot, signal);
@@ -245,7 +247,7 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                 mount.current = owned;
                 for (const action of queued.current.splice(0)) action(owned);
                 if (request.play && sequence === playSequence.current) {
-                    const text = await playbackText(request, request.play, request.textLocale, request.textSession ?? null, false)
+                    const text = await playbackText(request, request.play, request.textLocale, request.textSession ?? null, request.refreshText === true)
                         .catch(error => { console.warn("[moly] translated playback unavailable, using source", error); return { session: null, result: undefined }; });
                     if (!cancelled && sequence === playSequence.current) {
                         if (text.result) state.current.onTextResolved(text.result);

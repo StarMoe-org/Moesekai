@@ -80,6 +80,18 @@ has restored to idle, and restores the previous selection if configuration fails
 Historical font revisions do not accumulate in the selected set. A font change
 rebuilds the glyph atlas even when the visible code points are unchanged.
 
+The maintained stage also discovers the independent `fonts/latest.json` below
+its configured resource base. The catalogue lists exact base-font SHA coverage
+and approved immutable supplements. Final display strings select supplements
+automatically, including saved-draft previews; translators never upload fonts.
+The engine loader supplies the verified base-font SHA, so one release's coverage
+is never assumed for another. A source snapshot or translation revision does not
+contain this catalogue identity. Operators publish its font/licence/history
+objects once and set NextTrans's `MYSEKAI_FONT_CATALOG_URL` to the same catalogue.
+NextTrans displays unsupported characters and checks every publishable draft
+before changing its public pointer. The first full-font supplement costs
+29,350,000 raw bytes on first use; later requests reuse immutable HTTP cache.
+
 If translated playback cannot prepare its text or fonts, the stage shows a
 specific error and does not start that Play request. Details remain available for
 reading, with Retry and return-to-reading actions. A successful reading view does

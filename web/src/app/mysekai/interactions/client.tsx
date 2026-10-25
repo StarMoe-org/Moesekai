@@ -103,7 +103,8 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const selected = nav.content ? entries.get(nav.content) : undefined;
     const { detail, loading: detailLoading, failed: detailFailed } = useContentDetail(snapshot, selected, detailRetry);
     const translated = useEntryText(snapshot, detail, locale, manifest?.release.module);
-    const translationPreview = useTranslationPreview(snapshot, detail, manifest?.release.module);
+    const draftPreview = useTranslationPreview(snapshot, detail, manifest?.release.module);
+    const translationPreview = draftPreview?.session.locale === locale ? draftPreview : null;
     const visibleEntry = translationPreview?.entry ?? translated.entry ?? detail ?? selected;
     const deferredBrowse = useDeferredValue(nav.browse);
     const contentResults = useMemo(() => catalog ? filterCatalog(catalog, deferredBrowse, textIndex) : [], [catalog, deferredBrowse, textIndex]);
@@ -287,7 +288,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         const identity = ++realmSequence.current;
         setSession({ id: identity, epoch: identity, snapshot, release: manifest.release,
             initial: runtimeSelectionFilters(nav.content, mode, nav.browse.tab), content: nav.content, play: key, soundEnabled, textLocale: locale,
-            textSession: key === nav.content ? translationPreview?.session ?? translated.session : null });
+            textSession: key === nav.content ? translationPreview?.session ?? null : null, refreshText: true });
         showStage(true);
     };
 
