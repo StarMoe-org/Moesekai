@@ -1833,7 +1833,7 @@ export const zhTWPagePrimary = {
                     powerCap: "綜合力上限",
                     shuffleUnitBonus: "混編組合加成",
                     supportDeck: "支援隊伍",
-                    breakGauge: "疲勞槽",
+                    breakGauge: "休息槽",
                     autoMeasure: "Auto 特殊措施",
                     autoDailyLimit: "每日 Auto 上限",
                     rankingTiers: "排名檔位",
@@ -1861,7 +1861,7 @@ export const zhTWPagePrimary = {
                     passNone: "無月卡",
                     passNormal: "一般月卡",
                     passPrecious: "PRECIOUS",
-                    gauge: "疲勞槽",
+                    gauge: "休息槽",
                     scope: "統計範圍",
                     scopeChapter: "本章",
                     scopeOverall: "總榜",
@@ -1872,7 +1872,7 @@ export const zhTWPagePrimary = {
                 notes: {
                     finaleWl2: "主隊伍：全角色 +5%；成員加成僅限 WL2 團活限定卡，最多 4 張生效（VS 也按 4 張）；隊長為 WL2 團活限定卡時再 +20%；與隊長角色一致的 WL2 章節 TOP1000 稱號 +50%（WL1 稱號不計）。支援隊伍：與隊長同角色的成員 +5%。絨毛娃娃家具加成上限 2%；BF 與期間限定 VS 的技能效果上限 140%",
                     finaleWl3: "WL3 活動成員每張 +25%，最多 5 張（125%）；主隊伍含 3/4/5 個組合時混編組合加成 10/30/50%（VS 只算作 VIRTUAL SINGER）；家具加成上限 6%；綜合力上限 33.6 萬；技能效果上限 140%；僅 WL3 章節 TOP1000 稱號 +50%",
-                    wl3Chapter: "指定成員加成 30%；支援隊伍 25 格，WL2 團活限定卡也享有支援加成；綜合力上限 33.6 萬；疲勞槽每章開始時重置；無 After Live",
+                    wl3Chapter: "指定成員加成 30%；支援隊伍 25 格，WL2 團活限定卡也享有支援加成；綜合力上限 33.6 萬；休息槽每章開始時重置；無 After Live",
                     cnWl1: "國服 WL1 的團章節每章 48 小時（日服為 72 小時）",
                 },
                 warnings: {
@@ -1987,8 +1987,8 @@ export const zhTWPagePrimary = {
                 stamina: "預計需要體力",
                 staminaValue: "{stamina} 點（約 {drinks} 個大火罐 / {crystals} 水晶）",
                 naturalStamina: "自然回復可抵扣約 {stamina} 點",
-                gaugeCap: "受疲勞槽限制，每天最多有效手動約 {hours} 小時",
-                gaugeCapLeft: "受疲勞槽限制，剩餘時間內最多有效手動約 {hours} 小時",
+                gaugeCap: "受休息槽限制，每天最多有效手動約 {hours} 小時",
+                gaugeCapLeft: "受休息槽限制，剩餘時間內最多有效手動約 {hours} 小時",
                 perChapter: "逐章明細",
                 chapterRow: "第 {no} 章 {character}：手動 {hours} 小時，{pt} PT",
                 feasibility: {

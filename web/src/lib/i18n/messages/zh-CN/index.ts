@@ -2784,7 +2784,7 @@ export const zhCNMessages = {
                     powerCap: "综合力上限",
                     shuffleUnitBonus: "混编组合加成",
                     supportDeck: "支援卡组",
-                    breakGauge: "疲劳槽",
+                    breakGauge: "休息槽",
                     autoMeasure: "Auto 特殊措施",
                     autoDailyLimit: "每日 Auto 上限",
                     rankingTiers: "排名档位",
@@ -2812,7 +2812,7 @@ export const zhCNMessages = {
                     passNone: "无月卡",
                     passNormal: "普通月卡",
                     passPrecious: "PRECIOUS",
-                    gauge: "疲劳槽",
+                    gauge: "休息槽",
                     scope: "统计范围",
                     scopeChapter: "本章",
                     scopeOverall: "总榜",
@@ -2823,7 +2823,7 @@ export const zhCNMessages = {
                 notes: {
                     finaleWl2: "主卡组：全角色 +5%；成员加成仅限 WL2 团活限定卡，最多 4 张生效（VS 也按 4 张）；队长为 WL2 团活限定卡时再 +20%；与队长角色一致的 WL2 章节 TOP1000 称号 +50%（WL1 称号不计）。支援卡组：与队长同角色的成员 +5%。毛绒家具加成上限 2%；BF 与期间限定 VS 的技能效果上限 140%",
                     finaleWl3: "WL3 活动成员每张 +25%，最多 5 张（125%）；主卡组含 3/4/5 个组合时混编组合加成 10/30/50%（VS 只算作 VIRTUAL SINGER）；家具加成上限 6%；综合力上限 33.6 万；技能效果上限 140%；仅 WL3 章节 TOP1000 称号 +50%",
-                    wl3Chapter: "指定成员加成 30%；支援卡组 25 格，WL2 团活限定卡也享受支援加成；综合力上限 33.6 万；疲劳槽每章开始时重置；无 After Live",
+                    wl3Chapter: "指定成员加成 30%；支援卡组 25 格，WL2 团活限定卡也享受支援加成；综合力上限 33.6 万；休息槽每章开始时重置；无 After Live",
                     cnWl1: "国服 WL1 的团章节每章 48 小时（日服为 72 小时）",
                 },
                 warnings: {
@@ -2938,8 +2938,8 @@ export const zhCNMessages = {
                 stamina: "预计需体力",
                 staminaValue: "{stamina} 点（约 {drinks} 个大火罐 / {crystals} 水晶）",
                 naturalStamina: "自然回复可抵扣约 {stamina} 点",
-                gaugeCap: "疲劳槽下每天最多有效手动约 {hours} 小时",
-                gaugeCapLeft: "疲劳槽下剩余时间内最多有效手动约 {hours} 小时",
+                gaugeCap: "受休息槽限制，每天最多有效手动约 {hours} 小时",
+                gaugeCapLeft: "受休息槽限制，剩余时间内最多有效手动约 {hours} 小时",
                 perChapter: "逐章明细",
                 chapterRow: "第 {no} 章 {character}：手动 {hours} 小时，{pt} PT",
                 feasibility: {
