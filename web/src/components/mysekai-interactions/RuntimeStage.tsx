@@ -4,7 +4,9 @@ import { forwardRef, useEffect, useImperativeHandle, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
-import type { MolyPlayerDataCommand, MolyPlayerDataState, MolyBoot, MolyError, MolyFilters, MolyKey, MolyMount, MolySnapshot, MountOptions } from "@/lib/moly/contract";
+import type { MolyPlayerDataCommand, MolyPlayerDataState, MolyBoot, MolyError, MolyFilters, MolyKey, MolyLocale, MolyMount, MolySnapshot, MolyTextSession, MountOptions } from "@/lib/moly/contract";
+import { fetchContentCatalog, fetchContentDetail } from "@/lib/moly/catalog";
+import { entryTextKey, resolveEntryText, type EntryTextResult } from "@/lib/moly/text";
 import type { MolyRelease, ResourceSnapshot } from "@/lib/moly/catalog";
 import { resourceCacheCommand } from "@/lib/moly/resourceCache";
 
@@ -25,8 +27,12 @@ export interface PlayerSession {
     play: MolyKey | null;
     preview?: boolean;
     soundEnabled: boolean;
+    /** Text locale captured by the initial Play, independent of later UI changes. */
+    textLocale: MolyLocale;
+    textSession?: MolyTextSession | null;
 }
 export interface RuntimeStageHandle {
+    setTextSession(key: MolyKey | null, session: MolyTextSession | null): void;
     playerData(value: MolyPlayerDataCommand): void;
     play(key: MolyKey): void;
     preview(key: MolyKey): void;
@@ -39,6 +45,7 @@ export interface RuntimeStageHandle {
     close(): Promise<boolean>;
 }
 interface Props {
+    onTextResolved(value: EntryTextResult): void;
     onPlayerData(value: MolyPlayerDataState | null): void;
     session: PlayerSession;
     onSnapshot(value: MolySnapshot | null): void;
@@ -47,20 +54,40 @@ interface Props {
 }
 type EmbedModule = { mountMoly(container: HTMLElement, options: MountOptions): MolyMount };
 
-const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage({ session, onSnapshot, onBoot, onError, onPlayerData }, ref) {
+async function playbackText(request: PlayerSession, key: MolyKey, locale: MolyLocale,
+    override: MolyTextSession | null, refresh: boolean): Promise<{ session: MolyTextSession | null; result?: EntryTextResult }> {
+    if (override) return { session: override };
+    if (!request.snapshot.textSource) return { session: null };
+    const signal = AbortSignal.timeout(15000);
+    const catalog = await fetchContentCatalog(request.snapshot, signal);
+    const row = catalog.entries.find(row => row.key === key);
+    if (!row) return { session: null };
+    const entry = await fetchContentDetail(request.snapshot, row, signal);
+    try {
+        const result = await resolveEntryText(request.snapshot, entry, locale, request.release.module, { refresh });
+        return { session: result.session, result };
+    } catch (error) {
+        console.warn("[moly] display translation unavailable, using source", error);
+        return { session: null, result: { key: entryTextKey(request.snapshot, entry, locale, request.release.module), entry, session: null } };
+    }
+}
+
+const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage({ session, onSnapshot, onBoot, onError, onPlayerData, onTextResolved }, ref) {
     const router = useRouter();
     const container = useRef<HTMLDivElement>(null);
     const mount = useRef<MolyMount | null>(null);
     const queued = useRef<Array<(player: MolyMount) => void>>([]);
+    const textOverride = useRef<{ key: MolyKey; session: MolyTextSession } | null>(null);
+    const playSequence = useRef(0);
     const { resolvedColorScheme, themeColor } = useTheme();
     const { locale, registerLocaleNavigation } = useI18n();
-    const state = useRef({ resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData });
+    const state = useRef({ resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData, onTextResolved });
 
     useEffect(() => {
-        state.current = { resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData };
+        state.current = { resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData, onTextResolved };
         mount.current?.setTheme({ mode: resolvedColorScheme, accent: themeColor });
         mount.current?.setLocale(locale);
-    }, [resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData]);
+    }, [resolvedColorScheme, themeColor, locale, onSnapshot, onBoot, onError, onPlayerData, onTextResolved]);
 
     useEffect(() => registerLocaleNavigation(url => {
         // Locale is already applied by the site's I18nContext. Use the native
@@ -84,6 +111,8 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             event.stopPropagation();
             if (navigating) return;
             navigating = true;
+            playSequence.current++;
+            queued.current = [];
             const destination = target.pathname + target.search + target.hash;
             void (mount.current?.close() ?? Promise.resolve(true))
                 .catch(() => false)
@@ -103,13 +132,40 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
             if (mount.current) action(mount.current);
             else if (queued.current.length < 64) queued.current.push(action);
         };
+        const play = (key: MolyKey, preview: boolean) => {
+            const sequence = ++playSequence.current;
+            const locale = state.current.locale;
+            const override = textOverride.current?.key === key ? textOverride.current.session : null;
+            // Keep gesture activation synchronous even when text loads first.
+            const frame = mount.current?.frame;
+            try { frame?.contentWindow?.dispatchEvent(new Event("moly-activate")); } catch { /* frame still loading */ }
+            const run = async () => {
+                const text = await playbackText(session, key, locale, override, true);
+                if (sequence !== playSequence.current) return;
+                send(player => {
+                    if (sequence !== playSequence.current) return;
+                    if (text.result) state.current.onTextResolved(text.result);
+                    player.setTextSession?.(text.session);
+                    if (preview) player.preview(key); else player.play(key);
+                });
+            };
+            void run().catch(error => {
+                if (sequence !== playSequence.current) return;
+                console.warn("[moly] translated playback unavailable, using source", error);
+                send(player => {
+                    if (sequence !== playSequence.current) return;
+                    player.setTextSession?.(null); if (preview) player.preview(key); else player.play(key);
+                });
+            });
+        };
         return {
+            setTextSession: (key, value) => { textOverride.current = key && value ? { key, session: value } : null; },
             playerData: value => {
                 if (!mount.current) throw new Error("The stage is not ready");
                 mount.current.playerData(value);
             },
-            play: key => send(player => player.play(key)),
-            preview: key => send(player => player.preview(key)),
+            play: key => play(key, false),
+            preview: key => play(key, true),
             browse: filters => send(player => player.browse(filters)),
             setWeather: phenomenon => send(player => player.setWeather(phenomenon)),
             // Older cached releases have no site dial; they keep their initial site.
@@ -123,13 +179,14 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                 if (typeof player.setSoundEnabled === "function") player.setSoundEnabled(enabled);
             }),
             select: key => send(player => player.select(key)),
-            stop: () => send(player => player.stop()),
+            stop: () => { playSequence.current++; send(player => player.stop()); },
             async close() {
+                playSequence.current++;
                 queued.current = [];
                 return mount.current ? mount.current.close() : true;
             },
         };
-    }, []);
+    }, [session]);
 
     // One realm per `session.epoch`. Content switching reuses the live world
     // through the mount handle instead of tearing the renderer, the audio
@@ -142,6 +199,9 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
     useEffect(() => {
         const request = launch.current;
         if (epoch === null || !request) return;
+        const requests = playSequence;
+        const sequence = ++requests.current;
+        textOverride.current = null;
         let cancelled = false;
         let owned: MolyMount | null = null;
         const host = container.current;
@@ -183,8 +243,16 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                     onError: value => { if (!cancelled) state.current.onError(value); },
                 });
                 mount.current = owned;
-                if (request.play) { if (request.preview) owned.preview(request.play); else owned.play(request.play); }
                 for (const action of queued.current.splice(0)) action(owned);
+                if (request.play && sequence === playSequence.current) {
+                    const text = await playbackText(request, request.play, request.textLocale, request.textSession ?? null, false)
+                        .catch(error => { console.warn("[moly] translated playback unavailable, using source", error); return { session: null, result: undefined }; });
+                    if (!cancelled && sequence === playSequence.current) {
+                        if (text.result) state.current.onTextResolved(text.result);
+                        owned.setTextSession?.(text.session);
+                        if (request.preview) owned.preview(request.play); else owned.play(request.play);
+                    }
+                }
             } catch (error) {
                 if (!cancelled) {
                     console.error("[moly] runtime mount failed", error);
@@ -195,6 +263,7 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
         void initialize();
         return () => {
             cancelled = true;
+            requests.current++;
             owned?.dispose();
             if (mount.current === owned) mount.current = null;
             queued.current = [];

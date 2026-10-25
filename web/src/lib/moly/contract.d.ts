@@ -1,17 +1,18 @@
 export type MolyRegion = 'cn' | 'jp';
 export type MolyLocale = 'zh-CN' | 'zh-TW' | 'en-US' | 'ja-JP' | 'ko-KR';
 export type MolyTab = 'conversations' | 'furniture' | 'performances' | 'activities';
-export type MolyKey = `talk:${'general'|'fixture'}:${number}` | `fixture:${number}` | `activity:${'notalk'|'preaction'}:${number}:${number}`;
+export type MolyKey = `talk:${'general'|'fixture'|'common'}:${number}` | `fixture:${number}` | `activity:${'notalk'|'preaction'}:${number}:${number}`;
 export type MolyTheme = 'light' | 'dark' | {mode:'light'|'dark'; accent?:string};
 export interface MolyCharacter {id:number; name:string; originalName?:string; group?:string|null; color?:string|null;}
 export interface MolyFixture {id:number; name:string; image:string|null;}
 export interface MolyEntry {
+  scriptKey?: string;
   preview?:{available:boolean; tweetId?:number; text?:string; unit?:number; reason?:string};
   key:MolyKey; title:string; subtitle:string; image:string|null; characters:MolyCharacter[];
   kind:string; available:boolean; reason?:string|null; reasonCode?:'source_unavailable'|'scene_unavailable'|null;
   fixtureIds:number[]; unitIds:number[];
   presentation:{category:'conversation'|'furniture'|'fixture_story'|'fixture_performance'|'activity'; behavior:'static'|'timeline'|'loop'|'one_shot'|'wall'|'floor'|'custom'|'authored'; primaryAction:'play'|'inspect'; textMode:'none'|'bubble'|'transcript'};
-  description?:string; lines?:{speaker:string; text:string}[]; fixtures?:MolyFixture[];
+  description?:string; lines?:{speaker:string; text:string; speakerStep?:number; textStep?:number}[]; fixtures?:MolyFixture[];
   related?:{tab:MolyTab; fixtureId:number; label:string; count:number}[];
   variant?:{index:number; count:number};
 }
@@ -83,6 +84,7 @@ export interface MountOptions {
   onBoot?:(boot:MolyBoot)=>void; onError?:(error:MolyError)=>void;
 }
 export interface MolyMount {
+  setTextSession(value: MolyTextSession | null): void;
   playerData(value: MolyPlayerDataCommand): void;
   readonly frame:HTMLIFrameElement; readonly disposed:boolean; readonly snapshot:MolySnapshot|null;
   setTheme(theme:MolyTheme):void; setLocale(locale:MolyLocale):void; browse(filters:MolyFilters):void;
@@ -105,3 +107,12 @@ export interface MolyPlayerDataState { schemaVersion: 1; region: MolyRegion; bus
 export type MolyPlayerDataNotice =
   | { code: "specialFurnitureRetained" | "surfaceAppearanceRetained"; count: number }
   | { code: "fixtureModelMissing" | "fixtureTextureMissing" | "fixtureColorMissing"; count: number; fixtures: number[] };
+
+export interface MolyTextSession {
+  source: string;
+  official: string;
+  community: string;
+  locale: MolyLocale;
+  fonts?: { url: string; sha256: string; bytes: number }[];
+  revisions?: { source: string; official: string | null; community: string | null };
+}

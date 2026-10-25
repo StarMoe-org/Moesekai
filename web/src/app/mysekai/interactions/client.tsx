@@ -15,6 +15,8 @@ import { INITIAL_FURNITURE, workspaceQuery } from "@/lib/moly/workspaceNavigatio
 import { useWorkspaceNavigation } from "@/lib/moly/useWorkspaceNavigation";
 import { runtimeSelectionFilters } from "@/lib/moly/runtimeSelection";
 import { useContentCatalog, useContentDetail, useRuntimeManifest } from "@/lib/moly/useResources";
+import { useEntryText, useTranslationPreview } from "@/lib/moly/useText";
+import { useCatalogText } from "@/lib/moly/useCatalogText";
 import type { MolyBoot, MolyError, MolyKey, MolySnapshot, MolyTab, MolyPlayerDataState } from "@/lib/moly/contract";
 import type { PlayerSession, RuntimeStageHandle } from "@/components/mysekai-interactions/RuntimeStage";
 import WorkspaceStage from "@/components/mysekai-interactions/WorkspaceStage";
@@ -96,12 +98,15 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const expired = Boolean(nav.snapshot && published && nav.snapshot !== published.id);
     const snapshot = sourceReady && !expired ? published : undefined;
     const { catalog, failed: catalogFailed } = useContentCatalog(snapshot, retry);
+    const textIndex = useCatalogText(snapshot, locale, manifest?.release.module);
     const entries = useMemo(() => new Map<string, CatalogEntry>(catalog?.entries.map(entry => [entry.key, entry]) ?? []), [catalog]);
     const selected = nav.content ? entries.get(nav.content) : undefined;
     const { detail, loading: detailLoading, failed: detailFailed } = useContentDetail(snapshot, selected, detailRetry);
-    const visibleEntry = detail ?? selected;
+    const translated = useEntryText(snapshot, detail, locale, manifest?.release.module);
+    const translationPreview = useTranslationPreview(snapshot, detail, manifest?.release.module);
+    const visibleEntry = translationPreview?.entry ?? translated.entry ?? detail ?? selected;
     const deferredBrowse = useDeferredValue(nav.browse);
-    const contentResults = useMemo(() => catalog ? filterCatalog(catalog, deferredBrowse) : [], [catalog, deferredBrowse]);
+    const contentResults = useMemo(() => catalog ? filterCatalog(catalog, deferredBrowse, textIndex) : [], [catalog, deferredBrowse, textIndex]);
     const resultCount = contentResults.length;
     const pageCount = Math.max(1, Math.ceil(resultCount / pageSize));
     const page = Math.min(nav.page, pageCount);
@@ -245,12 +250,14 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         if (!snapshot?.available || !manifest || closeInFlight.current) return;
         setRuntimeError(null); setNotice(null);
         if (session) {
+            player.current?.setTextSession(key, key === nav.content ? translationPreview?.session ?? null : null);
             player.current?.setSoundEnabled(sound);
             if (key) { player.current?.browse(runtimeSelectionFilters(key, mode)); if (preview) player.current?.preview(key); else player.current?.play(key); }
         } else {
             const identity = ++realmSequence.current;
             setSession({ id: identity, epoch: identity, snapshot, release: manifest.release,
-                initial: runtimeSelectionFilters(key ?? nav.content, mode, nav.browse.tab), content: key ?? nav.content, play: key, preview, soundEnabled: sound });
+                initial: runtimeSelectionFilters(key ?? nav.content, mode, nav.browse.tab), content: key ?? nav.content, play: key, preview, soundEnabled: sound, textLocale: locale,
+                textSession: key === nav.content ? translationPreview?.session ?? translated.session : null });
         }
         showStage(true);
     };
@@ -278,7 +285,9 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
         const key = selected?.available ? nav.content : null;
         await closePlayer();
         const identity = ++realmSequence.current;
-        setSession({ id: identity, epoch: identity, snapshot, release: manifest.release, initial: runtimeSelectionFilters(nav.content, mode, nav.browse.tab), content: nav.content, play: key, soundEnabled });
+        setSession({ id: identity, epoch: identity, snapshot, release: manifest.release,
+            initial: runtimeSelectionFilters(nav.content, mode, nav.browse.tab), content: nav.content, play: key, soundEnabled, textLocale: locale,
+            textSession: key === nav.content ? translationPreview?.session ?? translated.session : null });
         showStage(true);
     };
 
@@ -467,6 +476,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                     onBoot={setBoot}
                     onError={setRuntimeError}
                     onPlayerData={setPlayerData}
+                    onTextResolved={translated.pin}
                 />
 
                 <div className="workspace-catalog-column">
@@ -522,6 +532,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                             />
                         </div>
 
+                        {translationPreview && <p className="px-4 py-2 type-label-m text-primary" role="status">{t("page.mysekaiWorkspace.translationPreview")}</p>}
                         {visibleEntry && snapshot ? (
                             <ContentDetail
                                 entry={visibleEntry}

@@ -1,4 +1,6 @@
 export const mysekaiWorkspaceMessages = {
+    "translationPreview": "번역 초안 미리보기 · 미게시",
+    "translationUnavailable": "번역 또는 필요한 글꼴을 불러오지 못해 재생을 시작하지 않았습니다. 다시 시도하거나 상세 정보 읽기로 돌아가세요.",
     "title": "MYSEKAI",
     "alphaLabel": "Alpha",
     "alphaNotice": "초기 미리보기 버전입니다. 장면 재현과 일부 연출은 아직 개발 중이며, 표시나 재생에 문제가 생길 수 있습니다.",

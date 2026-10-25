@@ -1,4 +1,6 @@
 export const mysekaiWorkspaceMessages = {
+    "translationPreview": "翻訳下書きのプレビュー · 未公開",
+    "translationUnavailable": "翻訳または必要なフォントを読み込めなかったため、今回の再生は開始していません。再試行するか、詳細を読む画面に戻ってください。",
     "title": "MYSEKAI",
     "alphaLabel": "Alpha",
     "alphaNotice": "開発初期のプレビュー版です。シーンの再現や一部の演出は開発中のため、表示や再生に不具合が生じる場合があります。",
