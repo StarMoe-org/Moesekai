@@ -3,11 +3,17 @@ import { readFile } from "node:fs/promises";
 import { stripTypeScriptTypes } from "node:module";
 
 // Exercise the real host parser without installing the full Next.js toolchain.
-// Type-only imports disappear; these are the complete runtime dependency edges.
+// Type-only imports disappear; local runtime imports are resolved recursively.
 async function moduleURL(file, imports = {}) {
     let source = stripTypeScriptTypes(await readFile(new URL(file, import.meta.url), "utf8"));
     for (const [specifier, replacement] of Object.entries(imports)) {
         source = source.replaceAll(`"${specifier}"`, `"${replacement}"`);
+    }
+    const runtimeImports = [...source.matchAll(/\bfrom\s+(["'])(\.[^"']+)\1/g)];
+    for (const [, quote, specifier] of runtimeImports) {
+        const dependency = new URL(specifier + ".ts", new URL(file, import.meta.url));
+        const replacement = await moduleURL(dependency);
+        source = source.replaceAll(`${quote}${specifier}${quote}`, `${quote}${replacement}${quote}`);
     }
     return `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 }
