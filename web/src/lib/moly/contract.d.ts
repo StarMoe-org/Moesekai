@@ -72,7 +72,7 @@ export interface MolyBoot {
   phase:string; backend:'webgpu'|'webgl2'|null; elapsedMs:number;
   engineDecodedBytes:number; transferredBytes:number; decodedBytes:number; timings:Record<string,number>;
 }
-export interface MolyError {code:string; key?:MolyKey;}
+export interface MolyError {code:string; key?:MolyKey; fatal?:boolean;}
 export interface MountOptions {
   onPlayerData?(value: MolyPlayerDataState): void;
   view?:'shell'|'stage'; src:string; assets?:string; resourceBase?:string; region?:MolyRegion; version?:string; snapshot?:string;

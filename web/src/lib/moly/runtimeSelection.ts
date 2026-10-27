@@ -1,4 +1,11 @@
-import type { MolyFilters, MolyKey, MolyTab } from "./contract";
+import type { MolyError, MolyFilters, MolyKey, MolySnapshot, MolyTab } from "./contract";
+
+/** A later exact-key admission supersedes a nonfatal initial selection refusal. */
+export function reconcileSelectionError(error: MolyError | null, snapshot: MolySnapshot | null): MolyError | null {
+    if (error?.code !== "selection_unavailable" || error.fatal || !error.key) return error;
+    if (!snapshot?.ready || snapshot.status.phase === "error" || snapshot.status.error) return error;
+    return snapshot.selected?.key === error.key && snapshot.selected.available ? null : error;
+}
 
 /**
  * The workspace's reading results and the stage's selected source are separate

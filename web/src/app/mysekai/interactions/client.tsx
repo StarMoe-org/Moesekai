@@ -13,7 +13,7 @@ import { useTheme, type ServerSourceType } from "@/contexts/ThemeContext";
 import { INITIAL_BROWSE, filterCatalog, supportedRegion, type BrowseState, type CatalogEntry } from "@/lib/moly/catalog";
 import { INITIAL_FURNITURE, workspaceQuery } from "@/lib/moly/workspaceNavigation";
 import { useWorkspaceNavigation } from "@/lib/moly/useWorkspaceNavigation";
-import { runtimeSelectionFilters } from "@/lib/moly/runtimeSelection";
+import { reconcileSelectionError, runtimeSelectionFilters } from "@/lib/moly/runtimeSelection";
 import { useContentCatalog, useContentDetail, useRuntimeManifest } from "@/lib/moly/useResources";
 import { useEntryText, useTranslationPreview } from "@/lib/moly/useText";
 import { useCatalogText } from "@/lib/moly/useCatalogText";
@@ -50,6 +50,10 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
     const [live, setLive] = useState<MolySnapshot | null>(null);
     const [boot, setBoot] = useState<MolyBoot | null>(null);
     const [runtimeError, setRuntimeError] = useState<MolyError | null>(null);
+    const receiveSnapshot = useCallback((value: MolySnapshot | null) => {
+        setLive(value);
+        setRuntimeError(previous => reconcileSelectionError(previous, value));
+    }, []);
     const [notice, setNotice] = useState<string | null>(null);
     const [mode, setMode] = useState<"independent" | "current">("independent");
     const [closing, setClosing] = useState(false);
@@ -473,7 +477,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                     expand={showStage}
                     close={() => void closePlayer()}
                     retry={() => void retryPlayer()}
-                    onSnapshot={setLive}
+                    onSnapshot={receiveSnapshot}
                     onBoot={setBoot}
                     onError={setRuntimeError}
                     onPlayerData={setPlayerData}

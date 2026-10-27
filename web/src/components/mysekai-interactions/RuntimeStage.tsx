@@ -230,7 +230,9 @@ const RuntimeStage = forwardRef<RuntimeStageHandle, Props>(function RuntimeStage
                     region: request.snapshot.region, version: request.snapshot.version, snapshot: request.snapshot.id,
                     packs: request.snapshot.packs, assetCatalog: request.snapshot.assetCatalog,
                     theme: { mode: current.resolvedColorScheme, accent: current.themeColor }, locale: current.locale,
-                    filters: request.initial, content: request.content ?? undefined, sound: request.soundEnabled,
+                    // Play owns exact-key selection after text preparation. A
+                    // simultaneous initial selection can inspect the prior frame.
+                    filters: request.initial, content: request.play ? undefined : request.content ?? undefined, sound: request.soundEnabled,
                     onPlayerData: value => { if (!cancelled) state.current.onPlayerData(value); },
                     onSnapshot: value => { if (!cancelled) state.current.onSnapshot(value); },
                     onBoot: value => {
