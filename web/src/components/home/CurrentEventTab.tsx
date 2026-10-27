@@ -217,6 +217,7 @@ export default function CurrentEventTab() {
                         {status === "ongoing" && (
                             <LinearProgress
                                 value={progressPercent / 100}
+                                stop={false}
                                 aria-label={t("page.home.currentEvent.progress")}
                                 className="absolute inset-x-0 bottom-0"
                             />

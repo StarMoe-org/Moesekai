@@ -29,13 +29,19 @@ export interface LinearProgressProps extends ProgressProps {
      * instead of easing toward each, which reads as a stutter.
      */
     tickMs?: number;
+    /**
+     * M3 stop indicator: a dot marking the end of the track. A bar with its
+     * percentage printed beside it already shows where it stands, so it can
+     * pass false.
+     */
+    stop?: boolean;
 }
 
-export function LinearProgress({ value, wavy, tickMs, className, "aria-label": label }: LinearProgressProps) {
+export function LinearProgress({ value, wavy, tickMs, stop = true, className, "aria-label": label }: LinearProgressProps) {
     const { t } = useI18n();
     const determinate = typeof value === "number";
     if (determinate && wavy !== undefined) {
-        return <WavyLinearProgress value={value} wavy={wavy} className={className} aria-label={label ?? t("common.md3.loading")} />;
+        return <WavyLinearProgress value={value} wavy={wavy} stop={stop} className={className} aria-label={label ?? t("common.md3.loading")} />;
     }
     const pct = determinate ? Math.max(0, Math.min(1, value)) * 100 : 0;
     return (
@@ -58,7 +64,7 @@ export function LinearProgress({ value, wavy, tickMs, className, "aria-label": l
                         />
                     )}
                     {pct < 100 && <span className="min-w-0 flex-1 rounded-full bg-secondary-container" />}
-                    <span className="absolute right-0 top-0 h-1 w-1 rounded-full bg-primary" />
+                    {stop && <span className="absolute right-0 top-0 h-1 w-1 rounded-full bg-primary" />}
                 </>
             ) : (
                 <>
@@ -76,7 +82,7 @@ export function LinearProgress({ value, wavy, tickMs, className, "aria-label": l
    The wave is flat below 10% and from 95% of the progress. */
 const WAVE = { height: 10, stroke: 4, amplitude: 3, wavelength: 40, gap: 4, seconds: 0.5 };
 
-function WavyLinearProgress({ value, wavy, className, "aria-label": label }: { value: number; wavy: boolean; className?: string; "aria-label": string }) {
+function WavyLinearProgress({ value, wavy, stop, className, "aria-label": label }: { value: number; wavy: boolean; stop: boolean; className?: string; "aria-label": string }) {
     const reducedMotion = useReducedMotion();
     const target = Math.max(0, Math.min(1, value));
     const waves = wavy && !reducedMotion && target > 0.1 && target < 0.95;
@@ -113,7 +119,7 @@ function WavyLinearProgress({ value, wavy, className, "aria-label": label }: { v
         const height = amplitude.get();
         if (height > 0) state.phase = (state.phase + delta / 1000 * WAVE.wavelength) % WAVE.wavelength;
         const key = `${state.width}:${progress.get()}:${height}:${height > 0 ? state.phase : 0}`;
-        if (key === state.key || !activeRef.current || !trackRef.current || !stopRef.current) return;
+        if (key === state.key || !activeRef.current || !trackRef.current) return;
         state.key = key;
 
         const middle = WAVE.height / 2;
@@ -136,7 +142,7 @@ function WavyLinearProgress({ value, wavy, className, "aria-label": label }: { v
         trackRef.current.setAttribute("x1", String(Math.min(from, to)));
         trackRef.current.setAttribute("x2", String(to));
         trackRef.current.style.visibility = from < to ? "visible" : "hidden";
-        stopRef.current.setAttribute("cx", String(to));
+        stopRef.current?.setAttribute("cx", String(to));
     });
 
     return (
@@ -153,7 +159,7 @@ function WavyLinearProgress({ value, wavy, className, "aria-label": label }: { v
             <svg className="absolute inset-0 h-full w-full" fill="none" strokeWidth={WAVE.stroke} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <line ref={trackRef} y1={WAVE.height / 2} y2={WAVE.height / 2} className="stroke-secondary-container" />
                 <path ref={activeRef} className="stroke-primary" />
-                <circle ref={stopRef} cy={WAVE.height / 2} r={WAVE.stroke / 2} stroke="none" className="fill-primary" />
+                {stop && <circle ref={stopRef} cy={WAVE.height / 2} r={WAVE.stroke / 2} stroke="none" className="fill-primary" />}
             </svg>
         </div>
     );

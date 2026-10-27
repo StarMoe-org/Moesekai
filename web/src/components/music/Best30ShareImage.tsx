@@ -709,7 +709,7 @@ export default function Best30ShareImage({
                                             <span className="text-on-surface-variant type-label-m">{progressText}</span>
                                             <span className="text-primary type-label-l">{progress}%</span>
                                         </div>
-                                        <LinearProgress value={progress / 100} aria-label={progressText} />
+                                        <LinearProgress value={progress / 100} stop={false} aria-label={progressText} />
                                     </div>
                                     <span className="text-on-surface-variant type-label-s">{t("page.best30Share.generatingTitle")}</span>
                                 </div>

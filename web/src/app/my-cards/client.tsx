@@ -603,7 +603,7 @@ function MyCardsContent() {
                             <span className="ml-2 type-label-s text-on-surface-variant">({progressStats.pct}%)</span>
                         </span>
                     </div>
-                    <LinearProgress value={progressStats.pct / 100} aria-label={t("common.progress.collectionProgress")} />
+                    <LinearProgress value={progressStats.pct / 100} stop={false} aria-label={t("common.progress.collectionProgress")} />
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                         {(["all", "owned", "missing"] as const).map((f) => (
                             <Chip

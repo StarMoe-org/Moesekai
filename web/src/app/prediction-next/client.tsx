@@ -306,7 +306,7 @@ export default function PredictionNextClient() {
                                             </div>
                                             {banner.status === "ongoing" && (
                                                 <div className="flex items-center gap-3">
-                                                    <LinearProgress value={banner.progressPercent / 100} aria-label={resolvedStatusLabel} />
+                                                    <LinearProgress value={banner.progressPercent / 100} stop={false} aria-label={resolvedStatusLabel} />
                                                     <span className="shrink-0 type-label-l tabular-nums text-primary">
                                                         {Math.floor(banner.progressPercent)}%
                                                     </span>
