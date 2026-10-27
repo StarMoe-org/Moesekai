@@ -815,6 +815,7 @@ export const jaJPMessages = {
       visual: 'ビジュアル',
       content: 'コンテンツ',
       data: 'データ',
+      experimental: '実験的',
       about: '概要'
     },
     about: {
@@ -859,6 +860,14 @@ export const jaJPMessages = {
       off: 'オフ',
       onDescription: 'マウスカーソルが現在のキャラクターのテーマカラーに合わせて変化し、はっきりした輪郭線を保つため、明るい背景でも暗い背景でも見つけやすくなります。',
       offDescription: 'システム標準のカーソルを使用します。タッチデバイスはこの設定の影響を受けません。'
+    },
+    experimental: {
+      notice: '実験的機能は開発中です。不完全な場合があり、予告なく変更・削除されることがあります。',
+      costume3d: {
+        sectionTitle: '3D 衣装',
+        unrestrictedLabel: 'キャラクター制限を解除',
+        unrestrictedDescription: 'どのキャラクターも、他のキャラクター（異性を含む）の衣装・髪型・頭アクセサリーを着用でき、頭アクセサリーと髪型の組み合わせ制限も無視します。衣装は元の体型のままのため、めり込みが起きることがあります。',
+      },
     },
     contentDisplay: {
       sectionTitle: 'コンテンツ表示'

@@ -5,6 +5,8 @@
  * - the body's skeleton leads: the face's bones are swapped for the body's bones of the same
  *   name, and the face's own nodes (hair bones, attach points) move under the body bone their
  *   parent names;
+ * - another character's hair (unrestricted) is that character's face bundle without its face,
+ *   attached like the face, whose own hair is taken off;
  * - the accessory hangs from its attach point (`Head/aNN`);
  * - the body's `OffsetValue` holds the shoe height, by which the game lifts the skeleton through
  *   `PositionOffset`.
@@ -104,6 +106,19 @@ function attachFace(body: THREE.Object3D, face: THREE.Object3D): number {
     });
     for (const [node, target] of moves) target.add(node);
     return moves.length;
+}
+
+/** The nodes of a face bundle that are its hair (`Acc`: what the hairstyle wears); the rest is the face. */
+const HAIR_NODES = new Set(["Hair", "Acc"]);
+
+/** Takes the meshes off `model` that `drop` names, before outlines are added. */
+function removeMeshes(model: THREE.Object3D, drop: (name: string) => boolean): void {
+    const meshes: THREE.Mesh[] = [];
+    model.traverse(object => { if ((object as THREE.Mesh).isMesh && drop(object.name)) meshes.push(object as THREE.Mesh); });
+    for (const mesh of meshes) {
+        mesh.removeFromParent();
+        disposeGroup(mesh);
+    }
 }
 
 function disposeGroup(group: THREE.Object3D): void {
@@ -437,23 +452,25 @@ export class Costume3dStage {
             this.colorTextures(library, variant.bodyColor), this.colorTextures(library, look.accessory?.color),
             this.motion(library, variant.motion),
             this.components(library, variant.bodyBundle), this.components(library, look.face),
+            glb(look.hairFrom), this.components(library, look.hairFrom),
         ];
         let done = 0;
         onProgress?.(0, tasks.length);
         for (const task of tasks) task.then(() => onProgress?.(++done, tasks.length), () => {});
-        const [body, face, accessory, bodyColors, accessoryColors, motion, bodyComponents, faceComponents] = await Promise.all(tasks) as [
+        const [body, face, accessory, bodyColors, accessoryColors, motion, bodyComponents, faceComponents, hair, hairComponents] = await Promise.all(tasks) as [
             GLTF | null, GLTF | null, GLTF | null, ColorTextures | null, ColorTextures | null, Awaited<ReturnType<Costume3dStage["motion"]>>,
-            Costume3dComponent[], Costume3dComponent[],
+            Costume3dComponent[], Costume3dComponent[], GLTF | null, Costume3dComponent[],
         ];
         const texture = (file: string, srgb: boolean) => this.texture(file, srgb, library);
         await Promise.all([
             body && dress(body.scene, { kind: "body", skin, colors: bodyColors, texture }),
             face && dress(face.scene, { kind: "face", skin, colors: null, texture }),
             accessory && dress(accessory.scene, { kind: "accessory", skin, colors: accessoryColors, texture }),
+            hair && dress(hair.scene, { kind: "face", skin, colors: null, texture }),
         ]);
         const group = new THREE.Group();
         if (signal?.aborted || this.disposed) {
-            for (const model of [body, face, accessory]) if (model) disposeGroup(model.scene);
+            for (const model of [body, face, accessory, hair]) if (model) disposeGroup(model.scene);
             throw new Costume3dStageAbortedError();
         }
 
@@ -466,11 +483,18 @@ export class Costume3dStage {
         if (bodyRoot && bodyComponents.length) {
             physicsSources.push({ components: bodyComponents, resolve: pinned(bodyComponents, resolverFor(bodyRoot)) });
         }
-        if (bodyRoot && face && faceComponents.length) {
+        if (bodyRoot) {
             const bodyNodes = new Map<string, THREE.Object3D>();
             bodyRoot.traverse(object => { if (object !== bodyRoot && !bodyNodes.has(object.name)) bodyNodes.set(object.name, object); });
-            const faceRoot = face.scene.getObjectByName("face") ?? face.scene;
-            physicsSources.push({ components: faceComponents, resolve: pinned(faceComponents, resolverFor(faceRoot, bodyNodes)) });
+            for (const [model, components] of [[face, faceComponents], [hair, hairComponents]] as const) {
+                if (!model || !components.length) continue;
+                const root = model.scene.getObjectByName("face") ?? model.scene;
+                physicsSources.push({ components, resolve: pinned(components, resolverFor(root, bodyNodes)) });
+            }
+        }
+        if (face && hair) {
+            removeMeshes(face.scene, name => HAIR_NODES.has(name));
+            removeMeshes(hair.scene, name => !HAIR_NODES.has(name));
         }
         if (body) group.add(body.scene);
         if (face) {
@@ -480,6 +504,10 @@ export class Costume3dStage {
             });
             group.add(face.scene);
             if (body) attachFace(body.scene, face.scene);
+        }
+        if (hair) {
+            group.add(hair.scene);
+            if (body) attachFace(body.scene, hair.scene);
         }
         if (accessory) {
             const attach = look.accessory?.attach;
@@ -499,7 +527,7 @@ export class Costume3dStage {
         const pair = (bodyClip: Clip | null, faceClip: Clip | null): ClipPair | null => (rig && (bodyClip || faceClip)
             ? { body: bodyClip && bindClip(bodyClip, rig), face: faceClip && bindClip(faceClip, rig) }
             : null);
-        const key = [variant.bodyBundle, look.face, look.accessory?.bundle ?? "", variant.motion ?? ""].join("|");
+        const key = [variant.bodyBundle, look.face, look.hairFrom ?? "", look.accessory?.bundle ?? "", variant.motion ?? ""].join("|");
         const sameModels = this.current?.key === key;
         const { time, phase } = this.player;
 

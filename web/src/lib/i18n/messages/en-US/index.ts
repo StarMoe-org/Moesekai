@@ -816,6 +816,7 @@ export const enUSMessages = {
             visual: "Visual",
             content: "Content",
             data: "Data",
+            experimental: "Labs",
             about: "About",
         },
         about: {
@@ -860,6 +861,14 @@ export const enUSMessages = {
             off: "Off",
             onDescription: "The mouse cursor follows the current character theme color and keeps a crisp outline, staying easy to spot on both light and dark backgrounds.",
             offDescription: "Use the system default cursor. Touch devices are unaffected by this setting."
+        },
+        experimental: {
+            notice: "Experimental features are still in progress: they may be incomplete, and may change or go away at any time.",
+            costume3d: {
+                sectionTitle: "3D costumes",
+                unrestrictedLabel: "Lift character restrictions",
+                unrestrictedDescription: "Any character can wear other characters' costumes, hairstyles and head accessories, including those of the other gender, and head and hair combinations are no longer restricted. Costumes keep their original body shape, so clipping may occur.",
+            },
         },
         contentDisplay: {
             sectionTitle: "Content display",

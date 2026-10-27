@@ -14,9 +14,10 @@ import { replaceAssetSourceRegion, useTheme, type ServerSourceType } from "@/con
 import { useTranslation } from "@/contexts/TranslationContext";
 import { getCostumeThumbnailUrl } from "@/lib/assets";
 import { costume3dRegions, type Costume3dRegion } from "@/lib/costume3d/config";
-import { Costume3dUnavailableError, loadCatalog, loadCostume, openOutput, type Costume3dOutput } from "@/lib/costume3d/data";
+import { Costume3dUnavailableError, loadCatalog, loadCostume, loadPool, openOutput, type Costume3dOutput } from "@/lib/costume3d/data";
 import {
-    hairOptions, headGroups, parseSelection, released, resolveLook, roleCostumes, selectionParams, type Costume3dSelection, type RoleCostume,
+    costumeVariant, hairOptions, headGroups, parseSelection, released, resolveLook, roleCostumes, selectionParams,
+    type Costume3dPool, type Costume3dSelection, type RoleCostume,
 } from "@/lib/costume3d/look";
 import type { StageLoad } from "@/lib/costume3d/stage";
 import { fetchMasterData } from "@/lib/fetch";
@@ -82,7 +83,7 @@ function Costume3dContent() {
     const { t } = useI18n();
     const { t: translate } = useTranslation();
     const params = useSearchParams();
-    const { serverSource, assetSource, isShowSpoiler, themeCharId, hasHydratedThemeSettings } = useTheme();
+    const { serverSource, assetSource, isShowSpoiler, themeCharId, hasHydratedThemeSettings, costume3dUnrestricted } = useTheme();
     const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
     const [now] = useState(() => Date.now());
     const regions = useMemo(() => costume3dRegions(), []);
@@ -120,11 +121,18 @@ function Costume3dContent() {
         () => loadCatalog(output.value as Costume3dOutput, role as { characterId: number; unit: string }),
     );
     const catalog = catalogState.value;
+    // Unrestricted (experimental setting): every role's parts, read once the role's own are shown.
+    const poolState = useLoaded<Costume3dPool>(
+        costume3dUnrestricted && output.value && catalog ? `${region}|pool` : null,
+        () => loadPool(output.value as Costume3dOutput),
+    );
+    const pool = costume3dUnrestricted ? poolState.value : null;
 
     // The costumes this role can wear; those not yet released only with spoilers shown. Colours the
     // output leaves unnamed (CN, TW, KR) take the site's names of the costume's colours.
+    const ownCostumes = useMemo(() => (catalog ? roleCostumes(catalog) : []), [catalog]);
     const costumes = useMemo(() => (catalog
-        ? roleCostumes(catalog)
+        ? (pool ? pool.costumes.map(entry => ownCostumes.find(own => own.costumeNumber === entry.costumeNumber) ?? entry) : ownCostumes)
             .filter(costume => isShowSpoiler || released(costume.publishedAt, now))
             .map(costume => {
                 const info = costumeData.value?.get(costume.costumeNumber);
@@ -138,13 +146,28 @@ function Costume3dContent() {
                     })),
                 };
             })
-        : []), [catalog, costumeData.value, isShowSpoiler, now]);
+        : []), [catalog, ownCostumes, pool, costumeData.value, isShowSpoiler, now]);
+    // What only the pool brings, for the wardrobe to mark.
+    const borrowedCostumes = useMemo(() => new Set(pool ? costumes.filter(entry => !ownCostumes.some(own => own.costumeNumber === entry.costumeNumber)).map(entry => entry.costumeNumber) : []), [pool, costumes, ownCostumes]);
     const costume = costumes.find(entry => entry.costumeNumber === want.costumeNumber) ?? costumes[0] ?? null;
     const colorId = costume?.colors.some(color => color.colorId === want.colorId) ? want.colorId as number : costume?.colors[0]?.colorId ?? 1;
-    const hairs = useMemo(() => (catalog ? hairOptions(catalog) : []), [catalog]);
-    const heads = useMemo(() => (catalog ? headGroups(catalog) : []), [catalog]);
+    const hairs = useMemo(() => {
+        const own = catalog ? hairOptions(catalog) : [];
+        const bundles = new Set(own.map(part => part.model?.bundle));
+        return pool ? [...own, ...pool.hairs.filter(part => !bundles.has(part.model?.bundle))] : own;
+    }, [catalog, pool]);
+    const heads = useMemo(() => {
+        const own = catalog ? headGroups(catalog) : [];
+        const keys = new Set(own.map(group => group.key));
+        return pool ? [...own, ...pool.heads.filter(group => !keys.has(group.key))] : own;
+    }, [catalog, pool]);
     const known = (id: number | null | undefined, slot: "hair" | "head") =>
-        id != null && (id === 0 && slot === "head" || Boolean(catalog?.parts.some(part => part.costume3dId === id && part.slot === slot)));
+        id != null && (id === 0 && slot === "head" || Boolean(catalog?.parts.some(part => part.costume3dId === id && part.slot === slot))
+            || pool?.parts.get(id)?.slot === slot);
+    /** The character a hair or head of the pool was taken from; null for the role's own. */
+    const ownerOf = useCallback((part: Costume3dPart) => (pool && catalog && !catalog.parts.includes(part)
+        ? pool.partOwners.get(part.costume3dId) ?? null
+        : null), [pool, catalog]);
     const hair = known(want.hair, "hair") ? want.hair as number : null;
     const head = known(want.head, "head") ? want.head as number : null;
 
@@ -152,12 +175,14 @@ function Costume3dContent() {
         output.value && costume ? `${region}|${costume.costumeNumber}` : null,
         () => loadCostume(output.value as Costume3dOutput, (costume as RoleCostume).costumeNumber),
     );
-    const variant = costumeState.value?.variants.find(entry =>
-        entry.characterId === role?.characterId && entry.unit === role?.unit && entry.colorId === colorId) ?? null;
-    const look = useMemo(() => (variant && catalog ? resolveLook(variant, catalog, { hair, head }) : null), [variant, catalog, hair, head]);
+    // The role's own look of the costume; unrestricted, one with a borrowed body when it has none.
+    const worn = useMemo(() => (costumeState.value && catalog ? costumeVariant(costumeState.value, catalog, colorId, pool) : null),
+        [costumeState.value, catalog, colorId, pool]);
+    const variant = worn?.variant ?? null;
+    const look = useMemo(() => (variant && catalog ? resolveLook(variant, catalog, { hair, head }, pool) : null), [variant, catalog, hair, head, pool]);
 
     const lookKey = look && variant
-        ? [variant.bodyBundle, variant.bodyColor, look.face, look.accessory?.bundle, look.accessory?.color, look.accessory?.attach, variant.motion].join("|")
+        ? [variant.bodyBundle, variant.bodyColor, look.face, look.hairFrom, look.accessory?.bundle, look.accessory?.color, look.accessory?.attach, variant.motion].join("|")
         : null;
     const stageLoad = useMemo<StageLoad | null>(() => (output.value && variant && look && catalog && !variant.missing?.length
         ? { library: output.value.library, variant, look, skin: { default: catalog.role.skin.default, shadow1: catalog.role.skin.shadow1 } }
@@ -184,12 +209,13 @@ function Costume3dContent() {
     }, [role, costume, colorId, hair, head, region, serverSource]);
 
     const regionAssets = region ? replaceAssetSourceRegion(assetSource, region as ServerSourceType) : assetSource;
-    const thumbnailOf = useCallback((costumeNumber: number, partType: string, color: number) => {
-        const name = role ? thumbnailName(costumeData.value?.get(costumeNumber), partType, color, role.characterId) : null;
+    const thumbnailOf = useCallback((costumeNumber: number, partType: string, color: number, characterId: number | null | undefined) => {
+        const name = role ? thumbnailName(costumeData.value?.get(costumeNumber), partType, color, characterId ?? role.characterId) : null;
         return name ? getCostumeThumbnailUrl(name, regionAssets) : null;
     }, [costumeData.value, role, regionAssets]);
-    const costumeThumbnail = useCallback((costumeNumber: number, color: number) => thumbnailOf(costumeNumber, "body", color), [thumbnailOf]);
-    const partThumbnail = useCallback((part: Costume3dPart) => thumbnailOf(part.costumeNumber, part.slot, part.colorId), [thumbnailOf]);
+    const costumeThumbnail = useCallback((costumeNumber: number, color: number) =>
+        thumbnailOf(costumeNumber, "body", color, borrowedCostumes.has(costumeNumber) ? pool?.costumeOwners.get(costumeNumber) : null), [thumbnailOf, borrowedCostumes, pool]);
+    const partThumbnail = useCallback((part: Costume3dPart) => thumbnailOf(part.costumeNumber, part.slot, part.colorId, ownerOf(part)), [thumbnailOf, ownerOf]);
     const colorNameOf = useCallback((costumeNumber: number, color: number) =>
         catalog?.parts.find(part => part.slot === "body" && part.costumeNumber === costumeNumber && part.colorId === color)?.colorName
         || Object.values(costumeData.value?.get(costumeNumber)?.parts ?? {}).flat().find(part => part.colorId === color)?.colorName
@@ -265,9 +291,13 @@ function Costume3dContent() {
                     {characterRoles.length > 1 && <span className="text-on-surface-variant">{unitName}</span>}
                 </span>
                 <span className={pill}>{colorName}</span>
+                {worn?.from && (
+                    <span className={pill}>{t("page.costume3d.captionBorrowed", { character: getCharacterName(t, worn.from.characterId) })}</span>
+                )}
                 {hair != null && look?.hair && !look.fullHead && (
-                    <span className={pill}>{t("page.costume3d.captionHair", {
+                    <span className={pill}>{t(look.hairFrom ? "page.costume3d.captionHairFrom" : "page.costume3d.captionHair", {
                         name: look.hair.costumeNumber === 0 ? t("page.costume3d.defaultHair") : translate("costumes", "name", look.hair.name) || look.hair.name,
+                        character: getCharacterName(t, ownerOf(look.hair) ?? role.characterId),
                     })}</span>
                 )}
                 {head != null && (
@@ -323,6 +353,7 @@ function Costume3dContent() {
             colorName={colorNameOf}
             now={now}
             showSpoilers={isShowSpoiler}
+            unrestricted={costume3dUnrestricted ? { loading: !pool && !poolState.error, failed: Boolean(poolState.error), borrowedCostumes, ownerOf } : null}
         />
     ) : catalogState.error ? (
         <p className="py-8 text-center type-body-m text-error">{t("page.costume3d.loadFailed")}</p>

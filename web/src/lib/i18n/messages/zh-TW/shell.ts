@@ -195,6 +195,7 @@ export const zhTWSettings = {
         visual: "視覺",
         content: "內容",
         data: "數據",
+        experimental: "實驗",
         about: "關於",
     },
     about: {
@@ -239,6 +240,14 @@ export const zhTWSettings = {
         off: "停用",
         onDescription: "滑鼠游標會依目前角色的主題色變化，並保留清晰描邊，在淺色與深色背景下都容易辨識。",
         offDescription: "使用系統預設游標。觸控裝置不受此設定影響。",
+    },
+    experimental: {
+        notice: "實驗性功能仍在開發中，效果可能不完整，也可能隨時調整或移除。",
+        costume3d: {
+            sectionTitle: "3D 服裝",
+            unrestrictedLabel: "解除角色限制",
+            unrestrictedDescription: "任何角色都可以穿戴其他角色（包括異性角色）的服裝、髮型和頭飾，並忽略頭飾與髮型的搭配限制。服裝保留原有體型，可能出現穿模。",
+        },
     },
     contentDisplay: {
         sectionTitle: "內容顯示",

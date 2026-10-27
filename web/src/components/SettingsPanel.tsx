@@ -41,6 +41,7 @@ import {
     mdLightMode,
     mdOpenInNew,
     mdPalette,
+    mdScience,
     mdRefresh,
     mdKeyboardArrowDown,
     mdClose,
@@ -52,7 +53,7 @@ interface SettingsPanelProps {
     onClose: () => void;
 }
 
-type SettingsTab = "visual" | "content" | "data" | "about";
+type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 type ColorSchemeOption = "system" | "light" | "dark";
 type ServerRegion = "en" | "jp" | "cn" | "tw" | "kr";
 type AssetLine = "main" | "overseas";
@@ -81,6 +82,7 @@ const tabs: { id: SettingsTab; labelKey: string; icon: string }[] = [
     { id: "visual", labelKey: "settings.sections.visual", icon: mdPalette },
     { id: "content", labelKey: "settings.sections.content", icon: mdTune },
     { id: "data", labelKey: "settings.sections.data", icon: mdDatabase },
+    { id: "experimental", labelKey: "settings.sections.experimental", icon: mdScience },
     { id: "about", labelKey: "settings.sections.about", icon: mdInfo },
 ];
 
@@ -119,6 +121,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         setBackgroundAnimationBudget,
         customCursorEnabled,
         setCustomCursorEnabled,
+        costume3dUnrestricted,
+        setCostume3dUnrestricted,
         serverSource,
         setServerSource,
     } = useTheme();
@@ -394,7 +398,25 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                 </div>
             )}
 
-            {/* TAB 4: ABOUT */}
+            {/* TAB 4: EXPERIMENTAL */}
+            {activeTab === "experimental" && (
+                <div className="space-y-5">
+                    <p className="rounded-md3-md bg-tertiary-container px-4 py-3 type-body-s text-on-tertiary-container">
+                        {t("settings.experimental.notice")}
+                    </p>
+                    <section className="space-y-4">
+                        <SectionTitle>{t("settings.experimental.costume3d.sectionTitle")}</SectionTitle>
+                        <Switch
+                            checked={costume3dUnrestricted}
+                            onCheckedChange={setCostume3dUnrestricted}
+                            label={t("settings.experimental.costume3d.unrestrictedLabel")}
+                            description={t("settings.experimental.costume3d.unrestrictedDescription")}
+                        />
+                    </section>
+                </div>
+            )}
+
+            {/* TAB 5: ABOUT */}
             {activeTab === "about" && (
                 <div className="flex flex-col items-center gap-3 rounded-md3-lg bg-surface-container p-6 text-center">
                     <a

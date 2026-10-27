@@ -3,9 +3,10 @@
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Banner, Button, Icon, Tabs, TextField, cn } from "@/components/md3";
-import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdSearch } from "@/components/md3/icons";
+import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdScience, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
+import { getCharacterName } from "@/lib/i18n";
 import { blocked, released, type Costume3dLook, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
 import type { Costume3dCatalog, Costume3dPart, Costume3dVariant } from "@/types/costume3d";
 
@@ -156,6 +157,24 @@ interface WardrobeProps {
     colorName: (costumeNumber: number, colorId: number) => string;
     now: number;
     showSpoilers: boolean;
+    /** Unrestricted (experimental setting): the other roles' parts are listed too. */
+    unrestricted: {
+        loading: boolean;
+        failed: boolean;
+        /** Costumes the role has no look of, worn with a borrowed body. */
+        borrowedCostumes: Set<number>;
+        /** The character a hair or head was taken from; null for the role's own. */
+        ownerOf: (part: Costume3dPart) => number | null;
+    } | null;
+}
+
+function Tag({ tone, children }: { tone: "primary" | "tertiary" | "secondary"; children: React.ReactNode }) {
+    const tones = {
+        primary: "bg-primary-container text-on-primary-container",
+        secondary: "bg-secondary-container text-on-secondary-container",
+        tertiary: "bg-tertiary-container text-on-tertiary-container",
+    };
+    return <span className={cn("rounded-md3-xs px-1 type-label-s", tones[tone])}>{children}</span>;
 }
 
 /**
@@ -165,7 +184,7 @@ interface WardrobeProps {
 export function Wardrobe(props: WardrobeProps) {
     const {
         tab, onTab, tint, catalog, variant, look, costumes, costumeNumber, colorId, onCostume, hairs, hair, onHair,
-        heads, head, onHead, costumeThumbnail, partThumbnail, colorName, now, showSpoilers,
+        heads, head, onHead, costumeThumbnail, partThumbnail, colorName, now, showSpoilers, unrestricted,
     } = props;
     const { t } = useI18n();
     const { t: translate } = useTranslation();
@@ -176,22 +195,28 @@ export function Wardrobe(props: WardrobeProps) {
         const raw = color.colorName || colorName(costume, color.colorId);
         return raw ? translate("costumes", "colorName", raw) || raw : t("page.costume3d.colorNumber", { number: color.colorId });
     };
-    const matches = useCallback((number: number, original: string) => !query || String(number) === query
-        || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query), [query, name]);
+    const ownerOf = unrestricted?.ownerOf;
+    const ownerName = useCallback((part: Costume3dPart) => {
+        const owner = ownerOf?.(part);
+        return owner ? getCharacterName(t, owner) : null;
+    }, [ownerOf, t]);
+    const matches = useCallback((number: number, original: string, also?: string | null) => !query || String(number) === query
+        || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query)
+        || Boolean(also?.toLowerCase().includes(query)), [query, name]);
     const listed = useCallback((publishedAt: number | null) => showSpoilers || released(publishedAt, now), [showSpoilers, now]);
 
     // What each tab lists (all of it, for the counts), and what it shows for the search.
     const listedHairs = useMemo(() => hairs.filter(part => part.costumeNumber === 0 || listed(part.publishedAt)), [hairs, listed]);
     const listedHeads = useMemo(() => heads.filter(group => listed(group.publishedAt)), [heads, listed]);
     const costumeList = useMemo(() => costumes.filter(costume => matches(costume.costumeNumber, costume.name)), [costumes, matches]);
-    const hairList = useMemo(() => listedHairs.filter(part => matches(part.costumeNumber, part.name)), [listedHairs, matches]);
+    const hairList = useMemo(() => listedHairs.filter(part => matches(part.costumeNumber, part.name, ownerName(part))), [listedHairs, matches, ownerName]);
     const ownHeads = useMemo(() => new Set([variant?.head, ...(variant?.alternativeHeads ?? [])]), [variant]);
     const wornHead = look?.head?.costume3dId ?? null;
     const headList = useMemo(() => {
         // The worn head and the costume's own first.
         const rank = (group: HeadGroup) => (group.parts.some(part => part.costume3dId === wornHead) ? 2 : group.parts.some(part => ownHeads.has(part.costume3dId)) ? 1 : 0);
-        return listedHeads.filter(group => matches(group.costumeNumber, group.name)).sort((a, b) => rank(b) - rank(a));
-    }, [listedHeads, matches, wornHead, ownHeads]);
+        return listedHeads.filter(group => matches(group.costumeNumber, group.name, ownerName(group.parts[0]))).sort((a, b) => rank(b) - rank(a));
+    }, [listedHeads, matches, ownerName, wornHead, ownHeads]);
 
     const selectedIndex = tab === "costume" ? costumeList.findIndex(costume => costume.costumeNumber === costumeNumber) : -1;
     const { shown: page, sentinel } = usePaged<unknown>(
@@ -230,6 +255,7 @@ export function Wardrobe(props: WardrobeProps) {
                     const selected = costume.costumeNumber === costumeNumber;
                     const shownColor = selected ? colorId : costume.colors[0]?.colorId ?? 1;
                     const upcoming = costume.publishedAt == null || costume.publishedAt > now;
+                    const borrowed = unrestricted?.borrowedCostumes.has(costume.costumeNumber);
                     return (
                         <div key={costume.costumeNumber} className="min-w-0">
                             <Card
@@ -238,7 +264,12 @@ export function Wardrobe(props: WardrobeProps) {
                                 title={name(costume.name)}
                                 subtitle={costume.colors.length === 1 ? named(costume.colors[0], costume.costumeNumber) : `#${costume.costumeNumber}`}
                                 colors={costume.colors.length > 1 ? t("page.costume3d.colorCount", { count: costume.colors.length }) : undefined}
-                                tags={upcoming ? <span className="rounded-md3-xs bg-tertiary-container px-1 type-label-s text-on-tertiary-container">{t("page.costume3d.upcoming")}</span> : undefined}
+                                tags={upcoming || borrowed ? (
+                                    <>
+                                        {upcoming && <Tag tone="tertiary">{t("page.costume3d.upcoming")}</Tag>}
+                                        {borrowed && <Tag tone="secondary">{t("page.costume3d.unrestricted.borrowedTag")}</Tag>}
+                                    </>
+                                ) : undefined}
                                 selected={selected}
                                 onClick={() => onCostume(costume.costumeNumber)}
                                 swatches={costume.colors.map(color => ({
@@ -263,14 +294,15 @@ export function Wardrobe(props: WardrobeProps) {
                 )}
                 <div className={grid}>
                     {shown.map(part => {
-                        const isBlocked = !fullHead && blocked(catalog, wornHead, part.costume3dId);
+                        const isBlocked = !fullHead && !unrestricted && blocked(catalog, wornHead, part.costume3dId);
+                        const owner = ownerName(part);
                         return (
                             <Card
                                 key={part.costume3dId}
                                 tint={tint}
                                 thumbnail={partThumbnail(part)}
                                 title={part.costumeNumber === 0 ? t("page.costume3d.defaultHair") : name(part.name)}
-                                subtitle={part.costumeNumber === 0 ? undefined : `#${part.costumeNumber}`}
+                                subtitle={owner ?? (part.costumeNumber === 0 ? undefined : `#${part.costumeNumber}`)}
                                 tags={isBlocked ? <Icon path={mdBlock} className="h-4 w-4 text-error" /> : undefined}
                                 selected={!fullHead && look?.hair?.costume3dId === part.costume3dId}
                                 disabled={fullHead || isBlocked}
@@ -300,6 +332,7 @@ export function Wardrobe(props: WardrobeProps) {
                     const worn = group.parts.find(part => part.costume3dId === wornHead);
                     const own = group.parts.some(part => ownHeads.has(part.costume3dId));
                     const shownPart = worn ?? group.parts[0];
+                    const borrowed = Boolean(ownerOf?.(group.parts[0]));
                     return (
                         <Card
                             key={group.key}
@@ -310,10 +343,11 @@ export function Wardrobe(props: WardrobeProps) {
                                 ? named({ colorName: "", colorId: group.parts[0].colorId }, group.costumeNumber)
                                 : `#${group.costumeNumber}`}
                             colors={group.parts.length > 1 ? t("page.costume3d.colorCount", { count: group.parts.length }) : undefined}
-                            tags={(own || group.headType === "head_and_hair") ? (
+                            tags={(own || borrowed || group.headType === "head_and_hair") ? (
                                 <>
-                                    {own && <span className="rounded-md3-xs bg-primary-container px-1 type-label-s text-on-primary-container">{t("page.costume3d.ownTag")}</span>}
-                                    {group.headType === "head_and_hair" && <span className="rounded-md3-xs bg-tertiary-container px-1 type-label-s text-on-tertiary-container">{t("page.costume3d.fullHeadTag")}</span>}
+                                    {own && <Tag tone="primary">{t("page.costume3d.ownTag")}</Tag>}
+                                    {group.headType === "head_and_hair" && <Tag tone="tertiary">{t("page.costume3d.fullHeadTag")}</Tag>}
+                                    {borrowed && <Tag tone="secondary">{t("page.costume3d.unrestricted.borrowedTag")}</Tag>}
                                 </>
                             ) : undefined}
                             selected={Boolean(worn)}
@@ -362,6 +396,12 @@ export function Wardrobe(props: WardrobeProps) {
                 />
                 {follow && <Button variant="tonal" size="s" onClick={follow}>{t("page.costume3d.followCostume")}</Button>}
             </div>
+            {unrestricted && (
+                <p className={cn("flex items-center gap-1.5 type-body-s", unrestricted.failed ? "text-error" : "text-on-surface-variant")}>
+                    <Icon path={mdScience} className="h-4 w-4 shrink-0" />
+                    {t(unrestricted.failed ? "page.costume3d.unrestricted.failed" : unrestricted.loading ? "page.costume3d.unrestricted.loading" : "page.costume3d.unrestricted.notice")}
+                </p>
+            )}
             {tab !== "costume" && notes}
             <div ref={scrollerRef} className="-mx-1 flex flex-col gap-3 px-1 pb-2 pt-1 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto">
                 {body}
