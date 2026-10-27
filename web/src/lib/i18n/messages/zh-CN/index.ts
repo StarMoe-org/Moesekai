@@ -815,6 +815,7 @@ export const zhCNMessages = {
             visual: "视觉",
             content: "内容",
             data: "数据",
+            experimental: "实验",
             about: "关于",
         },
         about: {
@@ -859,6 +860,14 @@ export const zhCNMessages = {
             off: "关闭",
             onDescription: "鼠标指针跟随当前角色主题色，并保留清晰描边，在浅色与深色背景下都易于辨认。",
             offDescription: "使用系统默认指针。触屏设备不受此设置影响。"
+        },
+        experimental: {
+            notice: "实验性功能仍在开发中，效果可能不完整，也可能随时调整或移除。",
+            costume3d: {
+                sectionTitle: "3D 服装",
+                unrestrictedLabel: "解除角色限制",
+                unrestrictedDescription: "任何角色都可以穿戴其他角色（包括异性角色）的服装、发型和头饰，并忽略头饰与发型的搭配限制。服装保留原有体型，可能出现穿模。",
+            },
         },
         contentDisplay: {
             sectionTitle: "内容显示",

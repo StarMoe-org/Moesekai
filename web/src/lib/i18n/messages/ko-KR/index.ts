@@ -813,6 +813,7 @@ export const koKRMessages = {
             visual: "비주얼",
             content: "콘텐츠",
             data: "데이터",
+            experimental: "실험",
             about: "정보"
         },
         about: {
@@ -857,6 +858,14 @@ export const koKRMessages = {
             off: "끄기",
             onDescription: "마우스 커서가 현재 캐릭터 테마 색상을 따르고 선명한 테두리를 유지하여 밝은 배경과 어두운 배경에서 모두 쉽게 알아볼 수 있습니다.",
             offDescription: "시스템 기본 커서를 사용합니다. 터치 기기는 이 설정의 영향을 받지 않습니다."
+        },
+        experimental: {
+            notice: "실험 기능은 아직 개발 중이며, 불완전하거나 예고 없이 변경·제거될 수 있습니다.",
+            costume3d: {
+                sectionTitle: "3D 의상",
+                unrestrictedLabel: "캐릭터 제한 해제",
+                unrestrictedDescription: "모든 캐릭터가 다른 캐릭터(다른 성별 포함)의 의상, 헤어스타일, 머리 장식을 착용할 수 있으며, 머리 장식과 헤어스타일의 조합 제한도 무시합니다. 의상은 원래 체형을 유지하므로 클리핑이 생길 수 있습니다.",
+            },
         },
         contentDisplay: {
             sectionTitle: "콘텐츠 표시"

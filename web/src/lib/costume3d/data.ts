@@ -5,6 +5,7 @@
  */
 import type { Costume3dCatalog, Costume3dCostume, Costume3dRoleList, Costume3dVersion } from "@/types/costume3d";
 import { COSTUME3D_FORMATS, costume3dSource } from "./config";
+import { PoolBuilder, type Costume3dPool } from "./look";
 
 /** Why an output cannot be read: not published for the server, written in formats this reader does not know, or not reachable. */
 export class Costume3dUnavailableError extends Error {
@@ -75,4 +76,34 @@ export function loadCostume(output: Costume3dOutput, costumeNumber: number): Pro
 /** Loads a JSON file below `library/` (part records and motions), kept like the indexes. */
 export function loadLibraryJson<T>(library: string, path: string): Promise<T> {
     return fetchJson<T>(`${library}${path}`);
+}
+
+/** Catalogs read at once while a pool is built. */
+const POOL_CONCURRENCY = 4;
+const pools = new Map<string, Promise<Costume3dPool>>();
+
+/**
+ * Every role's catalog of `output` reduced to a pool (unrestricted wardrobe). The catalogs are
+ * read past the document cache and dropped once reduced; only the pool is kept.
+ */
+export function loadPool(output: Costume3dOutput): Promise<Costume3dPool> {
+    let pending = pools.get(output.source);
+    if (!pending) {
+        pending = (async () => {
+            const builder = new PoolBuilder();
+            const queue = [...output.roles];
+            const worker = async () => {
+                for (let entry = queue.shift(); entry; entry = queue.shift()) {
+                    const response = await fetch(`${output.source}${entry.catalog}`);
+                    if (!response.ok) throw new Error(`${response.status} ${entry.catalog}`);
+                    builder.add(await response.json() as Costume3dCatalog);
+                }
+            };
+            await Promise.all(Array.from({ length: POOL_CONCURRENCY }, worker));
+            return builder.build();
+        })();
+        pending.catch(() => pools.delete(output.source));
+        pools.set(output.source, pending);
+    }
+    return pending;
 }

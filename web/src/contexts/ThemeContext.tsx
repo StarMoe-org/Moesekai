@@ -49,6 +49,9 @@ const THEME_SWITCHING_DURATION_MS = 180;
 const CUSTOM_CURSOR_STORAGE_KEY = "custom-cursor";
 const DEFAULT_CUSTOM_CURSOR_ENABLED = true;
 
+/** Experimental: the 3D costume page lets any role wear any role's costumes, hairs and heads. Off unless turned on. */
+const COSTUME3D_UNRESTRICTED_STORAGE_KEY = "experimental-costume3d-unrestricted";
+
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 // Asset source type (Main line / Overseas line, with optional regional suffix for override)
@@ -137,6 +140,8 @@ interface ThemeContextType {
     setBackgroundAnimationBudget: (budget: BackgroundAnimationBudget) => void;
     customCursorEnabled: boolean;
     setCustomCursorEnabled: (enabled: boolean) => void;
+    costume3dUnrestricted: boolean;
+    setCostume3dUnrestricted: (enabled: boolean) => void;
     serverSource: ServerSourceType;
     hasHydratedThemeSettings: boolean;
     setServerSource: (source: ServerSourceType) => void;
@@ -161,6 +166,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const [showAdsState, setShowAdsState] = useState(DEFAULT_SHOW_ADS);
     const [backgroundAnimationBudgetState, setBackgroundAnimationBudgetState] = useState<BackgroundAnimationBudget>(DEFAULT_BACKGROUND_ANIMATION_BUDGET);
     const [customCursorEnabledState, setCustomCursorEnabledState] = useState(DEFAULT_CUSTOM_CURSOR_ENABLED);
+    const [costume3dUnrestrictedState, setCostume3dUnrestrictedState] = useState(false);
     const [serverSourceState, setServerSourceState] = useState<ServerSourceType>(DEFAULT_SERVER_SOURCE);
     const themeSwitchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const effectiveShowAds = ADS_FEATURE_ENABLED && showAdsState;
@@ -226,6 +232,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             // Load theme cursor setting. Opt-out, so only an explicit "false" disables it.
             if (localStorage.getItem(CUSTOM_CURSOR_STORAGE_KEY) === "false") {
                 setCustomCursorEnabledState(false);
+            }
+            if (localStorage.getItem(COSTUME3D_UNRESTRICTED_STORAGE_KEY) === "true") {
+                setCostume3dUnrestrictedState(true);
             }
             // Load server source setting
             const savedServerSource = localStorage.getItem("server-source");
@@ -444,6 +453,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
     };
 
+    const setCostume3dUnrestricted = (enabled: boolean) => {
+        setCostume3dUnrestrictedState(enabled);
+        try {
+            localStorage.setItem(COSTUME3D_UNRESTRICTED_STORAGE_KEY, enabled ? "true" : "false");
+        } catch (e) {
+            console.error("Failed to save 3D costume setting to localStorage:", e);
+        }
+    };
+
     const setServerSource = (source: ServerSourceType) => {
         setServerSourceState(source);
         try {
@@ -454,7 +472,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     return (
-        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
+        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
             {children}
         </ThemeContext.Provider>
     );
