@@ -83,6 +83,8 @@ export default function InteractionsSettingsModal({
             onClose={onClose}
             title={t("page.mysekaiWorkspace.settingsModalTitle")}
             size="lg"
+            // Server changes already update workspace history; closing must keep them.
+            syncHistory={false}
         >
             <div className="flex flex-col gap-5">
                 {/* Navigation Tabs */}

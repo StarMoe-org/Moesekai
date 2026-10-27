@@ -364,7 +364,7 @@ function WorkspaceContent({ defaultTab }: { defaultTab: MolyTab }) {
                         </Button>
 
                         {/* Settings Modal Trigger */}
-                        <Button variant="tonal" icon={mdSettings} onClick={() => setSettingsOpen(true)}>
+                        <Button variant="tonal" icon={mdSettings} aria-label={t("page.mysekaiWorkspace.settingsModalTitle")} onClick={() => setSettingsOpen(true)}>
                             <span className="hidden sm:inline">{t("page.mysekaiWorkspace.settingsModalTitle")}</span>
                         </Button>
                     </>
