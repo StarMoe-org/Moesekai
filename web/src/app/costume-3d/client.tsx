@@ -166,6 +166,7 @@ function Costume3dContent() {
         ? pool.roleOf.get(part) ?? null
         : null), [pool, catalog]);
     const ownerOf = useCallback((part: Costume3dPart) => roleOf(part)?.characterId ?? null, [roleOf]);
+    const costumeInfo = useCallback((costumeNumber: number) => costumeData.value?.get(costumeNumber), [costumeData.value]);
     /** Who a part of the pool was taken from: the character, and the unit when they have several roles (Miku). */
     const ownerName = useCallback((part: Costume3dPart) => {
         const from = roleOf(part);
@@ -363,7 +364,7 @@ function Costume3dContent() {
             colorName={colorNameOf}
             now={now}
             showSpoilers={isShowSpoiler}
-            unrestricted={costume3dUnrestricted ? { pool, loading: !pool && !poolState.error, failed: Boolean(poolState.error), borrowedCostumes, ownerName } : null}
+            unrestricted={costume3dUnrestricted ? { pool, loading: !pool && !poolState.error, failed: Boolean(poolState.error), borrowedCostumes, ownerName, ownerOf, costumeInfo } : null}
         />
     ) : catalogState.error ? (
         <p className="py-8 text-center type-body-m text-error">{t("page.costume3d.loadFailed")}</p>

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 const { COSTUME3D_FORMATS, costume3dCheckConfig, costume3dRegions, costume3dSource } = await import("../src/lib/costume3d/config.ts");
 const {
-    PoolBuilder, blocked, costume3dHref, costumeVariant, hairById, hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams,
+    PoolBuilder, blocked, costume3dHref, wearableBy, costumeVariant, hairById, hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams,
 } = await import("../src/lib/costume3d/look.ts");
 
 // ---------------------------------------------------------------- config
@@ -188,6 +188,9 @@ assert.deepEqual(pool.costumes.map(c => [c.costumeNumber, c.publishedAt]), [[8, 
 assert.deepEqual(pool.hairs.map(p => p.costume3dId), [201, 6161, 5161, 204, 211, 221, 221]);
 assert.deepEqual(pool.roleOf.get(pool.hairs.find(p => p.costume3dId === 211)), { characterId: 11, unit: "street" });
 assert.equal(pool.costumeOwners.get(5), 1);
+assert.deepEqual([...pool.costumeCharacters.get(5)].sort((a, b) => a - b), [1, 4]);
+assert.deepEqual([...pool.costumeGenders.get(8)], ["male"]);
+assert.deepEqual([...pool.costumeGenders.get(5)], ["female"]);
 assert.equal(pool.headsById.has(8002), false);
 assert.deepEqual(pool.heads.find(g => g.key === "5:head_only").parts.map(p => p.costume3dId), [4001, 5003]);
 assert.deepEqual(poolOf(wearer, smaller, mens).heads.find(g => g.key === "5:head_only").parts.map(p => p.costume3dId), [4001, 5003]);
@@ -242,6 +245,10 @@ assert.equal(blocked(wearer, byId(5003), hairOf(204), pool), false); // the rule
 // Another role's head brings that role's default hair.
 look = resolveLook(variant, wearer, { hair: null, head: 8001 }, pool);
 assert.deepEqual([look.accessory.bundle, look.hair.costume3dId, look.hairFrom], ["acc/8/a03", 211, "face/11/0001"]);
+// The filters: who can wear a head in the game.
+assert.equal(wearableBy(pool, pool.headsById.get(8001), new Set([11])), true);
+assert.equal(wearableBy(pool, pool.headsById.get(8001), new Set([1, 4])), false);
+assert.equal(wearableBy(pool, byId(5003), new Set([4])), true);
 // A hair is named by its id and its role's unit: Miku's units are told apart.
 assert.equal(hairById(mikuPiapro, 221, null, pool).model.bundle, "face/21/0000");
 assert.equal(hairById(mikuPiapro, 221, "idol", pool).model.bundle, "face/28/0000");

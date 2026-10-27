@@ -26,6 +26,11 @@ export const costume3dMessages = {
     "captionHairFrom": "髮型：{character}的{name}",
     "captionHead": "頭飾：{name}",
     "captionBorrowed": "借用{character}的服裝",
+    "filter": {
+        "characters": "來源角色",
+        "hairHint": "髮型按所屬角色篩選；性別、取得途徑和稀有度只用於服裝。",
+        "headHint": "頭飾按所選角色在遊戲裡能否佩戴篩選；性別、取得途徑和稀有度只用於服裝。",
+    },
     "unrestricted": {
         "notice": "實驗性：已解除角色限制，跨角色的服裝、髮型和頭飾可能出現穿模。",
         "loading": "實驗性：正在讀取全部角色的服裝…",

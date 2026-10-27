@@ -26,6 +26,11 @@ export const costume3dMessages = {
     "captionHairFrom": "髪型：{character}の{name}",
     "captionHead": "アクセ：{name}",
     "captionBorrowed": "{character}の衣装を借用",
+    "filter": {
+        "characters": "キャラクター",
+        "hairHint": "髪型は持ち主のキャラクターで絞り込みます。性別・入手方法・レアリティは衣装のみに適用されます。",
+        "headHint": "頭アクセは選んだキャラクターがゲーム内で着用できるかで絞り込みます。性別・入手方法・レアリティは衣装のみに適用されます。",
+    },
     "unrestricted": {
         "notice": "実験的：キャラクター制限を解除中です。他キャラクターの衣装・髪型・アクセはめり込むことがあります。",
         "loading": "実験的：全キャラクターの衣装を読み込み中…",

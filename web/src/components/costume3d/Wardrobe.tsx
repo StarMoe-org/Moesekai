@@ -2,17 +2,34 @@
 
 import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Banner, Button, Icon, Tabs, TextField, cn } from "@/components/md3";
-import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdScience, mdSearch } from "@/components/md3/icons";
+import { FilterButton, FilterSection } from "@/components/common/BaseFilters";
+import CharacterFilter from "@/components/common/CharacterFilter";
+import { Banner, Button, Icon, IconButton, Tabs, TextField, cn } from "@/components/md3";
+import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdFilterList, mdScience, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { blocked, released, type Costume3dLook, type Costume3dPool, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
+import { blocked, released, wearableBy, type Costume3dLook, type Costume3dPool, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
+import { RARITY_IDS, RARITY_LABEL_KEYS, SOURCE_IDS, SOURCE_LABEL_KEYS, type ICostumeInfo } from "@/types/costume";
 import type { Costume3dCatalog, Costume3dPart, Costume3dVariant } from "@/types/costume3d";
+
+const toggled = (list: string[], id: string) => (list.includes(id) ? list.filter(entry => entry !== id) : [...list, id]);
 
 /** Cards rendered at first and added each time the end of the grid comes into view. */
 const PAGE = 48;
 
 export type WardrobeTab = "costume" | "hair" | "head";
+
+/** Unrestricted, what the wardrobe narrows its lists to: characters for all tabs, the rest for costumes. */
+interface WardrobeFilters {
+    characters: number[];
+    units: string[];
+    genders: string[];
+    sources: string[];
+    rarities: string[];
+}
+
+const NO_FILTERS: WardrobeFilters = { characters: [], units: [], genders: [], sources: [], rarities: [] };
+const GENDER_IDS = ["female", "male"] as const;
 
 interface Swatch {
     key: string;
@@ -165,6 +182,10 @@ interface WardrobeProps {
         borrowedCostumes: Set<number>;
         /** Who a hair or head was taken from (the character, and the unit for Miku's roles); null for the role's own. */
         ownerName: (part: Costume3dPart) => string | null;
+        /** The character a hair or head was taken from; null for the role's own. */
+        ownerOf: (part: Costume3dPart) => number | null;
+        /** The site's record of a costume, for the filters. */
+        costumeInfo: (costumeNumber: number) => ICostumeInfo | undefined;
     } | null;
 }
 
@@ -201,10 +222,36 @@ export function Wardrobe(props: WardrobeProps) {
         || Boolean(also?.toLowerCase().includes(query)), [query, name]);
     const listed = useCallback((publishedAt: number | null) => showSpoilers || released(publishedAt, now), [showSpoilers, now]);
 
+    // Unrestricted, the filters: a costume by who has a look of it and their figures' gender (the
+    // site's own gender field does not tell men's costumes apart), and by the site's record of
+    // its source and rarity; a hair by its character; a head by whether the characters can wear it.
+    const [filters, setFilters] = useState<WardrobeFilters>(NO_FILTERS);
+    const [filtersOpen, setFiltersOpen] = useState(false);
+    const filtering = unrestricted != null;
+    const characters = useMemo(() => new Set(filters.characters), [filters.characters]);
+    const costumeFilters = filters.genders.length + filters.sources.length + filters.rarities.length;
+    const activeFilters = !filtering ? 0 : (characters.size ? 1 : 0) + (tab === "costume" ? costumeFilters : 0);
+    const keepCostume = useCallback((costume: RoleCostume) => {
+        if (!filtering || (!characters.size && !costumeFilters)) return true;
+        const pool = unrestricted.pool;
+        const info = unrestricted.costumeInfo(costume.costumeNumber);
+        const wornBy = pool?.costumeCharacters.get(costume.costumeNumber);
+        const genders = pool?.costumeGenders.get(costume.costumeNumber);
+        const any = (selected: string[], value: string | undefined) => !selected.length || (value != null && selected.includes(value));
+        return (!characters.size || !pool || Boolean(wornBy && [...wornBy].some(id => characters.has(id))))
+            && (!filters.genders.length || !pool || filters.genders.some(gender => genders?.has(gender as "female" | "male")))
+            && any(filters.sources, info?.source) && any(filters.rarities, info?.costume3dRarity);
+    }, [filtering, unrestricted, characters, costumeFilters, filters]);
+    const keepHair = useCallback((part: Costume3dPart) => !filtering || !characters.size
+        || characters.has(unrestricted.ownerOf(part) ?? catalog.role.characterId), [filtering, unrestricted, characters, catalog]);
+    const keepHead = useCallback((group: HeadGroup) => !filtering || !characters.size || !unrestricted.pool
+        || wearableBy(unrestricted.pool, group.parts[0], characters), [filtering, unrestricted, characters]);
+
     // What each tab lists (all of it, for the counts), and what it shows for the search.
-    const listedHairs = useMemo(() => hairs.filter(part => part.costumeNumber === 0 || listed(part.publishedAt)), [hairs, listed]);
-    const listedHeads = useMemo(() => heads.filter(group => listed(group.publishedAt)), [heads, listed]);
-    const costumeList = useMemo(() => costumes.filter(costume => matches(costume.costumeNumber, costume.name)), [costumes, matches]);
+    const listedCostumes = useMemo(() => costumes.filter(keepCostume), [costumes, keepCostume]);
+    const listedHairs = useMemo(() => hairs.filter(part => (part.costumeNumber === 0 || listed(part.publishedAt)) && keepHair(part)), [hairs, listed, keepHair]);
+    const listedHeads = useMemo(() => heads.filter(group => listed(group.publishedAt) && keepHead(group)), [heads, listed, keepHead]);
+    const costumeList = useMemo(() => listedCostumes.filter(costume => matches(costume.costumeNumber, costume.name)), [listedCostumes, matches]);
     const hairList = useMemo(() => listedHairs.filter(part => matches(part.costumeNumber, part.name, ownerName(part))), [listedHairs, matches, ownerName]);
     const ownHeads = useMemo(() => new Set([variant?.head, ...(variant?.alternativeHeads ?? [])]), [variant]);
     const wornHead = look?.head?.costume3dId ?? null;
@@ -232,7 +279,7 @@ export function Wardrobe(props: WardrobeProps) {
     const selectedIndex = tab === "costume" ? costumeList.findIndex(costume => costume.costumeNumber === costumeNumber) : -1;
     const { shown: page, sentinel } = usePaged<unknown>(
         tab === "costume" ? costumeList : tab === "hair" ? hairList : headList,
-        `${tab}|${query}|${catalog.role.characterId}-${catalog.role.unit}`,
+        `${tab}|${query}|${catalog.role.characterId}-${catalog.role.unit}|${JSON.stringify(filters)}`,
         selectedIndex + 1,
     );
 
@@ -394,7 +441,7 @@ export function Wardrobe(props: WardrobeProps) {
         <div className="flex min-h-0 flex-col gap-3 @3xl:flex-1">
             <Tabs
                 items={[
-                    { value: "costume", icon: mdApparel, label: <span>{t("page.costume3d.costumes")}{count(costumes.length)}</span> },
+                    { value: "costume", icon: mdApparel, label: <span>{t("page.costume3d.costumes")}{count(listedCostumes.length)}</span> },
                     { value: "hair", icon: mdFace3, label: <span>{t("page.costume3d.hair")}{count(listedHairs.length)}</span> },
                     { value: "head", icon: mdCrown, label: <span>{t("page.costume3d.head")}{count(listedHeads.length)}</span> },
                 ]}
@@ -414,7 +461,70 @@ export function Wardrobe(props: WardrobeProps) {
                     aria-label={placeholder}
                 />
                 {follow && <Button variant="tonal" size="s" onClick={follow}>{t("page.costume3d.followCostume")}</Button>}
+                {filtering && (
+                    <span className="relative shrink-0">
+                        <IconButton
+                            icon={mdFilterList}
+                            label={t("common.filter.title")}
+                            variant="tonal"
+                            selected={filtersOpen || activeFilters > 0}
+                            aria-expanded={filtersOpen}
+                            onClick={() => setFiltersOpen(open => !open)}
+                        />
+                        {activeFilters > 0 && (
+                            <span className="pointer-events-none absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-primary px-1 type-label-s text-on-primary">
+                                {activeFilters}
+                            </span>
+                        )}
+                    </span>
+                )}
             </div>
+            {filtering && filtersOpen && (
+                <div className="max-h-[50dvh] shrink-0 space-y-4 overflow-y-auto overscroll-contain rounded-md3-lg bg-surface-container px-3 py-3">
+                    <CharacterFilter
+                        selectedCharacters={filters.characters}
+                        onCharacterChange={chars => setFilters(current => ({ ...current, characters: chars }))}
+                        selectedUnitIds={filters.units}
+                        onUnitIdsChange={units => setFilters(current => ({ ...current, units }))}
+                        characterLabel={t("page.costume3d.filter.characters")}
+                    />
+                    {tab === "costume" && (
+                        <>
+                            <FilterSection label={t("page.costumes.sectionLabel.gender")}>
+                                <div className="flex flex-wrap gap-2">
+                                    {GENDER_IDS.map(id => (
+                                        <FilterButton key={id} selected={filters.genders.includes(id)} onClick={() => setFilters(current => ({ ...current, genders: toggled(current.genders, id) }))}>
+                                            {t(`common.costume.genders.${id}`)}
+                                        </FilterButton>
+                                    ))}
+                                </div>
+                            </FilterSection>
+                            <FilterSection label={t("page.costumes.sectionLabel.source")}>
+                                <div className="flex flex-wrap gap-2">
+                                    {SOURCE_IDS.map(id => (
+                                        <FilterButton key={id} selected={filters.sources.includes(id)} onClick={() => setFilters(current => ({ ...current, sources: toggled(current.sources, id) }))}>
+                                            {t(SOURCE_LABEL_KEYS[id])}
+                                        </FilterButton>
+                                    ))}
+                                </div>
+                            </FilterSection>
+                            <FilterSection label={t("page.costumes.sectionLabel.rarity")}>
+                                <div className="flex flex-wrap gap-2">
+                                    {RARITY_IDS.map(id => (
+                                        <FilterButton key={id} selected={filters.rarities.includes(id)} onClick={() => setFilters(current => ({ ...current, rarities: toggled(current.rarities, id) }))}>
+                                            {t(RARITY_LABEL_KEYS[id])}
+                                        </FilterButton>
+                                    ))}
+                                </div>
+                            </FilterSection>
+                        </>
+                    )}
+                    {tab !== "costume" && <p className="type-body-s text-on-surface-variant">{t(`page.costume3d.filter.${tab}Hint`)}</p>}
+                    {(characters.size > 0 || costumeFilters > 0) && (
+                        <Button variant="text" size="s" onClick={() => setFilters(NO_FILTERS)}>{t("common.filter.reset")}</Button>
+                    )}
+                </div>
+            )}
             {unrestricted && (
                 <p className={cn("flex items-center gap-1.5 type-body-s", unrestricted.failed ? "text-error" : "text-on-surface-variant")}>
                     <Icon path={mdScience} className="h-4 w-4 shrink-0" />

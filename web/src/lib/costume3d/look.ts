@@ -245,6 +245,9 @@ export interface Costume3dPool {
     roleOf: Map<Costume3dPart, { characterId: number; unit: string }>;
     /** The character a costume (by number) was taken from. */
     costumeOwners: Map<number, number>;
+    /** The characters with a look of a costume, and the genders of their figures (`mens` and `boys` are male). */
+    costumeCharacters: Map<number, Set<number>>;
+    costumeGenders: Map<number, Set<"female" | "male">>;
     /** Every role's `notAvailable`, by models (`modelPair`). */
     notAvailable: Set<string>;
     /** The head models each role can wear, by `characterId-unit`. */
@@ -263,7 +266,8 @@ export class PoolBuilder {
     private readonly hairs = new Map<string, Costume3dPart>();
     private readonly heads = new Map<string, Costume3dPart>();
     private readonly roleOf = new Map<Costume3dPart, { characterId: number; unit: string }>();
-    private readonly costumeOwners = new Map<number, number>();
+    private readonly costumeCharacters = new Map<number, Set<number>>();
+    private readonly costumeGenders = new Map<number, Set<"female" | "male">>();
     private readonly notAvailable = new Set<string>();
     private readonly roleHeads = new Map<string, Set<string>>();
     /** A kept head's default hair, by face bundle. */
@@ -274,7 +278,12 @@ export class PoolBuilder {
         this.roles.push({ characterId, unit, figure, breastSize });
         for (const costume of roleCostumes(catalog)) {
             const known = this.costumes.get(costume.costumeNumber);
-            if (characterId < (this.costumeOwners.get(costume.costumeNumber) ?? Infinity)) this.costumeOwners.set(costume.costumeNumber, characterId);
+            const add = <T,>(sets: Map<number, Set<T>>, value: T) => {
+                const set = sets.get(costume.costumeNumber) ?? new Set<T>();
+                sets.set(costume.costumeNumber, set.add(value));
+            };
+            add(this.costumeCharacters, characterId);
+            add(this.costumeGenders, figure === "ladies" ? "female" : "male");
             if (!known) {
                 this.costumes.set(costume.costumeNumber, { ...costume, colors: [...costume.colors] });
                 continue;
@@ -332,11 +341,19 @@ export class PoolBuilder {
             const hair = this.hairs.get(bundle);
             if (hair) defaultHairs.set(head, hair);
         }
+        const costumeOwners = new Map([...this.costumeCharacters].map(([costumeNumber, characters]) => [costumeNumber, Math.min(...characters)]));
         return {
-            roles, costumes, hairs, heads, headsById, roleOf: this.roleOf, costumeOwners: this.costumeOwners,
+            roles, costumes, hairs, heads, headsById, roleOf: this.roleOf, costumeOwners,
+            costumeCharacters: this.costumeCharacters, costumeGenders: this.costumeGenders,
             notAvailable: this.notAvailable, roleHeads: this.roleHeads, defaultHairs,
         };
     }
+}
+
+/** Whether a role of one of `characterIds` can wear `head` in the game. */
+export function wearableBy(pool: Costume3dPool, head: Costume3dPart, characterIds: ReadonlySet<number>): boolean {
+    const bundle = head.model?.bundle;
+    return bundle != null && pool.roles.some(role => characterIds.has(role.characterId) && Boolean(pool.roleHeads.get(roleKey(role))?.has(bundle)));
 }
 
 const BREAST_SIZES = ["ss", "s", "m", "l"];

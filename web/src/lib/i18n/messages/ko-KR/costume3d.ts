@@ -26,6 +26,11 @@ export const costume3dMessages = {
     "captionHairFrom": "헤어스타일: {character}의 {name}",
     "captionHead": "액세서리: {name}",
     "captionBorrowed": "{character}의 의상 차용",
+    "filter": {
+        "characters": "캐릭터",
+        "hairHint": "헤어스타일은 해당 캐릭터 기준으로 필터링됩니다. 성별, 획득 경로, 레어도는 의상에만 적용됩니다.",
+        "headHint": "머리 장식은 선택한 캐릭터가 게임에서 착용할 수 있는지로 필터링됩니다. 성별, 획득 경로, 레어도는 의상에만 적용됩니다.",
+    },
     "unrestricted": {
         "notice": "실험 기능: 캐릭터 제한이 해제되었습니다. 다른 캐릭터의 의상, 헤어스타일, 액세서리는 클리핑이 생길 수 있습니다.",
         "loading": "실험 기능: 모든 캐릭터의 의상을 불러오는 중…",

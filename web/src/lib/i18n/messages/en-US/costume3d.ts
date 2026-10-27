@@ -26,6 +26,11 @@ export const costume3dMessages = {
     "captionHairFrom": "Hair: {name} ({character})",
     "captionHead": "Head: {name}",
     "captionBorrowed": "Borrowed from {character}",
+    "filter": {
+        "characters": "Characters",
+        "hairHint": "Hairstyles are filtered by the character they belong to; gender, source and rarity apply to costumes only.",
+        "headHint": "Head accessories are filtered by whether the chosen characters can wear them in the game; gender, source and rarity apply to costumes only.",
+    },
     "unrestricted": {
         "notice": "Experimental: character restrictions are lifted. Parts from other characters may clip.",
         "loading": "Experimental: reading every character's wardrobe…",
