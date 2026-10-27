@@ -437,8 +437,9 @@ export function Wardrobe(props: WardrobeProps) {
     const placeholder = tab === "costume" ? t("page.costume3d.searchPlaceholder") : tab === "hair" ? t("page.costume3d.hairSearchPlaceholder") : t("page.costume3d.headSearchPlaceholder");
 
     return (
-        // Inside the page's @container: beside the stage the grid scrolls within the wardrobe.
-        <div className="flex min-h-0 flex-col gap-3 @3xl:flex-1">
+        // Inside the page's @container: beside the stage the grid scrolls within the wardrobe, and
+        // keeps a usable height (the panel grows instead) when the filters take room above it.
+        <div className="flex flex-col gap-3 @3xl:flex-[1_1_0px]">
             <Tabs
                 items={[
                     { value: "costume", icon: mdApparel, label: <span>{t("page.costume3d.costumes")}{count(listedCostumes.length)}</span> },
@@ -532,7 +533,7 @@ export function Wardrobe(props: WardrobeProps) {
                 </p>
             )}
             {tab !== "costume" && notes}
-            <div ref={scrollerRef} className="-mx-1 flex flex-col gap-3 px-1 pb-2 pt-1 @3xl:min-h-0 @3xl:flex-1 @3xl:overflow-y-auto">
+            <div ref={scrollerRef} className="-mx-1 flex flex-col gap-3 px-1 pb-2 pt-1 @3xl:min-h-[max(280px,calc(100dvh-34rem))] @3xl:flex-[1_1_0px] @3xl:overflow-y-auto">
                 {body}
                 {(tab === "costume" ? costumeList : tab === "hair" ? hairList : headList).length === 0 && (
                     <p className="py-8 text-center type-body-m text-on-surface-variant">{t("page.costume3d.noMatches")}</p>

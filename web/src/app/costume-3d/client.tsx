@@ -370,8 +370,10 @@ function Costume3dContent() {
         <p className="py-8 text-center type-body-m text-error">{t("page.costume3d.loadFailed")}</p>
     ) : <LoadingState className="min-h-[20vh]" />;
 
-    // Stage and panel fill the window beside each other; the header above is the only page scroll.
+    // Stage and panel fill the window beside each other; the header above is the only page scroll,
+    // unless the panel's filters leave its grid too short: then the panel grows below the stage.
     const column = "@3xl:sticky @3xl:top-20 @3xl:h-[calc(100dvh-10.5rem)] @3xl:min-h-[540px]";
+    const panelColumn = "@3xl:sticky @3xl:top-20 @3xl:min-h-[max(540px,calc(100dvh-10.5rem))]";
     return (
         <PageContainer wide className="sm:py-5">
             {compactHeader}
@@ -383,7 +385,7 @@ function Costume3dContent() {
                         {viewport}
                     </div>
                     {/* The panel: who, then what they wear. */}
-                    <Surface tone="card" radius="xl" className={cn("flex min-h-0 flex-col gap-4 p-4", column)}>
+                    <Surface tone="card" radius="xl" className={cn("flex flex-col gap-4 p-4", panelColumn)}>
                         <CharacterPicker
                             available={available}
                             selected={role.characterId}
