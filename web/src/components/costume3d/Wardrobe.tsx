@@ -6,8 +6,7 @@ import { Banner, Button, Icon, Tabs, TextField, cn } from "@/components/md3";
 import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdScience, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { getCharacterName } from "@/lib/i18n";
-import { blocked, released, type Costume3dLook, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
+import { blocked, released, type Costume3dLook, type Costume3dPool, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
 import type { Costume3dCatalog, Costume3dPart, Costume3dVariant } from "@/types/costume3d";
 
 /** Cards rendered at first and added each time the end of the grid comes into view. */
@@ -145,7 +144,7 @@ interface WardrobeProps {
     hairs: Costume3dPart[];
     /** Picked over the costume: null follows it. */
     hair: number | null;
-    onHair: (id: number | null) => void;
+    onHair: (part: Costume3dPart | null) => void;
 
     heads: HeadGroup[];
     /** Picked over the costume: null follows it, 0 is none. */
@@ -159,12 +158,13 @@ interface WardrobeProps {
     showSpoilers: boolean;
     /** Unrestricted (experimental setting): the other roles' parts are listed too. */
     unrestricted: {
+        pool: Costume3dPool | null;
         loading: boolean;
         failed: boolean;
         /** Costumes the role has no look of, worn with a borrowed body. */
         borrowedCostumes: Set<number>;
-        /** The character a hair or head was taken from; null for the role's own. */
-        ownerOf: (part: Costume3dPart) => number | null;
+        /** Who a hair or head was taken from (the character, and the unit for Miku's roles); null for the role's own. */
+        ownerName: (part: Costume3dPart) => string | null;
     } | null;
 }
 
@@ -195,11 +195,7 @@ export function Wardrobe(props: WardrobeProps) {
         const raw = color.colorName || colorName(costume, color.colorId);
         return raw ? translate("costumes", "colorName", raw) || raw : t("page.costume3d.colorNumber", { number: color.colorId });
     };
-    const ownerOf = unrestricted?.ownerOf;
-    const ownerName = useCallback((part: Costume3dPart) => {
-        const owner = ownerOf?.(part);
-        return owner ? getCharacterName(t, owner) : null;
-    }, [ownerOf, t]);
+    const ownerName = useCallback((part: Costume3dPart) => unrestricted?.ownerName(part) ?? null, [unrestricted]);
     const matches = useCallback((number: number, original: string, also?: string | null) => !query || String(number) === query
         || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query)
         || Boolean(also?.toLowerCase().includes(query)), [query, name]);
@@ -212,11 +208,26 @@ export function Wardrobe(props: WardrobeProps) {
     const hairList = useMemo(() => listedHairs.filter(part => matches(part.costumeNumber, part.name, ownerName(part))), [listedHairs, matches, ownerName]);
     const ownHeads = useMemo(() => new Set([variant?.head, ...(variant?.alternativeHeads ?? [])]), [variant]);
     const wornHead = look?.head?.costume3dId ?? null;
+    // Unrestricted, what was picked holds: a picked head rules out the hairs it does not go with,
+    // and a picked hair the heads; a hair over the costume's head takes that head off instead.
+    const pool = unrestricted?.pool ?? null;
+    const headPicked = head != null && head !== 0;
+    const costumeHead = headPicked ? null : look?.head ?? look?.headDropped ?? null;
+    /** Whether a head goes with the hair it would be worn with: the picked one, else (another role's head) the one it brings, or the hair on now. */
+    const headMismatch = useCallback((part: Costume3dPart) => {
+        if (!pool) return false;
+        // The pool's parts are its own objects: one it holds is another role's.
+        const withHair = hair != null ? look?.hair : !pool.roleOf.has(part) ? null : pool.defaultHairs.get(part) ?? look?.hair;
+        return blocked(catalog, part, withHair, pool);
+    }, [pool, hair, look, catalog]);
     const headList = useMemo(() => {
-        // The worn head and the costume's own first.
-        const rank = (group: HeadGroup) => (group.parts.some(part => part.costume3dId === wornHead) ? 2 : group.parts.some(part => ownHeads.has(part.costume3dId)) ? 1 : 0);
-        return listedHeads.filter(group => matches(group.costumeNumber, group.name, ownerName(group.parts[0]))).sort((a, b) => rank(b) - rank(a));
-    }, [listedHeads, matches, ownerName, wornHead, ownHeads]);
+        // The worn head and the costume's own first; those that cannot be worn now last.
+        const rank = (group: HeadGroup) => (group.parts.some(part => part.costume3dId === wornHead) ? 2 : group.parts.some(part => ownHeads.has(part.costume3dId)) ? 1 : 0)
+            - (headMismatch(group.parts[0]) ? 4 : 0);
+        const ranks = new Map(listedHeads.map(group => [group, rank(group)]));
+        return listedHeads.filter(group => matches(group.costumeNumber, group.name, ownerName(group.parts[0])))
+            .sort((a, b) => (ranks.get(b) ?? 0) - (ranks.get(a) ?? 0));
+    }, [listedHeads, matches, ownerName, wornHead, ownHeads, headMismatch]);
 
     const selectedIndex = tab === "costume" ? costumeList.findIndex(costume => costume.costumeNumber === costumeNumber) : -1;
     const { shown: page, sentinel } = usePaged<unknown>(
@@ -237,11 +248,13 @@ export function Wardrobe(props: WardrobeProps) {
     }, [tab, catalog]);
 
     const fullHead = Boolean(look?.fullHead);
-    const notes = look?.hairReplaced || look?.hairIgnored ? (
+    const notes = look?.hairReplaced || look?.hairIgnored || look?.headDropped ? (
         <Banner tone="info">
             {look.hairIgnored
                 ? t("page.costume3d.hairIgnored")
-                : t("page.costume3d.hairReplaced", { name: look.hairReplaced ? name(look.hairReplaced.name) : "" })}
+                : look.headDropped
+                    ? t("page.costume3d.unrestricted.headDropped", { name: name(look.headDropped.name) })
+                    : t("page.costume3d.hairReplaced", { name: look.hairReplaced ? name(look.hairReplaced.name) : "" })}
         </Banner>
     ) : null;
 
@@ -294,20 +307,23 @@ export function Wardrobe(props: WardrobeProps) {
                 )}
                 <div className={grid}>
                     {shown.map(part => {
-                        const isBlocked = !fullHead && !unrestricted && blocked(catalog, wornHead, part.costume3dId);
+                        const isBlocked = !fullHead && (pool ? headPicked : true) && blocked(catalog, look?.head, part, pool);
+                        const dropsHead = !fullHead && !isBlocked && pool != null && blocked(catalog, costumeHead, part, pool);
                         const owner = ownerName(part);
                         return (
                             <Card
-                                key={part.costume3dId}
+                                key={part.model?.bundle ?? part.costume3dId}
                                 tint={tint}
                                 thumbnail={partThumbnail(part)}
                                 title={part.costumeNumber === 0 ? t("page.costume3d.defaultHair") : name(part.name)}
                                 subtitle={owner ?? (part.costumeNumber === 0 ? undefined : `#${part.costumeNumber}`)}
                                 tags={isBlocked ? <Icon path={mdBlock} className="h-4 w-4 text-error" /> : undefined}
-                                selected={!fullHead && look?.hair?.costume3dId === part.costume3dId}
+                                selected={!fullHead && look?.hair === part}
                                 disabled={fullHead || isBlocked}
-                                hint={fullHead ? t("page.costume3d.hairLockedByFullHead", { name: look?.head ? name(look.head.name) : "" }) : isBlocked ? t("page.costume3d.incompatible") : undefined}
-                                onClick={() => onHair(part.costume3dId)}
+                                hint={fullHead
+                                    ? t("page.costume3d.hairLockedByFullHead", { name: look?.head ? name(look.head.name) : "" })
+                                    : isBlocked ? t("page.costume3d.incompatible") : dropsHead ? t("page.costume3d.unrestricted.dropsHead") : undefined}
+                                onClick={() => onHair(part)}
                             />
                         );
                     })}
@@ -332,7 +348,8 @@ export function Wardrobe(props: WardrobeProps) {
                     const worn = group.parts.find(part => part.costume3dId === wornHead);
                     const own = group.parts.some(part => ownHeads.has(part.costume3dId));
                     const shownPart = worn ?? group.parts[0];
-                    const borrowed = Boolean(ownerOf?.(group.parts[0]));
+                    const borrowed = Boolean(ownerName(group.parts[0]));
+                    const mismatch = headMismatch(group.parts[0]);
                     return (
                         <Card
                             key={group.key}
@@ -351,6 +368,8 @@ export function Wardrobe(props: WardrobeProps) {
                                 </>
                             ) : undefined}
                             selected={Boolean(worn)}
+                            disabled={mismatch}
+                            hint={mismatch ? t("page.costume3d.unrestricted.hairMismatch") : undefined}
                             onClick={() => onHead(group.parts[0].costume3dId)}
                             swatches={group.parts.map(part => ({
                                 key: String(part.costume3dId),

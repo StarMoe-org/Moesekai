@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 const { COSTUME3D_FORMATS, costume3dCheckConfig, costume3dRegions, costume3dSource } = await import("../src/lib/costume3d/config.ts");
 const {
-    PoolBuilder, blocked, costume3dHref, costumeVariant, hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams,
+    PoolBuilder, blocked, costume3dHref, costumeVariant, hairById, hairOptions, headGroups, parseSelection, resolveLook, roleCostumes, selectionParams,
 } = await import("../src/lib/costume3d/look.ts");
 
 // ---------------------------------------------------------------- config
@@ -86,8 +86,9 @@ assert.deepEqual(headGroups(catalog).map(g => [g.costumeNumber, g.headType, g.pu
     [6, "head_only", 250, [6001]],
     [5, "head_only", 200, [5001, 5003]],
 ]);
-assert.equal(blocked(catalog, 5001, 6161), true);
-assert.equal(blocked(catalog, 6001, 6161), false);
+const byId = (id) => catalog.parts.find(p => p.costume3dId === id);
+assert.equal(blocked(catalog, byId(5001), byId(6161)), true);
+assert.equal(blocked(catalog, byId(6001), byId(6161)), false);
 
 // ---------------------------------------------------------------- looks
 const variant = {
@@ -165,19 +166,29 @@ const smaller = {
         part({ costume3dId: 204, slot: "hair", costumeNumber: 0, colorId: 1, name: "默认", model: model("face/04/0001") }),
         part({ costume3dId: 4001, slot: "head", costumeNumber: 5, colorId: 1, name: "Five", headType: "head_only", publishedAt: 200, model: model("acc/5/a02", { attach: "a02" }) }),
     ],
-    notAvailable: [],
+    notAvailable: [[4001, 204]],
     defaultHairs: {},
 };
+// Miku's roles share her ids: the default hair of each unit is 221, in a face of its own.
+const mikuRole = (unit, face) => ({
+    ...catalog,
+    role: { characterId: 21, unit, figure: "ladies", breastSize: "s", defaultHair: 221, motion: `motion/21_${unit}` },
+    parts: [part({ costume3dId: 221, slot: "hair", costumeNumber: 0, colorId: 1, name: "默认", model: model(face) })],
+    notAvailable: [],
+    defaultHairs: {},
+});
+const mikuPiapro = mikuRole("piapro", "face/21/0000");
+const mikuIdol = mikuRole("idol", "face/28/0000");
 const poolOf = (...catalogs) => { const builder = new PoolBuilder(); for (const entry of catalogs) builder.add(entry); return builder.build(); };
-const pool = poolOf(mens, smaller, wearer);
+const pool = poolOf(mens, smaller, wearer, mikuIdol, mikuPiapro);
 
 // The pool: every role's costumes (a costume dates from its earliest look), hairs by character,
 // heads without the complete ones; of parts that are the same, the lowest id, whatever the order.
 assert.deepEqual(pool.costumes.map(c => [c.costumeNumber, c.publishedAt]), [[8, 400], [6, 250], [5, 150]]);
-assert.deepEqual(pool.hairs.map(p => p.costume3dId), [201, 6161, 5161, 204, 211]);
-assert.equal(pool.partOwners.get(211), 11);
+assert.deepEqual(pool.hairs.map(p => p.costume3dId), [201, 6161, 5161, 204, 211, 221, 221]);
+assert.deepEqual(pool.roleOf.get(pool.hairs.find(p => p.costume3dId === 211)), { characterId: 11, unit: "street" });
 assert.equal(pool.costumeOwners.get(5), 1);
-assert.equal(pool.parts.has(8002), false);
+assert.equal(pool.headsById.has(8002), false);
 assert.deepEqual(pool.heads.find(g => g.key === "5:head_only").parts.map(p => p.costume3dId), [4001, 5003]);
 assert.deepEqual(poolOf(wearer, smaller, mens).heads.find(g => g.key === "5:head_only").parts.map(p => p.costume3dId), [4001, 5003]);
 
@@ -186,7 +197,8 @@ const five = { costumeNumber: 5, variants: [variant, { ...variant, characterId: 
 assert.equal(costumeVariant(five, wearer, 1, pool).variant, variant);
 assert.equal(costumeVariant(five, wearer, 1, pool).from, null);
 // One it has none of: only unrestricted, with the body of the nearest figure, and the role's own
-// face, default hair and motion; the costume's accessory stands as the pool's part.
+// face, default hair and motion; the costume's accessory only when the role can wear it, as the
+// pool's part of that accessory.
 const eight = { costumeNumber: 8, variants: [{
     characterId: 11, unit: "street", colorId: 1, body: 80, hair: 211, head: 8001, bodyBundle: "body/0008/mens", bodyColor: null,
     faceBundle: "face/11/0001", accessoryBundle: "acc/8/a03", accessoryColor: null, attach: "a03", motion: "motion/11_00",
@@ -194,12 +206,13 @@ const eight = { costumeNumber: 8, variants: [{
 assert.equal(costumeVariant(eight, wearer, 1, null), null);
 let borrowed = costumeVariant(eight, wearer, 1, pool);
 assert.deepEqual(borrowed.from, { characterId: 11, unit: "street" });
-assert.equal(borrowed.variant.bodyBundle, "body/0008/mens");
-assert.equal(borrowed.variant.faceBundle, "face/01/0001");
-assert.equal(borrowed.variant.motion, "motion/01_00");
-assert.equal(borrowed.variant.head, 8001);
+assert.deepEqual([borrowed.variant.bodyBundle, borrowed.variant.faceBundle, borrowed.variant.motion], ["body/0008/mens", "face/01/0001", "motion/01_00"]);
+assert.deepEqual([borrowed.variant.head, borrowed.variant.accessoryBundle], [0, null]);
 look = resolveLook(borrowed.variant, wearer, follow, pool);
-assert.deepEqual([look.face, look.hairFrom, look.accessory.bundle, look.head.costume3dId], ["face/01/0001", null, "acc/8/a03", 8001]);
+assert.deepEqual([look.face, look.hairFrom, look.accessory, look.head], ["face/01/0001", null, null, null]);
+const withFive = { costumeNumber: 8, variants: [{ ...eight.variants[0], head: 9999, accessoryBundle: "acc/5/a02", attach: "a02" }] };
+borrowed = costumeVariant(withFive, wearer, 1, pool);
+assert.deepEqual([borrowed.variant.head, borrowed.variant.accessoryBundle], [4001, "acc/5/a02"]);
 const nine = { costumeNumber: 9, variants: [eight.variants[0], { ...eight.variants[0], characterId: 4, unit: "light_sound", bodyBundle: "body/0009/s" }] };
 assert.equal(costumeVariant(nine, wearer, 1, pool).variant.bodyBundle, "body/0009/s");
 assert.equal(costumeVariant(nine, mens, 1, pool).variant.bodyBundle, "body/0008/mens");
@@ -207,25 +220,45 @@ assert.equal(costumeVariant(nine, mens, 1, pool).variant.bodyBundle, "body/0008/
 const ten = { costumeNumber: 10, variants: [variant, { ...variant, characterId: 4, bodyBundle: "body/0010/s" }] };
 assert.equal(costumeVariant(ten, mens, 1, pool).variant.bodyBundle, "body/0010/s");
 
-// Another character's hair on the role's own face; `notAvailable` no longer applies.
-look = resolveLook(variant, wearer, { hair: 211, head: null }, pool);
+// Another character's hair on the role's own face.
+const noHead = { ...variant, head: 0, accessoryBundle: null, attach: null };
+look = resolveLook(noHead, wearer, { hair: 211, head: null }, pool);
 assert.deepEqual([look.face, look.hairFrom, look.hair.costume3dId], ["face/01/0001", "face/11/0001", 211]);
+// A head goes only with a hair whose role can wear it: 11 cannot wear acc/5/a02. A picked hair
+// takes the costume's head off; a picked head keeps it and puts its default hair on instead.
+const hairOf = (id) => pool.hairs.find(p => p.costume3dId === id);
+assert.equal(blocked(wearer, byId(5001), hairOf(211), pool), true);
+assert.equal(blocked(wearer, pool.headsById.get(8001), hairOf(211), pool), false);
+look = resolveLook(variant, wearer, { hair: 211, head: null }, pool);
+assert.deepEqual([look.hair.costume3dId, look.hairFrom, look.accessory, look.headDropped.costume3dId, look.hairReplaced], [211, "face/11/0001", null, 5001, null]);
+look = resolveLook(variant, wearer, { hair: 211, head: 5001 }, pool);
+assert.deepEqual([look.hair.costume3dId, look.hairReplaced.costume3dId, look.accessory.bundle, look.headDropped], [201, 211, "acc/5/a02", null]);
+// `notAvailable` still applies, from every role's catalog by models: the role's own pairs, and
+// another role's hair with the head that role cannot wear it with (4001 is 5001's model).
 look = resolveLook(variant, wearer, { hair: 6161, head: 5001 }, pool);
-assert.deepEqual([look.hair.costume3dId, look.hairReplaced, look.hairFrom], [6161, null, null]);
-assert.equal(blocked(wearer, 5001, 6161, pool), false);
-// Another role's head; its default hair is that role's, so the costume's hair stays.
+assert.deepEqual([look.hair.costume3dId, look.hairReplaced.costume3dId], [201, 6161]);
+assert.equal(blocked(wearer, byId(5001), hairOf(204), pool), true);
+assert.equal(blocked(wearer, byId(5003), hairOf(204), pool), false); // the rule is for the other colour
+// Another role's head brings that role's default hair.
 look = resolveLook(variant, wearer, { hair: null, head: 8001 }, pool);
-assert.deepEqual([look.accessory.bundle, look.hair.costume3dId, look.hairFrom], ["acc/8/a03", 201, null]);
+assert.deepEqual([look.accessory.bundle, look.hair.costume3dId, look.hairFrom], ["acc/8/a03", 211, "face/11/0001"]);
+// A hair is named by its id and its role's unit: Miku's units are told apart.
+assert.equal(hairById(mikuPiapro, 221, null, pool).model.bundle, "face/21/0000");
+assert.equal(hairById(mikuPiapro, 221, "idol", pool).model.bundle, "face/28/0000");
+assert.equal(hairById(wearer, 221, "piapro", pool).model.bundle, "face/21/0000");
+look = resolveLook({ ...noHead, characterId: 21, unit: "piapro", faceBundle: "face/21/0000", hair: 221 }, mikuPiapro, { hair: 221, hairUnit: "idol", head: null }, pool);
+assert.deepEqual([look.face, look.hairFrom], ["face/21/0000", "face/28/0000"]);
 
 // ---------------------------------------------------------------- addresses
-assert.deepEqual(parseSelection(new URLSearchParams("server=CN&ch=1&u=light_sound&c=880&col=2&hair=897165&head=0")), {
-    server: "cn", characterId: 1, unit: "light_sound", costumeNumber: 880, colorId: 2, hair: 897165, head: 0,
+assert.deepEqual(parseSelection(new URLSearchParams("server=CN&ch=1&u=light_sound&c=880&col=2&hair=897165&hu=idol&head=0")), {
+    server: "cn", characterId: 1, unit: "light_sound", costumeNumber: 880, colorId: 2, hair: 897165, hairUnit: "idol", head: 0,
 });
 // Anything malformed is left out, for the page to choose.
 assert.deepEqual(parseSelection(new URLSearchParams("ch=0&u=Light-Sound&c=-1&col=x&hair=0&head=1.5")), {});
-const selection = { characterId: 21, unit: "piapro", costumeNumber: 880, colorId: 1, hair: null, head: 0 };
+const selection = { characterId: 21, unit: "piapro", costumeNumber: 880, colorId: 1, hair: null, hairUnit: null, head: 0 };
 assert.equal(selectionParams(selection, null).toString(), "ch=21&u=piapro&c=880&col=1&head=0");
 assert.equal(selectionParams({ ...selection, head: null, hair: 5 }, "jp").toString(), "server=jp&ch=21&u=piapro&c=880&col=1&hair=5");
+assert.equal(selectionParams({ ...selection, head: null, hair: 221, hairUnit: "idol" }, null).toString(), "ch=21&u=piapro&c=880&col=1&hair=221&hu=idol");
 assert.equal(costume3dHref({ costumeNumber: 880, colorId: 2, characterId: 1 }), "/costume-3d?ch=1&c=880&col=2");
 assert.equal(costume3dHref({}), "/costume-3d");
 
