@@ -13,6 +13,8 @@ export interface MolyRelease {
     engines: Record<"webgpu" | "webgl2", { downloadBytes: number; decodedBytes: number; brotliBytes?: number; gzipBytes?: number }>;
 }
 export interface ResourceSnapshot {
+    /** Original display bindings only; translated publications are independent. */
+    textSource?: { url: string; sha256: string; bytes: number };
     id: string;
     region: MolyRegion;
     version: string;
@@ -99,6 +101,9 @@ export async function fetchRuntimeManifest(signal?: AbortSignal, pin?: { snapsho
             || snapshot.catalog !== `/moly/snapshots/${snapshot.id}/catalog/index.json`
             || typeof snapshot.available !== "boolean") throw new Error("moly_manifest_invalid");
         regions.add(snapshot.region);
+        if (snapshot.textSource && (snapshot.textSource.url !== `/moly/snapshots/${snapshot.id}/text/index.json`
+            || !/^[a-f0-9]{64}$/.test(snapshot.textSource.sha256) || !Number.isSafeInteger(snapshot.textSource.bytes)
+            || snapshot.textSource.bytes < 1 || snapshot.textSource.bytes > 2 * 1048576)) throw new Error("moly_text_source_invalid");
         snapshot.releaseModule = value.release.module;
     }
     // Validate logical publication identities before applying the host's exact,
@@ -107,6 +112,7 @@ export async function fetchRuntimeManifest(signal?: AbortSignal, pin?: { snapsho
     for (const snapshot of value.snapshots) {
         snapshot.assets = molyResourceUrl(snapshot.assets);
         snapshot.catalog = molyResourceUrl(snapshot.catalog);
+        if (snapshot.textSource) snapshot.textSource = { ...snapshot.textSource, url: molyResourceUrl(snapshot.textSource.url) };
     }
     return value;
 }
@@ -166,7 +172,8 @@ export function resourceImage(snapshot: ResourceSnapshot, image: string | null |
 // These are ordinary catalogue/search predicates over an immutable Rust
 // projection. The `available` flag is never recomputed in the host. Starting
 // playback always goes back through the real runtime's current admission gate.
-export function filterCatalog(catalog: ContentCatalog, state: BrowseState): CatalogEntry[] {
+export function filterCatalog(catalog: ContentCatalog, state: BrowseState,
+    textIndex?: Record<string, { title: string; search: string }>): CatalogEntry[] {
     const tokens = state.query.toLocaleLowerCase().trim().split(/\s+/).filter(Boolean);
     // Search the same furniture relationships used by the furniture detail page.
     // Authored conversation titles usually contain the cast, not the furniture.
@@ -182,7 +189,11 @@ export function filterCatalog(catalog: ContentCatalog, state: BrowseState): Cata
         if (!inTab || (state.fixture !== null && !entry.fixtureIds.includes(state.fixture))
             || (state.characters.length > 0 && !entry.unitIds.some(character => state.characters.includes(character)))
             || (state.availability === "ready" && !entry.available)) return false;
-        const search = `${entry.title} ${entry.subtitle} ${entry.key} ${entry.fixtureIds.map(id => `${id} ${furnitureNames.get(id) ?? ""}`).join(" ")} ${entry.characters.map(c => `${c.name} ${c.originalName || ""}`).join(" ")}`.toLocaleLowerCase();
+        const translated = entry.scriptKey ? textIndex?.[entry.scriptKey] : undefined;
+        const search = `${entry.title} ${entry.subtitle} ${translated?.search ?? ""} ${entry.key} ${entry.fixtureIds.map(id => `${id} ${furnitureNames.get(id) ?? ""}`).join(" ")} ${entry.characters.map(c => `${c.name} ${c.originalName || ""}`).join(" ")}`.toLocaleLowerCase();
         return tokens.every(token => search.includes(token.replace(/^#/, "")));
+    }).map(entry => {
+        const title = entry.scriptKey ? textIndex?.[entry.scriptKey]?.title : undefined;
+        return title ? { ...entry, title } : entry;
     });
 }

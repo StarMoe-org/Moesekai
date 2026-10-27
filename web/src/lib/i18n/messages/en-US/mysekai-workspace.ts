@@ -1,4 +1,6 @@
 export const mysekaiWorkspaceMessages = {
+    "translationPreview": "Translation draft preview · Unpublished",
+    "translationUnavailable": "The translation or its required fonts could not be loaded. Playback has not started. Retry or return to reading.",
     "title": "MYSEKAI",
     "alphaLabel": "Alpha",
     "alphaNotice": "Early preview. Scene recreation and some performances are still in development; visual or playback issues may occur.",

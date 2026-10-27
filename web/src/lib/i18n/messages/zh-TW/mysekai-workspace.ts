@@ -1,4 +1,6 @@
 export const mysekaiWorkspaceMessages = {
+    "translationPreview": "翻譯草稿預覽 · 尚未發佈",
+    "translationUnavailable": "譯文或所需字型暫時無法載入，本次播放尚未開始。可以重試，或返回閱讀詳情。",
     "title": "MYSEKAI",
     "alphaLabel": "Alpha",
     "alphaNotice": "早期預覽版本。場景還原和部分演出仍在完善，可能出現顯示或播放異常。",

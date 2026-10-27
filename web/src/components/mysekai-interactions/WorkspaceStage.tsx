@@ -5,11 +5,13 @@ import { Button, Chip, Icon, IconButton, LoadingIndicator } from "@/components/m
 import { mdFullscreen, mdFullscreenExit, mdKeyboardArrowDown, mdRefresh, mdSettings, mdSmartDisplay, mdVolumeOff, mdVolumeUp } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { MolyBoot, MolyError, MolySnapshot, MolyPlayerDataState } from "@/lib/moly/contract";
+import type { EntryTextResult } from "@/lib/moly/text";
 import RuntimeStage, { type PlayerSession, type RuntimeStageHandle } from "./RuntimeStage";
 import { useStagePresentation } from "./useStagePresentation";
 import WeatherControl from "./WeatherControl";
 
 interface Props {
+    onTextResolved(value: EntryTextResult): void;
     session: PlayerSession | null;
     player: RefObject<RuntimeStageHandle | null>;
     live: MolySnapshot | null;
@@ -52,13 +54,14 @@ export default function WorkspaceStage({
     onBoot,
     onError,
     onPlayerData,
+    onTextResolved,
 }: Props) {
     const { t } = useI18n();
     const root = useRef<HTMLDivElement>(null);
     const [expiredWeatherKey, setExpiredWeatherKey] = useState<string | null>(null);
     const weatherKey = session ? `${session.epoch}:${session.snapshot.id}` : null;
     const hasWeather = Boolean(live?.weather);
-    const sceneReady = Boolean(live?.ready);
+    const sceneReady = Boolean(!error && live?.scene?.ready);
 
     useEffect(() => {
         if (!weatherKey || !sceneReady || hasWeather) return;
@@ -69,8 +72,8 @@ export default function WorkspaceStage({
     const presentation = useStagePresentation(root, Boolean(session));
     if (!session) return null;
 
-    const phase = closing ? "restoring" : live?.status.phase ?? "preparing";
-    const busy = Boolean(live?.status.canStop);
+    const phase = closing ? "restoring" : error ? "error" : !sceneReady ? "preparing" : live?.status.phase ?? "preparing";
+    const busy = Boolean(!error && live?.status.canStop);
     const show = expanded || presentation.immersive;
     const weatherUnavailable = sceneReady && expiredWeatherKey === weatherKey;
 
@@ -143,6 +146,7 @@ export default function WorkspaceStage({
                         onBoot={onBoot}
                         onError={onError}
                         onPlayerData={onPlayerData}
+                        onTextResolved={onTextResolved}
                     />
 
                     {/* Instant Loading Overlay */}
@@ -233,7 +237,9 @@ export default function WorkspaceStage({
             {(error || live?.status.phase === "error") && (
                 <div className="flex flex-wrap items-center justify-between gap-3 bg-error-container p-4 text-on-error-container" role="alert">
                     <p className="type-title-s">
-                        {t(`page.mysekaiInteractions.${error?.code === "source_mismatch" ? "sourceMismatch" : "runtimeFailed"}`)}
+                        {error?.code === "text_unavailable"
+                            ? t("page.mysekaiWorkspace.translationUnavailable")
+                            : t(`page.mysekaiInteractions.${error?.code === "source_mismatch" ? "sourceMismatch" : "runtimeFailed"}`)}
                     </p>
                     <div className="flex gap-2">
                         <Button size="xs" variant="filled" color="error" icon={mdRefresh} disabled={closing} onClick={retry}>

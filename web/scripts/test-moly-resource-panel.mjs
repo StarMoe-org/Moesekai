@@ -31,6 +31,17 @@ const mocks = {
         return reply;
     } },
 };
+// Load the real region presentation modules added by the host, keeping only
+// external services and context providers mocked.
+async function sourceModule(file) {
+    const source = await readFile(new URL(file, import.meta.url), "utf8");
+    const compiled = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
+    const exports = {};
+    new Function("require", "exports", compiled)(id => mocks[id] ?? require(id), exports);
+    return exports;
+}
+mocks["@/lib/account-servers"] = await sourceModule("../src/lib/account-servers.ts");
+mocks["@/components/common/ServerRegion"] = await sourceModule("../src/components/common/ServerRegion.tsx");
 new Function("require", "exports", compiled)(id => mocks[id] ?? require(id), exports);
 const Panel = exports.default;
 const host = document.getElementById("root");

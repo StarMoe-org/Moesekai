@@ -47,7 +47,7 @@ export function positiveId(value: string | null): number | null {
 export function validContentKey(value: unknown): value is MolyKey {
     if (typeof value !== "string" || value.length > 160) return false;
     const parts = value.split(":");
-    const numbers = parts[0] === "talk" && ["general", "fixture"].includes(parts[1]) && parts.length === 3 ? parts.slice(2)
+    const numbers = parts[0] === "talk" && ["general", "fixture", "common"].includes(parts[1]) && parts.length === 3 ? parts.slice(2)
         : parts[0] === "fixture" && parts.length === 2 ? parts.slice(1)
             : parts[0] === "activity" && ["notalk", "preaction"].includes(parts[1]) && parts.length === 4 ? parts.slice(2) : [];
     return numbers.length > 0 && numbers.every(number => positiveId(number) !== null);
