@@ -870,6 +870,8 @@ export const koKRMessages = {
                 sectionTitle: "Live2D 스토리 미리보기",
                 antialiasingLabel: "안티에일리어싱 설정",
                 antialiasingDescription: "Live2D 스토리 미리보기의 재생 설정에 안티에일리어싱(MSAA, SSAA, SMAA 중 하나) 옵션을 표시해 캐릭터 윤곽을 부드럽게 합니다. 화면이 게임과 달라지며, 배율이 높을수록 GPU와 메모리를 더 사용합니다.",
+                highFpsLabel: "고프레임",
+                highFpsDescription: "60Hz를 넘는 디스플레이에서 Live2D 스토리 미리보기를 디스플레이 주사율로 그립니다. 프레임 사이의 동작, 페이드, Live2D 파라미터를 시간에 따라 보간해 더 부드럽게 보입니다. 텍스트, 이펙트 파티클, 전환 효과는 여전히 60fps로 바뀝니다. 다음에 스토리를 불러올 때부터 적용되며, 주사율만큼 그리는 횟수가 늘어납니다.",
             },
         },
         contentDisplay: {

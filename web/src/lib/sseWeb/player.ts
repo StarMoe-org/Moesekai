@@ -80,6 +80,8 @@ export interface SsePlayerOptions {
     auto?: boolean;
     /** Experimental anti-aliasing of the Live2D models; none when left out. */
     experimentalAntialiasing?: SsePlayerAntialiasing;
+    /** Experimental: on a display above 60 Hz, draws every refresh, interpolated between the story's frames. */
+    highFps?: boolean;
     onProgress?: (progress: SsePlayerProgress) => void;
 }
 

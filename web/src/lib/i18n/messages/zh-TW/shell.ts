@@ -252,6 +252,8 @@ export const zhTWSettings = {
             sectionTitle: "Live2D 劇情預覽",
             antialiasingLabel: "反鋸齒設定",
             antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒（MSAA、SSAA、SMAA，同時只用一種），讓角色邊緣更平滑。畫面會與遊戲不同，倍率越高越佔顯示卡與記憶體。",
+            highFpsLabel: "高影格率",
+            highFpsDescription: "在高於 60 Hz 的螢幕上，Live2D 劇情預覽依螢幕的更新率繪製：兩格之間的動作、淡入淡出與 Live2D 參數依時間插值，更流暢；文字、特效粒子與轉場仍以 60 格變化。下次載入劇情時生效，繪製次數隨更新率增加。",
         },
     },
     contentDisplay: {

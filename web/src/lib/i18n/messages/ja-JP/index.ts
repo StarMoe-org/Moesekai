@@ -872,6 +872,8 @@ export const jaJPMessages = {
         sectionTitle: "Live2D ストーリープレビュー",
         antialiasingLabel: "アンチエイリアス設定",
         antialiasingDescription: "Live2D ストーリープレビューの再生設定にアンチエイリアス（MSAA・SSAA・SMAA のいずれか 1 つ）の項目を表示し、キャラクターの輪郭を滑らかにします。画面はゲームと異なり、倍率が高いほど GPU とメモリを使います。",
+        highFpsLabel: "高フレームレート",
+        highFpsDescription: "60 Hz を超えるディスプレイで、Live2D ストーリープレビューをディスプレイのリフレッシュレートで描画します。フレーム間の動き・フェード・Live2D パラメータを時間で補間して滑らかにします。テキスト・エフェクトのパーティクル・トランジションは 60 fps のまま変化します。次にストーリーを読み込んだときから有効になり、描画回数はリフレッシュレートに応じて増えます。",
       },
     },
     contentDisplay: {

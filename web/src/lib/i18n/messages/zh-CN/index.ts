@@ -872,6 +872,8 @@ export const zhCNMessages = {
                 sectionTitle: "Live2D 剧情预览",
                 antialiasingLabel: "抗锯齿设置",
                 antialiasingDescription: "在 Live2D 剧情预览的播放设置里提供抗锯齿（MSAA、SSAA、SMAA，同时只用一种），让角色边缘更平滑。画面会与游戏不同，倍率越高越占显卡和内存。",
+                highFpsLabel: "高帧率",
+                highFpsDescription: "在高于 60 Hz 的显示器上，Live2D 剧情预览按显示器的刷新率绘制：两帧之间的动作、淡入淡出与 Live2D 参数按时间插值，更流畅；文字、特效粒子与转场仍按 60 帧变化。下次加载剧情时生效，绘制次数随刷新率增加。",
             },
         },
         contentDisplay: {

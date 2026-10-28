@@ -55,6 +55,9 @@ const COSTUME3D_UNRESTRICTED_STORAGE_KEY = "experimental-costume3d-unrestricted"
 /** Experimental: the Live2D story player's settings offer anti-aliasing. Off unless turned on. */
 const STORY_LIVE2D_ANTIALIASING_STORAGE_KEY = "experimental-story-live2d-antialiasing";
 
+/** Experimental: the Live2D story player draws every refresh of a display above 60 Hz. Off unless turned on. */
+const STORY_LIVE2D_HIGH_FPS_STORAGE_KEY = "experimental-story-live2d-high-fps";
+
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
 // Asset source type (Main line / Overseas line, with optional regional suffix for override)
@@ -147,6 +150,8 @@ interface ThemeContextType {
     setCostume3dUnrestricted: (enabled: boolean) => void;
     storyLive2dAntialiasing: boolean;
     setStoryLive2dAntialiasing: (enabled: boolean) => void;
+    storyLive2dHighFps: boolean;
+    setStoryLive2dHighFps: (enabled: boolean) => void;
     serverSource: ServerSourceType;
     hasHydratedThemeSettings: boolean;
     setServerSource: (source: ServerSourceType) => void;
@@ -173,6 +178,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const [customCursorEnabledState, setCustomCursorEnabledState] = useState(DEFAULT_CUSTOM_CURSOR_ENABLED);
     const [costume3dUnrestrictedState, setCostume3dUnrestrictedState] = useState(false);
     const [storyLive2dAntialiasingState, setStoryLive2dAntialiasingState] = useState(false);
+    const [storyLive2dHighFpsState, setStoryLive2dHighFpsState] = useState(false);
     const [serverSourceState, setServerSourceState] = useState<ServerSourceType>(DEFAULT_SERVER_SOURCE);
     const themeSwitchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const effectiveShowAds = ADS_FEATURE_ENABLED && showAdsState;
@@ -244,6 +250,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             }
             if (localStorage.getItem(STORY_LIVE2D_ANTIALIASING_STORAGE_KEY) === "true") {
                 setStoryLive2dAntialiasingState(true);
+            }
+            if (localStorage.getItem(STORY_LIVE2D_HIGH_FPS_STORAGE_KEY) === "true") {
+                setStoryLive2dHighFpsState(true);
             }
             // Load server source setting
             const savedServerSource = localStorage.getItem("server-source");
@@ -480,6 +489,15 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
     };
 
+    const setStoryLive2dHighFps = (enabled: boolean) => {
+        setStoryLive2dHighFpsState(enabled);
+        try {
+            localStorage.setItem(STORY_LIVE2D_HIGH_FPS_STORAGE_KEY, enabled ? "true" : "false");
+        } catch (e) {
+            console.error("Failed to save the Live2D high frame rate setting to localStorage:", e);
+        }
+    };
+
     const setServerSource = (source: ServerSourceType) => {
         setServerSourceState(source);
         try {
@@ -490,7 +508,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     return (
-        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
+        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, storyLive2dHighFps: storyLive2dHighFpsState, setStoryLive2dHighFps, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
             {children}
         </ThemeContext.Provider>
     );

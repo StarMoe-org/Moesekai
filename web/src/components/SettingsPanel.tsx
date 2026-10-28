@@ -125,6 +125,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         setCostume3dUnrestricted,
         storyLive2dAntialiasing,
         setStoryLive2dAntialiasing,
+        storyLive2dHighFps,
+        setStoryLive2dHighFps,
         serverSource,
         setServerSource,
     } = useTheme();
@@ -422,6 +424,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             onCheckedChange={setStoryLive2dAntialiasing}
                             label={t("settings.experimental.storyLive2d.antialiasingLabel")}
                             description={t("settings.experimental.storyLive2d.antialiasingDescription")}
+                        />
+                        <Switch
+                            checked={storyLive2dHighFps}
+                            onCheckedChange={setStoryLive2dHighFps}
+                            label={t("settings.experimental.storyLive2d.highFpsLabel")}
+                            description={t("settings.experimental.storyLive2d.highFpsDescription")}
                         />
                     </section>
                 </div>

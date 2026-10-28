@@ -115,9 +115,12 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
     const { t } = useI18n();
     // the anti-aliasing chosen in the player's settings holds only while the experimental setting
     // offers it
-    const { storyLive2dAntialiasing } = useTheme();
+    const { storyLive2dAntialiasing, storyLive2dHighFps } = useTheme();
     const antialiasingOfferedRef = useRef(storyLive2dAntialiasing);
     antialiasingOfferedRef.current = storyLive2dAntialiasing;
+    // the player takes the high frame rate when it is made: a change holds from the next episode loaded
+    const highFpsRef = useRef(storyLive2dHighFps);
+    highFpsRef.current = storyLive2dHighFps;
     /** What the player was last told to anti-alias with. */
     const appliedAntialiasingRef = useRef<SseWebAntialiasing>(SSE_WEB_NO_ANTIALIASING);
     const sources = sseWebSources(region);
@@ -232,6 +235,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 playerName: t("page.story.live2d.playerName"),
                 auto: true,
                 experimentalAntialiasing: antialiasing,
+                highFps: highFpsRef.current,
                 onProgress: ({ sim, render, kit }) => {
                     if (epoch !== epochRef.current) return;
                     // the two workers' file counts; the UI kit is found file by file and only adds bytes
