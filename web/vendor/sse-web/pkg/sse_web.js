@@ -93,6 +93,16 @@ let wasm_bindgen = (function(exports) {
             return ret !== 0;
         }
         /**
+         * The MSAA sample counts this device takes (4 in browsers).
+         * @returns {Uint32Array}
+         */
+        msaaSampleCounts() {
+            const ret = wasm.framerenderer_msaaSampleCounts(this.__wbg_ptr);
+            var v1 = getArrayU32FromWasm0(ret[0], ret[1]).slice();
+            wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+            return v1;
+        }
+        /**
          * Draws one frame, given as the JSON of a `FrameState`.
          * @param {string} frame
          */
@@ -123,15 +133,18 @@ let wasm_bindgen = (function(exports) {
             }
         }
         /**
-         * Experimental: anti-aliases the Live2D models from now on: `msaa` samples per pixel (1 or
-         * 4), `ssaa` times the size per side (1, 2 or 3; 1 is off for both), and SMAA 1x; any
-         * combination, none by default. Smoother character edges than the game shows.
-         * @param {number} msaa
-         * @param {number} ssaa
-         * @param {boolean} smaa
+         * Experimental: anti-aliases the Live2D models from now on with one `method`: `none` (the
+         * default), `msaa` with `msaa_samples` samples per pixel (one of
+         * [`FrameRenderer::msaa_sample_counts`]), `ssaa` at `ssaa_factor` times the size per side
+         * (2 or 3), or `smaa`. Smoother character edges than the game shows.
+         * @param {string} method
+         * @param {number} msaa_samples
+         * @param {number} ssaa_factor
          */
-        setExperimentalAntialiasing(msaa, ssaa, smaa) {
-            const ret = wasm.framerenderer_setExperimentalAntialiasing(this.__wbg_ptr, msaa, ssaa, smaa);
+        setExperimentalAntialiasing(method, msaa_samples, ssaa_factor) {
+            const ptr0 = passStringToWasm0(method, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.framerenderer_setExperimentalAntialiasing(this.__wbg_ptr, ptr0, len0, msaa_samples, ssaa_factor);
             if (ret[1]) {
                 throw takeFromExternrefTable0(ret[0]);
             }
@@ -865,6 +878,10 @@ let wasm_bindgen = (function(exports) {
                 arg0.end();
             },
             __wbg_features_5cac120c28ba0475: function(arg0) {
+                const ret = arg0.features;
+                return ret;
+            },
+            __wbg_features_dec7bd2fd3d91bd6: function(arg0) {
                 const ret = arg0.features;
                 return ret;
             },
@@ -1949,12 +1966,12 @@ let wasm_bindgen = (function(exports) {
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
                 // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 301, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__45);
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46);
                 return ret;
             },
             __wbindgen_generic_0000000000000004: function(arg0, arg1) {
                 // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 301, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46);
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47);
                 return ret;
             },
             __wbindgen_generic_0000000000000005: function(arg0) {
@@ -2002,15 +2019,15 @@ let wasm_bindgen = (function(exports) {
         }
     }
 
-    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__45(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__45(arg0, arg1, arg2);
+    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__46(arg0, arg1, arg2);
+    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }

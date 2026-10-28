@@ -37,9 +37,9 @@ const CORE = "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.
  *   network      a file could not be fetched, after several tries (`url`)
  *   internal     anything else
  */
-/** `experimentalAntialiasing` with what is left out filled in (off). */
+/** `experimentalAntialiasing` with what is left out filled in: off, 4 samples, factor 2. */
 function antialiasing(aa) {
-  return { msaa: aa?.msaa ?? 1, ssaa: aa?.ssaa ?? 1, smaa: !!aa?.smaa };
+  return { method: aa?.method ?? "none", msaaSamples: aa?.msaaSamples ?? 4, ssaaFactor: aa?.ssaaFactor ?? 2 };
 }
 
 export class SsePlayer extends EventTarget {
@@ -84,7 +84,7 @@ export class SsePlayer extends EventTarget {
    *   the names, each a font (TTF or OTF; `weight` sets a variable font's weight) followed by
    *   the fonts that fill in the characters it lacks. With both given, the client's own font
    *   files are not fetched at all. Text in other fonts is not what the game shows
-   * @param {{msaa?: number, ssaa?: number, smaa?: boolean}} [o.experimentalAntialiasing]
+   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [o.experimentalAntialiasing]
    *   experimental anti-aliasing of the Live2D models, see setExperimentalAntialiasing; none
    *   by default
    * @param {string} [o.playerName]
@@ -238,8 +238,9 @@ export class SsePlayer extends EventTarget {
     p.sim.postMessage({ type: "init", options, framesPort: frames.port1, audioPort: audio.port1 }, [frames.port1, audio.port1]);
     p.render.postMessage({ type: "init", options, canvas: offscreen, framesPort: frames.port2 }, [offscreen, frames.port2]);
     p.kit.postMessage({ type: "init", options });
-    const [simInfo] = await Promise.all([simReady, renderReady, kitReady]);
+    const [simInfo, renderInfo] = await Promise.all([simReady, renderReady, kitReady]);
     p.nodes = simInfo.nodes;
+    p.msaaSampleCounts = renderInfo.msaaSampleCounts;
     p.unsupported = simInfo.unsupported;
     p.loaded = true;
     p.tick = p.tick.bind(p);
@@ -383,11 +384,13 @@ export class SsePlayer extends EventTarget {
   }
 
   /**
-   * Experimental: anti-aliases the Live2D models from now on, the frame on screen included.
-   * `msaa`: samples per pixel (1 or 4); `ssaa`: times the size per side (1, 2 or 3; 1 is off
-   * for both); `smaa`: SMAA 1x. Any combination; left out, each is off. Smoother character
-   * edges than the game shows. A value outside these is ignored, with a warning in the console.
-   * @param {{msaa?: number, ssaa?: number, smaa?: boolean}} [aa]
+   * Experimental: anti-aliases the Live2D models from now on, the frame on screen included,
+   * with one method: `msaa` (MSAA with `msaaSamples` samples per pixel, 4 by default; the
+   * counts this device takes are in `msaaSampleCounts`), `ssaa` (drawn at `ssaaFactor` times
+   * the size per side, 2 or 3, 2 by default, and filtered down) or `smaa` (SMAA 1x); `none`,
+   * or left out, is off. Smoother character edges than the game shows. A setting the player
+   * does not take is ignored, with a warning in the console.
+   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [aa]
    */
   setExperimentalAntialiasing(aa) {
     this.render.postMessage({ type: "antialiasing", antialiasing: antialiasing(aa) });

@@ -23,7 +23,7 @@
 //   { type: "answer", index }                        a choice dialog's button was tapped
 //   { type: "click" }                                any other tap, unless a dialog is up
 // To the page:
-//   { type: "ready", loadedBytes }
+//   { type: "ready", loadedBytes, msaaSampleCounts }
 //   { type: "error", message, kind, url }            see sseErrorMessage (common.js); the worker
 //                                                    does nothing more after it
 //   { type: "shown", frame, ms, skipped, gen, loadedBytes, tableBytes, wasmBytes }   after each
@@ -51,7 +51,7 @@ let shownChoice = false;
 let framesPort;
 /** What a renderer is created with: the canvas, the UI kit, the client and the selector. */
 let rendererArgs;
-// SsePlayer's experimental anti-aliasing of the Live2D models: {msaa, ssaa, smaa}
+// SsePlayer's experimental anti-aliasing of the Live2D models: {method, msaaSamples, ssaaFactor}
 let antialiasing;
 let skipped = 0;
 /** Seeks taken (reported with what is shown). */
@@ -251,11 +251,12 @@ async function init(o, canvas, port) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", o.selector, ui.dir, lock.region ?? "jp", [], 60, o.width, o.height,
       fonts.body, fonts.name)));
-  antialiasing = o.antialiasing;
-  renderer.setExperimentalAntialiasing(antialiasing.msaa, antialiasing.ssaa, antialiasing.smaa);
+  // a setting the device does not take leaves the player without anti-aliasing, not failed
+  antialiasing = { method: "none", msaaSamples: 4, ssaaFactor: 2 };
+  setAntialiasing(o.antialiasing);
   renderer.setModels(models);
   rendererArgs = [canvas, ui.dir, lock.region ?? "jp", o.selector, fonts];
-  postMessage({ type: "ready", loadedBytes: loader.bytes });
+  postMessage({ type: "ready", loadedBytes: loader.bytes, msaaSampleCounts: [...renderer.msaaSampleCounts()] });
 }
 
 /**
@@ -288,7 +289,7 @@ async function resize(width, height) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", selector, kit, game, models, 60, width, height,
       fonts.body, fonts.name)));
-  renderer.setExperimentalAntialiasing(antialiasing.msaa, antialiasing.ssaa, antialiasing.smaa);
+  applyAntialiasing(antialiasing);
   showAgain();
 }
 
@@ -300,11 +301,15 @@ function showAgain() {
   }
 }
 
+function applyAntialiasing(aa) {
+  renderer.setExperimentalAntialiasing(aa.method, aa.msaaSamples, aa.ssaaFactor);
+}
+
 /** SsePlayer.setExperimentalAntialiasing: from the frame on screen on; refused values change nothing. */
 function setAntialiasing(aa) {
   if (!renderer) return;
   try {
-    renderer.setExperimentalAntialiasing(aa.msaa, aa.ssaa, aa.smaa);
+    applyAntialiasing(aa);
   } catch (e) {
     console.warn(`experimental anti-aliasing ${JSON.stringify(aa)} refused: ${e?.message ?? e}`);
     return;

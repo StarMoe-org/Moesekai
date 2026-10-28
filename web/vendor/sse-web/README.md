@@ -52,7 +52,7 @@ const player = await SsePlayer.create({
   width: 1920, height: 1080,
   playerName: "「世界」的居民",              // 替换剧本里的玩家名（可选）
   auto: true,                               // AUTO 或手动模式（可选，默认 AUTO）
-  // experimentalAntialiasing: { msaa: 4, ssaa: 2, smaa: true },  // 实验性（可选）：Live2D 抗锯齿，见下
+  // experimentalAntialiasing: { method: "msaa", msaaSamples: 4 },  // 实验性（可选）：Live2D 抗锯齿，见下
   onProgress: ({ sim, render, kit }) => {}, // 加载进度（可选）；kit 是 UI 套件的派生，已缓存时没有
 });
 // create 在这一话需要的文件全部载入后才返回（ADR-0031：先载完再播）
@@ -101,7 +101,8 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 | `node` | 当前所在的节点序号（从 0 起；播完最后一个后等于 `nodes.length`） |
 | `seek(k)` / `next()` / `previous()` | 跳到第 k 个节点、下一个、上一个的开头：画面与从头 AUTO 播放到那里时相同 |
 | `setVolume(v)` | 总音量 0–1 |
-| `setExperimentalAntialiasing({msaa, ssaa, smaa})` | **实验性**：Live2D 角色的抗锯齿，从画面上这一帧起生效，可以任意组合。`msaa`：每像素采样数，1 或 4；`ssaa`：每边放大倍数，1、2 或 3；`smaa`：SMAA 1x。省略的项和取 1 一样表示关闭。角色边缘会比游戏平滑，不用于与游戏比对；超出范围的值会被忽略，并在控制台给出警告。`create` 的 `experimentalAntialiasing` 指定初始值 |
+| `setExperimentalAntialiasing({method, msaaSamples, ssaaFactor})` | **实验性**：Live2D 角色的抗锯齿，从画面上这一帧起生效，同时只用一种。`method`：`msaa`、`ssaa`、`smaa`，`none` 或省略为关闭；`msaaSamples`：MSAA 的每像素采样数，默认 4（浏览器里只有 4）；`ssaaFactor`：SSAA 每边的放大倍数，2 或 3，默认 2。倍率只对自己的方案起作用。角色边缘会比游戏平滑，不用于与游戏比对；不支持的设置会被忽略，并在控制台给出警告。`create` 的 `experimentalAntialiasing` 指定初始值 |
+| `msaaSampleCounts` | 这台设备上 MSAA 可用的采样数（`create` 之后才有；浏览器里是 `[4]`） |
 | `position` | 播放位置：`node`、`nodes`（总数）、`shown`（显示的帧）、`waitsForClick`、`waitsForAnswer`、`stalled`、`seeking`、`ended` 等 |
 | `error` | 出错时的信息 |
 | `destroy()` | 结束播放器并释放它占用的一切：两个 Worker（连同这一话的文件和 GPU 资源）、音频、逐帧回调。离开页面或换一话时调用 |
