@@ -357,6 +357,7 @@ function StoryPlayerContent() {
                 isOpen={settingsOpen && phase === "ready"}
                 onClose={() => setSettingsOpen(false)}
                 settings={player.settings}
+                msaaSampleCounts={player.msaaSampleCounts}
                 onChange={player.changeSettings}
             />
         </PageContainer>

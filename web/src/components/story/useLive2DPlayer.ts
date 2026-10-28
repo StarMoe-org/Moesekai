@@ -139,6 +139,8 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
     const [position, setPosition] = useState<Live2DPosition>({ node: 0, nodes: 0, waitsForClick: false, waitsForAnswer: false, ended: false });
     const [buffering, setBuffering] = useState(false);
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
+    /** The MSAA sample counts the player's device takes. */
+    const [msaaSampleCounts, setMsaaSampleCounts] = useState<number[]>([4]);
     const [fullscreen, setFullscreen] = useState(false);
     /** In full screen: the pointer moved lately, so it is shown. */
     const [pointerAwake, setPointerAwake] = useState(false);
@@ -250,6 +252,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             player.setVolume(volume / 100);
             setAuto(true);
             setNotPlayed(player.unsupported);
+            setMsaaSampleCounts(player.msaaSampleCounts ?? [4]);
             setPosition({ node: player.node, nodes: player.nodes.length, waitsForClick: false, waitsForAnswer: false, ended: false });
             setPhase("ready");
             callbacks.current.onActiveChange?.(true);
@@ -353,16 +356,19 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
     }, [phase, settings]);
 
     // The anti-aliasing follows the reader's choice and the experimental setting that offers it.
-    const { msaa, ssaa, smaa } = storyLive2dAntialiasing ? settings.antialiasing : SSE_WEB_NO_ANTIALIASING;
+    const chosenAntialiasing = storyLive2dAntialiasing ? settings.antialiasing : SSE_WEB_NO_ANTIALIASING;
+    const { method, ssaaFactor } = chosenAntialiasing;
+    // a count this device does not take (kept from elsewhere) falls back to the one every device takes
+    const msaaSamples = msaaSampleCounts.includes(chosenAntialiasing.msaaSamples) ? chosenAntialiasing.msaaSamples : 4;
     useEffect(() => {
         const player = playerRef.current;
         if (phase !== "ready" || !player) return;
         const applied = appliedAntialiasingRef.current;
-        if (applied.msaa === msaa && applied.ssaa === ssaa && applied.smaa === smaa) return;
-        appliedAntialiasingRef.current = { msaa, ssaa, smaa };
+        if (applied.method === method && applied.msaaSamples === msaaSamples && applied.ssaaFactor === ssaaFactor) return;
+        appliedAntialiasingRef.current = { method, msaaSamples, ssaaFactor };
         // a release from before the setting has no such method
-        if (typeof player.setExperimentalAntialiasing === "function") player.setExperimentalAntialiasing({ msaa, ssaa, smaa });
-    }, [phase, msaa, ssaa, smaa]);
+        if (typeof player.setExperimentalAntialiasing === "function") player.setExperimentalAntialiasing({ method, msaaSamples, ssaaFactor });
+    }, [phase, method, msaaSamples, ssaaFactor]);
 
     // What the picture costs, once a second, when the reader asked to see it.
     useEffect(() => {
@@ -545,6 +551,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         /** In full screen: the pointer is shown (it moved lately, or the toolbar is up). */
         pointerShown: fullscreen && (pointerAwake || pointerAtBottom || toolbarFocused),
         settings,
+        msaaSampleCounts,
         ratio,
         stats,
         start,

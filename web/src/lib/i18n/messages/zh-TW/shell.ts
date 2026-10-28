@@ -251,7 +251,7 @@ export const zhTWSettings = {
         storyLive2d: {
             sectionTitle: "Live2D 劇情預覽",
             antialiasingLabel: "反鋸齒設定",
-            antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒選項（MSAA、SSAA、SMAA），讓角色邊緣更平滑。畫面會與遊戲不同，開得越多越佔顯示卡與記憶體。",
+            antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒（MSAA、SSAA、SMAA，同時只用一種），讓角色邊緣更平滑。畫面會與遊戲不同，倍率越高越佔顯示卡與記憶體。",
         },
     },
     contentDisplay: {

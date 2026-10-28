@@ -19,23 +19,29 @@ export const SSE_WEB_RESOLUTIONS = ["auto", "540", "720", "1080", "1440", "2160"
 
 export type SseWebResolution = (typeof SSE_WEB_RESOLUTIONS)[number];
 
-/** MSAA samples per pixel: 1 is off. */
-export const SSE_WEB_MSAA = [1, 4] as const;
-/** SSAA factor per side: 1 is off. */
-export const SSE_WEB_SSAA = [1, 2, 3] as const;
+/** The anti-aliasing methods, one at a time. */
+export const SSE_WEB_ANTIALIASING_METHODS = ["none", "msaa", "ssaa", "smaa"] as const;
+
+export type SseWebAntialiasingMethod = (typeof SSE_WEB_ANTIALIASING_METHODS)[number];
+
+/** MSAA sample counts the player may take; which this device takes, the player says (`msaaSampleCounts`). */
+export const SSE_WEB_MSAA_SAMPLES = [2, 4, 8, 16] as const;
+/** SSAA factors per side. */
+export const SSE_WEB_SSAA_FACTORS = [2, 3] as const;
 
 /**
  * The player's experimental anti-aliasing of the Live2D models
- * (`SsePlayer.setExperimentalAntialiasing`). Used only while the experimental
- * setting that offers it is on; stored either way.
+ * (`SsePlayer.setExperimentalAntialiasing`): one method, with the rate of
+ * each kept apart. Used only while the experimental setting that offers it is
+ * on; stored either way.
  */
 export interface SseWebAntialiasing {
-    msaa: (typeof SSE_WEB_MSAA)[number];
-    ssaa: (typeof SSE_WEB_SSAA)[number];
-    smaa: boolean;
+    method: SseWebAntialiasingMethod;
+    msaaSamples: (typeof SSE_WEB_MSAA_SAMPLES)[number];
+    ssaaFactor: (typeof SSE_WEB_SSAA_FACTORS)[number];
 }
 
-export const SSE_WEB_NO_ANTIALIASING: SseWebAntialiasing = { msaa: 1, ssaa: 1, smaa: false };
+export const SSE_WEB_NO_ANTIALIASING: SseWebAntialiasing = { method: "none", msaaSamples: 4, ssaaFactor: 2 };
 
 export interface SseWebSettings {
     resolution: SseWebResolution;
@@ -70,9 +76,9 @@ export function loadSseWebSettings(): SseWebSettings {
         const aa = stored.antialiasing as Partial<Record<keyof SseWebAntialiasing, unknown>> | null | undefined;
         if (aa && typeof aa === "object") {
             settings.antialiasing = {
-                msaa: SSE_WEB_MSAA.find(n => n === aa.msaa) ?? 1,
-                ssaa: SSE_WEB_SSAA.find(n => n === aa.ssaa) ?? 1,
-                smaa: aa.smaa === true,
+                method: SSE_WEB_ANTIALIASING_METHODS.find(m => m === aa.method) ?? "none",
+                msaaSamples: SSE_WEB_MSAA_SAMPLES.find(n => n === aa.msaaSamples) ?? 4,
+                ssaaFactor: SSE_WEB_SSAA_FACTORS.find(n => n === aa.ssaaFactor) ?? 2,
             };
         }
     } catch {
@@ -93,8 +99,9 @@ export function storeSseWebSettings(settings: SseWebSettings) {
 export function sameSseWebSettings(a: SseWebSettings, b: SseWebSettings): boolean {
     return a.resolution === b.resolution && a.aspect === b.aspect
         && a.fullscreenFillsScreen === b.fullscreenFillsScreen && a.showStats === b.showStats
-        && a.antialiasing.msaa === b.antialiasing.msaa && a.antialiasing.ssaa === b.antialiasing.ssaa
-        && a.antialiasing.smaa === b.antialiasing.smaa;
+        && a.antialiasing.method === b.antialiasing.method
+        && a.antialiasing.msaaSamples === b.antialiasing.msaaSamples
+        && a.antialiasing.ssaaFactor === b.antialiasing.ssaaFactor;
 }
 
 /** Width over height of the picture in the player's window. */
