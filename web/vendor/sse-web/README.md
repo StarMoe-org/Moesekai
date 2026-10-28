@@ -52,6 +52,8 @@ const player = await SsePlayer.create({
   width: 1920, height: 1080,
   playerName: "「世界」的居民",              // 替换剧本里的玩家名（可选）
   auto: true,                               // AUTO 或手动模式（可选，默认 AUTO）
+  // experimentalAntialiasing: { method: "msaa", msaaSamples: 4 },  // 实验性（可选）：Live2D 抗锯齿，见下
+  // highFps: true,                          // 实验性：高于 60 Hz 的显示器按其刷新率绘制，帧间插值（可选，默认关闭）
   onProgress: ({ sim, render, kit }) => {}, // 加载进度（可选）；kit 是 UI 套件的派生，已缓存时没有
 });
 // create 在这一话需要的文件全部载入后才返回（ADR-0031：先载完再播）
@@ -100,6 +102,8 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 | `node` | 当前所在的节点序号（从 0 起；播完最后一个后等于 `nodes.length`） |
 | `seek(k)` / `next()` / `previous()` | 跳到第 k 个节点、下一个、上一个的开头：画面与从头 AUTO 播放到那里时相同 |
 | `setVolume(v)` | 总音量 0–1 |
+| `setExperimentalAntialiasing({method, msaaSamples, ssaaFactor})` | **实验性**：Live2D 角色的抗锯齿，从画面上这一帧起生效，同时只用一种。`method`：`msaa`、`ssaa`、`smaa`，`none` 或省略为关闭；`msaaSamples`：MSAA 的每像素采样数，默认 4（浏览器里只有 4）；`ssaaFactor`：SSAA 每边的放大倍数，2 或 3，默认 2。倍率只对自己的方案起作用。角色边缘会比游戏平滑，不用于与游戏比对；不支持的设置会被忽略，并在控制台给出警告。`create` 的 `experimentalAntialiasing` 指定初始值 |
+| `msaaSampleCounts` | 这台设备上 MSAA 可用的采样数（`create` 之后才有；浏览器里是 `[4]`） |
 | `position` | 播放位置：`node`、`nodes`（总数）、`shown`（显示的帧）、`waitsForClick`、`waitsForAnswer`、`stalled`、`seeking`、`ended` 等 |
 | `error` | 出错时的信息 |
 | `destroy()` | 结束播放器并释放它占用的一切：两个 Worker（连同这一话的文件和 GPU 资源）、音频、逐帧回调。离开页面或换一话时调用 |
@@ -138,6 +142,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 - 用户把标签页切到后台时，声音和模拟照常进行（时钟在音频线程），画面在回到前台时追上。
 - 影片（片头、片尾等）在渲染 Worker 里用编入的解码器播放（ADR-0033）：加载时多取这一话的视频文件（多数 10 MB 左右，最大 58 MB），画面与导出不是逐像素相同。library 里没有视频文件的影片显示黑底和影片名。
 - 背景 prefab（粒子背景、影片背景）与导出相同：加载时多取 library 解包的背景 bundle（模拟 Worker 取对象图，多数 1 MB 左右，最大约 5.6 MB；渲染 Worker 取整个 bundle），影片背景的视频文件随影片一起取。library 里没有影片文件的影片背景，遮罩照样退去，背景是空的（黑色）。
+- `highFps`（实验性，默认关闭）：在高于 60 Hz 的显示器上每次刷新都绘制，两帧之间显示按正在听到的样本在帧内的位置插值的状态（位置、淡入淡出、Live2D 参数）；文字、特效粒子与转场仍是 60 fps 的阶梯（ADR-0037）。绘制次数随刷新率增加，渲染跟不上时只画最新的一次请求。
 
 ## 许可
 

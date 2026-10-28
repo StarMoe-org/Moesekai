@@ -15,6 +15,9 @@
 //   { type: "init", options, canvas, framesPort }   canvas: the OffscreenCanvas
 //   { type: "kit", dir, files }                      the UI kit: [name, bytes] for `<dir>/<name>`
 //   { type: "show", frame }                          draw this frame
+//   { type: "show", frame, w }                       experimental (a display above 60 Hz): draw
+//                                                    the state `w` (in [0, 1)) of the way to
+//                                                    the next frame, when that one is in
 //   { type: "tap", x, y }                            the player tapped the canvas (pixels)
 //   { type: "resize", width, height }                draw at this size from now on
 // From the simulation worker (on the frames port), besides frames:
@@ -23,7 +26,7 @@
 //   { type: "answer", index }                        a choice dialog's button was tapped
 //   { type: "click" }                                any other tap, unless a dialog is up
 // To the page:
-//   { type: "ready", loadedBytes }
+//   { type: "ready", loadedBytes, msaaSampleCounts }
 //   { type: "error", message, kind, url }            see sseErrorMessage (common.js); the worker
 //                                                    does nothing more after it
 //   { type: "shown", frame, ms, skipped, gen, loadedBytes, tableBytes, wasmBytes }   after each
@@ -48,9 +51,15 @@ let shown = -1;
 let shownEntry;
 let shownJson;
 let shownChoice = false;
+/** How far towards the next frame the drawing on screen is (0: the frame itself). */
+let shownW = 0;
+/** The newest in-between `show` not drawn yet: they are drawn one task later, the newest only. */
+let pendingShow;
 let framesPort;
 /** What a renderer is created with: the canvas, the UI kit, the client and the selector. */
 let rendererArgs;
+// SsePlayer's experimental anti-aliasing of the Live2D models: {method, msaaSamples, ssaaFactor}
+let antialiasing;
 let skipped = 0;
 /** Seeks taken (reported with what is shown). */
 let gen = 0;
@@ -180,6 +189,7 @@ async function init(o, canvas, port) {
       gen = e.data.gen;
       frames.clear();
       shown = e.data.frame - 1;
+      shownW = 0;
       newest = e.data.frame;
       return;
     }
@@ -249,9 +259,12 @@ async function init(o, canvas, port) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", o.selector, ui.dir, lock.region ?? "jp", [], 60, o.width, o.height,
       fonts.body, fonts.name)));
+  // a setting the device does not take leaves the player without anti-aliasing, not failed
+  antialiasing = { method: "none", msaaSamples: 4, ssaaFactor: 2 };
+  setAntialiasing(o.antialiasing);
   renderer.setModels(models);
   rendererArgs = [canvas, ui.dir, lock.region ?? "jp", o.selector, fonts];
-  postMessage({ type: "ready", loadedBytes: loader.bytes });
+  postMessage({ type: "ready", loadedBytes: loader.bytes, msaaSampleCounts: [...renderer.msaaSampleCounts()] });
 }
 
 /**
@@ -284,15 +297,74 @@ async function resize(width, height) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", selector, kit, game, models, 60, width, height,
       fonts.body, fonts.name)));
+  applyAntialiasing(antialiasing);
+  showAgain();
+}
+
+/** The frame on screen is drawn again at the next show. */
+function showAgain() {
   if (shownEntry && !frames.has(shown)) {
     frames.set(shown, shownEntry);
     shown--;
+    shownW = 0;
   }
 }
 
-function show(want) {
+function applyAntialiasing(aa) {
+  renderer.setExperimentalAntialiasing(aa.method, aa.msaaSamples, aa.ssaaFactor);
+}
+
+/** SsePlayer.setExperimentalAntialiasing: from the frame on screen on; refused values change nothing. */
+function setAntialiasing(aa) {
+  if (!renderer) return;
+  try {
+    applyAntialiasing(aa);
+  } catch (e) {
+    console.warn(`experimental anti-aliasing ${JSON.stringify(aa)} refused: ${e?.message ?? e}`);
+    return;
+  }
+  antialiasing = aa;
+  showAgain();
+}
+
+/** Experimental: draws `want` `w` of the way to the next frame. At a refresh rate the renderer
+ * cannot keep up with, the requests that queued up meanwhile give way to the newest. */
+function showBetween(want, w) {
+  if (pendingShow === undefined) setTimeout(() => {
+    const [f, x] = pendingShow;
+    pendingShow = undefined;
+    if (!dead) {
+      try { show(f, x); } catch (err) { fatal(err); }
+    }
+  }, 0);
+  pendingShow = [want, w];
+}
+
+/** The JSON of `want` drawn `w` of the way to the next frame, when that frame is in. */
+function present(want, json, w) {
+  const next = w > 0 ? frames.get(want + 1) : undefined;
+  if (next === undefined) {
+    renderer.present(json);
+    return 0;
+  }
+  // the state in between is drawn with `want`'s files: the next frame's need not be in
+  renderer.presentBetween(json, next[0], w);
+  return w;
+}
+
+function show(want, w = 0) {
+  if (!renderer) return;
+  // the frame on screen, further towards the next one
+  if (want === shown && w > shownW && shownJson !== undefined) {
+    const start = performance.now();
+    const drawn = present(want, shownJson, w);
+    if (drawn === 0) return;
+    shownW = drawn;
+    postMessage({ type: "shown", gen, frame: want, ms: performance.now() - start, skipped, loadedBytes: loader.bytes, tableBytes: fileTableSize() + [...webp.values()].reduce((a, b) => a + b.length, 0), wasmBytes: wasmBytes() });
+    return;
+  }
   // an older frame than the one on screen (the clock is not to go back): keep what is shown
-  if (!renderer || want <= shown) return;
+  if (want <= shown) return;
   const entry = frames.get(want);
   if (entry === undefined) {
     const keys = [...frames.keys()];
@@ -321,7 +393,7 @@ function show(want) {
   }
   const start = performance.now();
   try {
-    renderer.present(entry[0]);
+    shownW = present(want, entry[0], w);
   } catch (e) {
     // a file nothing announced (the renderer reads it on its own): fetch it and draw again
     const path = sseMissingPath(e);
@@ -347,11 +419,14 @@ onmessage = (e) => {
     } else if (m.type === "kit") {
       kitArrived(m);
     } else if (m.type === "show") {
-      show(m.frame);
+      if (m.w === undefined) show(m.frame);
+      else showBetween(m.frame, m.w);
     } else if (m.type === "tap") {
       tap(m.x, m.y);
     } else if (m.type === "resize") {
       resize(m.width, m.height).catch(fatal);
+    } else if (m.type === "antialiasing") {
+      setAntialiasing(m.antialiasing);
     }
   } catch (err) {
     fatal(err);

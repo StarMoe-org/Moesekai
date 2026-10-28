@@ -361,6 +361,7 @@ export function Live2DStoryPlayer({ selector, region, onActiveChange, onNode, ex
                 isOpen={settingsOpen && phase === "ready"}
                 onClose={() => setSettingsOpen(false)}
                 settings={player.settings}
+                msaaSampleCounts={player.msaaSampleCounts}
                 onChange={player.changeSettings}
             />
         </>

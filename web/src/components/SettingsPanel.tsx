@@ -123,6 +123,10 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         setCustomCursorEnabled,
         costume3dUnrestricted,
         setCostume3dUnrestricted,
+        storyLive2dAntialiasing,
+        setStoryLive2dAntialiasing,
+        storyLive2dHighFps,
+        setStoryLive2dHighFps,
         serverSource,
         setServerSource,
     } = useTheme();
@@ -411,6 +415,21 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             onCheckedChange={setCostume3dUnrestricted}
                             label={t("settings.experimental.costume3d.unrestrictedLabel")}
                             description={t("settings.experimental.costume3d.unrestrictedDescription")}
+                        />
+                    </section>
+                    <section className="space-y-4">
+                        <SectionTitle>{t("settings.experimental.storyLive2d.sectionTitle")}</SectionTitle>
+                        <Switch
+                            checked={storyLive2dAntialiasing}
+                            onCheckedChange={setStoryLive2dAntialiasing}
+                            label={t("settings.experimental.storyLive2d.antialiasingLabel")}
+                            description={t("settings.experimental.storyLive2d.antialiasingDescription")}
+                        />
+                        <Switch
+                            checked={storyLive2dHighFps}
+                            onCheckedChange={setStoryLive2dHighFps}
+                            label={t("settings.experimental.storyLive2d.highFpsLabel")}
+                            description={t("settings.experimental.storyLive2d.highFpsDescription")}
                         />
                     </section>
                 </div>

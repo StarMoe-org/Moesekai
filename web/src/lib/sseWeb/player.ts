@@ -57,6 +57,13 @@ export interface SsePlayerPosition {
     ended: boolean;
 }
 
+/** One anti-aliasing method, and the rates of the two that have one. */
+export interface SsePlayerAntialiasing {
+    method: "none" | "msaa" | "ssaa" | "smaa";
+    msaaSamples: number;
+    ssaaFactor: number;
+}
+
 export interface SsePlayerOptions {
     canvas: HTMLCanvasElement;
     js: string;
@@ -71,6 +78,10 @@ export interface SsePlayerOptions {
     height: number;
     playerName?: string;
     auto?: boolean;
+    /** Experimental anti-aliasing of the Live2D models; none when left out. */
+    experimentalAntialiasing?: SsePlayerAntialiasing;
+    /** Experimental: on a display above 60 Hz, draws every refresh, interpolated between the story's frames. */
+    highFps?: boolean;
     onProgress?: (progress: SsePlayerProgress) => void;
 }
 
@@ -100,6 +111,10 @@ export interface SsePlayer extends EventTarget {
     next(): void;
     previous(): void;
     setVolume(volume: number): void;
+    /** Experimental: anti-aliases the Live2D models from the frame on screen on. */
+    setExperimentalAntialiasing(antialiasing: SsePlayerAntialiasing): void;
+    /** The MSAA sample counts this device takes (a release from before the setting has none). */
+    readonly msaaSampleCounts?: number[];
     destroy(): void;
 }
 

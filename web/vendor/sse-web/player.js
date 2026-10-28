@@ -14,7 +14,9 @@
 // it carry an older `gen` and are dropped.
 //
 // The clock is the audio: the worklet plays the mix sample by sample; the frame shown is the
-// one the sample being heard belongs to (60 fps at 48 kHz: 800 samples a frame).
+// one the sample being heard belongs to (60 fps at 48 kHz: 800 samples a frame). With the
+// experimental `highFps` a display above 60 Hz is drawn at its own rate: between two frames,
+// the state as far towards the next one as the sample being heard is into its frame.
 
 const RATE = 48000;
 const PER_FRAME = RATE / 60;
@@ -37,6 +39,11 @@ const CORE = "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.
  *   network      a file could not be fetched, after several tries (`url`)
  *   internal     anything else
  */
+/** `experimentalAntialiasing` with what is left out filled in: off, 4 samples, factor 2. */
+function antialiasing(aa) {
+  return { method: aa?.method ?? "none", msaaSamples: aa?.msaaSamples ?? 4, ssaaFactor: aa?.ssaaFactor ?? 2 };
+}
+
 export class SsePlayer extends EventTarget {
   /**
    * What the browser lacks for playing, checked without loading anything: `{ok, missing}`,
@@ -79,8 +86,15 @@ export class SsePlayer extends EventTarget {
    *   the names, each a font (TTF or OTF; `weight` sets a variable font's weight) followed by
    *   the fonts that fill in the characters it lacks. With both given, the client's own font
    *   files are not fetched at all. Text in other fonts is not what the game shows
+   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [o.experimentalAntialiasing]
+   *   experimental anti-aliasing of the Live2D models, see setExperimentalAntialiasing; none
+   *   by default
    * @param {string} [o.playerName]
    * @param {boolean} [o.auto]
+   * @param {boolean} [o.highFps]  experimental: on a display above 60 Hz, draw every refresh,
+   *   with the motion, fades and Live2D parameters interpolated between the story's 60 fps
+   *   frames (text, effect particles and the transition keep their 60 fps steps); takes up to
+   *   that many more draws
    * @param {(p: object) => void} [o.onProgress]  while loading: `{sim, render, kit}`, each that
    *   worker's last `{phase, done, total, bytes}` (`kit`: the UI kit being derived from the
    *   client unpack; absent when it was kept from an earlier visit). `create` resolves once
@@ -113,11 +127,12 @@ export class SsePlayer extends EventTarget {
     const options = {
       js: o.js, pkg: o.pkg, core: o.core ?? CORE, sources: o.sources, selector: o.selector,
       width: o.width, height: o.height, playerName: o.playerName ?? "「世界」的居民", auto: o.auto ?? true,
-      fonts: o.fonts,
+      fonts: o.fonts, antialiasing: antialiasing(o.experimentalAntialiasing),
     };
     const p = this;
     p.width = o.width;
     p.height = o.height;
+    p.highFps = o.highFps === true;
     p.ctx = new AudioContext({ sampleRate: RATE });
     try {
       await p.ctx.audioWorklet.addModule(`${o.js}audio-worklet.js`);
@@ -230,8 +245,9 @@ export class SsePlayer extends EventTarget {
     p.sim.postMessage({ type: "init", options, framesPort: frames.port1, audioPort: audio.port1 }, [frames.port1, audio.port1]);
     p.render.postMessage({ type: "init", options, canvas: offscreen, framesPort: frames.port2 }, [offscreen, frames.port2]);
     p.kit.postMessage({ type: "init", options });
-    const [simInfo] = await Promise.all([simReady, renderReady, kitReady]);
+    const [simInfo, renderInfo] = await Promise.all([simReady, renderReady, kitReady]);
     p.nodes = simInfo.nodes;
+    p.msaaSampleCounts = renderInfo.msaaSampleCounts;
     p.unsupported = simInfo.unsupported;
     p.loaded = true;
     p.tick = p.tick.bind(p);
@@ -330,7 +346,11 @@ export class SsePlayer extends EventTarget {
   tick() {
     if (this.destroyed) return;
     const now = this.hearing();
-    this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME) });
+    if (this.highFps) {
+      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME), w: (now % PER_FRAME) / PER_FRAME });
+    } else {
+      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME) });
+    }
     this.frameRequest = requestAnimationFrame(this.tick);
   }
 
@@ -372,6 +392,19 @@ export class SsePlayer extends EventTarget {
     this.height = height;
     this.render.postMessage({ type: "resize", width, height });
     this.sim.postMessage({ type: "resize", width, height });
+  }
+
+  /**
+   * Experimental: anti-aliases the Live2D models from now on, the frame on screen included,
+   * with one method: `msaa` (MSAA with `msaaSamples` samples per pixel, 4 by default; the
+   * counts this device takes are in `msaaSampleCounts`), `ssaa` (drawn at `ssaaFactor` times
+   * the size per side, 2 or 3, 2 by default, and filtered down) or `smaa` (SMAA 1x); `none`,
+   * or left out, is off. Smoother character edges than the game shows. A setting the player
+   * does not take is ignored, with a warning in the console.
+   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [aa]
+   */
+  setExperimentalAntialiasing(aa) {
+    this.render.postMessage({ type: "antialiasing", antialiasing: antialiasing(aa) });
   }
 
   /** Goes on from the start of node `k` (0-based, clamped), in the current mode. */

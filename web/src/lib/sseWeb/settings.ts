@@ -1,6 +1,7 @@
 /**
  * What the reader chooses about the Live2D player's picture: the size it is
- * rendered at and its aspect ratio. Kept in this browser.
+ * rendered at, its aspect ratio and (an experimental setting) its
+ * anti-aliasing. Kept in this browser.
  */
 
 /** The aspect ratios on offer, as whole numbers: a picture is a whole multiple of one. */
@@ -18,6 +19,30 @@ export const SSE_WEB_RESOLUTIONS = ["auto", "540", "720", "1080", "1440", "2160"
 
 export type SseWebResolution = (typeof SSE_WEB_RESOLUTIONS)[number];
 
+/** The anti-aliasing methods, one at a time. */
+export const SSE_WEB_ANTIALIASING_METHODS = ["none", "msaa", "ssaa", "smaa"] as const;
+
+export type SseWebAntialiasingMethod = (typeof SSE_WEB_ANTIALIASING_METHODS)[number];
+
+/** MSAA sample counts the player may take; which this device takes, the player says (`msaaSampleCounts`). */
+export const SSE_WEB_MSAA_SAMPLES = [2, 4, 8, 16] as const;
+/** SSAA factors per side. */
+export const SSE_WEB_SSAA_FACTORS = [2, 3] as const;
+
+/**
+ * The player's experimental anti-aliasing of the Live2D models
+ * (`SsePlayer.setExperimentalAntialiasing`): one method, with the rate of
+ * each kept apart. Used only while the experimental setting that offers it is
+ * on; stored either way.
+ */
+export interface SseWebAntialiasing {
+    method: SseWebAntialiasingMethod;
+    msaaSamples: (typeof SSE_WEB_MSAA_SAMPLES)[number];
+    ssaaFactor: (typeof SSE_WEB_SSAA_FACTORS)[number];
+}
+
+export const SSE_WEB_NO_ANTIALIASING: SseWebAntialiasing = { method: "none", msaaSamples: 4, ssaaFactor: 2 };
+
 export interface SseWebSettings {
     resolution: SseWebResolution;
     aspect: SseWebAspect;
@@ -25,6 +50,7 @@ export interface SseWebSettings {
     fullscreenFillsScreen: boolean;
     /** The render size, frame rate and memory are shown over the picture. */
     showStats: boolean;
+    antialiasing: SseWebAntialiasing;
 }
 
 export const SSE_WEB_DEFAULT_SETTINGS: SseWebSettings = {
@@ -32,6 +58,7 @@ export const SSE_WEB_DEFAULT_SETTINGS: SseWebSettings = {
     aspect: "16:9",
     fullscreenFillsScreen: true,
     showStats: false,
+    antialiasing: SSE_WEB_NO_ANTIALIASING,
 };
 
 const SETTINGS_KEY = "story-live2d-settings";
@@ -46,6 +73,14 @@ export function loadSseWebSettings(): SseWebSettings {
         if (typeof stored.aspect === "string" && stored.aspect in SSE_WEB_ASPECTS) settings.aspect = stored.aspect as SseWebAspect;
         if (typeof stored.fullscreenFillsScreen === "boolean") settings.fullscreenFillsScreen = stored.fullscreenFillsScreen;
         if (typeof stored.showStats === "boolean") settings.showStats = stored.showStats;
+        const aa = stored.antialiasing as Partial<Record<keyof SseWebAntialiasing, unknown>> | null | undefined;
+        if (aa && typeof aa === "object") {
+            settings.antialiasing = {
+                method: SSE_WEB_ANTIALIASING_METHODS.find(m => m === aa.method) ?? "none",
+                msaaSamples: SSE_WEB_MSAA_SAMPLES.find(n => n === aa.msaaSamples) ?? 4,
+                ssaaFactor: SSE_WEB_SSAA_FACTORS.find(n => n === aa.ssaaFactor) ?? 2,
+            };
+        }
     } catch {
         // no storage, or not what was stored
     }
@@ -58,6 +93,15 @@ export function storeSseWebSettings(settings: SseWebSettings) {
     } catch {
         // the settings hold until the page is left
     }
+}
+
+/** Whether two settings are the same. */
+export function sameSseWebSettings(a: SseWebSettings, b: SseWebSettings): boolean {
+    return a.resolution === b.resolution && a.aspect === b.aspect
+        && a.fullscreenFillsScreen === b.fullscreenFillsScreen && a.showStats === b.showStats
+        && a.antialiasing.method === b.antialiasing.method
+        && a.antialiasing.msaaSamples === b.antialiasing.msaaSamples
+        && a.antialiasing.ssaaFactor === b.antialiasing.ssaaFactor;
 }
 
 /** Width over height of the picture in the player's window. */

@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import type { ServerType } from "@/lib/account-servers";
 import { sseWebCoreUrl, sseWebFonts, sseWebSources, type SseWebFontFile } from "@/lib/sseWeb/config";
 import {
@@ -9,8 +10,9 @@ import {
     type SsePlayer, type SsePlayerError, type SsePlayerNode, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
 } from "@/lib/sseWeb/player";
 import {
-    SSE_WEB_DEFAULT_SETTINGS, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize, storeSseWebSettings,
-    type SseWebSettings,
+    SSE_WEB_DEFAULT_SETTINGS, SSE_WEB_NO_ANTIALIASING, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize,
+    storeSseWebSettings,
+    type SseWebAntialiasing, type SseWebSettings,
 } from "@/lib/sseWeb/settings";
 
 export type Live2DPhase = "idle" | "loading" | "ready" | "failed";
@@ -111,6 +113,16 @@ function absolute(font: SseWebFontFile): SseWebFontFile {
  */
 export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: UseLive2DPlayerOptions) {
     const { t } = useI18n();
+    // the anti-aliasing chosen in the player's settings holds only while the experimental setting
+    // offers it
+    const { storyLive2dAntialiasing, storyLive2dHighFps } = useTheme();
+    const antialiasingOfferedRef = useRef(storyLive2dAntialiasing);
+    antialiasingOfferedRef.current = storyLive2dAntialiasing;
+    // the player takes the high frame rate when it is made: a change holds from the next episode loaded
+    const highFpsRef = useRef(storyLive2dHighFps);
+    highFpsRef.current = storyLive2dHighFps;
+    /** What the player was last told to anti-alias with. */
+    const appliedAntialiasingRef = useRef<SseWebAntialiasing>(SSE_WEB_NO_ANTIALIASING);
     const sources = sseWebSources(region);
     const fonts = sseWebFonts(region);
     const stageRef = useRef<HTMLDivElement | null>(null);
@@ -130,6 +142,8 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
     const [position, setPosition] = useState<Live2DPosition>({ node: 0, nodes: 0, waitsForClick: false, waitsForAnswer: false, ended: false });
     const [buffering, setBuffering] = useState(false);
     const [notPlayed, setNotPlayed] = useState<SsePlayerUnsupported[]>([]);
+    /** The MSAA sample counts the player's device takes. */
+    const [msaaSampleCounts, setMsaaSampleCounts] = useState<number[]>([4]);
     const [fullscreen, setFullscreen] = useState(false);
     /** In full screen: the pointer moved lately, so it is shown. */
     const [pointerAwake, setPointerAwake] = useState(false);
@@ -205,6 +219,8 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             canvas.height = height;
             canvas.className = "block h-full w-full object-contain";
             stage.prepend(canvas);
+            const antialiasing = antialiasingOfferedRef.current ? chosen.antialiasing : SSE_WEB_NO_ANTIALIASING;
+            appliedAntialiasingRef.current = antialiasing;
             const player = await SsePlayerClass.create({
                 canvas,
                 js: sseWebScriptBase(),
@@ -218,6 +234,8 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 height,
                 playerName: t("page.story.live2d.playerName"),
                 auto: true,
+                experimentalAntialiasing: antialiasing,
+                highFps: highFpsRef.current,
                 onProgress: ({ sim, render, kit }) => {
                     if (epoch !== epochRef.current) return;
                     // the two workers' file counts; the UI kit is found file by file and only adds bytes
@@ -238,6 +256,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             player.setVolume(volume / 100);
             setAuto(true);
             setNotPlayed(player.unsupported);
+            setMsaaSampleCounts(player.msaaSampleCounts ?? [4]);
             setPosition({ node: player.node, nodes: player.nodes.length, waitsForClick: false, waitsForAnswer: false, ended: false });
             setPhase("ready");
             callbacks.current.onActiveChange?.(true);
@@ -339,6 +358,21 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             document.removeEventListener("fullscreenchange", onFullscreen);
         };
     }, [phase, settings]);
+
+    // The anti-aliasing follows the reader's choice and the experimental setting that offers it.
+    const chosenAntialiasing = storyLive2dAntialiasing ? settings.antialiasing : SSE_WEB_NO_ANTIALIASING;
+    const { method, ssaaFactor } = chosenAntialiasing;
+    // a count this device does not take (kept from elsewhere) falls back to the one every device takes
+    const msaaSamples = msaaSampleCounts.includes(chosenAntialiasing.msaaSamples) ? chosenAntialiasing.msaaSamples : 4;
+    useEffect(() => {
+        const player = playerRef.current;
+        if (phase !== "ready" || !player) return;
+        const applied = appliedAntialiasingRef.current;
+        if (applied.method === method && applied.msaaSamples === msaaSamples && applied.ssaaFactor === ssaaFactor) return;
+        appliedAntialiasingRef.current = { method, msaaSamples, ssaaFactor };
+        // a release from before the setting has no such method
+        if (typeof player.setExperimentalAntialiasing === "function") player.setExperimentalAntialiasing({ method, msaaSamples, ssaaFactor });
+    }, [phase, method, msaaSamples, ssaaFactor]);
 
     // What the picture costs, once a second, when the reader asked to see it.
     useEffect(() => {
@@ -521,6 +555,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
         /** In full screen: the pointer is shown (it moved lately, or the toolbar is up). */
         pointerShown: fullscreen && (pointerAwake || pointerAtBottom || toolbarFocused),
         settings,
+        msaaSampleCounts,
         ratio,
         stats,
         start,
