@@ -14,7 +14,9 @@
 // it carry an older `gen` and are dropped.
 //
 // The clock is the audio: the worklet plays the mix sample by sample; the frame shown is the
-// one the sample being heard belongs to (60 fps at 48 kHz: 800 samples a frame).
+// one the sample being heard belongs to (60 fps at 48 kHz: 800 samples a frame). With the
+// experimental `highFps` a display above 60 Hz is drawn at its own rate: between two frames,
+// the state as far towards the next one as the sample being heard is into its frame.
 
 const RATE = 48000;
 const PER_FRAME = RATE / 60;
@@ -89,6 +91,10 @@ export class SsePlayer extends EventTarget {
    *   by default
    * @param {string} [o.playerName]
    * @param {boolean} [o.auto]
+   * @param {boolean} [o.highFps]  experimental: on a display above 60 Hz, draw every refresh,
+   *   with the motion, fades and Live2D parameters interpolated between the story's 60 fps
+   *   frames (text, effect particles and the transition keep their 60 fps steps); takes up to
+   *   that many more draws
    * @param {(p: object) => void} [o.onProgress]  while loading: `{sim, render, kit}`, each that
    *   worker's last `{phase, done, total, bytes}` (`kit`: the UI kit being derived from the
    *   client unpack; absent when it was kept from an earlier visit). `create` resolves once
@@ -126,6 +132,7 @@ export class SsePlayer extends EventTarget {
     const p = this;
     p.width = o.width;
     p.height = o.height;
+    p.highFps = o.highFps === true;
     p.ctx = new AudioContext({ sampleRate: RATE });
     try {
       await p.ctx.audioWorklet.addModule(`${o.js}audio-worklet.js`);
@@ -339,7 +346,11 @@ export class SsePlayer extends EventTarget {
   tick() {
     if (this.destroyed) return;
     const now = this.hearing();
-    this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME) });
+    if (this.highFps) {
+      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME), w: (now % PER_FRAME) / PER_FRAME });
+    } else {
+      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME) });
+    }
     this.frameRequest = requestAnimationFrame(this.tick);
   }
 

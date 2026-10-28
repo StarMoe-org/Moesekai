@@ -53,6 +53,7 @@ const player = await SsePlayer.create({
   playerName: "「世界」的居民",              // 替换剧本里的玩家名（可选）
   auto: true,                               // AUTO 或手动模式（可选，默认 AUTO）
   // experimentalAntialiasing: { method: "msaa", msaaSamples: 4 },  // 实验性（可选）：Live2D 抗锯齿，见下
+  // highFps: true,                          // 实验性：高于 60 Hz 的显示器按其刷新率绘制，帧间插值（可选，默认关闭）
   onProgress: ({ sim, render, kit }) => {}, // 加载进度（可选）；kit 是 UI 套件的派生，已缓存时没有
 });
 // create 在这一话需要的文件全部载入后才返回（ADR-0031：先载完再播）
@@ -141,6 +142,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 - 用户把标签页切到后台时，声音和模拟照常进行（时钟在音频线程），画面在回到前台时追上。
 - 影片（片头、片尾等）在渲染 Worker 里用编入的解码器播放（ADR-0033）：加载时多取这一话的视频文件（多数 10 MB 左右，最大 58 MB），画面与导出不是逐像素相同。library 里没有视频文件的影片显示黑底和影片名。
 - 背景 prefab（粒子背景、影片背景）与导出相同：加载时多取 library 解包的背景 bundle（模拟 Worker 取对象图，多数 1 MB 左右，最大约 5.6 MB；渲染 Worker 取整个 bundle），影片背景的视频文件随影片一起取。library 里没有影片文件的影片背景，遮罩照样退去，背景是空的（黑色）。
+- `highFps`（实验性，默认关闭）：在高于 60 Hz 的显示器上每次刷新都绘制，两帧之间显示按正在听到的样本在帧内的位置插值的状态（位置、淡入淡出、Live2D 参数）；文字、特效粒子与转场仍是 60 fps 的阶梯（ADR-0037）。绘制次数随刷新率增加，渲染跟不上时只画最新的一次请求。
 
 ## 许可
 
