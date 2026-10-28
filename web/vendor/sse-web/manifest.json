@@ -1,20 +1,20 @@
 {
   "format": "sse-web-release/1",
   "version": "1.0.5",
-  "commit": "60337b3d4ccf26be93ed7d5d4c237626809dea4c",
+  "commit": "b74c66f3da0eeb382617d2b70d6a5c739b47f1b4",
   "dirty": false,
   "toolchain": { "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)", "wasmBindgen": "0.2.128" },
   "sha256": {
     "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
     "LICENSE-EXCEPTION": "415f550d8372c34ab5f9e1e9a06acff438d51b9b396908c997c05cd5595fc0f8",
-    "README.md": "89e2e5dcb0088447451d081c904190c53f3c67cf0271b0223dec9675266d1ffa",
+    "README.md": "25fbc6b2702f16df52b798cc381f8424d570b23414b3efb9255d5dbd4e8a3044",
     "audio-worklet.js": "214e32970d87555777e9e39122a3885df4662e890a65298d1f5b502abeaa6c01",
     "common.js": "92c1306e22694d23153f622d83394d5f49d9ddd2c74cf06a4370b88ae5d1a443",
     "kit-worker.js": "fb68881ad88014756cd1302c77c2f795fa8a5cbf0817da4c8c2884d5469ec3cd",
     "pkg/sse_web.js": "c64f27550c6f3f2269ae9e3f9c8e97f767f30714fd03d2023156c7d641520687",
     "pkg/sse_web_bg.wasm": "a9112df44d5fcff713df763bbb6f4da0ff7235358b9a3552ce8cce38a7d8acca",
-    "player.js": "366a8fcaf52187204463006e2a6af013a4356f7d37c84e25d7c498e9ee07b605",
-    "render-worker.js": "440ee2c1590f05f8b501fdaf07b70c063350148756814fe799bee64570c820d5",
+    "player.js": "c4bf359b17d28c076f0f8f7e6e658fb92b2f964a84294d800da8f187b6f61e8b",
+    "render-worker.js": "a27911dab3eb4595a6a2bdf91d8c53e32b4ae7f1fc2a2ec993d5ea8aa94590c3",
     "sim-worker.js": "e93e1b02026cf483f8da7bc27c1d60c7b3c78e0d361637d47683b00a1fb16aa1"
   }
 }

@@ -356,6 +356,8 @@ function show(want, w = 0) {
   if (!renderer) return;
   // the frame on screen, further towards the next one
   if (want === shown && w > shownW && shownJson !== undefined) {
+    // without the next frame (waiting for a click, the end) the picture would not change: no draw
+    if (!frames.has(want + 1)) return;
     const start = performance.now();
     const drawn = present(want, shownJson, w);
     if (drawn === 0) return;

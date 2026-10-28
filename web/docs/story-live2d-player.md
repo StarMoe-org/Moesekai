@@ -52,7 +52,7 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
   - 全屏时铺满屏幕（默认开）：全屏用屏幕自己的比例；关掉则保持所选比例。屏幕竖着时不铺满，按所选比例放进去。
   - 显示性能信息：在画面左上角显示渲染尺寸、帧率、跳过的帧数、两个 Worker 的 wasm 内存。
   - 抗锯齿（实验性，只在站点设置「实验」页打开「Live2D 剧情预览 → 抗锯齿设置」后出现；那个开关记在 `localStorage` 的 `experimental-story-live2d-antialiasing`）：先选方案（关闭 / MSAA / SSAA / SMAA，同时只用一种），再只显示该方案的参数：MSAA 的采样数（播放器报告的设备可用值，浏览器里只有 4x）、SSAA 的放大倍数（2x / 3x）；SMAA 没有参数。改了从画面上这一帧起生效（播放器的 `setExperimentalAntialiasing({method, msaaSamples, ssaaFactor})`）。选择和其他设置一起存着，两个倍率各自保留；实验开关关掉时播放器不做抗锯齿，选择保留。设备不支持的采样数按 4x 处理。角色边缘会比游戏平滑；SSAA 3x 时角色的 RT 是 6912×4608，手机上可能吃不消。需要带这个接口的发布物，旧发布物会忽略它。
-- 高帧率（实验性，站点设置「实验」页「Live2D 剧情预览 → 高帧率」，记在 `localStorage` 的 `experimental-story-live2d-high-fps`）：创建播放器时传 `highFps: true`，在高于 60 Hz 的显示器上每次刷新都绘制，两帧之间的位置、淡入淡出、Live2D 参数按正在听到的样本在帧内的位置插值（SSE ADR-0037）；文字、特效粒子与转场仍是 60 fps 的阶梯。播放器只在创建时读这个选项，所以开关在下次加载剧情时生效。绘制次数随刷新率增加，渲染跟不上时只画最新的一次。旧发布物会忽略它。
+- 高帧率（实验性，站点设置「实验」页「Live2D 剧情预览 → 高帧率」，记在 `localStorage` 的 `experimental-story-live2d-high-fps`）：创建播放器时传 `highFps: true`，在高于 60 Hz 的显示器上每次刷新都绘制，两帧之间的位置、淡入淡出、Live2D 参数按正在听到的样本在帧内的位置插值（SSE ADR-0037）；文字、特效粒子与转场仍是 60 fps 的阶梯。播放器只在创建时读这个选项，所以开关在下次加载剧情时生效。绘制次数随刷新率增加，渲染跟不上时只画最新的一次。旧发布物会忽略它。Safari 默认把 `requestAnimationFrame` 限在 60 Hz（Feature Flags 的「Prefer Page Rendering Updates near 60fps」），开了也是 60 fps。
 - 播放以「节点」为单位，位置显示为第几句：节点是点击会作用到的内容——对话、字幕（telop）、全屏文字、选项。没有可拖动的时间条；可以上一个、下一个，或点文本列表里对应的那一行跳过去（这四种行都能点）。播放时列表高亮当前这一行并跟着滚动（可关），滚动时让开悬浮窗。
 - 节点和列表的行靠剧本里的位置对上：播放器给每个节点带上它在剧本 `Snippets` 里的序号，`storyLoader` 给每一行记同一个序号（`snippetIndex`）。列表里没有对应行的节点不影响其他行。
 - AUTO 与手动两种模式；手动模式下点画面推进。选项要在画面上点。
