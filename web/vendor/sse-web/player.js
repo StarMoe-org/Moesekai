@@ -332,8 +332,14 @@ export class SsePlayer extends EventTarget {
   /** The sample being heard now: the last report moved on by the time since, less the output latency. */
   hearing() {
     let now = this.heard.position;
+    // currentTime moves in steps of the device's buffer (about 10 ms in Windows' shared mode,
+    // fewer steps a second than a fast display draws): at highFps it moves on with the page's
+    // clock in between, by at most a step or two, so that a device that holds does not run ahead
+    let clock = this.ctx.currentTime;
+    if (clock !== this.clockAt?.time) this.clockAt = { time: clock, at: performance.now() };
+    if (this.highFps) clock += Math.min((performance.now() - this.clockAt.at) / 1000, 0.025);
     if (this.playing && !this.stalled) {
-      const since = Math.max(0, this.ctx.currentTime - this.heard.time);
+      const since = Math.max(0, clock - this.heard.time);
       const latency = this.ctx.outputLatency || this.ctx.baseLatency || 0;
       now = Math.max(0, now + Math.floor((since - latency) * RATE));
     }
