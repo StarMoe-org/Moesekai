@@ -248,6 +248,11 @@ export const zhTWSettings = {
             unrestrictedLabel: "解除角色限制",
             unrestrictedDescription: "任何角色都可以穿戴其他角色（包括異性角色）的服裝、髮型和頭飾，並忽略頭飾與髮型的搭配限制。服裝保留原有體型，可能出現穿模。",
         },
+        storyLive2d: {
+            sectionTitle: "Live2D 劇情預覽",
+            antialiasingLabel: "反鋸齒設定",
+            antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒選項（MSAA、SSAA、SMAA），讓角色邊緣更平滑。畫面會與遊戲不同，開得越多越佔顯示卡與記憶體。",
+        },
     },
     contentDisplay: {
         sectionTitle: "內容顯示",

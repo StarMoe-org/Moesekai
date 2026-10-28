@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import type { ServerType } from "@/lib/account-servers";
 import { sseWebCoreUrl, sseWebFonts, sseWebSources, type SseWebFontFile } from "@/lib/sseWeb/config";
 import {
@@ -9,8 +10,9 @@ import {
     type SsePlayer, type SsePlayerError, type SsePlayerNode, type SsePlayerErrorKind, type SsePlayerMissing, type SsePlayerUnsupported,
 } from "@/lib/sseWeb/player";
 import {
-    SSE_WEB_DEFAULT_SETTINGS, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize, storeSseWebSettings,
-    type SseWebSettings,
+    SSE_WEB_DEFAULT_SETTINGS, SSE_WEB_NO_ANTIALIASING, loadSseWebSettings, sseWebAspectRatio, sseWebRenderSize,
+    storeSseWebSettings,
+    type SseWebAntialiasing, type SseWebSettings,
 } from "@/lib/sseWeb/settings";
 
 export type Live2DPhase = "idle" | "loading" | "ready" | "failed";
@@ -111,6 +113,13 @@ function absolute(font: SseWebFontFile): SseWebFontFile {
  */
 export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: UseLive2DPlayerOptions) {
     const { t } = useI18n();
+    // the anti-aliasing chosen in the player's settings holds only while the experimental setting
+    // offers it
+    const { storyLive2dAntialiasing } = useTheme();
+    const antialiasingOfferedRef = useRef(storyLive2dAntialiasing);
+    antialiasingOfferedRef.current = storyLive2dAntialiasing;
+    /** What the player was last told to anti-alias with. */
+    const appliedAntialiasingRef = useRef<SseWebAntialiasing>(SSE_WEB_NO_ANTIALIASING);
     const sources = sseWebSources(region);
     const fonts = sseWebFonts(region);
     const stageRef = useRef<HTMLDivElement | null>(null);
@@ -205,6 +214,8 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             canvas.height = height;
             canvas.className = "block h-full w-full object-contain";
             stage.prepend(canvas);
+            const antialiasing = antialiasingOfferedRef.current ? chosen.antialiasing : SSE_WEB_NO_ANTIALIASING;
+            appliedAntialiasingRef.current = antialiasing;
             const player = await SsePlayerClass.create({
                 canvas,
                 js: sseWebScriptBase(),
@@ -218,6 +229,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 height,
                 playerName: t("page.story.live2d.playerName"),
                 auto: true,
+                experimentalAntialiasing: antialiasing,
                 onProgress: ({ sim, render, kit }) => {
                     if (epoch !== epochRef.current) return;
                     // the two workers' file counts; the UI kit is found file by file and only adds bytes
@@ -339,6 +351,18 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
             document.removeEventListener("fullscreenchange", onFullscreen);
         };
     }, [phase, settings]);
+
+    // The anti-aliasing follows the reader's choice and the experimental setting that offers it.
+    const { msaa, ssaa, smaa } = storyLive2dAntialiasing ? settings.antialiasing : SSE_WEB_NO_ANTIALIASING;
+    useEffect(() => {
+        const player = playerRef.current;
+        if (phase !== "ready" || !player) return;
+        const applied = appliedAntialiasingRef.current;
+        if (applied.msaa === msaa && applied.ssaa === ssaa && applied.smaa === smaa) return;
+        appliedAntialiasingRef.current = { msaa, ssaa, smaa };
+        // a release from before the setting has no such method
+        if (typeof player.setExperimentalAntialiasing === "function") player.setExperimentalAntialiasing({ msaa, ssaa, smaa });
+    }, [phase, msaa, ssaa, smaa]);
 
     // What the picture costs, once a second, when the reader asked to see it.
     useEffect(() => {

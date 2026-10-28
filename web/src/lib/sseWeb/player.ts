@@ -71,6 +71,8 @@ export interface SsePlayerOptions {
     height: number;
     playerName?: string;
     auto?: boolean;
+    /** Experimental anti-aliasing of the Live2D models; none when left out. */
+    experimentalAntialiasing?: { msaa: number; ssaa: number; smaa: boolean };
     onProgress?: (progress: SsePlayerProgress) => void;
 }
 
@@ -100,6 +102,8 @@ export interface SsePlayer extends EventTarget {
     next(): void;
     previous(): void;
     setVolume(volume: number): void;
+    /** Experimental: anti-aliases the Live2D models from the frame on screen on. */
+    setExperimentalAntialiasing(antialiasing: { msaa: number; ssaa: number; smaa: boolean }): void;
     destroy(): void;
 }
 

@@ -866,6 +866,11 @@ export const koKRMessages = {
                 unrestrictedLabel: "캐릭터 제한 해제",
                 unrestrictedDescription: "모든 캐릭터가 다른 캐릭터(다른 성별 포함)의 의상, 헤어스타일, 머리 장식을 착용할 수 있으며, 머리 장식과 헤어스타일의 조합 제한도 무시합니다. 의상은 원래 체형을 유지하므로 클리핑이 생길 수 있습니다.",
             },
+            storyLive2d: {
+                sectionTitle: "Live2D 스토리 미리보기",
+                antialiasingLabel: "안티에일리어싱 설정",
+                antialiasingDescription: "Live2D 스토리 미리보기의 재생 설정에 안티에일리어싱(MSAA, SSAA, SMAA) 옵션을 표시해 캐릭터 윤곽을 부드럽게 합니다. 화면이 게임과 달라지며, 켤수록 GPU와 메모리를 더 사용합니다.",
+            },
         },
         contentDisplay: {
             sectionTitle: "콘텐츠 표시"
@@ -1790,6 +1795,15 @@ export const koKRMessages = {
                     fullscreenFillsScreenHint: "전체 화면에서는 화면 자체의 비율을 사용합니다. 끄면 위에서 선택한 비율을 유지합니다.",
                     showStats: "성능 정보 표시",
                     statsLine: "{width}×{height} · {fps} fps · 건너뜀 {skipped} · wasm {megabytes} MB",
+                    antialiasing: "안티에일리어싱 (실험적)",
+                    antialiasingHint: "캐릭터 윤곽을 게임보다 부드럽게 합니다. 세 가지를 함께 켤 수 있습니다.",
+                    antialiasingOff: "끄기",
+                    msaa: "멀티샘플링 (MSAA)",
+                    msaaHint: "모델 메시의 가장자리를 부드럽게 합니다. 부하가 적습니다.",
+                    ssaa: "슈퍼샘플링 (SSAA)",
+                    ssaaHint: "캐릭터를 더 높은 해상도로 그린 뒤 축소합니다. 가장 부드럽지만 2x는 약 4배, 3x는 약 9배의 GPU와 메모리를 사용합니다. 휴대폰에서는 권장하지 않습니다.",
+                    smaa: "SMAA",
+                    smaaHint: "화면에서 윤곽을 찾아 부드럽게 합니다. 부하가 적지만 세부가 약간 흐려집니다.",
                 },
                 fullscreen: "전체 화면",
                 exitFullscreen: "전체 화면 종료",

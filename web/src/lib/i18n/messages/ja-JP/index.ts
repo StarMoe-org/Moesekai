@@ -868,6 +868,11 @@ export const jaJPMessages = {
         unrestrictedLabel: 'キャラクター制限を解除',
         unrestrictedDescription: 'どのキャラクターも、他のキャラクター（異性を含む）の衣装・髪型・頭アクセサリーを着用でき、頭アクセサリーと髪型の組み合わせ制限も無視します。衣装は元の体型のままのため、めり込みが起きることがあります。',
       },
+      storyLive2d: {
+        sectionTitle: "Live2D ストーリープレビュー",
+        antialiasingLabel: "アンチエイリアス設定",
+        antialiasingDescription: "Live2D ストーリープレビューの再生設定にアンチエイリアス（MSAA・SSAA・SMAA）の項目を表示し、キャラクターの輪郭を滑らかにします。画面はゲームと異なり、有効にするほど GPU とメモリを使います。",
+      },
     },
     contentDisplay: {
       sectionTitle: 'コンテンツ表示'
@@ -1792,6 +1797,15 @@ export const jaJPMessages = {
           fullscreenFillsScreenHint: "全画面では画面自体の比率を使います。オフにすると上で選んだ比率のままです。",
           showStats: "パフォーマンス情報を表示",
           statsLine: "{width}×{height} · {fps} fps · スキップ {skipped} · wasm {megabytes} MB",
+          antialiasing: "アンチエイリアス（実験的）",
+          antialiasingHint: "キャラクターの輪郭をゲームより滑らかにします。3 つは同時に使えます。",
+          antialiasingOff: "オフ",
+          msaa: "マルチサンプリング（MSAA）",
+          msaaHint: "モデルのメッシュの輪郭を滑らかにします。負荷は小さめです。",
+          ssaa: "スーパーサンプリング（SSAA）",
+          ssaaHint: "キャラクターを高い解像度で描いてから縮小します。最も滑らかですが、2x で約 4 倍、3x で約 9 倍の GPU とメモリを使います。スマートフォンでは非推奨です。",
+          smaa: "SMAA",
+          smaaHint: "画面から輪郭を検出してぼかします。負荷は小さめですが、細部がわずかに柔らかくなります。",
         },
         fullscreen: "全画面",
         exitFullscreen: "全画面を終了",
