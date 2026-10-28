@@ -37,6 +37,11 @@ const CORE = "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.
  *   network      a file could not be fetched, after several tries (`url`)
  *   internal     anything else
  */
+/** `experimentalAntialiasing` with what is left out filled in (off). */
+function antialiasing(aa) {
+  return { msaa: aa?.msaa ?? 1, ssaa: aa?.ssaa ?? 1, smaa: !!aa?.smaa };
+}
+
 export class SsePlayer extends EventTarget {
   /**
    * What the browser lacks for playing, checked without loading anything: `{ok, missing}`,
@@ -79,6 +84,9 @@ export class SsePlayer extends EventTarget {
    *   the names, each a font (TTF or OTF; `weight` sets a variable font's weight) followed by
    *   the fonts that fill in the characters it lacks. With both given, the client's own font
    *   files are not fetched at all. Text in other fonts is not what the game shows
+   * @param {{msaa?: number, ssaa?: number, smaa?: boolean}} [o.experimentalAntialiasing]
+   *   experimental anti-aliasing of the Live2D models, see setExperimentalAntialiasing; none
+   *   by default
    * @param {string} [o.playerName]
    * @param {boolean} [o.auto]
    * @param {(p: object) => void} [o.onProgress]  while loading: `{sim, render, kit}`, each that
@@ -113,7 +121,7 @@ export class SsePlayer extends EventTarget {
     const options = {
       js: o.js, pkg: o.pkg, core: o.core ?? CORE, sources: o.sources, selector: o.selector,
       width: o.width, height: o.height, playerName: o.playerName ?? "「世界」的居民", auto: o.auto ?? true,
-      fonts: o.fonts,
+      fonts: o.fonts, antialiasing: antialiasing(o.experimentalAntialiasing),
     };
     const p = this;
     p.width = o.width;
@@ -372,6 +380,17 @@ export class SsePlayer extends EventTarget {
     this.height = height;
     this.render.postMessage({ type: "resize", width, height });
     this.sim.postMessage({ type: "resize", width, height });
+  }
+
+  /**
+   * Experimental: anti-aliases the Live2D models from now on, the frame on screen included.
+   * `msaa`: samples per pixel (1 or 4); `ssaa`: times the size per side (1, 2 or 3; 1 is off
+   * for both); `smaa`: SMAA 1x. Any combination; left out, each is off. Smoother character
+   * edges than the game shows. A value outside these is ignored, with a warning in the console.
+   * @param {{msaa?: number, ssaa?: number, smaa?: boolean}} [aa]
+   */
+  setExperimentalAntialiasing(aa) {
+    this.render.postMessage({ type: "antialiasing", antialiasing: antialiasing(aa) });
   }
 
   /** Goes on from the start of node `k` (0-based, clamped), in the current mode. */

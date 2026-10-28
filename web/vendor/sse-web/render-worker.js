@@ -51,6 +51,8 @@ let shownChoice = false;
 let framesPort;
 /** What a renderer is created with: the canvas, the UI kit, the client and the selector. */
 let rendererArgs;
+// SsePlayer's experimental anti-aliasing of the Live2D models: {msaa, ssaa, smaa}
+let antialiasing;
 let skipped = 0;
 /** Seeks taken (reported with what is shown). */
 let gen = 0;
@@ -249,6 +251,8 @@ async function init(o, canvas, port) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", o.selector, ui.dir, lock.region ?? "jp", [], 60, o.width, o.height,
       fonts.body, fonts.name)));
+  antialiasing = o.antialiasing;
+  renderer.setExperimentalAntialiasing(antialiasing.msaa, antialiasing.ssaa, antialiasing.smaa);
   renderer.setModels(models);
   rendererArgs = [canvas, ui.dir, lock.region ?? "jp", o.selector, fonts];
   postMessage({ type: "ready", loadedBytes: loader.bytes });
@@ -284,10 +288,29 @@ async function resize(width, height) {
   renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
     FrameRenderer.create(canvas, "/lib", "/assets", selector, kit, game, models, 60, width, height,
       fonts.body, fonts.name)));
+  renderer.setExperimentalAntialiasing(antialiasing.msaa, antialiasing.ssaa, antialiasing.smaa);
+  showAgain();
+}
+
+/** The frame on screen is drawn again at the next show. */
+function showAgain() {
   if (shownEntry && !frames.has(shown)) {
     frames.set(shown, shownEntry);
     shown--;
   }
+}
+
+/** SsePlayer.setExperimentalAntialiasing: from the frame on screen on; refused values change nothing. */
+function setAntialiasing(aa) {
+  if (!renderer) return;
+  try {
+    renderer.setExperimentalAntialiasing(aa.msaa, aa.ssaa, aa.smaa);
+  } catch (e) {
+    console.warn(`experimental anti-aliasing ${JSON.stringify(aa)} refused: ${e?.message ?? e}`);
+    return;
+  }
+  antialiasing = aa;
+  showAgain();
 }
 
 function show(want) {
@@ -352,6 +375,8 @@ onmessage = (e) => {
       tap(m.x, m.y);
     } else if (m.type === "resize") {
       resize(m.width, m.height).catch(fatal);
+    } else if (m.type === "antialiasing") {
+      setAntialiasing(m.antialiasing);
     }
   } catch (err) {
     fatal(err);
