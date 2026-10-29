@@ -601,7 +601,7 @@ export default function Sidebar({
 
                 {/* Navigation groups - scrollable area. Docked, nothing sits above it, so it starts below
                     the pane's rounded top corners to keep its scrollbar out of the curve. */}
-                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:mt-4">
+                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:pt-4">
                     {/* Home */}
                     <NavigationDrawerItem
                         density="compact"
