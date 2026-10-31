@@ -869,7 +869,7 @@ export const koKRMessages = {
             storyLive2d: {
                 sectionTitle: "Live2D 스토리 미리보기",
                 antialiasingLabel: "안티에일리어싱 설정",
-                antialiasingDescription: "Live2D 스토리 미리보기의 재생 설정에 안티에일리어싱(MSAA, SSAA, SMAA 중 하나) 옵션을 표시해 캐릭터 윤곽을 부드럽게 합니다. 화면이 게임과 달라지며, 배율이 높을수록 GPU와 메모리를 더 사용합니다.",
+                antialiasingDescription: "Live2D 스토리 미리보기의 재생 설정에 안티에일리어싱(MSAA, SSAA 중 하나) 옵션을 표시해 캐릭터 윤곽을 부드럽게 합니다. 화면이 게임과 달라지며, 배율이 높을수록 GPU와 메모리를 더 사용합니다.",
                 highFpsLabel: "고프레임",
                 highFpsDescription: "60Hz를 넘는 디스플레이에서 Live2D 스토리 미리보기를 디스플레이 주사율로 그립니다. 프레임 사이의 동작, 페이드, Live2D 파라미터를 시간에 따라 보간해 더 부드럽게 보입니다. 텍스트, 이펙트 파티클, 전환 효과는 여전히 60fps로 바뀝니다. 다음에 스토리를 불러올 때부터 적용되며, 주사율만큼 그리는 횟수가 늘어납니다.",
             },
@@ -1802,7 +1802,6 @@ export const koKRMessages = {
                     antialiasingOffHint: "안티에일리어싱 없음. 게임과 같은 화면입니다.",
                     msaaHint: "멀티샘플링: 모델 메시의 가장자리를 부드럽게 합니다. 부하가 적습니다.",
                     ssaaHint: "슈퍼샘플링: 캐릭터를 더 높은 해상도로 그린 뒤 축소합니다. 가장 부드럽지만 GPU와 메모리를 가장 많이 사용합니다.",
-                    smaaHint: "SMAA: 화면에서 윤곽을 찾아 부드럽게 합니다. 부하가 적지만 세부가 약간 흐려집니다. 설정할 항목이 없습니다.",
                     msaaSamples: "샘플 수",
                     msaaSamplesHint: "픽셀당 샘플 수로, 많을수록 부드럽습니다. 브라우저에서는 4x만 지원합니다.",
                     ssaaFactor: "배율",

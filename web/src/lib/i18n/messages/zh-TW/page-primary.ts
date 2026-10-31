@@ -834,7 +834,6 @@ export const zhTWPagePrimary = {
                     antialiasingOffHint: "不做反鋸齒，與遊戲畫面相同。",
                     msaaHint: "多重取樣：平滑模型網格的邊緣，負擔較小。",
                     ssaaHint: "超取樣：以更高解析度繪製角色再縮小，最平滑，也最佔顯示卡與記憶體。",
-                    smaaHint: "SMAA：在畫面上找出邊緣並柔化，負擔較小，細節會略微變軟。沒有可調的參數。",
                     msaaSamples: "取樣數",
                     msaaSamplesHint: "每個像素的取樣數，越多越平滑。瀏覽器中只有 4x。",
                     ssaaFactor: "放大倍數",

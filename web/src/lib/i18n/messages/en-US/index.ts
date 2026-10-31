@@ -872,7 +872,7 @@ export const enUSMessages = {
             storyLive2d: {
                 sectionTitle: "Live2D story preview",
                 antialiasingLabel: "Anti-aliasing settings",
-                antialiasingDescription: "Offers anti-aliasing (MSAA, SSAA or SMAA, one at a time) in the Live2D story preview's settings, for smoother character edges. The picture then differs from the game's, and higher rates cost more graphics power and memory.",
+                antialiasingDescription: "Offers anti-aliasing (MSAA or SSAA, one at a time) in the Live2D story preview's settings, for smoother character edges. The picture then differs from the game's, and higher rates cost more graphics power and memory.",
                 highFpsLabel: "High frame rate",
                 highFpsDescription: "On a display above 60 Hz, the Live2D story preview draws at the display's refresh rate: motion, fades and Live2D parameters are interpolated between the story's frames for smoother movement, while text, effect particles and transitions still change at 60 fps. Takes effect the next time a story loads, and draws that many more frames.",
             },
@@ -1805,7 +1805,6 @@ export const enUSMessages = {
                     antialiasingOffHint: "No anti-aliasing: the picture is the game's.",
                     msaaHint: "Multisampling: smooths the edges of the model's meshes, at a small cost.",
                     ssaaHint: "Supersampling: draws the characters at a higher resolution and scales them down; the smoothest, and the most costly in graphics work and memory.",
-                    smaaHint: "SMAA: finds edges in the picture and softens them, at a small cost; fine detail gets slightly softer. It has nothing to set.",
                     msaaSamples: "Samples",
                     msaaSamplesHint: "Samples per pixel; more is smoother. Browsers take 4x only.",
                     ssaaFactor: "Factor",

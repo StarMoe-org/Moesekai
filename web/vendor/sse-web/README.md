@@ -102,7 +102,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 | `node` | 当前所在的节点序号（从 0 起；播完最后一个后等于 `nodes.length`） |
 | `seek(k)` / `next()` / `previous()` | 跳到第 k 个节点、下一个、上一个的开头：画面与从头 AUTO 播放到那里时相同 |
 | `setVolume(v)` | 总音量 0–1 |
-| `setExperimentalAntialiasing({method, msaaSamples, ssaaFactor})` | **实验性**：Live2D 角色的抗锯齿，从画面上这一帧起生效，同时只用一种。`method`：`msaa`、`ssaa`、`smaa`，`none` 或省略为关闭；`msaaSamples`：MSAA 的每像素采样数，默认 4（浏览器里只有 4）；`ssaaFactor`：SSAA 每边的放大倍数，2 或 3，默认 2。倍率只对自己的方案起作用。角色边缘会比游戏平滑，不用于与游戏比对；不支持的设置会被忽略，并在控制台给出警告。`create` 的 `experimentalAntialiasing` 指定初始值 |
+| `setExperimentalAntialiasing({method, msaaSamples, ssaaFactor})` | **实验性**：Live2D 角色的抗锯齿，从画面上这一帧起生效，同时只用一种。`method`：`msaa`、`ssaa`，`none` 或省略为关闭；`msaaSamples`：MSAA 的每像素采样数，默认 4（浏览器里只有 4）；`ssaaFactor`：SSAA 每边的放大倍数，2 或 3，默认 2。倍率只对自己的方案起作用。角色边缘会比游戏平滑，不用于与游戏比对；不支持的设置会被忽略，并在控制台给出警告。`create` 的 `experimentalAntialiasing` 指定初始值 |
 | `msaaSampleCounts` | 这台设备上 MSAA 可用的采样数（`create` 之后才有；浏览器里是 `[4]`） |
 | `position` | 播放位置：`node`、`nodes`（总数）、`shown`（显示的帧）、`waitsForClick`、`waitsForAnswer`、`stalled`、`seeking`、`ended` 等 |
 | `error` | 出错时的信息 |

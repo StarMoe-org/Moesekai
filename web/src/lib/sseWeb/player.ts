@@ -59,7 +59,7 @@ export interface SsePlayerPosition {
 
 /** One anti-aliasing method, and the rates of the two that have one. */
 export interface SsePlayerAntialiasing {
-    method: "none" | "msaa" | "ssaa" | "smaa";
+    method: "none" | "msaa" | "ssaa";
     msaaSamples: number;
     ssaaFactor: number;
 }

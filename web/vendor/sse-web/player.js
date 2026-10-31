@@ -86,7 +86,7 @@ export class SsePlayer extends EventTarget {
    *   the names, each a font (TTF or OTF; `weight` sets a variable font's weight) followed by
    *   the fonts that fill in the characters it lacks. With both given, the client's own font
    *   files are not fetched at all. Text in other fonts is not what the game shows
-   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [o.experimentalAntialiasing]
+   * @param {{method: "none" | "msaa" | "ssaa", msaaSamples?: number, ssaaFactor?: number}} [o.experimentalAntialiasing]
    *   experimental anti-aliasing of the Live2D models, see setExperimentalAntialiasing; none
    *   by default
    * @param {string} [o.playerName]
@@ -403,11 +403,10 @@ export class SsePlayer extends EventTarget {
   /**
    * Experimental: anti-aliases the Live2D models from now on, the frame on screen included,
    * with one method: `msaa` (MSAA with `msaaSamples` samples per pixel, 4 by default; the
-   * counts this device takes are in `msaaSampleCounts`), `ssaa` (drawn at `ssaaFactor` times
-   * the size per side, 2 or 3, 2 by default, and filtered down) or `smaa` (SMAA 1x); `none`,
-   * or left out, is off. Smoother character edges than the game shows. A setting the player
+   * counts this device takes are in `msaaSampleCounts`) or `ssaa` (drawn at `ssaaFactor` times
+   * the size per side, 2 or 3, 2 by default, and filtered down); `none`, or left out, is off. Smoother character edges than the game shows. A setting the player
    * does not take is ignored, with a warning in the console.
-   * @param {{method: "none" | "msaa" | "ssaa" | "smaa", msaaSamples?: number, ssaaFactor?: number}} [aa]
+   * @param {{method: "none" | "msaa" | "ssaa", msaaSamples?: number, ssaaFactor?: number}} [aa]
    */
   setExperimentalAntialiasing(aa) {
     this.render.postMessage({ type: "antialiasing", antialiasing: antialiasing(aa) });

@@ -871,7 +871,7 @@ export const zhCNMessages = {
             storyLive2d: {
                 sectionTitle: "Live2D 剧情预览",
                 antialiasingLabel: "抗锯齿设置",
-                antialiasingDescription: "在 Live2D 剧情预览的播放设置里提供抗锯齿（MSAA、SSAA、SMAA，同时只用一种），让角色边缘更平滑。画面会与游戏不同，倍率越高越占显卡和内存。",
+                antialiasingDescription: "在 Live2D 剧情预览的播放设置里提供抗锯齿（MSAA、SSAA，同时只用一种），让角色边缘更平滑。画面会与游戏不同，倍率越高越占显卡和内存。",
                 highFpsLabel: "高帧率",
                 highFpsDescription: "在高于 60 Hz 的显示器上，Live2D 剧情预览按显示器的刷新率绘制：两帧之间的动作、淡入淡出与 Live2D 参数按时间插值，更流畅；文字、特效粒子与转场仍按 60 帧变化。下次加载剧情时生效，绘制次数随刷新率增加。",
             },
@@ -1804,7 +1804,6 @@ export const zhCNMessages = {
                     antialiasingOffHint: "不做抗锯齿，与游戏画面相同。",
                     msaaHint: "多重采样：平滑模型网格的边缘，开销较小。",
                     ssaaHint: "超采样：以更高分辨率绘制角色再缩小，最平滑，也最占显卡和显存。",
-                    smaaHint: "SMAA：在画面上找出边缘并柔化，开销较小，细节会略微变软。没有可调的参数。",
                     msaaSamples: "采样数",
                     msaaSamplesHint: "每个像素的采样数，越多越平滑。浏览器里只有 4x。",
                     ssaaFactor: "放大倍数",

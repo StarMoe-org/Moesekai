@@ -871,7 +871,7 @@ export const jaJPMessages = {
       storyLive2d: {
         sectionTitle: "Live2D ストーリープレビュー",
         antialiasingLabel: "アンチエイリアス設定",
-        antialiasingDescription: "Live2D ストーリープレビューの再生設定にアンチエイリアス（MSAA・SSAA・SMAA のいずれか 1 つ）の項目を表示し、キャラクターの輪郭を滑らかにします。画面はゲームと異なり、倍率が高いほど GPU とメモリを使います。",
+        antialiasingDescription: "Live2D ストーリープレビューの再生設定にアンチエイリアス（MSAA・SSAA のいずれか 1 つ）の項目を表示し、キャラクターの輪郭を滑らかにします。画面はゲームと異なり、倍率が高いほど GPU とメモリを使います。",
         highFpsLabel: "高フレームレート",
         highFpsDescription: "60 Hz を超えるディスプレイで、Live2D ストーリープレビューをディスプレイのリフレッシュレートで描画します。フレーム間の動き・フェード・Live2D パラメータを時間で補間して滑らかにします。テキスト・エフェクトのパーティクル・トランジションは 60 fps のまま変化します。次にストーリーを読み込んだときから有効になり、描画回数はリフレッシュレートに応じて増えます。",
       },
@@ -1804,7 +1804,6 @@ export const jaJPMessages = {
           antialiasingOffHint: "アンチエイリアスなし。ゲームと同じ画面です。",
           msaaHint: "マルチサンプリング：モデルのメッシュの輪郭を滑らかにします。負荷は小さめです。",
           ssaaHint: "スーパーサンプリング：キャラクターを高い解像度で描いてから縮小します。最も滑らかですが、GPU とメモリを最も使います。",
-          smaaHint: "SMAA：画面から輪郭を検出してぼかします。負荷は小さめですが、細部がわずかに柔らかくなります。設定項目はありません。",
           msaaSamples: "サンプル数",
           msaaSamplesHint: "1 ピクセルあたりのサンプル数で、多いほど滑らかです。ブラウザでは 4x のみです。",
           ssaaFactor: "倍率",
