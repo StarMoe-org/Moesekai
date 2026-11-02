@@ -5,6 +5,7 @@ import MainLayout from "@/components/MainLayout";
 import { Button, PageContainer, PageHeader, Surface } from "@/components/md3";
 import { mdArrowBack } from "@/components/md3/icons";
 import { pageMetadata } from "@/lib/seo-metadata";
+import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 export const generateMetadata = pageMetadata("patreon");
 
@@ -145,7 +146,7 @@ export default function PatreonPage() {
                         </p>
 
                         <p className="mt-4 rounded-md3-md bg-surface-container-high p-4">
-                            你可以 <span className="font-medium text-primary">加入我们的官方用户群 1075068454</span> 进行网站反馈，与开发者交流，获取 moesekai 的最新动态！
+                            你可以 <span className="font-medium text-primary">加入我们的官方用户群 {MOESEKAI_QQ_GROUP_ID}</span> 进行网站反馈，与开发者交流，获取 moesekai 的最新动态！
                         </p>
                     </section>
 

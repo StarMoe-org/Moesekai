@@ -713,6 +713,7 @@ export const jaJPMessages = {
       explore: '探索',
       sisterSites: '姉妹サイト・コミュニティ',
       bilibiliAccount: 'Bilibili',
+      qqCommunity: 'QQグループ',
       discordCommunity: 'Discord',
       contact: '連絡先とフィードバック',
       brandDescription: 'プロジェクトセカイの次世代ビューアー。',

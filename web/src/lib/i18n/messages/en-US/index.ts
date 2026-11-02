@@ -714,6 +714,7 @@ export const enUSMessages = {
             explore: "Explore",
             sisterSites: "Sister Sites & Community",
             bilibiliAccount: "Bilibili",
+            qqCommunity: "QQ Group",
             discordCommunity: "Discord",
             contact: "Contact & Feedback",
             brandDescription: "A next-generation viewer for PROJECT SEKAI.",
