@@ -711,6 +711,7 @@ export const koKRMessages = {
             explore: "둘러보기",
             sisterSites: "자매 사이트 및 커뮤니티",
             bilibiliAccount: "Bilibili",
+            qqCommunity: "QQ 그룹",
             discordCommunity: "Discord",
             contact: "문의 및 피드백",
             brandDescription: "PROJECT SEKAI를 위한 차세대 뷰어.",

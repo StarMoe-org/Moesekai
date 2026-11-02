@@ -91,6 +91,7 @@ export const zhTWLayout = {
         explore: "探索",
         sisterSites: "姊妹站與社群",
         bilibiliAccount: "Bilibili",
+        qqCommunity: "QQ群",
         discordCommunity: "discord群",
         contact: "聯絡與意見回饋",
         brandDescription: "PROJECT SEKAI 的新一代資料檢視器。",

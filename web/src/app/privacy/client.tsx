@@ -4,6 +4,7 @@ import ExternalLink from "@/components/ExternalLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { PageContainer, PageHeader, Surface } from "@/components/md3";
+import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 const bulletGroups = [
     ["local.preferences", "local.account", "local.tokens", "local.gameData"],
@@ -77,7 +78,7 @@ export default function PrivacyPolicyClient() {
                                     moe-sekai/Moesekai
                                 </ExternalLink>
                             </li>
-                            <li>{t("page.privacy.contact.qq")}: 1075068454</li>
+                            <li>{t("page.privacy.contact.qq")}: {MOESEKAI_QQ_GROUP_ID}</li>
                         </ul>
                     </Section>
                 </div>

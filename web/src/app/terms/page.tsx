@@ -5,6 +5,7 @@ import ExternalLink from "@/components/ExternalLink";
 import { Button, PageContainer, PageHeader, Surface } from "@/components/md3";
 import { mdArrowBack } from "@/components/md3/icons";
 import { pageMetadata } from "@/lib/seo-metadata";
+import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 export const generateMetadata = pageMetadata("terms");
 
@@ -98,7 +99,7 @@ export default function TermsPage() {
                                     moe-sekai/Moesekai
                                 </ExternalLink>
                             </li>
-                            <li>QQ 群：1075068454</li>
+                            <li>QQ 群：{MOESEKAI_QQ_GROUP_ID}</li>
                         </ul>
                     </Section>
                 </div>

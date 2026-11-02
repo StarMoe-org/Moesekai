@@ -713,6 +713,7 @@ export const zhCNMessages = {
             explore: "探索",
             sisterSites: "姐妹站与社区",
             bilibiliAccount: "Bilibili",
+            qqCommunity: "QQ群",
             discordCommunity: "discord群",
             contact: "联系与反馈",
             brandDescription: "PROJECT SEKAI 的新一代 Viewer。",
