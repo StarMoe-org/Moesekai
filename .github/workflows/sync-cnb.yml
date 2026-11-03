@@ -1,0 +1,35 @@
+# Mirror every pushed branch and tag to the same-named repository under https://cnb.cool/StarMoe-org
+# with the tencentcom/git-sync plugin (https://cnb.cool/cnb/plugins/tencentcom/git-sync).
+# Needs the CNB_TOKEN secret: a CNB access token with repo-code:rw on the target repository.
+name: Sync to CNB
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: sync-cnb-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    # Forks have no CNB_TOKEN, Dependabot runs cannot read it, and a deleted ref has nothing to check out.
+    if: github.repository_owner == 'StarMoe-org' && github.actor != 'dependabot[bot]' && github.event.deleted != true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Sync to CNB
+        uses: docker://tencentcom/git-sync
+        env:
+          PLUGIN_TARGET_URL: https://cnb.cool/StarMoe-org/${{ github.event.repository.name }}.git
+          PLUGIN_AUTH_TYPE: https
+          PLUGIN_USERNAME: cnb
+          PLUGIN_PASSWORD: ${{ secrets.CNB_TOKEN }}
+          PLUGIN_FORCE: "true"
+          PLUGIN_PUSH_TAGS: "true"
