@@ -36,6 +36,7 @@ test("all five UI locales contain nonempty scoped view, filter range and home cu
             ["common.view", messages.common.view, ["grid", "table", "label"]],
             ["common.filter", messages.common.filter, ["difficultyRange", "minimum", "maximum", "difficultiesHint", "sortDifficulty"]],
             ["page.home.customize", messages.page.home.customize, ["open", "title", "description", "moveUp", "moveDown", "reset"]],
+            ["page.honors.badgeVariant", messages.page.honors.badgeVariant, ["label", "main", "sub"]],
         ];
         for (const [prefix, group, keys] of groups) {
             assert.ok(group, `${locale} ${prefix}`);
@@ -108,4 +109,182 @@ test("card tables show both available artworks, without inventing missing normal
     assert.deepEqual(artworks({ ...base, initialSpecialTrainingStatus: "done" }), ["true"]);
     assert.deepEqual(artworks({ ...base, specialTrainingPower1BonusFixed: 0 }), ["false"]);
     assert.deepEqual(artworks({ ...base, cardRarityType: "rarity_birthday" }), ["false"]);
+});
+
+test("honor detail dialogs toggle between main and sub badge previews and export filenames", async () => {
+    const { JSDOM } = require("jsdom");
+    const React = require("react");
+    const { act } = React;
+    const { createRoot } = require("react-dom/client");
+    const { renderToStaticMarkup } = require("react-dom/server");
+
+    const compile = (relativePath, resolve) => {
+        const output = ts.transpileModule(readWeb(relativePath), {
+            compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.React, esModuleInterop: true },
+        }).outputText;
+        const exports = {};
+        new Function("require", "exports", output)(resolve, exports);
+        return exports;
+    };
+
+    let lastPreviewFileName = "";
+    const makeResolve = () => (id) => {
+        if (id === "react") return React;
+        if (id === "@/contexts/I18nContext") return { useI18n: () => ({ t: (key) => key }) };
+        if (id === "@/lib/i18n") return { getCharacterName: (_t, charId) => `Chara${charId}` };
+        if (id === "@/hooks/useSvgPreviewActions") {
+            return {
+                useSvgPreviewActions: ({ fileName }) => {
+                    lastPreviewFileName = fileName;
+                    return { headerActions: null, errorMessage: null };
+                },
+            };
+        }
+        if (id === "@/components/common/Modal") {
+            return {
+                __esModule: true,
+                default: ({ isOpen, children }) => (isOpen ? React.createElement("div", { "data-modal": "open" }, children) : null),
+            };
+        }
+        if (id === "@/components/md3") {
+            return {
+                SegmentedButton: ({ value, onValueChange, options }) =>
+                    React.createElement(
+                        "div",
+                        { role: "radiogroup" },
+                        options.map((opt) =>
+                            React.createElement(
+                                "button",
+                                {
+                                    key: opt.value,
+                                    type: "button",
+                                    "data-segment": opt.value,
+                                    "aria-checked": String(value === opt.value),
+                                    onClick: () => onValueChange(opt.value),
+                                },
+                                opt.label,
+                            ),
+                        ),
+                    ),
+            };
+        }
+        if (id === "./DegreeImage") {
+            return {
+                __esModule: true,
+                default: ({ sub = false, honorLevel }) =>
+                    React.createElement("svg", { "data-degree-sub": String(sub), "data-level": String(honorLevel ?? "") }),
+            };
+        }
+        if (id === "./BondsDegreeImage") {
+            return {
+                __esModule: true,
+                default: ({ sub = false }) => React.createElement("svg", { "data-bonds-sub": String(sub) }),
+            };
+        }
+        return require(id);
+    };
+
+    const { default: HonorDetailDialog } = compile("src/components/honor/HonorDetailDialog.tsx", makeResolve());
+    const { default: BondsHonorDetailDialog } = compile("src/components/honor/BondsHonorDetailDialog.tsx", makeResolve());
+
+    const dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>");
+    const prevWindow = globalThis.window;
+    const prevDocument = globalThis.document;
+    const prevActEnv = globalThis.IS_REACT_ACT_ENVIRONMENT;
+    globalThis.window = dom.window;
+    globalThis.document = dom.window.document;
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+    try {
+        const container = dom.window.document.getElementById("root");
+        const root = createRoot(container);
+
+        const sampleHonor = {
+            id: 42,
+            seq: 1,
+            groupId: 10,
+            name: "TestHonor",
+            honorRarity: "high",
+            levels: [
+                { honorId: 42, level: 1, bonus: 10, description: "Lv1", assetbundleName: "honor_lv1" },
+            ],
+        };
+
+        await act(async () => {
+            root.render(React.createElement(HonorDetailDialog, { open: true, onClose: () => {}, honor: sampleHonor }));
+        });
+        assert.equal(lastPreviewFileName, "TestHonor_42");
+        assert.deepEqual(
+            [...container.querySelectorAll("svg[data-degree-sub]")].map((el) => el.getAttribute("data-degree-sub")),
+            ["false", "false"],
+        );
+
+        await act(async () => {
+            container.querySelector('button[data-segment="sub"]').click();
+        });
+        assert.equal(lastPreviewFileName, "TestHonor_42_sub");
+        assert.deepEqual(
+            [...container.querySelectorAll("svg[data-degree-sub]")].map((el) => el.getAttribute("data-degree-sub")),
+            ["true", "true"],
+        );
+
+        const sampleBondsHonor = {
+            id: 99,
+            seq: 1,
+            bondsGroupId: 5,
+            gameCharacterUnitId1: 1,
+            gameCharacterUnitId2: 2,
+            honorRarity: "middle",
+            name: "TestBonds",
+            levels: [{ id: 1, bondsHonorId: 99, level: 1, description: "Lv1" }],
+        };
+        const gameCharaUnits = [
+            { id: 1, gameCharacterId: 1, unit: "light_sound", colorCode: "#33aaee", skinColorCode: "#fff", skinShadowColorCode: "#ccc" },
+            { id: 2, gameCharacterId: 2, unit: "light_sound", colorCode: "#ffdd44", skinColorCode: "#fff", skinShadowColorCode: "#ccc" },
+        ];
+
+        await act(async () => {
+            root.render(React.createElement(BondsHonorDetailDialog, { open: true, onClose: () => {}, bondsHonor: sampleBondsHonor, gameCharaUnits }));
+        });
+        assert.equal(lastPreviewFileName, "TestBonds_99");
+        assert.equal(container.querySelector("svg[data-bonds-sub]").getAttribute("data-bonds-sub"), "false");
+
+        await act(async () => {
+            container.querySelector('button[data-segment="sub"]').click();
+        });
+        assert.equal(lastPreviewFileName, "TestBonds_99_sub");
+        assert.equal(container.querySelector("svg[data-bonds-sub]").getAttribute("data-bonds-sub"), "true");
+
+        await act(async () => {
+            root.unmount();
+        });
+
+        const { default: RealBondsDegreeImage } = compile("src/components/honor/BondsDegreeImage.tsx", (id) => {
+            if (id === "react") return React;
+            if (id === "@/lib/assets") {
+                return {
+                    getBondsHonorCharacterUrl: () => "https://example.com/chara.webp",
+                    getBondsHonorWordUrl: () => "https://example.com/word.webp",
+                    getHonorFrameUrl: () => "https://example.com/frame.webp",
+                    getHonorLevelIconUrl: () => "https://example.com/lv.webp",
+                };
+            }
+            return require(id);
+        });
+        const twoBadgesMarkup = renderToStaticMarkup(
+            React.createElement(
+                "div",
+                null,
+                React.createElement(RealBondsDegreeImage, { bondsHonor: sampleBondsHonor, gameCharaUnits, sub: true }),
+                React.createElement(RealBondsDegreeImage, { bondsHonor: sampleBondsHonor, gameCharaUnits, sub: true }),
+            ),
+        );
+        const maskIds = [...twoBadgesMarkup.matchAll(/<mask id="([^"]+)"/g)].map((m) => m[1]);
+        assert.equal(maskIds.length, 6);
+        assert.equal(new Set(maskIds).size, 6, "duplicate BondsDegreeImage instances must not share SVG mask IDs");
+    } finally {
+        globalThis.window = prevWindow;
+        globalThis.document = prevDocument;
+        globalThis.IS_REACT_ACT_ENVIRONMENT = prevActEnv;
+    }
 });

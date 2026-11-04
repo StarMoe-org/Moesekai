@@ -1,11 +1,14 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Modal from "@/components/common/Modal";
+import { SegmentedButton } from "@/components/md3";
 import { IHonorInfo, IHonorGroup } from "@/types/honor";
 import DegreeImage from "./DegreeImage";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 import { useSvgPreviewActions } from "@/hooks/useSvgPreviewActions";
 import { useI18n } from "@/contexts/I18nContext";
+
+type HonorBadgeVariant = "main" | "sub";
 
 interface HonorDetailDialogProps {
     open: boolean;
@@ -23,11 +26,13 @@ export default function HonorDetailDialog({
     source = "main-jp",
 }: HonorDetailDialogProps) {
     const { t } = useI18n();
+    const [badgeVariant, setBadgeVariant] = useState<HonorBadgeVariant>("main");
+    const isSub = badgeVariant === "sub";
     const previewRef = useRef<HTMLDivElement>(null);
     const { headerActions, errorMessage } = useSvgPreviewActions({
         isOpen: open,
         previewRef,
-        fileName: honor ? `${honor.name}_${honor.id}` : "honor",
+        fileName: honor ? `${honor.name}_${honor.id}${isSub ? "_sub" : ""}` : "honor",
     });
 
     return (
@@ -40,15 +45,29 @@ export default function HonorDetailDialog({
         >
             {honor ? (
                 <div className="space-y-5">
-                    <div className="flex justify-center">
-                        <div ref={previewRef} className="w-full max-w-[380px]">
-                            <DegreeImage
-                                honor={honor}
-                                honorGroup={honorGroup}
-                                honorLevel={honor.levels.length > 0 ? honor.levels[0].level : undefined}
-                                source={source}
-                            />
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="flex min-h-[80px] w-full items-center justify-center">
+                            <div ref={previewRef} className={isSub ? "w-full max-w-[180px]" : "w-full max-w-[380px]"}>
+                                <DegreeImage
+                                    honor={honor}
+                                    honorGroup={honorGroup}
+                                    honorLevel={honor.levels.length > 0 ? honor.levels[0].level : undefined}
+                                    sub={isSub}
+                                    source={source}
+                                />
+                            </div>
                         </div>
+                        <SegmentedButton<HonorBadgeVariant>
+                            density={-1}
+                            className="w-auto min-w-[12rem]"
+                            aria-label={t("page.honors.badgeVariant.label")}
+                            value={badgeVariant}
+                            onValueChange={setBadgeVariant}
+                            options={[
+                                { value: "main", label: t("page.honors.badgeVariant.main") },
+                                { value: "sub", label: t("page.honors.badgeVariant.sub") },
+                            ]}
+                        />
                     </div>
 
                     <div className="space-y-0">
@@ -83,11 +102,12 @@ export default function HonorDetailDialog({
                                             <p className="type-body-m text-on-surface-variant">{level.description}</p>
                                         )}
                                         {level.assetbundleName && (
-                                            <div className="mt-2">
+                                            <div className={isSub ? "mt-2 max-w-[180px]" : "mt-2 max-w-[380px]"}>
                                                 <DegreeImage
                                                     honor={{ ...honor, assetbundleName: level.assetbundleName }}
                                                     honorGroup={honorGroup}
                                                     honorLevel={level.level}
+                                                    sub={isSub}
                                                     source={source}
                                                 />
                                             </div>

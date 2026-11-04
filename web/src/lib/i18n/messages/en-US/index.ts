@@ -2626,6 +2626,11 @@ export const enUSMessages = {
             },
             normalDetailTitle: "Honor Details",
             bondsDetailTitle: "Bonds Honor Details",
+            badgeVariant: {
+                label: "Honor Size",
+                main: "Main",
+                sub: "Sub",
+            },
             bondsBadge: "Bonds",
             loadingFallback: "Loading honor data...",
         },

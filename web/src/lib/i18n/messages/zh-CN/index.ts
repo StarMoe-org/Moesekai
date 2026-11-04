@@ -2625,6 +2625,11 @@ export const zhCNMessages = {
             },
             normalDetailTitle: "称号详情",
             bondsDetailTitle: "羁绊称号详情",
+            badgeVariant: {
+                label: "称号样式",
+                main: "主牌",
+                sub: "副牌",
+            },
             bondsBadge: "羁绊",
             loadingFallback: "正在加载称号数据...",
         },

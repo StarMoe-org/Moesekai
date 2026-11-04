@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useId } from "react";
 import { IBondsHonor, IGameCharaUnit } from "@/types/honor";
 import { getBondsHonorCharacterUrl, getBondsHonorWordUrl, getHonorFrameUrl, getHonorLevelIconUrl } from "@/lib/assets";
 import { AssetSourceType } from "@/contexts/ThemeContext";
@@ -58,6 +58,11 @@ export default function BondsDegreeImage({
     source = "main-jp",
     className,
 }: BondsDegreeImageProps) {
+    const rawId = useId();
+    const uid = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
+    const roundedMaskId = `bonds-rounded-${bondsHonor.id}-${sub ? "s" : "m"}-${uid}`;
+    const leftCropMaskId = `bonds-left-crop-${bondsHonor.id}-${uid}`;
+    const rightCropMaskId = `bonds-right-crop-${bondsHonor.id}-${uid}`;
     const width = sub ? 180 : 380;
     const height = 80;
 
@@ -127,15 +132,15 @@ export default function BondsDegreeImage({
         >
             {/* Masks */}
             <defs>
-                <mask id={`bonds-rounded-${bondsHonor.id}-${sub ? "s" : "m"}`}>
+                <mask id={roundedMaskId}>
                     <rect x="10" y="0" height={80} width={sub ? 160 : 360} rx={40} fill="white" />
                 </mask>
                 {sub && (
                     <>
-                        <mask id={`bonds-left-crop-${bondsHonor.id}`}>
+                        <mask id={leftCropMaskId}>
                             <rect x="0" y="0" height={80} width={90} fill="white" />
                         </mask>
-                        <mask id={`bonds-right-crop-${bondsHonor.id}`}>
+                        <mask id={rightCropMaskId}>
                             <rect x="90" y="0" height={80} width={90} fill="white" />
                         </mask>
                     </>
@@ -146,7 +151,7 @@ export default function BondsDegreeImage({
             <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox={`0 0 ${width} ${height}`}
-                mask={`url(#bonds-rounded-${bondsHonor.id}-${sub ? "s" : "m"})`}
+                mask={`url(#${roundedMaskId})`}
             >
                 {/* Left background */}
                 <rect
@@ -180,7 +185,7 @@ export default function BondsDegreeImage({
                         y={sdLeftY}
                         height={sdLeftH}
                         width={sdLeftW}
-                        mask={sub ? `url(#bonds-left-crop-${bondsHonor.id})` : undefined}
+                        mask={sub ? `url(#${leftCropMaskId})` : undefined}
                     />
                 )}
                 {/* Right character SD */}
@@ -191,7 +196,7 @@ export default function BondsDegreeImage({
                         y={sdRightY}
                         height={sdRightH}
                         width={sdRightW}
-                        mask={sub ? `url(#bonds-right-crop-${bondsHonor.id})` : undefined}
+                        mask={sub ? `url(#${rightCropMaskId})` : undefined}
                     />
                 )}
                 {/* Word image (only for main size) */}

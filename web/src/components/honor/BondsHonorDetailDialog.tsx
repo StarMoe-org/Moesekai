@@ -1,12 +1,15 @@
 "use client";
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import Modal from "@/components/common/Modal";
+import { SegmentedButton } from "@/components/md3";
 import { IBondsHonor, IBondsHonorWord, IGameCharaUnit } from "@/types/honor";
 import BondsDegreeImage from "./BondsDegreeImage";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 import { useSvgPreviewActions } from "@/hooks/useSvgPreviewActions";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
+
+type HonorBadgeVariant = "main" | "sub";
 
 interface BondsHonorDetailDialogProps {
     open: boolean;
@@ -26,11 +29,13 @@ export default function BondsHonorDetailDialog({
     source = "main-jp",
 }: BondsHonorDetailDialogProps) {
     const { t } = useI18n();
+    const [badgeVariant, setBadgeVariant] = useState<HonorBadgeVariant>("main");
+    const isSub = badgeVariant === "sub";
     const previewRef = useRef<HTMLDivElement>(null);
     const { headerActions, errorMessage } = useSvgPreviewActions({
         isOpen: open,
         previewRef,
-        fileName: bondsHonor ? `${bondsHonor.name}_${bondsHonor.id}` : "bonds_honor",
+        fileName: bondsHonor ? `${bondsHonor.name}_${bondsHonor.id}${isSub ? "_sub" : ""}` : "bonds_honor",
     });
     const gcu1 = bondsHonor
         ? gameCharaUnits.find(g => g.id === bondsHonor.gameCharacterUnitId1)
@@ -52,17 +57,31 @@ export default function BondsHonorDetailDialog({
         >
             {bondsHonor ? (
                 <div className="space-y-5">
-                    <div className="flex justify-center">
-                        <div ref={previewRef} className="w-full max-w-[380px]">
-                            <BondsDegreeImage
-                                bondsHonor={bondsHonor}
-                                gameCharaUnits={gameCharaUnits}
-                                bondsHonorWordAssetbundleName={defaultWord?.assetbundleName}
-                                viewType="normal"
-                                honorLevel={bondsHonor.levels.length > 0 ? bondsHonor.levels[0].level : undefined}
-                                source={source}
-                            />
+                    <div className="flex flex-col items-center gap-3">
+                        <div className="flex min-h-[80px] w-full items-center justify-center">
+                            <div ref={previewRef} className={isSub ? "w-full max-w-[180px]" : "w-full max-w-[380px]"}>
+                                <BondsDegreeImage
+                                    bondsHonor={bondsHonor}
+                                    gameCharaUnits={gameCharaUnits}
+                                    bondsHonorWordAssetbundleName={defaultWord?.assetbundleName}
+                                    viewType="normal"
+                                    honorLevel={bondsHonor.levels.length > 0 ? bondsHonor.levels[0].level : undefined}
+                                    sub={isSub}
+                                    source={source}
+                                />
+                            </div>
                         </div>
+                        <SegmentedButton<HonorBadgeVariant>
+                            density={-1}
+                            className="w-auto min-w-[12rem]"
+                            aria-label={t("page.honors.badgeVariant.label")}
+                            value={badgeVariant}
+                            onValueChange={setBadgeVariant}
+                            options={[
+                                { value: "main", label: t("page.honors.badgeVariant.main") },
+                                { value: "sub", label: t("page.honors.badgeVariant.sub") },
+                            ]}
+                        />
                     </div>
 
                     <div className="space-y-0">
