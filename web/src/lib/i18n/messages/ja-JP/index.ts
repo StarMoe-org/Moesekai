@@ -821,7 +821,12 @@ export const jaJPMessages = {
     },
     about: {
       projectDescription: 'PROJECT SEKAI データベース & ビューア',
-      viewDetails: 'プロジェクトについて'
+      viewDetails: 'プロジェクトについて',
+      versionLabel: 'バージョン',
+      commitLabel: 'ビルドコミット',
+      buildDateLabel: 'ビルド日',
+      viewRelease: 'リリース',
+      viewChangelog: '更新履歴'
     },
     appearance: {
       sectionTitle: '表示設定',
@@ -926,7 +931,7 @@ export const jaJPMessages = {
       refreshing: '更新中...'
     },
     footer: {
-      version: 'Moesekai · 1.8-preview-beta1'
+      version: 'Moesekai · {version}'
     },
     sidebar: {
       notLoggedIn: '未ログイン',

@@ -822,6 +822,11 @@ export const zhCNMessages = {
         about: {
             projectDescription: "PROJECT SEKAI 查看器 & 数据库",
             viewDetails: "关于本项目",
+            versionLabel: "本站版本",
+            commitLabel: "构建提交",
+            buildDateLabel: "构建日期",
+            viewRelease: "发布页",
+            viewChangelog: "更新日志",
         },
         appearance: {
             sectionTitle: "外观模式",
@@ -926,7 +931,7 @@ export const zhCNMessages = {
             refreshing: "刷新中...",
         },
         footer: {
-            version: "Moesekai · 1.8-preview-beta1",
+            version: "Moesekai · {version}",
         },
         sidebar: {
             notLoggedIn: "未登录",

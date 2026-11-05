@@ -63,6 +63,21 @@ ENV NEXT_PUBLIC_LYRICS_BASE_URL=$NEXT_PUBLIC_LYRICS_BASE_URL
 # pages call their own /api/auth/ and /api/guess-music/, which this server forwards to MOESEKAI_API_URL.
 ARG NEXT_PUBLIC_MOESEKAI_API_ORIGIN=
 ENV NEXT_PUBLIC_MOESEKAI_API_ORIGIN=$NEXT_PUBLIC_MOESEKAI_API_ORIGIN
+# MoeSekai app version (see docs/VERSIONING.md). .git is not in the build context, so CI
+# resolves the git-tag-derived version on the runner and passes it in; empty values fall
+# back to the 2.0.0 baseline inside web/src/lib/build-version.ts.
+ARG MOESEKAI_VERSION=
+ARG MOESEKAI_RELEASE_TAG=
+ARG MOESEKAI_COMMIT=
+ARG MOESEKAI_BUILD_DATE=
+ARG MOESEKAI_COMMITS_SINCE=
+ARG MOESEKAI_IS_RELEASE=
+ENV MOESEKAI_VERSION=$MOESEKAI_VERSION
+ENV MOESEKAI_RELEASE_TAG=$MOESEKAI_RELEASE_TAG
+ENV MOESEKAI_COMMIT=$MOESEKAI_COMMIT
+ENV MOESEKAI_BUILD_DATE=$MOESEKAI_BUILD_DATE
+ENV MOESEKAI_COMMITS_SINCE=$MOESEKAI_COMMITS_SINCE
+ENV MOESEKAI_IS_RELEASE=$MOESEKAI_IS_RELEASE
 # Build-time data sources. Multiple URLs allow Docker builds to survive flaky DNS/proxy/CDN paths.
 ARG MASTER_DATA_URLS=https://metadata.exmeaning.com/{region}/master,https://metadata.pjsk.moe/{region}/master
 ARG MANGA_DATA_URLS=https://moe.exmeaning.com/mangas/mangas.json

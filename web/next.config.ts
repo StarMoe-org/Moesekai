@@ -6,6 +6,11 @@ import { live2dCheckConfig } from "./src/lib/live2dViewer/config";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
 import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 import { costume3dCheckConfig } from "./src/lib/costume3d/config";
+import { resolveBuildVersion } from "./src/lib/build-version";
+
+// MoeSekai app version (git-tag derived; see docs/VERSIONING.md). Computed once
+// here and inlined into the client bundle as NEXT_PUBLIC_* so Settings can show it.
+const buildVersion = resolveBuildVersion();
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -79,6 +84,11 @@ function getAllowedDevOrigins(): string[] {
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS: storyFontsBundled ? "1" : "",
+    NEXT_PUBLIC_MOESEKAI_VERSION: buildVersion.version,
+    NEXT_PUBLIC_MOESEKAI_RELEASE_TAG: buildVersion.tag ?? "",
+    NEXT_PUBLIC_MOESEKAI_COMMIT: buildVersion.commit,
+    NEXT_PUBLIC_MOESEKAI_BUILD_DATE: buildVersion.buildDate,
+    NEXT_PUBLIC_MOESEKAI_IS_RELEASE: buildVersion.isRelease ? "1" : "",
   },
   // Keep QA builds separate from a running standalone server on Windows.
   distDir: process.env.MOE_NEXT_DIST_DIR || ".next",

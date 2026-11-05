@@ -20,6 +20,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: App version
+        id: ver
+        run: |
+          git fetch --tags --force
+          node web/scripts/resolve-version.mjs --shell >> "$GITHUB_OUTPUT"
 
       - name: Image name
         id: img
@@ -42,6 +50,14 @@ jobs:
           tags: |
             ${{ steps.img.outputs.name }}:${{ steps.img.outputs.tag }}
             ${{ steps.img.outputs.name }}:main
+            ${{ steps.img.outputs.name }}:v${{ steps.ver.outputs.version }}
+          build-args: |
+            MOESEKAI_VERSION=${{ steps.ver.outputs.version }}
+            MOESEKAI_RELEASE_TAG=${{ steps.ver.outputs.tag }}
+            MOESEKAI_COMMIT=${{ github.sha }}
+            MOESEKAI_BUILD_DATE=${{ steps.ver.outputs.build_date }}
+            MOESEKAI_COMMITS_SINCE=${{ steps.ver.outputs.commits_since }}
+            MOESEKAI_IS_RELEASE=${{ steps.ver.outputs.is_release }}
           cache-from: type=gha,scope=deploy
           cache-to: type=gha,scope=deploy,mode=max
 

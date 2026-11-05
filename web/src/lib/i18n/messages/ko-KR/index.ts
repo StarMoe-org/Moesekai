@@ -819,7 +819,12 @@ export const koKRMessages = {
         },
         about: {
             projectDescription: "PROJECT SEKAI 뷰어 & 데이터베이스",
-            viewDetails: "프로젝트 정보"
+            viewDetails: "프로젝트 정보",
+            versionLabel: "버전",
+            commitLabel: "빌드 커밋",
+            buildDateLabel: "빌드 날짜",
+            viewRelease: "릴리스",
+            viewChangelog: "변경 로그"
         },
         appearance: {
             sectionTitle: "화면 모드",
@@ -924,7 +929,7 @@ export const koKRMessages = {
             refreshing: "새로고침 중..."
         },
         footer: {
-            version: "Moesekai · 1.8-preview-beta1"
+            version: "Moesekai · {version}"
         },
         sidebar: {
             notLoggedIn: "로그인되지 않음",
