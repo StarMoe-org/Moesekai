@@ -3,6 +3,8 @@ export const PJSK_BILIBILI_SPACE_URL = MOESEKAI_BILIBILI_SPACE_URL;
 export const STARMOE_DISCORD_URL = "https://discord.gg/6JQMVQ2Mku";
 export const MOESEKAI_QQ_GROUP_ID = "1130135677";
 export const MOESEKAI_QQ_GROUP_URL = "https://qm.qq.com/cgi-bin/qm/qr?k=iUZhVFvgHRyknINbLwZXeM5jKZS_25na&jump_from=webapi&authKey=O80SsyvpH0k8Y8TU2sCFqZNgqZ4CsuBu6t9fBIuxwW1xi1Upd7NVI029a8tZgwZE";
+export const MOESEKAI_AFDIAN_URL = "https://afdian.com/a/MoeSekai";
+export const MOESEKAI_KOFI_URL = "https://ko-fi.com/moesekai";
 
 export const MEMBER_LINKS: Record<string, string> = {
     "@雪莹ちゃん": "https://space.bilibili.com/1234351000",

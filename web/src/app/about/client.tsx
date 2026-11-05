@@ -6,7 +6,7 @@ import Link from "@/components/LocalizedLink";
 import ExternalLink from "@/components/ExternalLink";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
-import { renderMemberText } from "@/components/MemberText";
+import { LEGACY_SPONSORS, LEGACY_SPONSOR_ANONYMOUS_COUNT, SPECIAL_THANKS, TEAM_GROUPS, memberLink } from "@/lib/community-lists";
 import { Divider, Icon, PageContainer, PageHeader, Surface, buttonClassName, cn } from "@/components/md3";
 import { mdArrowForward, mdFavoriteFill, mdGavel, mdPolicy } from "@/components/md3/icons";
 
@@ -25,6 +25,24 @@ function CreditItem({ children }: { children: React.ReactNode }) {
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" aria-hidden="true" />
             <div className="text-on-surface-variant">{children}</div>
         </li>
+    );
+}
+
+function NameChip({ name }: { name: string }) {
+    return (
+        <span className="inline-flex items-center rounded-full bg-secondary-container px-3 py-1 type-label-m text-on-secondary-container">
+            {name}
+        </span>
+    );
+}
+
+function MemberName({ name }: { name: string }) {
+    const link = memberLink(name);
+    if (!link) return <>{name}</>;
+    return (
+        <ExternalLink href={link} target="_blank" bypassLeave={true} className={creditLinkCls}>
+            {name}
+        </ExternalLink>
     );
 }
 
@@ -171,33 +189,50 @@ export default function AboutClient() {
 
                     <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.sponsors.title")}</p>
-                        <p className="text-justify type-body-l text-on-surface-variant">
-                            {t("page.about.sponsors.list")}
+                        <div className="flex flex-wrap gap-2">
+                            {LEGACY_SPONSORS.map((sponsor) => (
+                                <span
+                                    key={sponsor.name}
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-secondary-container px-3 py-1 type-label-m text-on-secondary-container"
+                                >
+                                    {sponsor.name}
+                                    {sponsor.noteKey ? (
+                                        <span className="type-label-s opacity-70">
+                                            ({t(`page.about.sponsors.${sponsor.noteKey}Note`)})
+                                        </span>
+                                    ) : null}
+                                </span>
+                            ))}
+                        </div>
+                        <p className="mt-3 type-body-m text-on-surface-variant">
+                            {t("page.about.sponsors.anonymousNote", { count: LEGACY_SPONSOR_ANONYMOUS_COUNT })}
                         </p>
                     </Surface>
 
                     <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.specialThanks.title")}</p>
-                        <p className="text-justify type-body-l text-on-surface-variant">
-                            {t("page.about.specialThanks.list")}
-                        </p>
+                        <div className="flex flex-wrap gap-2">
+                            {SPECIAL_THANKS.map((name) => (
+                                <NameChip key={name} name={name} />
+                            ))}
+                        </div>
+                        <p className="mt-3 type-body-m text-on-surface-variant">{t("page.about.specialThanks.partialNote")}</p>
                     </Surface>
 
                     <Surface tone="card" className={cn(panelCls, "md:col-span-3")}>
                         <p className={panelTitleCls}>{t("page.about.teams.title")}</p>
                         <div className="space-y-4 type-body-l text-on-surface-variant">
-                            <div>
-                                <span className="font-medium text-on-surface">{t("page.about.teams.translationLabel")}</span>
-                                {renderMemberText(t("page.about.teams.translationMembers"))}
-                            </div>
-                            <div>
-                                <span className="font-medium text-on-surface">{t("page.about.teams.artLabel")}</span>
-                                {renderMemberText(t("page.about.teams.artMembers"))}
-                            </div>
-                            <div>
-                                <span className="font-medium text-on-surface">{t("page.about.teams.guideLabel")}</span>
-                                {renderMemberText(t("page.about.teams.guideMembers"))}
-                            </div>
+                            {TEAM_GROUPS.map((group) => (
+                                <div key={group.id}>
+                                    <span className="font-medium text-on-surface">{t(group.labelKey)}</span>{" "}
+                                    {group.members.map((member, index) => (
+                                        <React.Fragment key={member}>
+                                            {index > 0 ? " " : null}
+                                            <MemberName name={member} />
+                                        </React.Fragment>
+                                    ))}
+                                </div>
+                            ))}
                             <Divider />
                             <p className="flex items-center gap-2 font-medium text-primary">
                                 <Icon path={mdArrowForward} size={20} />

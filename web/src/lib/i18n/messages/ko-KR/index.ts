@@ -1453,24 +1453,35 @@ export const koKRMessages = {
             },
             sponsors: {
                 title: "후원해 주신 분들 (순서 무관)",
-                list: "阳子(서버 후원), cike, 晓月, Hakuchumu, 性价比, luoxia, 雪莹ちゃん, 蘸色绘糖/晕星奏, tony_all, 沙皮, 轩, 末乐回忆, M氏, ick110811, metamiku, madoka, 垂耳兔kawayi, amia, maveriki, Conrad, 意路二夢, 그리고 ID 공개를 원치 않으신 후원자 네 분"
+                serverSponsorNote: "서버 후원",
+                anonymousNote: "그리고 ID 공개를 원치 않으신 후원자 {count}분"
             },
             specialThanks: {
                 title: "Moesekai를 응원해 주신 분들 (순서 무관)",
-                list: "深海, Luna茶, cike, Kazuhira, 灵潜, 咖啡不甜, 郁郁葱葱, luoxia, 惜花, TONY_ALL#, M氏, 大梦, metamiku, tf, 四宫爱, 芒果冰, Hakuchumu, 葡萄柚, Amia, 不解, 旭光, 阳子, 弥佑瑶, サクラかぜ, 陈睿ガチ恋势, 猫尾草, 笨牛奶, 霞綾, 木口, 沧溟, Aya, Belos, 兔兔, 明日天気に, シラ, 偶像大师希罗酱, 性价比... (일부 명단입니다. 묵묵히 Moesekai를 응원해 주시는 모든 분께 감사드립니다)"
+                partialNote: "일부 명단입니다. 묵묵히 Moesekai를 응원해 주시는 모든 분께 감사드립니다."
             },
             teams: {
                 title: "팀 구성원",
                 translationLabel: "Moesekai 번역팀:",
-                translationMembers: "@雪莹ちゃん @忻羽 @虐酱 @御明正",
                 artLabel: "Moesekai 아트팀: ",
-                artMembers: "@岓诚 @黄Yell",
                 guideLabel: "Moesekai 공략팀:",
-                guideMembers: "@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月",
                 joinPrefix: "저희를 돕고 싶다면 QQ 그룹",
                 joinMiddle: "",
                 joinGroup: "",
                 joinSuffix: "에 들어와 문의해 주세요!"
+            }
+        },
+        patreon: {
+            sponsors: {
+                title: "후원자 목록",
+                afdianHint: "애발전(Afdian)으로 후원하시면 닉네임이 자동으로 여기에 표시됩니다(1시간마다 갱신).",
+                loading: "후원자 목록을 불러오는 중…",
+                notConfigured: "후원자 목록이 아직 설정되지 않았습니다. 우선 아래의 기존 후원자 목록을 확인해 주세요.",
+                loadFailed: "후원자 목록을 불러오지 못했습니다. 나중에 다시 확인해 주세요.",
+                empty: "아직 애발전 후원자가 없습니다. 첫 번째 후원자가 되어 보세요!",
+                count: "후원자 {count}명",
+                legacyTitle: "기존 후원자 (이전 후원자)",
+                legacyDescription: "애발전 개설 전 다른 방법으로 후원해 주신 분들"
             }
         },
         privacy: {
@@ -3209,9 +3220,7 @@ export const koKRMessages = {
             celebrationTextLink: "후원 페이지에서",
             celebrationTextPart2: "후원해 주세요냥~ 프로젝트를 오래 이어 가는 데 큰 힘이 된다냥~",
             celebrationButton: "후원 페이지로 가기냥",
-            celebrationQrScanHint: "QR 코드를 스캔해서 바로 후원할 수도 있다냥:",
-            celebrationAlipay: "Alipay / 알리페이",
-            celebrationWechat: "WeChat / 위챗페이",
+            celebrationAfdian: "국내 후원 / 애발전 Afdian",
             celebrationKofi: "해외 후원 / Ko-fi Support"
         },
         deckRecommend: {
