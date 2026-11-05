@@ -1,12 +1,14 @@
 {
     "name": "moesekai-root",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "private": true,
     "scripts": {
         "dev": "npm run dev --prefix web",
         "build": "npm run build --prefix web",
         "start": "npm run start --prefix web",
-        "lint": "npm run lint --prefix web"
+        "lint": "npm run lint --prefix web",
+        "version:show": "node web/scripts/resolve-version.mjs",
+        "version:next": "node web/scripts/resolve-version.mjs --next-tag patch"
     },
     "workspaces": [
         "web"

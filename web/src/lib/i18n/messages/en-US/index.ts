@@ -823,6 +823,11 @@ export const enUSMessages = {
         about: {
             projectDescription: "PROJECT SEKAI Database & Viewer",
             viewDetails: "About Project",
+            versionLabel: "App Version",
+            commitLabel: "Build Commit",
+            buildDateLabel: "Build Date",
+            viewRelease: "Releases",
+            viewChangelog: "Changelog",
         },
         appearance: {
             sectionTitle: "Appearance",
@@ -927,7 +932,7 @@ export const enUSMessages = {
             refreshing: "Refreshing...",
         },
         footer: {
-            version: "Moesekai · 1.8-preview-beta1",
+            version: "Moesekai · {version}",
         },
         sidebar: {
             notLoggedIn: "Not signed in",

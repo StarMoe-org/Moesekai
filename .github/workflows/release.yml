@@ -1,0 +1,66 @@
+# One-click release: computes the next tag from the git-tag-derived version
+# (see docs/VERSIONING.md), tags the current main HEAD and creates a GitHub
+# Release with auto-generated notes. Deployments still happen on push to main;
+# a release is only a named, browsable snapshot — the site version between
+# releases keeps auto-incrementing per commit.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: "Version bump for the new tag (first release is always v2.0.0)"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+        required: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch tags
+        run: git fetch --tags --force
+
+      - name: Compute next tag
+        id: ver
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: |
+          echo "current=$(node web/scripts/resolve-version.mjs --json)" >> "$GITHUB_OUTPUT"
+          echo "next=$(node web/scripts/resolve-version.mjs --next-tag "$BUMP")" >> "$GITHUB_OUTPUT"
+
+      - name: Create and push tag
+        env:
+          NEXT_TAG: ${{ steps.ver.outputs.next }}
+        run: |
+          if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
+            echo "Tag $NEXT_TAG already exists" >&2
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEXT_TAG" -m "Moesekai $NEXT_TAG"
+          git push origin "$NEXT_TAG"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEXT_TAG: ${{ steps.ver.outputs.next }}
+        run: |
+          gh release create "$NEXT_TAG" \
+            --title "Moesekai $NEXT_TAG" \
+            --generate-notes \
+            --verify-tag

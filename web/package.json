@@ -21,6 +21,8 @@
     "test:mysekai-character-filter": "node --experimental-strip-types scripts/test-mysekai-character-filter.mjs",
     "test:mysekai-runtime-selection": "node --experimental-strip-types scripts/test-mysekai-runtime-selection.mjs",
     "test:costume3d": "node --experimental-strip-types scripts/test-costume3d.mjs",
+    "version:show": "node scripts/resolve-version.mjs",
+    "test:version": "node --test tests/version.test.mjs",
     "sitemap": "node scripts/generate-sitemaps.mjs",
     "generate:metadata": "node scripts/generate-metadata-map.mjs",
     "start": "next start",

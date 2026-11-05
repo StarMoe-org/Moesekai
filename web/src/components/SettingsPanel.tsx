@@ -17,6 +17,8 @@ import {
     parseShortcutCombos,
 } from "@/lib/shortcuts";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n";
+import { APP_CHANGELOG_URL, APP_COMMIT_URL, APP_RELEASE_URL, APP_VERSION } from "@/lib/app-version";
+import ExternalLink from "@/components/ExternalLink";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
     Banner,
@@ -463,6 +465,36 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         </span>
                     </a>
                     <p className="type-body-m text-on-surface-variant">{t("settings.about.projectDescription")}</p>
+                    <dl className="w-full space-y-2 rounded-md3-md bg-surface-container-high px-4 py-3 text-left type-body-m">
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.versionLabel")}</dt>
+                            <dd className="font-mono text-on-surface">{APP_VERSION.display}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.commitLabel")}</dt>
+                            <dd className="font-mono text-on-surface">
+                                {APP_VERSION.commitShort ? (
+                                    <ExternalLink href={APP_COMMIT_URL} className="state-layer focus-ring rounded-md3-xs px-1 text-primary">
+                                        {APP_VERSION.commitShort}
+                                    </ExternalLink>
+                                ) : "—"}
+                            </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.buildDateLabel")}</dt>
+                            <dd className="font-mono text-on-surface">{APP_VERSION.buildDate || "—"}</dd>
+                        </div>
+                    </dl>
+                    <div className="flex w-full flex-col gap-2 sm:flex-row">
+                        <ExternalLink href={APP_RELEASE_URL} className={cn(buttonClassName({ variant: "tonal" }), "flex-1")}>
+                            {t("settings.about.viewRelease")}
+                            <Icon path={mdOpenInNew} size={18} />
+                        </ExternalLink>
+                        <ExternalLink href={APP_CHANGELOG_URL} className={cn(buttonClassName({ variant: "tonal" }), "flex-1")}>
+                            {t("settings.about.viewChangelog")}
+                            <Icon path={mdOpenInNew} size={18} />
+                        </ExternalLink>
+                    </div>
                     <a
                         href="/about"
                         onClick={handleNavigateAbout}
@@ -503,7 +535,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         title: t("settings.title"),
         syncHistory: false,
         bodyClassName: "flex flex-col overflow-hidden! p-0!",
-        footer: <p className="text-center type-label-s text-on-surface-variant">{t("settings.footer.version")}</p>,
+        footer: <p className="text-center type-label-s text-on-surface-variant">{t("settings.footer.version", { version: APP_VERSION.display })}</p>,
     };
 
     return isWide ? (

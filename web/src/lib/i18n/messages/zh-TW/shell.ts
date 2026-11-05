@@ -202,6 +202,11 @@ export const zhTWSettings = {
     about: {
         projectDescription: "PROJECT SEKAI 檢視器與資料庫",
         viewDetails: "關於本專案",
+        versionLabel: "本站版本",
+        commitLabel: "建置提交",
+        buildDateLabel: "建置日期",
+        viewRelease: "發布頁",
+        viewChangelog: "更新日誌",
     },
     appearance: {
         sectionTitle: "外觀模式",
@@ -306,7 +311,7 @@ export const zhTWSettings = {
         refreshing: "重新整理中...",
     },
     footer: {
-        version: "Moesekai · 1.8-preview-beta1",
+        version: "Moesekai · {version}",
     },
     sidebar: {
         notLoggedIn: "尚未登入",
