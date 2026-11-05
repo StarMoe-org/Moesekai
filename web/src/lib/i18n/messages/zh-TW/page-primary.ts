@@ -1657,6 +1657,11 @@ export const zhTWPagePrimary = {
 
             normalDetailTitle: "稱號詳細資訊",
             bondsDetailTitle: "羈絆稱號詳細資訊",
+            badgeVariant: {
+                label: "稱號樣式",
+                main: "主牌",
+                sub: "副牌",
+            },
             bondsBadge: "羈絆",
             loadingFallback: "正在載入稱號資料...",
         },

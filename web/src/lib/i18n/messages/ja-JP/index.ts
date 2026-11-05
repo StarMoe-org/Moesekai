@@ -2649,6 +2649,11 @@ export const jaJPMessages = {
       },
       normalDetailTitle: 'Honor Details',
       bondsDetailTitle: 'Bonds Honor Details',
+      badgeVariant: {
+        label: '称号サイズ',
+        main: 'メイン',
+        sub: 'サブ'
+      },
       bondsBadge: 'Bonds',
       loadingFallback: 'Loading honor data...'
     },

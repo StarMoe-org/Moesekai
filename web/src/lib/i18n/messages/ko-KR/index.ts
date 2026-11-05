@@ -2647,6 +2647,11 @@ export const koKRMessages = {
             },
             normalDetailTitle: "칭호 상세",
             bondsDetailTitle: "인연 칭호 상세",
+            badgeVariant: {
+                label: "칭호 크기",
+                main: "메인",
+                sub: "서브"
+            },
             bondsBadge: "인연",
             loadingFallback: "칭호 데이터 불러오는 중..."
         },
