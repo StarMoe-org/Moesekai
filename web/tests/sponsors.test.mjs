@@ -4,7 +4,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import test from "node:test";
-import { buildSignedAfdianBody, parseAfdianSponsors } from "../src/lib/afdian.ts";
+import { buildSignedAfdianBody, fetchAfdianSponsors, parseAfdianSponsors } from "../src/lib/afdian.ts";
 import { isCollectableKofiEvent, parseKofiWebhookEvent, readKofiSupporters, recordKofiEvent, verifyKofiToken } from "../src/lib/kofi.ts";
 import { mergeSponsors } from "../src/lib/sponsors.ts";
 import lists from "../src/data/community-lists.json" with { type: "json" };
@@ -191,4 +191,74 @@ test("community lists keep the union of every locale's names without duplicates"
         assert.ok(Array.isArray(lists.teams[group]) && lists.teams[group].length > 0, `team ${group} empty`);
     }
     assert.ok(lists.teams.guide.includes("@阿木"));
+});
+
+function stubAfdianEnv() {
+    const prevFetch = globalThis.fetch;
+    const prevUser = process.env.AFDIAN_USER_ID;
+    const prevToken = process.env.AFDIAN_API_TOKEN;
+    process.env.AFDIAN_USER_ID = "user123";
+    process.env.AFDIAN_API_TOKEN = "tok-abc";
+    return () => {
+        globalThis.fetch = prevFetch;
+        if (prevUser === undefined) delete process.env.AFDIAN_USER_ID;
+        else process.env.AFDIAN_USER_ID = prevUser;
+        if (prevToken === undefined) delete process.env.AFDIAN_API_TOKEN;
+        else process.env.AFDIAN_API_TOKEN = prevToken;
+    };
+}
+
+test("fetchAfdianSponsors treats HTTP 404 (no sponsors yet) as an empty list", async () => {
+    const restore = stubAfdianEnv();
+    globalThis.fetch = async () => ({ status: 404, ok: false, json: async () => ({}) });
+    try {
+        const result = await fetchAfdianSponsors();
+        assert.deepEqual(result, { configured: true, sponsors: [], total: 0 });
+    } finally {
+        restore();
+    }
+});
+
+test("fetchAfdianSponsors treats a zero-count payload as an empty list", async () => {
+    const restore = stubAfdianEnv();
+    globalThis.fetch = async () => ({
+        status: 200,
+        ok: true,
+        json: async () => ({ ec: 200, data: { total_count: 0, total_page: 1, list: [] } }),
+    });
+    try {
+        const result = await fetchAfdianSponsors();
+        assert.deepEqual(result, { configured: true, sponsors: [], total: 0 });
+    } finally {
+        restore();
+    }
+});
+
+test("fetchAfdianSponsors treats a nonzero-ec payload with zero count as empty", async () => {
+    const restore = stubAfdianEnv();
+    globalThis.fetch = async () => ({
+        status: 200,
+        ok: true,
+        json: async () => ({ ec: 400, data: { total_count: 0 } }),
+    });
+    try {
+        const result = await fetchAfdianSponsors();
+        assert.deepEqual(result, { configured: true, sponsors: [], total: 0 });
+    } finally {
+        restore();
+    }
+});
+
+test("fetchAfdianSponsors reports an error on HTTP 500 instead of an empty list", async () => {
+    const restore = stubAfdianEnv();
+    globalThis.fetch = async () => ({ status: 500, ok: false, json: async () => ({}) });
+    try {
+        const result = await fetchAfdianSponsors();
+        assert.equal(result.configured, true);
+        assert.deepEqual(result.sponsors, []);
+        assert.equal(result.total, 0);
+        assert.match(result.error ?? "", /HTTP 500/);
+    } finally {
+        restore();
+    }
 });

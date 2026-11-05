@@ -229,6 +229,37 @@ func TestInternalHealthzBlockedFromPublic(t *testing.T) {
 	}
 }
 
+func TestFrontendAPIRoutesReachFrontendProxy(t *testing.T) {
+	mux := http.NewServeMux()
+	// Registered first on purpose: pattern specificity, not order, must win.
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	registerFrontendAPIRoutes(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"proxied":true}`))
+	}))
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		want   int
+	}{
+		{http.MethodGet, "/api/sponsors", http.StatusOK},
+		{http.MethodGet, "/api/sponsors/", http.StatusOK},
+		{http.MethodPost, "/api/sponsors/kofi-webhook", http.StatusOK},
+		{http.MethodPost, "/api/sponsors/kofi-webhook/", http.StatusOK},
+		{http.MethodGet, "/api/sponsors-other", http.StatusNotFound},
+		{http.MethodGet, "/api/unknown", http.StatusNotFound},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
+		if rec.Code != tc.want {
+			t.Fatalf("%s %s status = %d, want %d", tc.method, tc.path, rec.Code, tc.want)
+		}
+	}
+}
+
 // newMoesekaiAPIFront serves the main server's routes for moesekai-api behind
 // the production middleware chain, proxying to upstreamURL.
 func newMoesekaiAPIFront(t *testing.T, upstreamURL string) *httptest.Server {

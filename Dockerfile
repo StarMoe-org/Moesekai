@@ -12,6 +12,9 @@ COPY refer/re_sekai-calculator/package.json refer/re_sekai-calculator/package.js
 RUN bun install --frozen-lockfile
 
 COPY web/ web/
+# Root changelog: /changelog renders it (web build reads ../CHANGELOG.md and
+# refreshes the checked-in snapshot in web/src/data/changelog.md).
+COPY CHANGELOG.md ./
 COPY refer/re_sekai-calculator/ refer/re_sekai-calculator/
 WORKDIR /app/web
 # Build validation must use production URL policy before sitemap generation and Next.js compilation.

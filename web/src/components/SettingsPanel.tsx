@@ -17,7 +17,7 @@ import {
     parseShortcutCombos,
 } from "@/lib/shortcuts";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n";
-import { APP_CHANGELOG_URL, APP_COMMIT_URL, APP_RELEASE_URL, APP_VERSION } from "@/lib/app-version";
+import { APP_COMMIT_URL, APP_RELEASE_URL, APP_VERSION } from "@/lib/app-version";
 import ExternalLink from "@/components/ExternalLink";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
@@ -39,6 +39,7 @@ import {
     mdCheck,
     mdDarkMode,
     mdDatabase,
+    mdFavoriteFill,
     mdInfo,
     mdLightMode,
     mdOpenInNew,
@@ -173,6 +174,20 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         e.stopPropagation();
         onClose();
         window.location.href = "/about";
+    };
+
+    const handleNavigateChangelog = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        window.location.href = "/changelog";
+    };
+
+    const handleNavigatePatreon = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        window.location.href = "/patreon";
     };
 
     const handleSelectLocale = (id: UiLocale) => {
@@ -485,15 +500,26 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             <dd className="font-mono text-on-surface">{APP_VERSION.buildDate || "—"}</dd>
                         </div>
                     </dl>
-                    <div className="flex w-full flex-col gap-2 sm:flex-row">
-                        <ExternalLink href={APP_RELEASE_URL} className={cn(buttonClassName({ variant: "tonal" }), "flex-1")}>
+                    <div className="flex w-full flex-col gap-2">
+                        <ExternalLink href={APP_RELEASE_URL} className={buttonClassName({ variant: "tonal", fullWidth: true })}>
                             {t("settings.about.viewRelease")}
                             <Icon path={mdOpenInNew} size={18} />
                         </ExternalLink>
-                        <ExternalLink href={APP_CHANGELOG_URL} className={cn(buttonClassName({ variant: "tonal" }), "flex-1")}>
+                        <a
+                            href="/changelog"
+                            onClick={handleNavigateChangelog}
+                            className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                        >
                             {t("settings.about.viewChangelog")}
-                            <Icon path={mdOpenInNew} size={18} />
-                        </ExternalLink>
+                        </a>
+                        <a
+                            href="/patreon"
+                            onClick={handleNavigatePatreon}
+                            className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                        >
+                            {t("settings.about.viewSupport")}
+                            <Icon path={mdFavoriteFill} size={18} />
+                        </a>
                     </div>
                     <a
                         href="/about"

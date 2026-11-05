@@ -826,7 +826,8 @@ export const jaJPMessages = {
       commitLabel: 'ビルドコミット',
       buildDateLabel: 'ビルド日',
       viewRelease: 'リリース',
-      viewChangelog: '更新履歴'
+      viewChangelog: '更新履歴',
+      viewSupport: 'サポートする'
     },
     appearance: {
       sectionTitle: '表示設定',
@@ -1480,11 +1481,17 @@ export const jaJPMessages = {
         loading: 'スポンサー一覧を読み込み中…',
         notConfigured: 'スポンサー一覧はまだ設定されていません。しばらくは下の旧スポンサーをご覧ください。',
         loadFailed: 'スポンサー一覧の読み込みに失敗しました。後ほどお試しください。',
-        empty: 'まだAfdianスポンサーはいません。最初のスポンサーになりませんか？',
+        empty: 'まだスポンサーはいません。最初のスポンサーになりませんか？',
         count: 'スポンサー {count} 名',
         legacyTitle: '旧スポンサー（過去の支援者）',
         legacyDescription: 'Afdian開設前に他の方法で支援してくださった方々'
       }
+    },
+    changelog: {
+      title: '更新履歴',
+      subtitle: 'Moesekai のリリースノート',
+      latest: '最新',
+      empty: '更新履歴はまだありません'
     },
     privacy: {
       title: 'プライバシーポリシー',

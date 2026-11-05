@@ -1,6 +1,7 @@
 [
   { "path": "/", "priority": 1.0, "changefreq": "daily", "indexable": true },
   { "path": "/about/", "pageKey": "about", "priority": 0.8, "changefreq": "monthly", "indexable": true },
+  { "path": "/changelog/", "pageKey": "changelog", "priority": 0.5, "changefreq": "monthly", "indexable": true },
   { "path": "/cards/", "pageKey": "cards", "priority": 0.9, "changefreq": "daily", "indexable": true },
   { "path": "/music/", "pageKey": "music", "priority": 0.9, "changefreq": "daily", "indexable": true },
   { "path": "/lyrics/", "pageKey": "lyrics", "priority": 0.8, "changefreq": "daily", "indexable": true },

@@ -316,6 +316,20 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["Moesekaiについて", "データ出典", "クレジット"],
     },
   ),
+  changelog: definePage(
+    "/changelog",
+    { "zh-CN": "更新日志", "en-US": "Changelog", "ja-JP": "更新履歴" },
+    {
+      "zh-CN": "查看 Moesekai 的版本更新记录与每个版本的改动内容，无需访问 GitHub。",
+      "en-US": "Read the Moesekai changelog and what changed in each release, right on this site.",
+      "ja-JP": "Moesekai のバージョン更新履歴と各リリースの変更内容をサイト内で確認できます。",
+    },
+    {
+      "zh-CN": ["更新日志", "版本更新", "Changelog"],
+      "en-US": ["changelog", "release notes", "updates"],
+      "ja-JP": ["更新履歴", "リリースノート", "アップデート"],
+    },
+  ),
   cards: definePage(
     "/cards",
     { "zh-CN": "卡牌图鉴", "en-US": "Card Encyclopedia", "ja-JP": "カード図鑑" },

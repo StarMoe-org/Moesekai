@@ -827,6 +827,7 @@ export const zhCNMessages = {
             buildDateLabel: "构建日期",
             viewRelease: "发布页",
             viewChangelog: "更新日志",
+            viewSupport: "支持我们",
         },
         appearance: {
             sectionTitle: "外观模式",
@@ -1480,11 +1481,17 @@ export const zhCNMessages = {
                 loading: "正在加载赞助者名单…",
                 notConfigured: "赞助者名单接口尚未配置，暂时显示下方历史名单。",
                 loadFailed: "赞助者名单加载失败，请稍后再来看看。",
-                empty: "还没有通过爱发电赞助的记录，来成为第一个吧！",
+                empty: "目前还没有赞助者，来成为第一个吧！",
                 count: "共 {count} 位赞助者",
                 legacyTitle: "历史赞助者（曾经赞助过）",
                 legacyDescription: "在爱发电开通前通过其他方式支持过我们的朋友们",
             },
+        },
+        changelog: {
+            title: "更新日志",
+            subtitle: "Moesekai 的版本更新记录",
+            latest: "最新",
+            empty: "暂无更新记录",
         },
         privacy: {
             title: "隐私政策",

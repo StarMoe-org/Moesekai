@@ -502,11 +502,17 @@ export const zhTWPagePrimary = {
                 loading: "正在載入贊助者名單…",
                 notConfigured: "贊助者名單尚未設定，暫時顯示下方歷史名單。",
                 loadFailed: "贊助者名單載入失敗，請稍後再來看看。",
-                empty: "還沒有透過愛發電贊助的記錄，來成為第一個吧！",
+                empty: "目前還沒有贊助者，來成為第一個吧！",
                 count: "共 {count} 位贊助者",
                 legacyTitle: "歷史贊助者（曾經贊助過）",
                 legacyDescription: "在愛發電開通前透過其他方式支持過我們的朋友們",
             },
+        },
+        changelog: {
+            title: "更新日誌",
+            subtitle: "Moesekai 的版本更新記錄",
+            latest: "最新",
+            empty: "暫無更新記錄",
         },
         privacy: {
             title: "隱私政策",

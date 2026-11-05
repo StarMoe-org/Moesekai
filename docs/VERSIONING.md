@@ -21,7 +21,11 @@
 
 - 设置面板底部页脚：`Moesekai · v2.0.37`
 - 设置 →「关于」：版本号、构建提交（短 SHA，可点进对应 commit）、构建日期，并有
-  GitHub 发布页 / 更新日志（`CHANGELOG.md`）入口。
+  GitHub 发布页 / 站内更新日志（`/changelog`）/ 支持我们（`/patreon`）入口（纵向全宽按钮）。
+- 站内更新日志页 `/changelog`：根目录 `CHANGELOG.md` 是唯一源头，
+  `npm run sync:changelog`（已接入 `npm run dev` / `npm run build`，Docker 构建也会
+  COPY 根 `CHANGELOG.md`）将其同步到 `web/src/data/changelog.md` 供页面渲染，
+  打开发版后本站内即可查看，不依赖 GitHub 访问。
 - 每次 Deploy 构建的 GHCR 镜像同时带 `v<版本>` tag（另有原来的 commit SHA 与 `main` tag）。
 
 版本信息在构建时注入：`next.config.ts` 通过 `web/src/lib/build-version.ts` 解析，

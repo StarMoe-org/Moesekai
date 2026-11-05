@@ -34,14 +34,17 @@ export default function SponsorWall() {
 
     useEffect(() => {
         let cancelled = false;
-        fetch("/api/sponsors")
+        fetch("/api/sponsors/")
             .then((res) => (res.ok ? res.json() : Promise.reject(new Error(`HTTP ${res.status}`))))
             .then((data: { configured?: boolean; error?: string; sponsors?: SponsorItem[] }) => {
                 if (cancelled) return;
+                // An upstream hiccup with an empty list is shown as the empty
+                // state ("no sponsors yet"), not as a failure. `failed` is
+                // reserved for our own /api/sponsors being unreachable.
                 setState({
                     status: "ready",
                     configured: Boolean(data.configured),
-                    failed: Boolean(data.error),
+                    failed: false,
                     sponsors: Array.isArray(data.sponsors) ? data.sponsors : [],
                 });
             })
