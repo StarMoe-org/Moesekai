@@ -11,6 +11,7 @@ interface SponsorItem {
     avatar: string;
     amount: string;
     plan: string;
+    source?: "afdian" | "kofi";
 }
 
 type LoadState =
@@ -97,6 +98,11 @@ export default function SponsorWall() {
                                 )}
                                 {sponsor.plan ? (
                                     <span className="type-label-s text-on-secondary-container/70">{sponsor.plan}</span>
+                                ) : null}
+                                {sponsor.source ? (
+                                    <span className="rounded-full bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
+                                        {sponsor.source === "kofi" ? "Ko-fi" : "Afdian"}
+                                    </span>
                                 ) : null}
                             </NameChip>
                         ))}

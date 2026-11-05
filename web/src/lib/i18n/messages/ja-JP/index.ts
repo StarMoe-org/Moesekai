@@ -1476,7 +1476,7 @@ export const jaJPMessages = {
     patreon: {
       sponsors: {
         title: 'スポンサー一覧',
-        afdianHint: '爱发电（Afdian）で支援すると、あなたのニックネームが自動でここに表示されます（1時間ごとに更新）。',
+        afdianHint: '爱发电（Afdian）/ Ko-fi で支援すると、あなたのニックネームが自動でここに表示されます（Afdianは1時間ごと、Ko-fiはリアルタイム更新）。',
         loading: 'スポンサー一覧を読み込み中…',
         notConfigured: 'スポンサー一覧はまだ設定されていません。しばらくは下の旧スポンサーをご覧ください。',
         loadFailed: 'スポンサー一覧の読み込みに失敗しました。後ほどお試しください。',

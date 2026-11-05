@@ -42,6 +42,35 @@ AFDIAN_API_TOKEN=      # 爱发电 API Token（机密！不要进 NEXT_PUBLIC_*�
 
 未配置时页面不报错：名单区显示「尚未配置」提示，历史名单照常展示。
 
+## Ko-fi 名单配置（Webhook 收集，服务端）
+
+Ko-fi **没有**查询赞助者名单的接口（官方只有按钮/挂件和出站 Webhook），所以 Ko-fi 名单
+只能靠 Webhook 一条条收集：每笔付款 Ko-fi 会向本站 POST 一次通知，本站校验后把公开的
+Donation / Subscription 攒进一个 JSON 文件，`GET /api/sponsors` 再与爱发电名单合并展示。
+
+配置步骤：
+
+1. Ko-fi 后台 Settings > API > Webhooks，把 Webhook URL 设为
+   `https://pjsk.moe/api/sponsors/kofi-webhook`。
+2. 把该页显示的 verification token 配到服务端环境变量（见 `.env.example`）：
+
+```bash
+KOFI_WEBHOOK_TOKEN=    # Ko-fi 的 verification token（机密！不要进 NEXT_PUBLIC_*）
+KOFI_SUPPORTERS_FILE=  # 可选，默认 ./data/kofi-supporters.json
+```
+
+注意事项：
+
+- **只能收集配置之后的新赞助**，Ko-fi 无法补历史；更早的 Ko-fi 赞助者请手动加进
+  `community-lists.json` 的历史名单。
+- 存储文件必须放在**持久化存储**上（如 Docker 的 `/app/data/kofi-supporters.json`），
+  放在临时容器层里重新部署就会丢。
+- 非公开（`is_public: false`）的赞助、Shop Order / Commission 不进名单；重复推送同一
+  笔订单会被按交易号去重。
+- 本站实现：`web/src/lib/kofi.ts`（校验/解析/聚合存储）、
+  `web/src/app/api/sponsors/kofi-webhook/route.ts`（接收端，Token 未配置返回 503、
+  校验失败 401）。
+
 ## 名单改这里，不要再改语言包
 
 赞助者、特别感谢、团队成员三类名单都已从 5 个语言包的硬编码长文案中抽出，

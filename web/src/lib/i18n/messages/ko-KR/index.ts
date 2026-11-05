@@ -1474,7 +1474,7 @@ export const koKRMessages = {
         patreon: {
             sponsors: {
                 title: "후원자 목록",
-                afdianHint: "애발전(Afdian)으로 후원하시면 닉네임이 자동으로 여기에 표시됩니다(1시간마다 갱신).",
+                afdianHint: "애발전(Afdian) / Ko-fi로 후원하시면 닉네임이 자동으로 여기에 표시됩니다(애발전은 1시간마다, Ko-fi는 실시간 갱신).",
                 loading: "후원자 목록을 불러오는 중…",
                 notConfigured: "후원자 목록이 아직 설정되지 않았습니다. 우선 아래의 기존 후원자 목록을 확인해 주세요.",
                 loadFailed: "후원자 목록을 불러오지 못했습니다. 나중에 다시 확인해 주세요.",

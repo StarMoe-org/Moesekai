@@ -1477,7 +1477,7 @@ export const enUSMessages = {
         patreon: {
             sponsors: {
                 title: "Our Sponsors",
-                afdianHint: "Sponsor us on Afdian and your nickname will automatically appear here (updated hourly).",
+                afdianHint: "Sponsor us on Afdian / Ko-fi and your nickname will automatically appear here (Afdian updates hourly, Ko-fi in real time).",
                 loading: "Loading sponsor list…",
                 notConfigured: "The sponsor list is not configured yet — see the legacy list below for now.",
                 loadFailed: "Failed to load the sponsor list. Please check back later.",

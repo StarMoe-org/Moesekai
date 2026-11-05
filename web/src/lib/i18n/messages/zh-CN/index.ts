@@ -1476,7 +1476,7 @@ export const zhCNMessages = {
         patreon: {
             sponsors: {
                 title: "赞助者名单",
-                afdianHint: "通过爱发电赞助后，你的昵称会自动出现在这里（每小时更新）。",
+                afdianHint: "通过爱发电 / Ko-fi 赞助后，你的昵称会自动出现在这里（爱发电每小时更新，Ko-fi 实时更新）。",
                 loading: "正在加载赞助者名单…",
                 notConfigured: "赞助者名单接口尚未配置，暂时显示下方历史名单。",
                 loadFailed: "赞助者名单加载失败，请稍后再来看看。",

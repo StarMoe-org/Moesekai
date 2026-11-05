@@ -498,7 +498,7 @@ export const zhTWPagePrimary = {
         patreon: {
             sponsors: {
                 title: "贊助者名單",
-                afdianHint: "透過愛發電贊助後，你的暱稱會自動出現在這裡（每小時更新）。",
+                afdianHint: "透過愛發電 / Ko-fi 贊助後，你的暱稱會自動出現在這裡（愛發電每小時更新，Ko-fi 即時更新）。",
                 loading: "正在載入贊助者名單…",
                 notConfigured: "贊助者名單尚未設定，暫時顯示下方歷史名單。",
                 loadFailed: "贊助者名單載入失敗，請稍後再來看看。",
