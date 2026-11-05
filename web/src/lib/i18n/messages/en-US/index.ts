@@ -828,6 +828,7 @@ export const enUSMessages = {
             buildDateLabel: "Build Date",
             viewRelease: "Releases",
             viewChangelog: "Changelog",
+            viewSupport: "Support Us",
         },
         appearance: {
             sectionTitle: "Appearance",
@@ -1481,11 +1482,17 @@ export const enUSMessages = {
                 loading: "Loading sponsor list…",
                 notConfigured: "The sponsor list is not configured yet — see the legacy list below for now.",
                 loadFailed: "Failed to load the sponsor list. Please check back later.",
-                empty: "No Afdian sponsors yet — be the first!",
+                empty: "No sponsors yet — be the first!",
                 count: "{count} sponsors",
                 legacyTitle: "Legacy Sponsors",
                 legacyDescription: "Friends who supported us through other channels before Afdian",
             },
+        },
+        changelog: {
+            title: "Changelog",
+            subtitle: "Moesekai release notes",
+            latest: "Latest",
+            empty: "No changelog entries yet",
         },
         privacy: {
             title: "Privacy Policy",

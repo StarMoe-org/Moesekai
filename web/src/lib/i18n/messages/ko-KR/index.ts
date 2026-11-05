@@ -824,7 +824,8 @@ export const koKRMessages = {
             commitLabel: "빌드 커밋",
             buildDateLabel: "빌드 날짜",
             viewRelease: "릴리스",
-            viewChangelog: "변경 로그"
+            viewChangelog: "변경 로그",
+            viewSupport: "후원하기"
         },
         appearance: {
             sectionTitle: "화면 모드",
@@ -1478,11 +1479,17 @@ export const koKRMessages = {
                 loading: "후원자 목록을 불러오는 중…",
                 notConfigured: "후원자 목록이 아직 설정되지 않았습니다. 우선 아래의 기존 후원자 목록을 확인해 주세요.",
                 loadFailed: "후원자 목록을 불러오지 못했습니다. 나중에 다시 확인해 주세요.",
-                empty: "아직 애발전 후원자가 없습니다. 첫 번째 후원자가 되어 보세요!",
+                empty: "아직 후원자가 없습니다. 첫 번째 후원자가 되어 보세요!",
                 count: "후원자 {count}명",
                 legacyTitle: "기존 후원자 (이전 후원자)",
                 legacyDescription: "애발전 개설 전 다른 방법으로 후원해 주신 분들"
             }
+        },
+        changelog: {
+            title: "변경 로그",
+            subtitle: "Moesekai 릴리스 노트",
+            latest: "최신",
+            empty: "아직 변경 기록이 없습니다",
         },
         privacy: {
             title: "개인정보 처리방침",

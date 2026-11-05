@@ -207,6 +207,7 @@ export const zhTWSettings = {
         buildDateLabel: "建置日期",
         viewRelease: "發布頁",
         viewChangelog: "更新日誌",
+        viewSupport: "支持我們",
     },
     appearance: {
         sectionTitle: "外觀模式",

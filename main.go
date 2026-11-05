@@ -39,6 +39,18 @@ const (
 // the session cookie stays first-party and no CORS is involved.
 var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/"}
 
+// frontendAPIPrefixes are Next.js route handlers under /api/ that belong to
+// the frontend, not to Go or moesekai-api: the public sponsor list and the
+// Ko-fi webhook receiver below it. They must reach the Next.js proxy instead
+// of the unknown-/api 404, and must not pass through the HTML cache.
+var frontendAPIPrefixes = []string{"/api/sponsors", "/api/sponsors/"}
+
+func registerFrontendAPIRoutes(mux *http.ServeMux, proxy http.Handler) {
+	for _, prefix := range frontendAPIPrefixes {
+		mux.Handle(prefix, proxy)
+	}
+}
+
 func main() {
 	// Load configuration
 	cfg := config.Load()

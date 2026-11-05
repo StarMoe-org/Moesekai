@@ -92,10 +92,17 @@ export async function fetchAfdianSponsors(): Promise<AfdianSponsorsResult> {
                 body: JSON.stringify(body),
                 next: { revalidate: 3600 },
             });
+            // A creator with no sponsors yet is an empty list, not a failure:
+            // Afdian answers 404 (or a zero-count payload) in that case.
+            if (response.status === 404) return { configured: true, sponsors: [], total: 0 };
             if (!response.ok) throw new Error(`Afdian HTTP ${response.status}`);
             const payload: unknown = await response.json();
             const ec = (payload as { ec?: unknown } | null)?.ec;
-            if (ec !== 200) throw new Error(`Afdian ec ${String(ec)}`);
+            if (ec !== 200) {
+                const count = (payload as { data?: { total_count?: unknown } } | null)?.data?.total_count;
+                if (count === 0) return { configured: true, sponsors: [], total: 0 };
+                throw new Error(`Afdian ec ${String(ec)}`);
+            }
             const parsed = parseAfdianSponsors(payload);
             sponsors.push(...parsed.sponsors);
             total = parsed.total;
