@@ -1,11 +1,12 @@
 import React from "react";
-import Image from "next/image";
 import ExternalLink from "@/components/ExternalLink";
 import MainLayout from "@/components/MainLayout";
+import SponsorWall from "@/components/patreon/SponsorWall";
 import { Button, PageContainer, PageHeader, Surface } from "@/components/md3";
-import { mdArrowBack } from "@/components/md3/icons";
+import { mdArrowBack, mdOpenInNew } from "@/components/md3/icons";
+import { Icon } from "@/components/md3";
 import { pageMetadata } from "@/lib/seo-metadata";
-import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
+import { MOESEKAI_AFDIAN_URL, MOESEKAI_KOFI_URL, MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 export const generateMetadata = pageMetadata("patreon");
 
@@ -154,64 +155,56 @@ export default function PatreonPage() {
                         <h2 className="mb-2 type-headline-s text-on-surface">赞助</h2>
 
                         <p className="mb-6 rounded-md3-md bg-secondary-container p-4 text-on-secondary-container">
-                            <strong className="font-medium">附言：</strong>赞助时请附言你的<strong>个人ID</strong>，以便于 moesekai 将你加入我们的感谢名单中！
+                            <strong className="font-medium">提示：</strong>通过爱发电 / Ko-fi 赞助后，你的平台昵称会自动出现在下方赞助者名单中，无需再附言个人ID。
+                            <br />
+                            <span className="type-body-m">Sponsor via Afdian / Ko-fi and your platform nickname will automatically appear in the sponsor list below.</span>
                         </p>
 
                         <p className="mb-6 text-center type-body-m text-on-surface-variant">
                             目前 moesekai 的服务器已进行过增加/升级，哪怕你不进行赞助，只要你一直支持我们，我们都会持续进行运营的！
                         </p>
 
-                        <div className="flex flex-col sm:flex-row gap-12 justify-center items-center">
-                            {/* Alipay */}
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="relative h-56 w-56 overflow-hidden rounded-md3-lg border border-outline-variant shadow-elev-1">
-                                    <Image
-                                        src="/patreon/alipay.png"
-                                        alt="支付宝收款码"
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                                <div className="text-center">
-                                    <p className="type-title-m text-on-surface">支付宝 / Alipay</p>
-                                </div>
-                            </div>
-
-                            {/* WeChat */}
-                            <div className="flex flex-col items-center gap-4">
-                                <div className="relative h-56 w-56 overflow-hidden rounded-md3-lg border border-outline-variant shadow-elev-1">
-                                    <Image
-                                        src="/patreon/wechat.png"
-                                        alt="微信收款码"
-                                        fill
-                                        className="object-cover"
-                                    />
-                                </div>
-                                <div className="text-center">
-                                    <p className="type-title-m text-on-surface">微信 / WeChat Pay</p>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="mt-12 pt-8 border-t border-outline-variant">
-                            <h3 className="mb-4 type-title-l text-on-surface">海外赞助 / International Support</h3>
-                            <p className="mb-4 text-on-surface-variant">
-                                如果你希望使用国际支付方式赞助我们，可以通过 Ko-fi 进行支持！
-                                <br />
-                                <span className="text-on-surface-variant">If you&apos;d like to support us with an international payment method, you can sponsor us via Ko-fi!</span>
-                            </p>
-                            <div className="flex justify-center">
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            {/* Afdian （爱发电） */}
+                            <div className="flex flex-col items-center gap-3 rounded-md3-lg border border-outline-variant bg-surface-container p-6 text-center">
+                                <p className="type-title-l text-on-surface">爱发电 / Afdian</p>
+                                <p className="type-body-m text-on-surface-variant">
+                                    国内赞助通道，支持微信 / 支付宝等方式。
+                                    <br />
+                                    <span>For supporters in China (WeChat Pay / Alipay).</span>
+                                </p>
                                 <ExternalLink
-                                    href="https://ko-fi.com/moesekai"
+                                    href={MOESEKAI_AFDIAN_URL}
+                                    className="state-layer focus-ring inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 type-label-l text-on-primary transition-opacity hover:opacity-90"
+                                >
+                                    在爱发电支持我们
+                                    <Icon path={mdOpenInNew} size={18} />
+                                </ExternalLink>
+                            </div>
+
+                            {/* Ko-fi */}
+                            <div className="flex flex-col items-center gap-3 rounded-md3-lg border border-outline-variant bg-surface-container p-6 text-center">
+                                <p className="type-title-l text-on-surface">Ko-fi</p>
+                                <p className="type-body-m text-on-surface-variant">
+                                    海外赞助通道，支持国际支付方式。
+                                    <br />
+                                    <span>For international supporters.</span>
+                                </p>
+                                <ExternalLink
+                                    href={MOESEKAI_KOFI_URL}
                                     className="rounded-md3-sm focus-ring"
                                 >
                                     <img
                                         src="https://storage.ko-fi.com/cdn/brandasset/v2/support_me_on_kofi_dark.png"
                                         alt="Support me on Ko-fi"
-                                        className="h-12 hover:opacity-80 transition-opacity"
+                                        className="h-11 transition-opacity hover:opacity-80"
                                     />
                                 </ExternalLink>
                             </div>
+                        </div>
+
+                        <div className="mt-12 border-t border-outline-variant pt-8">
+                            <SponsorWall />
                         </div>
 
                         <div className="mt-12 pt-8 border-t border-outline-variant">

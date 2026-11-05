@@ -23,6 +23,7 @@
     "test:costume3d": "node --experimental-strip-types scripts/test-costume3d.mjs",
     "version:show": "node scripts/resolve-version.mjs",
     "test:version": "node --test tests/version.test.mjs",
+    "test:sponsors": "node --experimental-strip-types --test tests/sponsors.test.mjs",
     "sitemap": "node scripts/generate-sitemaps.mjs",
     "generate:metadata": "node scripts/generate-metadata-map.mjs",
     "start": "next start",

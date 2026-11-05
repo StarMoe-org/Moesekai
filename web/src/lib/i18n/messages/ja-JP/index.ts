@@ -1455,24 +1455,35 @@ export const jaJPMessages = {
       },
       sponsors: {
         title: 'Sponsor Thanks (in no particular order)',
-        list: '阳子(support server), Hakuchumu, 性价比, luoxia, 雪莹ちゃん, 蘸色绘糖/晕星奏, tony_all, 沙皮, 轩, 末乐回忆 M氏 ick110811, metamiku, madoka, 垂耳兔kawayi, amia, maveriki,Conrad,意路二夢and four supporters who prefer not to disclose their IDs.'
+        serverSponsorNote: 'サーバー支援',
+        anonymousNote: 'ほか、IDの公表を希望しない {count} 名の支援者'
       },
       specialThanks: {
         title: 'Supporter Thanks (in no particular order)',
-        list: '深海, Luna茶, cike, 晓月, Kazuhira, 灵潜, 咖啡不甜, 郁郁葱葱, luoxia, 惜花, TONY_ALL#, M氏, 大梦, metamiku, tf, 四宫爱, 芒果冰, Hakuchumu, 葡萄柚, Amia, 不解, 旭光, 阳子, 弥佑瑶, サクラかぜ, 陈睿ガチ恋势, 猫尾草, 笨牛奶, 霞綾, 木口, 沧溟, Aya, Belos, 兔兔, 明日天気に, シラ, 偶像大师希罗酱, 性价比... This is only a partial list; thank you to everyone who quietly supports Moesekai.'
+        partialNote: '上記は一部の方々です。いつも Moesekai を応援してくださる皆さまに感謝します。'
       },
       teams: {
         title: 'Team Members',
         translationLabel: 'Moesekai Localization Team: ',
-        translationMembers: '@雪莹ちゃん @忻羽 @虐酱 @御明正',
         artLabel: 'Moesekai Art Team: ',
-        artMembers: '@岓诚 @黄Yell',
         guideLabel: 'Moesekai 攻略チーム: ',
-        guideMembers: '@Pizza @Misto @火狐mzk @阿木 @盐盐 @深海棉花糖 @羽月',
         joinPrefix: 'お手伝いいただける場合は、',
         joinMiddle: '',
         joinGroup: '',
         joinSuffix: ' までお問い合わせください！'
+      }
+    },
+    patreon: {
+      sponsors: {
+        title: 'スポンサー一覧',
+        afdianHint: '爱发电（Afdian）/ Ko-fi で支援すると、あなたのニックネームが自動でここに表示されます（Afdianは1時間ごと、Ko-fiはリアルタイム更新）。',
+        loading: 'スポンサー一覧を読み込み中…',
+        notConfigured: 'スポンサー一覧はまだ設定されていません。しばらくは下の旧スポンサーをご覧ください。',
+        loadFailed: 'スポンサー一覧の読み込みに失敗しました。後ほどお試しください。',
+        empty: 'まだAfdianスポンサーはいません。最初のスポンサーになりませんか？',
+        count: 'スポンサー {count} 名',
+        legacyTitle: '旧スポンサー（過去の支援者）',
+        legacyDescription: 'Afdian開設前に他の方法で支援してくださった方々'
       }
     },
     privacy: {
@@ -3211,9 +3222,7 @@ export const jaJPMessages = {
       celebrationTextLink: "支援ページをクリック",
       celebrationTextPart2: "してご支援をお願いしますにゃ〜 これによりプロジェクトの長期的な維持・運営が可能になりますにゃ〜",
       celebrationButton: "支援ページへにゃ",
-      celebrationQrScanHint: "または直接QRコードをスキャンして支援にゃ：",
-      celebrationAlipay: "Alipay / アリペイ",
-      celebrationWechat: "WeChat Pay / ウィーチャットペイ",
+      celebrationAfdian: "中国向け支援 / Afdian",
       celebrationKofi: "海外ご支援 / Ko-fi"
     },
     deckRecommend: {

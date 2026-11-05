@@ -35,6 +35,7 @@ import { IEventInfo } from "@/types/events";
 import { EventListItem } from "@/types/prediction";
 import { getCharacterName } from "@/lib/i18n";
 import { setRealtimeRankingLine, useRealtimeRankingLine } from "@/lib/realtime-ranking-line";
+import { MOESEKAI_AFDIAN_URL, MOESEKAI_KOFI_URL } from "@/lib/team-links";
 
 const DEFAULT_REGION: RealtimeRankingRegion = "cn";
 const POLL_INTERVAL = 10_000;
@@ -1284,44 +1285,25 @@ function RealtimeRankingContent() {
                         {t("page.realtimeRanking.celebrationTextPart2")}
                     </p>
 
-                    {/* QR Code scans displayed directly in the modal per user request! */}
-                    <div className="space-y-4 rounded-md3-lg bg-surface-container-high p-4">
-                        <p className="type-label-l text-on-surface-variant">
-                            {t("page.realtimeRanking.celebrationQrScanHint")}
-                        </p>
-                        <div className="flex flex-col sm:flex-row gap-6 justify-center items-center">
-                            {/* Alipay */}
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-32 h-32 rounded-md3-md overflow-hidden shadow-elev-1 border border-outline-variant relative bg-surface-container-lowest">
-                                    <img
-                                        src="/patreon/alipay.png"
-                                        alt="Alipay QR Code"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <span className="type-label-s text-on-surface-variant">{t("page.realtimeRanking.celebrationAlipay")}</span>
-                            </div>
-
-                            {/* WeChat */}
-                            <div className="flex flex-col items-center gap-2">
-                                <div className="w-32 h-32 rounded-md3-md overflow-hidden shadow-elev-1 border border-outline-variant relative bg-surface-container-lowest">
-                                    <img
-                                        src="/patreon/wechat.png"
-                                        alt="WeChat QR Code"
-                                        className="w-full h-full object-cover"
-                                    />
-                                </div>
-                                <span className="type-label-s text-on-surface-variant">{t("page.realtimeRanking.celebrationWechat")}</span>
-                            </div>
+                    {/* Sponsor channels: Afdian (domestic) and Ko-fi (international) side by side. */}
+                    <div className="grid gap-4 rounded-md3-lg bg-surface-container-high p-4 sm:grid-cols-2">
+                        <div className="flex flex-col items-center gap-1.5">
+                            <span className="type-label-m text-on-surface-variant">
+                                {t("page.realtimeRanking.celebrationAfdian")}
+                            </span>
+                            <ExternalLink
+                                href={MOESEKAI_AFDIAN_URL}
+                                className="state-layer focus-ring inline-flex items-center rounded-full bg-primary px-4 py-2 type-label-l text-on-primary transition-opacity hover:opacity-90"
+                            >
+                                Afdian
+                            </ExternalLink>
                         </div>
-
-                        {/* Ko-fi Link */}
-                        <div className="flex flex-col items-center gap-1.5 pt-3 border-t border-outline-variant">
+                        <div className="flex flex-col items-center gap-1.5">
                             <span className="type-label-m text-on-surface-variant">
                                 {t("page.realtimeRanking.celebrationKofi")}
                             </span>
                             <ExternalLink
-                                href="https://ko-fi.com/moesekai"
+                                href={MOESEKAI_KOFI_URL}
                                 className="hover:opacity-80 transition-opacity"
                             >
                                 <img
