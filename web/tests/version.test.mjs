@@ -6,9 +6,9 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { BASELINE_VERSION, deriveVersion, nextReleaseTag, resolveVersion } from "../scripts/resolve-version.mjs";
 
-test("deriveVersion falls back to baseline before the first tag", () => {
+test("deriveVersion increments from the baseline before the first tag", () => {
     assert.equal(deriveVersion(null, 0), BASELINE_VERSION);
-    assert.equal(deriveVersion(null, 123), BASELINE_VERSION);
+    assert.equal(deriveVersion(null, 123), "2.0.123");
     assert.equal(deriveVersion("not-a-tag", 5), BASELINE_VERSION);
 });
 
@@ -21,7 +21,7 @@ test("deriveVersion auto-bumps patch by commits since the tag", () => {
 });
 
 test("nextReleaseTag never goes backwards from the derived version", () => {
-    // No tag yet: the first formal release is always the baseline.
+    // The first release tags the baseline commit, not the current HEAD.
     assert.equal(nextReleaseTag(null, 0, "patch"), "v2.0.0");
     assert.equal(nextReleaseTag(null, 999, "minor"), "v2.0.0");
     assert.equal(nextReleaseTag(null, 999, "major"), "v2.0.0");
@@ -50,6 +50,16 @@ test("resolveVersion derives the version from a real git history", () => {
         assert.equal(info.version, BASELINE_VERSION);
         assert.equal(info.isRelease, false);
         assert.match(info.commit, /^[0-9a-f]{40}$/);
+
+        const baseline = info.commit;
+        git(["commit", "-q", "--allow-empty", "-m", "before first release"]);
+        const beforeRelease = resolveVersion(dir, baseline);
+        assert.equal(beforeRelease.commitsSince, 1);
+        assert.equal(beforeRelease.version, "2.0.1");
+        assert.equal(nextReleaseTag(beforeRelease.tag, beforeRelease.commitsSince, "patch"), "v2.0.0");
+        git(["tag", "v2.0.0", baseline]);
+        assert.equal(resolveVersion(dir, baseline).version, beforeRelease.version);
+        git(["tag", "-d", "v2.0.0"]);
 
         git(["tag", "-a", "v2.0.0", "-m", "Moesekai v2.0.0"]);
         info = resolveVersion(dir);

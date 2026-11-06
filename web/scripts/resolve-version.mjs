@@ -11,13 +11,14 @@
  * Versioning model (docs/VERSIONING.md): the latest strict semver git tag vX.Y.Z
  * is the only source of truth; the displayed version is X.Y.(Z + commits since
  * the tag), so every commit auto-bumps the small version with no file edits.
- * Before the first tag, the baseline 2.0.0 is reported (and is the first tag
- * a release creates).
+ * Before the first tag, commits since the v2.0.0 baseline commit are counted.
  */
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 export const BASELINE_VERSION = "2.0.0";
+
+const BASELINE_COMMIT = "fb4767c9543ac65f69a91b99cb23146e111e046a";
 
 const STRICT_TAG_PATTERN = /^v(\d+)\.(\d+)\.(\d+)$/;
 const STRICT_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
@@ -29,7 +30,7 @@ function parseSemver(value) {
 }
 
 export function deriveVersion(tag, commitsSince) {
-    if (!tag) return BASELINE_VERSION;
+    if (!tag) return `2.0.${Number.isFinite(commitsSince) && commitsSince > 0 ? Math.floor(commitsSince) : 0}`;
     const match = STRICT_TAG_PATTERN.exec(tag);
     if (!match) return BASELINE_VERSION;
     const count = Number.isFinite(commitsSince) && commitsSince > 0 ? Math.floor(commitsSince) : 0;
@@ -59,7 +60,7 @@ function git(args, cwd) {
     }
 }
 
-export function resolveVersion(cwd = process.cwd()) {
+export function resolveVersion(cwd = process.cwd(), baselineCommit = BASELINE_COMMIT) {
     const raw = (process.env.MOESEKAI_VERSION || "").trim().replace(/^v/, "");
     if (raw && parseSemver(raw)) {
         const tag = (process.env.MOESEKAI_RELEASE_TAG || "").trim();
@@ -79,9 +80,9 @@ export function resolveVersion(cwd = process.cwd()) {
     const tag = tags?.split("\n").map((line) => line.trim()).find((line) => STRICT_TAG_PATTERN.test(line)) ?? null;
 
     if (!tag) {
-        const total = Number.parseInt(git(["rev-list", "--count", "HEAD"], cwd) || "", 10);
+        const total = Number.parseInt(git(["rev-list", "--count", `${baselineCommit}..HEAD`], cwd) || "", 10);
         return {
-            version: BASELINE_VERSION,
+            version: deriveVersion(null, Number.isFinite(total) ? total : 0),
             tag: null,
             commitsSince: Number.isFinite(total) ? total : 0,
             commit,

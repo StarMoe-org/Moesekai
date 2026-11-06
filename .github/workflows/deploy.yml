@@ -29,6 +29,9 @@ jobs:
           git fetch --tags --force
           node web/scripts/resolve-version.mjs --shell >> "$GITHUB_OUTPUT"
 
+      - name: Embed changelog and commit history
+        run: node web/scripts/sync-changelog.mjs
+
       - name: Image name
         id: img
         run: |

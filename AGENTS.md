@@ -125,8 +125,8 @@ const updateURL = (params: Record<string, string>) => {
 
 ## 版本与发版
 
-- 版本唯一真相源是 git tag（严格 `vX.Y.Z`），展示版本由 `web/src/lib/build-version.ts`（脚本孪生：`web/scripts/resolve-version.mjs`）按「tag 的 patch + tag 后 commit 数」自动派生；不要手工改 `package.json` 版本号发版——其 `2.0.0` 仅是无 tag 时的兜底基线，需与 `BASELINE_VERSION` / `FALLBACK_VERSION` 保持一致。
-- 正式发版用 GitHub Actions 的 Release workflow 一键打 tag + 生成 Release（首次运行自动打出 v2.0.0）；部署仍是 push `main` 自动上线。机制详见 `docs/VERSIONING.md`。
+- 版本基准是 git tag（严格 `vX.Y.Z`），无 tag 时使用 `fb4767c`，展示版本由 `web/src/lib/build-version.ts`（脚本孪生：`web/scripts/resolve-version.mjs`）按「tag 的 patch + tag 后 commit 数」自动派生；不要手工改 `package.json` 版本号发版——其 `2.0.0` 仅是历史不可用时的兜底基线，需与 `BASELINE_VERSION` / `FALLBACK_VERSION` 保持一致。
+- 正式发版用 GitHub Actions 的 Release workflow 一键打 tag + 生成 Release（首次运行在基准提交创建 v2.0.0）；部署仍是 push `main` 自动上线。机制详见 `docs/VERSIONING.md`。
 - 前端只读 `@/lib/app-version`（构建时由 `next.config.ts` 注入 `NEXT_PUBLIC_MOESEKAI_*`）；禁止在客户端代码 import `@/lib/build-version`（会执行 git 命令）。
 
 ## 新模块/重大变更

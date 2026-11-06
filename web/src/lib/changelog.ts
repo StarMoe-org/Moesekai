@@ -1,15 +1,5 @@
-/**
- * On-site changelog (/changelog), so readers do not need GitHub access.
- *
- * Source of truth is the repository-root CHANGELOG.md. This module reads it
- * when available (local dev and the Docker build, which copies it next to
- * web/), and falls back to the checked-in snapshot at src/data/changelog.md.
- * Refresh the snapshot after editing the root file with:
- *   npm run sync:changelog
- * (also wired into the web build/dev scripts).
- */
-import { existsSync, readFileSync } from "node:fs";
-import path from "node:path";
+/** Build-time snapshot of curated notes and recent commits. */
+import changelogBuild from "../data/changelog-build.json" with { type: "json" };
 
 export interface ChangelogEntry {
     /** Full heading text, e.g. "v2.0.0 — release notes title". */
@@ -39,17 +29,11 @@ export function parseChangelog(markdown: string): ChangelogEntry[] {
 }
 
 export function getChangelogEntries(): ChangelogEntry[] {
-    const candidates = [
-        path.join(process.cwd(), "..", "CHANGELOG.md"),
-        path.join(process.cwd(), "CHANGELOG.md"),
-        path.join(process.cwd(), "src", "data", "changelog.md"),
-    ];
-    for (const candidate of candidates) {
-        try {
-            if (existsSync(candidate)) return parseChangelog(readFileSync(candidate, "utf8"));
-        } catch {
-            // Try the next candidate.
-        }
-    }
-    return [];
+    const commits = changelogBuild.commits.map(({ sha, date, subject }) => ({
+        title: `${date} · ${sha.slice(0, 7)}`,
+        version: null,
+        // Treat commit subjects as plain text rather than author-supplied Markdown.
+        body: subject.replace(/[\\`*_{}\[\]<>#!|]/g, "\\$&"),
+    }));
+    return [...commits, ...parseChangelog(changelogBuild.markdown)];
 }

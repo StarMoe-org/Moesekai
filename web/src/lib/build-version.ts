@@ -7,8 +7,8 @@
  * - The displayed version is derived, never stored: patch = tag.patch + number of
  *   commits since that tag, so every commit automatically bumps the small version
  *   (v2.0.0 -> 37 commits later -> 2.0.37) with no extra commits or tags.
- * - Before the first tag exists (or when .git is unavailable, e.g. inside Docker),
- *   BASELINE_VERSION is used. CI passes MOESEKAI_* env overrides computed on the
+ * - Before the first tag, count commits after the v2.0.0 baseline commit;
+ *   when history is unavailable, BASELINE_VERSION is used. CI passes MOESEKAI_* env overrides computed on the
  *   runner (where .git exists) through Docker build-args.
  *
  * Keep the pure helpers in sync with web/scripts/resolve-version.mjs (the CLI /
@@ -24,7 +24,7 @@ export interface BuildVersionInfo {
     version: string;
     /** Latest reachable strict semver tag, e.g. "v2.0.0", or null before the first release. */
     tag: string | null;
-    /** Commits on HEAD since `tag` (total commits when no tag exists). */
+    /** Commits on HEAD since the tag or baseline commit. */
     commitsSince: number;
     /** Full commit SHA the build was made from, or "" when unknown. */
     commit: string;
@@ -33,6 +33,8 @@ export interface BuildVersionInfo {
     /** True when HEAD is exactly on `tag`. */
     isRelease: boolean;
 }
+
+const BASELINE_COMMIT = "fb4767c9543ac65f69a91b99cb23146e111e046a";
 
 const STRICT_TAG_PATTERN = /^v(\d+)\.(\d+)\.(\d+)$/;
 const STRICT_VERSION_PATTERN = /^(\d+)\.(\d+)\.(\d+)$/;
@@ -45,7 +47,7 @@ function parseSemver(value: string): [number, number, number] | null {
 
 /** patch is raised by the commit count so plain commits auto-bump the small version. */
 export function deriveVersion(tag: string | null, commitsSince: number): string {
-    if (!tag) return BASELINE_VERSION;
+    if (!tag) return `2.0.${Number.isFinite(commitsSince) && commitsSince > 0 ? Math.floor(commitsSince) : 0}`;
     const match = STRICT_TAG_PATTERN.exec(tag);
     if (!match) return BASELINE_VERSION;
     const count = Number.isFinite(commitsSince) && commitsSince > 0 ? Math.floor(commitsSince) : 0;
@@ -102,9 +104,9 @@ export function resolveBuildVersion(): BuildVersionInfo {
     const tag = tags?.split("\n").map((line) => line.trim()).find((line) => STRICT_TAG_PATTERN.test(line)) ?? null;
 
     if (!tag) {
-        const total = Number.parseInt(git(["rev-list", "--count", "HEAD"]) || "", 10);
+        const total = Number.parseInt(git(["rev-list", "--count", `${BASELINE_COMMIT}..HEAD`]) || "", 10);
         return {
-            version: BASELINE_VERSION,
+            version: deriveVersion(null, Number.isFinite(total) ? total : 0),
             tag: null,
             commitsSince: Number.isFinite(total) ? total : 0,
             commit,

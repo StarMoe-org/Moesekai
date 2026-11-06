@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "Version bump for the new tag (first release is always v2.0.0)"
+        description: "Version bump for the new tag (first release tags the v2.0.0 baseline)"
         type: choice
         options: [patch, minor, major]
         default: patch
@@ -39,12 +39,13 @@ jobs:
         env:
           BUMP: ${{ inputs.bump }}
         run: |
-          echo "current=$(node web/scripts/resolve-version.mjs --json)" >> "$GITHUB_OUTPUT"
+          node web/scripts/resolve-version.mjs --shell >> "$GITHUB_OUTPUT"
           echo "next=$(node web/scripts/resolve-version.mjs --next-tag "$BUMP")" >> "$GITHUB_OUTPUT"
 
       - name: Create and push tag
         env:
           NEXT_TAG: ${{ steps.ver.outputs.next }}
+          BASE_TAG: ${{ steps.ver.outputs.tag }}
         run: |
           if git rev-parse "$NEXT_TAG" >/dev/null 2>&1; then
             echo "Tag $NEXT_TAG already exists" >&2
@@ -52,7 +53,12 @@ jobs:
           fi
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git tag -a "$NEXT_TAG" -m "Moesekai $NEXT_TAG"
+          target=HEAD
+          if [ -z "$BASE_TAG" ]; then
+            target=fb4767c9543ac65f69a91b99cb23146e111e046a
+            git merge-base --is-ancestor "$target" HEAD
+          fi
+          git tag -a "$NEXT_TAG" "$target" -m "Moesekai $NEXT_TAG"
           git push origin "$NEXT_TAG"
 
       - name: Create GitHub Release

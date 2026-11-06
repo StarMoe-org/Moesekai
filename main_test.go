@@ -235,10 +235,16 @@ func TestFrontendAPIRoutesReachFrontendProxy(t *testing.T) {
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 	})
-	registerFrontendAPIRoutes(mux, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"proxied":true}`))
 	}))
+	defer upstream.Close()
+	target, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newRegisteredFrontendProxy(mux, target)
 
 	for _, tc := range []struct {
 		method string
