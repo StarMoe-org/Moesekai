@@ -91,7 +91,7 @@ func main() {
 			registerReadinessRoute(mux, store, nil)
 			setupAPIOnlyMode(mux)
 		} else {
-			nextjsProxy := newFrontendProxy(nextjsURL)
+			nextjsProxy := newRegisteredFrontendProxy(mux, nextjsURL)
 			frontendHealth := newFrontendHealthCheck(cfg.FrontendProxyURL)
 			registerFrontendHealthRoute(mux, frontendHealth)
 			registerReadinessRoute(mux, store, frontendHealth)
@@ -187,6 +187,14 @@ func parseProxyTargetURL(raw string) (*url.URL, error) {
 		return nil, fmt.Errorf("must be an absolute HTTP(S) URL without credentials")
 	}
 	return parsed, nil
+}
+
+// Set up the production proxy and its API routes together so the /api/ fallback
+// cannot accidentally shadow frontend route handlers.
+func newRegisteredFrontendProxy(mux *http.ServeMux, target *url.URL) *httputil.ReverseProxy {
+	proxy := newFrontendProxy(target)
+	registerFrontendAPIRoutes(mux, proxy)
+	return proxy
 }
 
 func newFrontendProxy(nextjsURL *url.URL) *httputil.ReverseProxy {
