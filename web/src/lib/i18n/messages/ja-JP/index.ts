@@ -1,6 +1,7 @@
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
+import { gachaSimulatorMessages } from "./gacha-simulator";
 
 export const jaJPMessages = {
   common: {
@@ -682,6 +683,7 @@ export const jaJPMessages = {
         chartPreview: '譜面プレビュー',
         storyPlayer: 'ストーリープレイヤー',
         costume3d: '3D衣装',
+        gachaSimulator: "ガチャシミュレーター",
         live2dViewer: 'Live2D ビューア',
         mysekaiPreviewScene: 'マイセカイプレビュー',
         assetViewer: 'アセットブラウザ',
@@ -758,6 +760,7 @@ export const jaJPMessages = {
       chartPreview: 'Preview chart files',
       storyPlayer: 'ストーリーを Live2D で再生し台本と並べて読む',
       costume3d: 'キャラクターの衣装を 3D で見る',
+      gachaSimulator: "3D 演出でガチャを体験。公式バナーと自由な確率設定に対応",
       live2dViewer: 'ストーリーの Live2D モデルとモーション・表情を見る',
       mysekaiPreview: 'Browse the top MySekai entries',
       mysekaiPreviewRanking: 'View ranked MySekai preview works',
@@ -1064,6 +1067,7 @@ export const jaJPMessages = {
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
       costume3d: costume3dMessages,
+      gachaSimulator: gachaSimulatorMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},
             r6: {"engineSource":"シーンエンジンのソース："},

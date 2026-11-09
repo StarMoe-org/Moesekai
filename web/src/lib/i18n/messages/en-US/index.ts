@@ -1,6 +1,7 @@
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
+import { gachaSimulatorMessages } from "./gacha-simulator";
 
 export const enUSMessages = {
     common: {
@@ -683,6 +684,7 @@ export const enUSMessages = {
                 chartPreview: "Chart Preview",
                 storyPlayer: "Story Player",
                 costume3d: "3D Costumes",
+                gachaSimulator: "Gacha Simulator",
                 live2dViewer: "Live2D Viewer",
                 mysekaiPreviewScene: "MySekai Previewer",
                 assetViewer: "Asset Browser",
@@ -759,6 +761,7 @@ export const enUSMessages = {
             chartPreview: "Preview chart files",
             storyPlayer: "Play stories in Live2D beside their script",
             costume3d: "See each character's costumes in 3D",
+            gachaSimulator: "Simulate gacha pulls in 3D with custom odds and pools",
             live2dViewer: "View the stories' Live2D models, motions and facials",
             mysekaiPreview: "Browse the top MySekai entries",
             mysekaiPreviewRanking: "View ranked MySekai preview works",
@@ -1065,6 +1068,7 @@ export const enUSMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        gachaSimulator: gachaSimulatorMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
             r6: {"engineSource":"Scene engine source:"},

@@ -1124,6 +1124,19 @@ export default function GachaDetailClient() {
 
                         {/* Consolidated Simulator & Statistics (Sidebar Mode) */}
                         <SectionCard icon={mdCasino} title={t("page.gacha.simulatorTitle")} bodyClassName="flex flex-col gap-6">
+                                {/* Entry to the 3D simulator, carrying the chosen Dream/Wish picks */}
+                                <div className="flex flex-col gap-3 rounded-md3-md bg-surface-container-high p-4 sm:flex-row sm:items-center sm:justify-between">
+                                    <p className="type-body-m text-on-surface-variant">{t("page.gachaSimulator.entryHint")}</p>
+                                    <Button
+                                        variant="tonal"
+                                        size="s"
+                                        icon={mdWandStars}
+                                        href={`/gacha-simulator?gachaId=${gacha.id}${selectedWishCardIds.length > 0 ? `&wish=${selectedWishCardIds.join(",")}` : ""}`}
+                                        className="shrink-0"
+                                    >
+                                        {t("page.gachaSimulator.entryButton")}
+                                    </Button>
+                                </div>
                                 {/* Controls */}
                                 <div className="flex flex-col gap-4 items-center">
                                     <div className="flex flex-wrap gap-3 justify-center w-full">

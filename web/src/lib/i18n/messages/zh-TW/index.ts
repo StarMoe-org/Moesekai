@@ -1,3 +1,4 @@
+import { gachaSimulatorMessages } from "./gacha-simulator";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -21,6 +22,7 @@ export const zhTWMessages = {
     page: {
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        gachaSimulator: gachaSimulatorMessages,
         ...zhTWPagePrimary,
         ...zhTWPageSecondaryA,
         ...zhTWPageSecondaryB,

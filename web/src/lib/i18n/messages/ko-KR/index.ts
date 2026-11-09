@@ -1,5 +1,6 @@
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { gachaSimulatorMessages } from "./gacha-simulator";
 export const koKRMessages = {
     common: {
         md3: {
@@ -680,6 +681,7 @@ export const koKRMessages = {
                 chartPreview: "채보 미리보기",
                 storyPlayer: "스토리 플레이어",
                 costume3d: "3D 의상",
+                gachaSimulator: "뽑기 시뮬레이터",
                 live2dViewer: "Live2D 뷰어",
                 mysekaiPreviewScene: "MYSEKAI 미리보기",
                 assetViewer: "에셋 브라우저",
@@ -756,6 +758,7 @@ export const koKRMessages = {
             chartPreview: "채보 파일 미리보기",
             storyPlayer: "스토리를 Live2D로 재생하고 대본과 함께 보기",
             costume3d: "캐릭터의 의상을 3D로 보기",
+            gachaSimulator: "3D 연출로 뽑기를 시뮬레이션하고 확률과 풀을 직접 설정",
             live2dViewer: "스토리의 Live2D 모델과 모션·표정 보기",
             mysekaiPreview: "MYSEKAI 백경 이벤트의 상위 투고 보기",
             mysekaiPreviewRanking: "MYSEKAI 백경 랭킹 작품 미리보기",
@@ -1062,6 +1065,7 @@ export const koKRMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        gachaSimulator: gachaSimulatorMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
             r6: {"engineSource":"장면 엔진 소스:"},

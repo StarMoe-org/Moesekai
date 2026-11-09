@@ -84,6 +84,7 @@ const allNavigationGroups: NavGroupData[] = [
             { href: "/chart-preview" },
             { href: "/story-player" },
             { href: "/costume-3d" },
+            { href: "/gacha-simulator" },
             { href: "/live2d" },
             { href: "/mysekai-preview/scene" },
         ],
@@ -215,6 +216,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/story-player", group: "tools", keywords: ["story player", "story viewer", "live2d", "story", "scenario", "adv"] },
     // "\u670d\u88c5" / "\u6362\u88c5" / "\u8863\u88c5" / "\uc758\uc0c1": costume and dress-up in Chinese, Japanese and Korean (escaped like the one above).
     { href: "/costume-3d", group: "tools", keywords: ["3d costume", "costume", "3d", "model", "outfit", "dress up", "\u670d\u88c5", "\u6362\u88c5", "\u8863\u88c5", "\uc758\uc0c1"] },
+    // Chinese and Korean gacha keywords are escaped, as in the entries above.
+    { href: "/gacha-simulator", group: "tools", keywords: ["gacha simulator", "gacha", "gacha simulation", "custom gacha", "gacha rates", "pity", "pull", "\u626d\u86cb", "\u6a21\u62df\u5668", "\ubf51\uae30"] },
     { href: "/live2d", group: "tools", keywords: ["live2d", "live2d viewer", "model viewer", "model", "costume", "motion"] },
     { href: "/mysekai-preview/scene", group: "tools", keywords: ["mysekai preview", "scene preview", "mysekai", "3d", "obj", "scene"] },
     { href: "/sticker-maker", group: "tools", keywords: ["sticker maker", "meme"] },
@@ -315,6 +318,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/chart-preview": "layout.nav.items.chartPreview",
     "/story-player": "layout.nav.items.storyPlayer",
     "/costume-3d": "layout.nav.items.costume3d",
+    "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/live2d": "layout.nav.items.live2dViewer",
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
     "/asset-viewer": "layout.nav.items.assetViewer",
@@ -366,6 +370,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/chart-preview": "layout.groupPages.chartPreview",
     "/story-player": "layout.groupPages.storyPlayer",
     "/costume-3d": "layout.groupPages.costume3d",
+    "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/live2d": "layout.groupPages.live2dViewer",
     "/mysekai-preview": "layout.groupPages.mysekaiPreview",
     "/mysekai-preview/scene": "layout.groupPages.mysekaiPreviewScene",

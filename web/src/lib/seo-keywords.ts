@@ -704,6 +704,24 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
     },
   ),
+  gacha_simulator: definePage(
+    "/gacha-simulator",
+    { "zh-CN": "扭蛋模拟器", "en-US": "Gacha Simulator", "ja-JP": "ガチャシミュレーター", "ko-KR": "뽑기 시뮬레이터", "zh-TW": "扭蛋模擬器" },
+    {
+      "zh-CN": "在浏览器里模拟 Project SEKAI 扭蛋：3D 蓄力与逐张翻牌演出，可载入官方卡池或自定义稀有度、保底、UP 占比与卡牌，保存预设并分享。",
+      "en-US": "Simulate Project Sekai gacha pulls in your browser with a 3D charge and card-by-card reveal. Load an official banner or build a custom pool with rarity rates, pity, UP share and cards, then save or share it.",
+      "ja-JP": "ブラウザで Project SEKAI のガチャを 3D 演出付きでシミュレート。公式バナーの読み込みや、レアリティ確率・天井・UP 率・カードを自由に設定したカスタムガチャを保存・共有できます。",
+      "ko-KR": "브라우저에서 Project SEKAI 뽑기를 3D 연출과 함께 시뮬레이션합니다. 공식 배너를 불러오거나 확률·천장·UP 비율·카드를 직접 설정한 커스텀 뽑기를 저장하고 공유할 수 있습니다.",
+      "zh-TW": "在瀏覽器裡模擬 Project SEKAI 扭蛋：3D 蓄力與逐張翻牌演出，可載入官方卡池或自訂稀有度、保底、UP 占比與卡牌，儲存預設並分享。",
+    },
+    {
+      "zh-CN": ["扭蛋模拟器", "抽卡模拟", "自定义扭蛋", "扭蛋概率", "保底"],
+      "en-US": ["gacha simulator", "gacha pull simulator", "custom gacha", "gacha rates", "pity"],
+      "ja-JP": ["ガチャシミュレーター", "ガチャ 確率", "カスタムガチャ", "天井"],
+      "ko-KR": ["뽑기 시뮬레이터", "가챠 시뮬", "뽑기 확률", "천장"],
+      "zh-TW": ["扭蛋模擬器", "抽卡模擬", "自訂扭蛋", "扭蛋機率", "保底"],
+    },
+  ),
   costume_3d: definePage(
     "/costume-3d",
     { "zh-CN": "3D 服装", "en-US": "3D Costumes", "ja-JP": "3D衣装", "ko-KR": "3D 의상", "zh-TW": "3D 服裝" },
