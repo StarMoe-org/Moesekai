@@ -29,12 +29,21 @@ for (const value of [
     assert.throws(() => sekaiGachaUrl(), /sekai_gacha_config_invalid/, value);
 }
 
-// Commands carry 1–10 cards, each with its asset name and rarity.
-const card = (assetbundleName, cardRarityType) => ({ assetbundleName, cardRarityType });
+// Commands carry 1–10 cards, each with its asset name, rarity, name and gacha phrase.
+const card = (assetbundleName, cardRarityType, prefix, gachaPhrase) => ({ assetbundleName, cardRarityType, prefix, gachaPhrase });
 assert.deepEqual(
-    playCommand([card("res001_no002", "rarity_2"), card("res006_no012", "rarity_birthday")]),
-    { type: "sekai-gacha:play", cards: [{ id: "res001_no002", rarity: "rarity_2" }, { id: "res006_no012", rarity: "rarity_birthday" }] },
+    playCommand([card("res001_no002", "rarity_2", "Leo/need", "-"), card("res006_no012", "rarity_birthday", "Happy Birthday！！", "プレゼント、持ちきれなくなっちゃった")]),
+    { type: "sekai-gacha:play", cards: [
+        { id: "res001_no002", rarity: "rarity_2", prefix: "Leo/need", phrase: "-" },
+        { id: "res006_no012", rarity: "rarity_birthday", prefix: "Happy Birthday！！", phrase: "プレゼント、持ちきれなくなっちゃった" },
+    ] },
 );
+// Text the stage would refuse is left out instead of failing the pull.
+assert.deepEqual(
+    playCommand([card("res001_no004", "rarity_4", "x".repeat(65), "a\nb")]).cards,
+    [{ id: "res001_no004", rarity: "rarity_4", prefix: undefined, phrase: undefined }],
+);
+assert.deepEqual(playCommand([card("res001_no004", "rarity_4")]).cards, [{ id: "res001_no004", rarity: "rarity_4", prefix: undefined, phrase: undefined }]);
 assert.throws(() => playCommand([]), /sekai_gacha_invalid_cards/);
 assert.throws(() => playCommand(Array(11).fill(card("res001_no004", "rarity_4"))), /sekai_gacha_invalid_cards/);
 assert.throws(() => playCommand([card("../evil", "rarity_4")]), /sekai_gacha_invalid_cards/);

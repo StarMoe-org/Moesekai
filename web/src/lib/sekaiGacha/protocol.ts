@@ -3,7 +3,8 @@
  * the build's WebGL template). The page draws the cards; the stage only plays them.
  *
  * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity), `skip`, `mute`.
- * The rarity picks the intro hint and the reveal (★2, ★3, ★4, birthday) as in the game.
+ * The rarity picks the intro hint and the reveal (★2, ★3, ★4, birthday) as in the game; the card's
+ * name (`prefix`) and gacha phrase (`gachaPhrase`) are shown on the reveal.
  * Stage → page: engine download progress, phase changes, and rejected commands.
  */
 
@@ -27,6 +28,17 @@ export type SekaiGachaRarity = "rarity_2" | "rarity_3" | "rarity_4" | "rarity_bi
 export interface SekaiGachaCard {
     id: string;
     rarity: SekaiGachaRarity;
+    /** The card's name; the unit name on ★2 cards. */
+    prefix?: string;
+    /** The gacha phrase; the stage shows it from ★3 up, as the game does. */
+    phrase?: string;
+}
+
+interface PlayableCard {
+    assetbundleName: string;
+    cardRarityType: string;
+    prefix?: string;
+    gachaPhrase?: string;
 }
 
 export type SekaiGachaCommand =
@@ -36,17 +48,31 @@ export type SekaiGachaCommand =
 
 const CARD_NAME = /^res\d+_no\d+$/;
 const RARITIES: readonly string[] = ["rarity_2", "rarity_3", "rarity_4", "rarity_birthday"];
+/** What the stage accepts as card text: one line of at most 64 characters. */
+const MAX_TEXT = 64;
+const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
+
+/** Text the stage would refuse is left out, so one card's text never stops the whole pull. */
+const cardText = (value: unknown) => typeof value === "string" && value.length <= MAX_TEXT && !CONTROL.test(value) ? value : undefined;
 
 /** Whether the stage can play this card: its asset name and a rarity it has a presentation for. */
 export function isSekaiGachaCard(card: { assetbundleName: string; cardRarityType: string }): boolean {
     return CARD_NAME.test(card.assetbundleName) && RARITIES.includes(card.cardRarityType);
 }
 
-export function playCommand(cards: { assetbundleName: string; cardRarityType: string }[]): SekaiGachaCommand {
+export function playCommand(cards: PlayableCard[]): SekaiGachaCommand {
     if (cards.length < 1 || cards.length > SEKAI_GACHA_MAX_CARDS || !cards.every(isSekaiGachaCard)) {
         throw new Error("sekai_gacha_invalid_cards");
     }
-    return { type: `${PREFIX}play`, cards: cards.map(card => ({ id: card.assetbundleName, rarity: card.cardRarityType as SekaiGachaRarity })) };
+    return {
+        type: `${PREFIX}play`,
+        cards: cards.map(card => ({
+            id: card.assetbundleName,
+            rarity: card.cardRarityType as SekaiGachaRarity,
+            prefix: cardText(card.prefix),
+            phrase: cardText(card.gachaPhrase),
+        })),
+    };
 }
 
 const count = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= SEKAI_GACHA_MAX_CARDS ? value : 0;
