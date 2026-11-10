@@ -1,9 +1,9 @@
 /**
- * Where the 3D costume pages read SekaiExtraRipper's costume output from (ADR-0020): one
- * directory per game server, `<base>/<region>/`, holding `index/` and `library/`.
+ * Where the 3D costume pages read a published exporter output from: `NEXT_PUBLIC_COSTUME3D_BASE`
+ * is the HTTP root of one output directory, below which `published/<region>/canonical/current.json`
+ * points at each server's index and `store/<aa>/<sha256>.<ext>` holds its objects. The default is
+ * the published output on assets.pjsk.moe.
  *
- * - `NEXT_PUBLIC_COSTUME3D_BASE`: the directory of those per-server directories; the default
- *   is the published one on assets.pjsk.moe.
  * - `NEXT_PUBLIC_COSTUME3D_REGIONS`: the servers that have been published there, separated by
  *   commas (default `jp,cn`). A server left out has no 3D costumes.
  *
@@ -16,23 +16,35 @@ export const COSTUME3D_REGIONS = ["jp", "cn", "tw", "kr", "en"] as const;
 
 export type Costume3dRegion = (typeof COSTUME3D_REGIONS)[number];
 
-const DEFAULT_BASE = "https://assets.pjsk.moe/sekai-extra-assets/costume3d/";
+const DEFAULT_BASE = "https://assets.pjsk.moe/sekai-extra-assets/";
 const DEFAULT_REGIONS = "jp,cn";
 
 /**
- * The format versions this reader understands. An output whose `index/version.json` lists
- * anything else is not read (the ripper's ADR-0013 rule), so a newer export never renders
- * wrongly here; it waits for this table to be updated with the reader.
+ * The versions of the documents this reader understands, by `format`: the index documents
+ * (publication), the costume documents (`costume.md`), clip documents and component documents.
+ * Anything else is not read (as ADR-0013 of the former costume output had it), so a newer export
+ * never renders wrongly here; it waits for this table to be updated with the reader.
  */
 export const COSTUME3D_FORMATS: Readonly<Record<string, number>> = {
-    "costume3d-catalog": 1,
-    "costume3d-components": 1,
-    "costume3d-costume": 1,
-    "costume3d-lock": 1,
-    "costume3d-motion": 1,
-    "costume3d-part": 2,
-    "costume3d-roles": 1,
-    "costume3d-version": 1,
+    pointer: 1,
+    "index-root": 1,
+    "index-shard": 1,
+    listing: 1,
+    "costume-role": 1,
+    costume: 1,
+    clip: 2,
+    components: 1,
+    /* The document of an asset; its form's version is `form_version`. */
+    asset: 1,
+};
+
+/** The `form_version` of each asset form this reader reads. */
+export const COSTUME3D_FORMS: Readonly<Record<string, number>> = {
+    "costume-role": 1,
+    costume: 1,
+    "costume-model": 1,
+    "costume-motion": 1,
+    texture: 2,
 };
 
 function base(): string {
@@ -63,10 +75,10 @@ export function costume3dRegions(): Costume3dRegion[] {
     return COSTUME3D_REGIONS.filter(region => named.includes(region));
 }
 
-/** The directory of `region`'s costume output, or null when that server has none. */
+/** The pointer of `region`'s output in the view that holds every asset (the default of a link), or null when that server has none. */
 export function costume3dSource(region: string): string | null {
     if (!costume3dRegions().includes(region as Costume3dRegion)) return null;
-    return `${base()}${region}/`;
+    return `${base()}published/${region}/canonical/current.json`;
 }
 
 /** Checks every value the functions above read; a wrong one throws. For the build. */

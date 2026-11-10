@@ -10,7 +10,8 @@
  * - Outline width per vertex is the red of the vertex colour.
  *
  * The Unity material properties come from the glTF material's `extras.unity`, which
- * GLTFLoader puts in `material.userData.unity`.
+ * GLTFLoader puts in `material.userData.unity`. A texture property names a glTF texture, whose
+ * image is `texture/<n>.webp` (see model.md): the corresponding member of the same asset.
  */
 import * as THREE from "three";
 
@@ -119,23 +120,44 @@ function toonMaterial({ main, shadow = null, value = null, shade, skin, outline 
     return material;
 }
 
-/** Loads a texture of `library/`: shared between looks, so it is fetched and uploaded once. */
-type TextureSource = (file: string, srgb: boolean) => Promise<THREE.Texture | null>;
+/**
+ * Loads the object `sha256` of the store, shared between looks. `srgb` says whether it is colour
+ * (else a value read as linear).
+ */
+export type TextureSource = (sha256: string, srgb: boolean) => Promise<THREE.Texture | null>;
 
-/** Colour-variation textures by suffix: `_C` → `_MainTex`, `_S` → `_ShadowTex`, `_H` → `_ValueTex`. */
-export type ColorTextures = Partial<Record<"_C" | "_S" | "_H", string>>;
+/** The colour-variation textures, one source per material slot they replace. */
+export interface ColorTextures {
+    main: TextureSource;
+    shadow: TextureSource;
+    value: TextureSource;
+}
+
+/** For each image of a `costume-model`'s GLB (`texture/<n>.webp`), the hash of the asset's member `texture/<n>`. */
+export function imageMembers(images: Array<{ uri?: string }>, members: Array<{ role: string; sha256: string }>): string[] {
+    return images.map(image => {
+        const n = /^texture\/(\d+)\.webp$/.exec(image.uri ?? "")?.[1];
+        return (n != null && members.find(member => member.role === `texture/${n}`)?.sha256) || "";
+    });
+}
 
 interface UnityMaterial {
     shader?: string;
-    textures?: Record<string, { texture?: { file?: string } }>;
+    textures?: Record<string, { texture?: number | null }>;
 }
 
 const isEye = (name: string) => /eye|ehl|eyelash|eyebrow/i.test(name);
 
-/** Replaces a converted model's glTF materials with toon materials. */
+/** Replaces a converted model's glTF materials with toon materials. `images` maps a texture property's glTF texture to its member. */
 export async function dress(
     root: THREE.Object3D,
-    { kind, skin, colors, texture }: { kind: "body" | "face" | "accessory"; skin: ToonOptions["skin"]; colors: ColorTextures | null; texture: TextureSource },
+    { kind, skin, colors, texture, images }: {
+        kind: "body" | "face" | "accessory";
+        skin: ToonOptions["skin"];
+        colors: ColorTextures | null;
+        texture: TextureSource;
+        images: string[];
+    },
 ): Promise<void> {
     const meshes: THREE.Mesh[] = [];
     root.traverse(object => { if ((object as THREE.Mesh).isMesh) meshes.push(object as THREE.Mesh); });
@@ -143,7 +165,10 @@ export async function dress(
         mesh.frustumCulled = false;
         const source = mesh.material as THREE.MeshStandardMaterial;
         const unity = (source.userData?.unity ?? {}) as UnityMaterial;
-        const slot = (name: string) => unity.textures?.[name]?.texture?.file;
+        const slot = (name: string) => {
+            const index = unity.textures?.[name]?.texture;
+            return index == null ? "" : images[index] ?? "";
+        };
         if (/Eye-Highlight/.test(unity.shader ?? "")) {
             mesh.material = new THREE.MeshBasicMaterial({ map: source.map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
             // GLTFLoader's own texture, not one of the texture source's: released with the look.
@@ -152,15 +177,16 @@ export async function dress(
             source.dispose();
             return;
         }
+        // A material with a lit map of its own takes the colour variation's textures.
         const recolor = colors && slot("_MainTex") ? colors : null;
-        const pick = (suffix: "_C" | "_S" | "_H", property: string, srgb: boolean) => {
-            const file = recolor?.[suffix] ?? slot(property);
-            return file ? texture(file, srgb) : Promise.resolve(null);
+        const pick = (source: TextureSource | null, property: string, srgb: boolean) => {
+            const sha256 = slot(property);
+            return sha256 ? (source ?? texture)(sha256, srgb) : Promise.resolve(null);
         };
         const [main, shadow, value] = await Promise.all([
-            pick("_C", "_MainTex", true),
-            pick("_S", "_ShadowTex", true),
-            pick("_H", "_ValueTex", false),
+            recolor ? pick(recolor.main, "_MainTex", true) : pick(null, "_MainTex", true),
+            pick(recolor?.shadow ?? null, "_ShadowTex", true),
+            pick(recolor?.value ?? null, "_ValueTex", false),
         ]);
         const shade = !(kind === "face" && !/hair/i.test(source.name));
         mesh.material = toonMaterial({ main: main ?? source.map, shadow, value, shade, skin });

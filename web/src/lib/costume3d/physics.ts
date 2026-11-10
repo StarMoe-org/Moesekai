@@ -1,6 +1,6 @@
 /**
  * What moves on its own after the motion: the Unity constraints and the spring bones of a body
- * and its face (`costume3d-components`, from their prefabs).
+ * and its face (their `costume-model` assets' component documents).
  *
  * - Constraints (Aim, Rotation, Position, Parent): the skirt's pivots aim between the knees, the
  *   thigh collider sits between them, the back hair follows the chest. Each constraint keeps the
@@ -15,16 +15,30 @@
  * mirrors X); dot products and angles keep their sign, so the algorithm carries over unchanged.
  */
 import * as THREE from "three";
+import type { Costume3dComponent, Costume3dRef } from "@/types/costume3d";
 
-/** One component of `components.json`; references are `{ $ref: { node } | { component } }`. */
-export interface Costume3dComponent {
-    class: string;
-    node: string;
-    enabled: boolean;
-    fields: Record<string, unknown>;
+export type { Costume3dComponent };
+
+/**
+ * A reference of a component document: to a node (`{ node }`), to a listed component
+ * (`{ component }`), or to a component the document does not list (`{ node, class }`), which this
+ * viewer has nothing to do with.
+ */
+type Ref = Costume3dRef;
+
+/** The classes of components that a component document writes inside a `MonoBehaviour`'s script. */
+const SCRIPTS = {
+    manager: "UTJ.SpringManager",
+    bone: "Sekai.SekaiSpringBone",
+    sphere: "UTJ.SpringSphereCollider",
+    capsule: "UTJ.SpringCapsuleCollider",
+} as const;
+
+/** What a component is: its class (`MonoBehaviour` with one of the spring scripts is that script). */
+function kindOf(component: Costume3dComponent): string {
+    const script = component.script ?? "";
+    return (Object.values(SCRIPTS) as string[]).find(name => script.endsWith(`/${name}`) || script === name) ?? component.class;
 }
-
-type Ref = { $ref?: { node?: string; component?: number } } | null | undefined;
 type Vec = { x: number; y: number; z: number };
 
 const STEP = 1 / 60;
@@ -37,7 +51,7 @@ const unityVector = (v: Vec | undefined, fallback: [number, number, number] = [0
 const worldPosition = (node: THREE.Object3D, out = new THREE.Vector3()) => out.setFromMatrixPosition(node.matrixWorld);
 const worldQuaternion = (node: THREE.Object3D, out = new THREE.Quaternion()) => node.getWorldQuaternion(out);
 
-/** Finds the nodes a bundle's components name, by path below its root. */
+/** Finds the nodes a component document names, by path below its model's root. */
 export type NodeResolver = (path: string) => THREE.Object3D | null;
 
 export function resolverFor(root: THREE.Object3D, shared?: Map<string, THREE.Object3D>): NodeResolver {
@@ -417,7 +431,7 @@ export class Costume3dPhysics {
         return this.constraints.length;
     }
 
-    /** Reads the components of each bundle; `root` must be in its rest pose, with world matrices up to date. */
+    /** Reads the components of each model's document; `root` must be in its rest pose, with world matrices up to date. */
     static build(root: THREE.Object3D, sourcesList: PhysicsSource[]): Costume3dPhysics {
         root.updateMatrixWorld(true);
         const constraints: Constraint[] = [];
@@ -425,7 +439,7 @@ export class Costume3dPhysics {
         for (const { components, resolve } of sourcesList) {
             const nodeOf = (component: Costume3dComponent) => resolve(component.node);
             for (const component of components) {
-                if (!component.class.endsWith("Constraint")) continue;
+                if (!kindOf(component).endsWith("Constraint")) continue;
                 const node = nodeOf(component);
                 const constraint = node && buildConstraint(component, node, resolve);
                 if (constraint) constraints.push(constraint);
@@ -437,11 +451,11 @@ export class Costume3dPhysics {
                 if (!component || !node || !component.enabled) return null;
                 const scale = node.getWorldScale(new THREE.Vector3()).x;
                 const radius = (component.fields.radius as number ?? 0) * scale;
-                const height = component.class === "SpringCapsuleCollider" ? (component.fields.height as number ?? 0) * scale : 0;
+                const height = kindOf(component) === SCRIPTS.capsule ? (component.fields.height as number ?? 0) * scale : 0;
                 return { node, radius, height };
             };
             for (const component of components) {
-                if (component.class !== "SpringManager" || !component.enabled) continue;
+                if (kindOf(component) !== SCRIPTS.manager || !component.enabled) continue;
                 const f = component.fields;
                 const bones: SpringBone[] = [];
                 for (const ref of (f.springBones as Ref[] | undefined) ?? []) {
