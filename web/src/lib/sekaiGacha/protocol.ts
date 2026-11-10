@@ -13,9 +13,10 @@ const PREFIX = "sekai-gacha:";
 /** At most ten cards are revealed per presentation, as in the game. */
 export const SEKAI_GACHA_MAX_CARDS = 10;
 
-export type SekaiGachaPhase = "booting" | "ready" | "loading" | "intro" | "reveal" | "complete" | "error";
+/** `tap`: the intro waits on its loop, showing the game's TAP TO START, until the reader taps the stage. */
+export type SekaiGachaPhase = "booting" | "ready" | "loading" | "tap" | "intro" | "reveal" | "complete" | "error";
 
-const PHASES: readonly SekaiGachaPhase[] = ["booting", "ready", "loading", "intro", "reveal", "complete", "error"];
+const PHASES: readonly SekaiGachaPhase[] = ["booting", "ready", "loading", "tap", "intro", "reveal", "complete", "error"];
 
 export type SekaiGachaMessage =
     | { kind: "loader"; progress: number }

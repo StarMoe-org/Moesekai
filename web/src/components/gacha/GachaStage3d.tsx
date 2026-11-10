@@ -57,7 +57,7 @@ interface StageState {
 }
 
 const MUTED_KEY = "gacha-stage-3d-muted";
-const PLAYING: readonly SekaiGachaPhase[] = ["loading", "intro", "reveal"];
+const PLAYING: readonly SekaiGachaPhase[] = ["loading", "tap", "intro", "reveal"];
 const isFourStar = (card: ICardInfo) => card.cardRarityType === "rarity_4" || card.cardRarityType === "rarity_birthday";
 
 function readMuted(): boolean {
@@ -316,7 +316,7 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
 
                 {/* Skip while the presentation runs. */}
                 <AnimatePresence>
-                    {(phase === "intro" || phase === "reveal") && (
+                    {(phase === "tap" || phase === "intro" || phase === "reveal") && (
                         <motion.div
                             key="skip"
                             initial={{ opacity: 0, y: 12 }}

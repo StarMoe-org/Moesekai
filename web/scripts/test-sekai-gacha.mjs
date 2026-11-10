@@ -57,6 +57,7 @@ assert.deepEqual(
     { kind: "state", phase: "reveal", revealed: 3, total: 10, card: "res021_no008", error: undefined },
 );
 assert.equal(readStageMessage({ type: "sekai-gacha:state", v: 1, phase: "dancing", revealed: 0, total: 0 }), null);
+assert.equal(readStageMessage({ type: "sekai-gacha:state", v: 1, phase: "tap", revealed: 0, total: 10 })?.phase, "tap");
 assert.deepEqual(readStageMessage({ type: "sekai-gacha:state", v: 1, phase: "ready", revealed: -1, total: 99 }),
     { kind: "state", phase: "ready", revealed: 0, total: 0, card: undefined, error: undefined });
 assert.deepEqual(readStageMessage({ type: "sekai-gacha:error", v: 1, code: "busy", message: "x" }), { kind: "rejected", code: "busy", message: "x" });
