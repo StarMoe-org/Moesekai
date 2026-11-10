@@ -8,7 +8,7 @@
  * The value must already be canonical (what the URL parser gives back): https, or http on a
  * loopback host for development, without credentials, query or fragment.
  */
-const DEFAULT_URL = "https://assets.pjsk.moe/sekai-extra-assets/sekai-gacha/fdacc79/index.html";
+const DEFAULT_URL = "https://assets.pjsk.moe/sekai-extra-assets/sekai-gacha/06835ef/index.html";
 
 /** The page the stage iframe opens. */
 export function sekaiGachaUrl(): string {
