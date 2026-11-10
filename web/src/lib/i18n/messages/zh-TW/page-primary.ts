@@ -301,7 +301,7 @@ export const zhTWPagePrimary = {
             assetTitle: "選擇 Assets 資源線路",
             assetDesc: "選擇載入遊戲圖片、音訊等資源的 CDN 線路。",
             assetMain: "主線線路",
-            assetOverseas: "海外主線線路",
+            assetBackup: "備用線路",
             themeTitle: "外觀與主題色",
             themeDesc: "選擇適合您的介面風格與角色代表色。",
             appearanceTitle: "外觀傾向",

@@ -1,6 +1,7 @@
 "use client";
 import React, { useId, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { AssetLineLabel } from "@/components/common/AssetLine";
 import { ServerRegionLabel, getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useTheme, CHAR_COLORS } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -59,7 +60,7 @@ interface SettingsPanelProps {
 type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 type ColorSchemeOption = "system" | "light" | "dark";
 type ServerRegion = "en" | "jp" | "cn" | "tw" | "kr";
-type AssetLine = "main" | "overseas";
+type AssetLine = "main" | "backup";
 
 // Group characters by unit for better organization (derived from UNIT_DATA)
 const unitGroups = UNIT_DATA.map(u => ({ id: u.id, labelKey: UNIT_ID_LABEL_KEYS[u.id] ?? `common.units.${u.id}`, charIds: u.charIds, color: u.color }));
@@ -76,7 +77,7 @@ const appearanceOptions = [
 
 const assetLineOptions = [
     { key: "main", labelKey: "settings.assetSource.main", value: "main" },
-    { key: "overseas", labelKey: "settings.assetSource.overseas", value: "overseas" },
+    { key: "backup", labelKey: "settings.assetSource.backup", value: "backup" },
 ] as const;
 
 const SERVER_REGIONS: readonly ServerRegion[] = ["en", "jp", "cn", "tw", "kr"];
@@ -381,7 +382,10 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             aria-label={t("settings.assetSource.sectionTitle")}
                             value={assetSource as AssetLine}
                             onValueChange={handleSelectAssetLine}
-                            options={assetLineOptions.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+                            options={assetLineOptions.map((option) => ({
+                                value: option.value,
+                                label: <AssetLineLabel line={option.value} label={t(option.labelKey)} size={18} />,
+                            }))}
                         />
                     </section>
 

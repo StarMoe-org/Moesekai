@@ -285,8 +285,8 @@ export const zhTWSettings = {
     },
     assetSource: {
         sectionTitle: "Assets 線路",
-        main: "主要線路",
-        overseas: "海外線路",
+        main: "主線",
+        backup: "備用線路",
     },
     serverSource: {
         sectionTitle: "資料伺服器",

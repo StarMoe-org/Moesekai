@@ -13,8 +13,8 @@ export function getMysekaiMasterDataUrls(path: string, source: AssetSourceType):
     const region = getAssetSourceRegion(source);
     const normalizedPath = path.replace(/^\/+/, "");
     return [
-        `https://metadata.exmeaning.com/${region}/master/${normalizedPath}`,
         `https://metadata.pjsk.moe/${region}/master/${normalizedPath}`,
+        `https://metadata.exmeaning.com/${region}/master/${normalizedPath}`,
     ];
 }
 

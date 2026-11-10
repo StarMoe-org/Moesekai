@@ -906,7 +906,7 @@ export const zhCNMessages = {
         assetSource: {
             sectionTitle: "Assets线路",
             main: "主线",
-            overseas: "海外线",
+            backup: "备用线路",
         },
         serverSource: {
             sectionTitle: "数据服务器",
@@ -1280,7 +1280,7 @@ export const zhCNMessages = {
             assetTitle: "选择 Assets 资源线路",
             assetDesc: "选择加载游戏图片、音频等资源的 CDN 线路。",
             assetMain: "主线线路",
-            assetOverseas: "海外主线线路",
+            assetBackup: "备用线路",
             themeTitle: "外观与主题色",
             themeDesc: "选择适合您的界面风格与角色代表色。",
             appearanceTitle: "外观倾向",

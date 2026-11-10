@@ -57,7 +57,7 @@ function UserDetailContent() {
     const line = useRealtimeRankingLine();
     const effectiveLine = getEffectiveLine(line, region);
     const effectiveAssetSource = useMemo<AssetSourceType>(
-        () => `${effectiveLine === "global" ? "overseas" : "main"}-${region}` as AssetSourceType,
+        () => `${effectiveLine === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
         [effectiveLine, region],
     );
 

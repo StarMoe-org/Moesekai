@@ -91,7 +91,7 @@ function Live2DViewerContent() {
     const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ library, model: current });
     const [loop, setLoop] = useState(false);
     const [background, setBackground] = useState<string | null>(null);
-    const line = assetSource.startsWith("overseas") ? "overseas" : "main";
+    const line = assetSource.startsWith("backup") ? "backup" : "main";
     const backgroundUrl = background && region ? getBackgroundImageUrl(background, `${line}-${region}` as AssetSourceType) : null;
     const ready = phase.kind === "ready" ? state : null;
 

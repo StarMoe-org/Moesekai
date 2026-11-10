@@ -29,7 +29,7 @@ function getRegionFromSource(source: AssetSourceType): string {
     if (hyphenIndex !== -1) {
         return source.substring(hyphenIndex + 1);
     }
-    // For bare "main" / "overseas", fall back to localStorage
+    // For bare "main" / "backup", fall back to localStorage
     if (typeof window !== "undefined") {
         return localStorage.getItem("server-source") || "jp";
     }

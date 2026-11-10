@@ -906,7 +906,7 @@ export const jaJPMessages = {
     assetSource: {
       sectionTitle: 'アセット回線',
       main: 'メイン',
-      overseas: '海外回線'
+      backup: '予備回線'
     },
     serverSource: {
       sectionTitle: 'データサーバー',
@@ -1280,7 +1280,7 @@ export const jaJPMessages = {
       assetTitle: "Assets 回線を選択",
       assetDesc: "ゲーム素材（画像、音楽など）をロードする CDN 回線を選択します。",
       assetMain: "メイン回線",
-      assetOverseas: "海外メイン回線",
+      assetBackup: "予備回線",
       themeTitle: "外観とテーマカラー",
       themeDesc: "インターフェースの外観とキャラクターのイメージカラーを選択します。",
       appearanceTitle: "外観モード",

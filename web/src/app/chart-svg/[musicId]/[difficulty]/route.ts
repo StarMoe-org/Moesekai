@@ -9,12 +9,12 @@ const VALID_DIFFICULTIES = new Set(["easy", "normal", "hard", "expert", "master"
 // Primary path: render the chart ourselves from the SUS score text (ported from
 // Uni-PJSK-Viewer-Frontend's sekai-sus2img pipeline, see src/vendor/sekai-sus2img).
 const SUS_ASSET_BASES = [
-    "https://storage.exmeaning.com/sekai-jp-assets",
     "https://storage.pjsk.moe/sekai-jp-assets",
+    "https://storage.exmeaning.com/sekai-jp-assets",
 ];
 const MASTER_DATA_BASES = [
-    "https://metadata.exmeaning.com/jp/master",
     "https://metadata.pjsk.moe/jp/master",
+    "https://metadata.exmeaning.com/jp/master",
 ];
 // Note sprites are vendored into web/public so rendering has no upstream dependency.
 const LOCAL_NOTE_HOST = "/notes_new/custom01";

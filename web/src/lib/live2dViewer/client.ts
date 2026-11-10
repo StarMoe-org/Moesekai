@@ -1,4 +1,4 @@
-import { ASSET_DOMAIN_MAIN, ASSET_DOMAIN_OVERSEAS } from "@/lib/assets";
+import { ASSET_DOMAIN_MAIN, ASSET_DOMAIN_BACKUP } from "@/lib/assets";
 import { live2dSources, type Live2DRegion } from "./config";
 import { parseLive2DModelIndex, type Live2DModel } from "./models";
 
@@ -24,17 +24,17 @@ const BACKGROUND_PREFIX = "scenario/background/";
 
 /**
  * One page of a server's story backgrounds, from the asset site's bundle listing (the one the
- * asset browser reads). `line` is the asset site the reader chose (main or overseas).
+ * asset browser reads). `line` is the asset site the reader chose (main or backup).
  */
 export async function fetchStoryBackgrounds(
     region: Live2DRegion,
-    line: "main" | "overseas",
+    line: "main" | "backup",
     cursor: string | null,
     signal: AbortSignal,
 ): Promise<StoryBackgroundPage> {
     const query = new URLSearchParams({ server: region, prefix: BACKGROUND_PREFIX, limit: "200" });
     if (cursor) query.set("cursor", cursor);
-    const url = `${line === "overseas" ? ASSET_DOMAIN_OVERSEAS : ASSET_DOMAIN_MAIN}/api/assets/bundles?${query.toString()}`;
+    const url = `${line === "backup" ? ASSET_DOMAIN_BACKUP : ASSET_DOMAIN_MAIN}/api/assets/bundles?${query.toString()}`;
     const response = await fetch(url, { signal, credentials: "omit" });
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
     const data = await response.json() as { items?: { type?: string; name?: string; path?: string }[]; nextCursor?: string };

@@ -133,7 +133,7 @@ test("every story type falls back, judged by the server of the mirror it read", 
     const enMirror = "https://storage.pjsk.moe/sekai-en-assets/event_story/event_cheerheart_2025/scenario/event_168_01.json";
     const enLibrary = "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/en/library/event_story/event_cheerheart_2025/scenario/event_168_01.json";
     requested = serve({ [enMirror]: TW, [enLibrary]: EN });
-    assert.deepEqual(await story.fetchStoryAssetFromMirror("event", "overseas-en", EVENT), EN);
+    assert.deepEqual(await story.fetchStoryAssetFromMirror("event", "backup-en", EVENT), EN);
     assert.deepEqual(requested, [enMirror, enLibrary]);
 });
 

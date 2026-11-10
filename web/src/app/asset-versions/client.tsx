@@ -201,7 +201,7 @@ function AssetVersionsContent() {
     }, []);
 
     const gatewayDomain = useMemo(() => {
-        return assetSource === "overseas" ? "https://storage.pjsk.moe" : "https://storage.exmeaning.com";
+        return assetSource === "backup" ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe";
     }, [assetSource]);
 
     // ==================== Version timeline states ====================

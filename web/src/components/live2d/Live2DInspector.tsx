@@ -18,7 +18,7 @@ type Tab = "models" | "motions" | "facials" | "scene";
 interface Live2DInspectorProps {
     region: Live2DRegion;
     /** The asset site the reader chose (for the backgrounds). */
-    line: "main" | "overseas";
+    line: "main" | "backup";
     models: readonly Live2DModel[];
     /** Where the server's list is: loading, failed (with a retry), or in. */
     listStatus: "loading" | "error" | "ready";

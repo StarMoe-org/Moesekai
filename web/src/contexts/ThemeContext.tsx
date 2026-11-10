@@ -60,22 +60,22 @@ const STORY_LIVE2D_HIGH_FPS_STORAGE_KEY = "experimental-story-live2d-high-fps";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-// Asset source type (Main line / Overseas line, with optional regional suffix for override)
+// Asset source type (Main CF line / Backup EdgeOne line, with optional regional suffix for override)
 export type AssetSourceType =
     | "main"
-    | "overseas"
+    | "backup"
     | "main-en"
     | "main-jp"
     | "main-cn"
     | "main-tw"
     | "main-kr"
-    | "overseas-en"
-    | "overseas-jp"
-    | "overseas-cn"
-    | "overseas-tw"
-    | "overseas-kr";
+    | "backup-en"
+    | "backup-jp"
+    | "backup-cn"
+    | "backup-tw"
+    | "backup-kr";
 const DEFAULT_ASSET_SOURCE: AssetSourceType = "main";
-const VALID_ASSET_SOURCES: AssetSourceType[] = ["main", "overseas"];
+const VALID_ASSET_SOURCES: AssetSourceType[] = ["main", "backup"];
 
 // Server source type
 export type ServerSourceType = "en" | "jp" | "cn" | "tw" | "kr";
@@ -105,7 +105,7 @@ export function getAssetSourceRegion(source: AssetSourceType): ServerSourceType 
 }
 
 export function replaceAssetSourceRegion(source: AssetSourceType, targetRegion: ServerSourceType): AssetSourceType {
-    const base = source.startsWith("overseas") ? "overseas" : "main";
+    const base = source.startsWith("backup") ? "backup" : "main";
     return `${base}-${targetRegion}` as AssetSourceType;
 }
 
@@ -119,8 +119,8 @@ function migrateLegacyAssetSource(rawSource: string | null): AssetSourceType {
     }
 
     // Migrate old values containing regional/line suffixes
-    if (rawSource.startsWith("overseas")) {
-        return "overseas";
+    if (rawSource.startsWith("backup")) {
+        return "backup";
     }
     return "main";
 }
@@ -219,6 +219,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             // Load asset source setting (with legacy migration)
             const savedAssetSource = localStorage.getItem("asset-source");
             const loadedAssetSource: AssetSourceType = migrateLegacyAssetSource(savedAssetSource);
+            if (savedAssetSource && savedAssetSource !== loadedAssetSource) {
+                localStorage.setItem("asset-source", loadedAssetSource);
+            }
             // Load LLM translation setting. Defaults to ON for Chinese UI and OFF for non-Chinese UI.
             setUseLLMTranslationState(getDefaultLLMTranslationSetting());
             // Load ads display setting

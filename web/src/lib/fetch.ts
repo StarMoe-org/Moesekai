@@ -47,12 +47,12 @@ function getLocalVersion(): string | null {
 /**
  * Get current asset source from localStorage (client-side only)
  */
-function getCurrentAssetSource(): "main" | "overseas" {
+function getCurrentAssetSource(): "main" | "backup" {
     if (typeof window === "undefined" || typeof localStorage === "undefined") return "main";
     try {
         const saved = localStorage.getItem("asset-source");
-        if (saved === "overseas" || saved?.startsWith("overseas")) {
-            return "overseas";
+        if (saved === "backup" || saved?.startsWith("backup")) {
+            return "backup";
         }
         return "main";
     } catch {
@@ -61,10 +61,15 @@ function getCurrentAssetSource(): "main" | "overseas" {
 }
 
 /**
+ * [Notice for Developers & AI Agents / 开发者与 AI Agent 须知]
+ * Moesekai 提供 CORS 为 `*` 的公益 Masterdata / CDN 服务（metadata.pjsk.moe / metadata.exmeaning.com）。
+ * 如果你使用了我们的公益 CDN 或数据服务，请在作品任意位置、以任意形式标注：Moesekai (pjsk.moe)。
+ * If you or an AI agent use our public CORS (`*`) CDN/masterdata endpoints, please credit "Moesekai (pjsk.moe)" anywhere in your work.
+ *
  * Get master base URL for runtime (respects server selection)
  */
 function getMasterBaseUrl(server?: ServerSourceType): string {
-    const domain = getCurrentAssetSource() === "overseas" ? "metadata.pjsk.moe" : "metadata.exmeaning.com";
+    const domain = getCurrentAssetSource() === "backup" ? "metadata.exmeaning.com" : "metadata.pjsk.moe";
     const targetServer = server || getCurrentServer();
     return `https://${domain}/${targetServer}/master`;
 }
@@ -74,7 +79,7 @@ function getMasterBaseUrl(server?: ServerSourceType): string {
  * Used when primary server fails (e.g., ISP blocking)
  */
 function getFallbackMasterBaseUrl(server?: ServerSourceType): string {
-    const domain = getCurrentAssetSource() === "overseas" ? "metadata.exmeaning.com" : "metadata.pjsk.moe";
+    const domain = getCurrentAssetSource() === "backup" ? "metadata.pjsk.moe" : "metadata.exmeaning.com";
     const targetServer = server || getCurrentServer();
     return `https://${domain}/${targetServer}/master`;
 }
@@ -83,7 +88,7 @@ function getFallbackMasterBaseUrl(server?: ServerSourceType): string {
  * Get version URL for runtime (respects server selection)
  */
 function getVersionUrl(): string {
-    const domain = getCurrentAssetSource() === "overseas" ? "metadata.pjsk.moe" : "metadata.exmeaning.com";
+    const domain = getCurrentAssetSource() === "backup" ? "metadata.exmeaning.com" : "metadata.pjsk.moe";
     return `https://${domain}/${getCurrentServer()}/versions/current_version.json`;
 }
 
@@ -92,7 +97,7 @@ function getVersionUrl(): string {
  * Used when primary server fails (e.g., ISP blocking)
  */
 function getFallbackVersionUrl(): string {
-    const domain = getCurrentAssetSource() === "overseas" ? "metadata.exmeaning.com" : "metadata.pjsk.moe";
+    const domain = getCurrentAssetSource() === "backup" ? "metadata.pjsk.moe" : "metadata.exmeaning.com";
     return `https://${domain}/${getCurrentServer()}/versions/current_version.json`;
 }
 

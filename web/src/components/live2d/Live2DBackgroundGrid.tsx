@@ -11,7 +11,7 @@ import type { Live2DRegion } from "@/lib/live2dViewer/config";
 interface Live2DBackgroundGridProps {
     region: Live2DRegion;
     /** The asset site the reader chose. */
-    line: "main" | "overseas";
+    line: "main" | "backup";
     /** The background shown, or null for none. */
     current: string | null;
     onSelect: (name: string | null) => void;

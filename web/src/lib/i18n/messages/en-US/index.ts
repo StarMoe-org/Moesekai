@@ -907,7 +907,7 @@ export const enUSMessages = {
         assetSource: {
             sectionTitle: "Asset line",
             main: "Main",
-            overseas: "Overseas",
+            backup: "Backup",
         },
         serverSource: {
             sectionTitle: "Data server",
@@ -1281,7 +1281,7 @@ export const enUSMessages = {
             assetTitle: "Select Assets Route",
             assetDesc: "Choose a CDN route to load game assets (images, music, etc.).",
             assetMain: "Main Route",
-            assetOverseas: "Overseas Main Route",
+            assetBackup: "Backup Route",
             themeTitle: "Appearance & Theme",
             themeDesc: "Choose a character-inspired theme color and appearance preference.",
             appearanceTitle: "Appearance",

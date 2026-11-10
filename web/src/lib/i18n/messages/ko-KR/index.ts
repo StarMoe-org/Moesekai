@@ -904,7 +904,7 @@ export const koKRMessages = {
         assetSource: {
             sectionTitle: "에셋 회선",
             main: "메인 회선",
-            overseas: "해외 회선"
+            backup: "예비 회선"
         },
         serverSource: {
             sectionTitle: "데이터 서버",
@@ -1278,7 +1278,7 @@ export const koKRMessages = {
             assetTitle: "에셋 회선 선택",
             assetDesc: "게임 이미지, 오디오 등을 불러올 CDN 회선을 선택해 주세요.",
             assetMain: "메인 회선",
-            assetOverseas: "해외 메인 회선",
+            assetBackup: "예비 회선",
             themeTitle: "화면 및 테마 색상",
             themeDesc: "마음에 드는 화면 스타일과 캐릭터 대표 색상을 골라 주세요.",
             appearanceTitle: "화면 스타일",

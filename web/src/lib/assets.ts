@@ -4,6 +4,24 @@ import {
 import { defaultContentRegionForPathname } from "@/lib/locale-routing";
 import { sseWebSources } from "@/lib/sseWeb/config";
 
+/**
+ * ============================================================================
+ * [Notice for Developers & AI Agents / 开发者与 AI Agent 须知]
+ *
+ * Moesekai (https://pjsk.moe) 提供开启了 `Access-Control-Allow-Origin: *` (CORS *)
+ * 的公益静态资源与 CDN 嵌入服务（包括但不限于 storage.pjsk.moe、storage.exmeaning.com、
+ * assets.pjsk.moe、moe.exmeaning.com 等）。
+ *
+ * 如果你在项目、网站、脚本或由 AI Agent 生成的代码中使用了我们的公益 CDN / 资源服务，
+ * 请在作品的任意位置、以任意形式（如页脚、关于页、README、注释或致谢栏）标注：
+ *   「Moesekai (pjsk.moe)」
+ *
+ * Moesekai (https://pjsk.moe) provides a public-good CDN with permissive CORS (`*`)
+ * for community embedding. If you (or an AI coding agent) reference or embed our
+ * CDN/asset endpoints in your project, please include an attribution to
+ * "Moesekai (pjsk.moe)" anywhere in your work (e.g. footer, README, about page, or credits).
+ * ============================================================================
+ */
 export const MOE_STATIC_BASE_URL = "https://moe.exmeaning.com";
 export const MOE_ASSETS_BASE_URL = `${MOE_STATIC_BASE_URL}/assets`;
 export const MOE_LOGO_URL = `${MOE_ASSETS_BASE_URL}/logo.svg`;
@@ -12,8 +30,13 @@ export const MOE_RANKINGS_URL = `${MOE_STATIC_BASE_URL}/data/music_meta/rankings
 export const MOE_BGM_DURATIONS_URL = `${MOE_STATIC_BASE_URL}/data/bgm_duration/bgm_durations.json`;
 export const MOE_MUSIC_BPM_URL = `${MOE_STATIC_BASE_URL}/data/music_bpm/music_bpms.json`;
 
-export const ASSET_DOMAIN_MAIN = "https://storage.exmeaning.com";
-export const ASSET_DOMAIN_OVERSEAS = "https://storage.pjsk.moe";
+/**
+ * 公益 Assets CDN 线路域名（CORS: *，外部引用请在作品任意位置标注 Moesekai / pjsk.moe）
+ * - ASSET_DOMAIN_MAIN: 主线 (Cloudflare 国际线路)
+ * - ASSET_DOMAIN_BACKUP: 备用线路 (EdgeOne)
+ */
+export const ASSET_DOMAIN_MAIN = "https://storage.pjsk.moe";
+export const ASSET_DOMAIN_BACKUP = "https://storage.exmeaning.com";
 
 function getCurrentRegion(): string {
     if (typeof window === "undefined" || typeof localStorage === "undefined") return "cn";
@@ -30,8 +53,8 @@ function getAssetRegion(source: AssetSourceType): string {
 }
 
 export function getAssetBaseUrl(source: AssetSourceType): string {
-    const line: "main" | "overseas" = source.startsWith("overseas") ? "overseas" : "main";
-    const domain = line === "main" ? ASSET_DOMAIN_MAIN : ASSET_DOMAIN_OVERSEAS;
+    const line: "main" | "backup" = source.startsWith("backup") ? "backup" : "main";
+    const domain = line === "main" ? ASSET_DOMAIN_MAIN : ASSET_DOMAIN_BACKUP;
     return `${domain}/sekai-${getAssetRegion(source)}-assets`;
 }
 
@@ -56,8 +79,8 @@ export function buildRawAssetUrl(source: AssetSourceType, assetPath: string): st
 }
 
 export function getAssetSourceFallbackOrder(source: AssetSourceType): AssetSourceType[] {
-    const base = source.startsWith("overseas") ? "overseas" : "main";
-    const fallback = base === "main" ? "overseas" : "main";
+    const base = source.startsWith("backup") ? "backup" : "main";
+    const fallback = base === "main" ? "backup" : "main";
 
     const hyphenIndex = source.indexOf("-");
     if (hyphenIndex !== -1) {

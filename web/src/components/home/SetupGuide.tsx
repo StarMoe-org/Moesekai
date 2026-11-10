@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTheme, type ServerSourceType, type AssetSourceType, type BackgroundAnimationBudget, CHAR_COLORS } from "@/contexts/ThemeContext";
+import { AssetLineLabel } from "@/components/common/AssetLine";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, type UiLocale } from "@/lib/i18n";
@@ -121,7 +122,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
   const [isExiting, setIsExiting] = useState(false);
   const [pings, setPings] = useState<Record<string, number | null>>({
     main: null,
-    overseas: null
+    backup: null
   });
   const [isPinging, setIsPinging] = useState(false);
 
@@ -166,23 +167,23 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
 
   // Assets latency ping test & auto-selection
   useEffect(() => {
-    if (currentStep !== 3 || isPinging || (pings.main !== null && pings.overseas !== null)) return;
+    if (currentStep !== 3 || isPinging || (pings.main !== null && pings.backup !== null)) return;
 
     const runPingTest = async () => {
       setIsPinging(true);
-      const [mainPing, overseasPing] = await Promise.all([
-        pingServer("https://storage.exmeaning.com"),
-        pingServer("https://storage.pjsk.moe")
+      const [mainPing, backupPing] = await Promise.all([
+        pingServer("https://storage.pjsk.moe"),
+        pingServer("https://storage.exmeaning.com")
       ]);
 
       setPings({
         main: mainPing,
-        overseas: overseasPing
+        backup: backupPing
       });
       setIsPinging(false);
 
       // Auto select the route with the lower latency
-      const preferredType = mainPing <= overseasPing ? "main" : "overseas";
+      const preferredType = mainPing <= backupPing ? "main" : "backup";
       setAssetSource(preferredType as AssetSourceType);
     };
 
@@ -441,7 +442,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
               </motion.div>
             )}
 
-            {/* STEP 3: Assets Route (only main and overseas main) */}
+            {/* STEP 3: Assets Route (main and backup) */}
             {currentStep === 3 && (
               <motion.div
                 key="step3"
@@ -462,8 +463,8 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
 
                 <div className="flex flex-col gap-3 pt-2">
                   {[
-                    { type: "main" as AssetSourceType, label: t("page.setup.assetMain"), desc: "Primary CDN optimized for loading speeds" },
-                    { type: "overseas" as AssetSourceType, label: t("page.setup.assetOverseas"), desc: "Global CDN fallback for overseas connections" }
+                    { type: "main" as const, label: t("page.setup.assetMain"), desc: "Global CDN route (Cloudflare)" },
+                    { type: "backup" as const, label: t("page.setup.assetBackup"), desc: "Backup CDN route (EdgeOne)" }
                   ].map((assetOpt) => {
                     const isSelected = assetSource === assetOpt.type;
                     return (
@@ -483,7 +484,7 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                       >
                         <div className="flex flex-col">
                           <span className="type-title-m flex items-center gap-2">
-                            {assetOpt.label}
+                            <AssetLineLabel line={assetOpt.type} label={assetOpt.label} size={20} />
                             {assetOpt.type.startsWith("main") ? (
                               pings.main === null ? (
                                 isPinging ? (
@@ -501,19 +502,19 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
                                 </span>
                               )
                             ) : (
-                              pings.overseas === null ? (
+                              pings.backup === null ? (
                                 isPinging ? (
                                   <span className="type-label-s text-on-surface-variant animate-pulse">({t("page.setup.testingPing")})</span>
                                 ) : null
                               ) : (
                                 <span className={`px-1.5 py-0.5 rounded-md3-xs type-label-s border ${
-                                  pings.overseas === 9999
+                                  pings.backup === 9999
                                     ? "text-red-500 bg-red-500/10 border-red-500/20"
-                                    : pings.overseas < 100
+                                    : pings.backup < 100
                                     ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
                                     : "text-amber-500 bg-amber-500/10 border-amber-500/20"
                                 }`}>
-                                  {pings.overseas === 9999 ? t("page.setup.timeout") : `${pings.overseas} ms`}
+                                  {pings.backup === 9999 ? t("page.setup.timeout") : `${pings.backup} ms`}
                                 </span>
                               )
                             )}

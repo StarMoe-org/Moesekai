@@ -93,7 +93,7 @@ function RealtimeRankingNextContent() {
     // Compute effective asset source based on the selected server and route.
     const effectiveLine = getEffectiveLine(line, region);
     const effectiveAssetSource: AssetSourceType = useMemo(
-        () => `${effectiveLine === "global" ? "overseas" : "main"}-${region}` as AssetSourceType,
+        () => `${effectiveLine === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
         [effectiveLine, region],
     );
 
