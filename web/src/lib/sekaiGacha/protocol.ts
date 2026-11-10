@@ -2,7 +2,7 @@
  * Messages between the gacha page and the SekaiGacha stage iframe (protocol v1, documented in
  * the build's WebGL template). The page draws the cards; the stage only plays them.
  *
- * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity), `skip`, `mute`.
+ * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity), `skip`, `finish`, `mute`.
  * The rarity picks the intro hint and the reveal (★2, ★3, ★4, birthday) as in the game; the card's
  * name (`prefix`) and gacha phrase (`gachaPhrase`) are shown on the reveal.
  * Stage → page: engine download progress, phase changes, and rejected commands.
@@ -44,7 +44,10 @@ interface PlayableCard {
 
 export type SekaiGachaCommand =
     | { type: "sekai-gacha:play"; cards: SekaiGachaCard[] }
+    /** The game's skip: passes the intro and skippable cards, stopping on each 4★, birthday or new 3★ card. */
     | { type: "sekai-gacha:skip" }
+    /** Ends the presentation at once, on the last card's closing frame. */
+    | { type: "sekai-gacha:finish" }
     | { type: "sekai-gacha:mute"; muted: boolean };
 
 const CARD_NAME = /^res\d+_no\d+$/;

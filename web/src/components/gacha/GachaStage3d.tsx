@@ -132,9 +132,9 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
             post({ type: "sekai-gacha:mute", muted: mutedRef.current });
             return;
         }
-        // Hidden: silence it and let a running presentation jump to its end.
+        // Hidden: silence it and end a running presentation at once. (`skip` would still stop on 4★ cards.)
         post({ type: "sekai-gacha:mute", muted: true });
-        if (PLAYING.includes(stageRef.current.phase)) post({ type: "sekai-gacha:skip" });
+        if (PLAYING.includes(stageRef.current.phase)) post({ type: "sekai-gacha:finish" });
         if (document.fullscreenElement && document.fullscreenElement === overlayRef.current) void document.exitFullscreen().catch(() => {});
     }, [open, frameLoaded, post, overlayRef]);
 
