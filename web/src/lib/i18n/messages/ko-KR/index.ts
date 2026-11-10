@@ -2466,7 +2466,6 @@ export const koKRMessages = {
                 unmute: "음소거 해제",
                 fullscreen: "전체 화면",
                 exitFullscreen: "전체 화면 종료",
-                skip: "건너뛰기",
                 resultsTitle: "스카우트 결과",
                 fourStarCount: "4★ ×{count}",
                 pickupCount: "UP ×{count}",

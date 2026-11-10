@@ -2444,7 +2444,6 @@ export const zhCNMessages = {
                 unmute: "取消静音",
                 fullscreen: "全屏",
                 exitFullscreen: "退出全屏",
-                skip: "跳过",
                 resultsTitle: "招募结果",
                 fourStarCount: "4★ ×{count}",
                 pickupCount: "UP ×{count}",

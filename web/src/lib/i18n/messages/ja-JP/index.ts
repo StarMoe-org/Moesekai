@@ -2468,7 +2468,6 @@ export const jaJPMessages = {
         unmute: 'ミュート解除',
         fullscreen: '全画面',
         exitFullscreen: '全画面を終了',
-        skip: 'スキップ',
         resultsTitle: '勧誘結果',
         fourStarCount: '4★ ×{count}',
         pickupCount: 'UP ×{count}',

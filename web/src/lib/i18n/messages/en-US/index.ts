@@ -2445,7 +2445,6 @@ export const enUSMessages = {
                 unmute: "Unmute",
                 fullscreen: "Full screen",
                 exitFullscreen: "Exit full screen",
-                skip: "Skip",
                 resultsTitle: "Recruit Results",
                 fourStarCount: "4★ ×{count}",
                 pickupCount: "UP ×{count}",

@@ -1469,7 +1469,6 @@ export const zhTWPagePrimary = {
                 unmute: "取消靜音",
                 fullscreen: "全螢幕",
                 exitFullscreen: "退出全螢幕",
-                skip: "跳過",
                 resultsTitle: "招募結果",
                 fourStarCount: "4★ ×{count}",
                 pickupCount: "UP ×{count}",

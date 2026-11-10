@@ -15,7 +15,6 @@ import {
     mdFullscreenExit,
     mdRefresh,
     mdReplay,
-    mdSkipNext,
     mdViewInAr,
     mdVolumeOff,
     mdVolumeUp,
@@ -286,8 +285,9 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
                     )}
                 </AnimatePresence>
 
-                {/* Top bar: what is playing, and the stage controls. */}
-                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between gap-3 p-3 sm:p-4">
+                {/* Top bar: what is playing, and the stage controls. Both stay on the left: the stage draws the
+                    game's own skip button in the top-right corner of the picture while cards are playing. */}
+                <div className="pointer-events-none absolute inset-x-0 top-0 flex items-start gap-3 p-3 sm:p-4">
                     <div className="glass pointer-events-auto flex h-12 min-w-0 items-center gap-2 rounded-full pl-4 pr-2">
                         <Icon path={mdViewInAr} size={20} className="shrink-0 text-primary" />
                         <span className="truncate type-title-s text-on-surface">{title}</span>
@@ -313,24 +313,6 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
                         <IconButton icon={mdClose} label={t("common.action.close")} variant="filled" onClick={onClose} />
                     </div>
                 </div>
-
-                {/* Skip while the presentation runs. */}
-                <AnimatePresence>
-                    {(phase === "tap" || phase === "intro" || phase === "reveal") && (
-                        <motion.div
-                            key="skip"
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 12 }}
-                            transition={rise}
-                            className="glass absolute bottom-4 right-4 rounded-full p-1 sm:bottom-6 sm:right-6"
-                        >
-                            <Button variant="text" icon={mdSkipNext} onClick={() => post({ type: "sekai-gacha:skip" })}>
-                                {t("page.gacha.stage3d.skip")}
-                            </Button>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
 
                 {/* Results once every card is out. */}
                 <AnimatePresence>
