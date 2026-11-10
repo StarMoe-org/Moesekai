@@ -112,7 +112,7 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
         wanted.current = null;
         playing.current = next;
         post({ type: "sekai-gacha:mute", muted: mutedRef.current || !openRef.current });
-        post(playCommand(next.cards.map(item => item.card.assetbundleName)));
+        post(playCommand(next.cards.map(item => item.card)));
         if (stageRef.current.phase !== "booting") {
             const state = { phase: "loading" as const, revealed: 0, total: next.cards.length };
             stageRef.current = state;

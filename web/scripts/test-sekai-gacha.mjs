@@ -29,11 +29,17 @@ for (const value of [
     assert.throws(() => sekaiGachaUrl(), /sekai_gacha_config_invalid/, value);
 }
 
-// Commands carry 1–10 card asset names.
-assert.deepEqual(playCommand(["res001_no004"]), { type: "sekai-gacha:play", cards: ["res001_no004"] });
+// Commands carry 1–10 cards, each with its asset name and rarity.
+const card = (assetbundleName, cardRarityType) => ({ assetbundleName, cardRarityType });
+assert.deepEqual(
+    playCommand([card("res001_no002", "rarity_2"), card("res006_no012", "rarity_birthday")]),
+    { type: "sekai-gacha:play", cards: [{ id: "res001_no002", rarity: "rarity_2" }, { id: "res006_no012", rarity: "rarity_birthday" }] },
+);
 assert.throws(() => playCommand([]), /sekai_gacha_invalid_cards/);
-assert.throws(() => playCommand(Array(11).fill("res001_no004")), /sekai_gacha_invalid_cards/);
-assert.throws(() => playCommand(["../evil"]), /sekai_gacha_invalid_cards/);
+assert.throws(() => playCommand(Array(11).fill(card("res001_no004", "rarity_4"))), /sekai_gacha_invalid_cards/);
+assert.throws(() => playCommand([card("../evil", "rarity_4")]), /sekai_gacha_invalid_cards/);
+// ★1 cards are not drawn from gachas and have no presentation.
+assert.throws(() => playCommand([card("res001_no001", "rarity_1")]), /sekai_gacha_invalid_cards/);
 
 // Stage messages.
 assert.deepEqual(readStageMessage({ type: "sekai-gacha:loader", v: 1, progress: 1.5 }), { kind: "loader", progress: 1 });

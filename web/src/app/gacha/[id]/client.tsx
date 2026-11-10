@@ -699,7 +699,7 @@ export default function GachaDetailClient() {
         const result = doGacha(behavior);
         if (!stage3dEnabled || result.length === 0 || result.length > SEKAI_GACHA_MAX_CARDS) return;
         const drawn = result.map(detail => cardMap.get(detail.cardId));
-        if (!drawn.every((card): card is ICardInfo => !!card && isSekaiGachaCard(card.assetbundleName))) return;
+        if (!drawn.every((card): card is ICardInfo => !!card && isSekaiGachaCard(card))) return;
         setStageBehavior(behavior);
         setStageRequest(previous => ({
             id: (previous?.id ?? 0) + 1,
