@@ -16,7 +16,9 @@ import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import CardSelectorModal from "@/components/cards/CardSelectorModal";
 import { useI18n } from "@/contexts/I18nContext";
 import { getGachaInfoTranslation, loadGachaInfoTranslations, resolveGachaInfoText, type GachaInfoField, type GachaInfoTranslations } from "@/lib/gachaInfoTranslations";
-import { Button, EmptyState, Icon, IconButton, LoadingState, PageContainer, SectionCard, Tabs } from "@/components/md3";
+import { Button, EmptyState, Icon, IconButton, LoadingState, PageContainer, SectionCard, Switch, Tabs } from "@/components/md3";
+import GachaStage3d, { type GachaStageRequest } from "@/components/gacha/GachaStage3d";
+import { SEKAI_GACHA_MAX_CARDS, isSekaiGachaCard } from "@/lib/sekaiGacha/protocol";
 import {
     mdArrowBack,
     mdBarChart,
@@ -31,9 +33,12 @@ import {
     mdPlayArrowFill,
     mdStarFill,
     mdTranslate,
+    mdViewInAr,
     mdWandStars,
     mdZoomIn,
 } from "@/components/md3/icons";
+
+const STAGE_3D_KEY = "gacha-stage-3d";
 
 const CARD_TILE_BASE = "rounded-md3-sm overflow-hidden bg-surface-container-lowest transition-shadow";
 const CARD_TILE_IDLE = "ring-1 ring-outline-variant group-hover:ring-2 group-hover:ring-primary";
@@ -174,8 +179,26 @@ export default function GachaDetailClient() {
     const [normalRates, setNormalRates] = useState<number[]>([]);
     const [guaranteedRates, setGuaranteedRates] = useState<number[]>([]);
 
+    // 3D presentation of 1–10 pulls (SekaiGacha). The stage mounts on the first 3D pull and
+    // stays loaded while this page is open, so later pulls start at once.
+    const [stage3dEnabled, setStage3dEnabled] = useState(false);
+    const [stageRequest, setStageRequest] = useState<GachaStageRequest | null>(null);
+    const [stageOpen, setStageOpen] = useState(false);
+    const [stageBehavior, setStageBehavior] = useState<IGachaBehavior | null>(null);
+
     useEffect(() => {
         setMounted(true);
+        try { setStage3dEnabled(localStorage.getItem(STAGE_3D_KEY) === "1"); } catch { /* storage unavailable */ }
+    }, []);
+
+    const changeStage3d = useCallback((enabled: boolean) => {
+        setStage3dEnabled(enabled);
+        try { localStorage.setItem(STAGE_3D_KEY, enabled ? "1" : "0"); } catch { /* storage unavailable */ }
+        if (!enabled) {
+            // Unloads the engine.
+            setStageOpen(false);
+            setStageRequest(null);
+        }
     }, []);
 
     // Set breadcrumb detail name
@@ -468,8 +491,8 @@ export default function GachaDetailClient() {
     }, [rateCardPools]);
 
     // Gacha simulation function
-    const doGacha = useCallback((behavior: IGachaBehavior) => {
-        if (!gacha || gachaRarityRates.length === 0 || cards.length === 0) return;
+    const doGacha = useCallback((behavior: IGachaBehavior): IGachaDetail[] => {
+        if (!gacha || gachaRarityRates.length === 0 || cards.length === 0) return [];
 
         const rollTimes = behavior.spinCount;
         const rollResult = gachaRarityRates.map(() => 0);
@@ -667,7 +690,27 @@ export default function GachaDetailClient() {
             // Reverse so newest is first, then prepend to existing history
             return [...new4StarDetails.reverse(), ...prev];
         });
+
+        return tmpGachaResult;
     }, [cards, cardMap, gacha, gachaRarityRates, guaranteedRates, normalRates, activePickupCards, rateCardPools, isWishPickGacha, selectedWishCardIds]);
+
+    // Draws, then plays the result in 3D when that is on and the spin fits one presentation.
+    const spin = useCallback((behavior: IGachaBehavior) => {
+        const result = doGacha(behavior);
+        if (!stage3dEnabled || result.length === 0 || result.length > SEKAI_GACHA_MAX_CARDS) return;
+        const drawn = result.map(detail => cardMap.get(detail.cardId));
+        if (!drawn.every((card): card is ICardInfo => !!card && isSekaiGachaCard(card.assetbundleName))) return;
+        setStageBehavior(behavior);
+        setStageRequest(previous => ({
+            id: (previous?.id ?? 0) + 1,
+            cards: drawn.map(card => ({
+                card,
+                trained: getCardDefaultTrainedStatus(card) || (useTrainedThumbnail && isTrainableCard(card) && card.cardRarityType !== "rarity_birthday"),
+                pickup: activePickupCards.some(pickup => pickup.id === card.id),
+            })),
+        }));
+        setStageOpen(true);
+    }, [doGacha, stage3dEnabled, cardMap, useTrainedThumbnail, activePickupCards]);
 
     // Reset gacha statistics
     const resetGacha = useCallback(() => {
@@ -1126,6 +1169,18 @@ export default function GachaDetailClient() {
                         <SectionCard icon={mdCasino} title={t("page.gacha.simulatorTitle")} bodyClassName="flex flex-col gap-6">
                                 {/* Controls */}
                                 <div className="flex flex-col gap-4 items-center">
+                                    <div className="flex w-full items-center gap-3 rounded-md3-lg bg-surface-container px-4 py-3">
+                                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-secondary-container text-on-secondary-container">
+                                            <Icon path={mdViewInAr} size={22} />
+                                        </span>
+                                        <Switch
+                                            checked={stage3dEnabled}
+                                            onCheckedChange={changeStage3d}
+                                            label={<span className="type-title-s">{t("page.gacha.stage3d.toggle")}</span>}
+                                            description={<span className="type-body-s">{t("page.gacha.stage3d.toggleHint")}</span>}
+                                            className="min-w-0 flex-1"
+                                        />
+                                    </div>
                                     <div className="flex flex-wrap gap-3 justify-center w-full">
                                         {(() => {
                                             const uniqueBehaviors = gacha.gachaBehaviors.reduce((acc, curr) => {
@@ -1144,7 +1199,8 @@ export default function GachaDetailClient() {
                                                         key={idx}
                                                         variant="filled"
                                                         size="m"
-                                                        onClick={() => doGacha(behavior)}
+                                                        icon={stage3dEnabled && behavior.spinCount <= SEKAI_GACHA_MAX_CARDS ? mdViewInAr : undefined}
+                                                        onClick={() => spin(behavior)}
                                                         className="flex-1"
                                                     >
                                                         {label}
@@ -1180,7 +1236,7 @@ export default function GachaDetailClient() {
                                                         // Find a reference behavior (prefer strict 10-pull for guarantee type, else generic)
                                                         const refBehavior = gacha.gachaBehaviors.find(b => b.spinCount === 10) || gacha.gachaBehaviors[0];
                                                         if (refBehavior) {
-                                                            doGacha({
+                                                            spin({
                                                                 ...refBehavior,
                                                                 spinCount: count
                                                             });
@@ -1345,6 +1401,21 @@ export default function GachaDetailClient() {
                     </Button>
                 </div>
             </PageContainer>
+
+            {stage3dEnabled && stageRequest && (
+                <GachaStage3d
+                    request={stageRequest}
+                    open={stageOpen}
+                    onClose={() => setStageOpen(false)}
+                    onAgain={() => { if (stageBehavior) spin(stageBehavior); }}
+                    againLabel={stageBehavior?.spinCount === 1
+                        ? t("page.gacha.spinSingle")
+                        : t("page.gacha.spinMulti", { count: stageBehavior?.spinCount ?? 10 })}
+                    title={gacha.name}
+                    logoUrl={logoUrl}
+                    backdropUrl={bgUrl}
+                />
+            )}
 
             {/* Wish PU Card Selector Modal */}
             <CardSelectorModal
