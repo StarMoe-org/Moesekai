@@ -1,4 +1,5 @@
 import { costume3dMessages } from "./costume3d";
+import { ptCalculatorMessages } from "./pt-calculator";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
     common: {
@@ -672,6 +673,7 @@ export const koKRMessages = {
                 deckRecommend: "덱 추천",
                 deckComparator: "덱 비교",
                 scoreControl: "점수 조절 계산",
+                ptCalculator: "이벤트 PT 계산기",
                 stickerMaker: "스티커 메이커",
                 goodsGacha: "굿즈 랜덤 뽑기",
                 guessWho: "캐릭터 맞히기",
@@ -748,6 +750,7 @@ export const koKRMessages = {
             deckRecommend: "조건에 맞는 최적의 덱 추천",
             deckComparator: "덱별 종합력 비교",
             scoreControl: "점수 조절에 필요한 점수 계산",
+            ptCalculator: "솔로 및 멀티 라이브 점수와 이벤트 PT 예상",
             stickerMaker: "나만의 스티커 만들기",
             goodsGacha: "굿즈 랜덤 뽑기 확률 시뮬레이션",
             guessWho: "카드를 보고 캐릭터 맞히기",
@@ -975,6 +978,7 @@ export const koKRMessages = {
         }
     },
     page: {
+        ptCalculator: ptCalculatorMessages,
         designSystem: {
             badge: "Material 3 Expressive · 다이내믹 컬러",
             title: "디자인 시스템 및 컴포넌트",

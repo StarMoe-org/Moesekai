@@ -1,4 +1,5 @@
 import { costume3dMessages } from "./costume3d";
+import { ptCalculatorMessages } from "./pt-calculator";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 import { zhTWCommon } from "./common";
@@ -19,6 +20,7 @@ export const zhTWMessages = {
     settings: zhTWSettings,
     shortcuts: zhTWShortcuts,
     page: {
+        ptCalculator: ptCalculatorMessages,
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
         ...zhTWPagePrimary,

@@ -1,4 +1,5 @@
 import { costume3dMessages } from "./costume3d";
+import { ptCalculatorMessages } from "./pt-calculator";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -675,6 +676,7 @@ export const enUSMessages = {
                 deckRecommend: "Deck Recommendations",
                 deckComparator: "Deck Comparator",
                 scoreControl: "Score Control",
+                ptCalculator: "Event PT Calculator",
                 stickerMaker: "Sticker Maker",
                 goodsGacha: "Goods Gacha",
                 guessWho: "Guess Who",
@@ -751,6 +753,7 @@ export const enUSMessages = {
             deckRecommend: "Recommend the best deck by conditions",
             deckComparator: "Compare deck performance",
             scoreControl: "Calculate scores for control planning",
+            ptCalculator: "Estimate solo or co-op scores and event PT",
             stickerMaker: "Make custom stickers",
             goodsGacha: "Simulate goods gacha odds",
             guessWho: "Guess the character from a card",
@@ -978,6 +981,7 @@ export const enUSMessages = {
         },
     },
     page: {
+        ptCalculator: ptCalculatorMessages,
         designSystem: {
             badge: "Material 3 Expressive · Dynamic color",
             title: "Design System & Components",

@@ -862,6 +862,22 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["プロフィール", "アカウント管理", "OAuth2"],
     },
   ),
+  pt_calculator: definePage(
+    "/pt-calculator",
+    { "zh-CN": "活动PT计算器", "en-US": "Event PT Calculator", "ja-JP": "イベントPT計算機", "ko-KR": "이벤트 PT 계산기" },
+    {
+      "zh-CN": "根据综合力、活动加成和技能实效，计算 Project SEKAI 单人及多人演出的理论分数与活动 PT 区间。",
+      "en-US": "Estimate Project SEKAI solo and co-op score and event PT ranges using team power, event bonus, and effective skill percentages.",
+      "ja-JP": "総合力・イベントボーナス・実効スキル値から、Project SEKAI のひとり・みんなでライブの理論スコアとイベント PT の範囲を計算します。",
+      "ko-KR": "종합력, 이벤트 보너스, 실효 스킬 수치로 Project SEKAI 솔로 및 멀티 라이브의 이론 점수와 이벤트 PT 범위를 계산합니다.",
+    },
+    {
+      "zh-CN": ["活动PT计算器", "活动点数", "技能实效", "单人模式", "多人模式"],
+      "en-US": ["event PT calculator", "event points", "effective skill", "solo", "co-op"],
+      "ja-JP": ["イベントPT計算機", "イベントポイント", "実効スキル値"],
+      "ko-KR": ["이벤트 PT 계산기", "이벤트 포인트", "실효 스킬 수치"],
+    },
+  ),
   score_control: definePage(
     "/score-control",
     { "zh-CN": "控分计算器", "en-US": "Score Control Calculator", "ja-JP": "スコア調整計算機" },

@@ -1,4 +1,5 @@
 import { costume3dMessages } from "./costume3d";
+import { ptCalculatorMessages } from "./pt-calculator";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -674,6 +675,7 @@ export const zhCNMessages = {
                 deckRecommend: "组卡推荐",
                 deckComparator: "组卡比较",
                 scoreControl: "控分计算",
+                ptCalculator: "活动PT计算器",
                 stickerMaker: "表情包制作",
                 goodsGacha: "谷子盲抽",
                 guessWho: "猜角色",
@@ -750,6 +752,7 @@ export const zhCNMessages = {
             deckRecommend: "根据条件推荐最优卡组",
             deckComparator: "对比不同卡组的综合力",
             scoreControl: "计算控分所需的分数",
+            ptCalculator: "估算单人或多人演出的分数与活动 PT",
             stickerMaker: "自定义制作表情包",
             goodsGacha: "模拟谷子盲抽概率",
             guessWho: "根据卡牌猜测角色",
@@ -977,6 +980,7 @@ export const zhCNMessages = {
         },
     },
     page: {
+        ptCalculator: ptCalculatorMessages,
         designSystem: {
             badge: "Material 3 Expressive · 动态配色",
             title: "设计系统与组件库",

@@ -31,6 +31,8 @@ interface MusicSelectorProps {
     recommendMode?: "event" | "challenge";
     liveType?: string;
     server?: ServerSourceType;
+    /** Whether to display the required-field asterisk (default: true). */
+    showRequiredIndicator?: boolean;
 }
 
 interface RecommendationItem {
@@ -57,6 +59,7 @@ export default function MusicSelector({
     recommendMode: _recommendMode = "event",
     liveType = "multi",
     server = "jp",
+    showRequiredIndicator = true,
 }: MusicSelectorProps) {
     const { assetSource, isShowSpoiler } = useTheme();
     const { t } = useI18n();
@@ -331,7 +334,7 @@ export default function MusicSelector({
     return (
         <div className="w-full">
             <label className="mb-1 block type-label-l text-on-surface-variant">
-                {t("page.deckRecommend.selector.music")} <span className="text-error">*</span>
+                {t("page.deckRecommend.selector.music")} {showRequiredIndicator && <span className="text-error">*</span>}
             </label>
 
             <button

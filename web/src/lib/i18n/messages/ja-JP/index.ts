@@ -1,4 +1,5 @@
 import { costume3dMessages } from "./costume3d";
+import { ptCalculatorMessages } from "./pt-calculator";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
 
@@ -674,6 +675,7 @@ export const jaJPMessages = {
         deckRecommend: '編成おすすめ',
         deckComparator: '編成比較',
         scoreControl: 'スコア調整',
+        ptCalculator: 'イベントPT計算機',
         stickerMaker: 'スタンプメーカー',
         goodsGacha: 'グッズガチャ',
         guessWho: 'キャラクター当て',
@@ -750,6 +752,7 @@ export const jaJPMessages = {
       deckRecommend: 'Recommend the best deck by conditions',
       deckComparator: 'Compare deck performance',
       scoreControl: 'Calculate scores for control planning',
+      ptCalculator: 'ひとり・みんなでライブのスコアとイベント PT を計算',
       stickerMaker: 'Make custom stickers',
       goodsGacha: 'Simulate goods gacha odds',
       guessWho: 'Guess the character from a card',
@@ -977,6 +980,7 @@ export const jaJPMessages = {
     }
   },
   page: {
+    ptCalculator: ptCalculatorMessages,
     designSystem: {
       badge: "Material 3 Expressive · ダイナミックカラー",
       title: "デザインシステムとコンポーネント",

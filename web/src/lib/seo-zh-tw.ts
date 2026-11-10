@@ -184,6 +184,11 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "管理 Moesekai 個人頁面、綁定帳號、公開 API 與 OAuth2 授權資料。",
         ["個人頁面", "帳號管理", "OAuth2"],
     ),
+    pt_calculator: page(
+        "活動PT計算器",
+        "依綜合力、活動加成及技能實效，計算 Project SEKAI 單人與多人演出的理論分數及活動 PT 區間。",
+        ["活動PT計算器", "活動點數", "技能實效", "單人模式", "多人模式"],
+    ),
     score_control: page(
         "控分計算器",
         "使用 Project SEKAI 控分計算器規劃掛機、放置與目標分數路線。",
