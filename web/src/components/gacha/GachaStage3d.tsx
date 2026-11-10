@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import Image from "next/image";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useI18n } from "@/contexts/I18nContext";
+import { useTheme } from "@/contexts/ThemeContext";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import { Button, Icon, IconButton, LinearProgress, LoadingIndicator, cn, useOverlay } from "@/components/md3";
 import { OverlayParentContext } from "@/components/md3/useOverlay";
@@ -88,6 +89,8 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
     const openRef = useRef(open);
     const stageRef = useRef(stage);
     const origin = sekaiGachaOrigin();
+    // The cards come from this server's master data; the stage picks the font for their text from it.
+    const { serverSource } = useTheme();
 
     useEffect(() => {
         const value = readMuted();
@@ -111,13 +114,13 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
         wanted.current = null;
         playing.current = next;
         post({ type: "sekai-gacha:mute", muted: mutedRef.current || !openRef.current });
-        post(playCommand(next.cards.map(item => item.card)));
+        post(playCommand(next.cards.map(item => item.card), serverSource));
         if (stageRef.current.phase !== "booting") {
             const state = { phase: "loading" as const, revealed: 0, total: next.cards.length };
             stageRef.current = state;
             setStage(state);
         }
-    }, [frameLoaded, post]);
+    }, [frameLoaded, post, serverSource]);
 
     useEffect(() => {
         if (playing.current?.id === request.id || wanted.current?.id === request.id) return;

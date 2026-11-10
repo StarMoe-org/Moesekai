@@ -29,22 +29,23 @@ for (const value of [
     assert.throws(() => sekaiGachaUrl(), /sekai_gacha_config_invalid/, value);
 }
 
-// Commands carry 1–10 cards, each with its asset name, rarity, name and gacha phrase.
+// Commands carry 1–10 cards, each with its asset name, rarity, name and gacha phrase, and the server of that text.
 const card = (assetbundleName, cardRarityType, prefix, gachaPhrase) => ({ assetbundleName, cardRarityType, prefix, gachaPhrase });
 assert.deepEqual(
-    playCommand([card("res001_no002", "rarity_2", "Leo/need", "-"), card("res006_no012", "rarity_birthday", "Happy Birthday！！", "プレゼント、持ちきれなくなっちゃった")]),
+    playCommand([card("res001_no002", "rarity_2", "Leo/need", "-"), card("res006_no012", "rarity_birthday", "Happy Birthday！！", "プレゼント、持ちきれなくなっちゃった")], "jp"),
     { type: "sekai-gacha:play", cards: [
         { id: "res001_no002", rarity: "rarity_2", prefix: "Leo/need", phrase: "-" },
         { id: "res006_no012", rarity: "rarity_birthday", prefix: "Happy Birthday！！", phrase: "プレゼント、持ちきれなくなっちゃった" },
-    ] },
+    ], region: "jp" },
 );
 // Text the stage would refuse is left out instead of failing the pull.
 assert.deepEqual(
-    playCommand([card("res001_no004", "rarity_4", "x".repeat(65), "a\nb")]).cards,
+    playCommand([card("res001_no004", "rarity_4", "x".repeat(65), "a\nb")], "cn").cards,
     [{ id: "res001_no004", rarity: "rarity_4", prefix: undefined, phrase: undefined }],
 );
-assert.deepEqual(playCommand([card("res001_no004", "rarity_4")]).cards, [{ id: "res001_no004", rarity: "rarity_4", prefix: undefined, phrase: undefined }]);
-assert.throws(() => playCommand([]), /sekai_gacha_invalid_cards/);
+assert.equal(playCommand([card("res001_no004", "rarity_4", "夜明け前の語らい", "们")], "cn").region, "cn");
+assert.deepEqual(playCommand([card("res001_no004", "rarity_4")], "jp").cards, [{ id: "res001_no004", rarity: "rarity_4", prefix: undefined, phrase: undefined }]);
+assert.throws(() => playCommand([], "jp"), /sekai_gacha_invalid_cards/);
 assert.throws(() => playCommand(Array(11).fill(card("res001_no004", "rarity_4"))), /sekai_gacha_invalid_cards/);
 assert.throws(() => playCommand([card("../evil", "rarity_4")]), /sekai_gacha_invalid_cards/);
 // ★1 cards are not drawn from gachas and have no presentation.
