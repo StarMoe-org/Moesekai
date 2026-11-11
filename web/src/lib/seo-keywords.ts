@@ -1008,6 +1008,30 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["グッズガチャ", "グッズ", "シミュレーター"],
     },
   ),
+  gacha_simulator: definePage(
+    "/gacha-simulator",
+    {
+      "zh-CN": "扭蛋模拟器",
+      "en-US": "Gacha Simulator",
+      "ja-JP": "ガチャシミュレーター",
+      "ko-KR": "가챠 시뮬레이터",
+      "zh-TW": "轉蛋模擬器",
+    },
+    {
+      "zh-CN": "在线模拟 Project SEKAI 扭蛋抽卡与 3D 演出，支持快速切换全服历史卡池，自定义星级与单卡 UP 概率、十连保底规则、UP 卡牌与出现的卡牌池。",
+      "en-US": "Simulate Project SEKAI gacha pulls with 3D stage presentation, browse historical banners across servers, and customize rarity rates, pickup cards, 10-pull guarantees, and card pool rules.",
+      "ja-JP": "Project SEKAI のガチャ抽選と 3D 演出をブラウザで再現。過去のガチャ切り替えに加え、レアリティ確率・ピックアップ対象・10連確定枠・出現カードプールの自由なカスタマイズに対応。",
+      "ko-KR": "Project SEKAI 가챠 추첨과 3D 연출을 시뮬레이션하고, 역대 가챠 선택 및 확률·픽업 대상·10연 확정 규칙·등장 카드 풀 커스텀을 지원합니다.",
+      "zh-TW": "線上模擬 Project SEKAI 轉蛋抽卡與 3D 演出，支援切換歷代卡池，自訂星級與單卡 UP 機率、十連保底規則、UP 卡牌與出現的卡牌池。",
+    },
+    {
+      "zh-CN": ["扭蛋模拟器", "抽卡模拟", "自定义卡池", "DIY抽卡", "3D抽卡演出"],
+      "en-US": ["gacha simulator", "pull simulator", "custom gacha", "DIY gacha", "3D gacha"],
+      "ja-JP": ["ガチャシミュレーター", "ガチャ演出", "カスタムガチャ"],
+      "ko-KR": ["가챠 시뮬레이터", "뽑기 시뮬레이션", "커스텀 가챠"],
+      "zh-TW": ["轉蛋模擬器", "抽卡模擬", "自訂卡池"],
+    },
+  ),
   story: definePage(
     "/story",
     { "zh-CN": "剧情浏览", "en-US": "Story Browser", "ja-JP": "ストーリーブラウザ" },

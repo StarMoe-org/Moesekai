@@ -77,6 +77,7 @@ const allNavigationGroups: NavGroupData[] = [
         items: [
             { href: "/asset-viewer" },
             { href: "/asset-versions" },
+            { href: "/gacha-simulator" },
             { href: "/deck-recommend" },
             { href: "/deck-comparator" },
             { href: "/score-control" },
@@ -208,6 +209,7 @@ const allSearchableNavItems: SearchableNavItem[] = [
 
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
     { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
+    { href: "/gacha-simulator", group: "tools", keywords: ["gacha simulator", "gacha", "pull", "simulator", "diy gacha", "\u62bd\u5361", "\u626d\u86cb\u6a21\u62df"] },
     { href: "/deck-recommend", group: "tools", keywords: ["deck recommend", "deck", "team"] },
     { href: "/deck-comparator", group: "tools", keywords: ["deck compare", "comparator"] },
     { href: "/score-control", group: "tools", keywords: ["score control", "score", "calculator"] },
@@ -304,6 +306,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/story/self": "layout.nav.items.selfIntro",
     "/story/special": "layout.nav.items.specialStory",
     "/guides": "layout.nav.items.guides",
+    "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/deck-recommend": "layout.nav.items.deckRecommend",
     "/deck-comparator": "layout.nav.items.deckComparator",
     "/score-control": "layout.nav.items.scoreControl",
@@ -355,6 +358,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/story/special": "layout.groupPages.storySpecial",
     "/prediction": "layout.groupPages.prediction",
     "/guides": "layout.groupPages.guides",
+    "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/deck-recommend": "layout.groupPages.deckRecommend",
     "/deck-comparator": "layout.groupPages.deckComparator",
     "/score-control": "layout.groupPages.scoreControl",

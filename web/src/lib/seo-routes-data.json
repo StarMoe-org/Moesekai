@@ -35,6 +35,7 @@
   { "path": "/story/self/", "pageKey": "story_self", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/story/special/", "pageKey": "story_special", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/guides/", "pageKey": "guides", "priority": 0.7, "changefreq": "weekly", "indexable": true },
+  { "path": "/gacha-simulator/", "pageKey": "gacha_simulator", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/deck-recommend/", "pageKey": "deck_recommend", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/deck-comparator/", "pageKey": "deck_comparator", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/score-control/", "pageKey": "score_control", "priority": 0.6, "changefreq": "monthly", "indexable": true },

@@ -52,6 +52,8 @@ const COMMENT_ONLY_ALLOWLIST = new Map([
     ["src/components/deck-recommend/CardPickerModal.tsx", "Comments describing the deck card picker internals"],
     ["src/lib/deck-engine/wasm-version.ts", "Generated file header comment"],
     ["src/lib/score-control/score-control-calculator.ts", "Comments describing the score control rounding contract"],
+    ["src/lib/assets.ts", "Comments describing public CDN attribution and asset line endpoints"],
+    ["src/lib/fetch.ts", "Comments describing public masterdata CDN attribution"],
 ]);
 
 function isCommentOnlyLine(line) {
