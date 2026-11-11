@@ -1,0 +1,110 @@
+/**
+ * Messages between the gacha page and the SekaiGacha stage iframe (protocol v1, documented in
+ * the build's WebGL template). The page draws the cards; the stage only plays them.
+ *
+ * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity), `skip`, `finish`, `mute`.
+ * The rarity picks the intro hint and the reveal (★2, ★3, ★4, birthday) as in the game; the card's
+ * name (`prefix`) and gacha phrase (`gachaPhrase`) are shown on the reveal, in the font of the server
+ * the text comes from (`region`: TW, CN and KR use a Chinese/Korean font, as the TW client does).
+ * Stage → page: engine download progress, phase changes, and rejected commands.
+ */
+
+const PREFIX = "sekai-gacha:";
+
+/** At most ten cards are revealed per presentation, as in the game. */
+export const SEKAI_GACHA_MAX_CARDS = 10;
+
+/** `tap`: the intro waits on its loop, showing the game's TAP TO START, until the reader taps the stage. */
+export type SekaiGachaPhase = "booting" | "ready" | "loading" | "tap" | "intro" | "reveal" | "complete" | "error";
+
+const PHASES: readonly SekaiGachaPhase[] = ["booting", "ready", "loading", "tap", "intro", "reveal", "complete", "error"];
+
+export type SekaiGachaMessage =
+    | { kind: "loader"; progress: number }
+    | { kind: "state"; phase: SekaiGachaPhase; revealed: number; total: number; card?: string; error?: string }
+    | { kind: "rejected"; code: string; message: string };
+
+/** The rarities the stage has presentations for, in masterdata's `cardRarityType` spelling. */
+export type SekaiGachaRarity = "rarity_2" | "rarity_3" | "rarity_4" | "rarity_birthday";
+
+export interface SekaiGachaCard {
+    id: string;
+    rarity: SekaiGachaRarity;
+    /** The card's name; the unit name on ★2 cards. */
+    prefix?: string;
+    /** The gacha phrase; the stage shows it from ★3 up, as the game does. */
+    phrase?: string;
+}
+
+interface PlayableCard {
+    assetbundleName: string;
+    cardRarityType: string;
+    prefix?: string;
+    gachaPhrase?: string;
+}
+
+export type SekaiGachaCommand =
+    | { type: "sekai-gacha:play"; cards: SekaiGachaCard[]; region: SekaiGachaRegion }
+    /** The game's skip: passes the intro and skippable cards, stopping on each 4★, birthday or new 3★ card. */
+    | { type: "sekai-gacha:skip" }
+    /** Ends the presentation at once. */
+    | { type: "sekai-gacha:finish" }
+    | { type: "sekai-gacha:mute"; muted: boolean };
+
+const CARD_NAME = /^res\d+_no\d+$/;
+const RARITIES: readonly string[] = ["rarity_2", "rarity_3", "rarity_4", "rarity_birthday"];
+/** What the stage accepts as card text: one line of at most 64 characters. */
+const MAX_TEXT = 64;
+const CONTROL = /[\u0000-\u001f\u007f-\u009f]/;
+
+/** Text the stage would refuse is left out, so one card's text never stops the whole pull. */
+const cardText = (value: unknown) => typeof value === "string" && value.length <= MAX_TEXT && !CONTROL.test(value) ? value : undefined;
+
+/** Whether the stage can play this card: its asset name and a rarity it has a presentation for. */
+export function isSekaiGachaCard(card: { assetbundleName: string; cardRarityType: string }): boolean {
+    return CARD_NAME.test(card.assetbundleName) && RARITIES.includes(card.cardRarityType);
+}
+
+/** The server the cards' master data (and so their name and phrase) comes from. */
+export type SekaiGachaRegion = "jp" | "en" | "tw" | "cn" | "kr";
+
+export function playCommand(cards: PlayableCard[], region: SekaiGachaRegion): SekaiGachaCommand {
+    if (cards.length < 1 || cards.length > SEKAI_GACHA_MAX_CARDS || !cards.every(isSekaiGachaCard)) {
+        throw new Error("sekai_gacha_invalid_cards");
+    }
+    return {
+        type: `${PREFIX}play`,
+        cards: cards.map(card => ({
+            id: card.assetbundleName,
+            rarity: card.cardRarityType as SekaiGachaRarity,
+            prefix: cardText(card.prefix),
+            phrase: cardText(card.gachaPhrase),
+        })),
+        region,
+    };
+}
+
+const count = (value: unknown) => typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= SEKAI_GACHA_MAX_CARDS ? value : 0;
+const text = (value: unknown) => typeof value === "string" ? value.slice(0, 500) : undefined;
+
+/** Reads one message from the stage; anything that is not a v1 stage message gives null. */
+export function readStageMessage(data: unknown): SekaiGachaMessage | null {
+    if (!data || typeof data !== "object") return null;
+    const message = data as Record<string, unknown>;
+    if (message.v !== 1 || typeof message.type !== "string" || !message.type.startsWith(PREFIX)) return null;
+    switch (message.type.slice(PREFIX.length)) {
+        case "loader": {
+            const progress = typeof message.progress === "number" && Number.isFinite(message.progress) ? message.progress : 0;
+            return { kind: "loader", progress: Math.min(1, Math.max(0, progress)) };
+        }
+        case "state": {
+            const phase = PHASES.find(item => item === message.phase);
+            if (!phase) return null;
+            return { kind: "state", phase, revealed: count(message.revealed), total: count(message.total), card: text(message.card), error: text(message.error) };
+        }
+        case "error":
+            return { kind: "rejected", code: text(message.code) ?? "", message: text(message.message) ?? "" };
+        default:
+            return null;
+    }
+}

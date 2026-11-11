@@ -22,6 +22,7 @@
     "test:mysekai-character-filter": "node --experimental-strip-types scripts/test-mysekai-character-filter.mjs",
     "test:mysekai-runtime-selection": "node --experimental-strip-types scripts/test-mysekai-runtime-selection.mjs",
     "test:costume3d": "node --experimental-strip-types scripts/test-costume3d.mjs",
+    "test:sekai-gacha": "node --experimental-strip-types scripts/test-sekai-gacha.mjs",
     "version:show": "node scripts/resolve-version.mjs",
     "test:version": "node --test tests/version.test.mjs",
     "test:sponsors": "node --experimental-strip-types --test tests/sponsors.test.mjs",
