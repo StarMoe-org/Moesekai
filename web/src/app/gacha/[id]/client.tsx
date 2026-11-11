@@ -33,6 +33,7 @@ import {
     mdPlayArrowFill,
     mdStarFill,
     mdTranslate,
+    mdTune,
     mdViewInAr,
     mdWandStars,
     mdZoomIn,
@@ -1163,10 +1164,32 @@ export default function GachaDetailClient() {
                             cards={poolCards}
                             gachaDetails={gacha.gachaDetails}
                             pickupCardIds={pickupCardIds}
+                            rarityRates={Object.fromEntries(
+                                (gacha.gachaCardRarityRates || []).reduce<Array<[string, number]>>((acc, r) => {
+                                    const existing = acc.find(item => item[0] === r.cardRarityType);
+                                    if (existing) existing[1] += r.rate;
+                                    else acc.push([r.cardRarityType, r.rate]);
+                                    return acc;
+                                }, [])
+                            )}
                         />
 
                         {/* Consolidated Simulator & Statistics (Sidebar Mode) */}
-                        <SectionCard icon={mdCasino} title={t("page.gacha.simulatorTitle")} bodyClassName="flex flex-col gap-6">
+                        <SectionCard
+                            icon={mdCasino}
+                            title={t("page.gacha.simulatorTitle")}
+                            bodyClassName="flex flex-col gap-6"
+                            actions={
+                                <Button
+                                    href={`/gacha-simulator?gachaId=${gacha.id}`}
+                                    variant="tonal"
+                                    size="xs"
+                                    icon={mdTune}
+                                >
+                                    {t("page.gacha.openInSimulator")}
+                                </Button>
+                            }
+                        >
                                 {/* Controls */}
                                 <div className="flex flex-col gap-4 items-center">
                                     <div className="flex w-full items-center gap-3 rounded-md3-lg bg-surface-container px-4 py-3">
