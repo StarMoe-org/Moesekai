@@ -6,7 +6,8 @@ import {
     md360, mdAccessibilityNew, mdFace, mdFitScreen, mdPauseFill, mdPlayArrowFill, mdReplay, mdViewInAr,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { Costume3dStage, Costume3dStageAbortedError, type StageLoad } from "@/lib/costume3d/stage";
+import { Costume3dStage, Costume3dStageAbortedError } from "@/lib/costume3d/stage";
+import type { StageLoad } from "@/types/costume3d";
 
 /** Whether the browser hands out a WebGL context, asked the way three.js asks (the probe is released at once). */
 function canCreateWebGLContext(): boolean {

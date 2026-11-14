@@ -1,109 +1,61 @@
 /**
- * Reading a server's costume output: its version (checked before anything else is read), its
- * roles, a role's catalog and a costume's looks. Documents are kept for the page's lifetime;
- * a failed request is forgotten so that a retry asks again.
+ * Catalogues of a published output: the roles it lists, a role's document, and the cross-role
+ * wardrobe of every role's document. The documents stay in the publication's cache; the wardrobe
+ * is built one role at a time, so that no more of them need be held at once than the cache keeps.
  */
-import type { Costume3dCatalog, Costume3dCostume, Costume3dRoleList, Costume3dVersion } from "@/types/costume3d";
-import { COSTUME3D_FORMATS, costume3dSource } from "./config";
+import type { Costume3dCatalog } from "@/types/costume3d";
+import { Costume3dDocumentError, openOutput, type Costume3dPublication } from "./publication";
 import { PoolBuilder, type Costume3dPool } from "./look";
 
-/** Why an output cannot be read: not published for the server, written in formats this reader does not know, or not reachable. */
-export class Costume3dUnavailableError extends Error {
-    constructor(readonly reason: "region" | "format" | "network", detail?: string) {
-        super(`costume3d_unavailable:${reason}${detail ? `:${detail}` : ""}`);
-    }
+const ROLE_PREFIX = "costume/role/";
+
+/** The roles the output lists: a character in a unit, by the name of its `costume-role` asset. */
+export async function openOutputRoles(region: string): Promise<{ publication: Costume3dPublication; roles: Costume3dCatalog["role"][] }> {
+    const publication = await openOutput(region);
+    const roles = (await publication.listing("costume-role")).map(parseRoleName).filter((role): role is Costume3dCatalog["role"] => role !== null);
+    return { publication, roles };
 }
 
-const documents = new Map<string, Promise<unknown>>();
-
-function fetchJson<T>(url: string): Promise<T> {
-    let pending = documents.get(url) as Promise<T> | undefined;
-    if (!pending) {
-        pending = fetch(url).then(response => {
-            if (!response.ok) throw new Error(`${response.status} ${url}`);
-            return response.json() as Promise<T>;
-        });
-        pending.catch(() => documents.delete(url));
-        documents.set(url, pending);
-    }
-    return pending;
+/** `costume/role/<characterId>-<unit>` as its character and unit. */
+function parseRoleName(name: string): { characterId: number; unit: string } | null {
+    const match = name.startsWith(ROLE_PREFIX) ? /^(\d+)-([a-z_]+)$/.exec(name.slice(ROLE_PREFIX.length)) : null;
+    return match ? { characterId: Number(match[1]), unit: match[2] } : null;
 }
 
-export interface Costume3dOutput {
-    region: string;
-    /** The output's directory, ending in `/`. */
-    source: string;
-    /** `library/` of the output: parts are `<library><bundle>/`. */
-    library: string;
-    version: Costume3dVersion;
-    roles: Costume3dRoleList["roles"];
-}
+const roleName = (role: { characterId: number; unit: string }): string => `${ROLE_PREFIX}${role.characterId}-${role.unit}`;
 
-/** Opens `region`'s output, after checking that it is written in the formats this reader knows. */
-export async function openOutput(region: string): Promise<Costume3dOutput> {
-    const source = costume3dSource(region);
-    if (!source) throw new Costume3dUnavailableError("region");
-    let version: Costume3dVersion;
-    let roles: Costume3dRoleList;
-    try {
-        [version, roles] = await Promise.all([
-            fetchJson<Costume3dVersion>(`${source}index/version.json`),
-            fetchJson<Costume3dRoleList>(`${source}index/roles.json`),
-        ]);
-    } catch (error) {
-        throw new Costume3dUnavailableError("network", error instanceof Error ? error.message : String(error));
-    }
-    const expected = Object.entries(COSTUME3D_FORMATS);
-    const formats = version.formats ?? {};
-    const mismatch = Object.keys(formats).length !== expected.length
-        || expected.some(([name, number]) => formats[name] !== number);
-    if (version.format !== "costume3d-version" || mismatch) {
-        throw new Costume3dUnavailableError("format", JSON.stringify(formats));
-    }
-    return { region, source, library: `${source}library/`, version, roles: roles.roles };
-}
-
-export function loadCatalog(output: Costume3dOutput, role: { characterId: number; unit: string }): Promise<Costume3dCatalog> {
-    const entry = output.roles.find(r => r.characterId === role.characterId && r.unit === role.unit);
-    if (!entry) return Promise.reject(new Error(`no role ${role.characterId}-${role.unit}`));
-    return fetchJson<Costume3dCatalog>(`${output.source}${entry.catalog}`);
-}
-
-export function loadCostume(output: Costume3dOutput, costumeNumber: number): Promise<Costume3dCostume> {
-    return fetchJson<Costume3dCostume>(`${output.source}index/costumes/${costumeNumber}.json`);
-}
-
-/** Loads a JSON file below `library/` (part records and motions), kept like the indexes. */
-export function loadLibraryJson<T>(library: string, path: string): Promise<T> {
-    return fetchJson<T>(`${library}${path}`);
+/** A role's document; one that is not published is read again on the next attempt. */
+export function loadCatalog(output: Costume3dPublication, role: { characterId: number; unit: string }): Promise<Costume3dCatalog> {
+    return output.role(roleName(role));
 }
 
 /** Catalogs read at once while a pool is built. */
-const POOL_CONCURRENCY = 4;
+const POOL_CONCURRENCY = 8;
 const pools = new Map<string, Promise<Costume3dPool>>();
 
-/**
- * Every role's catalog of `output` reduced to a pool (unrestricted wardrobe). The catalogs are
- * read past the document cache and dropped once reduced; only the pool is kept.
- */
-export function loadPool(output: Costume3dOutput): Promise<Costume3dPool> {
-    let pending = pools.get(output.source);
+/** Every role's document reduced to a pool (unrestricted wardrobe). */
+export function loadPool(output: Costume3dPublication, roles: Costume3dCatalog["role"][]): Promise<Costume3dPool> {
+    let pending = pools.get(output.pointer);
     if (!pending) {
         pending = (async () => {
             const builder = new PoolBuilder();
-            const queue = [...output.roles];
+            const queue = [...roles];
             const worker = async () => {
                 for (let entry = queue.shift(); entry; entry = queue.shift()) {
-                    const response = await fetch(`${output.source}${entry.catalog}`);
-                    if (!response.ok) throw new Error(`${response.status} ${entry.catalog}`);
-                    builder.add(await response.json() as Costume3dCatalog);
+                    try {
+                        builder.add(await loadCatalog(output, entry));
+                    } catch (error) {
+                        // A document this reader cannot read ends the pool; one that was not published is left out.
+                        if (!(error instanceof Costume3dDocumentError && error.reason === "missing")) throw error;
+                    }
                 }
             };
             await Promise.all(Array.from({ length: POOL_CONCURRENCY }, worker));
             return builder.build();
         })();
-        pending.catch(() => pools.delete(output.source));
-        pools.set(output.source, pending);
+        pending.catch(() => pools.delete(output.pointer));
+        pools.set(output.pointer, pending);
     }
     return pending;
 }
+

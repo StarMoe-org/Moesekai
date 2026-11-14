@@ -5,11 +5,12 @@
  * - the body's skeleton leads: the face's bones are swapped for the body's bones of the same
  *   name, and the face's own nodes (hair bones, attach points) move under the body bone their
  *   parent names;
- * - another character's hair (unrestricted) is that character's face bundle without its face,
- *   attached like the face, whose own hair is taken off;
+ * - another character's hair (cross-role) is that character's face without its face, attached
+ *   like the face, whose own hair is taken off;
  * - the accessory hangs from its attach point (`Head/aNN`);
  * - the body's `OffsetValue` holds the shoe height, by which the game lifts the skeleton through
- *   `PositionOffset`.
+ *   `PositionOffset`;
+ * - a node the model marks inactive, or whose renderer it marks disabled, is not shown.
  *
  * The renderer is transparent: the page paints the background. Rendering stops while the stage
  * is off screen or the tab is hidden.
@@ -17,12 +18,11 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
-import type { Costume3dMotion, Costume3dPartRecord, Costume3dVariant } from "@/types/costume3d";
-import { loadLibraryJson } from "./data";
-import type { Costume3dLook } from "./look";
-import { addOutlines, dress, type ColorTextures } from "./materials";
+import type { Costume3dAssetDocument, Costume3dComponent, Costume3dPartModel, StageLoad } from "@/types/costume3d";
+import type { Costume3dPublication } from "./publication";
+import { addOutlines, dress, imageMembers, type ColorTextures } from "./materials";
 import { bindClip, clipOf, MotionPlayer, rigOf, type Clip, type ClipPair, type MotionPhase } from "./motion";
-import { Costume3dPhysics, pinned, resolverFor, type Costume3dComponent, type PhysicsSource } from "./physics";
+import { Costume3dPhysics, pinned, resolverFor, type PhysicsSource } from "./physics";
 
 const STAGE_RADIUS = 0.5;
 const STAGE_HEIGHT = 0.04;
@@ -30,6 +30,10 @@ const STAGE_HEIGHT = 0.04;
 const BODY_VIEW = { target: new THREE.Vector3(0, 0.5, 0), from: new THREE.Vector3(0.32, 0.36, 1).normalize(), distance: 3.1 };
 /** Textures kept for later looks; beyond this, those the current look does not use are released. */
 const TEXTURE_CACHE_LIMIT = 160;
+/** A 1×1 transparent PNG, standing in for the images a GLB names. */
+const BLANK_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+/** The clips of the costume screen, by their name in the role document. */
+const CLIPS = ["motion", "face", "motion_loop", "face_loop"] as const;
 
 function canvasTexture(draw: (g: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => void, width: number, height = width): THREE.CanvasTexture {
     const canvas = document.createElement("canvas");
@@ -108,7 +112,7 @@ function attachFace(body: THREE.Object3D, face: THREE.Object3D): number {
     return moves.length;
 }
 
-/** The nodes of a face bundle that are its hair (`Acc`: what the hairstyle wears); the rest is the face. */
+/** The nodes of a face that are its hair (`Acc`: what the hairstyle wears); the rest is the face. */
 const HAIR_NODES = new Set(["Hair", "Acc"]);
 
 /** Takes the meshes off `model` that `drop` names, before outlines are added. */
@@ -134,11 +138,12 @@ function disposeGroup(group: THREE.Object3D): void {
     });
 }
 
-export interface StageLoad {
-    library: string;
-    variant: Costume3dVariant;
-    look: Costume3dLook;
-    skin: { default: string; shadow1: string };
+/** Hides the nodes and renderers that the model marks inactive or disabled. */
+function applyState(root: THREE.Object3D): void {
+    root.traverse(object => {
+        const extras = object.userData as { active?: boolean; enabled?: boolean };
+        if (extras.active === false || extras.enabled === false) object.visible = false;
+    });
 }
 
 export interface StageLoadOptions {
@@ -158,6 +163,21 @@ export interface Costume3dStageOptions {
     still?: boolean;
 }
 
+/** The JSON chunk of a model file, as far as the stage reads it. */
+interface ModelJson {
+    images?: Array<{ uri?: string }>;
+}
+
+/** A `costume-model` asset of a look: its GLB, its component document and its images. */
+interface Part {
+    asset: Costume3dAssetDocument;
+    model: GLTF;
+    json: ModelJson;
+    components: Costume3dComponent[];
+    /** For each image of the GLB, the member that holds it. */
+    images: string[];
+}
+
 export class Costume3dStage {
     readonly canvas: HTMLCanvasElement;
     private readonly host: HTMLElement;
@@ -170,8 +190,6 @@ export class Costume3dStage {
     private readonly stageObjects: THREE.Object3D[] = [];
     private readonly player = new MotionPlayer();
     private readonly clock = new THREE.Clock();
-    private readonly gltfLoader = new GLTFLoader();
-    private readonly textureLoader = new THREE.TextureLoader();
     private readonly textures = new Map<string, Promise<THREE.Texture | null>>();
     private readonly clips = new Map<string, Promise<Clip | null>>();
     private readonly resizeObserver: ResizeObserver;
@@ -347,12 +365,13 @@ export class Costume3dStage {
         this.playing = false;
     }
 
-    private texture = (file: string, srgb: boolean, library: string): Promise<THREE.Texture | null> => {
-        const key = `${library}${file}${srgb ? "" : "#linear"}`;
+    /** A texture of the store, shared between looks, by the hash of its object. */
+    private texture(publication: Costume3dPublication, sha256: string, srgb: boolean): Promise<THREE.Texture | null> {
+        const key = `${sha256}${srgb ? "" : "#linear"}`;
         let pending = this.textures.get(key);
         if (!pending) {
-            pending = this.textureLoader.loadAsync(`${library}${file}`).then(texture => {
-                texture.flipY = false; // PNG rows top first; the glTF UVs are flipped already
+            pending = new THREE.TextureLoader().loadAsync(`${publication.store}${sha256.slice(0, 2)}/${sha256}.webp`).then(texture => {
+                texture.flipY = false; // WebP rows top first; the glTF UVs are flipped already
                 texture.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
                 texture.anisotropy = 4;
                 return texture;
@@ -364,7 +383,7 @@ export class Costume3dStage {
             this.textures.set(key, pending);
         }
         return pending;
-    };
+    }
 
     /** Releases cached textures beyond the limit, oldest first, except those `group` uses. */
     private async trimTextures(group: THREE.Object3D): Promise<void> {
@@ -387,55 +406,49 @@ export class Costume3dStage {
         }
     }
 
-    private part(library: string, bundle: string): Promise<Costume3dPartRecord> {
-        return loadLibraryJson<Costume3dPartRecord>(library, `${bundle}/_part.json`);
+    /** The GLB of a `costume-model` asset, whose images are the asset's `texture/<n>` members. */
+    private async part(publication: Costume3dPublication, name: string): Promise<Part> {
+        const asset = await publication.asset(name);
+        // The GLB's images are its own members, held by the texture cache and used by the toon
+        // materials; the loader gets a blank image for each of them.
+        const url = publication.member(asset, "model").url;
+        const manager = new THREE.LoadingManager();
+        manager.setURLModifier(requested => (requested === url ? url : BLANK_IMAGE));
+        const model = await new GLTFLoader(manager).loadAsync(url);
+        applyState(model.scene);
+        const json = model.parser.json as ModelJson;
+        return {
+            asset,
+            model,
+            json,
+            components: (await publication.components(asset)).components,
+            images: imageMembers(json.images ?? [], asset.members),
+        };
     }
 
-    private async colorTextures(library: string, bundle: string | null | undefined): Promise<ColorTextures | null> {
-        if (!bundle) return null;
-        const record = await this.part(library, bundle);
-        const textures: ColorTextures = {};
-        for (const texture of record.textures) {
-            const match = /_([CSH])$/i.exec(texture.name);
-            if (match) textures[`_${match[1].toUpperCase()}` as keyof ColorTextures] = texture.file;
-        }
-        return textures;
+    /** The colour-variation textures of a part: `_C` → `_MainTex`, `_S` → `_ShadowTex`, `_H` → `_ValueTex`, read once. */
+    private colors(publication: Costume3dPublication, colors: Costume3dPartModel["colors"]): ColorTextures | null {
+        if (!colors) return null;
+        const image = (name: string | undefined, srgb: boolean) => {
+            let pending: Promise<THREE.Texture | null> | null = null;
+            return (): Promise<THREE.Texture | null> => (pending ??= name
+                ? publication.asset(name).then(asset => publication.member(asset, "image").sha256).then(sha256 => this.texture(publication, sha256, srgb))
+                : Promise.resolve(null));
+        };
+        return { main: image(colors.color, true), shadow: image(colors.shadow, true), value: image(colors.value, false) };
     }
 
-    private async components(library: string, bundle: string | null | undefined): Promise<Costume3dComponent[]> {
-        if (!bundle) return [];
-        const record = await this.part(library, bundle);
-        if (!record.components) return [];
-        const file = await loadLibraryJson<{ components: Costume3dComponent[] }>(library, `${bundle}/${record.components}`);
-        return file.components ?? [];
-    }
-
-    private clip(library: string, bundle: string, record: Costume3dPartRecord, name: string): Promise<Clip | null> {
-        const key = `${library}${bundle}#${name}`;
-        let pending = this.clips.get(key);
+    /** The clips a role's motion assets hold, each read once. */
+    private clip(publication: Costume3dPublication, name: string): Promise<Clip | null> {
+        let pending = this.clips.get(name);
         if (!pending) {
-            const entry = record.motions.find(motion => motion.name === name);
-            pending = !entry
-                ? Promise.resolve(null)
-                : fetch(`${library}${bundle}/${entry.file}`)
-                    .then(response => {
-                        if (!response.ok) throw new Error(`${response.status} ${bundle}/${entry.file}`);
-                        return response.json() as Promise<Costume3dMotion>;
-                    })
-                    .then(clipOf);
-            pending.catch(() => this.clips.delete(key));
-            this.clips.set(key, pending);
+            pending = publication.asset(name)
+                .then(asset => publication.clip(asset))
+                .then(clipOf);
+            pending.catch(() => this.clips.delete(name));
+            this.clips.set(name, pending);
         }
         return pending;
-    }
-
-    private async motion(library: string, bundle: string | null): Promise<{ intro: Clip | null; introFace: Clip | null; loop: Clip | null; loopFace: Clip | null } | null> {
-        if (!bundle) return null;
-        const record = await this.part(library, bundle);
-        const [intro, introFace, loop, loopFace] = await Promise.all(
-            ["motion", "face", "motion_loop", "face_loop"].map(name => this.clip(library, bundle, record, name)),
-        );
-        return { intro, introFace, loop, loopFace };
     }
 
     /**
@@ -443,91 +456,85 @@ export class Costume3dStage {
      * one frame; an aborted load leaves the stage as it was. A look that differs only in
      * colour keeps the motion where it is.
      */
-    async show({ library, variant, look, skin }: StageLoad, { signal, onProgress }: StageLoadOptions = {}): Promise<void> {
-        const glb = (bundle: string | null | undefined): Promise<GLTF | null> => (bundle
-            ? this.gltfLoader.loadAsync(`${library}${bundle}/model.glb`)
-            : Promise.resolve(null));
+    async show({ publication, body, face, accessory, hair, motions, skin }: StageLoad, { signal, onProgress }: StageLoadOptions = {}): Promise<void> {
+        const part = (name: string | null | undefined) => (name ? this.part(publication, name) : Promise.resolve(null));
         const tasks: Array<Promise<unknown>> = [
-            glb(variant.bodyBundle), glb(look.face), glb(look.accessory?.bundle),
-            this.colorTextures(library, variant.bodyColor), this.colorTextures(library, look.accessory?.color),
-            this.motion(library, variant.motion),
-            this.components(library, variant.bodyBundle), this.components(library, look.face),
-            glb(look.hairFrom), this.components(library, look.hairFrom),
+            part(body.asset), part(face), part(accessory?.model.asset), part(hair),
+            ...CLIPS.map(name => (motions[name] ? this.clip(publication, motions[name]) : Promise.resolve(null))),
         ];
         let done = 0;
         onProgress?.(0, tasks.length);
         for (const task of tasks) task.then(() => onProgress?.(++done, tasks.length), () => {});
-        const [body, face, accessory, bodyColors, accessoryColors, motion, bodyComponents, faceComponents, hair, hairComponents] = await Promise.all(tasks) as [
-            GLTF | null, GLTF | null, GLTF | null, ColorTextures | null, ColorTextures | null, Awaited<ReturnType<Costume3dStage["motion"]>>,
-            Costume3dComponent[], Costume3dComponent[], GLTF | null, Costume3dComponent[],
+        const [bodyPart, facePart, accessoryPart, hairPart, motion, motionFace, motionLoop, motionLoopFace] = await Promise.all(tasks) as [
+            Part, Part | null, Part | null, Part | null, Clip | null, Clip | null, Clip | null, Clip | null,
         ];
-        const texture = (file: string, srgb: boolean) => this.texture(file, srgb, library);
+        const texture = (sha256: string, srgb: boolean) => this.texture(publication, sha256, srgb);
+        const imagesOf = (source: Part) => ({ texture, images: source.images });
         await Promise.all([
-            body && dress(body.scene, { kind: "body", skin, colors: bodyColors, texture }),
-            face && dress(face.scene, { kind: "face", skin, colors: null, texture }),
-            accessory && dress(accessory.scene, { kind: "accessory", skin, colors: accessoryColors, texture }),
-            hair && dress(hair.scene, { kind: "face", skin, colors: null, texture }),
+            dress(bodyPart.model.scene, { kind: "body", skin, colors: this.colors(publication, body.colors), ...imagesOf(bodyPart) }),
+            facePart && dress(facePart.model.scene, { kind: "face", skin, colors: null, ...imagesOf(facePart) }),
+            accessoryPart && dress(accessoryPart.model.scene, { kind: "accessory", skin, colors: this.colors(publication, accessory?.model.colors), ...imagesOf(accessoryPart) }),
+            hairPart && dress(hairPart.model.scene, { kind: "face", skin, colors: null, ...imagesOf(hairPart) }),
         ]);
-        const group = new THREE.Group();
+        const loaded = [bodyPart, facePart, accessoryPart, hairPart];
         if (signal?.aborted || this.disposed) {
-            for (const model of [body, face, accessory, hair]) if (model) disposeGroup(model.scene);
+            for (const source of loaded) if (source) disposeGroup(source.model.scene);
             throw new Costume3dStageAbortedError();
         }
 
+        const group = new THREE.Group();
         group.position.y = STAGE_HEIGHT;
         const faceMeshes: THREE.Mesh[] = [];
         // The components name nodes by path below each prefab's root; the face's are found before
         // attachFace moves them, and the bones it shares with the body are the body's.
-        const bodyRoot = body ? body.scene.getObjectByName("body") ?? body.scene : null;
+        const bodyRoot = bodyPart.model.scene.getObjectByName("body") ?? bodyPart.model.scene;
         const physicsSources: PhysicsSource[] = [];
-        if (bodyRoot && bodyComponents.length) {
-            physicsSources.push({ components: bodyComponents, resolve: pinned(bodyComponents, resolverFor(bodyRoot)) });
+        if (bodyPart.components.length) {
+            physicsSources.push({ components: bodyPart.components, resolve: pinned(bodyPart.components, resolverFor(bodyRoot)) });
         }
-        if (bodyRoot) {
-            const bodyNodes = new Map<string, THREE.Object3D>();
-            bodyRoot.traverse(object => { if (object !== bodyRoot && !bodyNodes.has(object.name)) bodyNodes.set(object.name, object); });
-            for (const [model, components] of [[face, faceComponents], [hair, hairComponents]] as const) {
-                if (!model || !components.length) continue;
-                const root = model.scene.getObjectByName("face") ?? model.scene;
-                physicsSources.push({ components, resolve: pinned(components, resolverFor(root, bodyNodes)) });
-            }
+        const bodyNodes = new Map<string, THREE.Object3D>();
+        bodyRoot.traverse(object => { if (object !== bodyRoot && !bodyNodes.has(object.name)) bodyNodes.set(object.name, object); });
+        for (const source of [facePart, hairPart]) {
+            if (!source || !source.components.length) continue;
+            const root = source.model.scene.getObjectByName("face") ?? source.model.scene;
+            physicsSources.push({ components: source.components, resolve: pinned(source.components, resolverFor(root, bodyNodes)) });
         }
-        if (face && hair) {
-            removeMeshes(face.scene, name => HAIR_NODES.has(name));
-            removeMeshes(hair.scene, name => !HAIR_NODES.has(name));
+        if (facePart && hairPart) {
+            removeMeshes(facePart.model.scene, name => HAIR_NODES.has(name));
+            removeMeshes(hairPart.model.scene, name => !HAIR_NODES.has(name));
         }
-        if (body) group.add(body.scene);
-        if (face) {
-            face.scene.traverse(object => {
+        group.add(bodyPart.model.scene);
+        if (facePart) {
+            facePart.model.scene.traverse(object => {
                 const mesh = object as THREE.Mesh;
                 if (mesh.isMesh && mesh.morphTargetDictionary) faceMeshes.push(mesh);
             });
-            group.add(face.scene);
-            if (body) attachFace(body.scene, face.scene);
+            group.add(facePart.model.scene);
+            attachFace(bodyPart.model.scene, facePart.model.scene);
         }
-        if (hair) {
-            group.add(hair.scene);
-            if (body) attachFace(body.scene, hair.scene);
+        if (hairPart) {
+            group.add(hairPart.model.scene);
+            attachFace(bodyPart.model.scene, hairPart.model.scene);
         }
-        if (accessory) {
-            const attach = look.accessory?.attach;
+        if (accessoryPart) {
+            const attach = accessory?.attach;
             let anchor: THREE.Object3D | null = null;
             group.traverse(object => { if (!anchor && attach && object.name === attach) anchor = object; });
-            (anchor ?? group).add(accessory.scene);
+            (anchor ?? group).add(accessoryPart.model.scene);
         }
-        const offsetValue = body?.scene.getObjectByName("OffsetValue");
-        const positionOffset = body?.scene.getObjectByName("PositionOffset");
+        const offsetValue = bodyPart.model.scene.getObjectByName("OffsetValue");
+        const positionOffset = bodyPart.model.scene.getObjectByName("PositionOffset");
         if (offsetValue && positionOffset) positionOffset.position.copy(offsetValue.position);
         addOutlines(group);
         group.traverse(object => { if (object.userData.isOutline) object.visible = this.outlines; });
 
         // In the rest pose, before the motion: constraints keep the offsets they have here.
         const physics = physicsSources.length ? Costume3dPhysics.build(group, physicsSources) : null;
-        const rig = bodyRoot ? rigOf(bodyRoot) : null;
-        const pair = (bodyClip: Clip | null, faceClip: Clip | null): ClipPair | null => (rig && (bodyClip || faceClip)
-            ? { body: bodyClip && bindClip(bodyClip, rig), face: faceClip && bindClip(faceClip, rig) }
+        const rig = rigOf(bodyRoot);
+        const pair = (bodyClip: Clip | null, faceClip: Clip | null): ClipPair | null => (bodyClip || faceClip
+            ? { body: bodyClip && bindClip(bodyClip, rig, faceMeshes), face: faceClip && bindClip(faceClip, rig, faceMeshes) }
             : null);
-        const key = [variant.bodyBundle, look.face, look.hairFrom ?? "", look.accessory?.bundle ?? "", variant.motion ?? ""].join("|");
+        const key = [bodyPart.asset.name, face ?? "", hair ?? "", accessory?.model.asset ?? "", ...CLIPS.map(name => motions[name] ?? "")].join("|");
         const sameModels = this.current?.key === key;
         const { time, phase } = this.player;
 
@@ -537,7 +544,7 @@ export class Costume3dStage {
         }
         this.scene.add(group);
         this.current = { group, key, physics };
-        this.player.attach(rig, faceMeshes, pair(motion?.intro ?? null, motion?.introFace ?? null), pair(motion?.loop ?? null, motion?.loopFace ?? null));
+        this.player.attach(rig, faceMeshes, pair(motion, motionFace), pair(motionLoop, motionLoopFace));
         if (sameModels && phase !== "rest") {
             this.player.time = time;
             this.player.phase = phase;
