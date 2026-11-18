@@ -1,3 +1,4 @@
+import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -1066,6 +1067,7 @@ export const zhCNMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},
             r6: {"engineSource":"场景引擎开源仓库："},
@@ -5637,6 +5639,8 @@ export const zhCNMessages = {
             fingerprint: "指纹",
             copyLink: "复制 CDN 链接",
             copied: "已复制",
+            copyOptions: "更多复制方式",
+            copyVersionLink: "复制此版本的链接",
             download: "下载",
             previewText: "预览文本",
             playAudio: "播放音频",

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
-import { useTheme } from "@/contexts/ThemeContext";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
@@ -12,7 +11,7 @@ import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
 import LocalizedLink from "@/components/LocalizedLink";
-import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, PageContainer, PageHeader, SegmentedButton, Surface } from "@/components/md3";
+import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, Menu, PageContainer, PageHeader, SegmentedButton, Surface } from "@/components/md3";
 import {
     mdArticle,
     mdAudioFile,
@@ -27,70 +26,37 @@ import {
     mdGridView,
     mdHistory,
     mdImage,
-    mdInventory2,
+    mdHelp,
+    mdKeyboardArrowDown,
+    mdMenuBook,
     mdRefresh,
     mdViewList,
     mdVolumeUp,
 } from "@/components/md3/icons";
+import { AssetFaq, AssetGuide, fileKind, formatDocUrl } from "./guide";
+import {
+    ASSET_VIEWS,
+    clearAssetTreeCache,
+    isAssetView,
+    listDirectory,
+    loadAssetTree,
+    type AssetView,
+    type AssetTree,
+    type AssetTreeFile,
+    type AssetTreeFolder,
+} from "@/lib/assetTree";
 
-// Type definitions for Bundle & Asset Browser APIs
-export interface BundleBrowseItem {
-    type: "directory" | "bundle";
-    name: string;
-    path: string;
-    fingerprint?: string;
-    fileCount?: number;
-    totalSize?: number;
-    source?: string;
-    filesUrl?: string;
-}
-
-export interface BundleBrowseResponse {
-    server: string;
-    prefix: string;
-    limit: number;
-    nextCursor?: string;
-    snapshotRevision: number;
-    items: BundleBrowseItem[];
-}
-
-export interface AssetBrowserItem {
-    type: "file" | "asset";
-    name: string;
-    path: string;
-    url?: string;
-    source?: string;
-    size?: number;
-    fingerprint?: string;
-    sha256?: string;
-    version?: string;
-}
-
-export interface BundleMetaInfo {
-    path: string;
-    fingerprint?: string;
-    fileCount: number;
-    totalSize: number;
-    source: string;
-}
-
-export interface BundleFilesResponse {
-    server: string;
-    bundle: BundleMetaInfo;
-    limit: number;
-    nextCursor?: string;
-    snapshotRevision: number;
-    items: AssetBrowserItem[];
-}
+const PAGE_SIZE = 200;
 
 // Merged file format structure (e.g. png + webp combined)
 export interface AssetFormatInfo {
     ext: string;
     name: string;
+    /** The file in the version being browsed. */
     url: string;
-    size?: number;
-    fingerprint?: string;
-    sha256?: string;
+    /** The file in the current version, the link that is copied by default. */
+    latestUrl: string;
+    size: number;
 }
 
 export interface MergedAssetItem {
@@ -104,56 +70,6 @@ export interface MergedAssetItem {
     isText: boolean;
     formats: AssetFormatInfo[];
     totalSize: number;
-    source?: string;
-    version?: string;
-}
-
-export interface DirCacheEntry {
-    type: "dir";
-    bundleItems: BundleBrowseItem[];
-    nextCursor: string;
-    snapshotRevision: number;
-    scrollY: number;
-}
-
-export interface BundleCacheEntry {
-    type: "bundle";
-    rawAssetFiles: AssetBrowserItem[];
-    activeBundleMeta: BundleMetaInfo | null;
-    nextCursor: string;
-    snapshotRevision: number;
-    scrollY: number;
-}
-
-export type ViewCacheEntry = DirCacheEntry | BundleCacheEntry;
-
-const CACHE_STORAGE_KEY = "asset_viewer_view_cache_v1";
-
-function saveCacheToSessionStorage(cacheMap: Map<string, ViewCacheEntry>) {
-    if (typeof window === "undefined") return;
-    try {
-        const entries = Array.from(cacheMap.entries());
-        const sliced = entries.slice(-20);
-        sessionStorage.setItem(CACHE_STORAGE_KEY, JSON.stringify(sliced));
-    } catch {
-        // ignore quota errors
-    }
-}
-
-function loadCacheFromSessionStorage(): Map<string, ViewCacheEntry> {
-    if (typeof window === "undefined") return new Map();
-    try {
-        const saved = sessionStorage.getItem(CACHE_STORAGE_KEY);
-        if (saved) {
-            const entries = JSON.parse(saved);
-            if (Array.isArray(entries)) {
-                return new Map(entries);
-            }
-        }
-    } catch {
-        // ignore errors
-    }
-    return new Map();
 }
 
 function formatBytes(bytes?: number): string {
@@ -165,7 +81,7 @@ function formatBytes(bytes?: number): string {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-function groupBundleFiles(files: AssetBrowserItem[]): MergedAssetItem[] {
+function groupFiles(files: AssetTreeFile[]): MergedAssetItem[] {
     const map = new Map<string, MergedAssetItem>();
 
     for (const file of files) {
@@ -182,40 +98,34 @@ function groupBundleFiles(files: AssetBrowserItem[]): MergedAssetItem[] {
         const formatEntry: AssetFormatInfo = {
             ext,
             name: file.name,
-            url: file.url || "",
+            url: file.url,
+            latestUrl: file.latestUrl,
             size: file.size,
-            fingerprint: file.fingerprint,
-            sha256: file.sha256,
         };
 
-        if (map.has(key)) {
-            const existing = map.get(key)!;
+        const existing = map.get(key);
+        if (existing) {
             if (!existing.formats.some(f => f.ext === ext)) {
                 existing.formats.push(formatEntry);
             }
-            existing.totalSize += file.size || 0;
-            if (ext === "webp" && file.url) {
+            existing.totalSize += file.size;
+            if (ext === "webp") {
                 existing.primaryUrl = file.url;
                 existing.primaryExt = "webp";
             }
         } else {
-            const isImg = ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(ext);
-            const isAud = ["mp3", "wav", "ogg", "m4a", "flac"].includes(ext);
-            const isTxt = ["json", "txt", "csv", "xml", "yaml", "yml"].includes(ext);
-
+            const isText = file.mediaType.startsWith("text/") || file.mediaType === "application/json";
             map.set(key, {
                 id: key,
                 baseName,
-                name: (ext === "png" || ext === "webp") ? baseName : file.name,
-                primaryUrl: file.url || "",
+                name: file.name,
+                primaryUrl: file.url,
                 primaryExt: ext,
-                isImage: isImg,
-                isAudio: isAud,
-                isText: isTxt,
+                isImage: file.mediaType.startsWith("image/"),
+                isAudio: file.mediaType.startsWith("audio/"),
+                isText,
                 formats: [formatEntry],
-                totalSize: file.size || 0,
-                source: file.source,
-                version: file.version,
+                totalSize: file.size,
             });
         }
     }
@@ -226,11 +136,7 @@ function groupBundleFiles(files: AssetBrowserItem[]): MergedAssetItem[] {
             if (b.ext === "webp") return 1;
             return a.ext.localeCompare(b.ext);
         });
-        if (item.formats.length > 1) {
-            item.name = item.baseName;
-        } else {
-            item.name = item.formats[0].name;
-        }
+        item.name = item.formats.length > 1 ? item.baseName : item.formats[0].name;
     }
 
     return Array.from(map.values());
@@ -250,17 +156,36 @@ function getFileIcon(name: string) {
     return <Icon path={mdDraft} size={32} className="text-on-surface-variant" />;
 }
 
-function ArchiveBundleIcon() {
-    return <Icon path={mdInventory2} size={32} className="text-secondary" />;
+/** A row of the file details naming a document format or an asset form, linked to its specification. */
+function SpecRow({ label, name, locale, title }: { label: string; name: string; locale: string; title: string }) {
+    return (
+        <div className="flex justify-between gap-4">
+            <span className="shrink-0 text-on-surface-variant">{label}</span>
+            <ExternalLink
+                href={formatDocUrl(name, locale)}
+                className="text-right font-mono type-label-l text-primary hover:underline"
+                title={title}
+            >
+                {name}
+            </ExternalLink>
+        </div>
+    );
 }
 
 function FolderIcon() {
     return <Icon path={mdFolderFill} size={32} className="text-tertiary" />;
 }
 
+function matchesQuery(name: string, query: string): boolean {
+    return !query || name.toLowerCase().includes(query);
+}
+
+function compareNames(a: string, b: string, sortOrder: "asc" | "desc"): number {
+    return sortOrder === "asc" ? a.localeCompare(b) : b.localeCompare(a);
+}
+
 function AssetViewerContent() {
-    const { assetSource } = useTheme();
-    const { t, formatNumber } = useI18n();
+    const { t, formatNumber, locale } = useI18n();
 
     // Query states
     const [server, setServer] = useState<string>(() => {
@@ -278,27 +203,30 @@ function AssetViewerContent() {
         return "jp";
     });
 
+    // The published view being browsed
+    const [view, setView] = useState<AssetView>(() => {
+        if (typeof window !== "undefined") {
+            const queryView = new URLSearchParams(window.location.search).get("view");
+            if (isAssetView(queryView)) return queryView;
+        }
+        return "storage";
+    });
+
+    // Directory path inside the tree of the view, segments joined by "/" ("" is the root)
     const [prefix, setPrefix] = useState<string>(() => {
         if (typeof window !== "undefined") {
             const params = new URLSearchParams(window.location.search);
-            return params.get("prefix") || "";
-        }
-        return "";
-    });
-
-    const [bundlePath, setBundlePath] = useState<string>(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            return params.get("bundle") || "";
+            return params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
         }
         return "";
     });
 
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterType, setFilterType] = useState<"all" | "directories" | "bundles">("all");
-    const [sortBy, setSortBy] = useState<"name" | "size" | "fileCount">("name");
+    const [filterType, setFilterType] = useState<"all" | "directories" | "files">("all");
+    const [sortBy, setSortBy] = useState<"name" | "size">("name");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
     // Load view mode preference from localStorage on mount
     useEffect(() => {
@@ -317,402 +245,165 @@ function AssetViewerContent() {
         }
     };
 
-    // TOS modal visibility
+    // TOS and guide modal visibility
     const [showTos, setShowTos] = useState(false);
+    const [showGuide, setShowGuide] = useState(false);
+    const [showFaq, setShowFaq] = useState(false);
 
-    // API response states
-    const [bundleItems, setBundleItems] = useState<BundleBrowseItem[]>([]);
-    const [rawAssetFiles, setRawAssetFiles] = useState<AssetBrowserItem[]>([]);
-    const [activeBundleMeta, setActiveBundleMeta] = useState<BundleMetaInfo | null>(null);
-
-    const [nextCursor, setNextCursor] = useState<string>("");
-    const [, setSnapshotRevision] = useState<number>(0);
+    // Storage tree states
+    const [tree, setTree] = useState<AssetTree | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [reloadToken, setReloadToken] = useState(0);
 
     // Selected file details & modal state
     const [selectedFile, setSelectedFile] = useState<MergedAssetItem | null>(null);
     const [activeFormatIndex, setActiveFormatIndex] = useState<number>(0);
 
     const [previewText, setPreviewText] = useState<string | null>(null);
+    // The `format` of a previewed JSON document and, for an asset document, the `form` of the
+    // asset: each names its specification
+    const [previewFormat, setPreviewFormat] = useState<{ format: string; form?: string } | null>(null);
     const [isPreviewTextLoading, setIsPreviewTextLoading] = useState(false);
     const [previewTextError, setPreviewTextError] = useState<string | null>(null);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
-    // View cache and scroll restore state
-    const viewCacheRef = useRef<Map<string, ViewCacheEntry>>(new Map());
-    const activeViewKeyRef = useRef<string>("");
-    const lastScrollYRef = useRef<number>(0);
+    // Scroll position per region and directory, restored when returning to it
+    const scrollByViewRef = useRef<Map<string, number>>(new Map());
+    const viewKey = `${server}:${view}:${prefix}`;
 
-    // Initialize cache from sessionStorage on mount
+    // Fetch the tree of the selected region and view (cached per region and view)
     useEffect(() => {
-        viewCacheRef.current = loadCacheFromSessionStorage();
-    }, []);
-
-    // Track scroll position continuously
-    useEffect(() => {
-        if (typeof window === "undefined") return;
-        const handleScroll = () => {
-            lastScrollYRef.current = window.scrollY;
+        let active = true;
+        setIsLoading(true);
+        setError(null);
+        loadAssetTree(server, view)
+            .then(loaded => {
+                if (active) setTree(loaded);
+            })
+            .catch(err => {
+                console.error("Failed to load directory tree:", err);
+                if (active) setError(err instanceof Error ? err.message : "Unknown error");
+            })
+            .finally(() => {
+                if (active) setIsLoading(false);
+            });
+        return () => {
+            active = false;
         };
-        window.addEventListener("scroll", handleScroll, { passive: true });
-        return () => window.removeEventListener("scroll", handleScroll);
-    }, []);
+    }, [server, view, reloadToken]);
 
-    const getViewKey = useCallback((s: string, p: string, b: string) => {
-        return b ? `bundle:${s}:${b}` : `dir:${s}:${p}`;
-    }, []);
+    // Restore the scroll position of the directory being shown
+    useEffect(() => {
+        window.scrollTo({ top: scrollByViewRef.current.get(viewKey) ?? 0, behavior: "instant" });
+    }, [viewKey]);
 
-    const saveCurrentViewScroll = useCallback(() => {
-        const key = activeViewKeyRef.current;
-        if (!key) return;
-        const cached = viewCacheRef.current.get(key);
-        if (cached) {
-            cached.scrollY = lastScrollYRef.current;
-            saveCacheToSessionStorage(viewCacheRef.current);
-        }
-    }, []);
+    // Start each listing at its first page
+    useEffect(() => {
+        setVisibleCount(PAGE_SIZE);
+    }, [server, view, prefix, searchQuery, filterType, sortBy, sortOrder]);
 
     // Sync state to URL query parameters
     useEffect(() => {
         const url = new URL(window.location.href);
         url.searchParams.set("server", server);
+        url.searchParams.set("view", view);
         if (prefix) {
             url.searchParams.set("prefix", prefix);
         } else {
             url.searchParams.delete("prefix");
         }
-        if (bundlePath) {
-            url.searchParams.set("bundle", bundlePath);
-        } else {
-            url.searchParams.delete("bundle");
-        }
         window.history.replaceState({}, "", url.toString());
-    }, [server, prefix, bundlePath]);
+    }, [server, view, prefix]);
 
     // Handle browser popstate navigation
     useEffect(() => {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
             const serverParam = params.get("server");
-            const prefixParam = params.get("prefix") || "";
-            const bundleParam = params.get("bundle") || "";
             if (serverParam) {
                 setServer(serverParam);
             }
-            setPrefix(prefixParam);
-            setBundlePath(bundleParam);
+            const viewParam = params.get("view");
+            setView(isAssetView(viewParam) ? viewParam : "storage");
+            setPrefix(params.get("prefix") || "");
         };
 
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
 
-    // Active domain base URL
-    const gatewayDomain = useMemo(() => {
-        return assetSource === "backup" ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe";
-    }, [assetSource]);
+    const rememberScroll = () => {
+        scrollByViewRef.current.set(viewKey, window.scrollY);
+    };
 
-    // Fetch view data
-    const fetchCurrentView = useCallback(async (forceRefresh = false) => {
-        const key = getViewKey(server, prefix, bundlePath);
+    const navigateTo = (path: string) => {
+        rememberScroll();
+        setPrefix(path);
+    };
 
-        if (activeViewKeyRef.current && activeViewKeyRef.current !== key) {
-            saveCurrentViewScroll();
-        }
-        activeViewKeyRef.current = key;
+    const changeServer = (srv: string) => {
+        rememberScroll();
+        setServer(srv);
+    };
 
-        if (!forceRefresh && viewCacheRef.current.has(key)) {
-            const cached = viewCacheRef.current.get(key)!;
-            if (cached.type === "bundle" && bundlePath) {
-                setRawAssetFiles(cached.rawAssetFiles);
-                setActiveBundleMeta(cached.activeBundleMeta);
-                setBundleItems([]);
-                setNextCursor(cached.nextCursor);
-                setSnapshotRevision(cached.snapshotRevision);
-                setIsLoading(false);
-                setError(null);
+    // Paths differ between views, so another view starts at its root
+    const changeView = (next: AssetView) => {
+        rememberScroll();
+        setView(next);
+        setPrefix("");
+    };
 
-                const targetY = cached.scrollY || 0;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            window.scrollTo({ top: targetY, behavior: "instant" });
-                            lastScrollYRef.current = targetY;
-                        }, 50);
-                    });
-                });
-                return;
-            } else if (cached.type === "dir" && !bundlePath) {
-                setBundleItems(cached.bundleItems);
-                setRawAssetFiles([]);
-                setActiveBundleMeta(null);
-                setNextCursor(cached.nextCursor);
-                setSnapshotRevision(cached.snapshotRevision);
-                setIsLoading(false);
-                setError(null);
+    const refreshTree = () => {
+        clearAssetTreeCache(server, view);
+        setReloadToken(token => token + 1);
+    };
 
-                const targetY = cached.scrollY || 0;
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        setTimeout(() => {
-                            window.scrollTo({ top: targetY, behavior: "instant" });
-                            lastScrollYRef.current = targetY;
-                        }, 50);
-                    });
-                });
-                return;
-            }
-        }
+    // Subfolders and files of the current directory
+    const listing = useMemo(() => (tree ? listDirectory(tree, prefix) : null), [tree, prefix]);
 
-        try {
-            setIsLoading(true);
-            setError(null);
+    const mergedFiles = useMemo(() => groupFiles(listing?.files ?? []), [listing]);
 
-            if (bundlePath) {
-                const url = `${gatewayDomain}/api/assets/bundle-files?server=${server}&path=${encodeURIComponent(bundlePath)}&limit=200`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
+    const query = searchQuery.trim().toLowerCase();
+
+    const folders = useMemo(() => {
+        if (filterType === "files") return [];
+        return (listing?.folders ?? [])
+            .filter(folder => matchesQuery(folder.name, query))
+            .sort((a, b) => compareNames(a.name, b.name, sortOrder));
+    }, [listing, query, filterType, sortOrder]);
+
+    const files = useMemo(() => {
+        if (filterType === "directories") return [];
+        return mergedFiles
+            .filter(item => matchesQuery(item.name, query) || item.formats.some(f => matchesQuery(f.name, query)))
+            .sort((a, b) => {
+                if (sortBy === "size") {
+                    return sortOrder === "asc" ? a.totalSize - b.totalSize : b.totalSize - a.totalSize;
                 }
-                const data: BundleFilesResponse = await res.json();
-                const items = data.items || [];
-                const meta = data.bundle || null;
-                const cursor = data.nextCursor || "";
-                const rev = data.snapshotRevision || 0;
+                return compareNames(a.name, b.name, sortOrder);
+            });
+    }, [mergedFiles, query, filterType, sortBy, sortOrder]);
 
-                setRawAssetFiles(items);
-                setActiveBundleMeta(meta);
-                setBundleItems([]);
-                setNextCursor(cursor);
-                setSnapshotRevision(rev);
-
-                const newCache: BundleCacheEntry = {
-                    type: "bundle",
-                    rawAssetFiles: items,
-                    activeBundleMeta: meta,
-                    nextCursor: cursor,
-                    snapshotRevision: rev,
-                    scrollY: 0,
-                };
-                viewCacheRef.current.set(key, newCache);
-                saveCacheToSessionStorage(viewCacheRef.current);
-            } else {
-                const url = `${gatewayDomain}/api/assets/bundles?server=${server}&prefix=${encodeURIComponent(prefix)}&limit=200`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
-                }
-                const data: BundleBrowseResponse = await res.json();
-                const items = data.items || [];
-                const cursor = data.nextCursor || "";
-                const rev = data.snapshotRevision || 0;
-
-                setBundleItems(items);
-                setRawAssetFiles([]);
-                setActiveBundleMeta(null);
-                setNextCursor(cursor);
-                setSnapshotRevision(rev);
-
-                const newCache: DirCacheEntry = {
-                    type: "dir",
-                    bundleItems: items,
-                    nextCursor: cursor,
-                    snapshotRevision: rev,
-                    scrollY: 0,
-                };
-                viewCacheRef.current.set(key, newCache);
-                saveCacheToSessionStorage(viewCacheRef.current);
-            }
-            window.scrollTo({ top: 0, behavior: "instant" });
-            lastScrollYRef.current = 0;
-        } catch (err) {
-            console.error("Failed to load assets view:", err);
-            setError(err instanceof Error ? err.message : "Unknown error");
-        } finally {
-            setIsLoading(false);
-        }
-    }, [server, prefix, bundlePath, gatewayDomain, getViewKey, saveCurrentViewScroll]);
-
-    useEffect(() => {
-        fetchCurrentView();
-    }, [fetchCurrentView]);
-
-    // Fetch next page
-    const fetchMore = useCallback(async () => {
-        if (!nextCursor || isLoadingMore) return;
-        const key = getViewKey(server, prefix, bundlePath);
-        try {
-            setIsLoadingMore(true);
-
-            if (bundlePath) {
-                const url = `${gatewayDomain}/api/assets/bundle-files?server=${server}&path=${encodeURIComponent(bundlePath)}&limit=200&cursor=${encodeURIComponent(nextCursor)}`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
-                }
-                const data: BundleFilesResponse = await res.json();
-                const newItems = data.items || [];
-                const cursor = data.nextCursor || "";
-                const rev = data.snapshotRevision || 0;
-
-                setRawAssetFiles(prev => {
-                    const updated = [...prev, ...newItems];
-                    const cached = viewCacheRef.current.get(key);
-                    if (cached && cached.type === "bundle") {
-                        cached.rawAssetFiles = updated;
-                        cached.nextCursor = cursor;
-                        cached.snapshotRevision = rev;
-                        saveCacheToSessionStorage(viewCacheRef.current);
-                    }
-                    return updated;
-                });
-                setNextCursor(cursor);
-                setSnapshotRevision(rev);
-            } else {
-                const url = `${gatewayDomain}/api/assets/bundles?server=${server}&prefix=${encodeURIComponent(prefix)}&limit=200&cursor=${encodeURIComponent(nextCursor)}`;
-                const res = await fetch(url);
-                if (!res.ok) {
-                    throw new Error(`HTTP ${res.status}`);
-                }
-                const data: BundleBrowseResponse = await res.json();
-                const newItems = data.items || [];
-                const cursor = data.nextCursor || "";
-                const rev = data.snapshotRevision || 0;
-
-                setBundleItems(prev => {
-                    const updated = [...prev, ...newItems];
-                    const cached = viewCacheRef.current.get(key);
-                    if (cached && cached.type === "dir") {
-                        cached.bundleItems = updated;
-                        cached.nextCursor = cursor;
-                        cached.snapshotRevision = rev;
-                        saveCacheToSessionStorage(viewCacheRef.current);
-                    }
-                    return updated;
-                });
-                setNextCursor(cursor);
-                setSnapshotRevision(rev);
-            }
-        } catch (err) {
-            console.error("Failed to load more items:", err);
-        } finally {
-            setIsLoadingMore(false);
-        }
-    }, [server, prefix, bundlePath, gatewayDomain, nextCursor, isLoadingMore, getViewKey]);
-
-    // Group raw files into merged asset items (merging png + webp)
-    const mergedAssetFiles = useMemo(() => {
-        return groupBundleFiles(rawAssetFiles);
-    }, [rawAssetFiles]);
+    const totalItemCount = (listing?.folders.length ?? 0) + mergedFiles.length;
+    const currentItemCount = folders.length + files.length;
+    const shownFolders = folders.slice(0, visibleCount);
+    const shownFiles = files.slice(0, Math.max(0, visibleCount - shownFolders.length));
+    const hasMore = currentItemCount > shownFolders.length + shownFiles.length;
 
     // Breadcrumbs list
     const breadcrumbs = useMemo(() => {
         const parts = prefix.split("/").filter(Boolean);
-        const list = [{ name: t("page.assetViewer.root"), path: "", isBundle: false }];
-        let currentPath = "";
-        for (const part of parts) {
-            currentPath += part + "/";
-            list.push({ name: part, path: currentPath, isBundle: false });
-        }
-        if (bundlePath) {
-            const bundleName = bundlePath.split("/").pop() || bundlePath;
-            list.push({ name: bundleName, path: bundlePath, isBundle: true });
-        }
-        return list;
-    }, [prefix, bundlePath, t]);
+        return [
+            { name: t("page.assetViewer.root"), path: "" },
+            ...parts.map((part, index) => ({ name: part, path: parts.slice(0, index + 1).join("/") })),
+        ];
+    }, [prefix, t]);
 
-    // Breadcrumb click handler
-    const handleBreadcrumbClick = (bc: { name: string; path: string; isBundle: boolean }) => {
-        if (bc.isBundle) return;
-        saveCurrentViewScroll();
-        setBundlePath("");
-        setPrefix(bc.path);
-    };
-
-    // Go back up one level
-    const handleGoBack = useCallback(() => {
-        saveCurrentViewScroll();
-        if (bundlePath) {
-            setBundlePath("");
-            return;
-        }
-        if (!prefix) return;
+    const handleGoBack = () => {
         const parts = prefix.split("/").filter(Boolean);
-        parts.pop();
-        const parentPath = parts.length > 0 ? parts.join("/") + "/" : "";
-        setPrefix(parentPath);
-    }, [prefix, bundlePath, saveCurrentViewScroll]);
-
-    // Processed directory & bundle items
-    const processedBundleItems = useMemo(() => {
-        let list = [...bundleItems];
-
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            list = list.filter(item => item.name.toLowerCase().includes(query));
-        }
-
-        if (filterType === "directories") {
-            list = list.filter(item => item.type === "directory");
-        } else if (filterType === "bundles") {
-            list = list.filter(item => item.type === "bundle");
-        }
-
-        list.sort((a, b) => {
-            if (a.type !== b.type) {
-                return a.type === "directory" ? -1 : 1;
-            }
-
-            const isAsc = sortOrder === "asc";
-
-            if (a.type === "directory") {
-                return isAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-            }
-
-            if (sortBy === "size") {
-                const sizeA = a.totalSize || 0;
-                const sizeB = b.totalSize || 0;
-                return isAsc ? sizeA - sizeB : sizeB - sizeA;
-            }
-
-            if (sortBy === "fileCount") {
-                const countA = a.fileCount || 0;
-                const countB = b.fileCount || 0;
-                return isAsc ? countA - countB : countB - countA;
-            }
-
-            return isAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-        });
-
-        return list;
-    }, [bundleItems, searchQuery, filterType, sortBy, sortOrder]);
-
-    // Processed asset files inside bundle
-    const processedAssetFiles = useMemo(() => {
-        let list = [...mergedAssetFiles];
-
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            list = list.filter(item =>
-                item.name.toLowerCase().includes(query) ||
-                item.formats.some(f => f.name.toLowerCase().includes(query))
-            );
-        }
-
-        list.sort((a, b) => {
-            const isAsc = sortOrder === "asc";
-            if (sortBy === "size") {
-                const sizeA = a.totalSize || 0;
-                const sizeB = b.totalSize || 0;
-                return isAsc ? sizeA - sizeB : sizeB - sizeA;
-            }
-            return isAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
-        });
-
-        return list;
-    }, [mergedAssetFiles, searchQuery, sortBy, sortOrder]);
+        navigateTo(parts.slice(0, -1).join("/"));
+    };
 
     // Active format in modal
     const activeFormat = useMemo(() => {
@@ -727,9 +418,9 @@ function AssetViewerContent() {
             setIsPreviewTextLoading(true);
             setPreviewTextError(null);
             setPreviewText(null);
+            setPreviewFormat(null);
 
-            const fileUrl = `${gatewayDomain}${format.url}`;
-            const res = await fetch(fileUrl);
+            const res = await fetch(format.url);
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
             }
@@ -738,6 +429,9 @@ function AssetViewerContent() {
             try {
                 const parsed = JSON.parse(content);
                 setPreviewText(JSON.stringify(parsed, null, 2));
+                if (typeof parsed?.format === "string") {
+                    setPreviewFormat({ format: parsed.format, form: typeof parsed.form === "string" ? parsed.form : undefined });
+                }
             } catch {
                 setPreviewText(content);
             }
@@ -759,9 +453,6 @@ function AssetViewerContent() {
         });
     };
 
-    // Sidebar Filters configuration
-    const totalItemCount = bundlePath ? mergedAssetFiles.length : bundleItems.length;
-    const currentItemCount = bundlePath ? processedAssetFiles.length : processedBundleItems.length;
     const activeFiltersCount = (server !== "jp" ? 1 : 0) + (filterType !== "all" ? 1 : 0) + (sortBy !== "name" ? 1 : 0) + (sortOrder !== "asc" ? 1 : 0);
 
     const resetFilters = () => {
@@ -780,22 +471,14 @@ function AssetViewerContent() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             searchPlaceholder={t("page.assetViewer.searchPlaceholder")}
-            sortOptions={
-                bundlePath
-                    ? [
-                          { id: "name", label: t("common.form.uid") },
-                          { id: "size", label: t("page.assetViewer.size") },
-                      ]
-                    : [
-                          { id: "name", label: t("common.form.uid") },
-                          { id: "size", label: t("page.assetViewer.totalSize") },
-                          { id: "fileCount", label: t("page.assetViewer.fileCount") },
-                      ]
-            }
+            sortOptions={[
+                { id: "name", label: t("common.form.uid") },
+                { id: "size", label: t("page.assetViewer.size") },
+            ]}
             sortBy={sortBy}
             sortOrder={sortOrder}
             onSortChange={(field, order) => {
-                setSortBy(field as "name" | "size" | "fileCount");
+                setSortBy(field as "name" | "size");
                 setSortOrder(order);
             }}
             hasActiveFilters={activeFiltersCount > 0 || searchQuery !== ""}
@@ -807,10 +490,7 @@ function AssetViewerContent() {
                         <FilterButton
                             key={srv}
                             selected={server === srv}
-                            onClick={() => {
-                                saveCurrentViewScroll();
-                                setServer(srv);
-                            }}
+                            onClick={() => changeServer(srv)}
                         >
                             <ServerRegionLabel server={srv} />
                         </FilterButton>
@@ -818,23 +498,21 @@ function AssetViewerContent() {
                 </div>
             </FilterSection>
 
-            {!bundlePath && (
-                <FilterSection label={t("page.assetViewer.source")}>
-                    <div className="grid grid-cols-3 gap-2">
-                        {(["all", "directories", "bundles"] as const).map(type => (
-                            <FilterButton
-                                key={type}
-                                selected={filterType === type}
-                                onClick={() => setFilterType(type)}
-                            >
-                                {type === "all" ? t("page.assetViewer.allTypes") :
-                                 type === "directories" ? t("page.assetViewer.typeDirectory") :
-                                 t("page.assetViewer.typeBundle")}
-                            </FilterButton>
-                        ))}
-                    </div>
-                </FilterSection>
-            )}
+            <FilterSection label={t("page.assetViewer.source")}>
+                <div className="grid grid-cols-3 gap-2">
+                    {(["all", "directories", "files"] as const).map(type => (
+                        <FilterButton
+                            key={type}
+                            selected={filterType === type}
+                            onClick={() => setFilterType(type)}
+                        >
+                            {type === "all" ? t("page.assetViewer.allTypes") :
+                             type === "directories" ? t("page.assetViewer.typeDirectory") :
+                             t("page.assetViewer.typeBundle")}
+                        </FilterButton>
+                    ))}
+                </div>
+            </FilterSection>
         </BaseFilters>
     );
 
@@ -844,7 +522,6 @@ function AssetViewerContent() {
         filterType,
         sortBy,
         sortOrder,
-        bundlePath,
         currentItemCount,
         totalItemCount,
         t,
@@ -857,11 +534,21 @@ function AssetViewerContent() {
                 <IconButton
                     icon={copyFeedback ? mdCheck : mdContentCopy}
                     size="xs"
-                    onClick={() => handleCopyToClipboard(`${gatewayDomain}${activeFormat.url}`)}
+                    onClick={() => handleCopyToClipboard(activeFormat.latestUrl)}
                     label={copyFeedback ? t("page.assetViewer.copied") : t("page.assetViewer.copyLink")}
                 />
+                <Menu
+                    align="end"
+                    anchor={(props) => (
+                        <IconButton {...props} icon={mdKeyboardArrowDown} size="xs" label={t("page.assetViewer.copyOptions")} />
+                    )}
+                    items={[
+                        { key: "latest", label: t("page.assetViewer.copyLink"), onSelect: () => handleCopyToClipboard(activeFormat.latestUrl) },
+                        { key: "version", label: t("page.assetViewer.copyVersionLink"), onSelect: () => handleCopyToClipboard(activeFormat.url) },
+                    ]}
+                />
                 <ExternalLink
-                    href={`${gatewayDomain}${activeFormat.url}`}
+                    href={activeFormat.url}
                     className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                     title={t("page.assetViewer.download")}
                 >
@@ -869,7 +556,7 @@ function AssetViewerContent() {
                 </ExternalLink>
             </div>
         );
-    }, [activeFormat, gatewayDomain, copyFeedback, t]);
+    }, [activeFormat, copyFeedback, t]);
 
     const checkerboardClassName =
         "bg-surface-container-high bg-[radial-gradient(var(--md-sys-color-outline-variant)_1px,transparent_1px)]";
@@ -896,13 +583,49 @@ function AssetViewerContent() {
                 }
             />
 
+            {/* View switcher: the same version as files for pages, canonical assets, or the client package */}
+            <Surface tone="card" radius="xl" className="mb-4 space-y-3 p-3 sm:p-4">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <SegmentedButton
+                        className="w-auto"
+                        density={-1}
+                        aria-label={t("page.assetGuide.view")}
+                        value={view}
+                        onValueChange={(next) => changeView(next as AssetView)}
+                        options={ASSET_VIEWS.map(option => ({
+                            value: option,
+                            label: t(`page.assetGuide.views.${option}.label`),
+                        }))}
+                    />
+                    <div className="flex flex-wrap gap-1">
+                        <Button variant="text" size="s" icon={mdMenuBook} onClick={() => setShowGuide(true)}>
+                            {t("page.assetGuide.open")}
+                        </Button>
+                        <Button variant="text" size="s" icon={mdHelp} onClick={() => setShowFaq(true)}>
+                            {t("page.assetGuide.faq.title")}
+                        </Button>
+                    </div>
+                </div>
+                <p className="type-body-s text-on-surface-variant">
+                    {t(`page.assetGuide.views.${view}.summary`)}
+                    {tree && tree.view === view && (
+                        <span className="ml-2 font-mono type-label-s text-outline">
+                            {t("page.assetGuide.version", {
+                                version: tree.document.published_version.split("-")[0],
+                                count: formatNumber(tree.document.files),
+                            })}
+                        </span>
+                    )}
+                </p>
+            </Surface>
+
             {/* Filters live in the global FilterDrawer (registered above via
                 useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 {/* Breadcrumbs Navigation & Actions */}
                 <Surface tone="card" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
                     <div className="flex min-w-0 items-center gap-2">
-                        {(prefix || bundlePath) && (
+                        {prefix && (
                             <IconButton
                                 icon={mdChevronLeft}
                                 size="xs"
@@ -911,29 +634,23 @@ function AssetViewerContent() {
                             />
                         )}
                         <div className="flex min-w-0 flex-wrap items-center gap-1.5 type-label-l text-on-surface-variant">
-                            {breadcrumbs.map((bc, index) => (
-                                <div key={`${bc.path}-${index}`} className="flex items-center gap-1.5">
-                                    {index > 0 && <span className="text-outline">/</span>}
-                                    {bc.isBundle ? (
-                                        <span className="flex items-center gap-1 rounded-md3-sm bg-primary-container px-2 py-0.5 type-label-l text-on-primary-container">
-                                            <Icon path={mdInventory2} size={16} />
-                                            {bc.name}
-                                        </span>
-                                    ) : (
+                            {breadcrumbs.map((bc, index) => {
+                                const isCurrent = index === breadcrumbs.length - 1;
+                                return (
+                                    <div key={bc.path} className="flex items-center gap-1.5">
+                                        {index > 0 && <span className="text-outline">/</span>}
                                         <button
                                             type="button"
-                                            onClick={() => handleBreadcrumbClick(bc)}
+                                            onClick={() => navigateTo(bc.path)}
                                             className={`focus-ring rounded-md3-xs transition-colors hover:text-primary ${
-                                                index === breadcrumbs.length - 1 && !bundlePath
-                                                    ? "type-title-s text-on-surface"
-                                                    : ""
+                                                isCurrent ? "type-title-s text-on-surface" : ""
                                             }`}
                                         >
                                             {bc.name}
                                         </button>
-                                    )}
-                                </div>
-                            ))}
+                                    </div>
+                                );
+                            })}
                         </div>
                     </div>
 
@@ -963,53 +680,12 @@ function AssetViewerContent() {
                         <IconButton
                             icon={mdRefresh}
                             size="xs"
-                            onClick={() => fetchCurrentView(true)}
+                            onClick={refreshTree}
                             label={t("common.action.refresh")}
                             className={isLoading ? "[&_svg]:animate-spin" : undefined}
                         />
                     </div>
                 </Surface>
-
-                {/* Active Bundle Details Banner */}
-                {bundlePath && activeBundleMeta && (
-                    <Surface tone="default" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-4 p-5">
-                        <div className="flex min-w-0 items-center gap-3.5">
-                            <div className="shrink-0 rounded-md3-lg bg-primary-container p-3 text-on-primary-container">
-                                <ArchiveBundleIcon />
-                            </div>
-                            <div className="min-w-0">
-                                <h2 className="max-w-xs truncate type-title-l text-on-surface sm:max-w-md" title={activeBundleMeta.path}>
-                                    {activeBundleMeta.path.split("/").pop()}
-                                </h2>
-                                <p className="mt-0.5 max-w-sm truncate font-mono type-body-s text-on-surface-variant" title={activeBundleMeta.fingerprint || ""}>
-                                    {activeBundleMeta.fingerprint ? `FP: ${activeBundleMeta.fingerprint}` : activeBundleMeta.path}
-                                </p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-4 type-body-s">
-                            <div className="text-right">
-                                <span className="block text-on-surface-variant">{t("page.assetViewer.fileCount")}</span>
-                                <span className="type-label-l text-on-surface">{formatNumber(activeBundleMeta.fileCount)}</span>
-                            </div>
-                            <div className="h-7 w-px bg-outline-variant" />
-                            <div className="text-right">
-                                <span className="block text-on-surface-variant">{t("page.assetViewer.totalSize")}</span>
-                                <span className="type-label-l text-on-surface">{formatBytes(activeBundleMeta.totalSize)}</span>
-                            </div>
-                            {activeBundleMeta.source && (
-                                <>
-                                    <div className="h-7 w-px bg-outline-variant" />
-                                    <div className="text-right">
-                                        <span className="block text-on-surface-variant">{t("page.assetViewer.source")}</span>
-                                        <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s uppercase text-on-tertiary-container">
-                                            {activeBundleMeta.source}
-                                        </span>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-                    </Surface>
-                )}
 
                 {/* Loader */}
                 {isLoading ? (
@@ -1019,254 +695,204 @@ function AssetViewerContent() {
                         title={t("page.assetViewer.loadFailed")}
                         message={error}
                         retryLabel={t("common.action.retry")}
-                        onRetry={() => fetchCurrentView(true)}
+                        onRetry={refreshTree}
                     />
-                ) : (bundlePath ? processedAssetFiles.length === 0 : processedBundleItems.length === 0) ? (
+                ) : currentItemCount === 0 ? (
                     <Surface tone="card" radius="xl">
                         <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
                     </Surface>
                 ) : (
                     <>
-                        {/* Directory & Bundles Tree View (Without redundant text badges) */}
-                        {!bundlePath ? (
-                            viewMode === "grid" ? (
-                                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                                    {processedBundleItems.map((item, index) => {
-                                        const isDir = item.type === "directory";
-                                        return (
-                                            <Card
-                                                key={`${item.path}-${index}`}
-                                                variant="filled"
-                                                radius="lg"
-                                                onClick={() => {
-                                                    saveCurrentViewScroll();
-                                                    if (isDir) {
-                                                        setPrefix(item.path.endsWith("/") ? item.path : item.path + "/");
-                                                    } else {
-                                                        setBundlePath(item.path);
-                                                    }
-                                                }}
-                                                className="group select-none p-4"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="shrink-0 rounded-md3-md bg-surface-container-low p-2.5">
-                                                        {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
-                                                    </div>
-
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                            {item.name}
-                                                        </p>
-                                                        <div className="mt-0.5 truncate type-label-s text-on-surface-variant">
-                                                            {!isDir && (
-                                                                <span>
-                                                                    {formatBytes(item.totalSize)}
-                                                                    {item.fileCount !== undefined && ` • ${t("page.assetViewer.fileCountValue", { count: item.fileCount })}`}
-                                                                </span>
-                                                            )}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-1.5">
-                                    <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
-                                        <div className="w-10"></div>
-                                        <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
-                                        <div className="w-24 text-right">{t("page.assetViewer.fileCount")}</div>
-                                        <div className="hidden w-28 text-right sm:block">{t("page.assetViewer.totalSize")}</div>
-                                    </div>
-                                    {processedBundleItems.map((item, index) => {
-                                        const isDir = item.type === "directory";
-                                        return (
-                                            <Card
-                                                key={`${item.path}-${index}`}
-                                                variant="filled"
-                                                onClick={() => {
-                                                    saveCurrentViewScroll();
-                                                    if (isDir) {
-                                                        setPrefix(item.path.endsWith("/") ? item.path : item.path + "/");
-                                                    } else {
-                                                        setBundlePath(item.path);
-                                                    }
-                                                }}
-                                                className="group select-none p-3"
-                                            >
-                                                <div className="flex items-center gap-3">
-                                                    <div className="shrink-0 rounded-md3-sm bg-surface-container-low p-1.5">
-                                                        {isDir ? <FolderIcon /> : <ArchiveBundleIcon />}
-                                                    </div>
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                            {item.name}
-                                                        </p>
-                                                    </div>
-                                                    <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
-                                                        {isDir ? "-" : (item.fileCount !== undefined ? t("page.assetViewer.fileCountValue", { count: item.fileCount }) : "-")}
-                                                    </div>
-                                                    <div className="hidden w-28 shrink-0 truncate text-right font-mono type-label-m text-on-surface-variant sm:block">
-                                                        {isDir ? "-" : formatBytes(item.totalSize)}
-                                                    </div>
-                                                </div>
-                                            </Card>
-                                        );
-                                    })}
-                                </div>
-                            )
+                        {/* Subfolders of the current directory */}
+                        {shownFolders.length > 0 && (viewMode === "grid" ? (
+                            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+                                {shownFolders.map((folder: AssetTreeFolder) => (
+                                    <Card
+                                        key={folder.path}
+                                        variant="filled"
+                                        radius="lg"
+                                        onClick={() => navigateTo(folder.path)}
+                                        className="group select-none p-4"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="shrink-0 rounded-md3-md bg-surface-container-low p-2.5">
+                                                <FolderIcon />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={folder.name}>
+                                                    {folder.name}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
                         ) : (
-                            /* Files inside Bundle (with direct Image Previews & Merged PNG+WEBP formats) */
-                            viewMode === "grid" ? (
-                                <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                                    {processedAssetFiles.map((item) => (
-                                        <Card
-                                            key={item.id}
-                                            variant="filled"
-                                            radius="lg"
-                                            onClick={() => {
-                                                setSelectedFile(item);
-                                                setActiveFormatIndex(0);
-                                            }}
-                                            className="group select-none p-3"
-                                        >
-                                            <div className="flex flex-col">
-                                                {/* Direct Thumbnail Preview for Images */}
+                            <div className="flex flex-col gap-1.5">
+                                {shownFolders.map((folder: AssetTreeFolder) => (
+                                    <Card
+                                        key={folder.path}
+                                        variant="filled"
+                                        onClick={() => navigateTo(folder.path)}
+                                        className="group select-none p-3"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="shrink-0 rounded-md3-sm bg-surface-container-low p-1.5">
+                                                <FolderIcon />
+                                            </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={folder.name}>
+                                                    {folder.name}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ))}
+
+                        {/* Files of the current directory (with direct Image Previews & merged PNG+WEBP formats) */}
+                        {shownFiles.length > 0 && (viewMode === "grid" ? (
+                            <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
+                                {shownFiles.map((item) => (
+                                    <Card
+                                        key={item.id}
+                                        variant="filled"
+                                        radius="lg"
+                                        onClick={() => {
+                                            setSelectedFile(item);
+                                            setActiveFormatIndex(0);
+                                        }}
+                                        className="group select-none p-3"
+                                    >
+                                        <div className="flex flex-col">
+                                            {/* Direct Thumbnail Preview for Images */}
+                                            {item.isImage && item.primaryUrl ? (
+                                                <div className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${checkerboardClassName}`}>
+                                                    <img
+                                                        src={item.primaryUrl}
+                                                        alt={item.name}
+                                                        loading="lazy"
+                                                        className="h-full w-full object-contain p-1.5"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLElement).style.display = "none";
+                                                        }}
+                                                    />
+                                                </div>
+                                            ) : (
+                                                <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center rounded-md3-md bg-surface-container-low">
+                                                    {getFileIcon(item.name)}
+                                                </div>
+                                            )}
+
+                                            <div className="flex min-w-0 flex-1 flex-col justify-between">
+                                                <p className="truncate type-label-l text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                    {item.name}
+                                                </p>
+
+                                                <div className="mt-1.5 flex items-center justify-between gap-1">
+                                                    {/* Formats Pills */}
+                                                    <div className="flex items-center gap-1">
+                                                        {item.formats.map((f) => (
+                                                            <span
+                                                                key={f.ext}
+                                                                className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                                            >
+                                                                {f.ext}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                    <span className="type-label-s text-on-surface-variant">
+                                                        {formatBytes(item.totalSize)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="mt-3 flex flex-col gap-1.5">
+                                <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
+                                    <div className="w-12"></div>
+                                    <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
+                                    <div className="w-32 text-center">{t("page.assetViewer.formats")}</div>
+                                    <div className="w-24 text-right">{t("page.assetViewer.size")}</div>
+                                </div>
+                                {shownFiles.map((item) => (
+                                    <Card
+                                        key={item.id}
+                                        variant="filled"
+                                        onClick={() => {
+                                            setSelectedFile(item);
+                                            setActiveFormatIndex(0);
+                                        }}
+                                        className="group select-none p-2.5"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            {/* Thumbnail preview in list mode */}
+                                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md3-sm [background-size:6px_6px] ${checkerboardClassName}`}>
                                                 {item.isImage && item.primaryUrl ? (
-                                                    <div className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${checkerboardClassName}`}>
-                                                        <img
-                                                            src={`${gatewayDomain}${item.primaryUrl}`}
-                                                            alt={item.name}
-                                                            loading="lazy"
-                                                            className="h-full w-full object-contain p-1.5"
-                                                            onError={(e) => {
-                                                                (e.target as HTMLElement).style.display = "none";
-                                                            }}
-                                                        />
-                                                    </div>
+                                                    <img
+                                                        src={item.primaryUrl}
+                                                        alt={item.name}
+                                                        loading="lazy"
+                                                        className="h-full w-full object-contain p-0.5"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLElement).style.display = "none";
+                                                        }}
+                                                    />
                                                 ) : (
-                                                    <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center rounded-md3-md bg-surface-container-low">
-                                                        {getFileIcon(item.name)}
-                                                    </div>
+                                                    getFileIcon(item.name)
                                                 )}
-
-                                                <div className="flex min-w-0 flex-1 flex-col justify-between">
-                                                    <p className="truncate type-label-l text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                        {item.name}
-                                                    </p>
-
-                                                    <div className="mt-1.5 flex items-center justify-between gap-1">
-                                                        {/* Formats Pills */}
-                                                        <div className="flex items-center gap-1">
-                                                            {item.formats.map((f) => (
-                                                                <span
-                                                                    key={f.ext}
-                                                                    className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
-                                                                >
-                                                                    {f.ext}
-                                                                </span>
-                                                            ))}
-                                                        </div>
-                                                        <span className="type-label-s text-on-surface-variant">
-                                                            {formatBytes(item.totalSize)}
-                                                        </span>
-                                                    </div>
-                                                </div>
                                             </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="flex flex-col gap-1.5">
-                                    <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
-                                        <div className="w-12"></div>
-                                        <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
-                                        <div className="w-32 text-center">{t("page.assetViewer.formats")}</div>
-                                        <div className="w-24 text-right">{t("page.assetViewer.size")}</div>
-                                    </div>
-                                    {processedAssetFiles.map((item) => (
-                                        <Card
-                                            key={item.id}
-                                            variant="filled"
-                                            onClick={() => {
-                                                setSelectedFile(item);
-                                                setActiveFormatIndex(0);
-                                            }}
-                                            className="group select-none p-2.5"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                                {/* Thumbnail preview in list mode */}
-                                                <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md3-sm [background-size:6px_6px] ${checkerboardClassName}`}>
-                                                    {item.isImage && item.primaryUrl ? (
-                                                        <img
-                                                            src={`${gatewayDomain}${item.primaryUrl}`}
-                                                            alt={item.name}
-                                                            loading="lazy"
-                                                            className="h-full w-full object-contain p-0.5"
-                                                            onError={(e) => {
-                                                                (e.target as HTMLElement).style.display = "none";
-                                                            }}
-                                                        />
-                                                    ) : (
-                                                        getFileIcon(item.name)
-                                                    )}
-                                                </div>
 
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                        {item.name}
-                                                    </p>
-                                                </div>
-
-                                                <div className="flex w-32 shrink-0 items-center justify-center gap-1">
-                                                    {item.formats.map((f) => (
-                                                        <span
-                                                            key={f.ext}
-                                                            className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
-                                                        >
-                                                            {f.ext}
-                                                        </span>
-                                                    ))}
-                                                </div>
-
-                                                <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
-                                                    {formatBytes(item.totalSize)}
-                                                </div>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
+                                                    {item.name}
+                                                </p>
                                             </div>
-                                        </Card>
-                                    ))}
-                                </div>
-                            )
-                        )}
 
-                        {/* Load Next Page Cursor */}
-                        {nextCursor && (
+                                            <div className="flex w-32 shrink-0 items-center justify-center gap-1">
+                                                {item.formats.map((f) => (
+                                                    <span
+                                                        key={f.ext}
+                                                        className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                                    >
+                                                        {f.ext}
+                                                    </span>
+                                                ))}
+                                            </div>
+
+                                            <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
+                                                {formatBytes(item.totalSize)}
+                                            </div>
+                                        </div>
+                                    </Card>
+                                ))}
+                            </div>
+                        ))}
+
+                        {/* Load Next Page */}
+                        {hasMore && (
                             <div className="mt-8 flex justify-center">
                                 <Button
                                     variant="tonal"
                                     size="m"
-                                    onClick={fetchMore}
-                                    disabled={isLoadingMore}
+                                    onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
                                 >
-                                    {isLoadingMore ? (
-                                        <CircularProgress size={20} />
-                                    ) : (
-                                        <>
-                                            {t("page.assetViewer.loadMore")}
-                                            <span className="type-label-l opacity-80">
-                                                {formatNumber(bundlePath ? mergedAssetFiles.length : bundleItems.length)}
-                                            </span>
-                                        </>
-                                    )}
+                                    {t("page.assetViewer.loadMore")}
+                                    <span className="type-label-l opacity-80">
+                                        {formatNumber(currentItemCount - shownFolders.length - shownFiles.length)}
+                                    </span>
                                 </Button>
                             </div>
                         )}
 
                         {/* All Loaded Message */}
-                        {!nextCursor && (bundlePath ? processedAssetFiles.length > 0 : processedBundleItems.length > 0) && (
+                        {!hasMore && (
                             <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                {t("page.assetViewer.allLoaded", { count: bundlePath ? processedAssetFiles.length : processedBundleItems.length })}
+                                {t("page.assetViewer.allLoaded", { count: currentItemCount })}
                             </div>
                         )}
                     </>
@@ -1280,6 +906,7 @@ function AssetViewerContent() {
                     setSelectedFile(null);
                     setActiveFormatIndex(0);
                     setPreviewText(null);
+                    setPreviewFormat(null);
                     setPreviewTextError(null);
                 }}
                 title={selectedFile?.name || ""}
@@ -1295,6 +922,7 @@ function AssetViewerContent() {
                                 onValueChange={(v) => {
                                     setActiveFormatIndex(Number(v));
                                     setPreviewText(null);
+                                    setPreviewFormat(null);
                                 }}
                                 options={selectedFile.formats.map((f, idx) => ({
                                     value: String(idx),
@@ -1314,29 +942,17 @@ function AssetViewerContent() {
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.size")}</span>
                                 <span className="text-right type-label-l text-on-surface">{formatBytes(activeFormat.size)}</span>
                             </div>
-                            {selectedFile.version && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.version")}</span>
-                                    <span className="text-right font-mono text-on-surface">{selectedFile.version}</span>
-                                </div>
+                            <div className="flex justify-between gap-4">
+                                <span className="shrink-0 text-on-surface-variant">{t("page.assetGuide.fileKind")}</span>
+                                <span className="text-right text-on-surface">
+                                    {t(`page.assetGuide.files.${fileKind(`${prefix}/${activeFormat.name}`)}`)}
+                                </span>
+                            </div>
+                            {previewFormat && (
+                                <SpecRow label={t("page.assetGuide.jsonFormat")} name={previewFormat.format} locale={locale} title={t("page.assetGuide.formatDocs")} />
                             )}
-                            {selectedFile.source && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.source")}</span>
-                                    <span className="text-right capitalize text-on-surface">{selectedFile.source}</span>
-                                </div>
-                            )}
-                            {activeFormat.fingerprint && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.fingerprint")}</span>
-                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={activeFormat.fingerprint}>{activeFormat.fingerprint}</span>
-                                </div>
-                            )}
-                            {activeFormat.sha256 && (
-                                <div className="flex flex-col gap-1 border-t border-outline-variant pt-1.5">
-                                    <span className="text-on-surface-variant">{t("page.assetViewer.sha256")}</span>
-                                    <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">{activeFormat.sha256}</span>
-                                </div>
+                            {previewFormat?.form && (
+                                <SpecRow label={t("page.assetGuide.assetForm")} name={previewFormat.form} locale={locale} title={t("page.assetGuide.formatDocs")} />
                             )}
                         </div>
 
@@ -1345,7 +961,7 @@ function AssetViewerContent() {
                             {selectedFile.isImage && activeFormat.url && (
                                 <div className={`relative flex max-h-72 w-full justify-center rounded-md3-lg p-4 [background-size:10px_10px] ${checkerboardClassName}`}>
                                     <img
-                                        src={`${gatewayDomain}${activeFormat.url}`}
+                                        src={activeFormat.url}
                                         alt={activeFormat.name}
                                         className="max-h-64 rounded-md3-sm object-contain"
                                         onError={(e) => {
@@ -1362,7 +978,7 @@ function AssetViewerContent() {
                                         {t("page.assetViewer.playAudio")}
                                     </p>
                                     <audio
-                                        src={`${gatewayDomain}${activeFormat.url}`}
+                                        src={activeFormat.url}
                                         controls
                                         className="w-full"
                                     />
@@ -1414,6 +1030,26 @@ function AssetViewerContent() {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* What these assets are, and why they take the forms they do */}
+            <Modal
+                isOpen={showGuide}
+                onClose={() => setShowGuide(false)}
+                title={t("page.assetGuide.title")}
+                size="lg"
+            >
+                <AssetGuide />
+            </Modal>
+
+            {/* Why the audio and video take the formats they do, and what they lose */}
+            <Modal
+                isOpen={showFaq}
+                onClose={() => setShowFaq(false)}
+                title={t("page.assetGuide.faq.title")}
+                size="lg"
+            >
+                <AssetFaq />
             </Modal>
 
             {/* Terms of Service Overlay Modal */}

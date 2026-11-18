@@ -1,3 +1,4 @@
+import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -1067,6 +1068,7 @@ export const enUSMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
             r6: {"engineSource":"Scene engine source:"},
@@ -5638,6 +5640,8 @@ export const enUSMessages = {
             fingerprint: "Fingerprint",
             copyLink: "Copy CDN Link",
             copied: "Copied",
+            copyOptions: "More copy options",
+            copyVersionLink: "Copy link to this version",
             download: "Download",
             previewText: "Preview Text",
             playAudio: "Play Audio",

@@ -1,3 +1,4 @@
+import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -1066,6 +1067,7 @@ export const jaJPMessages = {
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
       costume3d: costume3dMessages,
+      assetGuide: assetGuideMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},
             r6: {"engineSource":"シーンエンジンのソース："},
@@ -5663,6 +5665,8 @@ export const jaJPMessages = {
       fingerprint: 'フットプリント',
       copyLink: 'CDNリンクをコピー',
       copied: 'コピー完了',
+      copyOptions: 'その他のコピー方法',
+      copyVersionLink: 'このバージョンへのリンクをコピー',
       download: 'ダウンロード',
       previewText: 'テキストプレビュー',
       playAudio: 'オーディオ再生',

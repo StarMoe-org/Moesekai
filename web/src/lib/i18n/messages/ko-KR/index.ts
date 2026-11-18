@@ -1,3 +1,4 @@
+import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
@@ -1064,6 +1065,7 @@ export const koKRMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
             r6: {"engineSource":"장면 엔진 소스:"},
@@ -5659,6 +5661,8 @@ export const koKRMessages = {
             fingerprint: "지문",
             copyLink: "CDN 링크 복사",
             copied: "복사됨",
+            copyOptions: "다른 복사 방법",
+            copyVersionLink: "이 버전의 링크 복사",
             download: "다운로드",
             previewText: "텍스트 미리보기",
             playAudio: "오디오 재생",

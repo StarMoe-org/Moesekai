@@ -1170,6 +1170,8 @@ export const zhTWPageSecondaryB = {
         fingerprint: "指紋",
         copyLink: "複製 CDN 連結",
         copied: "已複製",
+        copyOptions: "更多複製方式",
+        copyVersionLink: "複製此版本的連結",
         download: "下載",
         previewText: "預覽文字",
         playAudio: "播放音訊",
