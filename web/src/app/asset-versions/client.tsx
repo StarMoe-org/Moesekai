@@ -39,6 +39,9 @@ import {
     mdVolumeUp,
 } from "@/components/md3/icons";
 
+/** The changed files shown at first, and added by each "load more". */
+const PAGE_SIZE = 200;
+
 const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }> = {
     added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
     changed: { labelKey: "page.assetVersions.changeUpdated", className: "bg-tertiary-container text-on-tertiary-container" },
@@ -239,6 +242,13 @@ function AssetVersionsContent() {
 
         return list;
     }, [diffItems, typeFilter, searchQuery, sortBy, sortOrder]);
+
+    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+    useEffect(() => {
+        setVisibleCount(PAGE_SIZE);
+    }, [processedDiffItems]);
+    const shownDiffItems = processedDiffItems.slice(0, visibleCount);
+    const hiddenDiffCount = processedDiffItems.length - shownDiffItems.length;
 
     const isDiffView = version !== "";
     const hasActiveDiffFilters = searchQuery !== "" || typeFilter !== "default" || sortBy !== "size" || sortOrder !== "desc";
@@ -632,7 +642,7 @@ function AssetVersionsContent() {
                                         <div className="w-24 text-right">{t("page.assetVersions.size")}</div>
                                     </div>
                                     {/* Rows */}
-                                    {processedDiffItems.map(item => (
+                                    {shownDiffItems.map(item => (
                                         <Card
                                             key={`${item.kind}:${item.path}`}
                                             variant="filled"
@@ -657,9 +667,24 @@ function AssetVersionsContent() {
                                     ))}
                                 </div>
 
-                                <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                    {t("page.assetVersions.allDiffLoaded", { count: processedDiffItems.length })}
-                                </div>
+                                {hiddenDiffCount > 0 ? (
+                                    <div className="mt-8 flex justify-center">
+                                        <Button
+                                            variant="tonal"
+                                            size="m"
+                                            onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+                                        >
+                                            {t("page.assetViewer.loadMore")}
+                                            <span className="type-label-l opacity-80">
+                                                {formatNumber(hiddenDiffCount)}
+                                            </span>
+                                        </Button>
+                                    </div>
+                                ) : (
+                                    <div className="mt-8 text-center type-body-m text-on-surface-variant">
+                                        {t("page.assetVersions.allDiffLoaded", { count: processedDiffItems.length })}
+                                    </div>
+                                )}
                             </>
                         )}
                     </>
