@@ -4727,7 +4727,6 @@ export const zhCNMessages = {
             noBackground: "无背景",
             backgroundSearch: "按名称搜索背景",
             backgroundsFailed: "背景列表加载失败",
-            moreBackgrounds: "加载更多背景",
             zoomIn: "放大",
             zoomOut: "缩小",
             zoomReset: "恢复原始大小",

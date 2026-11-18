@@ -1,6 +1,6 @@
 import type { IScenarioData } from "@/types/story";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
-import { getAssetBaseUrl } from "./assets";
+import { getAssetBaseUrl, getAssetRegion } from "./assets";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -23,40 +23,24 @@ export class StoryAssetMissingError extends Error {
 
 // ── Path builder ──────────────────────────────────────────────────────────────
 
-/** Extract region from AssetSourceType (e.g. "main-en" → "en", "main" → from localStorage) */
-function getRegionFromSource(source: AssetSourceType): string {
-    const hyphenIndex = source.indexOf("-");
-    if (hyphenIndex !== -1) {
-        return source.substring(hyphenIndex + 1);
-    }
-    // For bare "main" / "backup", fall back to localStorage
-    if (typeof window !== "undefined") {
-        return localStorage.getItem("server-source") || "jp";
-    }
-    return "jp";
-}
-
-function buildPath(type: StoryAssetType, source: AssetSourceType, params: AssetParams): string {
-    const base = `${getAssetBaseUrl(source)}/`;
+/** The scenario's path in the server's asset tree, the same in the storage view and the story library. */
+function scenarioPath(type: StoryAssetType, region: string, params: AssetParams): string {
     switch (type) {
         case "unit":
-            return `${base}scenario/unitstory/${params.assetbundleName}/${params.scenarioId}.json`;
+            return `scenario/unitstory/${params.assetbundleName}/${params.scenarioId}.json`;
         case "event":
-            return `${base}event_story/${params.assetbundleName}/scenario/${params.scenarioId}.json`;
-        case "card": {
-            // International server (en) uses a different directory structure
-            const region = getRegionFromSource(source);
-            if (region === "en") {
-                return `${base}character/member_scenario/${params.assetbundleName}/${params.scenarioId}.json`;
-            }
-            return `${base}character/member/${params.assetbundleName}/${params.scenarioId}.json`;
-        }
+            return `event_story/${params.assetbundleName}/scenario/${params.scenarioId}.json`;
+        case "card":
+            // The international server (en) keeps card stories in a directory of its own.
+            return region === "en"
+                ? `character/member_scenario/${params.assetbundleName}/${params.scenarioId}.json`
+                : `character/member/${params.assetbundleName}/${params.scenarioId}.json`;
         case "talk":
-            return `${base}scenario/actionset/group${params.group}/${params.scenarioId}.json`;
+            return `scenario/actionset/group${params.group}/${params.scenarioId}.json`;
         case "self":
-            return `${base}scenario/profile/${params.scenarioId}.json`;
+            return `scenario/profile/${params.scenarioId}.json`;
         case "special":
-            return `${base}scenario/special/${params.assetbundleName}/${params.scenarioId}.json`;
+            return `scenario/special/${params.assetbundleName}/${params.scenarioId}.json`;
     }
 }
 
@@ -120,15 +104,9 @@ export function scenarioTextMatchesRegion(region: string, scenario: unknown): bo
     }
 }
 
-/**
- * The story library's copy of a mirror file (`<region>/library/<the same path>`), unpacked
- * from the game's own bundle, or null when the URL is not a mirror path.
- */
-export function storyLibraryUrlFor(mirrorUrl: string): { region: string; url: string } | null {
-    const match = /^https?:\/\/[^/]+\/sekai-([a-z]+)-assets\/(.+)$/.exec(mirrorUrl);
-    if (!match) return null;
-    const [, region, path] = match;
-    return { region, url: `${STORY_LIBRARY_BASE}${region}/library/${path}` };
+/** The story library's copy of a scenario (`<region>/library/<the same path>`), unpacked from the game's own bundle. */
+function storyLibraryUrl(region: string, path: string): string {
+    return `${STORY_LIBRARY_BASE}${region}/library/${path}`;
 }
 
 async function fetchScenario(url: string): Promise<IScenarioData | null> {
@@ -154,19 +132,14 @@ export async function fetchStoryAssetFromMirror(
     source: AssetSourceType,
     params: AssetParams
 ): Promise<IScenarioData> {
-    const url = buildPath(type, source, params);
+    const region = getAssetRegion(source);
+    const path = scenarioPath(type, region, params);
+    const url = `${getAssetBaseUrl(source)}/${path}`;
     const data = await fetchScenario(url);
-    if (data) {
-        const library = storyLibraryUrlFor(url);
-        if (library && !scenarioTextMatchesRegion(library.region, data)) {
-            const replacement = await fetchScenario(library.url);
-            if (replacement) return replacement;
-            console.warn("[story] the mirror's scenario is not in the server's language and the story library has no copy", { url });
-        }
-        return data;
-    }
-
-    // Strip domain and assets prefix for display
-    const displayPath = url.replace(/^https?:\/\/[^\/]+\/(sekai-[a-z]+-assets\/)?/, "");
-    throw new StoryAssetMissingError([displayPath]);
+    if (!data) throw new StoryAssetMissingError([path]);
+    if (scenarioTextMatchesRegion(region, data)) return data;
+    const replacement = await fetchScenario(storyLibraryUrl(region, path));
+    if (replacement) return replacement;
+    console.warn("[story] the mirror's scenario is not in the server's language and the story library has no copy", { url });
+    return data;
 }

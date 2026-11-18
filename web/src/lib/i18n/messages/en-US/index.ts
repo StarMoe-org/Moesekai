@@ -4728,7 +4728,6 @@ export const enUSMessages = {
             noBackground: "None",
             backgroundSearch: "Search backgrounds by name",
             backgroundsFailed: "The backgrounds could not be loaded",
-            moreBackgrounds: "More backgrounds",
             zoomIn: "Zoom in",
             zoomOut: "Zoom out",
             zoomReset: "Reset zoom",

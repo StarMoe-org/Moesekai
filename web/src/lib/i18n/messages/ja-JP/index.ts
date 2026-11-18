@@ -4753,7 +4753,6 @@ export const jaJPMessages = {
       noBackground: '背景なし',
       backgroundSearch: '名前で背景を検索',
       backgroundsFailed: '背景の一覧を読み込めませんでした',
-      moreBackgrounds: '背景をさらに読み込む',
       zoomIn: '拡大',
       zoomOut: '縮小',
       zoomReset: '拡大をリセット',

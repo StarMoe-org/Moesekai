@@ -260,7 +260,6 @@ export const zhTWPageSecondaryB = {
         noBackground: "無背景",
         backgroundSearch: "依名稱搜尋背景",
         backgroundsFailed: "背景列表載入失敗",
-        moreBackgrounds: "載入更多背景",
         zoomIn: "放大",
         zoomOut: "縮小",
         zoomReset: "恢復原始大小",

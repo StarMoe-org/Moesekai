@@ -7,7 +7,7 @@ import { AssetLineLabel } from "@/components/common/AssetLine";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, type UiLocale } from "@/lib/i18n";
-import { MOE_LOGO_URL } from "@/lib/assets";
+import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN, MOE_LOGO_URL } from "@/lib/assets";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { Button, Icon, Switch } from "@/components/md3";
 import { mdArrowForward, mdBrightnessAuto, mdCheck, mdCheckCircle, mdChevronLeft, mdChevronRight, mdDarkMode, mdInfo, mdLightMode } from "@/components/md3/icons";
@@ -172,8 +172,8 @@ export default function SetupGuide({ onComplete }: SetupGuideProps) {
     const runPingTest = async () => {
       setIsPinging(true);
       const [mainPing, backupPing] = await Promise.all([
-        pingServer("https://storage.pjsk.moe"),
-        pingServer("https://storage.exmeaning.com")
+        pingServer(ASSET_DOMAIN_MAIN),
+        pingServer(ASSET_DOMAIN_BACKUP)
       ]);
 
       setPings({

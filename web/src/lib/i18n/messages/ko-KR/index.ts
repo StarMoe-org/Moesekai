@@ -4749,7 +4749,6 @@ export const koKRMessages = {
             noBackground: "배경 없음",
             backgroundSearch: "이름으로 배경 검색",
             backgroundsFailed: "배경 목록을 불러오지 못했습니다",
-            moreBackgrounds: "배경 더 불러오기",
             zoomIn: "확대",
             zoomOut: "축소",
             zoomReset: "확대 초기화",
