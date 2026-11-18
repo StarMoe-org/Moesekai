@@ -13,6 +13,17 @@ import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
 import LocalizedLink from "@/components/LocalizedLink";
 import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, PageContainer, PageHeader, Surface } from "@/components/md3";
+import { getAssetDomain } from "@/lib/assets";
+import {
+    changeCount,
+    changedFileUrl,
+    fetchVersionChanges,
+    fetchVersionHistory,
+    type ChangedFile,
+    type ChangeKind,
+    type VersionChanges,
+    type VersionEntry,
+} from "@/lib/assetHistory";
 import {
     mdCheck,
     mdChevronLeft,
@@ -27,70 +38,13 @@ import {
     mdVolumeUp,
 } from "@/components/md3/icons";
 
-// ==================== Types (matching the assets gateway responses) ====================
-
-export interface AssetVersionItem {
-    assetVersion: string;
-    appVersion: string;
-    assetHash?: string;
-    bundleCount: number;
-    committedAt: number; // unix seconds
-    changedAssets: number;
-    /** Client COMMIT stats passthrough — keys are not guaranteed to be stable */
-    stats?: Record<string, number>;
-    diffUrl?: string;
-}
-
-export interface AssetVersionsResponse {
-    server: string;
-    limit: number;
-    nextCursor?: string;
-    items: AssetVersionItem[];
-}
-
-export interface AssetDiffItem {
-    changeType: "added" | "updated";
-    path: string;
-    url: string;
-    source?: string;
-    size?: number;
-    fingerprint?: string;
-    sha256?: string;
-    bundlePath?: string;
-}
-
-export interface AssetDiffResponse {
-    server: string;
-    assetVersion: string;
-    appVersion: string;
-    assetHash?: string;
-    committedAt: number;
-    types?: string[];
-    totalChanged: number;
-    limit: number;
-    nextCursor?: string;
-    items: AssetDiffItem[];
-}
-
-type AssetDiffMeta = Omit<AssetDiffResponse, "items" | "nextCursor" | "limit">;
-
 const SERVERS = ["jp", "en", "tw", "kr", "cn"] as const;
-const VERSIONS_PAGE_LIMIT = 20;
-const DIFF_PAGE_LIMIT = 200;
 
-// Known COMMIT stat keys → i18n labels; unknown keys fall back to the raw name
-const STAT_LABEL_KEYS: Record<string, string> = {
-    SkippedByLayer1: "page.assetVersions.stats.skippedByLayer1",
-    SkippedByCheck: "page.assetVersions.stats.skippedByCheck",
-    UploadedShared: "page.assetVersions.stats.uploadedShared",
-    UploadedOverride: "page.assetVersions.stats.uploadedOverride",
+const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }> = {
+    added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
+    changed: { labelKey: "page.assetVersions.changeUpdated", className: "bg-tertiary-container text-on-tertiary-container" },
+    removed: { labelKey: "page.assetVersions.changeRemoved", className: "bg-error-container text-on-error-container" },
 };
-
-const STAT_CHIP_CLASSES: Record<string, string> = {
-    UploadedOverride: "bg-tertiary-container text-on-tertiary-container",
-    UploadedShared: "bg-secondary-container text-on-secondary-container",
-};
-const STAT_CHIP_DEFAULT = "bg-surface-container-highest text-on-surface-variant";
 
 function formatBytes(bytes?: number): string {
     if (bytes === undefined || bytes === null) return "-";
@@ -200,68 +154,36 @@ function AssetVersionsContent() {
         setVersion("");
     }, []);
 
-    const gatewayDomain = useMemo(() => {
-        return assetSource === "backup" ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe";
-    }, [assetSource]);
+    const origin = useMemo(() => getAssetDomain(assetSource), [assetSource]);
 
     // ==================== Version timeline states ====================
 
-    const [versions, setVersions] = useState<AssetVersionItem[]>([]);
-    const [versionsCursor, setVersionsCursor] = useState<string>("");
+    const [versions, setVersions] = useState<VersionEntry[]>([]);
     const [isVersionsLoading, setIsVersionsLoading] = useState(true);
-    const [isVersionsLoadingMore, setIsVersionsLoadingMore] = useState(false);
     const [versionsError, setVersionsError] = useState<string | null>(null);
 
     const fetchVersions = useCallback(async () => {
         try {
             setIsVersionsLoading(true);
             setVersionsError(null);
-            const url = `${gatewayDomain}/api/assets/versions?server=${server}&limit=${VERSIONS_PAGE_LIMIT}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetVersionsResponse = await res.json();
-            setVersions(data.items || []);
-            setVersionsCursor(data.nextCursor || "");
+            setVersions(await fetchVersionHistory(origin, server));
         } catch (err) {
             console.error("Failed to load asset versions:", err);
             setVersionsError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setIsVersionsLoading(false);
         }
-    }, [server, gatewayDomain]);
+    }, [server, origin]);
 
     useEffect(() => {
         fetchVersions();
     }, [fetchVersions]);
 
-    const fetchMoreVersions = useCallback(async () => {
-        if (!versionsCursor || isVersionsLoadingMore) return;
-        try {
-            setIsVersionsLoadingMore(true);
-            const url = `${gatewayDomain}/api/assets/versions?server=${server}&limit=${VERSIONS_PAGE_LIMIT}&cursor=${encodeURIComponent(versionsCursor)}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetVersionsResponse = await res.json();
-            setVersions(prev => [...prev, ...(data.items || [])]);
-            setVersionsCursor(data.nextCursor || "");
-        } catch (err) {
-            console.error("Failed to load more asset versions:", err);
-        } finally {
-            setIsVersionsLoadingMore(false);
-        }
-    }, [server, gatewayDomain, versionsCursor, isVersionsLoadingMore]);
+    // ==================== Changes states ====================
 
-    // ==================== Diff states ====================
-
-    const [diffMeta, setDiffMeta] = useState<AssetDiffMeta | null>(null);
-    const [diffItems, setDiffItems] = useState<AssetDiffItem[]>([]);
-    const [diffCursor, setDiffCursor] = useState<string>("");
+    /** The changes of the selected version; null when the site has no record of them. */
+    const [changes, setChanges] = useState<VersionChanges | null>(null);
     const [isDiffLoading, setIsDiffLoading] = useState(false);
-    const [isDiffLoadingMore, setIsDiffLoadingMore] = useState(false);
     const [diffError, setDiffError] = useState<string | null>(null);
 
     // Diff filters
@@ -270,7 +192,7 @@ function AssetVersionsContent() {
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
     // Selected file detail modal
-    const [selectedFile, setSelectedFile] = useState<AssetDiffItem | null>(null);
+    const [selectedFile, setSelectedFile] = useState<ChangedFile | null>(null);
     const [previewText, setPreviewText] = useState<string | null>(null);
     const [isPreviewTextLoading, setIsPreviewTextLoading] = useState(false);
     const [previewTextError, setPreviewTextError] = useState<string | null>(null);
@@ -281,70 +203,32 @@ function AssetVersionsContent() {
         try {
             setIsDiffLoading(true);
             setDiffError(null);
-            setDiffItems([]);
-            setDiffMeta(null);
-
-            let url = `${gatewayDomain}/api/assets/diff?server=${server}&version=${encodeURIComponent(version)}&limit=${DIFF_PAGE_LIMIT}`;
-            if (typeFilter && typeFilter !== "default") {
-                url += `&types=${encodeURIComponent(typeFilter)}`;
-            }
-
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetDiffResponse = await res.json();
-            setDiffMeta({
-                server: data.server,
-                assetVersion: data.assetVersion,
-                appVersion: data.appVersion,
-                assetHash: data.assetHash,
-                committedAt: data.committedAt,
-                types: data.types,
-                totalChanged: data.totalChanged,
-            });
-            setDiffItems(data.items || []);
-            setDiffCursor(data.nextCursor || "");
+            setChanges(null);
+            setChanges(await fetchVersionChanges(origin, server, version));
         } catch (err) {
             console.error("Failed to load asset diff:", err);
             setDiffError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setIsDiffLoading(false);
         }
-    }, [server, version, typeFilter, gatewayDomain]);
+    }, [server, version, origin]);
 
     useEffect(() => {
         fetchDiff();
     }, [fetchDiff]);
 
-    const fetchMoreDiff = useCallback(async () => {
-        if (!version || !diffCursor || isDiffLoadingMore) return;
-        try {
-            setIsDiffLoadingMore(true);
+    const diffItems = useMemo(() => changes?.files ?? [], [changes]);
+    const fileUrl = useCallback(
+        (file: ChangedFile) => (changes ? changedFileUrl(origin, server, changes, file) : ""),
+        [changes, origin, server],
+    );
 
-            let url = `${gatewayDomain}/api/assets/diff?server=${server}&version=${encodeURIComponent(version)}&limit=${DIFF_PAGE_LIMIT}&cursor=${encodeURIComponent(diffCursor)}`;
-            if (typeFilter && typeFilter !== "default") {
-                url += `&types=${encodeURIComponent(typeFilter)}`;
-            }
-
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetDiffResponse = await res.json();
-            setDiffItems(prev => [...prev, ...(data.items || [])]);
-            setDiffCursor(data.nextCursor || "");
-        } catch (err) {
-            console.error("Failed to load more asset diff entries:", err);
-        } finally {
-            setIsDiffLoadingMore(false);
-        }
-    }, [server, version, typeFilter, gatewayDomain, diffCursor, isDiffLoadingMore]);
-
-    // ==================== Diff filtering & pagination ====================
+    // ==================== Diff filtering ====================
 
     const processedDiffItems = useMemo(() => {
-        let list = [...diffItems];
+        let list = typeFilter === "default" || typeFilter === "all"
+            ? [...diffItems]
+            : diffItems.filter(item => getFileExtension(item.path) === typeFilter);
 
         if (searchQuery.trim()) {
             const query = searchQuery.toLowerCase();
@@ -363,7 +247,7 @@ function AssetVersionsContent() {
         }
 
         return list;
-    }, [diffItems, searchQuery, sortBy, sortOrder]);
+    }, [diffItems, typeFilter, searchQuery, sortBy, sortOrder]);
 
     const isDiffView = version !== "";
     const hasActiveDiffFilters = searchQuery !== "" || typeFilter !== "default" || sortBy !== "size" || sortOrder !== "desc";
@@ -382,14 +266,13 @@ function AssetVersionsContent() {
 
     // ==================== File preview helpers ====================
 
-    const handleFetchPreviewText = async (file: AssetDiffItem) => {
-        if (!file.url) return;
+    const handleFetchPreviewText = async (file: ChangedFile) => {
         try {
             setIsPreviewTextLoading(true);
             setPreviewTextError(null);
             setPreviewText(null);
 
-            const res = await fetch(`${gatewayDomain}${file.url}`);
+            const res = await fetch(fileUrl(file));
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
             }
@@ -495,25 +378,24 @@ function AssetVersionsContent() {
         processedDiffItems.length,
         diffItems.length,
         versions.length,
-        diffMeta,
-        diffCursor,
         t,
     ]);
 
     // ==================== Modal header actions ====================
 
     const modalHeaderActions = useMemo(() => {
-        if (!selectedFile?.url) return null;
+        if (!selectedFile) return null;
+        const url = fileUrl(selectedFile);
         return (
             <div className="flex items-center gap-1">
                 <IconButton
                     icon={copyFeedback ? mdCheck : mdContentCopy}
                     size="xs"
-                    onClick={() => handleCopyToClipboard(`${gatewayDomain}${selectedFile.url}`)}
+                    onClick={() => handleCopyToClipboard(url)}
                     label={copyFeedback ? t("page.assetVersions.copied") : t("page.assetVersions.copyLink")}
                 />
                 <ExternalLink
-                    href={`${gatewayDomain}${selectedFile.url}`}
+                    href={url}
                     className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                     title={t("page.assetVersions.download")}
                 >
@@ -521,44 +403,18 @@ function AssetVersionsContent() {
                 </ExternalLink>
             </div>
         );
-    }, [selectedFile, gatewayDomain, copyFeedback, t]);
+    }, [selectedFile, fileUrl, copyFeedback, t]);
 
     // ==================== Shared render helpers ====================
 
-    const renderStatChips = (stats: Record<string, number> | undefined, wrapperClassName: string) => {
-        const entries = Object.entries(stats || {}).filter(([key, value]) => value > 0 && key !== "SkippedByCheck");
-        if (entries.length === 0) return null;
-        return (
-            <div className={`flex flex-wrap items-center gap-1.5 ${wrapperClassName}`}>
-                {entries.map(([key, value]) => {
-                    const labelKey = STAT_LABEL_KEYS[key];
-                    return (
-                        <span
-                            key={key}
-                            className={`rounded-md3-sm px-2 py-0.5 type-label-s ${STAT_CHIP_CLASSES[key] || STAT_CHIP_DEFAULT}`}
-                        >
-                            {labelKey ? t(labelKey) : key} {formatNumber(value)}
-                        </span>
-                    );
-                })}
-            </div>
-        );
-    };
-
-    const renderChangeTypeBadge = (changeType: AssetDiffItem["changeType"]) => (
-        <span
-            className={`shrink-0 rounded-md3-sm px-2 py-0.5 type-label-s uppercase ${
-                changeType === "added"
-                    ? "bg-primary-container text-on-primary-container"
-                    : "bg-tertiary-container text-on-tertiary-container"
-            }`}
-        >
-            {changeType === "added" ? t("page.assetVersions.changeAdded") : t("page.assetVersions.changeUpdated")}
+    const renderChangeTypeBadge = (kind: ChangeKind) => (
+        <span className={`shrink-0 rounded-md3-sm px-2 py-0.5 type-label-s uppercase ${CHANGE_BADGES[kind].className}`}>
+            {t(CHANGE_BADGES[kind].labelKey)}
         </span>
     );
 
-    const formatCommittedAt = (committedAt: number) =>
-        formatDate(new Date(committedAt * 1000), {
+    const formatPublishedAt = (publishedAt: string) =>
+        formatDate(new Date(publishedAt), {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -566,9 +422,14 @@ function AssetVersionsContent() {
             minute: "2-digit",
         });
 
+    const formatChangeCount = (entry: VersionEntry) => {
+        const count = changeCount(entry);
+        return count === undefined ? t("page.assetVersions.noChangeRecord") : formatNumber(count);
+    };
+
     const selectedVersionMeta = useMemo(() => {
         if (!isDiffView) return null;
-        return versions.find(v => v.assetVersion === version) || null;
+        return versions.find(v => v.published_version === version) || null;
     }, [isDiffView, versions, version]);
 
     // ==================== Render ====================
@@ -667,7 +528,7 @@ function AssetVersionsContent() {
                                 {/* Timeline rail */}
                                 <div className="absolute bottom-4 left-[13px] top-4 hidden w-px bg-outline-variant sm:block" aria-hidden />
                                 {versions.map((v, index) => (
-                                    <div key={`${v.assetVersion}-${index}`} className="relative sm:pl-9">
+                                    <div key={v.published_version} className="relative sm:pl-9">
                                         {/* Timeline dot */}
                                         <span
                                             className={`absolute left-[9px] top-6 hidden h-[9px] w-[9px] rounded-full sm:block ${index === 0 ? "bg-primary ring-4 ring-primary-container" : "bg-outline"}`}
@@ -676,17 +537,14 @@ function AssetVersionsContent() {
                                         <Card
                                             variant="filled"
                                             radius="lg"
-                                            onClick={() => setVersion(v.assetVersion)}
+                                            onClick={() => setVersion(v.published_version)}
                                             className="group select-none p-4 text-left sm:p-5"
                                         >
                                             <div className="flex items-start justify-between gap-3">
                                                 <div className="min-w-0">
                                                     <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="font-mono type-title-l type-emphasized text-on-surface transition-colors duration-200 group-hover:text-primary">
-                                                            {v.assetVersion}
-                                                        </span>
-                                                        <span className="rounded-md3-sm bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                                                            App {v.appVersion}
+                                                        <span className="break-all font-mono type-title-l type-emphasized text-on-surface transition-colors duration-200 group-hover:text-primary">
+                                                            {v.published_version}
                                                         </span>
                                                         {index === 0 && (
                                                             <span className="rounded-md3-sm bg-primary px-2 py-0.5 type-label-s text-on-primary">
@@ -694,9 +552,11 @@ function AssetVersionsContent() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <p className="mt-1 type-body-s text-on-surface-variant">
-                                                        {formatCommittedAt(v.committedAt)}
-                                                    </p>
+                                                    {v.published_at && (
+                                                        <p className="mt-1 type-body-s text-on-surface-variant">
+                                                            {formatPublishedAt(v.published_at)}
+                                                        </p>
+                                                    )}
                                                 </div>
                                                 <div className="flex shrink-0 items-center gap-1 type-label-l text-on-surface-variant transition-colors duration-200 group-hover:text-primary">
                                                     <span className="hidden sm:inline">{t("page.assetVersions.viewDiff")}</span>
@@ -707,34 +567,19 @@ function AssetVersionsContent() {
                                             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 type-body-s text-on-surface-variant">
                                                 <span>
                                                     {t("page.assetVersions.changedAssetsLabel")}
-                                                    <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(v.changedAssets)}</span>
+                                                    <span className="ml-1.5 type-label-l text-on-surface">
+                                                        {formatChangeCount(v)}
+                                                    </span>
                                                 </span>
                                             </div>
-
-                                            {renderStatChips(v.stats, "mt-2.5")}
                                         </Card>
                                     </div>
                                 ))}
                             </div>
 
-                            {versionsCursor && (
-                                <div className="mt-8 flex justify-center">
-                                    <Button
-                                        variant="tonal"
-                                        size="m"
-                                        onClick={fetchMoreVersions}
-                                        disabled={isVersionsLoadingMore}
-                                    >
-                                        {isVersionsLoadingMore ? <CircularProgress size={20} /> : t("page.assetVersions.loadMore")}
-                                    </Button>
-                                </div>
-                            )}
-
-                            {!versionsCursor && versions.length > 0 && (
-                                <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                    {t("page.assetVersions.allVersionsLoaded", { count: versions.length })}
-                                </div>
-                            )}
+                            <div className="mt-8 text-center type-body-m text-on-surface-variant">
+                                {t("page.assetVersions.allVersionsLoaded", { count: versions.length })}
+                            </div>
                         </>
                     )
                 ) : (
@@ -742,43 +587,30 @@ function AssetVersionsContent() {
                     <>
                         {/* Version summary card */}
                         <Surface tone="card" radius="xl" className="mb-4 p-4 sm:p-5">
-                            {isDiffLoading && !diffMeta ? (
+                            {isDiffLoading ? (
                                 <div className="flex items-center gap-3 type-body-m text-on-surface-variant">
                                     <CircularProgress size={20} />
                                     <span>{t("page.assetVersions.loadingDiff")}</span>
                                 </div>
-                            ) : diffMeta ? (
+                            ) : (
                                 <>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-mono type-title-l type-emphasized text-on-surface">{diffMeta.assetVersion}</span>
-                                        <span className="rounded-md3-sm bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                                            App {diffMeta.appVersion}
-                                        </span>
-                                        {(diffMeta.types || []).map(type => (
-                                            <span key={type} className="rounded-md3-sm bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">
-                                                {type}
-                                            </span>
-                                        ))}
-                                    </div>
+                                    <span className="break-all font-mono type-title-l type-emphasized text-on-surface">{version}</span>
                                     <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 type-body-s text-on-surface-variant">
-                                        <span>{formatCommittedAt(diffMeta.committedAt)}</span>
+                                        {selectedVersionMeta?.published_at && <span>{formatPublishedAt(selectedVersionMeta.published_at)}</span>}
                                         <span>
                                             {t("page.assetVersions.totalChangedLabel")}
-                                            <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(diffMeta.totalChanged)}</span>
-                                        </span>
-                                        <span>
-                                            {t("page.assetVersions.loadedLabel")}
-                                            <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(diffItems.length)}</span>
+                                            <span className="ml-1.5 type-label-l text-on-surface">
+                                                {changes ? formatNumber(diffItems.length) : t("page.assetVersions.noChangeRecord")}
+                                            </span>
                                         </span>
                                     </div>
-                                    {selectedVersionMeta && renderStatChips(selectedVersionMeta.stats, "mt-2.5")}
-                                    {diffMeta.assetHash && (
+                                    {selectedVersionMeta && (
                                         <p className="mt-2 break-all font-mono type-label-s text-on-surface-variant">
-                                            {diffMeta.assetHash}
+                                            {selectedVersionMeta.revision}
                                         </p>
                                     )}
                                 </>
-                            ) : null}
+                            )}
                         </Surface>
 
                         {/* Diff list */}
@@ -791,6 +623,10 @@ function AssetVersionsContent() {
                                 retryLabel={t("common.action.retry")}
                                 onRetry={fetchDiff}
                             />
+                        ) : !changes ? (
+                            <Surface tone="card" radius="xl">
+                                <EmptyState icon={mdHistory} title={t("page.assetVersions.noChangeRecord")} />
+                            </Surface>
                         ) : processedDiffItems.length === 0 ? (
                             <Surface tone="card" radius="xl">
                                 <EmptyState icon={mdFolderOff} title={t("page.assetVersions.emptyDiff")} />
@@ -805,15 +641,15 @@ function AssetVersionsContent() {
                                         <div className="w-24 text-right">{t("page.assetVersions.size")}</div>
                                     </div>
                                     {/* Rows */}
-                                    {processedDiffItems.map((item, index) => (
+                                    {processedDiffItems.map(item => (
                                         <Card
-                                            key={`${item.path}-${index}`}
+                                            key={`${item.kind}:${item.path}`}
                                             variant="filled"
                                             onClick={() => setSelectedFile(item)}
                                             className="group select-none px-4 py-3 text-left"
                                         >
                                             <div className="flex items-center gap-3">
-                                            {renderChangeTypeBadge(item.changeType)}
+                                            {renderChangeTypeBadge(item.kind)}
                                             <div className="flex min-w-0 flex-1 items-center gap-2">
                                                 <p
                                                     className="truncate font-mono type-body-s text-on-surface transition-colors duration-200 group-hover:text-primary sm:type-body-m"
@@ -821,9 +657,6 @@ function AssetVersionsContent() {
                                                 >
                                                     {item.path}
                                                 </p>
-                                                {item.source === "override" && (
-                                                    <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 type-label-s text-on-tertiary-container">override</span>
-                                                )}
                                             </div>
                                             <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
                                                 {formatBytes(item.size)}
@@ -833,35 +666,9 @@ function AssetVersionsContent() {
                                     ))}
                                 </div>
 
-                                {/* Fetch next server page */}
-                                {diffCursor && (
-                                    <div className="mt-8 flex justify-center">
-                                        <Button
-                                            variant="tonal"
-                                            size="m"
-                                            onClick={fetchMoreDiff}
-                                            disabled={isDiffLoadingMore}
-                                        >
-                                            {isDiffLoadingMore ? (
-                                                <CircularProgress size={20} />
-                                            ) : (
-                                                <>
-                                                    {t("page.assetVersions.loadMore")}
-                                                    <span className="type-label-l opacity-80">
-                                                        {formatNumber(diffItems.length)} / {formatNumber(diffMeta?.totalChanged || 0)}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {/* All loaded message */}
-                                {!diffCursor && processedDiffItems.length > 0 && (
-                                    <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                        {t("page.assetVersions.allDiffLoaded", { count: processedDiffItems.length })}
-                                    </div>
-                                )}
+                                <div className="mt-8 text-center type-body-m text-on-surface-variant">
+                                    {t("page.assetVersions.allDiffLoaded", { count: processedDiffItems.length })}
+                                </div>
                             </>
                         )}
                     </>
@@ -886,7 +693,7 @@ function AssetVersionsContent() {
                         <div className="space-y-2.5 rounded-md3-lg bg-surface-container p-4 type-body-s sm:type-body-m">
                             <div className="flex justify-between gap-4">
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.changeTypeLabel")}</span>
-                                {renderChangeTypeBadge(selectedFile.changeType)}
+                                {renderChangeTypeBadge(selectedFile.kind)}
                             </div>
                             <div className="flex flex-col gap-1">
                                 <span className="text-on-surface-variant">{t("page.assetVersions.path")}</span>
@@ -896,38 +703,14 @@ function AssetVersionsContent() {
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.size")}</span>
                                 <span className="text-right type-label-l text-on-surface">{formatBytes(selectedFile.size)}</span>
                             </div>
-                            {selectedFile.source && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.source")}</span>
-                                    <span className="text-right capitalize text-on-surface">{selectedFile.source}</span>
-                                </div>
-                            )}
-                            {selectedFile.bundlePath && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.bundlePath")}</span>
-                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={selectedFile.bundlePath}>{selectedFile.bundlePath}</span>
-                                </div>
-                            )}
-                            {selectedFile.fingerprint && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.fingerprint")}</span>
-                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={selectedFile.fingerprint}>{selectedFile.fingerprint}</span>
-                                </div>
-                            )}
-                            {selectedFile.sha256 && (
-                                <div className="flex flex-col gap-1 border-t border-outline-variant pt-1.5">
-                                    <span className="text-on-surface-variant">{t("page.assetVersions.sha256")}</span>
-                                    <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">{selectedFile.sha256}</span>
-                                </div>
-                            )}
                         </div>
 
                         {/* Inline Previews */}
                         <div className="flex flex-col items-center justify-center">
-                            {isImagePath(selectedFile.path) && selectedFile.url && (
+                            {isImagePath(selectedFile.path) && (
                                 <div className="relative flex max-h-64 w-full justify-center rounded-md3-lg bg-surface-container p-4">
                                     <img
-                                        src={`${gatewayDomain}${selectedFile.url}`}
+                                        src={fileUrl(selectedFile)}
                                         alt={selectedFile.path}
                                         className="max-h-56 rounded-md3-sm object-contain"
                                         onError={(e) => {
@@ -937,21 +720,21 @@ function AssetVersionsContent() {
                                 </div>
                             )}
 
-                            {isAudioPath(selectedFile.path) && selectedFile.url && (
+                            {isAudioPath(selectedFile.path) && (
                                 <div className="w-full rounded-md3-lg bg-surface-container p-4">
                                     <p className="mb-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
                                         <Icon path={mdVolumeUp} size={18} />
                                         {t("page.assetVersions.playAudio")}
                                     </p>
                                     <audio
-                                        src={`${gatewayDomain}${selectedFile.url}`}
+                                        src={fileUrl(selectedFile)}
                                         controls
                                         className="w-full"
                                     />
                                 </div>
                             )}
 
-                            {isTextPath(selectedFile.path) && selectedFile.url && (
+                            {isTextPath(selectedFile.path) && (
                                 <div className="w-full">
                                     {previewText === null && !isPreviewTextLoading && !previewTextError && (
                                         <Button
