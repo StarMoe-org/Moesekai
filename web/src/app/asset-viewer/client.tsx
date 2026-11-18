@@ -7,6 +7,7 @@ import BaseFilters, { FilterSection, FilterButton } from "@/components/common/Ba
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { usePageServer } from "@/hooks/usePageServer";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
@@ -188,20 +189,7 @@ function AssetViewerContent() {
     const { t, formatNumber, locale } = useI18n();
 
     // Query states
-    const [server, setServer] = useState<string>(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            const queryServer = params.get("server");
-            if (queryServer) return queryServer;
-
-            const savedServer = localStorage.getItem("server-source");
-            if (savedServer === "en" || savedServer === "jp" || savedServer === "cn" || savedServer === "tw" || savedServer === "kr") {
-                return savedServer;
-            }
-            return "jp";
-        }
-        return "jp";
-    });
+    const { servers, server, pinned, ready, chooseServer, unpin } = usePageServer();
 
     // The published view being browsed
     const [view, setView] = useState<AssetView>(() => {
@@ -274,6 +262,7 @@ function AssetViewerContent() {
 
     // Fetch the tree of the selected region and view (cached per region and view)
     useEffect(() => {
+        if (!ready) return;
         let active = true;
         setIsLoading(true);
         setError(null);
@@ -291,7 +280,7 @@ function AssetViewerContent() {
         return () => {
             active = false;
         };
-    }, [server, view, reloadToken]);
+    }, [ready, server, view, reloadToken]);
 
     // Restore the scroll position of the directory being shown
     useEffect(() => {
@@ -305,8 +294,13 @@ function AssetViewerContent() {
 
     // Sync state to URL query parameters
     useEffect(() => {
+        if (!ready) return;
         const url = new URL(window.location.href);
-        url.searchParams.set("server", server);
+        if (pinned) {
+            url.searchParams.set("server", pinned);
+        } else {
+            url.searchParams.delete("server");
+        }
         url.searchParams.set("view", view);
         if (prefix) {
             url.searchParams.set("prefix", prefix);
@@ -314,16 +308,12 @@ function AssetViewerContent() {
             url.searchParams.delete("prefix");
         }
         window.history.replaceState({}, "", url.toString());
-    }, [server, view, prefix]);
+    }, [ready, pinned, view, prefix]);
 
-    // Handle browser popstate navigation
+    // Handle browser popstate navigation (the server follows it in usePageServer)
     useEffect(() => {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
-            const serverParam = params.get("server");
-            if (serverParam) {
-                setServer(serverParam);
-            }
             const viewParam = params.get("view");
             setView(isAssetView(viewParam) ? viewParam : "storage");
             setPrefix(params.get("prefix") || "");
@@ -342,9 +332,9 @@ function AssetViewerContent() {
         setPrefix(path);
     };
 
-    const changeServer = (srv: string) => {
+    const changeServer = (srv: (typeof servers)[number]) => {
         rememberScroll();
-        setServer(srv);
+        chooseServer(srv);
     };
 
     // Paths differ between views, so another view starts at its root
@@ -453,10 +443,10 @@ function AssetViewerContent() {
         });
     };
 
-    const activeFiltersCount = (server !== "jp" ? 1 : 0) + (filterType !== "all" ? 1 : 0) + (sortBy !== "name" ? 1 : 0) + (sortOrder !== "asc" ? 1 : 0);
+    const activeFiltersCount = (pinned ? 1 : 0) + (filterType !== "all" ? 1 : 0) + (sortBy !== "name" ? 1 : 0) + (sortOrder !== "asc" ? 1 : 0);
 
     const resetFilters = () => {
-        setServer("jp");
+        unpin();
         setFilterType("all");
         setSortBy("name");
         setSortOrder("asc");
@@ -486,7 +476,7 @@ function AssetViewerContent() {
         >
             <FilterSection label={t("page.assetViewer.serverSelect")}>
                 <div className="flex flex-wrap gap-2">
-                    {(["jp", "en", "tw", "kr", "cn"] as const).map(srv => (
+                    {servers.map(srv => (
                         <FilterButton
                             key={srv}
                             selected={server === srv}
@@ -669,7 +659,7 @@ function AssetViewerContent() {
                         />
 
                         <LocalizedLink
-                            href={`/asset-versions?server=${server}`}
+                            href={pinned ? `/asset-versions?server=${pinned}` : "/asset-versions"}
                             className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                             title={t("layout.nav.items.assetVersions")}
                             aria-label={t("layout.nav.items.assetVersions")}

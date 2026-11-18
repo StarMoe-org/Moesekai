@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
@@ -8,6 +8,7 @@ import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { usePageServer } from "@/hooks/usePageServer";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
@@ -37,8 +38,6 @@ import {
     mdRefresh,
     mdVolumeUp,
 } from "@/components/md3/icons";
-
-const SERVERS = ["jp", "en", "tw", "kr", "cn"] as const;
 
 const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }> = {
     added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
@@ -79,20 +78,7 @@ function AssetVersionsContent() {
 
     // ==================== Query states (synced to URL) ====================
 
-    const [server, setServer] = useState<string>(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            const queryServer = params.get("server");
-            if (queryServer) return queryServer;
-
-            const savedServer = localStorage.getItem("server-source");
-            if (savedServer === "en" || savedServer === "jp" || savedServer === "cn" || savedServer === "tw" || savedServer === "kr") {
-                return savedServer;
-            }
-            return "jp";
-        }
-        return "jp";
-    });
+    const { servers, server, pinned, ready, chooseServer } = usePageServer();
     // Selected version — empty string means the version timeline view
     const [version, setVersion] = useState<string>(() => {
         if (typeof window !== "undefined") {
@@ -115,8 +101,13 @@ function AssetVersionsContent() {
 
     // Sync state to URL query parameters (write-only)
     useEffect(() => {
+        if (!ready) return;
         const url = new URL(window.location.href);
-        url.searchParams.set("server", server);
+        if (pinned) {
+            url.searchParams.set("server", pinned);
+        } else {
+            url.searchParams.delete("server");
+        }
         if (version) {
             url.searchParams.set("version", version);
             if (typeFilter !== "default") {
@@ -130,16 +121,12 @@ function AssetVersionsContent() {
             url.searchParams.delete("types");
         }
         window.history.replaceState({}, "", url.toString());
-    }, [server, version, typeFilter]);
+    }, [ready, pinned, version, typeFilter]);
 
-    // Handle back/forward navigation
+    // Handle back/forward navigation (the server follows it in usePageServer)
     useEffect(() => {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
-            const serverParam = params.get("server");
-            if (serverParam) {
-                setServer(serverParam);
-            }
             setVersion(params.get("version") || "");
             setTypeFilter(params.get("types") || "default");
         };
@@ -148,11 +135,14 @@ function AssetVersionsContent() {
         return () => window.removeEventListener("popstate", handlePopState);
     }, []);
 
-    // Versions are server-specific, so switching servers exits the diff view
-    const handleServerChange = useCallback((srv: string) => {
-        setServer(srv);
-        setVersion("");
-    }, []);
+    // Versions are server-specific, so a change of server, on the page or in the settings, exits
+    // the diff view. The first server known keeps the version the URL asked for.
+    const versionServer = useRef<string | null>(null);
+    useEffect(() => {
+        if (!ready) return;
+        if (versionServer.current !== null && versionServer.current !== server) setVersion("");
+        versionServer.current = server;
+    }, [ready, server]);
 
     const origin = useMemo(() => getAssetDomain(assetSource), [assetSource]);
 
@@ -163,6 +153,7 @@ function AssetVersionsContent() {
     const [versionsError, setVersionsError] = useState<string | null>(null);
 
     const fetchVersions = useCallback(async () => {
+        if (!ready) return;
         try {
             setIsVersionsLoading(true);
             setVersionsError(null);
@@ -173,7 +164,7 @@ function AssetVersionsContent() {
         } finally {
             setIsVersionsLoading(false);
         }
-    }, [server, origin]);
+    }, [ready, server, origin]);
 
     useEffect(() => {
         fetchVersions();
@@ -199,7 +190,7 @@ function AssetVersionsContent() {
     const [copyFeedback, setCopyFeedback] = useState(false);
 
     const fetchDiff = useCallback(async () => {
-        if (!version) return;
+        if (!ready || !version) return;
         try {
             setIsDiffLoading(true);
             setDiffError(null);
@@ -211,7 +202,7 @@ function AssetVersionsContent() {
         } finally {
             setIsDiffLoading(false);
         }
-    }, [server, version, origin]);
+    }, [ready, server, version, origin]);
 
     useEffect(() => {
         fetchDiff();
@@ -327,11 +318,11 @@ function AssetVersionsContent() {
         >
             <FilterSection label={t("page.assetVersions.serverSelect")}>
                 <div className="flex flex-wrap gap-2">
-                    {SERVERS.map(srv => (
+                    {servers.map(srv => (
                         <FilterButton
                             key={srv}
                             selected={server === srv}
-                            onClick={() => handleServerChange(srv)}
+                            onClick={() => chooseServer(srv)}
                         >
                             <ServerRegionLabel server={srv} />
                         </FilterButton>
@@ -489,7 +480,7 @@ function AssetVersionsContent() {
 
                     <div className="flex items-center gap-1">
                         <LocalizedLink
-                            href={`/asset-viewer?server=${server}`}
+                            href={pinned ? `/asset-viewer?server=${pinned}` : "/asset-viewer"}
                             className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                             title={t("layout.nav.items.assetViewer")}
                             aria-label={t("layout.nav.items.assetViewer")}
