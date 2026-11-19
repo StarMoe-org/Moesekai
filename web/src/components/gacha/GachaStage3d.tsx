@@ -20,7 +20,7 @@ import {
     mdVolumeOff,
     mdVolumeUp,
 } from "@/components/md3/icons";
-import { getAssetLine } from "@/lib/assets";
+import { getAssetLine, MOE_LOGO_URL } from "@/lib/assets";
 import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import { sekaiGachaOrigin, sekaiGachaUrl } from "@/lib/sekaiGacha/config";
 import { playCommand, readStageMessage, type SekaiGachaCommand, type SekaiGachaPhase } from "@/lib/sekaiGacha/protocol";
@@ -322,14 +322,19 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
 
                 {/* Brand logo in the bottom-right corner while intro or reveals are visible. */}
                 {!preparing && (phase === "tap" || phase === "intro" || phase === "reveal") && (
-                    <Image
-                        src="/logo.svg"
-                        alt=""
+                    <div
                         aria-hidden="true"
-                        width={104}
-                        height={25}
-                        unoptimized
-                        className="pointer-events-none absolute bottom-2.5 right-3 select-none opacity-80 sm:bottom-3.5 sm:right-4"
+                        className="pointer-events-none absolute bottom-2.5 right-3 h-6 w-[6.25rem] select-none bg-primary-container opacity-85 sm:bottom-3.5 sm:right-4 sm:h-7 sm:w-28"
+                        style={{
+                            maskImage: `url(${MOE_LOGO_URL})`,
+                            maskSize: "contain",
+                            maskPosition: "right center",
+                            maskRepeat: "no-repeat",
+                            WebkitMaskImage: `url(${MOE_LOGO_URL})`,
+                            WebkitMaskSize: "contain",
+                            WebkitMaskPosition: "right center",
+                            WebkitMaskRepeat: "no-repeat",
+                        }}
                     />
                 )}
 
