@@ -350,3 +350,24 @@ func TestARegionNotIndexedYetSaysSo(t *testing.T) {
 		t.Fatalf("%s", body)
 	}
 }
+
+func TestThePublishedEpisodesAreListed(t *testing.T) {
+	site := newFakeSite()
+	site.publish("v1", firstVersion(), true)
+	server := httptest.NewServer(site)
+	defer server.Close()
+	x := New(server.URL, t.TempDir())
+	refreshed(t, x)
+	mux := http.NewServeMux()
+	x.RegisterRoutes(mux)
+	response := httptest.NewRecorder()
+	mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/api/live2d/jp/episodes", nil))
+	var list Episodes
+	if err := json.Unmarshal(response.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"card:9/former", "event:1/1", "event:1/2"}
+	if !list.Complete || strings.Join(list.Episodes, ",") != strings.Join(want, ",") || response.Header().Get("ETag") == "" {
+		t.Fatalf("%+v", list)
+	}
+}

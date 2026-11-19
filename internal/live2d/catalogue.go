@@ -104,18 +104,71 @@ func (s *state) catalogue() Catalogue {
 	return catalogue
 }
 
-// render makes the response of the state held (the caller holds the lock).
-func (r *regionIndex) render() {
-	body, err := json.Marshal(r.state.catalogue())
-	if err != nil {
-		body = []byte(`{"published_version":"","complete":false,"models":[]}`)
-	}
-	sum := sha256.Sum256(body)
-	r.response = body
-	r.etag = `"` + hex.EncodeToString(sum[:16]) + `"`
+// Episodes is what `GET /api/live2d/<region>/episodes` answers: the selectors of the episodes
+// the version holds (`event:1/1`, `card:9/former`, …), sorted, for the story player's list.
+type Episodes struct {
+	PublishedVersion string   `json:"published_version"`
+	Complete         bool     `json:"complete"`
+	Episodes         []string `json:"episodes"`
 }
 
-// RegisterRoutes serves `GET /api/live2d/<region>/models`.
+// selector of the episode document at `path` (`episode/<type>/<key>/<episode>.json`), as the
+// player takes it: a card's parts are `former` and `latter`.
+func selector(path string) (string, bool) {
+	rest := strings.TrimSuffix(strings.TrimPrefix(path, "episode/"), ".json")
+	kind, rest, ok := strings.Cut(rest, "/")
+	if !ok {
+		return "", false
+	}
+	i := strings.LastIndexByte(rest, '/')
+	if i <= 0 {
+		return "", false
+	}
+	key, episode := rest[:i], rest[i+1:]
+	if kind == "card" {
+		switch episode {
+		case "first":
+			episode = "former"
+		case "second":
+			episode = "latter"
+		}
+	}
+	return kind + ":" + key + "/" + episode, true
+}
+
+func (s *state) episodes() Episodes {
+	list := Episodes{PublishedVersion: s.PublishedVersion, Complete: s.Complete, Episodes: []string{}}
+	for path := range s.Episodes {
+		if sel, ok := selector(path); ok {
+			list.Episodes = append(list.Episodes, sel)
+		}
+	}
+	sort.Strings(list.Episodes)
+	return list
+}
+
+// served is a response and its ETag.
+type served struct {
+	body []byte
+	etag string
+}
+
+func serve(value any) served {
+	body, err := json.Marshal(value)
+	if err != nil {
+		body = []byte(`{"published_version":"","complete":false}`)
+	}
+	sum := sha256.Sum256(body)
+	return served{body: body, etag: `"` + hex.EncodeToString(sum[:16]) + `"`}
+}
+
+// render makes the responses of the state held (the caller holds the lock).
+func (r *regionIndex) render() {
+	r.models = serve(r.state.catalogue())
+	r.episodeList = serve(r.state.episodes())
+}
+
+// RegisterRoutes serves `GET /api/live2d/<region>/models` and `GET /api/live2d/<region>/episodes`.
 func (x *Index) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/live2d/", x.handleModels)
 }
@@ -123,7 +176,7 @@ func (x *Index) RegisterRoutes(mux *http.ServeMux) {
 func (x *Index) handleModels(w http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/api/live2d/")
 	region, tail, _ := strings.Cut(rest, "/")
-	if tail != "models" {
+	if tail != "models" && tail != "episodes" {
 		http.NotFound(w, r)
 		return
 	}
@@ -132,7 +185,14 @@ func (x *Index) handleModels(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 		return
 	}
-	body, etag, ok := x.Models(region)
+	var body []byte
+	var etag string
+	var ok bool
+	if tail == "models" {
+		body, etag, ok = x.Models(region)
+	} else {
+		body, etag, ok = x.Episodes(region)
+	}
 	if !ok {
 		http.NotFound(w, r)
 		return

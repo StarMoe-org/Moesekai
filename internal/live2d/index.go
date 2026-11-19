@@ -1,6 +1,6 @@
-// Package live2d keeps the catalogue of Live2D models the model viewer lists: every model of a
-// region's published version, with the characters the stories show it as and the motion set they
-// play on it.
+// Package live2d keeps, for each region's published version, the catalogue of Live2D models the
+// model viewer lists (every model, with the characters the stories show it as and the motion set
+// they play on it) and the list of episodes the story player offers.
 //
 // The only source of facts is the episode documents of the publication: an episode names, for
 // each character it shows, its costumes' models and the character's motion set. Which models go
@@ -184,12 +184,12 @@ type regionIndex struct {
 	region string
 	index  *Index
 
-	mutex      sync.RWMutex
-	state      *state
-	response   []byte
-	etag       string
-	refreshing bool
-	lastCheck  time.Time
+	mutex       sync.RWMutex
+	state       *state
+	models      served
+	episodeList served
+	refreshing  bool
+	lastCheck   time.Time
 }
 
 // New makes the index of the publication on `site` (such as `https://example.org`), kept in
@@ -259,20 +259,31 @@ func (x *Index) save(s *state) error {
 // a new version. Until the index is complete the catalogue says so (`complete`: false). false for
 // a region the index is not kept for.
 func (x *Index) Models(region string) (body []byte, etag string, ok bool) {
+	return x.respond(region, func(r *regionIndex) served { return r.models })
+}
+
+// Episodes is the list of the episodes of `region` as served, as Models is the catalogue.
+func (x *Index) Episodes(region string) (body []byte, etag string, ok bool) {
+	return x.respond(region, func(r *regionIndex) served { return r.episodeList })
+}
+
+func (x *Index) respond(region string, pick func(*regionIndex) served) ([]byte, string, bool) {
 	r := x.regions[region]
 	if r == nil {
 		return nil, "", false
 	}
 	r.maybeRefresh()
-	body, etag = r.served()
-	return body, etag, true
+	r.mutex.RLock()
+	defer r.mutex.RUnlock()
+	s := pick(r)
+	return s.body, s.etag, true
 }
 
 // served is the catalogue held and its ETag.
 func (r *regionIndex) served() ([]byte, string) {
 	r.mutex.RLock()
 	defer r.mutex.RUnlock()
-	return r.response, r.etag
+	return r.models.body, r.models.etag
 }
 
 func (r *regionIndex) maybeRefresh() {
