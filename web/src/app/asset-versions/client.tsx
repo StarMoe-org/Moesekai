@@ -30,6 +30,7 @@ import {
     SegmentedButton,
     Surface,
 } from "@/components/md3";
+import { isModalHistoryRoundTrip } from "@/components/md3";
 import { getAssetDomain } from "@/lib/assets";
 import {
     changedFileUrl,
@@ -231,9 +232,8 @@ function AssetVersionsContent() {
         }
     };
 
-    // Sync state to URL query parameters
-    useEffect(() => {
-        if (!ready) return;
+    // The URL of the current history entry, as the state below names it.
+    const stateUrl = useCallback(() => {
         const url = new URL(window.location.href);
         if (pinned) {
             url.searchParams.set("server", pinned);
@@ -261,12 +261,25 @@ function AssetVersionsContent() {
             url.searchParams.delete("cause");
         }
         url.searchParams.delete("action");
-        window.history.replaceState({}, "", url.toString());
-    }, [ready, pinned, version, prefix, mediaFilter, causeFilter]);
+        return url.toString();
+    }, [pinned, version, prefix, mediaFilter, causeFilter]);
+
+    // Sync state to URL query parameters
+    useEffect(() => {
+        if (!ready) return;
+        window.history.replaceState({}, "", stateUrl());
+    }, [ready, stateUrl]);
 
     // Handle browser back/forward navigation
     useEffect(() => {
         const handlePopState = () => {
+            // A modal the picker opened removed its history entry, and this popstate is the
+            // `back` it queued: what the page did while it was open stays, and the entry it
+            // returned to is renamed to match.
+            if (isModalHistoryRoundTrip()) {
+                window.history.replaceState({}, "", stateUrl());
+                return;
+            }
             const params = new URLSearchParams(window.location.search);
             const nextVersion = params.get("version") || "";
             const nextPrefix = params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
@@ -280,7 +293,7 @@ function AssetVersionsContent() {
 
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
-    }, []);
+    }, [stateUrl]);
 
     const origin = useMemo(() => getAssetDomain(assetSource), [assetSource]);
 

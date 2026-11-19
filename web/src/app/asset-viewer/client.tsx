@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, useDeferredValue, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback, useDeferredValue, Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
@@ -27,6 +27,7 @@ import {
     SegmentedButton,
     Surface,
 } from "@/components/md3";
+import { isModalHistoryRoundTrip } from "@/components/md3";
 import {
     mdArticle,
     mdAudioFile,
@@ -354,9 +355,8 @@ function AssetViewerContent() {
         }
     }, [viewKey]);
 
-    // Sync state to URL query parameters
-    useEffect(() => {
-        if (!ready) return;
+    // The URL of the current history entry, as the state below names it.
+    const stateUrl = useCallback(() => {
         const url = new URL(window.location.href);
         if (pinned) {
             url.searchParams.set("server", pinned);
@@ -369,12 +369,25 @@ function AssetViewerContent() {
         } else {
             url.searchParams.delete("prefix");
         }
-        window.history.replaceState({}, "", url.toString());
-    }, [ready, pinned, view, prefix]);
+        return url.toString();
+    }, [pinned, view, prefix]);
+
+    // Sync state to URL query parameters
+    useEffect(() => {
+        if (!ready) return;
+        window.history.replaceState({}, "", stateUrl());
+    }, [ready, stateUrl]);
 
     // Handle browser popstate navigation (the server follows it in usePageServer)
     useEffect(() => {
         const handlePopState = () => {
+            // A modal the page opened removed its history entry, and this popstate is the `back`
+            // it queued: what the page did while it was open stays, and the entry it returned to
+            // is renamed to match.
+            if (isModalHistoryRoundTrip()) {
+                window.history.replaceState({}, "", stateUrl());
+                return;
+            }
             const params = new URLSearchParams(window.location.search);
             const viewParam = params.get("view");
             const nextPrefix = params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
@@ -386,7 +399,7 @@ function AssetViewerContent() {
 
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
-    }, []);
+    }, [stateUrl]);
 
     const rememberScroll = () => {
         if (listScrollRef.current) {

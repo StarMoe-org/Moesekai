@@ -37,5 +37,5 @@ export { List, ListItem, Divider, Badge, Tooltip, Snackbar } from "./Misc";
 export type { ListItemProps, SnackbarProps } from "./Misc";
 export { NavigationDrawerItem, NavigationRailItem, NavigationBar, NavigationBarItem, TopAppBar } from "./Navigation";
 export type { TopAppBarProps, TopAppBarVariant } from "./Navigation";
-export { useOverlay } from "./useOverlay";
+export { useOverlay, isModalHistoryRoundTrip } from "./useOverlay";
 export { PageHeader, SectionCard, Banner, ErrorState, EmptyState, LoadingState, LoadMore, PageContainer } from "./Patterns";
