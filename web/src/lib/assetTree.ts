@@ -154,6 +154,52 @@ export function listDirectory(tree: AssetTree, path: string): AssetTreeListing {
     return { folders, files };
 }
 
+/** Recursively searches subdirectories and files under `basePath` matching `query` (case-insensitive). */
+export function searchDirectory(tree: AssetTree, basePath: string, query: string): AssetTreeListing {
+    const q = query.trim().toLowerCase();
+    if (!q) return listDirectory(tree, basePath);
+
+    const { document } = tree;
+    const rootDir = findDirectory(document.root, basePath);
+    if (!rootDir) return { folders: [], files: [] };
+
+    const folders: AssetTreeFolder[] = [];
+    const files: AssetTreeFile[] = [];
+
+    const walk = (node: TreeDirectory, currentPath: string) => {
+        for (const child of node.directories ?? []) {
+            const childPath = joinPath(currentPath, child.name);
+            const relPath = basePath ? childPath.slice(basePath.length + 1) : childPath;
+            if (child.name.toLowerCase().includes(q) || relPath.toLowerCase().includes(q)) {
+                folders.push({ name: child.name, path: childPath });
+            }
+            walk(child, childPath);
+        }
+
+        const columns = node.files;
+        if (columns) {
+            for (let i = 0; i < columns.names.length; i += 1) {
+                const name = columns.names[i];
+                const filePath = joinPath(currentPath, name);
+                const relPath = basePath ? filePath.slice(basePath.length + 1) : filePath;
+                if (name.toLowerCase().includes(q) || relPath.toLowerCase().includes(q)) {
+                    files.push({
+                        name,
+                        path: filePath,
+                        size: columns.sizes[i],
+                        mediaType: document.media_types[columns.media_types[i]],
+                        url: fileUrl(tree, filePath),
+                        latestUrl: latestFileUrl(tree, filePath),
+                    });
+                }
+            }
+        }
+    };
+
+    walk(rootDir, basePath);
+    return { folders, files };
+}
+
 /** The URL prefix of each view before `<region>/` or `<region>@<version>/`. The canonical view has none. */
 const VIEW_PREFIX: Record<AssetView, string> = {
     storage: "/storage",

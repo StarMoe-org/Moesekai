@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef, Suspense } from "react";
+import { useState, useEffect, useMemo, useRef, useDeferredValue, Suspense } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
@@ -11,36 +11,59 @@ import { usePageServer } from "@/hooks/usePageServer";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
-import LocalizedLink from "@/components/LocalizedLink";
-import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, Menu, PageContainer, PageHeader, SegmentedButton, Surface } from "@/components/md3";
+import {
+    Banner,
+    Button,
+    Card,
+    CircularProgress,
+    EmptyState,
+    ErrorState,
+    Icon,
+    IconButton,
+    LoadingState,
+    Menu,
+    PageContainer,
+    PageHeader,
+    SegmentedButton,
+    Surface,
+} from "@/components/md3";
 import {
     mdArticle,
     mdAudioFile,
     mdCheck,
     mdChevronLeft,
+    mdChevronRight,
+    mdClose,
     mdContentCopy,
     mdDescription,
+    mdDockToRight,
     mdDownload,
     mdDraft,
     mdFolderFill,
     mdFolderOpen,
     mdGridView,
     mdHistory,
+    mdHome,
     mdImage,
-    mdHelp,
     mdKeyboardArrowDown,
+    mdKeyboardArrowUp,
     mdMenuBook,
     mdRefresh,
+    mdSearch,
+    mdVideoFile,
     mdViewList,
     mdVolumeUp,
 } from "@/components/md3/icons";
-import { AssetFaq, AssetGuide, fileKind, formatDocUrl } from "./guide";
+import { AssetGuide, formatDocUrl } from "./guide";
+import DirectoryTreeSidebar from "@/components/common/DirectoryTreeSidebar";
+import ExplorerSplitPane from "@/components/common/ExplorerSplitPane";
 import {
     ASSET_VIEWS,
     clearAssetTreeCache,
     isAssetView,
     listDirectory,
     loadAssetTree,
+    searchDirectory,
     type AssetView,
     type AssetTree,
     type AssetTreeFile,
@@ -49,10 +72,13 @@ import {
 
 const PAGE_SIZE = 200;
 
+export type AssetFilterType = "all" | "directories" | "image" | "audio" | "video" | "text" | "other";
+
 // Merged file format structure (e.g. png + webp combined)
 export interface AssetFormatInfo {
     ext: string;
     name: string;
+    path: string;
     /** The file in the version being browsed. */
     url: string;
     /** The file in the current version, the link that is copied by default. */
@@ -64,10 +90,12 @@ export interface MergedAssetItem {
     id: string;
     baseName: string;
     name: string;
+    path: string;
     primaryUrl: string;
     primaryExt: string;
     isImage: boolean;
     isAudio: boolean;
+    isVideo: boolean;
     isText: boolean;
     formats: AssetFormatInfo[];
     totalSize: number;
@@ -99,6 +127,7 @@ function groupFiles(files: AssetTreeFile[]): MergedAssetItem[] {
         const formatEntry: AssetFormatInfo = {
             ext,
             name: file.name,
+            path: file.path,
             url: file.url,
             latestUrl: file.latestUrl,
             size: file.size,
@@ -120,10 +149,12 @@ function groupFiles(files: AssetTreeFile[]): MergedAssetItem[] {
                 id: key,
                 baseName,
                 name: file.name,
+                path: file.path,
                 primaryUrl: file.url,
                 primaryExt: ext,
                 isImage: file.mediaType.startsWith("image/"),
                 isAudio: file.mediaType.startsWith("audio/"),
+                isVideo: file.mediaType.startsWith("video/"),
                 isText,
                 formats: [formatEntry],
                 totalSize: file.size,
@@ -143,18 +174,40 @@ function groupFiles(files: AssetTreeFile[]): MergedAssetItem[] {
     return Array.from(map.values());
 }
 
-function getFileIcon(name: string) {
-    const ext = name.split(".").pop()?.toLowerCase();
+function getFileIcon(item: Pick<MergedAssetItem, "isImage" | "isAudio" | "isVideo" | "isText" | "name">, size = 24) {
+    if (item.isImage) return <Icon path={mdImage} size={size} className="text-primary" />;
+    if (item.isAudio) return <Icon path={mdAudioFile} size={size} className="text-tertiary" />;
+    if (item.isVideo) return <Icon path={mdVideoFile} size={size} className="text-primary" />;
+    if (item.isText) return <Icon path={mdArticle} size={size} className="text-secondary" />;
+
+    const ext = item.name.split(".").pop()?.toLowerCase();
     if (["png", "jpg", "jpeg", "webp", "gif", "svg", "ico"].includes(ext || "")) {
-        return <Icon path={mdImage} size={32} className="text-primary" />;
+        return <Icon path={mdImage} size={size} className="text-primary" />;
     }
     if (["mp3", "wav", "ogg", "m4a", "flac"].includes(ext || "")) {
-        return <Icon path={mdAudioFile} size={32} className="text-tertiary" />;
+        return <Icon path={mdAudioFile} size={size} className="text-tertiary" />;
+    }
+    if (["mp4", "webm", "mov", "mkv"].includes(ext || "")) {
+        return <Icon path={mdVideoFile} size={size} className="text-primary" />;
     }
     if (["json", "txt", "csv", "xml", "yaml", "yml"].includes(ext || "")) {
-        return <Icon path={mdArticle} size={32} className="text-secondary" />;
+        return <Icon path={mdArticle} size={size} className="text-secondary" />;
     }
-    return <Icon path={mdDraft} size={32} className="text-on-surface-variant" />;
+    return <Icon path={mdDraft} size={size} className="text-on-surface-variant" />;
+}
+
+function getFileCategory(item: MergedAssetItem): Exclude<AssetFilterType, "all" | "directories"> {
+    if (item.isImage) return "image";
+    if (item.isAudio) return "audio";
+    if (item.isVideo) return "video";
+    if (item.isText) return "text";
+    return "other";
+}
+
+function getRelativeParent(fullPath: string, basePath: string): string {
+    const rel = basePath && fullPath.startsWith(`${basePath}/`) ? fullPath.slice(basePath.length + 1) : fullPath;
+    const slash = rel.lastIndexOf("/");
+    return slash > 0 ? rel.slice(0, slash) : "";
 }
 
 /** A row of the file details naming a document format or an asset form, linked to its specification. */
@@ -171,14 +224,6 @@ function SpecRow({ label, name, locale, title }: { label: string; name: string; 
             </ExternalLink>
         </div>
     );
-}
-
-function FolderIcon() {
-    return <Icon path={mdFolderFill} size={32} className="text-tertiary" />;
-}
-
-function matchesQuery(name: string, query: string): boolean {
-    return !query || name.toLowerCase().includes(query);
 }
 
 function compareNames(a: string, b: string, sortOrder: "asc" | "desc"): number {
@@ -209,19 +254,30 @@ function AssetViewerContent() {
         return "";
     });
 
+    // In-explorer navigation history stack
+    const [historyStack, setHistoryStack] = useState<string[]>(() => [prefix]);
+    const [historyIndex, setHistoryIndex] = useState(0);
+
+    // Collapsible directory tree sidebar (open by default on desktop)
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+
     const [searchQuery, setSearchQuery] = useState("");
-    const [filterType, setFilterType] = useState<"all" | "directories" | "files">("all");
+    const deferredQuery = useDeferredValue(searchQuery.trim());
+    const [filterType, setFilterType] = useState<AssetFilterType>("all");
     const [sortBy, setSortBy] = useState<"name" | "size">("name");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-    const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+    const [viewMode, setViewMode] = useState<"grid" | "list">("list");
     const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
-    // Load view mode preference from localStorage on mount
+    // Load view mode preference and responsive sidebar default on mount
     useEffect(() => {
         if (typeof window !== "undefined") {
             const saved = localStorage.getItem("asset-viewer-mode");
             if (saved === "grid" || saved === "list") {
                 setViewMode(saved);
+            }
+            if (window.innerWidth < 1024) {
+                setSidebarOpen(false);
             }
         }
     }, []);
@@ -236,7 +292,6 @@ function AssetViewerContent() {
     // TOS and guide modal visibility
     const [showTos, setShowTos] = useState(false);
     const [showGuide, setShowGuide] = useState(false);
-    const [showFaq, setShowFaq] = useState(false);
 
     // Storage tree states
     const [tree, setTree] = useState<AssetTree | null>(null);
@@ -256,9 +311,18 @@ function AssetViewerContent() {
     const [previewTextError, setPreviewTextError] = useState<string | null>(null);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
-    // Scroll position per region and directory, restored when returning to it
+    // Scroll position per region and directory inside the explorer listing pane
+    const listScrollRef = useRef<HTMLDivElement | null>(null);
     const scrollByViewRef = useRef<Map<string, number>>(new Map());
     const viewKey = `${server}:${view}:${prefix}`;
+
+    // Reset visibleCount whenever the listing context changes
+    const filterKey = `${viewKey}:${deferredQuery}:${filterType}:${sortBy}:${sortOrder}`;
+    const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
+    if (filterKey !== prevFilterKey) {
+        setPrevFilterKey(filterKey);
+        setVisibleCount(PAGE_SIZE);
+    }
 
     // Fetch the tree of the selected region and view (cached per region and view)
     useEffect(() => {
@@ -282,15 +346,12 @@ function AssetViewerContent() {
         };
     }, [ready, server, view, reloadToken]);
 
-    // Restore the scroll position of the directory being shown
+    // Restore the scroll position of the listing pane when navigating
     useEffect(() => {
-        window.scrollTo({ top: scrollByViewRef.current.get(viewKey) ?? 0, behavior: "instant" });
+        if (listScrollRef.current) {
+            listScrollRef.current.scrollTop = scrollByViewRef.current.get(viewKey) ?? 0;
+        }
     }, [viewKey]);
-
-    // Start each listing at its first page
-    useEffect(() => {
-        setVisibleCount(PAGE_SIZE);
-    }, [server, view, prefix, searchQuery, filterType, sortBy, sortOrder]);
 
     // Sync state to URL query parameters
     useEffect(() => {
@@ -315,8 +376,11 @@ function AssetViewerContent() {
         const handlePopState = () => {
             const params = new URLSearchParams(window.location.search);
             const viewParam = params.get("view");
+            const nextPrefix = params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
             setView(isAssetView(viewParam) ? viewParam : "storage");
-            setPrefix(params.get("prefix") || "");
+            setPrefix(nextPrefix);
+            setHistoryStack([nextPrefix]);
+            setHistoryIndex(0);
         };
 
         window.addEventListener("popstate", handlePopState);
@@ -324,12 +388,40 @@ function AssetViewerContent() {
     }, []);
 
     const rememberScroll = () => {
-        scrollByViewRef.current.set(viewKey, window.scrollY);
+        if (listScrollRef.current) {
+            scrollByViewRef.current.set(viewKey, listScrollRef.current.scrollTop);
+        }
     };
 
     const navigateTo = (path: string) => {
+        const normalized = path.replace(/^\/+|\/+$/g, "");
+        if (normalized === prefix) return;
         rememberScroll();
-        setPrefix(path);
+        setPrefix(normalized);
+        setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), normalized]);
+        setHistoryIndex(prev => prev + 1);
+    };
+
+    const handleHistoryBack = () => {
+        if (historyIndex <= 0) return;
+        rememberScroll();
+        const nextIdx = historyIndex - 1;
+        setHistoryIndex(nextIdx);
+        setPrefix(historyStack[nextIdx]);
+    };
+
+    const handleHistoryForward = () => {
+        if (historyIndex >= historyStack.length - 1) return;
+        rememberScroll();
+        const nextIdx = historyIndex + 1;
+        setHistoryIndex(nextIdx);
+        setPrefix(historyStack[nextIdx]);
+    };
+
+    const handleGoUp = () => {
+        if (!prefix) return;
+        const parts = prefix.split("/").filter(Boolean);
+        navigateTo(parts.slice(0, -1).join("/"));
     };
 
     const changeServer = (srv: (typeof servers)[number]) => {
@@ -342,6 +434,9 @@ function AssetViewerContent() {
         rememberScroll();
         setView(next);
         setPrefix("");
+        setHistoryStack([""]);
+        setHistoryIndex(0);
+        setFilterType("all");
     };
 
     const refreshTree = () => {
@@ -349,33 +444,50 @@ function AssetViewerContent() {
         setReloadToken(token => token + 1);
     };
 
-    // Subfolders and files of the current directory
-    const listing = useMemo(() => (tree ? listDirectory(tree, prefix) : null), [tree, prefix]);
+    const isSearching = deferredQuery.length > 0;
+
+    // Subfolders and files of the current directory (or recursive search across current subtree)
+    const listing = useMemo(() => {
+        if (!tree) return null;
+        return isSearching ? searchDirectory(tree, prefix, deferredQuery) : listDirectory(tree, prefix);
+    }, [tree, prefix, isSearching, deferredQuery]);
 
     const mergedFiles = useMemo(() => groupFiles(listing?.files ?? []), [listing]);
 
-    const query = searchQuery.trim().toLowerCase();
+    const categoryCounts = useMemo(() => {
+        const counts = {
+            all: (listing?.folders.length ?? 0) + mergedFiles.length,
+            directories: listing?.folders.length ?? 0,
+            image: 0,
+            audio: 0,
+            video: 0,
+            text: 0,
+            other: 0,
+        };
+        for (const item of mergedFiles) {
+            counts[getFileCategory(item)] += 1;
+        }
+        return counts;
+    }, [listing, mergedFiles]);
 
     const folders = useMemo(() => {
-        if (filterType === "files") return [];
-        return (listing?.folders ?? [])
-            .filter(folder => matchesQuery(folder.name, query))
-            .sort((a, b) => compareNames(a.name, b.name, sortOrder));
-    }, [listing, query, filterType, sortOrder]);
+        if (filterType !== "all" && filterType !== "directories") return [];
+        return [...(listing?.folders ?? [])].sort((a, b) => compareNames(a.name, b.name, sortOrder));
+    }, [listing, filterType, sortOrder]);
 
     const files = useMemo(() => {
         if (filterType === "directories") return [];
         return mergedFiles
-            .filter(item => matchesQuery(item.name, query) || item.formats.some(f => matchesQuery(f.name, query)))
+            .filter(item => filterType === "all" || getFileCategory(item) === filterType)
             .sort((a, b) => {
                 if (sortBy === "size") {
                     return sortOrder === "asc" ? a.totalSize - b.totalSize : b.totalSize - a.totalSize;
                 }
                 return compareNames(a.name, b.name, sortOrder);
             });
-    }, [mergedFiles, query, filterType, sortBy, sortOrder]);
+    }, [mergedFiles, filterType, sortBy, sortOrder]);
 
-    const totalItemCount = (listing?.folders.length ?? 0) + mergedFiles.length;
+    const totalItemCount = categoryCounts.all;
     const currentItemCount = folders.length + files.length;
     const shownFolders = folders.slice(0, visibleCount);
     const shownFiles = files.slice(0, Math.max(0, visibleCount - shownFolders.length));
@@ -389,11 +501,6 @@ function AssetViewerContent() {
             ...parts.map((part, index) => ({ name: part, path: parts.slice(0, index + 1).join("/") })),
         ];
     }, [prefix, t]);
-
-    const handleGoBack = () => {
-        const parts = prefix.split("/").filter(Boolean);
-        navigateTo(parts.slice(0, -1).join("/"));
-    };
 
     // Active format in modal
     const activeFormat = useMemo(() => {
@@ -443,6 +550,15 @@ function AssetViewerContent() {
         });
     };
 
+    const toggleSortColumn = (col: "name" | "size") => {
+        if (sortBy === col) {
+            setSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortBy(col);
+            setSortOrder("asc");
+        }
+    };
+
     const activeFiltersCount = (pinned ? 1 : 0) + (filterType !== "all" ? 1 : 0) + (sortBy !== "name" ? 1 : 0) + (sortOrder !== "asc" ? 1 : 0);
 
     const resetFilters = () => {
@@ -453,6 +569,32 @@ function AssetViewerContent() {
         setSearchQuery("");
     };
 
+    const filterChipOptions = useMemo(() => {
+        const base: Array<{ key: AssetFilterType; label: string; count: number; alwaysShowCount?: boolean }> = [
+            { key: "all", label: t("page.assetViewer.allTypes"), count: categoryCounts.all, alwaysShowCount: true },
+            { key: "directories", label: t("page.assetViewer.typeDirectory"), count: categoryCounts.directories },
+            { key: "image", label: t("page.assetViewer.typeImage"), count: categoryCounts.image },
+            { key: "audio", label: t("page.assetViewer.typeAudio"), count: categoryCounts.audio },
+            { key: "video", label: t("page.assetViewer.typeVideo"), count: categoryCounts.video },
+            { key: "text", label: t("page.assetViewer.typeText"), count: categoryCounts.text },
+        ];
+        if (categoryCounts.other > 0 || filterType === "other") {
+            base.push({ key: "other", label: t("page.assetViewer.typeOther"), count: categoryCounts.other });
+        }
+        return base;
+    }, [categoryCounts, filterType, t]);
+
+    const getFileTypeBadge = (item: MergedAssetItem): string => {
+        const cat = getFileCategory(item);
+        switch (cat) {
+            case "image": return t("page.assetViewer.typeImage");
+            case "audio": return t("page.assetViewer.typeAudio");
+            case "video": return t("page.assetViewer.typeVideo");
+            case "text": return t("page.assetViewer.typeText");
+            default: return item.primaryExt ? item.primaryExt.toUpperCase() : t("page.assetViewer.typeAsset");
+        }
+    };
+
     const quickFilterContent = (
         <BaseFilters
             filteredCount={currentItemCount}
@@ -460,7 +602,7 @@ function AssetViewerContent() {
             countUnit={t("page.assetViewer.countUnit")}
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
-            searchPlaceholder={t("page.assetViewer.searchPlaceholder")}
+            searchPlaceholder={t("page.assetViewer.searchSubtreePlaceholder")}
             sortOptions={[
                 { id: "name", label: t("common.form.uid") },
                 { id: "size", label: t("page.assetViewer.size") },
@@ -488,17 +630,15 @@ function AssetViewerContent() {
                 </div>
             </FilterSection>
 
-            <FilterSection label={t("page.assetViewer.source")}>
-                <div className="grid grid-cols-3 gap-2">
-                    {(["all", "directories", "files"] as const).map(type => (
+            <FilterSection label={t("page.assetViewer.columnType")}>
+                <div className="flex flex-wrap gap-2">
+                    {filterChipOptions.map(opt => (
                         <FilterButton
-                            key={type}
-                            selected={filterType === type}
-                            onClick={() => setFilterType(type)}
+                            key={opt.key}
+                            selected={filterType === opt.key}
+                            onClick={() => setFilterType(opt.key)}
                         >
-                            {type === "all" ? t("page.assetViewer.allTypes") :
-                             type === "directories" ? t("page.assetViewer.typeDirectory") :
-                             t("page.assetViewer.typeBundle")}
+                            {opt.label}
                         </FilterButton>
                     ))}
                 </div>
@@ -514,6 +654,7 @@ function AssetViewerContent() {
         sortOrder,
         currentItemCount,
         totalItemCount,
+        filterChipOptions,
         t,
     ]);
 
@@ -552,7 +693,7 @@ function AssetViewerContent() {
         "bg-surface-container-high bg-[radial-gradient(var(--md-sys-color-outline-variant)_1px,transparent_1px)]";
 
     return (
-        <PageContainer>
+        <PageContainer wide>
             {/* Page Header */}
             <PageHeader
                 eyebrow={t("page.assetViewer.badge")}
@@ -573,100 +714,87 @@ function AssetViewerContent() {
                 }
             />
 
-            {/* View switcher: the same version as files for pages, canonical assets, or the client package */}
-            <Surface tone="card" radius="xl" className="mb-4 space-y-3 p-3 sm:p-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <SegmentedButton
-                        className="w-auto"
-                        density={-1}
-                        aria-label={t("page.assetGuide.view")}
-                        value={view}
-                        onValueChange={(next) => changeView(next as AssetView)}
-                        options={ASSET_VIEWS.map(option => ({
-                            value: option,
-                            label: t(`page.assetGuide.views.${option}.label`),
+            {/* Compact View Switcher & Server / Changelog Controls */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
+                <SegmentedButton
+                    className="w-auto"
+                    density={-1}
+                    aria-label={t("page.assetGuide.view")}
+                    value={view}
+                    onValueChange={(next) => changeView(next as AssetView)}
+                    options={ASSET_VIEWS.map(option => ({
+                        value: option,
+                        label: t(`page.assetGuide.views.${option}.label`),
+                    }))}
+                />
+
+                <div className="flex flex-wrap items-center gap-2">
+                    <Menu
+                        align="end"
+                        anchor={(props) => (
+                            <Button {...props} variant="outlined" size="xs" trailingIcon={mdKeyboardArrowDown}>
+                                <ServerRegionLabel server={server} />
+                            </Button>
+                        )}
+                        items={servers.map(srv => ({
+                            key: srv,
+                            label: <ServerRegionLabel server={srv} />,
+                            onSelect: () => changeServer(srv),
                         }))}
                     />
-                    <div className="flex flex-wrap gap-1">
-                        <Button variant="text" size="s" icon={mdMenuBook} onClick={() => setShowGuide(true)}>
-                            {t("page.assetGuide.open")}
-                        </Button>
-                        <Button variant="text" size="s" icon={mdHelp} onClick={() => setShowFaq(true)}>
-                            {t("page.assetGuide.faq.title")}
-                        </Button>
-                    </div>
+                    <Button
+                        variant="text"
+                        size="xs"
+                        icon={mdHistory}
+                        href={pinned ? `/asset-versions?server=${pinned}` : "/asset-versions"}
+                    >
+                        {t("layout.nav.items.assetVersions")}
+                    </Button>
+                    <Button
+                        variant="text"
+                        size="xs"
+                        icon={mdMenuBook}
+                        onClick={() => setShowGuide(true)}
+                    >
+                        {t("page.assetGuide.open")}
+                    </Button>
                 </div>
-                <p className="type-body-s text-on-surface-variant">
-                    {t(`page.assetGuide.views.${view}.summary`)}
-                    {tree && tree.view === view && (
-                        <span className="ml-2 font-mono type-label-s text-outline">
-                            {t("page.assetGuide.version", {
-                                version: tree.document.published_version.split("-")[0],
-                                count: formatNumber(tree.document.files),
-                            })}
-                        </span>
-                    )}
-                </p>
-            </Surface>
+            </div>
 
-            {/* Filters live in the global FilterDrawer (registered above via
-                useQuickFilter), so the page body is a single column. */}
-            <div className="min-w-0">
-                {/* Breadcrumbs Navigation & Actions */}
-                <Surface tone="card" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
-                    <div className="flex min-w-0 items-center gap-2">
-                        {prefix && (
-                            <IconButton
-                                icon={mdChevronLeft}
-                                size="xs"
-                                onClick={handleGoBack}
-                                label={t("page.assetViewer.parentDir")}
-                            />
-                        )}
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5 type-label-l text-on-surface-variant">
-                            {breadcrumbs.map((bc, index) => {
-                                const isCurrent = index === breadcrumbs.length - 1;
-                                return (
-                                    <div key={bc.path} className="flex items-center gap-1.5">
-                                        {index > 0 && <span className="text-outline">/</span>}
-                                        <button
-                                            type="button"
-                                            onClick={() => navigateTo(bc.path)}
-                                            className={`focus-ring rounded-md3-xs transition-colors hover:text-primary ${
-                                                isCurrent ? "type-title-s text-on-surface" : ""
-                                            }`}
-                                        >
-                                            {bc.name}
-                                        </button>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                        <SegmentedButton
-                            className="w-auto"
-                            density={-2}
-                            showCheckmark={false}
-                            aria-label={t("page.assetViewer.viewGrid")}
-                            value={viewMode}
-                            onValueChange={(mode) => handleViewModeChange(mode)}
-                            options={[
-                                { value: "grid", label: <span className="sr-only">{t("page.assetViewer.viewGrid")}</span>, icon: mdGridView },
-                                { value: "list", label: <span className="sr-only">{t("page.assetViewer.viewList")}</span>, icon: mdViewList },
-                            ]}
+            {/* Multi-Pane File Explorer Frame */}
+            <Surface tone="card" radius="xl" className="overflow-hidden">
+                {/* Top Navigation, Breadcrumbs, Search & View Mode Toolbar */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/70 px-3 py-2.5 sm:px-4">
+                    <div className="flex shrink-0 items-center gap-0.5">
+                        <IconButton
+                            icon={mdDockToRight}
+                            size="xs"
+                            selected={sidebarOpen}
+                            onClick={() => setSidebarOpen(prev => !prev)}
+                            label={t("page.assetViewer.toggleSidebar")}
+                            className={sidebarOpen ? "bg-primary-container/75 text-primary" : undefined}
                         />
-
-                        <LocalizedLink
-                            href={pinned ? `/asset-versions?server=${pinned}` : "/asset-versions"}
-                            className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
-                            title={t("layout.nav.items.assetVersions")}
-                            aria-label={t("layout.nav.items.assetVersions")}
-                        >
-                            <Icon path={mdHistory} size={20} />
-                        </LocalizedLink>
-
+                        <IconButton
+                            icon={mdChevronLeft}
+                            size="xs"
+                            disabled={historyIndex <= 0}
+                            onClick={handleHistoryBack}
+                            label={t("page.assetViewer.navBack")}
+                        />
+                        <IconButton
+                            icon={mdChevronRight}
+                            size="xs"
+                            disabled={historyIndex >= historyStack.length - 1}
+                            onClick={handleHistoryForward}
+                            label={t("page.assetViewer.navForward")}
+                        />
+                        <IconButton
+                            icon={mdKeyboardArrowUp}
+                            size="xs"
+                            disabled={!prefix}
+                            onClick={handleGoUp}
+                            label={t("page.assetViewer.parentDir")}
+                        />
                         <IconButton
                             icon={mdRefresh}
                             size="xs"
@@ -675,219 +803,479 @@ function AssetViewerContent() {
                             className={isLoading ? "[&_svg]:animate-spin" : undefined}
                         />
                     </div>
-                </Surface>
 
-                {/* Loader */}
-                {isLoading ? (
-                    <LoadingState />
-                ) : error ? (
-                    <ErrorState
-                        title={t("page.assetViewer.loadFailed")}
-                        message={error}
-                        retryLabel={t("common.action.retry")}
-                        onRetry={refreshTree}
-                    />
-                ) : currentItemCount === 0 ? (
-                    <Surface tone="card" radius="xl">
-                        <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
-                    </Surface>
-                ) : (
-                    <>
-                        {/* Subfolders of the current directory */}
-                        {shownFolders.length > 0 && (viewMode === "grid" ? (
-                            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                                {shownFolders.map((folder: AssetTreeFolder) => (
-                                    <Card
-                                        key={folder.path}
-                                        variant="filled"
-                                        radius="lg"
-                                        onClick={() => navigateTo(folder.path)}
-                                        className="group select-none p-4"
+                    {/* Breadcrumb Path */}
+                    <nav
+                        aria-label={t("page.assetViewer.directoryTree")}
+                        className="custom-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 type-label-l text-on-surface-variant"
+                    >
+                        {breadcrumbs.map((bc, index) => {
+                            const isCurrent = index === breadcrumbs.length - 1;
+                            const isRoot = index === 0;
+                            return (
+                                <div key={bc.path || "root"} className="flex shrink-0 items-center gap-1">
+                                    {index > 0 && <span className="text-outline/70">/</span>}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigateTo(bc.path)}
+                                        className={`state-layer focus-ring inline-flex items-center gap-1.5 rounded-md3-sm px-2 py-1 transition-colors ${
+                                            isCurrent
+                                                ? "bg-primary-container text-on-primary-container font-medium"
+                                                : "hover:bg-surface-container-high hover:text-primary"
+                                        }`}
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="shrink-0 rounded-md3-md bg-surface-container-low p-2.5">
-                                                <FolderIcon />
-                                            </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={folder.name}>
-                                                    {folder.name}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                ))}
+                                        {isRoot && <Icon path={mdHome} size={16} />}
+                                        <span>{bc.name}</span>
+                                    </button>
+                                </div>
+                            );
+                        })}
+                    </nav>
+
+                    {/* Search & View Toggle */}
+                    <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+                        <div className="relative flex-1 sm:w-64 md:w-72">
+                            <Icon
+                                path={mdSearch}
+                                size={18}
+                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                            />
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={t("page.assetViewer.searchSubtreePlaceholder")}
+                                aria-label={t("page.assetViewer.searchSubtreePlaceholder")}
+                                className="focus-ring h-9 w-full rounded-full border border-outline-variant bg-surface-container-lowest pl-9 pr-8 type-body-s text-on-surface placeholder:text-on-surface-variant/75"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery("")}
+                                    aria-label={t("common.md3.clear")}
+                                    className="state-layer focus-ring absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant"
+                                >
+                                    <Icon path={mdClose} size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        <SegmentedButton
+                            className="w-auto shrink-0"
+                            density={-2}
+                            iconOnly
+                            showCheckmark={false}
+                            aria-label={t("page.assetViewer.viewList")}
+                            value={viewMode}
+                            onValueChange={(mode) => handleViewModeChange(mode as "grid" | "list")}
+                            options={[
+                                { value: "list", label: t("page.assetViewer.viewList"), icon: mdViewList },
+                                { value: "grid", label: t("page.assetViewer.viewGrid"), icon: mdGridView },
+                            ]}
+                        />
+                    </div>
+                </div>
+
+                {/* Status Sub-Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 bg-surface-container-low/60 px-3 py-1.5 type-label-m text-on-surface-variant sm:px-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ServerRegionLabel server={server} />
+                        <span className="text-outline">·</span>
+                        <span>{t(`page.assetGuide.views.${view}.label`)}</span>
+                        {tree && tree.view === view && (
+                            <span className="font-mono text-outline">
+                                ({tree.document.published_version.split("-")[0]})
+                            </span>
+                        )}
+                    </div>
+                    {tree && tree.view === view && (
+                        <span className="font-mono type-label-m text-on-surface-variant">
+                            {t("page.assetViewer.totalFiles", { count: formatNumber(tree.document.files) })}
+                        </span>
+                    )}
+                </div>
+
+                {/* Split-Pane Explorer Body */}
+                <ExplorerSplitPane
+                    showSidebar={Boolean(sidebarOpen && tree && !isLoading && !error)}
+                    resizeLabel={t("page.assetViewer.resizeSidebar")}
+                    sidebar={
+                        tree ? (
+                            <DirectoryTreeSidebar
+                                root={tree.document.root}
+                                rootLabel={t("page.assetViewer.root")}
+                                title={t("page.assetViewer.directoryTree")}
+                                activePath={prefix}
+                                onSelectPath={navigateTo}
+                            />
+                        ) : null
+                    }
+                >
+
+                    {/* Right Main Content Pane */}
+                    <div className="flex min-h-[360px] min-w-0 flex-1 flex-col overflow-hidden">
+                        {isLoading ? (
+                            <LoadingState />
+                        ) : error ? (
+                            <div className="p-4">
+                                <ErrorState
+                                    title={t("page.assetViewer.loadFailed")}
+                                    message={error}
+                                    retryLabel={t("common.action.retry")}
+                                    onRetry={refreshTree}
+                                />
                             </div>
                         ) : (
-                            <div className="flex flex-col gap-1.5">
-                                {shownFolders.map((folder: AssetTreeFolder) => (
-                                    <Card
-                                        key={folder.path}
-                                        variant="filled"
-                                        onClick={() => navigateTo(folder.path)}
-                                        className="group select-none p-3"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            <div className="shrink-0 rounded-md3-sm bg-surface-container-low p-1.5">
-                                                <FolderIcon />
+                            <>
+                                {/* Type Filter Chips & Summary Bar */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 px-3 py-2.5 sm:px-4">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {filterChipOptions.map(opt => {
+                                            const selected = filterType === opt.key;
+                                            const countText = opt.alwaysShowCount || opt.count > 0
+                                                ? ` (${formatNumber(opt.count)})`
+                                                : "";
+                                            return (
+                                                <button
+                                                    key={opt.key}
+                                                    type="button"
+                                                    onClick={() => setFilterType(opt.key)}
+                                                    aria-pressed={selected}
+                                                    className={`state-layer focus-ring inline-flex h-8 shrink-0 items-center rounded-full px-3.5 type-label-l transition-colors ${
+                                                        selected
+                                                            ? "bg-primary text-on-primary"
+                                                            : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
+                                                    }`}
+                                                >
+                                                    {opt.label}{countText}
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+
+                                    <span className="shrink-0 type-label-m text-on-surface-variant">
+                                        {t("page.assetViewer.summaryCounts", {
+                                            folders: formatNumber(folders.length),
+                                            files: formatNumber(files.length),
+                                        })}
+                                    </span>
+                                </div>
+
+                                {/* Subtree Search Indicator */}
+                                {isSearching && (
+                                    <div className="flex items-center justify-between gap-2 border-b border-outline-variant/40 bg-secondary-container/30 px-4 py-1.5 type-body-s text-on-surface-variant">
+                                        <span className="truncate">
+                                            {t("page.assetViewer.searchingSubtree")}: <strong className="text-on-surface">{deferredQuery}</strong>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery("")}
+                                            className="focus-ring shrink-0 rounded-md3-xs px-1.5 py-0.5 type-label-m text-primary hover:underline"
+                                        >
+                                            {t("common.md3.clear")}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Scrollable Directory/File Listing */}
+                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto">
+                                    {currentItemCount === 0 ? (
+                                        <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
+                                    ) : viewMode === "list" ? (
+                                        <div>
+                                            {/* Sticky Table Header */}
+                                            <div className="sticky top-0 z-10 flex select-none items-center gap-3 border-b border-outline-variant/60 bg-surface-container-lowest/95 px-4 py-2 type-label-m text-on-surface-variant">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSortColumn("name")}
+                                                    className="focus-ring flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-primary"
+                                                >
+                                                    <span>{t("page.assetViewer.columnName")}</span>
+                                                    {sortBy === "name" && (
+                                                        <Icon
+                                                            path={mdKeyboardArrowDown}
+                                                            size={16}
+                                                            className={sortOrder === "desc" ? "rotate-180" : undefined}
+                                                        />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSortColumn("size")}
+                                                    className="focus-ring hidden w-24 shrink-0 items-center justify-end gap-1 sm:flex transition-colors hover:text-primary"
+                                                >
+                                                    <span>{t("page.assetViewer.size")}</span>
+                                                    {sortBy === "size" && (
+                                                        <Icon
+                                                            path={mdKeyboardArrowDown}
+                                                            size={16}
+                                                            className={sortOrder === "desc" ? "rotate-180" : undefined}
+                                                        />
+                                                    )}
+                                                </button>
+                                                <div className="w-20 shrink-0 text-right">
+                                                    {t("page.assetViewer.columnType")}
+                                                </div>
                                             </div>
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={folder.name}>
-                                                    {folder.name}
-                                                </p>
+
+                                            {/* Folder & File Rows */}
+                                            <div className="divide-y divide-outline-variant/40">
+                                                {shownFolders.map((folder: AssetTreeFolder) => {
+                                                    const relParent = isSearching ? getRelativeParent(folder.path, prefix) : "";
+                                                    return (
+                                                        <button
+                                                            key={folder.path}
+                                                            type="button"
+                                                            onClick={() => navigateTo(folder.path)}
+                                                            className="state-layer focus-ring group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-container/60"
+                                                        >
+                                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md3-md bg-tertiary-container/40 text-tertiary">
+                                                                <Icon path={mdFolderFill} size={22} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p
+                                                                    className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                    title={folder.name}
+                                                                >
+                                                                    {folder.name}
+                                                                </p>
+                                                                {relParent && (
+                                                                    <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                        {relParent}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="hidden w-24 shrink-0 text-right type-label-m text-on-surface-variant sm:block">
+                                                                -
+                                                            </div>
+                                                            <div className="flex w-20 shrink-0 justify-end">
+                                                                <span className="rounded-md3-sm bg-tertiary-container/50 px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                                    {t("page.assetViewer.typeDirectory")}
+                                                                </span>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {shownFiles.map((item) => {
+                                                    const relParent = isSearching ? getRelativeParent(item.path, prefix) : "";
+                                                    return (
+                                                        <button
+                                                            key={item.id}
+                                                            type="button"
+                                                            onClick={() => {
+                                                                setSelectedFile(item);
+                                                                setActiveFormatIndex(0);
+                                                            }}
+                                                            className="state-layer focus-ring group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-container/60"
+                                                        >
+                                                            <div
+                                                                className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md3-md [background-size:6px_6px] ${
+                                                                    item.isImage && item.primaryUrl ? checkerboardClassName : "bg-surface-container"
+                                                                }`}
+                                                            >
+                                                                {item.isImage && item.primaryUrl ? (
+                                                                    <img
+                                                                        src={item.primaryUrl}
+                                                                        alt={item.name}
+                                                                        loading="lazy"
+                                                                        className="h-full w-full object-contain p-0.5"
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLElement).style.display = "none";
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    getFileIcon(item, 20)
+                                                                )}
+                                                            </div>
+
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex items-center gap-2">
+                                                                    <p
+                                                                        className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                        title={item.name}
+                                                                    >
+                                                                        {item.name}
+                                                                    </p>
+                                                                    {item.formats.length > 1 && (
+                                                                        <div className="hidden shrink-0 items-center gap-1 md:flex">
+                                                                            {item.formats.map((f) => (
+                                                                                <span
+                                                                                    key={f.ext}
+                                                                                    className="rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s uppercase text-on-surface-variant"
+                                                                                >
+                                                                                    {f.ext}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                {relParent && (
+                                                                    <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                        {relParent}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="hidden w-24 shrink-0 text-right font-mono type-label-m text-on-surface-variant sm:block">
+                                                                {formatBytes(item.totalSize)}
+                                                            </div>
+
+                                                            <div className="flex w-20 shrink-0 justify-end">
+                                                                <span className="rounded-md3-sm bg-secondary-container/60 px-2.5 py-0.5 type-label-s text-on-secondary-container">
+                                                                    {getFileTypeBadge(item)}
+                                                                </span>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
                                             </div>
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ))}
-
-                        {/* Files of the current directory (with direct Image Previews & merged PNG+WEBP formats) */}
-                        {shownFiles.length > 0 && (viewMode === "grid" ? (
-                            <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                                {shownFiles.map((item) => (
-                                    <Card
-                                        key={item.id}
-                                        variant="filled"
-                                        radius="lg"
-                                        onClick={() => {
-                                            setSelectedFile(item);
-                                            setActiveFormatIndex(0);
-                                        }}
-                                        className="group select-none p-3"
-                                    >
-                                        <div className="flex flex-col">
-                                            {/* Direct Thumbnail Preview for Images */}
-                                            {item.isImage && item.primaryUrl ? (
-                                                <div className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${checkerboardClassName}`}>
-                                                    <img
-                                                        src={item.primaryUrl}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        className="h-full w-full object-contain p-1.5"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLElement).style.display = "none";
-                                                        }}
-                                                    />
-                                                </div>
-                                            ) : (
-                                                <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center rounded-md3-md bg-surface-container-low">
-                                                    {getFileIcon(item.name)}
+                                    ) : (
+                                        <div className="space-y-3 p-3 sm:p-4">
+                                            {/* Grid Mode Folders */}
+                                            {shownFolders.length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                                                    {shownFolders.map((folder: AssetTreeFolder) => {
+                                                        const relParent = isSearching ? getRelativeParent(folder.path, prefix) : "";
+                                                        return (
+                                                            <Card
+                                                                key={folder.path}
+                                                                variant="filled"
+                                                                radius="lg"
+                                                                onClick={() => navigateTo(folder.path)}
+                                                                className="group select-none p-3.5"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="shrink-0 rounded-md3-md bg-tertiary-container/40 p-2 text-tertiary">
+                                                                        <Icon path={mdFolderFill} size={26} />
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p
+                                                                            className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary"
+                                                                            title={folder.name}
+                                                                        >
+                                                                            {folder.name}
+                                                                        </p>
+                                                                        {relParent && (
+                                                                            <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                                {relParent}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </Card>
+                                                        );
+                                                    })}
                                                 </div>
                                             )}
 
-                                            <div className="flex min-w-0 flex-1 flex-col justify-between">
-                                                <p className="truncate type-label-l text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                    {item.name}
-                                                </p>
-
-                                                <div className="mt-1.5 flex items-center justify-between gap-1">
-                                                    {/* Formats Pills */}
-                                                    <div className="flex items-center gap-1">
-                                                        {item.formats.map((f) => (
-                                                            <span
-                                                                key={f.ext}
-                                                                className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                            {/* Grid Mode Files */}
+                                            {shownFiles.length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                                                    {shownFiles.map((item) => {
+                                                        const relParent = isSearching ? getRelativeParent(item.path, prefix) : "";
+                                                        return (
+                                                            <Card
+                                                                key={item.id}
+                                                                variant="filled"
+                                                                radius="lg"
+                                                                onClick={() => {
+                                                                    setSelectedFile(item);
+                                                                    setActiveFormatIndex(0);
+                                                                }}
+                                                                className="group select-none p-3"
                                                             >
-                                                                {f.ext}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                    <span className="type-label-s text-on-surface-variant">
-                                                        {formatBytes(item.totalSize)}
-                                                    </span>
+                                                                <div className="flex flex-col">
+                                                                    {item.isImage && item.primaryUrl ? (
+                                                                        <div className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${checkerboardClassName}`}>
+                                                                            <img
+                                                                                src={item.primaryUrl}
+                                                                                alt={item.name}
+                                                                                loading="lazy"
+                                                                                className="h-full w-full object-contain p-1.5"
+                                                                                onError={(e) => {
+                                                                                    (e.target as HTMLElement).style.display = "none";
+                                                                                }}
+                                                                            />
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="relative mb-2.5 flex aspect-square w-full items-center justify-center rounded-md3-md bg-surface-container-low">
+                                                                            {getFileIcon(item, 32)}
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div className="flex min-w-0 flex-1 flex-col justify-between">
+                                                                        <p
+                                                                            className="truncate type-label-l text-on-surface transition-colors duration-200 group-hover:text-primary"
+                                                                            title={item.name}
+                                                                        >
+                                                                            {item.name}
+                                                                        </p>
+                                                                        {relParent && (
+                                                                            <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                                {relParent}
+                                                                            </p>
+                                                                        )}
+
+                                                                        <div className="mt-1.5 flex items-center justify-between gap-1">
+                                                                            {item.formats.length > 1 ? (
+                                                                                <div className="flex items-center gap-1">
+                                                                                    {item.formats.map((f) => (
+                                                                                        <span
+                                                                                            key={f.ext}
+                                                                                            className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
+                                                                                        >
+                                                                                            {f.ext}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            ) : (
+                                                                                <span className="type-label-s text-on-surface-variant">
+                                                                                    {getFileTypeBadge(item)}
+                                                                                </span>
+                                                                            )}
+                                                                            <span className="type-label-s text-on-surface-variant">
+                                                                                {formatBytes(item.totalSize)}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </Card>
+                                                        );
+                                                    })}
                                                 </div>
-                                            </div>
+                                            )}
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ) : (
-                            <div className="mt-3 flex flex-col gap-1.5">
-                                <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
-                                    <div className="w-12"></div>
-                                    <div className="min-w-0 flex-1">{t("common.form.uid")}</div>
-                                    <div className="w-32 text-center">{t("page.assetViewer.formats")}</div>
-                                    <div className="w-24 text-right">{t("page.assetViewer.size")}</div>
-                                </div>
-                                {shownFiles.map((item) => (
-                                    <Card
-                                        key={item.id}
-                                        variant="filled"
-                                        onClick={() => {
-                                            setSelectedFile(item);
-                                            setActiveFormatIndex(0);
-                                        }}
-                                        className="group select-none p-2.5"
-                                    >
-                                        <div className="flex items-center gap-3">
-                                            {/* Thumbnail preview in list mode */}
-                                            <div className={`flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md3-sm [background-size:6px_6px] ${checkerboardClassName}`}>
-                                                {item.isImage && item.primaryUrl ? (
-                                                    <img
-                                                        src={item.primaryUrl}
-                                                        alt={item.name}
-                                                        loading="lazy"
-                                                        className="h-full w-full object-contain p-0.5"
-                                                        onError={(e) => {
-                                                            (e.target as HTMLElement).style.display = "none";
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    getFileIcon(item.name)
-                                                )}
-                                            </div>
+                                    )}
 
-                                            <div className="min-w-0 flex-1">
-                                                <p className="truncate type-title-s text-on-surface transition-colors duration-200 group-hover:text-primary" title={item.name}>
-                                                    {item.name}
-                                                </p>
-                                            </div>
-
-                                            <div className="flex w-32 shrink-0 items-center justify-center gap-1">
-                                                {item.formats.map((f) => (
-                                                    <span
-                                                        key={f.ext}
-                                                        className="rounded-md3-xs bg-surface-container-low px-1.5 type-label-s uppercase text-on-surface-variant"
-                                                    >
-                                                        {f.ext}
+                                    {/* Load More / All Loaded Footer */}
+                                    {currentItemCount > 0 && (
+                                        <div className="px-4 py-6 text-center">
+                                            {hasMore ? (
+                                                <Button
+                                                    variant="tonal"
+                                                    size="m"
+                                                    onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+                                                >
+                                                    {t("page.assetViewer.loadMore")}
+                                                    <span className="type-label-l opacity-80">
+                                                        {formatNumber(currentItemCount - shownFolders.length - shownFiles.length)}
                                                     </span>
-                                                ))}
-                                            </div>
-
-                                            <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
-                                                {formatBytes(item.totalSize)}
-                                            </div>
+                                                </Button>
+                                            ) : (
+                                                <div className="type-body-m text-on-surface-variant">
+                                                    {t("page.assetViewer.allLoaded", { count: currentItemCount })}
+                                                </div>
+                                            )}
                                         </div>
-                                    </Card>
-                                ))}
-                            </div>
-                        ))}
-
-                        {/* Load Next Page */}
-                        {hasMore && (
-                            <div className="mt-8 flex justify-center">
-                                <Button
-                                    variant="tonal"
-                                    size="m"
-                                    onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
-                                >
-                                    {t("page.assetViewer.loadMore")}
-                                    <span className="type-label-l opacity-80">
-                                        {formatNumber(currentItemCount - shownFolders.length - shownFiles.length)}
-                                    </span>
-                                </Button>
-                            </div>
+                                    )}
+                                </div>
+                            </>
                         )}
-
-                        {/* All Loaded Message */}
-                        {!hasMore && (
-                            <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                {t("page.assetViewer.allLoaded", { count: currentItemCount })}
-                            </div>
-                        )}
-                    </>
-                )}
-            </div>
+                    </div>
+                </ExplorerSplitPane>
+            </Surface>
 
             {/* File Detail & Preview Modal */}
             <Modal
@@ -932,12 +1320,6 @@ function AssetViewerContent() {
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetViewer.size")}</span>
                                 <span className="text-right type-label-l text-on-surface">{formatBytes(activeFormat.size)}</span>
                             </div>
-                            <div className="flex justify-between gap-4">
-                                <span className="shrink-0 text-on-surface-variant">{t("page.assetGuide.fileKind")}</span>
-                                <span className="text-right text-on-surface">
-                                    {t(`page.assetGuide.files.${fileKind(`${prefix}/${activeFormat.name}`)}`)}
-                                </span>
-                            </div>
                             {previewFormat && (
                                 <SpecRow label={t("page.assetGuide.jsonFormat")} name={previewFormat.format} locale={locale} title={t("page.assetGuide.formatDocs")} />
                             )}
@@ -971,6 +1353,20 @@ function AssetViewerContent() {
                                         src={activeFormat.url}
                                         controls
                                         className="w-full"
+                                    />
+                                </div>
+                            )}
+
+                            {selectedFile.isVideo && activeFormat.url && (
+                                <div className="w-full rounded-md3-lg bg-surface-container p-4">
+                                    <p className="mb-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
+                                        <Icon path={mdVideoFile} size={18} />
+                                        {t("page.assetViewer.playVideo")}
+                                    </p>
+                                    <video
+                                        src={activeFormat.url}
+                                        controls
+                                        className="max-h-72 w-full rounded-md3-sm bg-surface-container-highest"
                                     />
                                 </div>
                             )}
@@ -1022,24 +1418,14 @@ function AssetViewerContent() {
                 )}
             </Modal>
 
-            {/* What these assets are, and why they take the forms they do */}
+            {/* Concise attribution & plain-language audio format modal */}
             <Modal
                 isOpen={showGuide}
                 onClose={() => setShowGuide(false)}
                 title={t("page.assetGuide.title")}
-                size="lg"
+                size="md"
             >
                 <AssetGuide />
-            </Modal>
-
-            {/* Why the audio and video take the formats they do, and what they lose */}
-            <Modal
-                isOpen={showFaq}
-                onClose={() => setShowFaq(false)}
-                title={t("page.assetGuide.faq.title")}
-                size="lg"
-            >
-                <AssetFaq />
             </Modal>
 
             {/* Terms of Service Overlay Modal */}

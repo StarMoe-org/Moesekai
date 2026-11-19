@@ -22,6 +22,10 @@ export const assetGuideMessages = {
         "body": "These files are converted from each server's game assets by the open-source sekai-exporter. Every game update is published as a new version and earlier versions never change: a URL with @version always returns the same file, so it can be linked and cached for good.",
         "docs": "Exporter documentation",
     },
+    "mp3Note": {
+        "title": "Why is audio MP3 instead of lossless?",
+        "body": "The game's original audio is already lossy HCA (~117 kbps for songs, ~70 kbps for voices). Decoding lossy audio to WAV or FLAC only inflates file sizes several times over without recovering any lost detail. Exporting as double-bitrate MP3 (256 kbps songs, 160 kbps voices) keeps listening quality transparent at a reasonable size. For model training or acoustic analysis, extract .acb / .awb from the game bundles and decode directly with vgmstream or sekai-codec.",
+    },
     "faq": {
         "title": "Questions",
         "references": "References:",

@@ -22,6 +22,10 @@ export const assetGuideMessages = {
         "body": "這裡的檔案由開源的 sekai-exporter 從各伺服器的遊戲資源轉換而來。每次遊戲更新都會發布一個新版本，舊版本保持不變：連結中帶 @版本 的網址內容永不改變，可以放心引用並長期快取。",
         "docs": "導出器文件",
     },
+    "mp3Note": {
+        "title": "為什麼音訊是 MP3 而不是無損格式？",
+        "body": "遊戲裡的原始音訊本身就是有損壓縮的 HCA 格式（歌曲約 117 kbps、語音約 70 kbps），打包時就已經丟失過一次細節。直接轉成 WAV 或 FLAC 只會讓檔案體積大上數倍，並不會多出任何音質；這裡採用約兩倍位元率的 MP3（歌曲 256 kbps、語音 160 kbps）兼顧聽感與體積。若需要原始音訊進行訓練或聲學分析，請從遊戲資源包提取 .acb / .awb 並以 vgmstream 或 sekai-codec 解碼。",
+    },
     "faq": {
         "title": "常見問題",
         "references": "參考：",
