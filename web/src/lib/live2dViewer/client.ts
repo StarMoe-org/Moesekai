@@ -1,16 +1,52 @@
 import { getAssetBaseUrl, type AssetLine } from "@/lib/assets";
-import { live2dSources, type Live2DRegion } from "./config";
-import { parseLive2DModelIndex, type Live2DModel } from "./models";
+import { live2dFetchUrl, live2dSources, type Live2DRegion } from "./config";
+import { live2dModelsByName, parseLive2DCatalogue, type Live2DModel } from "./models";
 
-/** The network side of the Live2D viewer page: a server's model index, and the story backgrounds to stand a model on. */
+/** The network side of the Live2D viewer page: a server's models, and the story backgrounds to stand a model on. */
 
-/** A server's models; none when its index is not published yet (404). */
-export async function fetchLive2DModels(region: Live2DRegion, signal: AbortSignal): Promise<Live2DModel[]> {
-    const url = live2dSources(region).index;
+/** The JSON at `url`, or throws. */
+async function json(url: string, signal: AbortSignal): Promise<unknown> {
     const response = await fetch(url, { signal, credentials: "omit", headers: { Accept: "application/json" } });
-    if (response.status === 404) return [];
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-    return parseLive2DModelIndex(await response.json());
+    return response.json();
+}
+
+/** The subdirectories of a directory listing of the published version. */
+async function directories(url: string, signal: AbortSignal): Promise<string[]> {
+    const listing = await json(url, signal) as { format?: string; directories?: unknown };
+    if (listing.format !== "directory-listing" || !Array.isArray(listing.directories)) throw new Error(`${url}: not a directory listing`);
+    return listing.directories.filter((name): name is string => typeof name === "string");
+}
+
+/**
+ * A server's models: this site's catalogue (each model with the motion set the stories play on
+ * it), or, while the catalogue is not ready or cannot be had, the models of the version the site
+ * publishes now, each with its motion set by the client's naming.
+ */
+export async function fetchLive2DModels(region: Live2DRegion, signal: AbortSignal): Promise<Live2DModel[]> {
+    const sources = live2dSources(region);
+    const version = async () => {
+        const root = await json(live2dFetchUrl(`${sources.site}${region}/`), signal) as { published_version?: unknown };
+        if (typeof root.published_version !== "string") throw new Error(`${sources.site}${region}/: no published version`);
+        return live2dFetchUrl(`${sources.site}${region}@${encodeURIComponent(root.published_version)}/`);
+    };
+    let catalogue: unknown = null;
+    try {
+        catalogue = await json(sources.catalogue, signal);
+    } catch (e) {
+        if (signal.aborted) throw e;
+    }
+    const base = await version();
+    const motions = await directories(`${base}live2d/motion/`, signal).catch(() => []);
+    if (catalogue !== null) {
+        try {
+            const models = parseLive2DCatalogue(catalogue, motions);
+            if (models) return models;
+        } catch {
+            // a catalogue the page cannot read: the site's own listing instead
+        }
+    }
+    return live2dModelsByName(await directories(`${base}live2d/model/`, signal), motions);
 }
 
 const BACKGROUND_DIRECTORY = "scenario/background/";

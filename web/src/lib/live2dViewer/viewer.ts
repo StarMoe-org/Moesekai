@@ -32,10 +32,14 @@ export interface Live2DViewerOptions {
     js?: string;
     /** The deployment's own Cubism Core for Web; Live2D's own when left out. */
     core?: string;
-    /** The story library's root, as the browser fetches it. */
-    library: string;
-    /** The model's bundle and its motion bundle (none: no motions or facials), as `models.json` gives them. */
-    model: { bundle: string; motion: string | null };
+    /** The site that publishes the models and the server whose version is read (the one published now unless `version` is given). */
+    sources: { site: string; region: string; version?: string; proxy?: string };
+    /**
+     * The model's `live2d-model` asset and its `live2d-motions` asset (none: no motions or facials),
+     * each by name or by a directory holding it (the first found going down it). A motion set the
+     * version does not have leaves the model without motions.
+     */
+    model: { asset: string; motion: string | null };
     /** The drawing buffer, in device pixels. */
     width: number;
     height: number;
@@ -45,6 +49,9 @@ export interface Live2DViewerOptions {
 }
 
 export interface Live2DViewer extends EventTarget {
+    /** The assets opened: the model, and its motion set (null: none). */
+    readonly model: string;
+    readonly motionSet: string | null;
     readonly motions: readonly string[];
     readonly facials: readonly string[];
     /** The body motion playing and the facial shown (null: none, a model without motions). */

@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
 
 const { live2dCoreUrl, live2dFetchUrl, live2dSources, live2dCheckConfig, isLive2DRegion, LIVE2D_REGIONS } = await import("../src/lib/live2dViewer/config.ts");
-const { parseLive2DModelId, parseLive2DModelIndex, parseLive2DModelParam, live2dViewerHref } = await import("../src/lib/live2dViewer/models.ts");
+const { parseLive2DModelId, parseLive2DCatalogue, live2dModelsByName, live2dMotionByName, parseLive2DModelParam, live2dViewerHref } = await import("../src/lib/live2dViewer/models.ts");
 
 const NAMES = [
-    "NEXT_PUBLIC_LIVE2D_CORE_URL", "NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_LIVE2D_LIBRARY_BASE", "NEXT_PUBLIC_LIVE2D_INDEX_BASE",
+    "NEXT_PUBLIC_LIVE2D_CORE_URL", "NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_LIVE2D_SITE", "NEXT_PUBLIC_SSE_WEB_SITE",
     "NEXT_PUBLIC_LIVE2D_ASSET_PROXY", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY",
 ];
 const set = (values) => {
@@ -14,15 +14,12 @@ const set = (values) => {
 
 // --- configuration ---
 
-// With nothing set (Docker passes empty strings) the viewer reads the published libraries and
-// indexes, and Live2D's own Cubism Core.
-for (const empty of [{}, { NEXT_PUBLIC_LIVE2D_CORE_URL: " ", NEXT_PUBLIC_LIVE2D_INDEX_BASE: "" }]) {
+// With nothing set (Docker passes empty strings) the viewer reads the story data site's published
+// versions, lists them from this site's catalogue, and loads Live2D's own Cubism Core.
+for (const empty of [{}, { NEXT_PUBLIC_LIVE2D_CORE_URL: " ", NEXT_PUBLIC_LIVE2D_SITE: "" }]) {
     set(empty);
     assert.equal(live2dCoreUrl(), null);
-    assert.deepEqual(live2dSources("jp"), {
-        library: "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/",
-        index: "https://assets.pjsk.moe/sekai-extra-assets/sekai-live2d/jp/models.json",
-    });
+    assert.deepEqual(live2dSources("jp"), { site: "https://storage.pjsk.moe/", region: "jp", catalogue: "/api/live2d/jp/models" });
     live2dCheckConfig();
 }
 assert.deepEqual([...LIVE2D_REGIONS], ["jp", "cn", "tw", "kr", "en"]);
@@ -34,21 +31,23 @@ assert.equal(live2dCoreUrl(), "https://cdn.example.com/core/live2dcubismcore.min
 set({ NEXT_PUBLIC_SSE_WEB_CORE_URL: "https://cdn.example.com/a.js", NEXT_PUBLIC_LIVE2D_CORE_URL: "https://cdn.example.com/b.js" });
 assert.equal(live2dCoreUrl(), "https://cdn.example.com/b.js");
 
-// Moved bases, and the development relay (the viewer's own, else the story player's).
-set({ NEXT_PUBLIC_LIVE2D_LIBRARY_BASE: "https://lib.example.com/x/", NEXT_PUBLIC_LIVE2D_INDEX_BASE: "https://idx.example.com/y/" });
-assert.deepEqual(live2dSources("cn"), { library: "https://lib.example.com/x/cn/", index: "https://idx.example.com/y/cn/models.json" });
+// Another site (the viewer's own, else the story player's), and the development relay (likewise).
+set({ NEXT_PUBLIC_SSE_WEB_SITE: "https://data.example.com/x/" });
+assert.equal(live2dSources("cn").site, "https://data.example.com/x/");
+set({ NEXT_PUBLIC_SSE_WEB_SITE: "https://data.example.com/x/", NEXT_PUBLIC_LIVE2D_SITE: "https://other.example.com/" });
+assert.equal(live2dSources("cn").site, "https://other.example.com/");
 set({ NEXT_PUBLIC_SSE_WEB_ASSET_PROXY: "http://127.0.0.1:8787/remote/" });
-assert.equal(live2dSources("jp").library, "http://127.0.0.1:8787/remote/assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/");
+assert.equal(live2dSources("jp").proxy, "http://127.0.0.1:8787/remote/");
 assert.equal(live2dFetchUrl("https://storage.exmeaning.com/a.webp"), "http://127.0.0.1:8787/remote/storage.exmeaning.com/a.webp");
 set({ NEXT_PUBLIC_SSE_WEB_ASSET_PROXY: "http://127.0.0.1:1/a/", NEXT_PUBLIC_LIVE2D_ASSET_PROXY: "http://localhost:2/b/" });
 assert.equal(live2dFetchUrl("https://h/p"), "http://localhost:2/b/h/p");
 
 // Malformed values fail (the build reads every setting once).
 for (const [name, value] of [
-    ["NEXT_PUBLIC_LIVE2D_LIBRARY_BASE", "https://lib.example.com/x"],
-    ["NEXT_PUBLIC_LIVE2D_INDEX_BASE", "http://idx.example.com/y/"],
-    ["NEXT_PUBLIC_LIVE2D_INDEX_BASE", "https://idx.example.com/y/?q=1"],
-    ["NEXT_PUBLIC_LIVE2D_LIBRARY_BASE", "https://lib.example.com/a/../b/"],
+    ["NEXT_PUBLIC_LIVE2D_SITE", "https://data.example.com/x"],
+    ["NEXT_PUBLIC_LIVE2D_SITE", "http://data.example.com/y/"],
+    ["NEXT_PUBLIC_LIVE2D_SITE", "https://data.example.com/y/?q=1"],
+    ["NEXT_PUBLIC_LIVE2D_SITE", "https://data.example.com/a/../b/"],
     ["NEXT_PUBLIC_LIVE2D_CORE_URL", "https://cdn.example.com/core/"],
     ["NEXT_PUBLIC_LIVE2D_ASSET_PROXY", "https://user:pw@relay.example.com/"],
 ]) {
@@ -76,37 +75,57 @@ assert.deepEqual(parseLive2DModelId("v2_clb01_21miku"), { generation: 2, collab:
 assert.deepEqual(parseLive2DModelId("sub_arisa02_lesson"), { generation: 1, collab: false, characterId: null, subName: "arisa02_lesson", costume: [] });
 assert.deepEqual(parseLive2DModelId("v2_sub_sanrio_kitty"), { generation: 2, collab: false, characterId: null, subName: "sanrio_kitty", costume: [] });
 
-// --- the index ---
+// --- the catalogue ---
 
-const index = {
-    format: 1,
-    region: "jp",
+const ichika = "live2d/model/01ichika_normal/live2d/model/v1/main/01_ichika/01ichika_normal/buildmodeldata";
+const ichikaMotions = "live2d/motion/01ichika_motion_base/live2d/motion/v1/main/01_ichika/01ichika_motion_base/buildmotiondata";
+const motionDirectories = ["01ichika_motion_base", "v2_01ichika_motion_base", "sub_airichild_motion_base", "sub_airi_motion_base"];
+const catalogue = {
+    published_version: "7.1.0",
+    complete: true,
     models: [
-        { id: "sub_airichild", bundle: "live2d/model/sub_airichild", motion: "live2d/motion/sub_airichild_motion_base", kind: "sub" },
-        { id: "01ichika_normal", bundle: "live2d/model/01ichika_normal", motion: "live2d/motion/01ichika_motion_base", bytes: 10 },
-        { id: "v2_01ichika_school01", bundle: "live2d/model/v2_01ichika_school01", motion: "live2d/motion/v2_01ichika_motion_base", motions: ["live2d/motion/x", "live2d/motion/v2_01ichika_motion_base"], characterId: 1 },
-        // a model without a motion bundle is listed (it shows breath and physics alone)
-        { id: "sub_still", bundle: "live2d/model/sub_still", motion: null, motions: [], kind: "sub" },
-        { id: "v2_01ichika_casual", bundle: "live2d/model/v2_01ichika_casual", motion: "live2d/motion/v2_01ichika_motion_base" },
-        { id: "mob_x", bundle: "live2d/model/mob_x", motion: "live2d/motion/mob_motion_base", kind: "mob" },
-        { id: "01ichika_normal", bundle: "dup", motion: "dup" },
-        { id: "Bad Id", bundle: "b", motion: "m" },
-        { id: "no_motion", bundle: "b" },
-        { id: "list_motion", bundle: "b", motion: ["m"] },
+        { id: "sub_airichild", asset: "live2d/model/sub_airichild/a/buildmodeldata", size: 5, textures: 1, characters: [] },
+        { id: "01ichika_normal", asset: ichika, size: 10, textures: 2, characters: [
+            { character2d_id: 1, motion_set: ichikaMotions, episodes: 40 },
+            { character2d_id: 900, motion_set: "live2d/motion/x/buildmotiondata", episodes: 1 },
+        ] },
+        { id: "v2_01ichika_casual", asset: "live2d/model/v2_01ichika_casual/b/buildmodeldata", size: 1, textures: 1, characters: [] },
+        // a model no story pairs and the naming does not match is listed without motions
+        { id: "mob_x", asset: "live2d/model/mob_x/c/buildmodeldata", size: 1, textures: 1, characters: [] },
+        { id: "01ichika_normal", asset: "dup", characters: [] },
+        { id: "Bad Id", asset: "x", characters: [] },
+        { id: "no_asset", characters: [] },
     ],
 };
-const models = parseLive2DModelIndex(index);
-assert.deepEqual(models.map(model => model.id), ["v2_01ichika_casual", "v2_01ichika_school01", "01ichika_normal", "sub_airichild", "sub_still", "mob_x"]);
-// the default motion bundle first, then the others the stories used
-assert.deepEqual(models[1].motions, ["live2d/motion/v2_01ichika_motion_base", "live2d/motion/x"]);
-assert.deepEqual(models[4].motions, []);
-assert.equal(models[2].bytes, 10);
-assert.equal(models[2].bundle, "live2d/model/01ichika_normal");
-assert.equal(models[3].kind, "sub");
-assert.equal(models[3].subName, "airichild");
-assert.equal(models[5].characterId, null);
-assert.throws(() => parseLive2DModelIndex({ format: 2, models: [] }), /live2d_index_invalid/);
-assert.throws(() => parseLive2DModelIndex(null), /live2d_index_invalid/);
+const models = parseLive2DCatalogue(catalogue, motionDirectories);
+assert.deepEqual(models.map(model => model.id), ["v2_01ichika_casual", "01ichika_normal", "sub_airichild", "mob_x"]);
+// the motion set most stories play first, then the others they do
+assert.deepEqual(models[1].motions, [ichikaMotions, "live2d/motion/x/buildmotiondata"]);
+assert.equal(models[1].asset, ichika);
+assert.equal(models[1].bundle, "live2d/model/01ichika_normal");
+assert.equal(models[1].bytes, 10);
+assert.equal(models[1].textures, 2);
+// a model no story pairs gets the motion set the naming gives: the longest match
+assert.deepEqual(models[0].motions, ["live2d/motion/v2_01ichika_motion_base"]);
+assert.deepEqual(models[2].motions, ["live2d/motion/sub_airichild_motion_base"]);
+assert.deepEqual(models[3].motions, []);
+assert.equal(models[2].kind, "sub");
+assert.equal(models[3].characterId, null);
+// a catalogue still being built says so
+assert.equal(parseLive2DCatalogue({ published_version: "", complete: false, models: [] }), null);
+assert.throws(() => parseLive2DCatalogue(null), /live2d_catalogue_invalid/);
+assert.throws(() => parseLive2DCatalogue({ complete: true }), /live2d_catalogue_invalid/);
+
+// --- the site's own listing (the catalogue is not ready) ---
+
+assert.equal(live2dMotionByName("sub_airi_lesson", motionDirectories), "live2d/motion/sub_airi_motion_base");
+assert.equal(live2dMotionByName("01ichikanot", motionDirectories), null);
+const listed = live2dModelsByName(["01ichika_normal", "sub_airichild", "Bad Id", "mob_x"], motionDirectories);
+assert.deepEqual(listed.map(model => [model.id, model.asset, model.motions]), [
+    ["01ichika_normal", "live2d/model/01ichika_normal", ["live2d/motion/01ichika_motion_base"]],
+    ["sub_airichild", "live2d/model/sub_airichild", ["live2d/motion/sub_airichild_motion_base"]],
+    ["mob_x", "live2d/model/mob_x", []],
+]);
 
 // --- the address ---
 

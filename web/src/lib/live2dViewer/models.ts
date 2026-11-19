@@ -1,4 +1,4 @@
-import type { ILive2DModelIndexEntry, Live2DModelKind } from "../../types/live2d";
+import type { ILive2DCatalogue, ILive2DModelIndexEntry, Live2DModelKind } from "../../types/live2d";
 
 /**
  * The models of a story library's index as the viewer page lists them. A model's id is its bundle
@@ -40,9 +40,11 @@ export type Live2DCostumePart =
 
 export interface Live2DModel {
     id: string;
-    /** `live2d/model/<id>`, relative to the library's `library/`. */
+    /** `live2d/model/<id>`: the directory of the published version holding the model. */
     bundle: string;
-    /** The motion bundles the stories used with it, the default first; none for a model without one. */
+    /** What the viewer opens: the model's `live2d-model` asset when known, else `bundle`. */
+    asset: string;
+    /** The motion sets the stories used with it (assets, or directories holding one), the default first; none for a model without one. */
     motions: string[];
     kind: Live2DModelKind;
     /** MasterCharacter id: the index's, else the one the id spells. */
@@ -127,6 +129,7 @@ export function parseLive2DModel(entry: ILive2DModelIndexEntry): Live2DModel {
         ...spelled,
         id: entry.id,
         bundle: entry.bundle,
+        asset: typeof entry.asset === "string" && entry.asset ? entry.asset : entry.bundle,
         motions: motionBundles(entry),
         kind,
         characterId: kind === "character" ? characterId : null,
@@ -158,22 +161,59 @@ export function compareLive2DModels(a: Live2DModel, b: Live2DModel): number {
         || a.id.localeCompare(b.id);
 }
 
+/** The motion set of the model `id` by the client's naming: the directory `<x>_motion_base` of
+ * `motionDirectories` (the names under `live2d/motion/`) whose `<x>` begins the id the furthest. */
+export function live2dMotionByName(id: string, motionDirectories: readonly string[]): string | null {
+    let best: string | null = null;
+    for (const directory of motionDirectories) {
+        const stem = directory.endsWith("_motion_base") ? directory.slice(0, -"_motion_base".length) : null;
+        if (!stem || !(id === stem || id.startsWith(`${stem}_`))) continue;
+        if (best === null || stem.length > best.length - "_motion_base".length) best = directory;
+    }
+    return best === null ? null : `live2d/motion/${best}`;
+}
+
 /**
- * The models of a `models.json`, sorted (compareLive2DModels). Entries the page cannot use (no id
- * or bundle) are left out; an index of another format is an error.
+ * The models of this site's catalogue, sorted (compareLive2DModels), or null while it is not
+ * complete. A model the stories pair with no motion set gets one by the client's naming
+ * (`live2dMotionByName`), when `motionDirectories` is given.
  */
-export function parseLive2DModelIndex(raw: unknown): Live2DModel[] {
-    if (typeof raw !== "object" || raw === null) throw new Error("live2d_index_invalid");
-    const index = raw as { format?: unknown; models?: unknown };
-    if (index.format !== 1 || !Array.isArray(index.models)) throw new Error("live2d_index_invalid");
+export function parseLive2DCatalogue(raw: unknown, motionDirectories: readonly string[] = []): Live2DModel[] | null {
+    if (typeof raw !== "object" || raw === null) throw new Error("live2d_catalogue_invalid");
+    const catalogue = raw as ILive2DCatalogue;
+    if (typeof catalogue.complete !== "boolean" || !Array.isArray(catalogue.models)) throw new Error("live2d_catalogue_invalid");
+    if (!catalogue.complete) return null;
     const seen = new Set<string>();
     const models: Live2DModel[] = [];
-    for (const entry of index.models) {
-        if (!isEntry(entry) || seen.has(entry.id)) continue;
-        seen.add(entry.id);
-        models.push(parseLive2DModel(entry));
+    for (const item of catalogue.models) {
+        if (typeof item?.id !== "string" || !/^[a-z0-9_]+$/.test(item.id) || typeof item.asset !== "string" || seen.has(item.id)) continue;
+        seen.add(item.id);
+        const characters = Array.isArray(item.characters) ? item.characters : [];
+        const sets = [...new Set(characters.map(c => c.motion_set).filter((set): set is string => typeof set === "string" && set !== ""))];
+        const named = sets.length === 0 ? live2dMotionByName(item.id, motionDirectories) : null;
+        const motions = sets.length > 0 ? sets : named ? [named] : [];
+        models.push(parseLive2DModel({
+            id: item.id,
+            bundle: `live2d/model/${item.id}`,
+            asset: item.asset,
+            motion: motions[0] ?? null,
+            motions,
+            bytes: typeof item.size === "number" ? item.size : 0,
+            textures: typeof item.textures === "number" ? item.textures : 0,
+        }));
     }
     return models.sort(compareLive2DModels);
+}
+
+/** The models of a published version's `live2d/model/` directories, each with its motion set by the client's naming, sorted. */
+export function live2dModelsByName(modelDirectories: readonly string[], motionDirectories: readonly string[]): Live2DModel[] {
+    return modelDirectories
+        .filter(id => /^[a-z0-9_]+$/.test(id))
+        .map(id => {
+            const motion = live2dMotionByName(id, motionDirectories);
+            return parseLive2DModel({ id, bundle: `live2d/model/${id}`, motion, motions: motion ? [motion] : [] });
+        })
+        .sort(compareLive2DModels);
 }
 
 /** The model the address names (`?model=<id>`), when it is a model id at all. */

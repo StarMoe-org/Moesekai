@@ -21,17 +21,17 @@ bun run --cwd web copy:wasm
 
 ## 数据
 
-- 模型文件来自各服务器的剧情库（SekaiStoryRipper 的产物）：`<剧情库>/<区服>/library/live2d/model/<模型>/` 与 `live2d/motion/<角色>_motion_base/`。播放器按每个包的 `_ripper.json` 文件清单下载。
-- 模型列表来自 SekaiLive2DViewer 的索引工具（`sekai-live2d-index`）发布的 `<索引目录>/<区服>/models.json`（格式见那个项目的 `docs/models-json.md`，页面用到的字段在 `src/types/live2d.ts`），只包含剧情库里已有的模型。服务器没有发布索引（404）时列表为空。
+- 模型文件来自剧情数据站点（导出器的发布物）上各服务器当前发布的版本 `<站点><区服>@<版本>/`：播放器打开模型的 `live2d-model` 资产和它的动作集（`live2d-motions` 资产），按资产文档下载成员文件，动作名、表情名就是动作集文档里 `motion/`、`facial/` 成员的名字。
+- 模型列表来自本站后端的模型目录 `GET /api/live2d/<区服>/models`（`internal/live2d`，字段见 `src/types/live2d.ts`）：后端从这一版的剧集文档推导每个模型的资产、首次下载大小、贴图数，以及剧情把它当作哪些角色、配哪个动作集，按版本缓存并增量更新。前端只用 HTTP 缓存（ETag、`stale-while-revalidate`）。
+- 后端目录还没建好（`complete` 为假）或请求失败时，列表改读站点这一版的 `live2d/model/` 目录列表，动作集按客户端的命名规则配：`live2d/motion/` 下名字最长地匹配模型名开头的 `<角色>_motion_base`。播放器拿到的是目录，自己往下找资产；动作集也找不到时，只打开模型、不带动作。
 - 服务器默认跟随站点设置里的资源服务器，页面上可以切换。
 - 模型名就是模型包名，页面从中读出角色、版本（`v2_`）、联动（`clb<NN>_`）、配角（`sub_`）和服装词（`src/lib/live2dViewer/models.ts`）。服装没有官方名称；`page.live2d.costume.*` 翻译常见的词，虚拟歌手的团体版本显示团体名，其他词按模型名原样显示。
 - 剧情背景列表来自资源站的 bundle 列表接口（`/api/assets/bundles?prefix=scenario/background/`，资产浏览器用的同一个），图片是资源站的 WebP。背景由页面用 `<img>` 垫在透明的播放器画布下面，不经过播放器。
 
-本地联调：SekaiLive2DViewer 的 `dev/serve.py` 在 8788 端口提供中转（`/remote/`），同时提供它生成的 `sekai-live2d/<区服>/models.json`，可以在 `web/.env.local` 里写：
+本地联调：站点不放行本地来源时，用 SekaiLive2DViewer 的 `dev/serve.py`（8788 端口）中转，在 `web/.env.local` 里写：
 
 ```
 NEXT_PUBLIC_LIVE2D_ASSET_PROXY=http://127.0.0.1:8788/remote/
-NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 ```
 
 ## 设置
@@ -40,12 +40,11 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 
 | 变量 | 含义 | 默认 |
 |---|---|---|
-| `NEXT_PUBLIC_LIVE2D_LIBRARY_BASE` | 各区服剧情库的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
-| `NEXT_PUBLIC_LIVE2D_INDEX_BASE` | 各区服模型索引的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/sekai-live2d/` |
+| `NEXT_PUBLIC_LIVE2D_SITE` | 剧情数据站点的根 | 剧情播放器的 `NEXT_PUBLIC_SSE_WEB_SITE`，都不设时 `https://storage.pjsk.moe/` |
 | `NEXT_PUBLIC_LIVE2D_CORE_URL` | 站点自己托管的 Cubism Core for Web | 剧情播放器的 `NEXT_PUBLIC_SSE_WEB_CORE_URL`，都不设时用 Live2D 官方地址 |
 | `NEXT_PUBLIC_LIVE2D_ASSET_PROXY` | 本地开发的中转（`<中转><主机>/…`） | `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` |
 
-写错时构建失败（`next.config.ts` 调用 `live2dCheckConfig()`）。剧情库主机只放行 `https://pjsk.moe` 跨源读取，本地开发要设中转。Cubism Core 是 Live2D Inc. 的软件，适用它自己的许可，本仓库和发布物都不包含它；舞台下方注明了它。
+后端的 `LIVE2D_SITE`、`LIVE2D_DATA_DIR` 见根目录 README。写错时构建失败（`next.config.ts` 调用 `live2dCheckConfig()`）。Cubism Core 是 Live2D Inc. 的软件，适用它自己的许可，本仓库和发布物都不包含它；舞台下方注明了它。
 
 ## 界面
 

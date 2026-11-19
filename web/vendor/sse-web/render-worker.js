@@ -1,19 +1,15 @@
 // The render worker (ADR-0031): Pass 2 on an OffscreenCanvas. Frames arrive from the simulation
-// worker a few seconds ahead; the files they show (models, backgrounds, effect prefabs) are
-// fetched as they arrive, and a frame is drawn only once everything it shows is in. The UI kit
-// comes from the page, derived by a worker of its own (kit-worker.js).
+// worker a few seconds ahead; the files they show (models, backgrounds, effect prefabs, movies)
+// are fetched as they arrive, and a frame is drawn only once everything it shows is in. The
+// scenario UI's sprites, fonts, transitions and dialog are read by the renderer itself from the
+// client view, which it names as it finds one missing (see SseLoader.retryMissing).
 //
-// Before playback it fetches everything the episode index lists that frames can show (every
-// model, effect and particle bundle, every background, the bundles background prefabs are in, the
-// bundles effect and background prefabs depend on, and every movie's video stream); playback then
-// fetches nothing (should a frame still lack a file, it is fetched and playback waits). Files
-// stay in the file table; the renderer drops textures it has not drawn for a while and decodes
-// them again from there (ADR-0029). Backgrounds from the asset source are fetched as its WebP and
-// decoded by the browser (ADR-0031; lossy, unlike the export's PNG).
+// Files stay in the file table; the renderer drops textures it has not drawn for a while and
+// decodes them again from there (ADR-0029). The pictures of movies are decoded by the browser
+// (WebCodecs, movies.js) and handed to the renderer as it asks for them.
 //
 // From the page:
 //   { type: "init", options, canvas, framesPort }   canvas: the OffscreenCanvas
-//   { type: "kit", dir, files }                      the UI kit: [name, bytes] for `<dir>/<name>`
 //   { type: "show", frame }                          draw this frame
 //   { type: "show", frame, w }                       experimental (a display above 60 Hz): draw
 //                                                    the state `w` (in [0, 1)) of the way to
@@ -22,6 +18,7 @@
 //   { type: "resize", width, height }                draw at this size from now on
 // From the simulation worker (on the frames port), besides frames:
 //   { type: "reset", frame, gen }                    a seek: frames start over from `frame`
+//   { type: "prefetch", assets }                     model assets that layouts ahead put on
 // To the simulation worker (on the frames port):
 //   { type: "answer", index }                        a choice dialog's button was tapped
 //   { type: "click" }                                any other tap, unless a dialog is up
@@ -35,17 +32,17 @@
 "use strict";
 
 let loader;
-let index;
+let movies;
 let renderer;
+/** What a renderer is created with: the canvas and the fonts the page gave. */
+let canvas;
+let fonts;
 let models = [];
-/** Baked frames not drawn yet, by frame number: [json, bundles and files it shows]. */
+/** Baked frames not drawn yet, by frame number: [json, what it shows, whether a choice is up]. */
 const frames = new Map();
-/** Library bundles and single files: "ready" once every file is in. */
+/** Keys (see `needs`) whose files are all in. */
 const ready = new Set();
 const requested = new Set();
-/** Encoded WebP backgrounds, by library path; and those being decoded. */
-const webp = new Map();
-const decoding = new Set();
 let shown = -1;
 /** The frame on screen: its entry (see `frames`), its JSON, and whether a choice dialog is up. */
 let shownEntry;
@@ -56,8 +53,6 @@ let shownW = 0;
 /** The newest in-between `show` not drawn yet: they are drawn one task later, the newest only. */
 let pendingShow;
 let framesPort;
-/** What a renderer is created with: the canvas, the UI kit, the client and the selector. */
-let rendererArgs;
 // SsePlayer's experimental anti-aliasing of the Live2D models: {method, msaaSamples, ssaaFactor}
 let antialiasing;
 let skipped = 0;
@@ -67,9 +62,6 @@ let gen = 0;
 let newest = 0;
 /** An error was reported to the page: nothing more is drawn. */
 let dead = false;
-/** The UI kit, once the page hands it over (see the top). */
-let kitArrived;
-const kit = new Promise((resolve) => { kitArrived = resolve; });
 
 /** Reports `e` to the page (once) and stops. */
 function fatal(e) {
@@ -82,39 +74,23 @@ function fatal(e) {
 /** How often fetching what a frame shows has failed, by key (each fetch tries a few times). */
 const failures = new Map();
 
-/** Decodes a WebP background into the renderer (async; the frame waits meanwhile). */
-async function decodeBackground(path) {
-  decoding.add(path);
-  try {
-    const bitmap = await createImageBitmap(new Blob([webp.get(path)], { type: "image/webp" }),
-      { colorSpaceConversion: "none", premultiplyAlpha: "none" });
-    const c = new OffscreenCanvas(bitmap.width, bitmap.height);
-    const ctx = c.getContext("2d", { willReadFrequently: true });
-    ctx.drawImage(bitmap, 0, 0);
-    const data = ctx.getImageData(0, 0, bitmap.width, bitmap.height).data;
-    renderer.putImage(path, bitmap.width, bitmap.height, new Uint8Array(data.buffer));
-    bitmap.close();
-  } finally {
-    decoding.delete(path);
-  }
-}
-
-
-/** What a frame shows that must be fetched: bundles (whole) and single files. */
+/**
+ * What a frame shows that must be fetched, as keys: `asset:<name>` for an asset of the canonical
+ * view (a model, an effect or background prefab) with all its files, `file:<table path>` for a
+ * single file (a background's picture, a movie).
+ */
 function needs(state) {
   const out = [];
-  for (const c of state.characters) if (models[c.model]) out.push(`bundle:${models[c.model]}`);
-  for (const b of [state.background?.current, state.background?.previous]) {
-    if (!b) continue;
-    out.push(index.assets?.[b] && b.endsWith(".png") ? `webp:${b}` : `file:${SseLoader.resolve(index, b)}`);
-  }
-  for (const e of state.effects ?? []) out.push(`bundle:${e.bundle}`);
-  if (state.movie?.file) out.push(`file:${SseLoader.resolve(index, state.movie.file)}`);
-  // a background prefab, drawn instead of the background's texture, and the movie it plays
+  const file = (path) => out.push(`file:${SSE_PUB}${path}`);
+  for (const c of state.characters) if (models[c.model]) out.push(`asset:${models[c.model]}`);
+  for (const path of [state.background?.current, state.background?.previous]) if (path) file(path);
+  for (const e of state.effects ?? []) out.push(`asset:${e.prefab}`);
+  if (state.movie?.file) file(state.movie.file);
+  // a background prefab, drawn instead of the background's picture, and the movie it plays
   const prefab = state.background?.prefab;
   if (prefab) {
-    out.push(`bundle:${prefab.bundle}`);
-    if (prefab.movie?.file) out.push(`file:${SseLoader.resolve(index, prefab.movie.file)}`);
+    out.push(`asset:${prefab.asset}`);
+    if (prefab.movie?.file) file(prefab.movie.file);
   }
   return out;
 }
@@ -131,21 +107,44 @@ function request(key) {
     if (failures.get(key) >= 2) fatal(e);
     else console.warn(`${key}: ${e?.message ?? e}`);
   };
-  if (key.startsWith("bundle:")) {
-    loader.bundleFiles(key.slice(7)).then((files) => loader.getAll(files)).then(done, fail);
-  } else if (key.startsWith("webp:")) {
-    const path = key.slice(5);
-    const root = loader.roots.find((r) => r.prefix === "/assets/");
-    loader.fetchRooted(root, `/assets/${path.replace(/\.png$/, ".webp")}`)
-      .then((bytes) => { webp.set(path, bytes); loader.bytes += bytes.length; }).then(done, fail);
+  if (key.startsWith("asset:")) {
+    loader.assetFiles(key.slice(6)).then((files) => loader.getAll(files)).then(done, fail);
   } else {
     loader.get(key.slice(5)).then(done, fail);
   }
 }
 
-async function init(o, canvas, port) {
+/** The page's own fonts (SsePlayer.create's `fonts`): each file once, at /fonts/<n>-<name>. */
+async function placeFonts(wanted) {
+  const paths = new Map();
+  const place = (list) => Promise.all((list ?? []).map(async ({ url, weight }) => {
+    const absolute = new URL(url, location.href).href;
+    if (!paths.has(absolute)) {
+      const path = `/fonts/${paths.size}-${absolute.split("/").pop().split(/[?#]/)[0]}`;
+      paths.set(absolute, sseFetchBytes(absolute).then((bytes) => {
+        wasm_bindgen.putFile(path, bytes);
+        loader.bytes += bytes.length;
+        return path;
+      }));
+    }
+    return { path: await paths.get(absolute), ...(weight === undefined ? {} : { weight }) };
+  }));
+  return { body: await place(wanted?.body), name: await place(wanted?.name) };
+}
+
+/** A renderer for `canvas` at `width` × `height`, with the models known so far. */
+async function createRenderer(width, height) {
+  const created = await sseWhenCoreReady(() => loader.retryMissing(
+    () => wasm_bindgen.FrameRenderer.create(canvas, models, 60, width, height, fonts.body, fonts.name),
+    sseReporter(loader, "client")));
+  // models that arrived while it was made
+  created.setModels(models);
+  return created;
+}
+
+async function init(o, offscreen, port) {
   // paths relative to this worker: Core and the package come from the options
-  for (const url of [o.core, `${o.pkg}sse_web.js`, "common.js"]) {
+  for (const url of [o.core, `${o.pkg}sse_web.js`, "common.js", "movies.js"]) {
     try {
       importScripts(url);
     } catch (e) {
@@ -155,31 +154,11 @@ async function init(o, canvas, port) {
   const wasm = await wasm_bindgen({ module_or_path: `${o.pkg}sse_web_bg.wasm` });
   // the size of the wasm memory: it holds the file table and only ever grows
   self.wasmBytes = () => wasm.memory.buffer.byteLength;
-  const { FrameRenderer, putFile, removeFile } = wasm_bindgen;
   self.fileTableSize = wasm_bindgen.fileTableSize;
-  loader = new SseLoader(putFile, o.sources);
-  loader.removeFile = removeFile;
-  const lock = await loader.json("/lib/ripper.lock.json");
-  if (lock.assets) loader.setRoot("/assets/", lock.assets.base);
-  index = await sseEpisodeIndex(loader, o.selector);
-  const report = (phase, done, total) => postMessage({ type: "progress", phase, done, total, bytes: loader.bytes });
-  // the page's own fonts (SsePlayer.create's `fonts`): each file once, at /fonts/<n>-<name>
-  const ownFonts = (async () => {
-    const paths = new Map();
-    const place = async (list) => Promise.all((list ?? []).map(async ({ url, weight }) => {
-      const absolute = new URL(url, location.href).href;
-      if (!paths.has(absolute)) {
-        const path = `/fonts/${paths.size}-${absolute.split("/").pop().split(/[?#]/)[0]}`;
-        paths.set(absolute, sseFetchBytes(absolute).then((bytes) => {
-          putFile(path, bytes);
-          loader.bytes += bytes.length;
-          return path;
-        }));
-      }
-      return { path: await paths.get(absolute), ...(weight === undefined ? {} : { weight }) };
-    }));
-    return { body: await place(o.fonts?.body), name: await place(o.fonts?.name) };
-  })();
+  loader = new SseLoader(wasm_bindgen, o.views);
+  movies = new SseMovies(wasm_bindgen);
+  canvas = offscreen;
+  const ownFonts = placeFonts(o.fonts);
   // a font that fails to load is reported when the renderer is made; not as an unhandled rejection before
   ownFonts.catch(() => {});
   framesPort = port;
@@ -194,10 +173,8 @@ async function init(o, canvas, port) {
       return;
     }
     if (e.data.type === "prefetch") {
-      // models layout instructions ahead will put on: fetch their textures early
-      for (const b of e.data.bundles) {
-        request(`bundle:${b}`);
-      }
+      // models layout instructions ahead will put on: fetch their files early
+      for (const name of e.data.assets) request(`asset:${name}`);
       return;
     }
     if (e.data.models) { models = e.data.models; renderer?.setModels(models); }
@@ -211,59 +188,11 @@ async function init(o, canvas, port) {
       newest = Math.max(newest, n);
     }
   };
-  // everything frames can show
-  const bundles = new Set(index.bundles.filter((b) => b.startsWith("shader/")));
-  // a costume whose model the library does not have (the index warns of it) is not drawn
-  for (const c of Object.values(index.characters)) for (const costume of c.costumes) if (costume.modelBundle) bundles.add(costume.modelBundle);
-  for (const b of Object.values(index.effects ?? {})) bundles.add(b);
-  // background prefabs: a bundle the library lacks (its download failed) is left out, and its
-  // background drawn from the texture
-  const prefabs = sseBackgroundBundles(index).filter((b) => !bundles.has(b));
-  // what effect and background prefabs use from other bundles is in their manifest
-  // dependencies: those too (one the library lacks is left out, like a prefab's bundle, and
-  // what points into it is drawn without it)
-  const deps = (await sseDependencyBundles(loader, index, [...Object.values(index.effects ?? {}), ...prefabs]))
-    .filter((b) => !bundles.has(b) && !prefabs.includes(b));
-  const optional = [...prefabs, ...deps];
-  const backgrounds = Object.values(index.backgrounds ?? {}).map((b) => b.path);
-  let listed = 0;
-  const listing = bundles.size + optional.length;
-  report("listing", 0, listing);
-  const lists = await Promise.all([
-    ...[...bundles].map((b) => loader.bundleFiles(b)),
-    ...optional.map((b) => loader.bundleFiles(b).then((files) => { bundles.add(b); return files; },
-      (e) => { console.warn(`${b}: ${e?.message ?? e}`); return []; })),
-  ].map((p) => p.then((files) => { report("listing", ++listed, listing); return files; })));
-  const singles = backgrounds.filter((b) => !(index.assets?.[b] && b.endsWith(".png"))).map((b) => SseLoader.resolve(index, b));
-  // a movie's picture: its video stream, decoded here as it plays (its sound is the simulation's)
-  for (const movie of Object.values(index.movies ?? {})) {
-    for (const f of movie.files) if (f.endsWith(".m2v")) singles.push(SseLoader.resolve(index, f));
-  }
-  const webps = backgrounds.filter((b) => index.assets?.[b] && b.endsWith(".png"));
-  const total = lists.flat().length + singles.length + webps.length;
-  let done = 0;
-  const step = () => report("files", ++done, total);
-  const root = loader.roots.find((r) => r.prefix === "/assets/");
-  await Promise.all([
-    loader.getAll([...lists.flat(), ...singles], step),
-    Promise.all(webps.map((b) => loader.fetchRooted(root, `/assets/${b.replace(/\.png$/, ".webp")}`)
-      .then((bytes) => { webp.set(b, bytes); loader.bytes += bytes.length; step(); }))),
-  ]);
-  for (const b of bundles) ready.add(`bundle:${b}`);
-  for (const b of singles) ready.add(`file:${b}`);
-  for (const b of webps) ready.add(`webp:${b}`);
-  for (const k of ready) requested.add(k);
-  const ui = await kit;
-  for (const [name, bytes] of ui.files) putFile(`${ui.dir}/${name}`, bytes);
-  const fonts = await ownFonts;
-  renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
-    FrameRenderer.create(canvas, "/lib", "/assets", o.selector, ui.dir, lock.region ?? "jp", [], 60, o.width, o.height,
-      fonts.body, fonts.name)));
+  fonts = await ownFonts;
+  renderer = await createRenderer(o.width, o.height);
   // a setting the device does not take leaves the player without anti-aliasing, not failed
   antialiasing = { method: "none", msaaSamples: 4, ssaaFactor: 2 };
   setAntialiasing(o.antialiasing);
-  renderer.setModels(models);
-  rendererArgs = [canvas, ui.dir, lock.region ?? "jp", o.selector, fonts];
   postMessage({ type: "ready", loadedBytes: loader.bytes, msaaSampleCounts: [...renderer.msaaSampleCounts()] });
 }
 
@@ -290,13 +219,9 @@ async function resize(width, height) {
   const old = renderer;
   renderer = undefined;
   old.free();
-  const [canvas, kit, game, selector, fonts] = rendererArgs;
   canvas.width = width;
   canvas.height = height;
-  const { FrameRenderer } = wasm_bindgen;
-  renderer = await sseWhenCoreReady(() => loader.retryMissing(() =>
-    FrameRenderer.create(canvas, "/lib", "/assets", selector, kit, game, models, 60, width, height,
-      fonts.body, fonts.name)));
+  renderer = await createRenderer(width, height);
   applyAntialiasing(antialiasing);
   showAgain();
 }
@@ -340,8 +265,24 @@ function showBetween(want, w) {
   pendingShow = [want, w];
 }
 
+/**
+ * Hands the renderer the movie pictures `json` shows that it does not hold. One that is not
+ * decoded yet is left out: the renderer keeps the movie's last picture (decoding goes on, and
+ * the next draw asks again).
+ */
+function putMoviePictures(json) {
+  for (const { path, index, background } of JSON.parse(renderer.movieFrames(json))) {
+    const picture = movies.picture(path, index, background);
+    if (!picture) continue;
+    // the renderer copies it to the GPU within the call
+    renderer.putMovieFrame(path, index, background, picture);
+    picture.close();
+  }
+}
+
 /** The JSON of `want` drawn `w` of the way to the next frame, when that frame is in. */
 function present(want, json, w) {
+  putMoviePictures(json);
   const next = w > 0 ? frames.get(want + 1) : undefined;
   if (next === undefined) {
     renderer.present(json);
@@ -362,7 +303,7 @@ function show(want, w = 0) {
     const drawn = present(want, shownJson, w);
     if (drawn === 0) return;
     shownW = drawn;
-    postMessage({ type: "shown", gen, frame: want, ms: performance.now() - start, skipped, loadedBytes: loader.bytes, tableBytes: fileTableSize() + [...webp.values()].reduce((a, b) => a + b.length, 0), wasmBytes: wasmBytes() });
+    postMessage({ type: "shown", gen, frame: want, ms: performance.now() - start, skipped, loadedBytes: loader.bytes, tableBytes: fileTableSize(), wasmBytes: wasmBytes() });
     return;
   }
   // an older frame than the one on screen (the clock is not to go back): keep what is shown
@@ -373,19 +314,10 @@ function show(want, w = 0) {
     postMessage({ type: "stall", gen, frame: want, reason: `frame ${want} not baked yet (holding ${keys.length}: ${Math.min(...keys)}..${Math.max(...keys)})` });
     return;
   }
-  const missing = entry[1].find((k) => !ready.has(k) && !k.startsWith("bundle:shader/"));
+  const missing = entry[1].find((k) => !ready.has(k));
   if (missing) {
     request(missing);
     postMessage({ type: "stall", gen, frame: want, reason: missing });
-    return;
-  }
-  // backgrounds decoded by the browser: (again, after the renderer dropped one) before drawing
-  const undecoded = entry[1].filter((k) => k.startsWith("webp:") && !renderer.hasImage(k.slice(5))).map((k) => k.slice(5));
-  if (undecoded.length) {
-    for (const p of undecoded) {
-      if (!decoding.has(p)) decodeBackground(p).catch((err) => fatal(new Error(`${p}: ${err?.message ?? err}`)));
-    }
-    postMessage({ type: "stall", gen, frame: want, reason: `decoding ${undecoded[0]}` });
     return;
   }
   for (const k of frames.keys()) {
@@ -397,11 +329,11 @@ function show(want, w = 0) {
   try {
     shownW = present(want, entry[0], w);
   } catch (e) {
-    // a file nothing announced (the renderer reads it on its own): fetch it and draw again
-    const path = sseMissingPath(e);
-    if (!path) throw e;
-    loader.get(path).catch(fatal);
-    postMessage({ type: "stall", gen, frame: want, reason: path });
+    // files nothing announced (the renderer reads them on its own): fetch them and draw again
+    const paths = sseMissingPaths(e);
+    if (!paths.length) throw e;
+    for (const path of paths) loader.get(path).catch(fatal);
+    postMessage({ type: "stall", gen, frame: want, reason: paths[0] });
     return;
   }
   frames.delete(want);
@@ -409,7 +341,7 @@ function show(want, w = 0) {
   shownEntry = entry;
   shownJson = entry[0];
   shownChoice = entry[2];
-  postMessage({ type: "shown", gen, frame: want, ms: performance.now() - start, skipped, loadedBytes: loader.bytes, tableBytes: fileTableSize() + [...webp.values()].reduce((a, b) => a + b.length, 0), wasmBytes: wasmBytes() });
+  postMessage({ type: "shown", gen, frame: want, ms: performance.now() - start, skipped, loadedBytes: loader.bytes, tableBytes: fileTableSize(), wasmBytes: wasmBytes() });
 }
 
 onmessage = (e) => {
@@ -418,8 +350,6 @@ onmessage = (e) => {
   try {
     if (m.type === "init") {
       init(m.options, m.canvas, m.framesPort).catch(fatal);
-    } else if (m.type === "kit") {
-      kitArrived(m);
     } else if (m.type === "show") {
       if (m.w === undefined) show(m.frame);
       else showBetween(m.frame, m.w);

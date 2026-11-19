@@ -85,6 +85,7 @@ AGPL-3.0
 - **STATIC_ARCHIVE_DIR**: Next.js 静态文件归档持久化目录（默认 `./data/static_archive`）。在全量 Docker 容器部署时，启动脚本会自动将新构建的 `.next/static` 产物增量归档保存至该目录，防止新版本部署导致未刷新的在线客户端加载旧 Chunk JS 出现 404 错误。
 - **STATIC_CACHE_MAX_DAYS**: 静态归档产物保留天数（默认 `30`）；设为 `0` 禁用过期清理，其他值必须是非负整数。
 - **HTML_CACHE_DIR**: HTML 响应缓存目录；留空时回落到默认目录（容器内 `/app/data/html_cache`，否则 `./data/html_cache`）。没有关闭磁盘 HTML 缓存的开关。
+- **LIVE2D_SITE** / **LIVE2D_DATA_DIR**: Live2D 模型目录（`/api/live2d/<区服>/models`）与剧情播放器的剧集列表（`/api/live2d/<区服>/episodes`）由 Go 后端从剧情数据站点的发布物推导：`LIVE2D_SITE` 是站点（默认 `https://storage.pjsk.moe`），`LIVE2D_DATA_DIR` 存放每个区服的索引（默认容器内 `/app/data/live2d`，否则 `./data/live2d`）。某个区服第一次被请求时才建索引（jp 约 8500 个文件、5 分钟），期间接口返回 `complete: false`，页面改用站点的目录列表；之后按站点的版本变更增量更新，每分钟最多检查一次。
 - **MOESEKAI_API_URL**: moesekai-api（登录与猜歌曲）的内网地址，例如 `http://moesekai-api.zeabur.internal:8080`。设置后 `/api/auth/` 与 `/api/guess-music/` 由 Go 后端同源转发：Cookie、Set-Cookie 与跳转地址原样透传，响应边收边发，`X-Forwarded-For` 末尾追加上一跳地址，`CF-Connecting-IP` 保持不变；上游不可达时返回 502 `{"error":"upstream_unavailable"}`。未设置时这两组路径返回 503 `{"error":"unavailable"}`。
 - **NEXTJS_PORT**: 全量镜像内部 Next.js 监听端口（默认 `3000`），必须与外部 Go `PORT` 不同。
 
