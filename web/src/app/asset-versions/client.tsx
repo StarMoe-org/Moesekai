@@ -36,6 +36,7 @@ import {
     conversionCount,
     fetchVersionChanges,
     fetchVersionHistory,
+    shortVersion,
     type ChangedFile,
     type ChangeKind,
     type VersionChanges,
@@ -86,10 +87,6 @@ const PAGE_SIZE = 200;
 type KindFilter = "all" | ChangeKind;
 type MediaFilter = "all" | DiffMediaCategory;
 type CauseFilter = "all" | DiffCause;
-
-function formatShortVersion(version: string): string {
-    return version.split("-")[0] || version;
-}
 
 const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }> = {
     added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
@@ -832,7 +829,7 @@ function AssetVersionsContent() {
                     >
                         <Icon path={mdHistory} size={18} className="shrink-0 text-primary" />
                         <span className="truncate font-mono type-label-l font-medium text-on-surface">
-                            {version ? formatShortVersion(version) : t("page.assetVersions.selectVersion")}
+                            {version ? shortVersion(version) : t("page.assetVersions.selectVersion")}
                         </span>
                         {selectedVersionIndex === 0 && (
                             <span className="hidden rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary sm:inline">
@@ -1001,7 +998,7 @@ function AssetVersionsContent() {
                         {version && (
                             <>
                                 <span className="text-outline">·</span>
-                                <span className="font-mono text-on-surface">{formatShortVersion(version)}</span>
+                                <span className="font-mono text-on-surface">{shortVersion(version)}</span>
                             </>
                         )}
                         {selectedVersionMeta?.published_at && (
@@ -1011,7 +1008,7 @@ function AssetVersionsContent() {
                         )}
                         {changes?.from && (
                             <span className="hidden font-mono text-outline md:inline">
-                                · {t("page.assetVersions.comparedFrom", { from: formatShortVersion(changes.from) })}
+                                · {t("page.assetVersions.comparedFrom", { from: shortVersion(changes.from) })}
                             </span>
                         )}
                     </div>
@@ -1688,7 +1685,7 @@ function AssetVersionsContent() {
                                         <div className="min-w-0 flex-1">
                                             <div className="flex items-center gap-2">
                                                 <span className="truncate font-mono type-label-l font-semibold">
-                                                    {formatShortVersion(v.published_version)}
+                                                    {shortVersion(v.published_version)}
                                                 </span>
                                                 {isLatest && (
                                                     <span className="shrink-0 rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary">

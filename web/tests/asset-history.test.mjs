@@ -122,3 +122,10 @@ test("a file is read from its version, and a removed file from the version befor
         `${SITE}/storage/jp@6.1.0.0-a/music/old.png`,
     );
 });
+
+test("the short version keeps the table revision and drops only the trailing hash", () => {
+    assert.equal(history.shortVersion("6.4.0-23-f5aecde706fc"), "6.4.0-23");
+    assert.equal(history.shortVersion("6.4.0-22-16f8fb9f1152"), "6.4.0-22");
+    assert.equal(history.shortVersion("7.1.0.70-1f43d17e-0318-465d-a4ed-9ea041e0b10a-2f9aa3437477"), "7.1.0.70");
+    assert.equal(history.shortVersion("6.4.0"), "6.4.0");
+});
