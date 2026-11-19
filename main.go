@@ -34,10 +34,12 @@ const (
 	masterDataRefreshInterval = 6 * time.Hour
 )
 
-// moesekai-api (sign-in and guess-music) runs as its own service on the
-// private network. Forwarding its paths keeps the browser on one origin, so
-// the session cookie stays first-party and no CORS is involved.
-var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/"}
+// moesekai-api (sign-in, guess-music, the accounts saved with a StarMoe
+// account and game data read for them) runs as its own service on the private
+// network. Forwarding its paths keeps the browser on one origin, so the
+// session cookie stays first-party and no CORS is involved. "/api/accounts"
+// is listed on its own because a subtree pattern does not match its root.
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/accounts", "/api/accounts/", "/api/sekai/"}
 
 // frontendAPIPrefixes are Next.js route handlers under /api/ that belong to
 // the frontend, not to Go or moesekai-api: the public sponsor list and the

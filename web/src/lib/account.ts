@@ -1,6 +1,9 @@
 /**
  * Moesekai multi-account system.
- * Uses localStorage only and does not communicate with backend services directly.
+ * The browser keeps every account in localStorage, so all pages can read them synchronously. Signed in with a
+ * StarMoe account, the list also lives on moesekai-api (starmoe-accounts.ts): hand-added and Haruki-verified
+ * accounts are folded into the browser's copy, and game data is read through moesekai-api, which uses the
+ * visitor's Haruki connection on StarMoe Connect. Signed out, everything stays in the browser as before.
  * Supports multiple accounts across every supported server (cn/jp/tw/kr/en).
  */
 
@@ -39,6 +42,10 @@ export interface MoesekaiAccount {
     oauthBindingId?: string | null;
     lastSyncAt?: number | null;
     authError?: "reauth_required" | null;
+    /** Saved with the StarMoe account: verified by Haruki (via StarMoe Connect) or added by hand. Unset: this browser only. */
+    starmoeSource?: "verified" | "manual" | null;
+    /** How moesekai-api reads this account's data for the visitor. */
+    starmoeReadVia?: "oauth" | "public" | null;
     userCharacters: UserCharacter[] | null;
     userGamedata: UserGamedata | null;
     userDecks: UserDeck[] | null;
@@ -152,6 +159,15 @@ export interface HarukiApiResult {
 
 import { fetchOAuthGameData, fetchOAuthGameDataSuite, refreshOAuthToken, revokeOAuthToken, type OAuthBinding, type OAuthProfile, type OAuthTokenSet } from "./oauth";
 import { getHarukiPublicApiBase } from "./haruki-public-api";
+import {
+    onStarMoeAccountsLoaded,
+    readSekaiMysekai,
+    readSekaiSuite,
+    removeStarMoeAccount,
+    saveStarMoeAccount,
+    starMoeDataEnabled,
+    type StarMoeAccounts,
+} from "./starmoe-accounts";
 
 const HARUKI_PUBLIC_API_BASE = getHarukiPublicApiBase();
 const ACCOUNTS_KEY = "moesekai_accounts";
@@ -354,9 +370,43 @@ function normalizeHarukiApiResponse(data: unknown): HarukiApiResult {
     };
 }
 
+const VERIFY_KEYS = [
+    "userGamedata",
+    "userDecks",
+    "userCharacters",
+    "userChallengeLiveSoloStages",
+    "userChallengeLiveSoloResults",
+    "userChallengeLiveSoloHighScoreRewards",
+    "userBonds",
+    "userMaterials",
+    "userAreas",
+    "userMysekaiFixtureGameCharacterPerformanceBonuses",
+    "userMysekaiGates",
+    "upload_time",
+];
+
+/** Read errors that mean "moesekai-api cannot serve this visitor here": use the public API directly instead. */
+function isStarMoeFallback(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : "";
+    return message === "LOGIN_REQUIRED" || message === "UNSUPPORTED";
+}
+
 /** Verify user data availability through the Haruki API. */
 export async function verifyHarukiApi(server: ServerType, gameId: string): Promise<HarukiApiResult> {
-    const url = `${HARUKI_PUBLIC_API_BASE}/${server}/suite/${gameId}?key=userGamedata,userDecks,userCharacters,userChallengeLiveSoloStages,userChallengeLiveSoloResults,userChallengeLiveSoloHighScoreRewards,userBonds,userMaterials,userAreas,userMysekaiFixtureGameCharacterPerformanceBonuses,userMysekaiGates,upload_time`;
+    if (starMoeDataEnabled()) {
+        try {
+            const read = await readSekaiSuite(server, gameId, VERIFY_KEYS);
+            return normalizeHarukiApiResponse(read.data);
+        } catch (error) {
+            if (!isStarMoeFallback(error)) {
+                const message = error instanceof Error ? error.message : "";
+                if (message === "API_NOT_PUBLIC") return { success: false, error: "API_NOT_PUBLIC" };
+                if (message === "NOT_FOUND") return { success: false, error: "NOT_FOUND" };
+                return { success: false, error: "NETWORK_ERROR" };
+            }
+        }
+    }
+    const url = `${HARUKI_PUBLIC_API_BASE}/${server}/suite/${gameId}?key=${VERIFY_KEYS.join(",")}`;
     try {
         const res = await fetch(url);
         if (res.status === 404) {
@@ -376,6 +426,13 @@ export async function verifyHarukiApi(server: ServerType, gameId: string): Promi
 }
 
 async function fetchPublicGameData(server: ServerType, gameId: string, keys: string[]): Promise<Record<string, unknown>> {
+    if (starMoeDataEnabled()) {
+        try {
+            return (await readSekaiSuite(server, gameId, keys)).data;
+        } catch (error) {
+            if (!isStarMoeFallback(error)) throw error;
+        }
+    }
     const url = `${HARUKI_PUBLIC_API_BASE}/${server}/suite/${gameId}?key=${keys.join(",")}`;
     const res = await fetch(url);
     if (res.status === 404) {
@@ -497,7 +554,8 @@ export function normalizeAccountDataError(error: unknown): AccountDataErrorCode 
 }
 
 export async function fetchAccountGameData(account: MoesekaiAccount, keys: string[]): Promise<Record<string, unknown>> {
-    if (account.authSource === "oauth2") {
+    // Signed in, moesekai-api reads every account (through the visitor's Haruki connection where it can).
+    if (account.authSource === "oauth2" && !starMoeDataEnabled()) {
         try {
             const token = await getRefreshedOAuthToken(account);
             if (keys.length > 1) {
@@ -699,9 +757,15 @@ export function updateAccount(accountId: string, updates: Partial<MoesekaiAccoun
     notifyAccountsChanged();
 }
 
-/** Remove an account. */
+/** Remove an account. A hand-added account saved with the StarMoe account is removed there too. */
 export function removeAccount(accountId: string): void {
     let accounts = getAccounts();
+    const removed = accounts.find(a => a.id === accountId);
+    if (removed?.starmoeSource === "manual" && starMoeDataEnabled()) {
+        void removeStarMoeAccount(removed.server, removed.gameId).catch((error) => {
+            console.warn(`Removing ${removed.id} from the StarMoe account failed`, error);
+        });
+    }
     accounts = accounts.filter(a => a.id !== accountId);
     saveAccounts(accounts);
     // If the active account was removed, switch to the first remaining account.
@@ -732,6 +796,105 @@ export function clearAllAccounts(): void {
 /** Check whether any accounts exist. */
 export function hasAccounts(): boolean {
     return getAccounts().length > 0;
+}
+
+// ==================== StarMoe account ====================
+
+/**
+ * Saves an account the visitor added by hand with their StarMoe account (signed in only; tools that create
+ * accounts on their own do not call this). Resolves false when signed out or not offered; rejects with
+ * code too_many_accounts at the limit.
+ */
+export async function rememberAccount(server: ServerType, gameId: string): Promise<boolean> {
+    if (!starMoeDataEnabled()) return false;
+    const existing = findAccountByGameId(server, gameId);
+    if (existing?.starmoeSource) return true;
+    await saveStarMoeAccount(server, gameId);
+    return true;
+}
+
+/** Accounts kept only in this browser, which a signed-in visitor can copy to their StarMoe account. */
+export function getLocalOnlyAccounts(): MoesekaiAccount[] {
+    return getAccounts().filter((account) => !account.starmoeSource);
+}
+
+function emptyAccount(server: ServerType, gameId: string): MoesekaiAccount {
+    return {
+        id: makeAccountId(server, gameId),
+        gameId,
+        server,
+        nickname: "",
+        avatarCharacterId: null,
+        avatarCardId: null,
+        isApiPublic: true,
+        authSource: "public_api",
+        oauthSubject: null,
+        oauthScopes: [],
+        oauthToken: null,
+        oauthBindingId: null,
+        lastSyncAt: null,
+        authError: null,
+        userCharacters: null,
+        userGamedata: null,
+        userDecks: null,
+        userChallengeLiveSoloStages: null,
+        userChallengeLiveSoloResults: null,
+        userChallengeLiveSoloHighScoreRewards: null,
+        userBonds: null,
+        userMaterials: null,
+        userAreas: null,
+        userMysekaiFixtureGameCharacterPerformanceBonuses: null,
+        userMysekaiGates: null,
+        uploadTime: null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+    };
+}
+
+/**
+ * Folds the StarMoe account's list into the browser's copy: its accounts are added (data follows on the next
+ * read) and marked, accounts it no longer has are dropped if they came from it, and accounts only this browser
+ * knows are left alone.
+ */
+function applyStarMoeAccounts(next: StarMoeAccounts): void {
+    if (typeof window === "undefined" || next.status !== "ready") return;
+    const current = getAccounts();
+    const byId = new Map(current.map((account) => [account.id, account]));
+    const listed = new Set<string>();
+    let changed = false;
+
+    for (const remote of next.accounts) {
+        const id = makeAccountId(remote.server, remote.uid);
+        listed.add(id);
+        const local = byId.get(id);
+        if (!local) {
+            byId.set(id, { ...emptyAccount(remote.server, remote.uid), starmoeSource: remote.source, starmoeReadVia: remote.readVia });
+            changed = true;
+        } else if (local.starmoeSource !== remote.source || local.starmoeReadVia !== remote.readVia) {
+            byId.set(id, { ...local, starmoeSource: remote.source, starmoeReadVia: remote.readVia });
+            changed = true;
+        }
+    }
+    for (const [id, account] of byId) {
+        if (account.starmoeSource && !listed.has(id)) {
+            byId.delete(id);
+            changed = true;
+        }
+    }
+    if (!changed) return;
+
+    const merged = [...byId.values()];
+    saveAccounts(merged);
+    const activeId = localStorage.getItem(ACTIVE_KEY);
+    if (merged.length > 0 && (!activeId || !byId.has(activeId))) {
+        setActiveAccount(merged[0].id);
+        return;
+    }
+    notifyAccountsChanged();
+}
+
+if (typeof window !== "undefined") {
+    onStarMoeAccountsLoaded(applyStarMoeAccounts);
 }
 
 // ==================== Backward compatibility ====================
@@ -1055,19 +1218,31 @@ export async function disconnectOAuthAccount(accountId: string): Promise<void> {
  */
 export async function fetchAccountMysekaiText(server: "cn" | "jp", gameId: string, signal?: AbortSignal): Promise<string> {
     if (!/^[1-9]\d{0,19}$/.test(gameId)) throw new Error("INVALID_UID");
-    const account = findAccountByGameId(server, gameId);
-    let url = `${getHarukiPublicApiBase()}/${server}/mysekai/${gameId}`;
-    const headers: Record<string, string> = { Accept: "application/json" };
-    if (account?.authSource === "oauth2") {
-        const token = await getRefreshedOAuthToken(account);
-        const { getOAuthConfig } = await import("./oauth");
-        url = `${getOAuthConfig().baseUrl}/game-data/${server}/mysekai/${gameId}`;
-        headers.Authorization = `Bearer ${token.accessToken}`;
+    let response: Response | null = null;
+    if (starMoeDataEnabled()) {
+        try {
+            response = await readSekaiMysekai(server, gameId);
+        } catch (error) {
+            if (!isStarMoeFallback(error)) {
+                throw new Error(error instanceof Error && error.message === "API_NOT_PUBLIC" ? "MYSEKAI_NOT_ACCESSIBLE" : "NETWORK_ERROR");
+            }
+        }
     }
-    const response = await fetch(url, { headers, signal, cache: "no-store", credentials: "omit", redirect: "error" });
-    if (response.status === 401) throw new Error("OAUTH_REAUTH_REQUIRED");
-    if (response.status === 403 || response.status === 404) throw new Error("MYSEKAI_NOT_ACCESSIBLE");
-    if (!response.ok) throw new Error("NETWORK_ERROR");
+    if (!response) {
+        const account = findAccountByGameId(server, gameId);
+        let url = `${getHarukiPublicApiBase()}/${server}/mysekai/${gameId}`;
+        const headers: Record<string, string> = { Accept: "application/json" };
+        if (account?.authSource === "oauth2") {
+            const token = await getRefreshedOAuthToken(account);
+            const { getOAuthConfig } = await import("./oauth");
+            url = `${getOAuthConfig().baseUrl}/game-data/${server}/mysekai/${gameId}`;
+            headers.Authorization = `Bearer ${token.accessToken}`;
+        }
+        response = await fetch(url, { headers, signal, cache: "no-store", credentials: "omit", redirect: "error" });
+        if (response.status === 401) throw new Error("OAUTH_REAUTH_REQUIRED");
+        if (response.status === 403 || response.status === 404) throw new Error("MYSEKAI_NOT_ACCESSIBLE");
+        if (!response.ok) throw new Error("NETWORK_ERROR");
+    }
     if (!response.headers.get("content-type")?.includes("json")) throw new Error("INVALID_PLAYER_DATA");
     const limit = 32 * 1024 * 1024;
     if (Number(response.headers.get("content-length")) > limit) throw new Error("PLAYER_DATA_TOO_LARGE");

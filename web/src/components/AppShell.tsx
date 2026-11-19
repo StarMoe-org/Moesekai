@@ -9,6 +9,7 @@ import FilterDrawer from "./FilterDrawer";
 import FilterTabHandle from "./FilterTabHandle";
 import BackgroundPattern from "./BackgroundPattern";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
+import OAuthMigrationPrompt from "./OAuthMigrationPrompt";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -469,6 +470,9 @@ function AppChrome({
 
                     {/* Keyboard Shortcuts Help */}
                     <KeyboardShortcutsHelp isOpen={isShortcutsHelpOpen} onClose={() => setIsShortcutsHelpOpen(false)} />
+
+                    {/* One-time prompt for visitors still on the retired in-browser Haruki OAuth2 binding. */}
+                    <OAuthMigrationPrompt />
                 </>
             )}
         </main>
