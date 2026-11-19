@@ -307,7 +307,7 @@ func TestMoesekaiAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
 				http.NotFound(w, r)
 			})
 
-			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily"} {
+			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123"} {
 				response := httptest.NewRecorder()
 				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")
