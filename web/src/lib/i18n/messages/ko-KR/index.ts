@@ -5822,6 +5822,13 @@ export const koKRMessages = {
             selectVersion: "버전 선택",
             prevVersion: "이전 버전",
             nextVersion: "다음 버전",
+            causeLabel: "변경 원인",
+            causeAll: "모든 원인",
+            causeSource: "게임 업데이트",
+            causeConversion: "변환만",
+            causeUnknown: "알 수 없음",
+            causeConversionHint: "게임 파일은 그대로이고 변환 방식만 바뀌었습니다",
+            conversionCount: "변환만 {count}",
         }
     }
 };

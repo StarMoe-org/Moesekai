@@ -5804,6 +5804,13 @@ export const jaJPMessages = {
       selectVersion: 'バージョン選択',
       prevVersion: '前のバージョン',
       nextVersion: '次のバージョン',
+      causeLabel: '変更の要因',
+      causeAll: 'すべての要因',
+      causeSource: 'ゲーム更新',
+      causeConversion: '変換のみ',
+      causeUnknown: '不明',
+      causeConversionHint: 'ゲームのファイルは同じで、変換方法だけが変わりました',
+      conversionCount: '変換のみ {count}',
     },
     best30Share: {
       title: 'Best30 Share Image',

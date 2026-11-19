@@ -1,15 +1,24 @@
 /**
  * The version history of a view of the asset site and the changes of each version: the
- * `version-history` and `version-changes` documents (version 1) the site serves at
+ * `version-history` and `version-changes` documents the site serves at
  * `/history/<server>/<view>` and `/changes/<server>/<view>@<version>`, as gzip-compressed JSON.
+ * Version 2 of the documents tells what each change follows from; version 1, which does not,
+ * reads as version 2 with those causes not known.
  */
 
 const HISTORY_FORMAT = "version-history";
 const CHANGES_FORMAT = "version-changes";
-const FORMAT_VERSION = 1;
+const FORMAT_VERSIONS = new Set<unknown>([1, 2]);
 
 /** The view whose versions the asset versions page follows: the files under the game's paths. */
 export const HISTORY_VIEW = "storage";
+
+/** How many files a version added, removed and changed. */
+export interface ChangeCounts {
+    added: number;
+    removed: number;
+    changed: number;
+}
 
 /** One published version of a view, newest first in the history. */
 export interface VersionEntry {
@@ -22,9 +31,17 @@ export interface VersionEntry {
     added?: number;
     removed?: number;
     changed?: number;
+    /** How many of those only the conversion made, left out unless the cause of every change is known. */
+    conversion?: ChangeCounts;
 }
 
 export type ChangeKind = "added" | "removed" | "changed";
+
+/**
+ * What a change follows from: `source` when the game's files it is made from changed, such as in a
+ * game update, and `conversion` when they are the same and only the conversion that makes it changed.
+ */
+export type ChangeCause = "source" | "conversion";
 
 export interface ChangedFile {
     kind: ChangeKind;
@@ -32,6 +49,8 @@ export interface ChangedFile {
     size: number;
     media_type?: string;
     previous_size?: number;
+    /** Left out when it is not known. */
+    cause?: ChangeCause;
 }
 
 /** The files a version added, removed and changed since the version before it (`from`). */
@@ -45,6 +64,12 @@ export interface VersionChanges {
 export function changeCount(entry: VersionEntry): number | undefined {
     if (entry.added === undefined || entry.removed === undefined || entry.changed === undefined) return undefined;
     return entry.added + entry.removed + entry.changed;
+}
+
+/** How many of the version's changes only the conversion made, or undefined when that is not known. */
+export function conversionCount(entry: VersionEntry): number | undefined {
+    const counts = entry.conversion;
+    return counts === undefined ? undefined : counts.added + counts.removed + counts.changed;
 }
 
 /** The versions of `server`'s view, newest first. */
@@ -95,7 +120,7 @@ async function fetchGzipJson(url: string): Promise<unknown | null> {
 
 function checkFormat(json: unknown, format: string): unknown {
     const header = json as { format?: unknown; version?: unknown } | null;
-    if (header?.format !== format || header.version !== FORMAT_VERSION) {
+    if (header?.format !== format || !FORMAT_VERSIONS.has(header.version)) {
         throw new Error(`Unsupported ${format}: format ${String(header?.format)}, version ${String(header?.version)}`);
     }
     return json;

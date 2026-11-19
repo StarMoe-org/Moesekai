@@ -1293,5 +1293,12 @@ export const zhTWPageSecondaryB = {
         selectVersion: "選擇版本",
         prevVersion: "上一個版本",
         nextVersion: "下一個版本",
+        causeLabel: "變更原因",
+        causeAll: "全部原因",
+        causeSource: "遊戲更新",
+        causeConversion: "僅轉換",
+        causeUnknown: "未知",
+        causeConversionHint: "遊戲檔案沒有變化，只是轉換方式變了",
+        conversionCount: "僅轉換 {count}",
     },
 } as const satisfies MessageTree;

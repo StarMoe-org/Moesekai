@@ -72,8 +72,35 @@ test("a version without a change record has no changes", async () => {
     assert.equal(await history.fetchVersionChanges(SITE, "jp", "6.1.0.0-a"), null);
 });
 
+test("a history of version 2 counts the changes that only the conversion made", async () => {
+    const entries = [
+        { ...ENTRIES[0], conversion: { added: 0, removed: 1, changed: 2 } },
+        { published_version: "6.1.0.5-c", revision: "cc", files: 11, added: 1, removed: 0, changed: 0 },
+    ];
+    serve({ [`${SITE}/history/jp/storage`]: { format: "version-history", version: 2, view: "storage", entries } });
+    assert.deepEqual(await history.fetchVersionHistory(SITE, "jp"), entries);
+    assert.equal(history.conversionCount(entries[0]), 3);
+    assert.equal(history.conversionCount(entries[1]), undefined);
+});
+
+test("the changes of version 2 keep the cause of each file, and leave it out where it is not known", async () => {
+    const version = "6.1.0.10-b";
+    serve({
+        [`${SITE}/changes/jp/storage@${version}`]: {
+            format: "version-changes", version: 2, view: "storage", from: "6.1.0.0-a", to: version,
+            added: [{ path: "a/new.png", size: 5, media_type: "image/png", cause: "source" }],
+            removed: [{ path: "a/old.png", size: 7 }],
+            changed: [{ path: "a/same.png", size: 9, previous_size: 8, cause: "conversion" }],
+        },
+    });
+    const changes = await history.fetchVersionChanges(SITE, "jp", version);
+    assert.deepEqual(changes.files.map(file => [file.path, file.cause]), [
+        ["a/new.png", "source"], ["a/same.png", "conversion"], ["a/old.png", undefined],
+    ]);
+});
+
 test("a document of another format or version is refused", async () => {
-    serve({ [`${SITE}/history/jp/storage`]: { format: "version-history", version: 2, entries: [] } });
+    serve({ [`${SITE}/history/jp/storage`]: { format: "version-history", version: 3, entries: [] } });
     await assert.rejects(history.fetchVersionHistory(SITE, "jp"), /Unsupported version-history/);
     serve({ [`${SITE}/history/jp/storage`]: { format: "directory-listing", version: 1 } });
     await assert.rejects(history.fetchVersionHistory(SITE, "jp"), /Unsupported version-history/);

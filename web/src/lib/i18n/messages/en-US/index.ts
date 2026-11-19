@@ -5779,6 +5779,13 @@ export const enUSMessages = {
             selectVersion: "Select Version",
             prevVersion: "Previous version",
             nextVersion: "Next version",
+            causeLabel: "Cause",
+            causeAll: "All causes",
+            causeSource: "Game update",
+            causeConversion: "Conversion only",
+            causeUnknown: "Unknown",
+            causeConversionHint: "The game's files are the same; only their conversion changed",
+            conversionCount: "{count} conversion only",
         },
         best30Share: {
             title: "Best30 Share Image",
