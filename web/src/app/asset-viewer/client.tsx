@@ -69,6 +69,7 @@ import {
     type AssetTreeFile,
     type AssetTreeFolder,
 } from "@/lib/assetTree";
+import { shortVersion } from "@/lib/assetHistory";
 
 const PAGE_SIZE = 200;
 
@@ -884,7 +885,7 @@ function AssetViewerContent() {
                         <span>{t(`page.assetGuide.views.${view}.label`)}</span>
                         {tree && tree.view === view && (
                             <span className="font-mono text-outline">
-                                ({tree.document.published_version.split("-")[0]})
+                                ({shortVersion(tree.document.published_version)})
                             </span>
                         )}
                     </div>

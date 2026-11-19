@@ -104,6 +104,15 @@ export function versionFileUrl(origin: string, server: string, version: string, 
     return `${origin}/${HISTORY_VIEW}/${server}@${encodeURIComponent(version)}/${encodedPath}`;
 }
 
+/** The version without its content hash: the application version (the first segment, dotted),
+ *  and where the server has one the table revision after it, a small number (`6.4.0-23` vs
+ *  `6.4.0-22` differ by a table update); the rest is a hash, alone or as a uuid with a hash. */
+export function shortVersion(version: string): string {
+    const [application, table] = version.split("-");
+    if (table === undefined) return application;
+    return /^\d{1,3}$/.test(table) ? `${application}-${table}` : application;
+}
+
 /** Where a changed file can be read: a removed file only in the version before. */
 export function changedFileUrl(origin: string, server: string, changes: VersionChanges, file: ChangedFile): string {
     return versionFileUrl(origin, server, file.kind === "removed" ? changes.from : changes.to, file.path);
