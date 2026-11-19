@@ -5778,6 +5778,13 @@ export const zhCNMessages = {
             selectVersion: "选择版本",
             prevVersion: "上一版本",
             nextVersion: "下一版本",
+            causeLabel: "变更原因",
+            causeAll: "全部原因",
+            causeSource: "游戏更新",
+            causeConversion: "仅转换",
+            causeUnknown: "未知",
+            causeConversionHint: "游戏文件没有变化，只是转换方式变了",
+            conversionCount: "仅转换 {count}",
         },
         best30Share: {
             title: "Best30 分享图片",

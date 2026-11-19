@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue, Suspense, type ReactNode } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
@@ -33,6 +33,7 @@ import {
 import { getAssetDomain } from "@/lib/assets";
 import {
     changedFileUrl,
+    conversionCount,
     fetchVersionChanges,
     fetchVersionHistory,
     type ChangedFile,
@@ -69,11 +70,14 @@ import {
 } from "@/components/md3/icons";
 import {
     buildDiffDirectoryTree,
+    countDiffCauses,
+    getDiffCause,
     getDiffMediaCategory,
     getFileExtension,
     getFileName,
     listDiffDirectory,
     searchDiffDirectory,
+    type DiffCause,
     type DiffMediaCategory,
 } from "./diffTree";
 
@@ -81,6 +85,7 @@ const PAGE_SIZE = 200;
 
 type KindFilter = "all" | ChangeKind;
 type MediaFilter = "all" | DiffMediaCategory;
+type CauseFilter = "all" | DiffCause;
 
 function formatShortVersion(version: string): string {
     return version.split("-")[0] || version;
@@ -90,6 +95,12 @@ const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }>
     added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
     changed: { labelKey: "page.assetVersions.changeUpdated", className: "bg-tertiary-container text-on-tertiary-container" },
     removed: { labelKey: "page.assetVersions.changeRemoved", className: "bg-error-container text-on-error-container" },
+};
+
+const CAUSE_LABEL_KEYS: Record<DiffCause, string> = {
+    source: "page.assetVersions.causeSource",
+    conversion: "page.assetVersions.causeConversion",
+    unknown: "page.assetVersions.causeUnknown",
 };
 
 function formatBytes(bytes?: number): string {
@@ -111,6 +122,10 @@ function normalizeMediaFilter(raw: string | null): MediaFilter {
     return "all";
 }
 
+function normalizeCauseFilter(raw: string | null): CauseFilter {
+    return raw === "source" || raw === "conversion" || raw === "unknown" ? raw : "all";
+}
+
 function getRelativeParent(fullPath: string, basePath: string): string {
     const rel = basePath && fullPath.startsWith(`${basePath}/`) ? fullPath.slice(basePath.length + 1) : fullPath;
     const slash = rel.lastIndexOf("/");
@@ -125,6 +140,28 @@ function getDiffFileIcon(category: DiffMediaCategory, size = 20) {
         case "text": return <Icon path={mdArticle} size={size} className="text-secondary" />;
         default: return <Icon path={mdDraft} size={size} className="text-on-surface-variant" />;
     }
+}
+
+function FilterChip({ selected, selectedClassName, onClick, children }: {
+    selected: boolean;
+    selectedClassName: string;
+    onClick: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={selected}
+            className={`state-layer focus-ring inline-flex h-8 shrink-0 items-center rounded-full px-3 type-label-l transition-colors ${
+                selected
+                    ? selectedClassName
+                    : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
+            }`}
+        >
+            {children}
+        </button>
+    );
 }
 
 function AssetVersionsContent() {
@@ -157,6 +194,12 @@ function AssetVersionsContent() {
     const [versionQuery, setVersionQuery] = useState("");
 
     const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+    const [causeFilter, setCauseFilter] = useState<CauseFilter>(() => {
+        if (typeof window !== "undefined") {
+            return normalizeCauseFilter(new URLSearchParams(window.location.search).get("cause"));
+        }
+        return "all";
+    });
     const [mediaFilter, setMediaFilter] = useState<MediaFilter>(() => {
         if (typeof window !== "undefined") {
             return normalizeMediaFilter(new URLSearchParams(window.location.search).get("types"));
@@ -215,9 +258,14 @@ function AssetVersionsContent() {
         } else {
             url.searchParams.delete("types");
         }
+        if (causeFilter !== "all") {
+            url.searchParams.set("cause", causeFilter);
+        } else {
+            url.searchParams.delete("cause");
+        }
         url.searchParams.delete("action");
         window.history.replaceState({}, "", url.toString());
-    }, [ready, pinned, version, prefix, mediaFilter]);
+    }, [ready, pinned, version, prefix, mediaFilter, causeFilter]);
 
     // Handle browser back/forward navigation
     useEffect(() => {
@@ -230,6 +278,7 @@ function AssetVersionsContent() {
             setHistoryStack([nextPrefix]);
             setHistoryIndex(0);
             setMediaFilter(normalizeMediaFilter(params.get("types")));
+            setCauseFilter(normalizeCauseFilter(params.get("cause")));
         };
 
         window.addEventListener("popstate", handlePopState);
@@ -307,13 +356,23 @@ function AssetVersionsContent() {
 
     const diffItems = useMemo(() => changes?.files ?? [], [changes]);
 
+    // Where the changes tell their causes, the page can show those of one cause only: the
+    // directory tree, its counts and the listing then all follow that cause.
+    const causeCounts = useMemo(() => countDiffCauses(diffItems), [diffItems]);
+    const hasCauses = causeCounts.source + causeCounts.conversion > 0;
+    const activeCause: CauseFilter = hasCauses ? causeFilter : "all";
+    const causeItems = useMemo(
+        () => (activeCause === "all" ? diffItems : diffItems.filter(item => getDiffCause(item) === activeCause)),
+        [diffItems, activeCause],
+    );
+
     const fileUrl = useCallback(
         (file: ChangedFile) => (changes ? changedFileUrl(origin, server, changes, file) : ""),
         [changes, origin, server],
     );
 
     // Reset visibleCount when query, filters, directory, or version changes
-    const filterKey = `${server}:${version}:${prefix}:${deferredQuery}:${kindFilter}:${mediaFilter}:${sortBy}:${sortOrder}`;
+    const filterKey = `${server}:${version}:${prefix}:${deferredQuery}:${activeCause}:${kindFilter}:${mediaFilter}:${sortBy}:${sortOrder}`;
     const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
     if (filterKey !== prevFilterKey) {
         setPrevFilterKey(filterKey);
@@ -378,7 +437,7 @@ function AssetVersionsContent() {
 
     // ==================== Directory tree & filtering ====================
 
-    const diffTree = useMemo(() => buildDiffDirectoryTree(diffItems), [diffItems]);
+    const diffTree = useMemo(() => buildDiffDirectoryTree(causeItems), [causeItems]);
 
     const isSearching = deferredQuery.length > 0;
 
@@ -472,6 +531,7 @@ function AssetVersionsContent() {
 
     const hasActiveDiffFilters =
         searchQuery !== "" ||
+        activeCause !== "all" ||
         kindFilter !== "all" ||
         mediaFilter !== "all" ||
         sortBy !== "path" ||
@@ -479,6 +539,7 @@ function AssetVersionsContent() {
 
     const resetFilters = useCallback(() => {
         setSearchQuery("");
+        setCauseFilter("all");
         setKindFilter("all");
         setMediaFilter("all");
         setSortBy("path");
@@ -551,6 +612,15 @@ function AssetVersionsContent() {
         mediaChipOptions.push({ key: "other", label: t("page.assetViewer.typeOther"), count: scopeCounts.media.other });
     }
 
+    const causeOptions: Array<{ key: CauseFilter; label: string; count: number }> = [
+        { key: "all", label: t("page.assetVersions.causeAll"), count: diffItems.length },
+        { key: "source", label: t(CAUSE_LABEL_KEYS.source), count: causeCounts.source },
+        { key: "conversion", label: t(CAUSE_LABEL_KEYS.conversion), count: causeCounts.conversion },
+    ];
+    if (causeCounts.unknown > 0 || causeFilter === "unknown") {
+        causeOptions.push({ key: "unknown", label: t(CAUSE_LABEL_KEYS.unknown), count: causeCounts.unknown });
+    }
+
     const getMediaTypeBadge = (item: ChangedFile): string => {
         const cat = getDiffMediaCategory(item);
         switch (cat) {
@@ -602,6 +672,22 @@ function AssetVersionsContent() {
                 </div>
             </FilterSection>
 
+            {hasCauses && (
+                <FilterSection label={t("page.assetVersions.causeLabel")}>
+                    <div className="flex flex-wrap gap-2">
+                        {causeOptions.map(opt => (
+                            <FilterButton
+                                key={opt.key}
+                                selected={activeCause === opt.key}
+                                onClick={() => setCauseFilter(opt.key)}
+                            >
+                                {opt.label}
+                            </FilterButton>
+                        ))}
+                    </div>
+                </FilterSection>
+            )}
+
             <FilterSection label={t("page.assetVersions.changeTypeLabel")}>
                 <div className="grid grid-cols-2 gap-2">
                     {kindChipOptions.map(opt => (
@@ -636,6 +722,8 @@ function AssetVersionsContent() {
         server,
         version,
         searchQuery,
+        causeFilter,
+        causeCounts,
         kindFilter,
         mediaFilter,
         sortBy,
@@ -674,6 +762,17 @@ function AssetVersionsContent() {
             {t(CHANGE_BADGES[kind].labelKey)}
         </span>
     );
+
+    // Marks the changes that only the conversion made while the changes of every cause are shown.
+    const renderConversionMark = (item: ChangedFile) =>
+        activeCause === "all" && item.cause === "conversion" ? (
+            <span
+                className="shrink-0 rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant"
+                title={t("page.assetVersions.causeConversionHint")}
+            >
+                {t(CAUSE_LABEL_KEYS.conversion)}
+            </span>
+        ) : null;
 
     const formatPublishedAt = (publishedAt: string) =>
         formatDate(new Date(publishedAt), {
@@ -976,51 +1075,49 @@ function AssetVersionsContent() {
                                 {/* Combined Kind & Media Filter Chips */}
                                 <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 px-3 py-2.5 sm:px-4">
                                     <div className="flex flex-wrap items-center gap-1.5">
-                                        {kindChipOptions.map(opt => {
-                                            const selected = kindFilter === opt.key;
-                                            const countText = opt.alwaysShowCount || opt.count > 0
-                                                ? ` (${formatNumber(opt.count)})`
-                                                : "";
-                                            return (
-                                                <button
-                                                    key={opt.key}
-                                                    type="button"
-                                                    onClick={() => setKindFilter(opt.key)}
-                                                    aria-pressed={selected}
-                                                    className={`state-layer focus-ring inline-flex h-8 shrink-0 items-center rounded-full px-3 type-label-l transition-colors ${
-                                                        selected
-                                                            ? "bg-primary text-on-primary"
-                                                            : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
-                                                    }`}
-                                                >
-                                                    {opt.label}{countText}
-                                                </button>
-                                            );
-                                        })}
+                                        {hasCauses && (
+                                            <>
+                                                {causeOptions.map(opt => (
+                                                    <FilterChip
+                                                        key={opt.key}
+                                                        selected={activeCause === opt.key}
+                                                        selectedClassName="bg-tertiary-container text-on-tertiary-container font-medium"
+                                                        onClick={() => setCauseFilter(opt.key)}
+                                                    >
+                                                        {opt.label}
+                                                        {(opt.key === "all" || opt.count > 0) && ` (${formatNumber(opt.count)})`}
+                                                    </FilterChip>
+                                                ))}
+
+                                                <span className="mx-1 hidden h-4 w-px bg-outline-variant/70 sm:inline-block" aria-hidden />
+                                            </>
+                                        )}
+
+                                        {kindChipOptions.map(opt => (
+                                            <FilterChip
+                                                key={opt.key}
+                                                selected={kindFilter === opt.key}
+                                                selectedClassName="bg-primary text-on-primary"
+                                                onClick={() => setKindFilter(opt.key)}
+                                            >
+                                                {opt.label}
+                                                {(opt.alwaysShowCount || opt.count > 0) && ` (${formatNumber(opt.count)})`}
+                                            </FilterChip>
+                                        ))}
 
                                         <span className="mx-1 hidden h-4 w-px bg-outline-variant/70 sm:inline-block" aria-hidden />
 
-                                        {mediaChipOptions.map(opt => {
-                                            const selected = mediaFilter === opt.key;
-                                            const countText = opt.key !== "all" && opt.count > 0
-                                                ? ` (${formatNumber(opt.count)})`
-                                                : "";
-                                            return (
-                                                <button
-                                                    key={opt.key}
-                                                    type="button"
-                                                    onClick={() => setMediaFilter(opt.key)}
-                                                    aria-pressed={selected}
-                                                    className={`state-layer focus-ring inline-flex h-8 shrink-0 items-center rounded-full px-3 type-label-l transition-colors ${
-                                                        selected
-                                                            ? "bg-secondary-container text-on-secondary-container font-medium"
-                                                            : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
-                                                    }`}
-                                                >
-                                                    {opt.label}{countText}
-                                                </button>
-                                            );
-                                        })}
+                                        {mediaChipOptions.map(opt => (
+                                            <FilterChip
+                                                key={opt.key}
+                                                selected={mediaFilter === opt.key}
+                                                selectedClassName="bg-secondary-container text-on-secondary-container font-medium"
+                                                onClick={() => setMediaFilter(opt.key)}
+                                            >
+                                                {opt.label}
+                                                {opt.key !== "all" && opt.count > 0 && ` (${formatNumber(opt.count)})`}
+                                            </FilterChip>
+                                        ))}
                                     </div>
 
                                     <span className="shrink-0 type-label-m text-on-surface-variant">
@@ -1186,12 +1283,15 @@ function AssetVersionsContent() {
                                                             </div>
 
                                                             <div className="min-w-0 flex-1">
-                                                                <p
-                                                                    className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
-                                                                    title={item.path}
-                                                                >
-                                                                    {displayName}
-                                                                </p>
+                                                                <div className="flex min-w-0 items-center gap-2">
+                                                                    <p
+                                                                        className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                        title={item.path}
+                                                                    >
+                                                                        {displayName}
+                                                                    </p>
+                                                                    {renderConversionMark(item)}
+                                                                </div>
                                                                 {relParent && (
                                                                     <p className="truncate font-mono type-label-s text-on-surface-variant">
                                                                         {relParent}
@@ -1287,8 +1387,9 @@ function AssetVersionsContent() {
                                                                             category === "image" && url ? checkerboardClassName : "bg-surface-container-low"
                                                                         }`}
                                                                     >
-                                                                        <span className="absolute left-2 top-2 z-10">
+                                                                        <span className="absolute left-2 top-2 z-10 flex flex-wrap gap-1">
                                                                             {renderChangeTypeBadge(item.kind)}
+                                                                            {renderConversionMark(item)}
                                                                         </span>
                                                                         {category === "image" && url ? (
                                                                             <img
@@ -1382,6 +1483,19 @@ function AssetVersionsContent() {
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.changeTypeLabel")}</span>
                                 {renderChangeTypeBadge(selectedFile.kind)}
                             </div>
+                            {selectedFile.cause && (
+                                <div className="flex justify-between gap-4">
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.causeLabel")}</span>
+                                    <span className="text-right text-on-surface">
+                                        {t(CAUSE_LABEL_KEYS[selectedFile.cause])}
+                                        {selectedFile.cause === "conversion" && (
+                                            <span className="block type-label-s text-on-surface-variant">
+                                                {t("page.assetVersions.causeConversionHint")}
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex flex-col gap-1">
                                 <span className="text-on-surface-variant">{t("page.assetVersions.path")}</span>
                                 <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">
@@ -1555,6 +1669,7 @@ function AssetVersionsContent() {
                                     v.added !== undefined &&
                                     v.changed !== undefined &&
                                     v.removed !== undefined;
+                                const conversion = conversionCount(v) ?? 0;
                                 return (
                                     <button
                                         key={v.published_version}
@@ -1586,6 +1701,11 @@ function AssetVersionsContent() {
                                                 <span>·</span>
                                                 <span className="font-mono">{formatNumber(v.files)}</span>
                                             </div>
+                                            {conversion > 0 && (
+                                                <div className="mt-0.5 type-label-s text-on-surface-variant">
+                                                    {t("page.assetVersions.conversionCount", { count: formatNumber(conversion) })}
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="flex shrink-0 items-center gap-1 font-mono type-label-s">

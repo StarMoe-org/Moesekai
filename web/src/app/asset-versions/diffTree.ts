@@ -1,7 +1,10 @@
-import type { ChangedFile, ChangeKind } from "@/lib/assetHistory";
+import type { ChangeCause, ChangedFile, ChangeKind } from "@/lib/assetHistory";
 import type { DirectoryTreeNodeLike } from "@/components/common/DirectoryTreeSidebar";
 
 export type DiffMediaCategory = "image" | "audio" | "video" | "text" | "other";
+
+/** What a change follows from, `unknown` where its document does not tell. */
+export type DiffCause = ChangeCause | "unknown";
 
 export interface DiffCounts {
     total: number;
@@ -47,6 +50,18 @@ export function getDiffMediaCategory(file: Pick<ChangedFile, "path" | "media_typ
     if (["mp4", "webm", "mov", "mkv"].includes(ext)) return "video";
     if (["json", "txt", "csv", "xml", "yaml", "yml"].includes(ext)) return "text";
     return "other";
+}
+
+export function getDiffCause(file: Pick<ChangedFile, "cause">): DiffCause {
+    return file.cause ?? "unknown";
+}
+
+export function countDiffCauses(files: ChangedFile[]): Record<DiffCause, number> {
+    const counts: Record<DiffCause, number> = { source: 0, conversion: 0, unknown: 0 };
+    for (const file of files) {
+        counts[getDiffCause(file)] += 1;
+    }
+    return counts;
 }
 
 function emptyCounts(): DiffCounts {
