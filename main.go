@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"snowy_viewer/internal/cache"
 	"snowy_viewer/internal/config"
 	"snowy_viewer/internal/handlers"
 	"snowy_viewer/internal/htmlcache"
@@ -56,10 +55,6 @@ func registerFrontendAPIRoutes(mux *http.ServeMux, proxy http.Handler) {
 func main() {
 	// Load configuration
 	cfg := config.Load()
-
-	// Initialize cache (Redis with memory fallback)
-	appCache := cache.New(cfg.RedisURL)
-	defer appCache.Close()
 
 	// Initialize and load master data without blocking the process health endpoint.
 	store := masterdata.NewStore(cfg.MasterDataPath)
