@@ -94,6 +94,9 @@ export default function ProfileClient() {
     const syncing = signedIn && saved.status === "ready";
     const [importing, setImporting] = useState(false);
     const [importMessage, setImportMessage] = useState<{ tone: "info" | "error"; text: string } | null>(null);
+    // Accounts being re-read by their "resync" button, and the last one that failed.
+    const [resyncingIds, setResyncingIds] = useState<ReadonlySet<string>>(() => new Set());
+    const [resyncError, setResyncError] = useState<string | null>(null);
 
     const reload = useCallback(() => {
         const accs = getAccounts();
@@ -132,62 +135,84 @@ export default function ProfileClient() {
         const refreshAllAccounts = async () => {
             const accs = getAccounts().filter((acc) => !onlyMissing || (!acc.uploadTime && !acc.userGamedata));
             for (const acc of accs) {
-                console.log(`Refreshing account data: ${acc.gameId} (${acc.server})`);
-
-                if (acc.authSource === "oauth2") {
-                    try {
-                        await refreshOAuthAccountData(acc.id);
-                    } catch (error) {
-                        console.warn(`OAuth2 account ${acc.gameId} refresh failed; keeping existing data`, error);
-                    }
-                    continue;
-                }
-
-                const result = await verifyHarukiApi(acc.server, acc.gameId);
-
-                if (!result.success) {
-                    console.warn(`Account ${acc.gameId} refresh failed; keeping existing data`);
-                } else {
-                    const userGamedata = result.userGamedata || null;
-                    const userDecks = result.userDecks || null;
-                    const userCharacters = result.userCharacters || null;
-                    const userChallengeLiveSoloStages = result.userChallengeLiveSoloStages || null;
-                    const userChallengeLiveSoloResults = result.userChallengeLiveSoloResults || null;
-                    const userChallengeLiveSoloHighScoreRewards = result.userChallengeLiveSoloHighScoreRewards || null;
-                    const userBonds = result.userBonds || null;
-                    const userMaterials = result.userMaterials || null;
-                    const userAreas = result.userAreas || null;
-                    const userMysekaiFixtureGameCharacterPerformanceBonuses = result.userMysekaiFixtureGameCharacterPerformanceBonuses || null;
-                    const userMysekaiGates = result.userMysekaiGates || null;
-                    const uploadTime = result.uploadTime || null;
-                    const avatarCardId = getLeaderCardId(userGamedata, userDecks);
-
-                    updateAccount(acc.id, {
-                        userCharacters,
-                        userChallengeLiveSoloStages,
-                        userChallengeLiveSoloResults,
-                        userChallengeLiveSoloHighScoreRewards,
-                        userBonds,
-                        userMaterials,
-                        userAreas,
-                        userMysekaiFixtureGameCharacterPerformanceBonuses,
-                        userMysekaiGates,
-                        userGamedata,
-                        userDecks,
-                        uploadTime,
-                        avatarCardId,
-                        avatarCharacterId: userCharacters && userCharacters.length > 0
-                            ? getTopCharacterId(userCharacters)
-                            : acc.avatarCharacterId,
-                        nickname: userGamedata?.name || acc.nickname,
-                    });
-                }
+                await refreshAccount(acc);
             }
             // Reload after all refreshes finish.
             reload();
         };
 
         void refreshAllAccounts();
+    }
+
+    /** The "resync" button: re-reads one account and says so when that fails (the old data stays). */
+    async function handleResync(acc: MoesekaiAccount) {
+        if (resyncingIds.has(acc.id)) return;
+        setResyncingIds((ids) => new Set(ids).add(acc.id));
+        setResyncError(null);
+        const error = await refreshAccount(acc);
+        setResyncingIds((ids) => {
+            const next = new Set(ids);
+            next.delete(acc.id);
+            return next;
+        });
+        reload();
+        if (error) {
+            const label = acc.userGamedata?.name || acc.nickname || acc.gameId;
+            const message = error === "OAUTH"
+                ? t("common.harukiErrors.oauthRefreshFailed")
+                : error === "API_NOT_PUBLIC"
+                    ? t("common.harukiErrors.apiNotPublic")
+                    : error === "NOT_FOUND"
+                        ? t("common.harukiErrors.userNotFound")
+                        : t("common.harukiErrors.networkError");
+            setResyncError(`${label}: ${message}`);
+        }
+    }
+
+    /** Re-reads one account's data. Returns why it failed (keeping the old data), or null. */
+    async function refreshAccount(acc: MoesekaiAccount): Promise<"OAUTH" | "API_NOT_PUBLIC" | "NOT_FOUND" | "NETWORK_ERROR" | null> {
+        console.log(`Refreshing account data: ${acc.gameId} (${acc.server})`);
+
+        if (acc.authSource === "oauth2") {
+            try {
+                await refreshOAuthAccountData(acc.id);
+                return null;
+            } catch (error) {
+                console.warn(`OAuth2 account ${acc.gameId} refresh failed; keeping existing data`, error);
+                return "OAUTH";
+            }
+        }
+
+        const result = await verifyHarukiApi(acc.server, acc.gameId);
+        if (!result.success) {
+            console.warn(`Account ${acc.gameId} refresh failed; keeping existing data`);
+            return result.error === "API_NOT_PUBLIC" || result.error === "NOT_FOUND" ? result.error : "NETWORK_ERROR";
+        }
+
+        const userGamedata = result.userGamedata || null;
+        const userDecks = result.userDecks || null;
+        const userCharacters = result.userCharacters || null;
+        updateAccount(acc.id, {
+            userCharacters,
+            userChallengeLiveSoloStages: result.userChallengeLiveSoloStages || null,
+            userChallengeLiveSoloResults: result.userChallengeLiveSoloResults || null,
+            userChallengeLiveSoloHighScoreRewards: result.userChallengeLiveSoloHighScoreRewards || null,
+            userBonds: result.userBonds || null,
+            userMaterials: result.userMaterials || null,
+            userAreas: result.userAreas || null,
+            userMysekaiFixtureGameCharacterPerformanceBonuses: result.userMysekaiFixtureGameCharacterPerformanceBonuses || null,
+            userMysekaiGates: result.userMysekaiGates || null,
+            userGamedata,
+            userDecks,
+            uploadTime: result.uploadTime || null,
+            avatarCardId: getLeaderCardId(userGamedata, userDecks),
+            avatarCharacterId: userCharacters && userCharacters.length > 0
+                ? getTopCharacterId(userCharacters)
+                : acc.avatarCharacterId,
+            nickname: userGamedata?.name || acc.nickname,
+            lastSyncAt: Date.now(),
+        });
+        return null;
     }
 
     const handleAddAccount = useCallback(async () => {
@@ -494,6 +519,7 @@ export default function ProfileClient() {
                                 </Banner>
                             )}
                             {importMessage && <Banner tone={importMessage.tone}>{importMessage.text}</Banner>}
+                            {resyncError && <Banner tone="error">{resyncError}</Banner>}
                             {legacyOAuth.length > 0 && (
                                 <Banner
                                     tone="warning"
@@ -590,20 +616,17 @@ export default function ProfileClient() {
                                                             {t("common.account.setDefault")}
                                                         </Button>
                                                     )}
-                                                    {acc.authSource === "oauth2" && (
-                                                        <Button
-                                                            variant="text"
-                                                            size="xs"
-                                                            color="secondary"
-                                                            icon={mdSync}
-                                                            onClick={() => void refreshOAuthAccountData(acc.id).then(reload).catch((error) => {
-                                                                console.warn(`OAuth2 account ${acc.gameId} manual sync failed`, error);
-                                                                setVerifyError(t("common.harukiErrors.oauthRefreshFailed"));
-                                                            })}
-                                                        >
-                                                            {t("common.account.resync")}
-                                                        </Button>
-                                                    )}
+                                                    <Button
+                                                        variant="text"
+                                                        size="xs"
+                                                        color="secondary"
+                                                        icon={resyncingIds.has(acc.id) ? undefined : mdSync}
+                                                        disabled={resyncingIds.has(acc.id)}
+                                                        onClick={() => void handleResync(acc)}
+                                                    >
+                                                        {resyncingIds.has(acc.id) && <CircularProgress size={14} strokeWidth={2} />}
+                                                        {t("common.account.resync")}
+                                                    </Button>
                                                     {acc.starmoeSource === "verified" && signedIn ? null : deleteConfirmId === acc.id ? (
                                                         <div className="flex items-center gap-1">
                                                             <Button variant="tonal" size="xs" color="error" onClick={() => handleDelete(acc.id)}>
