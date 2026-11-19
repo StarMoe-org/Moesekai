@@ -2,10 +2,12 @@
  * Messages between the gacha page and the SekaiGacha stage iframe (protocol v1, documented in
  * the build's WebGL template). The page draws the cards; the stage only plays them.
  *
- * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity), `skip`, `finish`, `mute`.
+ * Page → stage: `play` (1–10 cards revealed in order, each its asset name and rarity, plus the
+ * server `region` and Settings `assetSource` line), `skip`, `finish`, `mute`.
  * The rarity picks the intro hint and the reveal (★2, ★3, ★4, birthday) as in the game; the card's
  * name (`prefix`) and gacha phrase (`gachaPhrase`) are shown on the reveal, in the font of the server
  * the text comes from (`region`: TW, CN and KR use a Chinese/Korean font, as the TW client does).
+ * `assetSource` chooses which storage CDN line (`main` or `backup`) the stage fetches card assets from.
  * Stage → page: engine download progress, phase changes, and rejected commands.
  */
 
@@ -43,8 +45,11 @@ interface PlayableCard {
     gachaPhrase?: string;
 }
 
+/** The Settings asset CDN line the stage fetches card art and voices from. */
+export type SekaiGachaAssetSource = "main" | "backup";
+
 export type SekaiGachaCommand =
-    | { type: "sekai-gacha:play"; cards: SekaiGachaCard[]; region: SekaiGachaRegion }
+    | { type: "sekai-gacha:play"; cards: SekaiGachaCard[]; region: SekaiGachaRegion; assetSource: SekaiGachaAssetSource }
     /** The game's skip: passes the intro and skippable cards, stopping on each 4★, birthday or new 3★ card. */
     | { type: "sekai-gacha:skip" }
     /** Ends the presentation at once. */
@@ -68,7 +73,11 @@ export function isSekaiGachaCard(card: { assetbundleName: string; cardRarityType
 /** The server the cards' master data (and so their name and phrase) comes from. */
 export type SekaiGachaRegion = "jp" | "en" | "tw" | "cn" | "kr";
 
-export function playCommand(cards: PlayableCard[], region: SekaiGachaRegion): SekaiGachaCommand {
+export function playCommand(
+    cards: PlayableCard[],
+    region: SekaiGachaRegion,
+    assetSource: SekaiGachaAssetSource = "main",
+): SekaiGachaCommand {
     if (cards.length < 1 || cards.length > SEKAI_GACHA_MAX_CARDS || !cards.every(isSekaiGachaCard)) {
         throw new Error("sekai_gacha_invalid_cards");
     }
@@ -81,6 +90,7 @@ export function playCommand(cards: PlayableCard[], region: SekaiGachaRegion): Se
             phrase: cardText(card.gachaPhrase),
         })),
         region,
+        assetSource,
     };
 }
 

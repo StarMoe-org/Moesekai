@@ -20,6 +20,7 @@ import {
     mdVolumeOff,
     mdVolumeUp,
 } from "@/components/md3/icons";
+import { getAssetLine } from "@/lib/assets";
 import { md3EffectsDefault, md3SpatialDefault, reducedMotionFade } from "@/lib/motion";
 import { sekaiGachaOrigin, sekaiGachaUrl } from "@/lib/sekaiGacha/config";
 import { playCommand, readStageMessage, type SekaiGachaCommand, type SekaiGachaPhase } from "@/lib/sekaiGacha/protocol";
@@ -89,8 +90,10 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
     const openRef = useRef(open);
     const stageRef = useRef(stage);
     const origin = sekaiGachaOrigin();
-    // The cards come from this server's master data; the stage picks the font for their text from it.
-    const { serverSource } = useTheme();
+    // The cards come from this server's master data; the stage picks the font for their text from it
+    // and loads card art and voices from the chosen asset line.
+    const { assetSource, serverSource } = useTheme();
+    const assetLine = getAssetLine(assetSource);
 
     useEffect(() => {
         const value = readMuted();
@@ -114,13 +117,13 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
         wanted.current = null;
         playing.current = next;
         post({ type: "sekai-gacha:mute", muted: mutedRef.current || !openRef.current });
-        post(playCommand(next.cards.map(item => item.card), serverSource));
+        post(playCommand(next.cards.map(item => item.card), serverSource, assetLine));
         if (stageRef.current.phase !== "booting") {
             const state = { phase: "loading" as const, revealed: 0, total: next.cards.length };
             stageRef.current = state;
             setStage(state);
         }
-    }, [frameLoaded, post, serverSource]);
+    }, [frameLoaded, post, serverSource, assetLine]);
 
     useEffect(() => {
         if (playing.current?.id === request.id || wanted.current?.id === request.id) return;
