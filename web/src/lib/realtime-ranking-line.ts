@@ -58,8 +58,6 @@ const LINE_HOSTS: Record<RealtimeRankingLine, LineHosts> = {
     },
 };
 
-const NEXT_CN_KR_HOST = "https://rks-n-cn.exmeaning.com";
-
 export function isRealtimeRankingLine(value: unknown): value is RealtimeRankingLine {
     return REALTIME_RANKING_LINE_OPTIONS.some((option) => option === value);
 }
@@ -116,10 +114,9 @@ export function getLegacyApiBase(): string {
 export function getNextApiBase(region?: RealtimeRankingRegion): string {
     const override = process.env.NEXT_PUBLIC_REALTIME_RANKING_V2_API_BASE;
     if (override) return stripTrailingSlash(override);
-    if (region && isSingleMainLineRegion(region)) {
-        return `${NEXT_CN_KR_HOST}/api/public/v2`;
-    }
-    return `${LINE_HOSTS[currentLine].next}/api/public/v2`;
+    // cn/kr are collected by the same hub as jp/en/tw since 2026-11-20, so they
+    // share the main line's host (they still offer only the main line).
+    return `${LINE_HOSTS[getEffectiveLine(currentLine, region)].next}/api/public/v2`;
 }
 
 /** React hook: subscribe to the current data line. */
