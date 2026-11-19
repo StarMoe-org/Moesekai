@@ -6,9 +6,12 @@ import {
     verifyHarukiApi,
     createAccount,
     getTopCharacterId,
+    rememberAccount,
     type ServerType,
 } from "@/lib/account";
-import { startOAuthConnect } from "@/lib/oauth";
+import HarukiConnectButton from "@/components/HarukiConnectButton";
+import { StarMoeApiError } from "@/lib/starmoe-accounts";
+import { useStarMoeAccountSync } from "@/hooks/useStarMoeAccountSync";
 import { ServerPicker } from "@/components/common/ServerPicker";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, Button, CircularProgress, Icon, Surface, TextField } from "@/components/md3";
@@ -20,7 +23,7 @@ interface QuickBindFormProps {
     icon?: React.ReactNode;
     /** Custom description text. */
     description?: string;
-    /** Return path after OAuth succeeds. */
+    /** Unused since Haruki is connected on StarMoe Connect, which returns to the current page. */
     returnTo?: string;
 }
 
@@ -30,12 +33,11 @@ export default function QuickBindForm({
     onAccountAdded,
     icon,
     description,
-    returnTo = "/profile",
 }: QuickBindFormProps) {
     const { t } = useI18n();
+    useStarMoeAccountSync();
     const resolvedDescription = description ?? t("common.account.quickBindDefaultDescription");
     const [gameId, setGameId] = useState("");
-    const [oauthError, setOauthError] = useState<string | null>(null);
     const [server, setServer] = useState<ServerType>("jp");
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -45,7 +47,6 @@ export default function QuickBindForm({
         if (!gameId.trim()) return;
         setIsVerifying(true);
         setError(null);
-        setOauthError(null);
 
         const result = await verifyHarukiApi(server, gameId.trim());
         if (!result.success) {
@@ -64,21 +65,23 @@ export default function QuickBindForm({
         const topCharId = getTopCharacterId(chars);
         const nickname = result.userGamedata?.name || "";
         createAccount(gameId.trim(), server, nickname, topCharId, chars, true);
+        try {
+            await rememberAccount(server, gameId.trim());
+        } catch (err) {
+            // Kept in this browser; the StarMoe account is full or could not be reached.
+            setError(err instanceof StarMoeApiError && err.code === "too_many_accounts"
+                ? t("common.account.starmoeAccountsFull")
+                : t("common.account.starmoeSaveFailed"));
+            setIsVerifying(false);
+            onAccountAdded();
+            return;
+        }
 
         setGameId("");
         setIsVerifying(false);
         setError(null);
         onAccountAdded();
     }, [gameId, server, onAccountAdded, t]);
-
-    const handleOAuthBind = useCallback(async () => {
-        try {
-            setOauthError(null);
-            await startOAuthConnect(returnTo);
-        } catch (err) {
-            setOauthError(err instanceof Error ? err.message : t("common.harukiErrors.oauthInitFailed"));
-        }
-    }, [returnTo, t]);
 
     return (
         <Surface tone="card" radius="xl" className="p-6 sm:p-8">
@@ -105,9 +108,9 @@ export default function QuickBindForm({
                     <ServerPicker value={server} onValueChange={setServer} disabled={isVerifying} labelledBy={serverLabelId} />
                 </div>
 
-                {(error || oauthError) && (
+                {error && (
                     <Banner tone="error">
-                        <p>{error || oauthError}</p>
+                        <p>{error}</p>
                         <ExternalLink href="https://haruki.seiunx.com" className="mt-1 inline-block underline">
                             {t("common.account.goHaruki")}
                         </ExternalLink>
@@ -130,14 +133,7 @@ export default function QuickBindForm({
                             t("common.account.verifyAndBind")
                         )}
                     </Button>
-                    <Button
-                        variant="outlined"
-                        fullWidth
-                        onClick={() => void handleOAuthBind()}
-                        disabled={isVerifying}
-                    >
-                        {t("common.account.oauthAuthorizeBind")}
-                    </Button>
+                    <HarukiConnectButton variant="outlined" size="m" fullWidth />
                 </div>
 
                 <p className="text-center type-body-s text-on-surface-variant">
