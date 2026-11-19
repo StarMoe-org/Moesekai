@@ -3,7 +3,6 @@ import {
 } from "@/contexts/ThemeContext";
 import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN } from "@/lib/assetDomains";
 import { defaultContentRegionForPathname } from "@/lib/locale-routing";
-import { sseWebSources } from "@/lib/sseWeb/config";
 
 /**
  * ============================================================================
@@ -357,25 +356,19 @@ export function getBondsHonorCharacterUrl(characterId: number, source: AssetSour
 
 /**
  * A sprite the game client carries in its own package rather than in a downloadable bundle
- * (the default honor frames, the honor level icons), read from the server's client unpack --
- * the same unpack the story player uses. The CN client keeps these in `data.unity3d`, the JP
- * unpack has them loose. A server left out of the player's unpacks falls back to JP's.
+ * (the default honor frames, the honor level icons). Every server's client ships the same
+ * images, so they are read from the JP client package on the source's asset site.
  */
-export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = "main-jp"): string | undefined {
-    const hyphenIndex = source.indexOf("-");
-    const region = hyphenIndex !== -1 ? source.substring(hyphenIndex + 1) : getCurrentRegion();
-    const inapp = (sseWebSources(region) ?? sseWebSources("jp"))?.inapp;
-    if (!inapp) return undefined;
-    const playerDir = /\/cn-[^/]+\/$/.test(inapp) ? "data.unity3d" : "loose";
-    return `${inapp}player/${playerDir}/Sprite/${spriteName}.png`;
+export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/${spriteName}/image.png`;
 }
 
-export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
 }
 
-export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string {
     return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
 
