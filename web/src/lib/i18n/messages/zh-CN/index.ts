@@ -292,6 +292,7 @@ export const zhCNMessages = {
         },
         view: {
             grid: "网格",
+            large: "大图",
             table: "表格",
             label: "视图",
         },

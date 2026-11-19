@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import { UNIT_BONUS_OPTIONS, ATTR_OPTIONS } from "./CustomRulesModal";
 import type {
     DeckAreaItemOverride,
@@ -70,7 +70,7 @@ function ItemIcon({ item }: { item: OverrideCatalogItem }) {
         if (a) {
             return (
                 <div className="w-8 h-8 relative flex-shrink-0">
-                    <Image src={`/data/icon/${a.icon}`} alt="" fill className="object-contain" unoptimized />
+                    <Image src={getAttrIconUrl(a.value)} alt="" fill className="object-contain" unoptimized />
                 </div>
             );
         }
@@ -589,7 +589,7 @@ export default function DataOverridePanel({
                                                 className="flex flex-col items-center justify-between p-2.5 bg-surface-container-lowest rounded-md3-md border border-outline-variant space-y-2 min-h-[92px]"
                                             >
                                                 <div className="w-7 h-7 relative flex-shrink-0">
-                                                    <Image src={`/data/icon/${attr.icon}`} alt={attr.label} fill className="object-contain" unoptimized />
+                                                    <Image src={getAttrIconUrl(attr.value)} alt={attr.label} fill className="object-contain" unoptimized />
                                                 </div>
                                                 <div className="flex flex-wrap items-center justify-center gap-1.5 w-full">
                                                     {items.map((item, idx) => {

@@ -20,14 +20,13 @@ import {
     CardRarityType,
     CardAttribute,
     ATTR_NAMES,
-    ATTR_ICON_PATHS,
     isTrainableCard,
     getCardDefaultTrainedStatus,
     isWishGacha,
 } from "@/types/types";
-import { ICardSupply, useCardSupplyTypeMapping } from "@/hooks/useCardSupplyType";
+import { getCardSupplyMeta, ICardSupply, useCardSupplyTypeMapping } from "@/hooks/useCardSupplyType";
 import { fetchMasterData } from "@/lib/fetch";
-import { getGachaLogoUrl, getGachaScreenUrl } from "@/lib/assets";
+import { getAttrIconUrl, getGachaLogoUrl, getGachaScreenUrl } from "@/lib/assets";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -1655,6 +1654,7 @@ function GachaSimulatorContent() {
                                     <div className="flex flex-wrap gap-2">
                                         {supplyTypes.map((st) => {
                                             const isSelected = selectedSupplyTypes.includes(st.type);
+                                            const supplyMeta = getCardSupplyMeta(st.type);
                                             return (
                                                 <button
                                                     key={st.type}
@@ -1668,7 +1668,12 @@ function GachaSimulatorContent() {
                                                     }}
                                                     className={getFilterChipStateClasses(isSelected)}
                                                 >
-                                                    {t(`common.cardSupplyTypes.${st.type}`)}
+                                                    <Icon
+                                                        path={supplyMeta.icon}
+                                                        size={16}
+                                                        className={isSelected ? "shrink-0" : `shrink-0 ${supplyMeta.colorClass}`}
+                                                    />
+                                                    <span>{t(`common.cardSupplyTypes.${st.type}`)}</span>
                                                 </button>
                                             );
                                         })}
@@ -1695,7 +1700,7 @@ function GachaSimulatorContent() {
                                                 >
                                                     <div className="w-6 h-6 relative">
                                                         <Image
-                                                            src={`/data/icon/${ATTR_ICON_PATHS[attr]}`}
+                                                            src={getAttrIconUrl(attr, assetSource)}
                                                             alt={ATTR_NAMES[attr]}
                                                             fill
                                                             className="object-contain"

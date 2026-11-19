@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { IEventInfo, IEventDeckBonus, EventType, EVENT_TYPE_COLORS, getEventStatus } from "@/types/events";
-import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, CardAttribute, ATTR_ICON_PATHS, ATTR_NAMES } from "@/types/types";
+import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_NAMES, type CardAttribute } from "@/types/types";
 import { fetchMasterDataForServer, type ServerSourceType } from "@/lib/fetch";
 import { isWorldBloomFinale, type WorldBloomChapterRow } from "@/lib/deck-recommend/world-bloom-finale";
-import { getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -556,10 +556,10 @@ function EventSelectionItem({
                                 <span className="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded-md3-sm" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
                             )
                         )}
-                        {bonusAttr && ATTR_ICON_PATHS[bonusAttr as keyof typeof ATTR_ICON_PATHS] && (
+                        {bonusAttr && bonusAttr in ATTR_NAMES && (
                             <div className="w-5 h-5 flex items-center justify-center" title={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES]}>
                                 <Image
-                                    src={`/data/icon/${ATTR_ICON_PATHS[bonusAttr as keyof typeof ATTR_ICON_PATHS]}`}
+                                    src={getAttrIconUrl(bonusAttr, assetSource)}
                                     alt={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES] || bonusAttr}
                                     width={16}
                                     height={16}

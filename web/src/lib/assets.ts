@@ -140,11 +140,33 @@ export function getCommonMaterialThumbnailUrl(
 }
 
 export function getAttrIconUrl(attr: string, source: AssetSourceType = "main-jp"): string {
-    return buildImageAssetUrl(source, `thumbnail/common/attribute/${attr}`);
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/icon_attribute_${attr}/image.png`;
 }
 
 export function getUnitLogoUrl(unitId: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `thumbnail/common/unit/${unitId}`);
+}
+
+export function getUnitOutlineLogoUrl(unitField: string, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/common/logos_outline/logo_${unitField}.png`;
+}
+
+const UNIT_FIELD_TO_TAB_CODE: Record<string, string> = {
+    light_sound: "ln",
+    idol: "mj",
+    street: "vb",
+    theme_park: "ws",
+    school_refusal: "25",
+    piapro: "vs",
+};
+
+export function getUnitTabIconUrl(unitField: string, source: AssetSourceType = "main-jp"): string {
+    const code = UNIT_FIELD_TO_TAB_CODE[unitField] ?? "vs";
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/icon_tab_unit_${code}_on/image.png`;
+}
+
+export function getCharacterChibiIconUrl(characterId: number, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/chr_il_${characterId}/image.png`;
 }
 
 export function getCardThumbnailUrl(

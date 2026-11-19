@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { UNIT_DATA, UNIT_ICON_FILES, UNIT_FIELD_TO_ID, type CardAttribute } from "@/types/types";
 import { fetchMasterDataForServer } from "@/lib/fetch";
-import { getAreaItemThumbnailUrl, getCharacterIconUrl, getMaterialThumbnailUrl } from "@/lib/assets";
+import { getAreaItemThumbnailUrl, getAttrIconUrl, getCharacterIconUrl, getMaterialThumbnailUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -85,13 +85,6 @@ const UNIT_TO_TARGET: Record<string, string> = Object.fromEntries(
 );
 
 const ATTRS: CardAttribute[] = ["cool", "cute", "happy", "mysterious", "pure"];
-const ATTR_ICON_FILES: Record<CardAttribute, string> = {
-    cool: "Cool.webp",
-    cute: "cute.webp",
-    happy: "Happy.webp",
-    mysterious: "Mysterious.webp",
-    pure: "Pure.webp",
-};
 
 function mergeCost(target: Map<number, number>, add: Map<number, number>) {
     add.forEach((v, k) => target.set(k, (target.get(k) || 0) + v));
@@ -367,7 +360,7 @@ export default function AreaItemUpgradeMaterials({
                             >
                                 <div className="w-8 h-8 relative">
                                     <Image
-                                        src={`/data/icon/${ATTR_ICON_FILES[attr]}`}
+                                        src={getAttrIconUrl(attr, assetSource)}
                                         alt={attr}
                                         fill
                                         className="object-contain"

@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
 import Modal from "@/components/common/Modal";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
 import { type ICardInfo, CARD_RARITY_MAX_LEVELS } from "@/types/types";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
@@ -422,7 +422,7 @@ export default function CustomRulesModal({
             rules.push({
                 key: "attrFilter",
                 label: t("page.deckRecommend.rules.preview.attrFilter"),
-                detail: a ? <Image src={`/data/icon/${a.icon}`} alt="" width={18} height={18} className="object-contain" /> : attrFilter,
+                detail: a ? <Image src={getAttrIconUrl(a.value)} alt="" width={18} height={18} className="object-contain" unoptimized /> : attrFilter,
                 onRemove: () => onChange({ attrFilter: "" }),
             });
         }
@@ -909,7 +909,7 @@ export default function CustomRulesModal({
                                                 title={attr.label}
                                             >
                                                 <div className="w-8 h-8 relative">
-                                                    <Image src={`/data/icon/${attr.icon}`} alt={attr.label} fill className="object-contain" unoptimized />
+                                                    <Image src={getAttrIconUrl(attr.value)} alt={attr.label} fill className="object-contain" unoptimized />
                                                 </div>
                                             </button>
                                         );

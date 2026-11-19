@@ -20,7 +20,7 @@ import {
     SUPPORT_UNIT_LABEL_KEYS,
     CARD_RARITY_MAX_LEVELS,
 } from "@/types/types";
-import { getCardFullUrl, getCardThumbnailUrl, getEventBannerUrl, getGachaLogoUrl, getCardGachaVoiceUrl, getCostumeThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCardFullUrl, getCardThumbnailUrl, getEventBannerUrl, getGachaLogoUrl, getCardGachaVoiceUrl, getCostumeThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
 import { useRef } from "react";
 import { formatSkillDescription } from "@/lib/skill";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
@@ -269,16 +269,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
     }, [card, cardLevel, normalMaxLevel]);
 
     // Attribute icon mapping
-    const getAttrIcon = (attr: CardAttribute) => {
-        const iconMap: Record<CardAttribute, string> = {
-            cool: "Cool.webp",
-            cute: "cute.webp",
-            happy: "Happy.webp",
-            mysterious: "Mysterious.webp",
-            pure: "Pure.webp",
-        };
-        return `/data/icon/${iconMap[attr]}`;
-    };
+    const getAttrIcon = (attr: CardAttribute) => getAttrIconUrl(attr, assetSource);
 
     // Dynamic skill description (normal skill)
     useEffect(() => {
