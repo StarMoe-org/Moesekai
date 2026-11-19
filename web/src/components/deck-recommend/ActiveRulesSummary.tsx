@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import type { ICardInfo } from "@/types/types";
 import { Button, Icon } from "@/components/md3";
 import { mdClose, mdRestartAlt, mdTune } from "@/components/md3/icons";
@@ -148,7 +148,7 @@ export default function ActiveRulesSummary({
             rules.push({
                 key: "attrFilter",
                 label: t("page.deckRecommend.rules.preview.attrFilter"),
-                detail: a ? <Image src={`/data/icon/${a.icon}`} alt="" width={18} height={18} className="object-contain" /> : attrFilter,
+                detail: a ? <Image src={getAttrIconUrl(a.value)} alt="" width={18} height={18} className="object-contain" unoptimized /> : attrFilter,
                 onRemove: () => onChange({ attrFilter: "" }),
             });
         }

@@ -288,6 +288,7 @@ export const zhTWCommon = {
     },
     view: {
         grid: "格線",
+        large: "大圖",
         table: "表格",
         label: "檢視",
     },

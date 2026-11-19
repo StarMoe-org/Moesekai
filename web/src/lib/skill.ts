@@ -72,6 +72,82 @@ export function getCardSkillTypes(skill?: Pick<ISkillInfo, "descriptionSpriteNam
 }
 
 /**
+ * Returns the maximum achievable score-up percentage (%) of a skill at max level,
+ * accounting for conditional, sub-unit, character-rank, unit-count, and reference skills.
+ */
+export function getSkillMaxScoreMultiplier(
+    skill?: Pick<ISkillInfo, "skillEffects"> | null
+): number | null {
+    const effects = skill?.skillEffects;
+    if (!effects || effects.length === 0) return null;
+
+    let baseScoreUp = 0;
+    let maxConditionLife = 0;
+    let maxKeep = 0;
+    let maxCharacterRankBonus = 0;
+    let maxUnitCountBonus = 0;
+    let maxOtherRefBonus = 0;
+    let maxSubUnitTotal = 0;
+
+    for (const effect of effects) {
+        const details = effect.skillEffectDetails;
+        if (!details || details.length === 0) continue;
+        const maxDetail = details[details.length - 1];
+        const v1 = maxDetail.activateEffectValue ?? 0;
+        const v2 = maxDetail.activateEffectValue2 ?? 0;
+
+        switch (effect.skillEffectType) {
+            case "score_up":
+                if (effect.skillEnhance?.skillEnhanceType === "sub_unit_score_up" && effect.skillEnhance.activateEffectValue) {
+                    maxSubUnitTotal = Math.max(maxSubUnitTotal, v1 + effect.skillEnhance.activateEffectValue * 5);
+                } else {
+                    baseScoreUp = Math.max(baseScoreUp, v1);
+                }
+                break;
+            case "score_up_condition_life":
+                maxConditionLife = Math.max(maxConditionLife, v1);
+                break;
+            case "score_up_keep":
+                maxKeep = Math.max(maxKeep, v1);
+                break;
+            case "score_up_character_rank":
+                maxCharacterRankBonus = Math.max(maxCharacterRankBonus, v1);
+                break;
+            case "score_up_unit_count":
+                maxUnitCountBonus = Math.max(maxUnitCountBonus, v1);
+                break;
+            case "other_member_score_up_reference_rate":
+                maxOtherRefBonus = Math.max(maxOtherRefBonus, v2 || v1);
+                break;
+        }
+    }
+
+    const total = Math.max(
+        maxSubUnitTotal,
+        maxConditionLife,
+        maxKeep,
+        baseScoreUp + maxCharacterRankBonus + maxUnitCountBonus + maxOtherRefBonus,
+    );
+    return total > 0 ? total : null;
+}
+
+/**
+ * Returns the maximum achievable score-up percentage (%) across a card's normal and trained skills.
+ */
+export function getCardMaxSkillMultiplier(
+    card: Pick<ICardInfo, "skillId" | "specialTrainingSkillId">,
+    skillsMap?: Map<number, ISkillInfo>
+): number | null {
+    if (!skillsMap) return null;
+    const normalMax = getSkillMaxScoreMultiplier(skillsMap.get(card.skillId)) ?? 0;
+    const trainedMax = card.specialTrainingSkillId
+        ? (getSkillMaxScoreMultiplier(skillsMap.get(card.specialTrainingSkillId)) ?? 0)
+        : 0;
+    const best = Math.max(normalMax, trainedMax);
+    return best > 0 ? best : null;
+}
+
+/**
  * Formats the skill description by replacing placeholders with actual values.
  * Based on sekai.best implementation.
  */

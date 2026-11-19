@@ -250,6 +250,15 @@ export const UNIT_FIELD_TO_ID: Record<string, string> = {
     piapro: "vs",
 };
 
+export const UNIT_ID_TO_FIELD: Record<string, string> = {
+    ln: "light_sound",
+    mmj: "idol",
+    vbs: "street",
+    ws: "theme_park",
+    "25ji": "school_refusal",
+    vs: "piapro",
+};
+
 // Unit definitions
 export const UNIT_DATA: UnitData[] = [
     { id: "ln", name: UNIT_NAME_MAP.light_sound, color: "#4455DD", charIds: [1, 2, 3, 4] },
@@ -259,6 +268,14 @@ export const UNIT_DATA: UnitData[] = [
     { id: "25ji", name: UNIT_NAME_MAP.school_refusal, color: "#884499", charIds: [17, 18, 19, 20] },
     { id: "vs", name: UNIT_NAME_MAP.piapro, color: "#33CCBB", charIds: [21, 22, 23, 24, 25, 26] },
 ];
+
+export function getCardUnitField(card: Pick<ICardInfo, "characterId" | "supportUnit">): string {
+    if (card.characterId >= 21) {
+        return card.supportUnit && card.supportUnit !== "none" ? card.supportUnit : "piapro";
+    }
+    const unit = UNIT_DATA.find((u) => u.charIds.includes(card.characterId));
+    return unit ? (UNIT_ID_TO_FIELD[unit.id] ?? "piapro") : "piapro";
+}
 
 export const UNIT_DATA_LABEL_KEYS: Record<string, string> = Object.fromEntries(
     UNIT_DATA.map((unit) => [unit.id, UNIT_ID_LABEL_KEYS[unit.id] ?? `common.units.${unit.id}`]),

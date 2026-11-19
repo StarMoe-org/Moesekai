@@ -17,7 +17,7 @@ import {
 } from "@/types/events";
 import { IActionSet, IEventStory, buildEventRawUnitMap, rawUnitToFilterId, getEventUnitFilterId, buildEventBannerCharMap } from "@/lib/eventUnit";
 import { type EventUnitFilterId } from "@/components/events/EventFilters";
-import { getEventLogoUrl, getCharacterIconUrl, getEventBannerUrl, getEventCharacterUrl, getEventStoryBannerUrl, getMusicJacketUrl, getVirtualLiveBannerUrl, getEventBgmUrl } from "@/lib/assets";
+import { getAttrIconUrl, getEventLogoUrl, getCharacterIconUrl, getEventBannerUrl, getEventCharacterUrl, getEventStoryBannerUrl, getMusicJacketUrl, getVirtualLiveBannerUrl, getEventBgmUrl } from "@/lib/assets";
 import { UNIT_FIELD_LABEL_KEYS } from "@/types/types";
 import type { ICardInfo, ICharaUnitInfo, IGameChara } from "@/types/types";
 import { isTrainableCard, getCardDefaultTrainedStatus } from "@/types/types";
@@ -47,15 +47,6 @@ import {
 } from "@/components/md3/icons";
 
 // Asset URL helpers - Now imported from @/lib/assets
-
-// Local attribute icon mapping
-const LOCAL_ATTR_ICONS: Record<string, string> = {
-    cool: "/data/icon/Cool.webp",
-    cute: "/data/icon/cute.webp",
-    happy: "/data/icon/Happy.webp",
-    mysterious: "/data/icon/Mysterious.webp",
-    pure: "/data/icon/Pure.webp",
-};
 
 // Attribute display names
 const ATTR_NAMES: Record<string, string> = {
@@ -568,7 +559,7 @@ export default function EventDetailPage() {
                                     <span className="type-body-m text-on-surface-variant">{t("page.events.bonusAttrLabel")}</span>
                                     <div className="flex items-center gap-2">
                                         <Image
-                                            src={LOCAL_ATTR_ICONS[bonusAttr] || LOCAL_ATTR_ICONS.cool}
+                                            src={getAttrIconUrl(bonusAttr, assetSource)}
                                             alt={bonusAttr}
                                             width={28}
                                             height={28}

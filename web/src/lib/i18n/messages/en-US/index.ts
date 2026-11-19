@@ -293,6 +293,7 @@ export const enUSMessages = {
         },
         view: {
             grid: "Grid",
+            large: "Large",
             table: "Table",
             label: "View",
         },

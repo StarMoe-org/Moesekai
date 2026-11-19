@@ -290,6 +290,7 @@ export const koKRMessages = {
         },
         view: {
             grid: "그리드",
+            large: "큰 이미지",
             table: "표",
             label: "보기"
         },

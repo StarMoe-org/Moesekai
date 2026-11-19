@@ -292,6 +292,7 @@ export const jaJPMessages = {
     },
     view: {
       grid: 'グリッド',
+      large: '大カード',
       table: 'テーブル',
       label: '表示形式'
     },
