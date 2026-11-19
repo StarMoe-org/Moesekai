@@ -18,6 +18,7 @@ import (
 	"snowy_viewer/internal/config"
 	"snowy_viewer/internal/handlers"
 	"snowy_viewer/internal/htmlcache"
+	"snowy_viewer/internal/live2d"
 	"snowy_viewer/internal/markdown"
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/mcp"
@@ -70,6 +71,9 @@ func main() {
 	mux := http.NewServeMux()
 	handler := handlers.New(store)
 	handler.RegisterRoutes(mux)
+
+	// The Live2D model catalogue, built from the published episodes when first asked for.
+	live2d.New(cfg.Live2DSite, cfg.Live2DDataDir).RegisterRoutes(mux)
 
 	// Register Model Context Protocol (MCP) server
 	mcpServer := mcp.New(store)
