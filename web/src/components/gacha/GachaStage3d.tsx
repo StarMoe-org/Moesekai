@@ -320,6 +320,28 @@ export default function GachaStage3d({ request, open, onClose, onAgain, againLab
                     </div>
                 </div>
 
+                {/* Brand watermark on live stage canvas while intro or reveals are visible. */}
+                {!preparing && (phase === "tap" || phase === "intro" || phase === "reveal") && (
+                    <div
+                        aria-hidden="true"
+                        className="pointer-events-none absolute bottom-2.5 right-3 select-none sm:bottom-3.5 sm:right-4"
+                        style={{
+                            width: "96px",
+                            height: "24px",
+                            backgroundColor: "rgba(255, 255, 255, 0.72)",
+                            filter: "drop-shadow(0 1px 3px rgba(0, 0, 0, 0.55))",
+                            maskImage: "url(/logo.svg)",
+                            maskSize: "contain",
+                            maskPosition: "right center",
+                            maskRepeat: "no-repeat",
+                            WebkitMaskImage: "url(/logo.svg)",
+                            WebkitMaskSize: "contain",
+                            WebkitMaskPosition: "right center",
+                            WebkitMaskRepeat: "no-repeat",
+                        }}
+                    />
+                )}
+
                 {/* Results once every card is out. */}
                 <AnimatePresence>
                     {phase === "complete" && (
