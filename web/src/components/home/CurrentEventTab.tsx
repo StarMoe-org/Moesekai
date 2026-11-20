@@ -115,10 +115,10 @@ export default function CurrentEventTab() {
     return (
         <div>
             <Link href={`/events/${currentEvent.id}`} className="state-layer focus-ring block group rounded-md3-xl">
-                <div className="relative flex h-32 md:h-36 rounded-md3-xl overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
+                <div className="relative flex min-h-32 md:min-h-36 rounded-md3-xl overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
 
                     {/* Left Side: Background & Logo (45%) */}
-                    <div className="w-[45%] relative overflow-hidden">
+                    <div className="w-[45%] shrink-0 relative overflow-hidden">
                         {/* Background Image */}
                         <div className="absolute inset-0">
                             <Image
@@ -149,10 +149,10 @@ export default function CurrentEventTab() {
                     </div>
 
                     {/* Right Side: Info (55%) */}
-                    <div className="w-[55%] relative flex items-center p-3 sm:p-4 overflow-hidden">
+                    <div className={`w-[55%] min-w-0 relative flex items-center ${status === "ongoing" ? "p-3 pb-4 sm:p-4" : "p-3 sm:p-4"}`}>
                         <div className="min-w-0 flex-1 space-y-1">
                             {/* Status Badge */}
-                            <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                            <div className="flex items-center gap-x-2 gap-y-1 mb-1 flex-wrap">
                                 <span
                                     className="type-label-m px-2 py-0.5 rounded-md3-sm text-white"
                                     style={{ backgroundColor: statusDisplay.color }}
@@ -195,12 +195,14 @@ export default function CurrentEventTab() {
                             </h3>
 
                             {/* Title (CN - Second Line) */}
-                            <p className="type-body-s text-on-surface-variant line-clamp-1 h-4">
-                                {translatedName !== currentEvent.name ? translatedName : ""}
-                            </p>
+                            {translatedName && translatedName !== currentEvent.name && (
+                                <p className="type-body-s text-on-surface-variant line-clamp-1">
+                                    {translatedName}
+                                </p>
+                            )}
 
                             {/* Date range, with the progress figure on the same row so the title keeps the full column width */}
-                            <div className="flex items-end justify-between gap-2 pt-2">
+                            <div className="flex items-end justify-between gap-2 pt-1.5 sm:pt-2">
                                 <div className="min-w-0 type-label-s text-on-surface-variant tabular-nums flex flex-col sm:flex-row sm:gap-2">
                                     <span>{formatDate(currentEvent.startAt)}</span>
                                     <span className="hidden sm:inline">-</span>

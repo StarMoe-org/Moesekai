@@ -249,6 +249,8 @@ test("missing files fall back per category and the text helpers preserve current
   assert.deepEqual(data.music, { title: {}, artist: {}, vocalCaption: {} });
   assert.deepEqual(data.cards, baseline.translationFiles.cards);
   assert.equal(translations.getTranslation({ 原文: "译文" }, "原文"), "译文");
+  assert.equal(translations.getTranslation({ 原文: "" }, "原文"), "原文");
+  assert.equal(translations.getTranslation({ 原文: "   " }, "原文", "回退"), "回退");
   assert.equal(translations.getTranslation({}, "原文"), "原文");
   assert.equal(translations.getTranslation(undefined, "原文", "回退"), "回退");
   assert.equal(translations.hasTranslation({ 原文: "" }, "原文"), true, "empty values still count as present keys");

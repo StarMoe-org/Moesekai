@@ -357,7 +357,8 @@ export async function fetchTranslationFile<T>(url: string): Promise<T | null> {
  */
 export function getTranslation(map: TranslationMap | undefined, key: string, fallback?: string): string {
     if (!map || !key) return fallback ?? key;
-    return map[key] ?? fallback ?? key;
+    const value = map[key];
+    return typeof value === "string" && value.trim() ? value : (fallback ?? key);
 }
 
 /**
