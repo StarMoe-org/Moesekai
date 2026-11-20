@@ -3,6 +3,7 @@
 import Link from "@/components/LocalizedLink";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import { useI18n } from "@/contexts/I18nContext";
+import { replaceAssetSourceRegion, useTheme } from "@/contexts/ThemeContext";
 import type { MoesekaiAccount } from "@/lib/account";
 import type { ProfileExtras } from "@/hooks/useProfileExtras";
 import type { ICardInfo } from "@/types/types";
@@ -17,6 +18,8 @@ interface Props {
 /** The five cards of the deck in use, leader first, as the profile screen shows them. */
 export default function ProfileDeck({ account, cards, extras }: Props) {
     const { t } = useI18n();
+    const { assetSource } = useTheme();
+    const accountAssetSource = replaceAssetSourceRegion(assetSource, account.server);
     const deck = account.userDecks?.find((item) => item.deckId === account.userGamedata?.deck) ?? account.userDecks?.[0];
     const members = deck ? [deck.member1, deck.member2, deck.member3, deck.member4, deck.member5].filter((id) => id > 0) : [];
     const artReady = extras.status !== "loading";
@@ -43,6 +46,7 @@ export default function ProfileDeck({ account, cards, extras }: Props) {
                                             trained={showsTrainedArt(card, state)}
                                             mastery={state?.masterRank || 0}
                                             className="w-full"
+                                            assetSource={accountAssetSource}
                                         />
                                     ) : (
                                         <div className="aspect-square animate-pulse rounded-md3-sm bg-surface-container-high" />

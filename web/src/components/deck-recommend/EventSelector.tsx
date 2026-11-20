@@ -6,7 +6,7 @@ import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_NA
 import { fetchMasterDataForServer, type ServerSourceType } from "@/lib/fetch";
 import { isWorldBloomFinale, type WorldBloomChapterRow } from "@/lib/deck-recommend/world-bloom-finale";
 import { getAttrIconUrl, getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
-import { useTheme } from "@/contexts/ThemeContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 import { loadTranslations, TranslationData } from "@/lib/translations";
@@ -79,7 +79,8 @@ export default function EventSelector({
     onBonusCharactersChange,
     server = "jp",
 }: EventSelectorProps) {
-    const { assetSource, isShowSpoiler } = useTheme();
+    const { assetSource: themeAssetSource, isShowSpoiler } = useTheme();
+    const assetSource = useMemo(() => replaceAssetSourceRegion(themeAssetSource, server), [themeAssetSource, server]);
     const { t, formatDate } = useI18n();
     const [now] = useState(() => Date.now());
     const [events, setEvents] = useState<IEventInfo[]>([]);
@@ -452,6 +453,7 @@ export default function EventSelector({
                                     unitType={eventUnitMap.get(event.id)}
                                     bonusAttr={eventBonusAttrMap.get(event.id)}
                                     eventStoryIds={eventStoryIds}
+                                    assetSource={assetSource}
                                     onClick={() => handleSelect(event)}
                                 />
                             ))}
@@ -475,6 +477,7 @@ function EventSelectionItem({
     unitType,
     bonusAttr,
     eventStoryIds,
+    assetSource,
     onClick,
 }: {
     event: IEventInfo;
@@ -482,9 +485,9 @@ function EventSelectionItem({
     unitType?: string;
     bonusAttr?: string;
     eventStoryIds?: Set<number>;
+    assetSource: AssetSourceType;
     onClick: () => void;
 }) {
-    const { assetSource } = useTheme();
     const { t, formatDate } = useI18n();
     const hasEventStoryBanner = eventStoryIds ? eventStoryIds.has(event.id) : true;
     const thumbnailUrl = hasEventStoryBanner

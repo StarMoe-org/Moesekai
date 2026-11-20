@@ -38,6 +38,7 @@ import QuickBindForm from "@/components/QuickBindForm";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { getCharacterName } from "@/lib/i18n";
 import { Banner, Chip, EmptyState, ErrorState, LinearProgress, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
 import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
@@ -107,12 +108,17 @@ function getUserErrorMessageKey(code: AccountDataErrorCode): string {
 
 function MyCardsContent() {
     const { t, formatDate } = useI18n();
+    const { assetSource } = useTheme();
     const gridRef = useGridReflowAnimation<HTMLDivElement>();
     const searchParams = useSearchParams();
 
     // Account state
     const [accounts, setAccountsList] = useState<MoesekaiAccount[]>([]);
     const [activeAccount, setActiveAcc] = useState<MoesekaiAccount | null>(null);
+    const accountAssetSource = useMemo(
+        () => (activeAccount ? replaceAssetSourceRegion(assetSource, activeAccount.server) : assetSource),
+        [assetSource, activeAccount],
+    );
 
     // Data state
     const [allCards, setAllCards] = useState<ICardInfo[]>([]);
@@ -654,6 +660,7 @@ function MyCardsContent() {
                                     key={card.id}
                                     card={card}
                                     userCard={uc || null}
+                                    assetSource={accountAssetSource}
                                 />
                             );
                         })}
@@ -692,9 +699,10 @@ function MyCardsHeader() {
 interface MyCardItemProps {
     card: ICardInfo;
     userCard: UserCard | null;
+    assetSource: AssetSourceType;
 }
 
-function MyCardItem({ card, userCard }: MyCardItemProps) {
+function MyCardItem({ card, userCard, assetSource }: MyCardItemProps) {
     const { t } = useI18n();
     const isOwned = !!userCard;
     const isTrained = userCard?.specialTrainingStatus === "done";
@@ -720,6 +728,7 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
                         trained={showTrained}
                         mastery={userCard?.masterRank || 0}
                         className="w-full"
+                        assetSource={assetSource}
                     />
 
                     {/* Skill Level Badge */}

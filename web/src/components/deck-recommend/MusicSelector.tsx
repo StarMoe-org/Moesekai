@@ -12,7 +12,7 @@ import {
 } from "@/types/music";
 import { fetchMasterDataForServer, fetchMusicMetas, type ServerSourceType } from "@/lib/fetch";
 import { getMusicJacketUrl } from "@/lib/assets";
-import { useTheme } from "@/contexts/ThemeContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import SelectorModal from "./SelectorModal";
@@ -58,7 +58,8 @@ export default function MusicSelector({
     liveType = "multi",
     server = "jp",
 }: MusicSelectorProps) {
-    const { assetSource, isShowSpoiler } = useTheme();
+    const { assetSource: themeAssetSource, isShowSpoiler } = useTheme();
+    const assetSource = useMemo(() => replaceAssetSourceRegion(themeAssetSource, server), [themeAssetSource, server]);
     const { t } = useI18n();
     const [now] = useState(() => Date.now());
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
@@ -564,7 +565,7 @@ export default function MusicSelector({
                                         onClick={() => handleSelect(music)}
                                         className="cursor-pointer"
                                     >
-                                        <MusicSelectionItem music={music} translations={translations} />
+                                        <MusicSelectionItem music={music} translations={translations} assetSource={assetSource} />
                                     </div>
                                 ))}
 
@@ -593,8 +594,7 @@ export default function MusicSelector({
 }
 
 // Simplified MusicItem for selection
-function MusicSelectionItem({ music, translations }: { music: IMusicInfo; translations: TranslationData | null }) {
-    const { assetSource } = useTheme();
+function MusicSelectionItem({ music, translations, assetSource }: { music: IMusicInfo; translations: TranslationData | null; assetSource: AssetSourceType }) {
     const jacketUrl = getMusicJacketUrl(music.assetbundleName, assetSource);
 
     return (

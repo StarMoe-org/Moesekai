@@ -17,7 +17,7 @@ import {
     SupportUnit,
 } from "@/types/types";
 import { ICardSupply } from "@/hooks/useCardSupplyType";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -42,6 +42,7 @@ export interface CardSelectorModalProps {
     onClearCards?: (cards: ICardInfo[]) => void;
     onSelectCard?: (card: ICardInfo) => void;
     server?: ServerSourceType;
+    assetSource?: AssetSourceType;
 }
 
 export default function CardSelectorModal({
@@ -60,6 +61,7 @@ export default function CardSelectorModal({
     onClearCards,
     onSelectCard,
     server = "jp",
+    assetSource: customAssetSource,
 }: CardSelectorModalProps) {
     const { t } = useI18n();
     const { useTrainedThumbnail, isShowSpoiler } = useTheme();
@@ -446,7 +448,7 @@ export default function CardSelectorModal({
                             >
                                 {/* Card Image Container */}
                                 <div className="w-full relative">
-                                    <SekaiCardThumbnail card={item.card} trained={showTrained} className="w-full" />
+                                    <SekaiCardThumbnail card={item.card} trained={showTrained} className="w-full" assetSource={customAssetSource} />
                                     {isSelected ? (
                                         <div className="absolute top-1 right-1 z-10 px-1.5 bg-primary text-on-primary type-label-s rounded-md3-xs shadow-elev-1">
                                             ✓ {t("page.gacha.selected")}

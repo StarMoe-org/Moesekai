@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
+import { type AssetSourceType } from "@/contexts/ThemeContext";
 import Modal from "@/components/common/Modal";
 import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
@@ -99,6 +100,7 @@ interface CustomRulesModalProps {
     };
     onOpenCardModal: (type: "fixed" | "excluded" | "single") => void;
     userDeckCardIds?: number[];
+    assetSource?: AssetSourceType;
 }
 
 type TabKey = "constraints" | "poolFilter" | "skillsAndMulti" | "dataOverrides" | "singleCards" | "engine";
@@ -107,12 +109,14 @@ type TranslationFn = ReturnType<typeof useI18n>["t"];
 function SingleCardOverrideRow({
     entry,
     master,
+    assetSource,
     onChange,
     onRemove,
     t,
 }: {
     entry: DeckSingleCardOverride;
     master?: ICardInfo;
+    assetSource?: AssetSourceType;
     onChange: (updated: DeckSingleCardOverride) => void;
     onRemove: () => void;
     t: TranslationFn;
@@ -128,7 +132,7 @@ function SingleCardOverrideRow({
             <div className="flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2 min-w-0">
                     {master ? (
-                        <SekaiCardThumbnail card={master} trained={entry.masterRank !== undefined && entry.masterRank > 0} width={40} />
+                        <SekaiCardThumbnail card={master} trained={entry.masterRank !== undefined && entry.masterRank > 0} width={40} assetSource={assetSource} />
                     ) : (
                         <div className="w-10 h-10 rounded bg-surface-container-highest flex items-center justify-center text-xs text-on-surface-variant">
                             #{entry.cardId}
@@ -295,6 +299,7 @@ export default function CustomRulesModal({
     overrideCatalogs,
     onOpenCardModal,
     userDeckCardIds = [],
+    assetSource,
 }: CustomRulesModalProps) {
     const { t } = useI18n();
     const [activeTab, setActiveTab] = useState<TabKey>("constraints");
@@ -361,7 +366,7 @@ export default function CustomRulesModal({
                     <div className="flex items-center gap-1">
                         {fixedCards.map((cardId) => {
                             const c = cardsMaster.find((item) => item.id === cardId);
-                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                     </div>
                 ),
@@ -377,7 +382,7 @@ export default function CustomRulesModal({
                     <div className="flex items-center gap-1">
                         {excludedCards.slice(0, 5).map((cardId) => {
                             const c = cardsMaster.find((item) => item.id === cardId);
-                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                         {excludedCards.length > 5 && (
                             <span className="text-[10px] text-on-surface-variant font-mono">+{excludedCards.length - 5}</span>
@@ -530,7 +535,7 @@ export default function CustomRulesModal({
                     <div className="flex items-center gap-1">
                         {singleCardOverrides.slice(0, 5).map((entry) => {
                             const c = cardsMaster.find((item) => item.id === entry.cardId);
-                            return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                         {singleCardOverrides.length > 5 && (
                             <span className="text-[10px] text-on-surface-variant font-mono">+{singleCardOverrides.length - 5}</span>
@@ -565,7 +570,7 @@ export default function CustomRulesModal({
         keepAfterTrainingState, supportMasterMax, supportSkillMax, filterOtherUnit,
         areaItemLevel, areaItemOverrides, characterRank, characterRankOverrides,
         mysekaiGateLevel, mysekaiGateOverrides, mysekaiFixtureBonusRate, mysekaiFixtureOverrides,
-        singleCardOverrides, boost, otherScore, limit, timeoutSeconds, cardsMaster, onChange, t
+        singleCardOverrides, boost, otherScore, limit, timeoutSeconds, cardsMaster, assetSource, onChange, t
     ]);
 
     const tabs: { key: TabKey; label: string }[] = [
@@ -793,7 +798,7 @@ export default function CustomRulesModal({
                                                         onClick={() => onChange({ fixedCards: fixedCards.filter((v) => v !== cardId) })}
                                                         className="relative rounded-md3-sm overflow-hidden hover:opacity-75 transition-opacity"
                                                     >
-                                                        {master ? <SekaiCardThumbnail card={master} trained={false} width={42} /> : <span className="text-xs">#{cardId}</span>}
+                                                        {master ? <SekaiCardThumbnail card={master} trained={false} width={42} assetSource={assetSource} /> : <span className="text-xs">#{cardId}</span>}
                                                         <span className="absolute top-0 right-0 bg-error text-on-error text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
                                                     </button>
                                                 );
@@ -830,7 +835,7 @@ export default function CustomRulesModal({
                                                         onClick={() => onChange({ excludedCards: excludedCards.filter((v) => v !== cardId) })}
                                                         className="relative rounded-md3-sm overflow-hidden hover:opacity-75 transition-opacity"
                                                     >
-                                                        {master ? <SekaiCardThumbnail card={master} trained={false} width={42} /> : <span className="text-xs">#{cardId}</span>}
+                                                        {master ? <SekaiCardThumbnail card={master} trained={false} width={42} assetSource={assetSource} /> : <span className="text-xs">#{cardId}</span>}
                                                         <span className="absolute top-0 right-0 bg-error text-on-error text-[9px] w-4 h-4 rounded-bl flex items-center justify-center font-bold">×</span>
                                                     </button>
                                                 );
@@ -1136,6 +1141,7 @@ export default function CustomRulesModal({
                                                     key={entry.cardId}
                                                     entry={entry}
                                                     master={master}
+                                                    assetSource={assetSource}
                                                     onChange={(updated) => {
                                                         onChange({
                                                             singleCardOverrides: singleCardOverrides.map((e) =>

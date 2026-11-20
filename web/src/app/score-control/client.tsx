@@ -17,7 +17,7 @@ import { preloadDeckEngine } from "@/lib/deck-engine/wasm-loader";
 
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { replaceAssetSourceRegion, useTheme } from "@/contexts/ThemeContext";
 import { getCharacterName } from "@/lib/i18n";
 import { getMusicJacketUrl } from "@/lib/assets";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
@@ -171,6 +171,7 @@ function getErrorMessage(error: string, t: ScoreControlTranslationFn): string {
 export default function ScoreControlClient() {
     const { t, formatDate, formatNumber } = useI18n();
     const { assetSource } = useTheme();
+    const jpAssetSource = useMemo(() => replaceAssetSourceRegion(assetSource, "jp"), [assetSource]);
 
     // Music selection state
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
@@ -875,6 +876,7 @@ export default function ScoreControlClient() {
                         trained={showTrained}
                         mastery={masterRank}
                         width={thumbWidth}
+                        assetSource={jpAssetSource}
                     />
                     {i === 0 && (
                         <div className="absolute bottom-0 right-0 bg-primary text-on-primary text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none z-10">L</div>
@@ -1640,7 +1642,7 @@ export default function ScoreControlClient() {
 
                                                                         {song.assetbundleName && result.songs.length < 5 && (
                                                                             <div className="relative w-8 h-8 rounded overflow-hidden flex-shrink-0 ring-1 ring-outline-variant">
-                                                                                <Image src={getMusicJacketUrl(song.assetbundleName, assetSource)} alt={song.musicTitle} fill className="object-cover" unoptimized />
+                                                                                <Image src={getMusicJacketUrl(song.assetbundleName, jpAssetSource)} alt={song.musicTitle} fill className="object-cover" unoptimized />
                                                                             </div>
                                                                         )}
                                                                         <span className="text-xs text-on-surface group-hover:text-primary transition-colors">{song.musicTitle}</span>
