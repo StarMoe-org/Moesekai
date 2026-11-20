@@ -1,7 +1,8 @@
 /**
  * The episodes the story player page lists: what each server's masterdata names, kept to
- * those its story library holds (`ripper.lock.json`). An episode is named by its selector in
- * the library, as the story pages name it to the Live2D player:
+ * those the version the story data site publishes now holds (this site's list of them,
+ * `/api/live2d/<region>/episodes`). An episode is named by its selector, as the story pages name
+ * it to the Live2D player:
  *
  * - event `event:<event>/<episode>`
  * - main story `unit:<chapter's assetbundleName>/<episode>`
@@ -9,7 +10,7 @@
  * - special `special:<id>/<episode>`
  * - area talk `area:<area>/<actionSet>`
  *
- * Self introductions are not in the library and are not listed.
+ * Self introductions are not published and are not listed.
  */
 import { getAreaCategory, categoryToUrlParam, type IActionSet } from "@/app/story/area/areaCategory";
 import { selectCardStoryParts, type ICardStoryEpisode } from "@/app/story/card/cardStoryParts";
@@ -21,7 +22,7 @@ export const STORY_KINDS = ["event", "unit", "card", "special", "area"] as const
 
 export type StoryKind = (typeof STORY_KINDS)[number];
 
-/** The page's address for an episode of a server's library. */
+/** The page's address for an episode of a server. */
 export function storyPlayerHref(region: string, selector?: string | null): string {
     // the selector's `:` and `/` may stand in a query as they are: the address stays readable
     const query = [`server=${encodeURIComponent(region)}`, ...(selector ? [`ep=${encodeURIComponent(selector).replace(/%3A/g, ":").replace(/%2F/g, "/")}`] : [])];
@@ -124,38 +125,41 @@ function master<T>(region: SseWebRegion, path: string): Promise<T> {
     return fetchMasterData<T>(path, false, region);
 }
 
-interface RipperLock {
-    episodes?: unknown;
+/** The episodes a server publishes, as far as the page knows them. */
+export interface PublishedEpisodes {
+    has(selector: string): boolean;
 }
 
-const libraries = new Map<SseWebRegion, Promise<Set<string>>>();
+/** While the list cannot be had, every episode the masterdata names is offered (one not published fails to open). */
+const ANY_EPISODE: PublishedEpisodes = { has: () => true };
+
+const published = new Map<SseWebRegion, Promise<PublishedEpisodes>>();
 
 /**
- * The selectors the server's story library holds (its `ripper.lock.json`), cards written
- * `former` / `latter`. Read once per page load.
+ * The selectors of the episodes the version the site publishes now holds, cards written
+ * `former` / `latter`: this site's list of them (built by the backend with its Live2D catalogue).
+ * Read once per page load; while the list is not ready or cannot be had, every episode counts.
  */
-export function fetchLibraryEpisodes(region: SseWebRegion): Promise<Set<string>> {
-    const known = libraries.get(region);
+export function fetchLibraryEpisodes(region: SseWebRegion): Promise<PublishedEpisodes> {
+    const known = published.get(region);
     if (known) return known;
-    const sources = sseWebSources(region);
-    if (!sources) return Promise.resolve(new Set());
-    const url = `${sources.library}ripper.lock.json`;
-    const loading = fetch(sources.proxy ? url.replace(/^https:\/\//, sources.proxy) : url)
+    if (!sseWebSources(region)) return Promise.resolve({ has: () => false });
+    const loading = fetch(`/api/live2d/${region}/episodes`, { headers: { Accept: "application/json" } })
         .then(response => {
-            if (!response.ok) throw new Error(`ripper.lock.json: HTTP ${response.status}`);
-            return response.json() as Promise<RipperLock>;
+            if (!response.ok) throw new Error(`episodes: HTTP ${response.status}`);
+            return response.json() as Promise<{ complete?: unknown; episodes?: unknown }>;
         })
-        .then(lock => {
-            if (!Array.isArray(lock.episodes)) throw new Error("ripper.lock.json: no episodes");
-            return new Set(lock.episodes.flatMap(episode => {
+        .then(list => {
+            if (list.complete !== true || !Array.isArray(list.episodes)) return ANY_EPISODE;
+            return new Set(list.episodes.flatMap(episode => {
                 const selector = parseSelector(typeof episode === "string" ? episode : null);
                 return selector ? [selector] : [];
             }));
         });
-    libraries.set(region, loading);
-    // a failure is not kept: the next call tries again
-    loading.catch(() => libraries.delete(region));
-    return loading;
+    published.set(region, loading);
+    // a list not ready is asked for again on the next call
+    loading.then(list => { if (list === ANY_EPISODE) published.delete(region); }, () => published.delete(region));
+    return loading.catch(() => ANY_EPISODE);
 }
 
 interface IEventInfo { id: number; name: string; assetbundleName: string }
@@ -182,7 +186,7 @@ interface ISpecialStory {
 interface IArea { id: number; name: string; subName?: string }
 interface ICharacter2D { id: number; characterType: string; characterId: number }
 
-type Builder = (region: SseWebRegion, library: Set<string>) => Promise<{ groups: StoryGroup[]; byEvent?: StoryGroup[] }>;
+type Builder = (region: SseWebRegion, library: PublishedEpisodes) => Promise<{ groups: StoryGroup[]; byEvent?: StoryGroup[] }>;
 
 /** A group for an event, named and pictured as the event is. */
 function eventGroup(key: string, kind: StoryKind, event: IEventInfo | undefined, id: number): StoryGroup {

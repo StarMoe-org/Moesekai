@@ -87,8 +87,8 @@ function Live2DViewerContent() {
     }, [region, shownId, linkedCharacter, listLoading]);
 
     // The viewer.
-    const library = region ? live2dSources(region).library : "";
-    const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ library, model: current });
+    const sources = live2dSources(region ?? "jp");
+    const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ sources, model: current });
     const [loop, setLoop] = useState(false);
     const [background, setBackground] = useState<string | null>(null);
     const line = assetSource.startsWith("backup") ? "backup" : "main";

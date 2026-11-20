@@ -31,9 +31,10 @@ export interface SsePlayerProgressPart {
 }
 
 export interface SsePlayerProgress {
+    /** Opening the episode (`episode`), then the audio of its first instructions (`audio`). */
     sim?: SsePlayerProgressPart;
+    /** Reading the interface from the client view (`client`). */
     render?: SsePlayerProgressPart;
-    kit?: SsePlayerProgressPart;
 }
 
 /**
@@ -70,13 +71,16 @@ export interface SsePlayerOptions {
     pkg: string;
     /** Cubism Core for Web, when not the one at Live2D's own address. */
     core?: string;
-    sources: { library: string; inapp: string; proxy?: string };
+    /** The site that publishes the story data and the server whose version is played (the one published now unless `version` is given). */
+    sources: { site: string; region: string; version?: string; proxy?: string };
     /** Fonts to draw the text with in place of the client's (which are then not fetched). */
     fonts?: { body: { url: string; weight?: number }[]; name: { url: string; weight?: number }[] };
     selector: string;
     width: number;
     height: number;
     playerName?: string;
+    /** `MMDDHH`: an area conversation's characters wear the area costumes of that date. */
+    areaDate?: string;
     auto?: boolean;
     /** Experimental anti-aliasing of the Live2D models; none when left out. */
     experimentalAntialiasing?: SsePlayerAntialiasing;

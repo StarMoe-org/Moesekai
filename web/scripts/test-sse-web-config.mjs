@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 
 const { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, SSE_WEB_PATH, sseWebCheckSources, sseWebCoreUrl, sseWebFonts, sseWebSources } = await import("../src/lib/sseWeb/config.ts");
 
-const NAMES = ["NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE", "NEXT_PUBLIC_SSE_WEB_INAPP_BASE", "NEXT_PUBLIC_SSE_WEB_INAPPS", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY", "NEXT_PUBLIC_SSE_WEB_FONT_BASE", "NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS", "NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS"];
+const NAMES = ["NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_SSE_WEB_SITE", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY", "NEXT_PUBLIC_SSE_WEB_FONT_BASE", "NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS", "NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS"];
 const set = (values) => {
     for (const name of NAMES) delete process.env[name];
     Object.assign(process.env, values);
@@ -12,28 +12,17 @@ const set = (values) => {
 
 assert.equal(SSE_WEB_PATH, "/sse-web/");
 
-// With nothing set the player reads the published libraries and loads Live2D's own Cubism
-// Core; Docker passes empty strings for what is not set.
-for (const empty of [{}, { NEXT_PUBLIC_SSE_WEB_CORE_URL: "  ", NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE: "" }]) {
+// With nothing set the player reads the story data site's published versions and loads Live2D's
+// own Cubism Core; Docker passes empty strings for what is not set.
+for (const empty of [{}, { NEXT_PUBLIC_SSE_WEB_CORE_URL: "  ", NEXT_PUBLIC_SSE_WEB_SITE: "" }]) {
     set(empty);
     assert.equal(sseWebCoreUrl(), null);
-    // Each server reads its own library; only JP and CN have a client unpack of their own.
-    assert.deepEqual(sseWebSources("jp"), {
-        library: "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/",
-        inapp: "https://assets.pjsk.moe/sekai-extra-assets/inapp/jp-7.0.0/",
-        borrowedUi: false,
-    });
-    assert.deepEqual(sseWebSources("cn"), {
-        library: "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/cn/",
-        inapp: "https://assets.pjsk.moe/sekai-extra-assets/inapp/cn-6.4.0/",
-        borrowedUi: false,
-    });
+    // Each server reads its own version; only JP and CN have a client view of their own.
+    for (const region of ["jp", "cn"]) {
+        assert.deepEqual(sseWebSources(region), { site: "https://storage.pjsk.moe/", region, borrowedUi: false });
+    }
     for (const region of ["tw", "kr", "en"]) {
-        assert.deepEqual(sseWebSources(region), {
-            library: `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/${region}/`,
-            inapp: "https://assets.pjsk.moe/sekai-extra-assets/inapp/cn-6.4.0/",
-            borrowedUi: true,
-        });
+        assert.deepEqual(sseWebSources(region), { site: "https://storage.pjsk.moe/", region, borrowedUi: true });
     }
     assert.equal(sseWebSources("xx"), null);
     // A build that found no open fonts and was given no directory of them: the client's fonts
@@ -96,25 +85,11 @@ assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SS
 
 set({
     NEXT_PUBLIC_SSE_WEB_CORE_URL: " https://example.test/vendor/live2dcubismcore.min.js ",
-    NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE: "https://assets.example.test/bucket/library/",
-    NEXT_PUBLIC_SSE_WEB_INAPP_BASE: "https://assets.example.test/bucket/inapp/",
-    NEXT_PUBLIC_SSE_WEB_INAPPS: "jp=jp-7.1.0, cn=cn-6.4.0",
+    NEXT_PUBLIC_SSE_WEB_SITE: "https://data.example.test/stories/",
 });
 assert.equal(sseWebCoreUrl(), "https://example.test/vendor/live2dcubismcore.min.js");
-assert.deepEqual(sseWebSources("jp"), {
-    library: "https://assets.example.test/bucket/library/jp/",
-    inapp: "https://assets.example.test/bucket/inapp/jp-7.1.0/",
-    borrowedUi: false,
-});
-// A server left out of the list has no Live2D playback.
-assert.equal(sseWebSources("tw"), null);
+assert.deepEqual(sseWebSources("jp"), { site: "https://data.example.test/stories/", region: "jp", borrowedUi: false });
 sseWebCheckSources();
-
-// The list is region=unpack pairs of known servers, each once.
-for (const value of ["jp", "jp=", "xx=jp-7.0.0", "jp=jp-7.0.0,jp=jp-6.8.1", "jp=../other", "jp=a/b", "jp=jp-7.0.0=x"]) {
-    set({ NEXT_PUBLIC_SSE_WEB_INAPPS: value });
-    assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_INAPPS/, value);
-}
 
 // Development: plain http on a loopback host, and a relay for the asset hosts.
 set({
@@ -125,19 +100,19 @@ assert.equal(sseWebCoreUrl(), "http://localhost:8787/core/live2dcubismcore.min.j
 assert.equal(sseWebSources("jp").proxy, "http://127.0.0.1:8787/remote/");
 
 for (const value of [
-    "http://assets.example.test/library/",
-    "https://assets.example.test/library",
-    "https://assets.example.test/library/?v=1",
-    "https://assets.example.test/library/#",
-    "https://assets.example.test/a b/",
-    "https://assets.example.test/library/../",
-    "https://user@assets.example.test/library/",
-    "//assets.example.test/library/",
-    "/library/",
-    "ftp://assets.example.test/library/",
+    "http://data.example.test/",
+    "https://data.example.test/stories",
+    "https://data.example.test/?v=1",
+    "https://data.example.test/#",
+    "https://data.example.test/a b/",
+    "https://data.example.test/stories/../",
+    "https://user@data.example.test/",
+    "//data.example.test/",
+    "/stories/",
+    "ftp://data.example.test/",
 ]) {
-    set({ NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE: value });
-    assert.throws(() => sseWebSources("jp"), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE/, value);
+    set({ NEXT_PUBLIC_SSE_WEB_SITE: value });
+    assert.throws(() => sseWebSources("jp"), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_SITE/, value);
 }
 
 for (const value of ["https://example.test/vendor/", "https://example.test/core.wasm", "http://example.test/core.js", "core.js"]) {
@@ -145,9 +120,7 @@ for (const value of ["https://example.test/vendor/", "https://example.test/core.
     assert.throws(() => sseWebCoreUrl(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_CORE_URL/, value);
 }
 
-set({ NEXT_PUBLIC_SSE_WEB_INAPP_BASE: "https://assets.example.test/inapp" });
-assert.throws(() => sseWebSources("jp"), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_INAPP_BASE/);
-set({ NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE: "http://assets.example.test/library/" });
-assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE/);
+set({ NEXT_PUBLIC_SSE_WEB_SITE: "http://data.example.test/" });
+assert.throws(() => sseWebCheckSources(), /sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_SITE/);
 
 console.log("sse-web config OK");

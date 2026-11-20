@@ -24,6 +24,11 @@ type Config struct {
 	// guess-music), e.g. http://moesekai-api.zeabur.internal:8080. Empty
 	// leaves /api/auth/ and /api/guess-music/ unavailable.
 	MoesekaiAPIURL string
+
+	// Live2DSite is the site that publishes the story data, whose episodes the Live2D model
+	// catalogue (/api/live2d/<region>/models) is derived from; Live2DDataDir keeps that catalogue.
+	Live2DSite    string
+	Live2DDataDir string
 }
 
 func Load() *Config {
@@ -41,6 +46,8 @@ func Load() *Config {
 		NextBuildID:         getEnv("NEXT_BUILD_ID", ""),
 		StaticArchiveDir:    getEnv("STATIC_ARCHIVE_DIR", "./data/static_archive"),
 		MoesekaiAPIURL:      strings.TrimSpace(os.Getenv("MOESEKAI_API_URL")),
+		Live2DSite:          getEnv("LIVE2D_SITE", "https://storage.pjsk.moe"),
+		Live2DDataDir:       getEnv("LIVE2D_DATA_DIR", defaultDataDir("live2d")),
 	}
 	return cfg
 }
@@ -74,6 +81,14 @@ func getEnv(key, defaultValue string) string {
 		return v
 	}
 	return defaultValue
+}
+
+// defaultDataDir is `name` under /app/data when the container has it, else under ./data.
+func defaultDataDir(name string) string {
+	if fi, err := os.Stat("/app/data"); err == nil && fi.IsDir() {
+		return "/app/data/" + name
+	}
+	return "./data/" + name
 }
 
 func defaultHTMLCacheDir() string {

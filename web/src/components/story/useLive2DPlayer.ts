@@ -105,6 +105,13 @@ function absolute(font: SseWebFontFile): SseWebFontFile {
     return { ...font, url: new URL(font.url, window.location.origin).href };
 }
 
+/** Now as `MMDDHH`, in the reader's own time. */
+function areaDateNow(): string {
+    const now = new Date();
+    const two = (n: number) => String(n).padStart(2, "0");
+    return `${two(now.getMonth() + 1)}${two(now.getDate())}${two(now.getHours())}`;
+}
+
 /**
  * An sse-web player and what is shown about it: loading, playing, its position, failures and
  * the reader's settings. The picture is drawn in the element `stageRef` is given (see `Live2DStage`);
@@ -226,25 +233,26 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 js: sseWebScriptBase(),
                 pkg: "pkg/",
                 ...(core ? { core } : {}),
-                sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
+                sources: { site: sources.site, region: sources.region, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
                 // the workers fetch the fonts: a path of this origin has to be a whole URL for them
                 ...(fonts ? { fonts: { body: fonts.body.map(absolute), name: fonts.name.map(absolute) } } : {}),
                 selector,
                 width,
                 height,
                 playerName: t("page.story.live2d.playerName"),
+                // an area conversation is dressed for today, as the game dresses it
+                areaDate: areaDateNow(),
                 auto: true,
                 experimentalAntialiasing: antialiasing,
                 highFps: highFpsRef.current,
-                onProgress: ({ sim, render, kit }) => {
+                onProgress: ({ sim, render }) => {
                     if (epoch !== epochRef.current) return;
-                    // the two workers' file counts; the UI kit is found file by file and only adds bytes
-                    const files = [sim, render].filter(part => part?.phase === "files");
-                    const done = files.reduce((sum, part) => sum + (part?.done ?? 0), 0);
-                    const total = files.reduce((sum, part) => sum + (part?.total ?? 0), 0);
+                    // the files of the episode are found as it opens; only the audio of the first
+                    // instructions, last, comes with a count
+                    const counted = sim?.phase === "audio" && sim.total > 0;
                     setProgress({
-                        fraction: files.length === 2 && total > 0 ? done / total : undefined,
-                        megabytes: ((sim?.bytes ?? 0) + (render?.bytes ?? 0) + (kit?.bytes ?? 0)) / 1e6,
+                        fraction: counted ? sim.done / sim.total : undefined,
+                        megabytes: ((sim?.bytes ?? 0) + (render?.bytes ?? 0)) / 1e6,
                     });
                 },
             });

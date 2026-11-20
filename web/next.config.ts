@@ -43,7 +43,7 @@ try {
   sseWebCoreUrl();
   sseWebCheckSources();
 } catch (error) {
-  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /; NEXT_PUBLIC_SSE_WEB_INAPPS is region=unpack pairs`);
+  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /`);
 }
 try {
   costume3dCheckConfig();
