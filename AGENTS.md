@@ -5,7 +5,7 @@
 ## 技术栈
 
 - **前端**: Next.js 16 (`output: "standalone"`, 服务端路由 + CSR 页面交互), React 19, TypeScript, **Tailwind CSS 4**, framer-motion, echarts
-- **后端**: Go (net/http), Redis 缓存 + 内存回退
+- **后端**: Go (net/http)，HTML 响应用磁盘缓存（`internal/htmlcache`），不使用 Redis
 
 ## 核心架构
 

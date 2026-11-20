@@ -23,7 +23,7 @@ export default function SekaiCardThumbnail({
 }: SekaiCardThumbnailProps) {
     const { assetSource: themeAssetSource } = useTheme();
     const assetSource = customAssetSource ?? themeAssetSource;
-    const [imageError, setImageError] = React.useState(false);
+    const [failedUrl, setFailedUrl] = React.useState<string | null>(null);
     // Card grids render many of these; a literal id would collide and every
     // clipPath reference would resolve to the first instance in the document.
     const clipId = `cardClip-${React.useId()}`;
@@ -51,6 +51,7 @@ export default function SekaiCardThumbnail({
         isTrained,
         assetSource
     );
+    const imageError = failedUrl === cardImageUrl;
 
     // 2. Frame
     // frame_rarity_{rarity}.png
@@ -159,7 +160,7 @@ export default function SekaiCardThumbnail({
                     height="152"
                     preserveAspectRatio="xMidYMid slice"
                     clipPath={`url(#${clipId})`}
-                    onError={() => setImageError(true)}
+                    onError={() => setFailedUrl(cardImageUrl)}
                 />
 
                 {/* 2. Frame */}

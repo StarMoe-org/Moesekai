@@ -1,6 +1,341 @@
 {
-  "markdown": "# 更新日志\n\n## v2.0.0 — 正式版本机制上线\n\n站点启用三段式语义版本（`v主版本.次版本.修订号`），基准版本为 v2.0.0，机制详见 `docs/VERSIONING.md`。\n\n- 版本号由 git tag 自动派生：以最新 `vX.Y.Z` tag 为基准，之后的每个 commit 自动让修订号 +1（例如 v2.0.0 后第 37 个提交显示 v2.0.37），无需手工改版本文件。\n- 设置面板页脚与「关于」页显示真实版本号、构建提交与构建日期，并提供 GitHub 发布页 / 更新日志入口（此前页脚写死的 `1.8-preview-beta1` 已移除）。\n- 新增一键发版 GitHub Action（Release workflow）：选择 patch / minor / major 即可基于当前版本自动打 tag 并生成 GitHub Release；普通部署流程不变（push main 自动上线，镜像同时带 `v<版本>` tag）。\n- 新增站内更新日志页 `/changelog`（展示最近提交和本文件的手写记录，国内用户无需打开 GitHub 即可查看）；设置「关于」页的按钮改为竖排全宽，并新增「支持我们」直达赞助页的入口。\n- 修复生产环境 `/api/sponsors` 被 Go 网关的未知 API 兜底规则拦截为 404（赞助名单与 Ko-fi Webhook 此前在生产环境均不可达）；赞助者为零时改为显示空状态，不再误报「加载失败」。\n\n## 2026-09-19 — 代码审查修复轮\n\n一轮以“不丢失现有功能与行为”为前提的审查，共 28 个提交，全部为缺陷修复与一处文档更正，没有新增功能，没有接口变更。\n\n### 数据与缓存\n\n- masterdata 的 IndexedDB 缓存键加入游戏服务器，切换区服不再读到上一个区服的数据。\n- 按区服拉取 masterdata 时遵循资源站点偏好设置。\n- 搜索索引改为读取实际对外服务的 `/files` 路径。\n- htmlcache 在淘汰之后再写持久化伴随文件，不再先写后淘汰。\n- MCP 加载磁盘上真实存在的日服 metadata 映射。\n\n### 页面与交互\n\n- 卡牌缩略图各自生成独立的 clipPath id，不再互相覆盖。\n- 扭蛋卡池弹窗里真实非零的出率不再显示为 `0.00%`，低于 0.01% 的统一显示 `<0.01%`；仅在存在扭蛋详情时才显示出率徽章。\n- 音乐封面角标不再重复绘制；APPEND 难度能完整放入难度网格。\n- 「我的歌曲」用日文原题作为键来检索中文曲名。\n- 「我的卡牌」的技能类型筛选此前未接线，现已生效。\n- 贴纸工坊忽略过期的图片加载回调，避免旧图覆盖新图。\n- 非数字或为 0 的路由参数能正确结束加载态；服装与漫画的未找到提示显示原始路由片段，不再显示 `NaN`。\n- 实时排行榜（Next）修正两处被多余花括号破坏的类名。\n- 活动预测不再把所有较新的日服活动都标成 World Link。\n\n### 剧情、游戏与账号\n\n- 剧情语音地址按完整路径缓存，不再只按语音 id 缓存而互相串台。\n- 多人游戏两种模式下的格挡盾不再被减半统计。\n- 房主的回合结束广播移出 setState 更新函数执行。\n- 组卡分数控制真正复用常驻的组卡 worker。\n- OAuth 令牌刷新按账号去重，且不再因瞬时故障停用账号。\n- Service Worker 正确缓存跨域图片资源。\n\n### 服务端\n\n- `/api/gachas/` 下多余的路径片段返回 404。\n- markdown 协商在记录上游 HTML 前去掉 `Accept-Encoding`。\n- 更正 README：`HTML_CACHE_DIR` 为空并不会关闭磁盘缓存。\n\n### 验证\n\n- 门禁：`go build` / `go vet` / `go test` 均通过；`tsc` 与 `eslint` 无错误；`node --test` 121/121；`lint:i18n` 通过（含硬编码文案扫描、46 条可索引 SEO 路由、翻译覆盖校验）。\n- 构建：按 `Dockerfile` 的真实口径用 bun 跑通 `copy:wasm` → `sitemap` → `generate:metadata` → `build:next`，standalone 产物正常生成。\n- 部署产物实跑：standalone 配合 Go 网关，17 条真实路由与五种语言首页全部 200，`sitemap.xml` 与 `sitemap-main.xml` 正常。\n- 浏览器校验：桌面与 390px 移动端均无横向溢出，控制台零错误零警告；对改动过的路径逐项确认（卡池弹窗出率徽章、服装页无 `NaN`、`/api/gachas/` 多余片段 404）。\n",
+  "markdown": "# 更新日志\n\n## v2.1.0 — 三大重磅新工具与全站体验升级\n\n全新剧情搜索器、3D 抽卡模拟器、多结构资产浏览器与版本追踪正式上线，同步带来全站触底自动展开、卡牌页全新视图及多项细节优化。\n\n- **全新剧情搜索器（`/story-search`）**：新增 AI 语义检索与浏览器本地文本 / 正则混合检索，记不清原台词也能按场景氛围或模糊印象定位名场面；支持国服 / 日服剧情库，按剧情类型、角色与团体筛选，支持详细 / 精简发言人视图切换与一键跳转阅读。\n- **全新 3D 抽卡模拟器（`/gacha-simulator`、`/gacha/[id]`）**：接入完整 3D 抽卡舞台演出，呈现开场动画、星级特效与卡面台词，支持跳过、静音、全屏与重播；新增通用历史卡池选择与 DIY 自选模拟（自定义概率、UP 卡面与保底规则），并在各卡池详情页同步支持 3D 模拟抽卡。\n- **全新资产浏览器与版本追踪（`/asset-viewer`、`/asset-versions`）**：全新分栏式多结构资产浏览器，支持原始存储、规范结构与客户端包三套视图及无损 PNG 原图预览下载；内置独家全游戏资源搜索，跨完整目录树一键检索文件与文件夹；资产版本页按时间线追踪增删改动，并智能区分源文件变动与仅格式转换更新。\n- **全站体验升级与杂项优化**：全局列表页新增「滑动到底部自动展开」（告别反复手动点击加载更多，可在设置 → 内容中随时开关）；卡牌页新增大图预览与表格视图并独立记忆桌面 / 移动端偏好；StarMoe 账号与互联同步升级；全服统一升级新版实时排行榜，同步修复歌词振假名、3D 服装索引、称号边框与移动端显示细节；新增 v2.1 版本更新公告弹窗与官方 MoeSekai 徽标矢量图更新。\n- **流畅访问小贴士**：若页面或图片资源加载较慢，可在「设置 → 数据 → Assets 线路」中切换为「备用线路」以获得更流畅的访问体验。\n\n## v2.0.0 — 正式版本机制上线\n\n站点启用三段式语义版本（`v主版本.次版本.修订号`），基准版本为 v2.0.0，机制详见 `docs/VERSIONING.md`。\n\n- 版本号由 git tag 自动派生：以最新 `vX.Y.Z` tag 为基准，之后的每个 commit 自动让修订号 +1（例如 v2.0.0 后第 37 个提交显示 v2.0.37），无需手工改版本文件。\n- 设置面板页脚与「关于」页显示真实版本号、构建提交与构建日期，并提供 GitHub 发布页 / 更新日志入口（此前页脚写死的 `1.8-preview-beta1` 已移除）。\n- 新增一键发版 GitHub Action（Release workflow）：选择 patch / minor / major 即可基于当前版本自动打 tag 并生成 GitHub Release；普通部署流程不变（push main 自动上线，镜像同时带 `v<版本>` tag）。\n- 新增站内更新日志页 `/changelog`（展示最近提交和本文件的手写记录，国内用户无需打开 GitHub 即可查看）；设置「关于」页的按钮改为竖排全宽，并新增「支持我们」直达赞助页的入口。\n- 修复生产环境 `/api/sponsors` 被 Go 网关的未知 API 兜底规则拦截为 404（赞助名单与 Ko-fi Webhook 此前在生产环境均不可达）；赞助者为零时改为显示空状态，不再误报「加载失败」。\n\n## 2026-09-19 — 代码审查修复轮\n\n一轮以“不丢失现有功能与行为”为前提的审查，共 28 个提交，全部为缺陷修复与一处文档更正，没有新增功能，没有接口变更。\n\n### 数据与缓存\n\n- masterdata 的 IndexedDB 缓存键加入游戏服务器，切换区服不再读到上一个区服的数据。\n- 按区服拉取 masterdata 时遵循资源站点偏好设置。\n- 搜索索引改为读取实际对外服务的 `/files` 路径。\n- htmlcache 在淘汰之后再写持久化伴随文件，不再先写后淘汰。\n- MCP 加载磁盘上真实存在的日服 metadata 映射。\n\n### 页面与交互\n\n- 卡牌缩略图各自生成独立的 clipPath id，不再互相覆盖。\n- 扭蛋卡池弹窗里真实非零的出率不再显示为 `0.00%`，低于 0.01% 的统一显示 `<0.01%`；仅在存在扭蛋详情时才显示出率徽章。\n- 音乐封面角标不再重复绘制；APPEND 难度能完整放入难度网格。\n- 「我的歌曲」用日文原题作为键来检索中文曲名。\n- 「我的卡牌」的技能类型筛选此前未接线，现已生效。\n- 贴纸工坊忽略过期的图片加载回调，避免旧图覆盖新图。\n- 非数字或为 0 的路由参数能正确结束加载态；服装与漫画的未找到提示显示原始路由片段，不再显示 `NaN`。\n- 实时排行榜（Next）修正两处被多余花括号破坏的类名。\n- 活动预测不再把所有较新的日服活动都标成 World Link。\n\n### 剧情、游戏与账号\n\n- 剧情语音地址按完整路径缓存，不再只按语音 id 缓存而互相串台。\n- 多人游戏两种模式下的格挡盾不再被减半统计。\n- 房主的回合结束广播移出 setState 更新函数执行。\n- 组卡分数控制真正复用常驻的组卡 worker。\n- OAuth 令牌刷新按账号去重，且不再因瞬时故障停用账号。\n- Service Worker 正确缓存跨域图片资源。\n\n### 服务端\n\n- `/api/gachas/` 下多余的路径片段返回 404。\n- markdown 协商在记录上游 HTML 前去掉 `Accept-Encoding`。\n- 更正 README：`HTML_CACHE_DIR` 为空并不会关闭磁盘缓存。\n\n### 验证\n\n- 门禁：`go build` / `go vet` / `go test` 均通过；`tsc` 与 `eslint` 无错误；`node --test` 121/121；`lint:i18n` 通过（含硬编码文案扫描、46 条可索引 SEO 路由、翻译覆盖校验）。\n- 构建：按 `Dockerfile` 的真实口径用 bun 跑通 `copy:wasm` → `sitemap` → `generate:metadata` → `build:next`，standalone 产物正常生成。\n- 部署产物实跑：standalone 配合 Go 网关，17 条真实路由与五种语言首页全部 200，`sitemap.xml` 与 `sitemap-main.xml` 正常。\n- 浏览器校验：桌面与 390px 移动端均无横向溢出，控制台零错误零警告；对改动过的路径逐项确认（卡池弹窗出率徽章、服装页无 `NaN`、`/api/gachas/` 多余片段 404）。\n",
   "commits": [
+    {
+      "sha": "e9a193b3486637197ed70c25a1cea72333ab8034",
+      "date": "2026-11-21",
+      "subject": "feat(release): add v2.1 release notes modal, feature screenshots, and update official logo SVG"
+    },
+    {
+      "sha": "10c11e130ca4c5f47753fc87c1ff2c460fa7f388",
+      "date": "2026-11-20",
+      "subject": "fix(story-search): match per-speaker lines accurately, deduplicate sliding chunks, raise limit, fix mode pill"
+    },
+    {
+      "sha": "3c42bc0f8092fd5dd7b49916e70a5407cfd8f103",
+      "date": "2026-11-20",
+      "subject": "Merge branch 'fix/asset-scroll-restore'"
+    },
+    {
+      "sha": "3b6b45f691e20164ae6a6f615900aaaa95020ac4",
+      "date": "2026-11-20",
+      "subject": "fix(asset-explorer): preserve scroll and loaded count and harden auto-load-more"
+    },
+    {
+      "sha": "2a6306a461f264dd32b2b4ee2f3ffb3ab359a7d0",
+      "date": "2026-11-20",
+      "subject": "fix(story-search): polish sidebar entry, pill layout, filters, and brief speaker view"
+    },
+    {
+      "sha": "1271bc0a42bf4f0fe8584b8a929a8bf5dd033ebe",
+      "date": "2026-11-20",
+      "subject": "feat(story-search): add /story-search hybrid search UI and /api/story-search proxy"
+    },
+    {
+      "sha": "4dc032af0030ed7d22b99d338435805f3d3b7de9",
+      "date": "2026-11-20",
+      "subject": "feat(patreon): move sponsor buttons and wall together to top"
+    },
+    {
+      "sha": "7be83abf546c6e2746ba5ad0471858b64e499435",
+      "date": "2026-11-20",
+      "subject": "feat(community): add visit counter prompts and reorder sponsor wall"
+    },
+    {
+      "sha": "043e5c4effff94178e27cfa9e2f6a477cf9e987e",
+      "date": "2026-11-20",
+      "subject": "feat(ui): add global auto-load-more on scroll"
+    },
+    {
+      "sha": "e7c48f7ad860a41a77ff38900692acc1b1e9a61f",
+      "date": "2026-11-20",
+      "subject": "fix(deck): bind deck and account card preview assets to masterdata server"
+    },
+    {
+      "sha": "ef47b438a33af966725409f50d697d5fd6ca94cc",
+      "date": "2026-11-20",
+      "subject": "fix(home): prevent mobile card overflow and empty music title fallback"
+    },
+    {
+      "sha": "d0f15e724f22c250e4bb1718dc91b1e79e8f0782",
+      "date": "2026-11-20",
+      "subject": "Merge pull request #140 from StarMoe-org/claude/main-site-redis-9b805e"
+    },
+    {
+      "sha": "41fc205619b618f90689f18f3540ad16257718c7",
+      "date": "2026-11-20",
+      "subject": "feat(realtime-ranking): unify all regions onto rks-n v2 and remove legacy v1"
+    },
+    {
+      "sha": "3fedb8c9d8d0a7a34811a8fd62250a03fe7b02b6",
+      "date": "2026-11-20",
+      "subject": "Merge pull request #146 from StarMoe-org/fix/deck-recommend-starmoe-data"
+    },
+    {
+      "sha": "6abb1f33f06a3e6448ff5743e459a81316cbc7c2",
+      "date": "2026-11-20",
+      "subject": "fix(deck-recommend): read user data through moesekai-api when signed in"
+    },
+    {
+      "sha": "5463567cadb2b967f7e4f825b2cc98a7dd0cfb2a",
+      "date": "2026-11-20",
+      "subject": "Merge pull request #144 from StarMoe-org/fix/version-label-revision"
+    },
+    {
+      "sha": "af55476724a8d6219ea54678afe4da9446a91905",
+      "date": "2026-11-20",
+      "subject": "fix(asset-versions): make a version picked from the timeline take effect"
+    },
+    {
+      "sha": "cf162935b0fee564781f46339b13aaaddb894c7e",
+      "date": "2026-11-20",
+      "subject": "Merge pull request #143 from StarMoe-org/fix/version-label-revision"
+    },
+    {
+      "sha": "83ed643ef63177604b538ae1667b8b988bf76418",
+      "date": "2026-11-20",
+      "subject": "fix(asset-versions): keep the table revision in the short version label"
+    },
+    {
+      "sha": "0f7dcc63e98b961da9e29ad936656b25f8dc2514",
+      "date": "2026-11-19",
+      "subject": "chore: update master data version"
+    },
+    {
+      "sha": "c0d56b699bea6f4516d06c89017bf02823f81f63",
+      "date": "2026-11-20",
+      "subject": "Merge pull request #141 from StarMoe-org/feat/asset-versions-cause"
+    },
+    {
+      "sha": "a5368e2101fec3828f03f74e1c260fd7483ac5dd",
+      "date": "2026-11-20",
+      "subject": "feat(asset-versions): read version 2 of the version history and show what each change follows from"
+    },
+    {
+      "sha": "982b07d6bc2480d708e22ee3a812121724f2987d",
+      "date": "2026-11-20",
+      "subject": "chore: 移除未使用的 Redis 缓存"
+    },
+    {
+      "sha": "b71057d241e2ddd9b3d69438d18ed3e9d3c8df59",
+      "date": "2026-11-20",
+      "subject": "Merge remote-tracking branch 'origin/main' into asset_viewer_multi_structure"
+    },
+    {
+      "sha": "d7b10ac8620f5c27d4126e192ed839d0640cf70c",
+      "date": "2026-11-20",
+      "subject": "Merge branch 'main' into asset_viewer_multi_structure"
+    },
+    {
+      "sha": "44bdd6e4fa64848a2cdbf44ebad2cea6a5cd1c22",
+      "date": "2026-11-20",
+      "subject": "feat(asset-viewer,asset-versions): 改造多结构分栏资源与版本变更浏览器"
+    },
+    {
+      "sha": "62deff174e2818b9b8163d25889ffabf48a76ab0",
+      "date": "2026-11-20",
+      "subject": "新增 /cards 大卡图预览、设备视图记忆、新版属性/团体图标与卡牌表格视图"
+    },
+    {
+      "sha": "5d6bf6fb70b7ff284359af338de5549326122d47",
+      "date": "2026-11-19",
+      "subject": "Merge pull request #139 from StarMoe-org/fix/profile-multi-account"
+    },
+    {
+      "sha": "d5406dc770a677880a399dfad687393f0491f2aa",
+      "date": "2026-11-19",
+      "subject": "fix(profile): resync any bound account, and show which one failed"
+    },
+    {
+      "sha": "b2544ad70b61beee413dcbfa8a5ddb06209eac91",
+      "date": "2026-11-19",
+      "subject": "Merge pull request #137 from StarMoe-org/feat/starmoe-accounts"
+    },
+    {
+      "sha": "549e3ba8e5f115369cb7ca954fd77ec73b901aea",
+      "date": "2026-11-19",
+      "subject": "使用 bg-primary-container 遮罩填充 3D 抽卡舞台 MoeSekai Logo 主题色"
+    },
+    {
+      "sha": "c47a28da8cfe6d89462ba8f0c9fad153858738e6",
+      "date": "2026-11-19",
+      "subject": "直接渲染 /logo.svg 替代遮罩阴影水印"
+    },
+    {
+      "sha": "f5b379dd479addd98cb31c10ffb8fec343b35149",
+      "date": "2026-11-19",
+      "subject": "升级无水印版 3D 抽卡构建并添加 MoeSekai SVG 舞台角标"
+    },
+    {
+      "sha": "b31409719b9e5e97c0af6d683857abb291398f13",
+      "date": "2026-11-19",
+      "subject": "升级 SekaiGacha 默认舞台地址至 da58491 以修复台词滞留问题"
+    },
+    {
+      "sha": "001d7ddf66d4f49d29c0d1c14554bc4a5a410ed1",
+      "date": "2026-11-19",
+      "subject": "feat(gacha): use SekaiGacha 1.4 with WebP cards, asset line & cache"
+    },
+    {
+      "sha": "bf73f047abac2921f4b0e57eb0a98cbabb169fdb",
+      "date": "2026-11-19",
+      "subject": "Merge remote-tracking branch 'origin/main' into feat/starmoe-accounts"
+    },
+    {
+      "sha": "117a21ec1fdc76df6fdc63c6410fb7700adcc8b9",
+      "date": "2026-11-19",
+      "subject": "Merge pull request #138 from StarMoe-org/feat/storage-client-assets"
+    },
+    {
+      "sha": "15f6484375b9202b7b7a933ee0ef2b521ebe0c49",
+      "date": "2026-11-19",
+      "subject": "feat(accounts): keep game accounts with the StarMoe account and connect Haruki through StarMoe Connect"
+    },
+    {
+      "sha": "1de9544d5ee05bb621b2690fab40dad569f9bd2f",
+      "date": "2026-11-19",
+      "subject": "docs: describe the 3D costume page's default source"
+    },
+    {
+      "sha": "2b3d7cea0180e2ffbe0d797279c22dedf324e0fb",
+      "date": "2026-11-19",
+      "subject": "refactor(story): read scenarios from the storage view only"
+    },
+    {
+      "sha": "885a46f9f1755c8cfb8a91869b5a55a77fc80754",
+      "date": "2026-11-19",
+      "subject": "feat(honors): read the default frames and level icons from the client package"
+    },
+    {
+      "sha": "876b1d16a848887138a17b8a8b276b52dd425b01",
+      "date": "2026-11-19",
+      "subject": "chore: update master data version"
+    },
+    {
+      "sha": "52442c167b9fbbb1cd4ab1619ce202252e11cd47",
+      "date": "2026-11-18",
+      "subject": "perf(asset-versions): show the changed files of a version 200 at a time"
+    },
+    {
+      "sha": "69e3bf42fd358598256e67e328be0886ed2002cf",
+      "date": "2026-11-18",
+      "subject": "feat(assets): follow the global server on the asset viewer and versions pages"
+    },
+    {
+      "sha": "53232ea4913a798c95354e4fd371f06ae10047de",
+      "date": "2026-11-18",
+      "subject": "feat(asset-versions): read the version history and changes of the asset site"
+    },
+    {
+      "sha": "025b45df770b593d6985d0ddea005ad8d034f0b8",
+      "date": "2026-11-18",
+      "subject": "feat(asset-viewer): browse the storage, canonical and client views, with a guide"
+    },
+    {
+      "sha": "0f790e04b4d66c37ed0d9d236dede916b8409820",
+      "date": "2026-11-18",
+      "subject": "feat(costume3d): read costumes from the exporter's published index"
+    },
+    {
+      "sha": "d79f49febc42474eba1e3243acb648306b427ae3",
+      "date": "2026-11-18",
+      "subject": "feat(assets): read the asset site's directories, canonical view and PNG originals"
+    },
+    {
+      "sha": "0870557d02a74f2f5f18d9e29ea17038e6d249f3",
+      "date": "2026-11-14",
+      "subject": "Merge pull request #134 from StarMoe-org/fix/lyrics-gloss-ruby"
+    },
+    {
+      "sha": "4ed0390048bc1ca217d81b72e70a1c298e4f8f78",
+      "date": "2026-11-14",
+      "subject": "fix(lyrics): accept kana readings over non-kanji ruby bases"
+    },
+    {
+      "sha": "01380e79e335c2ee66d4a1da37f759bf1bfe678a",
+      "date": "2026-11-11",
+      "subject": "Merge pull request #133 from StarMoe-org/feat/gacha-simulator"
+    },
+    {
+      "sha": "3276db8ee9f62410005e23ff20f112e086492e26",
+      "date": "2026-11-11",
+      "subject": "feat(gacha): add universal gacha selector and DIY gacha simulator"
+    },
+    {
+      "sha": "b37257733f66ee64d9749f11550f25959b17aad7",
+      "date": "2026-11-11",
+      "subject": "chore(i18n): allowlist CDN notice comments in hardcoded Han scanner"
+    },
+    {
+      "sha": "3a84a0f2d9f87d257ca193ba516e8c4373a90374",
+      "date": "2026-11-11",
+      "subject": "Merge pull request #131 from MetaMikuAI/feat/sekai-gacha-3d"
+    },
+    {
+      "sha": "9bb5f89b62760929e5d679134f4598e2944a1996",
+      "date": "2026-11-11",
+      "subject": "chore: update master data version"
+    },
+    {
+      "sha": "b2efb46303f7ab6f01e930323e27a4ba2d408c65",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): load SekaiGacha 1.3 by default"
+    },
+    {
+      "sha": "6718b1f12bf22fb3020cfea3b6d9808d96bbe404",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): tell the 3D stage which server the card text is from"
+    },
+    {
+      "sha": "0fdd0069539ccb9f30c3360b18ba879fc187c2fc",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): leave skipping to the 3D stage's own skip button"
+    },
+    {
+      "sha": "099d4a6bed96f7c915b1f24fd66193812063e9b5",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): end the 3D stage with finish when the overlay closes"
+    },
+    {
+      "sha": "e1d97f8493da8023576dd412ef346fecad25a35b",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): accept the 3D stage's tap phase"
+    },
+    {
+      "sha": "b951f334020ff77b4050e80290fc318b9c8b3342",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): show each card's name and gacha phrase on the 3D reveal"
+    },
+    {
+      "sha": "b9c5fa03da58a4bba2d1b2cdcb10e67abd8e18a9",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): play each card's own rarity presentation (SekaiGacha 1.1)"
+    },
+    {
+      "sha": "b9290d5732352b454d20599a71ace1c3b2273f8a",
+      "date": "2026-11-10",
+      "subject": "assets主线更改为cf"
+    },
+    {
+      "sha": "995dc72cd24a8b00c9ce9cb13c78d2e152020d33",
+      "date": "2026-11-10",
+      "subject": "feat(gacha): play simulator pulls in the SekaiGacha 3D stage"
+    },
+    {
+      "sha": "ad4472ece9e1d5033cd2c2ee24dccc50961621c6",
+      "date": "2026-11-06",
+      "subject": "chore: update master data version"
+    },
+    {
+      "sha": "b6f321d02cd609329605a79d90189cf251977ec8",
+      "date": "2026-11-06",
+      "subject": "Merge pull request #126 from StarMoe-org/arena/d83c8648-moesekai"
+    },
+    {
+      "sha": "d2d81066147655317047b60e570e6a6784ff06f2",
+      "date": "2026-11-06",
+      "subject": "fix: connect sponsor proxy and track build history"
+    },
     {
       "sha": "bb4358d8cc79084f8e4dcc3d1db5d091ff10d38c",
       "date": "2026-11-06",
@@ -1165,341 +1500,6 @@
       "sha": "983d15529d7952c9e76d3e200b4ad57c71cf0897",
       "date": "2026-09-25",
       "subject": "feat(story): show card story and area talk translations"
-    },
-    {
-      "sha": "82ffd89298115392816339aaa2c0874124eb21ee",
-      "date": "2026-09-25",
-      "subject": "feat(gacha): show translated gacha summaries and descriptions"
-    },
-    {
-      "sha": "76f04f2c96b12d3a8b77c8cd6ed03e46d78e77fd",
-      "date": "2026-09-25",
-      "subject": "fix(start): give the Go server up to 180s to become healthy"
-    },
-    {
-      "sha": "c80496bd13ba0d931d07d0a1ad6df684fc1b3109",
-      "date": "2026-09-25",
-      "subject": "chore: update master data version"
-    },
-    {
-      "sha": "30563ee0a5c22e723ddf3b05f3293675943537bd",
-      "date": "2026-09-25",
-      "subject": "moly: read schema 2 catalogues and packed card images by address"
-    },
-    {
-      "sha": "6f670b382fcd9aadc3a4c615ca3a4ec734d1fdfd",
-      "date": "2026-09-25",
-      "subject": "chore: trigger redeploy of the rollback"
-    },
-    {
-      "sha": "dfd3d86ce17a64f2b05d329e2a2f4acc521d1399",
-      "date": "2026-09-25",
-      "subject": "Revert \"feat(gacha): show translated gacha summaries and descriptions\""
-    },
-    {
-      "sha": "766d2147d7848788db4ff43f59720c3f0c363992",
-      "date": "2026-09-25",
-      "subject": "Revert \"feat(story): show card story and area talk translations\""
-    },
-    {
-      "sha": "9c5e097d94c71f3d5ec0533986ea1a061cccfd66",
-      "date": "2026-09-25",
-      "subject": "feat(moly): expose the stage site dial to the host"
-    },
-    {
-      "sha": "32d8fa9e8816e7f417eeb26eac1d1022838bcaec",
-      "date": "2026-09-25",
-      "subject": "fix(moly): drop the in-frame start step from the stage lifecycle"
-    },
-    {
-      "sha": "7964aa8c4f6e8576748baff762944a6d57cee45d",
-      "date": "2026-09-25",
-      "subject": "feat(story): show card story and area talk translations"
-    },
-    {
-      "sha": "ce63cd14d1d0abbf890ad19e08f8c92346f07f16",
-      "date": "2026-09-25",
-      "subject": "fix(moly): replace older resource worker registrations in place"
-    },
-    {
-      "sha": "dd9733d9ecd35a8a3770f6b8cf9eededb1d0f1ad",
-      "date": "2026-09-24",
-      "subject": "feat(gacha): show translated gacha summaries and descriptions"
-    },
-    {
-      "sha": "c2ef9a4e35145500fda3009ba56ce158230157ed",
-      "date": "2026-09-24",
-      "subject": "feat(moly): read resources from one configured resource base"
-    },
-    {
-      "sha": "25157c2096b56403f4ad3a67f37b43704d1dc505",
-      "date": "2026-09-22",
-      "subject": "初步优化烤森预览UI"
-    },
-    {
-      "sha": "c438c6bb6178ec008871db73f5013bd4fcf3abae",
-      "date": "2026-09-22",
-      "subject": "fix music/:id fatal"
-    },
-    {
-      "sha": "2a274fdafb9f94e10c069ed2cdb7696ac1965094",
-      "date": "2026-09-22",
-      "subject": "Merge pull request #71 from nichinichisou0609/codex/moly-cache-worker-upgrade"
-    },
-    {
-      "sha": "2b734b55cbe14b1ae0521a55fe2379788185d5db",
-      "date": "2026-09-22",
-      "subject": "fix music/:id fatal"
-    },
-    {
-      "sha": "d09b1bc9114aaccdf9f07fdaf03ec793b017216d",
-      "date": "2026-09-22",
-      "subject": "chore: update master data version"
-    },
-    {
-      "sha": "a303471e90407078033305d86387074adaf20baa",
-      "date": "2026-09-22",
-      "subject": "feat(mysekai): expose resource storage usage and cache controls"
-    },
-    {
-      "sha": "4d93d8b27c636f1767a195d9c9abf06d6fbef86c",
-      "date": "2026-09-22",
-      "subject": "fix(mysekai): center normal interaction stage"
-    },
-    {
-      "sha": "243f17aac362f3d96c05282058577d08fe972369",
-      "date": "2026-09-22",
-      "subject": "fix(mysekai): center fullscreen scene and refresh resource worker"
-    },
-    {
-      "sha": "5d600803e006eeafd695700b43d4f47b6d348ab6",
-      "date": "2026-09-21",
-      "subject": "feat(lyrics): add IA external performer avatar and color mapping"
-    },
-    {
-      "sha": "a4139a385726a7ce1fc0b22b91fbd5981df8cb1b",
-      "date": "2026-09-21",
-      "subject": "Merge pull request #70 from nichinichisou0609/refactor/moly-resource-origin-20260921"
-    },
-    {
-      "sha": "9f11cac9009fec505409882ab7eb60ca3db8d115",
-      "date": "2026-09-21",
-      "subject": "fix(moly): name the real cause when resources are not deployed"
-    },
-    {
-      "sha": "45838a7f691f065f70dd07c4f8c5dd5e23df06e3",
-      "date": "2026-09-21",
-      "subject": "fix(moly): leave the resource worker registration unchanged"
-    },
-    {
-      "sha": "890d100354237440734e60e30f97943af7c56aa9",
-      "date": "2026-09-21",
-      "subject": "refactor(moly): deploy the runtime from one configured resource origin"
-    },
-    {
-      "sha": "1b5fd9e43b87d8147ecb83685afc39baa6296d21",
-      "date": "2026-09-21",
-      "subject": "Merge pull request #69 from nichinichisou0609/feat/moly-interactions-20260916"
-    },
-    {
-      "sha": "d186cbb8f8063bc350433d569d7bb45d38748ebb",
-      "date": "2026-09-21",
-      "subject": "docs(moly): describe only what this repository consumes"
-    },
-    {
-      "sha": "582f76f2395a51b8ce216b72b0e1de3b73353066",
-      "date": "2026-09-21",
-      "subject": "fix(mysekai): keep furniture URLs cacheable and recover interrupted navigation"
-    },
-    {
-      "sha": "09a798d72040ca9b6c92fe3f152f67fcad6b7d69",
-      "date": "2026-09-21",
-      "subject": "fix(moly): answer published snapshot pins from the validated manifest"
-    },
-    {
-      "sha": "1d6239a51975e5895891fb4def735fcb190b8ec2",
-      "date": "2026-09-21",
-      "subject": "chore(mysekai): defer generated sitemap refresh to production build"
-    },
-    {
-      "sha": "9b83260d74553d52e9ded830d1eb8263df588648",
-      "date": "2026-09-21",
-      "subject": "chore(mysekai): remove unrelated generated data and agent files"
-    },
-    {
-      "sha": "b9a632f6fdd63d9d5ff5047cb496f677e2b37f80",
-      "date": "2026-09-21",
-      "subject": "chore(mysekai): remove generated review config and SEO formatting churn"
-    },
-    {
-      "sha": "1b438d5a50fbfe9cd407bc9bfc8867b865fb4bef",
-      "date": "2026-09-21",
-      "subject": "fix(mysekai): keep player with narrow detail and reuse dialogue per visit"
-    },
-    {
-      "sha": "551c46699e29827e42591b1e02fac452572198c6",
-      "date": "2026-09-21",
-      "subject": "feat(mysekai): filter conversations by all selected characters"
-    },
-    {
-      "sha": "a802d67bff172a49853707eec67be9dba88e425f",
-      "date": "2026-09-21",
-      "subject": "feat(mysekai): polish alpha conversations and configure CDN delivery"
-    },
-    {
-      "sha": "9b4edb1138d4109f1a2e90bc307f01eb0bcec77d",
-      "date": "2026-09-20",
-      "subject": "fix(mysekai): clarify weather development status"
-    },
-    {
-      "sha": "30ea839645f204bfec880dab1e55ed5132eb5c7b",
-      "date": "2026-09-20",
-      "subject": "feat(mysekai): integrate weather preview into live workspace"
-    },
-    {
-      "sha": "1e323f2cfb657ab06e6f1e1b9039fe49481f8dc1",
-      "date": "2026-09-20",
-      "subject": "docs(moly): record final R5 publication and verified QA scope"
-    },
-    {
-      "sha": "a07a9dda6178da129425f91eac44dd3434b9d281",
-      "date": "2026-09-20",
-      "subject": "build(mysekai): isolate production QA artifacts and document runtime delivery"
-    },
-    {
-      "sha": "3c13b4cef1bdda648eaa3c474d83ca3d4c3d4182",
-      "date": "2026-09-20",
-      "subject": "feat(moly): negotiate Brotli representations and validate release sizes"
-    },
-    {
-      "sha": "e83bf127e44d5e0cbe52c8200652e52e680b999b",
-      "date": "2026-09-20",
-      "subject": "feat(mysekai): preserve runtime activation and add scoped resource management"
-    },
-    {
-      "sha": "3afa172bd063cdad63539e9aaf4700def8f98e96",
-      "date": "2026-09-20",
-      "subject": "feat(mysekai): show source head portraits with furniture and paginated browsing"
-    },
-    {
-      "sha": "dc4b10547a3ffd170393e1d258a4136a09f0e3da",
-      "date": "2026-09-20",
-      "subject": "feat(mysekai): add source-pinned conversations and interaction browser"
-    },
-    {
-      "sha": "17004e9c1fb73eb31cdf37684f5ad2063ecf250a",
-      "date": "2026-09-20",
-      "subject": "feat(moly): serve source-qualified runtime artifacts safely"
-    },
-    {
-      "sha": "aba92c9a7bb0370e3ec0033b3e84ddc0c7496df0",
-      "date": "2026-09-19",
-      "subject": "docs: add a changelog for the 2026-09-19 review round"
-    },
-    {
-      "sha": "0cca410e1863344e780d0929631e22cc85e17399",
-      "date": "2026-09-19",
-      "subject": "fix(cards): stop printing a real draw rate as 0.00%"
-    },
-    {
-      "sha": "0c6dbbc502e0368053ce87f673997e7d0ad4a6d6",
-      "date": "2026-09-19",
-      "subject": "fix(costumes,manga): print the route segment instead of NaN when it is not a number"
-    },
-    {
-      "sha": "a39f9dab1729cacd7c5b06ef787f3f8816f0b77a",
-      "date": "2026-09-19",
-      "subject": "fix(search): read the index path that can carry the English title"
-    },
-    {
-      "sha": "82a9d5ad4d66f339925bfbccb50d7af2b30882df",
-      "date": "2026-09-19",
-      "subject": "fix(oauth): dedupe token refreshes and stop disabling accounts on blips"
-    },
-    {
-      "sha": "139841efb9faef857179e87edb7bb9f2e3be372b",
-      "date": "2026-09-19",
-      "subject": "fix(sw): actually cache cross-origin image assets"
-    },
-    {
-      "sha": "4534eddf7326c6f68293a8aaabf99b8a9e203a58",
-      "date": "2026-09-19",
-      "subject": "docs: HTML_CACHE_DIR does not disable the disk cache when empty"
-    },
-    {
-      "sha": "b536e80ad250a1623076568efd52fec131fe87f0",
-      "date": "2026-09-19",
-      "subject": "fix(my-cards): wire up the skill-type filter"
-    },
-    {
-      "sha": "56419d5f1b6a48a05aa93fef60c359159e32a62e",
-      "date": "2026-09-19",
-      "subject": "fix(cards): only show a draw-rate badge when a gacha detail exists"
-    },
-    {
-      "sha": "8b2f4a037f56c819c85b62f45d16e5ff8c9a6aa4",
-      "date": "2026-09-19",
-      "subject": "fix(api): 404 on extra path segments under /api/gachas/"
-    },
-    {
-      "sha": "c37286207ac2bf5071112e6aeaafcb40c64c185e",
-      "date": "2026-09-19",
-      "subject": "fix(sticker-maker): ignore a stale sticker image load"
-    },
-    {
-      "sha": "7704fe62d87b66e31673ac013f0a43677c0f9dab",
-      "date": "2026-09-19",
-      "subject": "fix(my-musics): search the Chinese song title by its Japanese key"
-    },
-    {
-      "sha": "54da297d3d5c69b216637e9af48433fbb799cb2c",
-      "date": "2026-09-19",
-      "subject": "fix(music): fit the APPEND difficulty in the difficulty grid"
-    },
-    {
-      "sha": "dbd6594a87f757bb7e426643ff962e6e971f8d51",
-      "date": "2026-09-19",
-      "subject": "fix(cards): give each card thumbnail its own clipPath id"
-    },
-    {
-      "sha": "57bedc8188b80f37bede17124ce4d90c77129144",
-      "date": "2026-09-19",
-      "subject": "fix(markdown): strip Accept-Encoding before recording the upstream HTML"
-    },
-    {
-      "sha": "22234f982f6106e3b39fa3959f5021859c906fe0",
-      "date": "2026-09-19",
-      "subject": "fix(routes): resolve the loading state for non-numeric and zero ids"
-    },
-    {
-      "sha": "06fbed87dfad552c8c9c166be7f2211df4651203",
-      "date": "2026-09-19",
-      "subject": "fix(htmlcache): write the persistent sidecar after eviction, not before"
-    },
-    {
-      "sha": "132aa38c7cf59472a90e3b78ff47874997bf6378",
-      "date": "2026-09-19",
-      "subject": "fix(lyrics): pass the published song ids into the catalogue merge"
-    },
-    {
-      "sha": "182117db0c36bd836b2d270b583e6acc0a00beb3",
-      "date": "2026-09-19",
-      "subject": "fix(masterdata): honour the asset-source preference for per-server fetches"
-    },
-    {
-      "sha": "2949b00b08d8da04c8fee7582cad3f7f25b25e10",
-      "date": "2026-09-19",
-      "subject": "fix(masterdata): include the game server in the IndexedDB cache key"
-    },
-    {
-      "sha": "82ada444d46edd14b83c0bfc5c039f9e4db95bc8",
-      "date": "2026-09-19",
-      "subject": "fix(prediction): stop labelling every recent JP event a World Link"
-    },
-    {
-      "sha": "6edc19b5d4d358d8b0b27aa615668a95eb38261c",
-      "date": "2026-09-19",
-      "subject": "fix(score-control): actually reuse the persistent deck builder worker"
     }
   ]
 }

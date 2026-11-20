@@ -1,4 +1,4 @@
-import { ASSET_DOMAIN_MAIN, ASSET_DOMAIN_BACKUP } from "@/lib/assets";
+import { getAssetBaseUrl, type AssetLine } from "@/lib/assets";
 import { live2dSources, type Live2DRegion } from "./config";
 import { parseLive2DModelIndex, type Live2DModel } from "./models";
 
@@ -13,35 +13,20 @@ export async function fetchLive2DModels(region: Live2DRegion, signal: AbortSigna
     return parseLive2DModelIndex(await response.json());
 }
 
-export interface StoryBackgroundPage {
-    /** Background names (`bg_a000001`), the bundle names under `scenario/background/`. */
-    names: string[];
-    /** The cursor of the next page, or null after the last. */
-    next: string | null;
-}
-
-const BACKGROUND_PREFIX = "scenario/background/";
+const BACKGROUND_DIRECTORY = "scenario/background/";
 
 /**
- * One page of a server's story backgrounds, from the asset site's bundle listing (the one the
- * asset browser reads). `line` is the asset site the reader chose (main or backup).
+ * A server's story backgrounds (`bg_a000001`), the directories under `scenario/background/` of the
+ * storage view on the asset line the reader chose.
  */
-export async function fetchStoryBackgrounds(
-    region: Live2DRegion,
-    line: "main" | "backup",
-    cursor: string | null,
-    signal: AbortSignal,
-): Promise<StoryBackgroundPage> {
-    const query = new URLSearchParams({ server: region, prefix: BACKGROUND_PREFIX, limit: "200" });
-    if (cursor) query.set("cursor", cursor);
-    const url = `${line === "backup" ? ASSET_DOMAIN_BACKUP : ASSET_DOMAIN_MAIN}/api/assets/bundles?${query.toString()}`;
-    const response = await fetch(url, { signal, credentials: "omit" });
+export async function fetchStoryBackgrounds(region: Live2DRegion, line: AssetLine, signal: AbortSignal): Promise<string[]> {
+    const url = `${getAssetBaseUrl(`${line}-${region}`)}/${BACKGROUND_DIRECTORY}`;
+    const response = await fetch(url, { signal, credentials: "omit", headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-    const data = await response.json() as { items?: { type?: string; name?: string; path?: string }[]; nextCursor?: string };
-    const names = (data.items ?? [])
-        .filter(item => item.type === "bundle" && typeof item.name === "string" && item.path === `${BACKGROUND_PREFIX}${item.name}`)
-        .map(item => item.name as string)
-        // a few bundles of the directory are not backgrounds of their own
-        .filter(name => /^bg/.test(name));
-    return { names, next: data.nextCursor || null };
+    const listing = await response.json() as { format?: string; version?: number; directories?: string[] };
+    if (listing.format !== "directory-listing" || listing.version !== 1) {
+        throw new Error(`${url}: unsupported listing ${String(listing.format)} ${String(listing.version)}`);
+    }
+    // a few directories are not backgrounds of their own
+    return (listing.directories ?? []).filter(name => /^bg/.test(name));
 }

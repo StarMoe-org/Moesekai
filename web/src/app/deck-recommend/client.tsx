@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import Link from "@/components/LocalizedLink";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import Image from "next/image";
 import MainLayout from "@/components/MainLayout";
 import type { ICardInfo } from "@/types/types";
@@ -21,7 +22,7 @@ import ActiveRulesSummary from "@/components/deck-recommend/ActiveRulesSummary";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
 import {
-    getOAuthAccessTokenForGameUser,
+    getDeckUserDataAccess,
     SERVER_OPTIONS,
     type ServerType,
 } from "@/lib/account";
@@ -459,6 +460,7 @@ interface DeckRowProps {
     scoreLabel: string;
     showBonus: boolean;
     cardsMaster: ICardInfo[];
+    assetSource: AssetSourceType;
     songTitles: Map<number, string>;
     userCards: DeckUserCard[];
     formatNumber: (value: number, options?: Intl.NumberFormatOptions) => string;
@@ -468,7 +470,7 @@ interface DeckRowProps {
 }
 
 function DeckRow({
-    deck, scoreLabel, showBonus, cardsMaster, songTitles, userCards, formatNumber,
+    deck, scoreLabel, showBonus, cardsMaster, assetSource, songTitles, userCards, formatNumber,
     musicRows, musicLoading, onRequestMusic,
 }: DeckRowProps) {
     const { t } = useI18n();
@@ -543,7 +545,7 @@ function DeckRow({
                             <div key={i} className="relative flex flex-col items-center gap-0.5 flex-shrink-0">
                                 <Link href={`/cards/${card.cardId}`} className="block relative" target="_blank">
                                     <span className="block w-11 h-11 sm:w-12 sm:h-12">
-                                        <SekaiCardThumbnail card={masterCard} trained={showTrained} mastery={masterRank} width={48} />
+                                        <SekaiCardThumbnail card={masterCard} trained={showTrained} mastery={masterRank} width={48} assetSource={assetSource} />
                                     </span>
                                     {i === 0 && (
                                         <div className="absolute bottom-0 right-0 bg-primary text-on-primary text-[8px] font-bold px-1 py-[1px] rounded-tl-md leading-none z-10">L</div>
@@ -642,6 +644,9 @@ function DeckRow({
 // ==================== Main client ====================
 export default function DeckRecommendClient() {
     const { t, formatNumber } = useI18n();
+    const { assetSource } = useTheme();
+    // Cards, custom rules, and card modal all read JP masterdata, so thumbnails must use JP assets rather than global server-source.
+    const cardAssetSource = useMemo(() => replaceAssetSourceRegion(assetSource, "jp"), [assetSource]);
     const pill = usePillClass();
 
     // Account
@@ -743,10 +748,12 @@ export default function DeckRecommendClient() {
         if (!trimmed) return;
         (async () => {
             try {
+                const access = await getDeckUserDataAccess(server, trimmed);
                 const provider = SnowyDataProvider.getCachedInstance(
                     trimmed,
                     server,
-                    getOAuthAccessTokenForGameUser(server, trimmed),
+                    access.oauthAccessToken ?? null,
+                    access.viaStarMoe,
                 );
                 const userData = await provider.getUserDataAll();
                 if (cancelled) return;
@@ -1142,6 +1149,7 @@ export default function DeckRecommendClient() {
                         onChange={patch}
                         onResetAll={handleResetRules}
                         cardsMaster={cardsMaster}
+                        assetSource={cardAssetSource}
                     />
 
                     {/* 挑战组卡 */}
@@ -1735,6 +1743,7 @@ export default function DeckRecommendClient() {
                                 scoreLabel={scoreLabel}
                                 showBonus={mode === "event" || mode === "custom" || mode === "mysekai"}
                                 cardsMaster={cardsMaster}
+                                assetSource={cardAssetSource}
                                 songTitles={songTitles}
                                 userCards={userCards}
                                 formatNumber={formatNumber}
@@ -1760,6 +1769,7 @@ export default function DeckRecommendClient() {
                 onChange={patch}
                 onResetAll={handleResetRules}
                 cardsMaster={cardsMaster}
+                assetSource={cardAssetSource}
                 overrideCatalogs={overrideCatalogs}
                 onOpenCardModal={setCardModal}
                 userDeckCardIds={[
@@ -1781,6 +1791,7 @@ export default function DeckRecommendClient() {
                         ? t("page.deckRecommend.config.excludedCards")
                         : t("page.deckRecommend.config.singleCardTitle")}
                 cards={cardsMaster}
+                assetSource={cardAssetSource}
                 maxSelectCount={cardModal === "fixed" ? 5 : cardModal === "single" ? 1 : undefined}
                 selectedCardIds={cardModal === "fixed" ? fixedCards : cardModal === "excluded" ? excludedCards : singleCardOverrides.map((e) => e.cardId)}
                 onToggleCardSelect={(card) => {

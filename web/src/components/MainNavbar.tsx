@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "@/components/LocalizedLink";
 import { usePathname } from "next/navigation";
-import SettingsPanel from "./SettingsPanel";
+import SettingsPanel, { type SettingsTab } from "./SettingsPanel";
 import CommandPalette from "./CommandPalette";
 import { getPrimaryShortcutLabel } from "@/lib/shortcuts";
 import { MOE_LOGO_URL } from "@/lib/assets";
@@ -21,6 +21,8 @@ interface MainNavbarProps {
     isSettingsOpen: boolean;
     onSettingsToggle: () => void;
     onSettingsClose: () => void;
+    settingsRequestedTab?: { tab: SettingsTab; nonce: number } | null;
+    onOpenReleaseNotes?: () => void;
     onShortcutsHelpToggle: () => void;
 }
 
@@ -46,6 +48,8 @@ export default function MainNavbar({
     isSettingsOpen,
     onSettingsToggle,
     onSettingsClose,
+    settingsRequestedTab,
+    onOpenReleaseNotes,
     onShortcutsHelpToggle,
 }: MainNavbarProps) {
     const pathname = usePathname();
@@ -134,7 +138,12 @@ export default function MainNavbar({
                             onClick={onSettingsToggle}
                             selected={isSettingsOpen ? true : undefined}
                         />
-                        <SettingsPanel isOpen={isSettingsOpen} onClose={onSettingsClose} />
+                        <SettingsPanel
+                            isOpen={isSettingsOpen}
+                            onClose={onSettingsClose}
+                            requestedTab={settingsRequestedTab}
+                            onOpenReleaseNotes={onOpenReleaseNotes}
+                        />
                     </div>
                 </div>
 

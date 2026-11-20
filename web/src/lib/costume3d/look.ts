@@ -1,23 +1,28 @@
 /**
- * What a role wears, worked out from the costume output's indexes: the costumes a role can
- * pick, its hairs and heads, and the bundles of one look. Pure functions, no fetching, so the
- * rules can be tested on their own (scripts/test-costume3d.mjs).
+ * What a role wears: the costumes of its `costume-role` document, its hairs and heads, and the
+ * look of one `costume` document worn as it is or with a picked hair and head. Pure functions, no
+ * fetching, so the rules can be tested on their own (scripts/test-costume3d.mjs).
  *
- * The rules follow the game's costume screen:
- * - a complete head (`head_and_hair`) is its own face bundle and replaces the hair;
+ * The document's looks are the game's combinations, worked out by the exporter: a look's models
+ * are worn as they are. A picked hair or head is the role's own part, a part of another role (the
+ * cross-role wardrobe), or — cross-role — the hair of the face the look shows.
+ *
+ * The rules for a picked bottom line follow the game's costume screen:
+ * - a head with its own hair (`head_and_hair`) is its own face and replaces the hair;
  * - a picked head brings its default hair (`defaultHairs`), unless a hair was picked too;
  * - a head and a hair listed in `notAvailable` are not worn together: the head's default hair
  *   is worn instead.
  *
- * Unrestricted (an experimental setting): a role may wear any role's costumes, hairs and heads,
- * from a pool of every role's catalog. A costume the role has no look of borrows the body of the
- * role whose figure is nearest; another character's hair is worn on the role's own face (the
- * stage takes only the hair from that face bundle). A head goes only with a hair whose role can
- * wear it in the game (and `notAvailable`, by the costume3d ids every catalog shares, still
- * applies); another role's head brings its default hair there. Complete heads of other
- * characters are left out: they would bring that character's face.
+ * A picked hair or head not worn for one of these rules keeps the accessory as the look has it.
+ *
+ * Cross-role: a role may wear any role's costumes, hairs and heads. A costume the role has no look
+ * of borrows the body of the role whose figure is nearest; another character's hair is worn on the
+ * role's own face (the stage takes only the hair from that face). A head goes only with a hair
+ * whose role can wear it in the game (and `notAvailable` still applies); another role's head
+ * brings its default hair there. Heads with their own hair of other characters are left out: they
+ * would bring that character's face.
  */
-import type { Costume3dCatalog, Costume3dCostume, Costume3dPart, Costume3dRole, Costume3dVariant } from "@/types/costume3d";
+import type { Costume3dCatalog, Costume3dCostume, Costume3dPart, Costume3dPartModel, Costume3dRole, Costume3dVariant } from "@/types/costume3d";
 
 /** A costume of one role: its colours and when it was first worn by this role. */
 export interface RoleCostume {
@@ -38,28 +43,37 @@ export interface LookOverrides {
     head: number | null;
 }
 
+/** What the stage shows of a look. */
 export interface Costume3dLook {
-    /** The face bundle: face and hair, or a complete head. */
-    face: string;
-    accessory: { bundle: string; color: string | null; attach: string | null } | null;
-    /** The head worn (accessory or complete head), if any. */
-    head: Costume3dPart | null;
-    /** The hair worn; null under a complete head. */
-    hair: Costume3dPart | null;
+    /** The body, with its colour-variation textures. */
+    body: Costume3dPartModel;
+    /** The face with its hair, or a head with its own hair. */
+    face: string | null;
+    /** A head with its own hair: it is the face, and no hair is worn. */
     fullHead: boolean;
+    accessory: { model: Costume3dPartModel; attach: string | null } | null;
+    /** The head worn (accessory or one with its own hair). */
+    head: Costume3dPart | null;
+    /** The hair worn; null under a head with its own hair. */
+    hair: Costume3dPart | null;
     /** A picked hair that the head did not allow: what was picked. */
     hairReplaced: Costume3dPart | null;
-    /** A picked hair that a complete head hides. */
+    /** A picked hair that a head with its own hair hides. */
     hairIgnored: boolean;
-    /** Unrestricted: the costume's head, taken off for a picked hair it does not go with. */
+    /** Cross-role: the costume's head, taken off for a picked hair it does not go with. */
     headDropped: Costume3dPart | null;
-    /** Unrestricted: another character's face bundle whose hair is worn instead of the face's own. */
+    /** Cross-role: another character's face whose hair is worn instead of the face's own. */
     hairFrom: string | null;
 }
 
 export function released(publishedAt: number | null, now: number): boolean {
     return publishedAt != null && publishedAt <= now;
 }
+
+/** The number of the costume a part belongs to; the default and unit costumes have none. */
+export const costumeNumberOf = (part: Costume3dPart): number => part.costumeNumber ?? 0;
+const colorNameOf = (part: Costume3dPart): string => part.colorName ?? "";
+const nameOf = (part: Costume3dPart): string => part.name ?? "";
 
 /**
  * The costumes a role can wear, newest first: its body parts grouped by costume number (0, the
@@ -69,17 +83,18 @@ export function released(publishedAt: number | null, now: number): boolean {
 export function roleCostumes(catalog: Costume3dCatalog): RoleCostume[] {
     const byNumber = new Map<number, RoleCostume>();
     for (const part of catalog.parts) {
-        if (part.slot !== "body" || part.costumeNumber === 0 || !part.model) continue;
-        let costume = byNumber.get(part.costumeNumber);
+        const costumeNumber = costumeNumberOf(part);
+        if (part.slot !== "body" || costumeNumber === 0 || !part.model) continue;
+        let costume = byNumber.get(costumeNumber);
         if (!costume) {
-            costume = { costumeNumber: part.costumeNumber, name: part.name, publishedAt: null, colors: [] };
-            byNumber.set(part.costumeNumber, costume);
+            costume = { costumeNumber, name: nameOf(part), publishedAt: null, colors: [] };
+            byNumber.set(costumeNumber, costume);
         }
         if (part.publishedAt != null && (costume.publishedAt == null || part.publishedAt < costume.publishedAt)) {
             costume.publishedAt = part.publishedAt;
         }
         if (!costume.colors.some(color => color.colorId === part.colorId)) {
-            costume.colors.push({ colorId: part.colorId, colorName: part.colorName });
+            costume.colors.push({ colorId: part.colorId, colorName: colorNameOf(part) });
         }
     }
     const list = [...byNumber.values()];
@@ -88,13 +103,13 @@ export function roleCostumes(catalog: Costume3dCatalog): RoleCostume[] {
 }
 
 const newestFirst = (a: Costume3dPart, b: Costume3dPart) =>
-    (b.publishedAt ?? 0) - (a.publishedAt ?? 0) || b.costumeNumber - a.costumeNumber;
+    (b.publishedAt ?? 0) - (a.publishedAt ?? 0) || costumeNumberOf(b) - costumeNumberOf(a);
 
 /** The hairs a role can pick: its default first, then newest first. */
 export function hairOptions(catalog: Costume3dCatalog): Costume3dPart[] {
     return catalog.parts
         .filter(part => part.slot === "hair" && part.model)
-        .sort((a, b) => (a.costumeNumber === 0 ? -1 : b.costumeNumber === 0 ? 1 : newestFirst(a, b)));
+        .sort((a, b) => (costumeNumberOf(a) === 0 ? -1 : costumeNumberOf(b) === 0 ? 1 : newestFirst(a, b)));
 }
 
 /** The heads of one costume, as a wardrobe shows them: one card, a swatch per colour. */
@@ -109,17 +124,18 @@ export interface HeadGroup {
 }
 
 /**
- * The heads a role can pick, grouped by costume (an accessory and a complete head of the same
- * costume are two groups), newest first.
+ * The heads a role can pick, grouped by costume (an accessory and a head with its own hair of the
+ * same costume are two groups), newest first.
  */
 export function headGroups(catalog: Pick<Costume3dCatalog, "parts">): HeadGroup[] {
     const groups = new Map<string, HeadGroup>();
     for (const part of catalog.parts) {
         if (part.slot !== "head" || !part.model) continue;
-        const key = `${part.costumeNumber}:${part.headType ?? ""}`;
+        const costumeNumber = costumeNumberOf(part);
+        const key = `${costumeNumber}:${part.headType ?? ""}`;
         let group = groups.get(key);
         if (!group) {
-            group = { key, costumeNumber: part.costumeNumber, name: part.name, headType: part.headType, publishedAt: null, parts: [] };
+            group = { key, costumeNumber, name: nameOf(part), headType: part.headType, publishedAt: null, parts: [] };
             groups.set(key, group);
         }
         if (part.publishedAt != null && (group.publishedAt == null || part.publishedAt < group.publishedAt)) group.publishedAt = part.publishedAt;
@@ -131,13 +147,15 @@ export function headGroups(catalog: Pick<Costume3dCatalog, "parts">): HeadGroup[
 }
 
 const roleKey = (role: { characterId: number; unit: string }) => `${role.characterId}-${role.unit}`;
+/** The role: the name of its `costume-role` asset. */
+const roleName = (role: { characterId: number; unit: string }) => `costume/role/${roleKey(role)}`;
 /** A head and a hair by their models: the same accessory has an id per character. */
-const modelPair = (head: Costume3dPart, hair: Costume3dPart) => `${head.model?.bundle}|${head.model?.color ?? ""}|${hair.model?.bundle}`;
+const modelPair = (head: Costume3dPart, hair: Costume3dPart) => `${head.model?.asset}|${head.model?.colors?.color ?? ""}|${hair.model?.asset}`;
 
 /**
  * Whether `head` and `hair` are not worn together: by the role's `notAvailable`. With a pool, by
  * every role's, and also when the hair's role cannot wear the head in the game (no head of its
- * catalog has that model).
+ * document has that model).
  */
 export function blocked(catalog: Costume3dCatalog, head: Costume3dPart | null | undefined, hair: Costume3dPart | null | undefined, pool?: Costume3dPool | null): boolean {
     if (!head || !hair) return false;
@@ -147,7 +165,7 @@ export function blocked(catalog: Costume3dCatalog, head: Costume3dPart | null | 
     // The pool's parts are its own objects: one it does not hold is the role's own.
     const role = pool.roleOf.get(hair) ?? catalog.role;
     const heads = role && pool.roleHeads.get(roleKey(role));
-    return Boolean(heads && !heads.has(head.model.bundle));
+    return Boolean(heads && !heads.has(head.model.asset));
 }
 
 function partById(catalog: Costume3dCatalog, id: number | null | undefined, pool?: Costume3dPool | null): Costume3dPart | null {
@@ -164,80 +182,119 @@ export function hairById(catalog: Costume3dCatalog, id: number | null | undefine
     return own ?? pool?.hairs.find(part => part.costume3dId === id && (!unit || pool.roleOf.get(part)?.unit === unit)) ?? null;
 }
 
+/** The part of `variant` the role wears in one slot, when it has one. */
+function wornPart(catalog: Costume3dCatalog, variant: Costume3dVariant, slot: Costume3dPart["slot"], pool?: Costume3dPool | null): Costume3dPart | null {
+    const id = slot === "body" ? variant.body : slot === "head" ? variant.head : variant.hair;
+    return partById(catalog, id, pool);
+}
+
+/** The accessory of `variant`, unless the look wears no head (0); its attach point is a child of the face's `Head` node. */
+function accessoryOf(variant: Costume3dVariant): Costume3dLook["accessory"] {
+    const model = variant.models.accessory;
+    return model && variant.head !== 0 ? { model, attach: model.attach ?? null } : null;
+}
+
+/** A look whose body or face is not in the version is not shown (the specification requires it). */
+export function showable(variant: Costume3dVariant): boolean {
+    return !variant.missing?.length && Boolean(variant.models.body && variant.models.face);
+}
+
+/** The look of `variant` as the costume document gives it. */
+export function defaultLook(variant: Costume3dVariant, catalog?: Costume3dCatalog | null, pool?: Costume3dPool | null): Costume3dLook {
+    const head = catalog ? wornPart(catalog, variant, "head", pool) : pool?.headsById.get(variant.head) ?? null;
+    const fullHead = head?.headType === "head_and_hair";
+    return {
+        body: variant.models.body as Costume3dPartModel,
+        face: variant.models.face ?? null,
+        fullHead,
+        accessory: fullHead ? null : accessoryOf(variant),
+        head: head?.model ? head : null,
+        hair: fullHead || !catalog ? null : wornPart(catalog, variant, "hair", pool),
+        hairReplaced: null,
+        hairIgnored: false,
+        headDropped: null,
+        hairFrom: null,
+    };
+}
+
 /**
- * The bundles of `variant` worn with `overrides`. With a `pool` (unrestricted), parts of other
+ * The look of `variant` worn with `overrides`. With no `catalog` — or a pick that is not a part of
+ * this role or of its pool — the look is the document's. With a `pool` (cross-role), parts of other
  * roles can be picked too.
  */
-export function resolveLook(variant: Costume3dVariant, catalog: Costume3dCatalog, overrides: LookOverrides, pool?: Costume3dPool | null): Costume3dLook {
-    const look = { hairReplaced: null, hairIgnored: false, hairFrom: null, headDropped: null };
-    if (overrides.head == null && overrides.hair == null) {
-        const own = partById(catalog, variant.head, pool);
-        const fullHead = own?.headType === "head_and_hair";
-        return {
-            ...look,
-            face: variant.faceBundle,
-            accessory: variant.accessoryBundle
-                ? { bundle: variant.accessoryBundle, color: variant.accessoryColor ?? null, attach: variant.attach ?? null }
-                : null,
-            head: own?.model ? own : null,
-            hair: fullHead ? null : partById(catalog, variant.hair),
-            fullHead,
-        };
-    }
-    const headId = overrides.head ?? variant.head;
-    const head = partById(catalog, headId, pool);
-    if (head?.headType === "head_and_hair" && head.model) {
-        return { ...look, face: head.model.bundle, accessory: null, head, hair: null, fullHead: true, hairIgnored: overrides.hair != null };
+export function resolveLook(variant: Costume3dVariant, catalog: Costume3dCatalog | null | undefined, overrides: LookOverrides, pool?: Costume3dPool | null): Costume3dLook {
+    const asGiven = defaultLook(variant, catalog, pool);
+    if (!catalog || (overrides.head == null && overrides.hair == null)) return asGiven;
+    const own = (part: Costume3dPart | null | undefined): part is Costume3dPart =>
+        Boolean(part && (catalog.parts.includes(part) || pool?.roleOf.has(part)));
+    // A head of 0 is a choice of none.
+    const head = overrides.head ? partById(catalog, overrides.head, pool) : null;
+    const pickedHead = own(head) ? head : null;
+    const hair = hairById(catalog, overrides.hair, overrides.hairUnit, pool);
+    const pickedHair = own(hair) ? hair : null;
+    if (!pickedHead && !pickedHair && overrides.head !== 0) return asGiven;
+    const look: Costume3dLook = { ...asGiven, hairReplaced: null, hairIgnored: false, hairFrom: null, headDropped: null };
+    if (pickedHead?.headType === "head_and_hair" && pickedHead.model) {
+        return { ...look, face: pickedHead.model.asset, accessory: null, head: pickedHead, hair: null, fullHead: true, hairIgnored: pickedHair != null };
     }
     // A head's default hair: the role's own, or (another role's head) that role's.
-    const defaultHair = (part: Costume3dPart | null) => (!part ? null
+    const defaultHair = (part: Costume3dPart | null): Costume3dPart | null => (!part ? null
         : catalog.parts.includes(part) ? partById(catalog, catalog.defaultHairs[String(part.costume3dId)]) : pool?.defaultHairs.get(part) ?? null);
-    let hair = overrides.hair != null
-        ? hairById(catalog, overrides.hair, overrides.hairUnit, pool)
-        : (overrides.head ? defaultHair(head) : null) ?? partById(catalog, variant.hair);
-    hair = hair ?? hairOptions(catalog)[0] ?? null;
-    let hairReplaced: Costume3dPart | null = null;
-    let worn = head;
-    let headDropped: Costume3dPart | null = null;
-    if (blocked(catalog, head, hair, pool)) {
-        if (pool && overrides.hair != null && overrides.head == null) {
-            // A picked hair over the costume's head: the head comes off.
+    // The costume's head, taken off when another role's hair is picked over it.
+    const headDropped = overrides.head == null && pickedHair && !catalog.parts.includes(pickedHair) ? asGiven.head : null;
+    // Following the costume: its head and hair, but not a look's own picks made over it.
+    const wornHead = headDropped ? null
+        : overrides.head === 0 ? null
+        : overrides.head != null ? pickedHead
+        : variant.head ? asGiven.head : null;
+    const fallback = hairOptions(catalog)[0] ?? null;
+    let wornHair = overrides.hair != null ? pickedHair
+        : overrides.head == 0 ? fallback
+        : (overrides.head != null ? defaultHair(wornHead) : null) ?? asGiven.hair ?? fallback;
+    let worn = wornHead;
+    // A hair the costume's own head does not allow leaves the head and the hair as the costume has them.
+    if (wornHead && overrides.hair == null && blocked(catalog, wornHead, wornHair, pool)) wornHair = asGiven.hair ?? fallback;
+    if (blocked(catalog, wornHead, wornHair, pool)) {
+        // The head's default hair, else the first hair it allows; another role's head that no hair here goes with is not worn.
+        look.hairReplaced = wornHair;
+        wornHair = defaultHair(wornHead) ?? hairOptions(catalog).find(other => !blocked(catalog, wornHead, other, pool)) ?? fallback;
+        if (blocked(catalog, wornHead, wornHair, pool)) {
             worn = null;
-            headDropped = head;
-        } else {
-            hairReplaced = hair;
-            hair = defaultHair(head) ?? hairOptions(catalog).find(other => !blocked(catalog, head, other, pool)) ?? hair;
-            // Another role's head that no hair here goes with: not worn.
-            if (pool && blocked(catalog, head, hair, pool)) [worn, hairReplaced] = [null, null];
+            look.hairReplaced = null;
         }
     }
     // Another character's hair goes on the role's own face, that of its default hair.
-    const own = !hair || catalog.parts.includes(hair);
-    const ownFace = own ? null : (partById(catalog, catalog.role.defaultHair) ?? hairOptions(catalog)[0])?.model?.bundle ?? null;
+    const ownFace = !wornHair || catalog.parts.includes(wornHair)
+        ? null
+        : (partById(catalog, catalog.role.defaultHair) ?? hairOptions(catalog)[0])?.model?.asset ?? null;
+    // The costume's accessory goes with its head, unless a pick takes the head off; another role's
+    // head is worn without one (it may be on another character's face).
+    const accessory = overrides.head === 0 || (overrides.head != null && !worn)
+        ? null
+        : variant.models.accessory ? { model: variant.models.accessory, attach: variant.models.accessory.attach ?? null } : null;
     return {
         ...look,
-        face: ownFace ?? hair?.model?.bundle ?? variant.faceBundle,
-        hairFrom: ownFace && hair?.model ? hair.model.bundle : null,
-        accessory: worn?.model ? { bundle: worn.model.bundle, color: worn.model.color, attach: worn.model.attach } : null,
+        face: ownFace ?? wornHair?.model?.asset ?? asGiven.face,
+        hairFrom: ownFace && wornHair?.model ? wornHair.model.asset : null,
+        accessory,
         head: worn?.model ? worn : null,
-        hair,
+        hair: wornHair,
         fullHead: false,
-        hairReplaced,
         headDropped,
     };
 }
 
-/** What a pool knows of a role: its figure, by which a costume's body is borrowed. */
-export type PoolRole = Pick<Costume3dRole, "characterId" | "unit" | "figure" | "breastSize">;
+/** What a pool knows of a role: its figure, by which a costume's body is borrowed, and its motions. */
+export type PoolRole = Pick<Costume3dRole, "characterId" | "unit" | "figure" | "breastSize" | "motions">;
 
-/** Every role's costumes, hairs and heads of one server, for the unrestricted wardrobe. */
+/** Every role's costumes, hairs and heads of one server, for the cross-role wardrobe. */
 export interface Costume3dPool {
     roles: PoolRole[];
     /** Every costume a role has a look of, newest first. */
     costumes: RoleCostume[];
     /** Every hair, by character; one part per face bundle. */
     hairs: Costume3dPart[];
-    /** Every head but the complete ones, grouped as `headGroups` does; one part per costume, kind and colour. */
+    /** Every head but the ones with their own hair, grouped as `headGroups` does; one part per costume, kind and colour. */
     heads: HeadGroup[];
     /** The heads above by costume3d id. */
     headsById: Map<number, Costume3dPart>;
@@ -257,8 +314,8 @@ export interface Costume3dPool {
 }
 
 /**
- * Builds a pool one catalog at a time, keeping only what the pool needs of each, so that the
- * catalogs (megabytes each) need not all be held at once.
+ * Builds a pool one document at a time, keeping only what the pool needs of each, so that the
+ * documents (megabytes each) need not all be held at once.
  */
 export class PoolBuilder {
     private readonly roles: PoolRole[] = [];
@@ -274,8 +331,8 @@ export class PoolBuilder {
     private readonly headHairs = new Map<Costume3dPart, string>();
 
     add(catalog: Costume3dCatalog): void {
-        const { characterId, unit, figure, breastSize } = catalog.role;
-        this.roles.push({ characterId, unit, figure, breastSize });
+        const { characterId, unit, figure, breastSize, motions } = catalog.role;
+        this.roles.push({ characterId, unit, figure, breastSize, motions });
         for (const costume of roleCostumes(catalog)) {
             const known = this.costumes.get(costume.costumeNumber);
             const add = <T,>(sets: Map<number, Set<T>>, value: T) => {
@@ -291,7 +348,7 @@ export class PoolBuilder {
             if (costume.publishedAt != null && (known.publishedAt == null || costume.publishedAt < known.publishedAt)) known.publishedAt = costume.publishedAt;
             for (const color of costume.colors) if (!known.colors.some(other => other.colorId === color.colorId)) known.colors.push(color);
         }
-        // Of parts that are the same, the lowest id is kept: catalogs arrive in any order, and
+        // Of parts that are the same, the lowest id is kept: documents arrive in any order, and
         // the address names parts by id.
         const keep = (parts: Map<string, Costume3dPart>, key: string, part: Costume3dPart): boolean => {
             const known = parts.get(key);
@@ -310,15 +367,16 @@ export class PoolBuilder {
         for (const part of catalog.parts) {
             if (!part.model) continue;
             if (part.slot !== "body") byId.set(part.costume3dId, part);
-            if (part.slot === "hair") keep(this.hairs, part.model.bundle, part);
+            if (part.slot === "hair") keep(this.hairs, part.model.asset, part);
             if (part.slot !== "head") continue;
-            heads.add(part.model.bundle);
-            if (part.headType === "head_and_hair" || !keep(this.heads, `${part.costumeNumber}:${part.headType ?? ""}:${part.colorId}`, part)) continue;
+            heads.add(part.model.asset);
+            if (part.headType === "head_and_hair"
+                || !keep(this.heads, `${costumeNumberOf(part)}:${part.headType ?? ""}:${part.colorId}`, part)) continue;
             const hairId = catalog.defaultHairs[String(part.costume3dId)];
             const hair = hairId ? catalog.parts.find(other => other.slot === "hair" && other.costume3dId === hairId)?.model : null;
-            if (hair) this.headHairs.set(part, hair.bundle);
+            if (hair) this.headHairs.set(part, hair.asset);
         }
-        // The ids of a rule are the catalog's own parts' where it applies to this role.
+        // The ids of a rule are the document's own parts' where it applies to this role.
         for (const [headId, hairId] of catalog.notAvailable) {
             const head = byId.get(headId);
             const hair = byId.get(hairId);
@@ -332,13 +390,13 @@ export class PoolBuilder {
         costumes.sort((a, b) => (b.publishedAt ?? 0) - (a.publishedAt ?? 0) || b.costumeNumber - a.costumeNumber);
         const owner = (part: Costume3dPart) => this.roleOf.get(part)?.characterId ?? 0;
         const hairs = [...this.hairs.values()].sort((a, b) =>
-            owner(a) - owner(b) || (a.costumeNumber === 0 ? -1 : b.costumeNumber === 0 ? 1 : newestFirst(a, b)));
+            owner(a) - owner(b) || (costumeNumberOf(a) === 0 ? -1 : costumeNumberOf(b) === 0 ? 1 : newestFirst(a, b)));
         const heads = headGroups({ parts: [...this.heads.values()] });
         const headsById = new Map([...this.heads.values()].map(part => [part.costume3dId, part]));
         const roles = [...this.roles].sort((a, b) => a.characterId - b.characterId || a.unit.localeCompare(b.unit));
         const defaultHairs = new Map<Costume3dPart, Costume3dPart>();
-        for (const [head, bundle] of this.headHairs) {
-            const hair = this.hairs.get(bundle);
+        for (const [head, asset] of this.headHairs) {
+            const hair = this.hairs.get(asset);
             if (hair) defaultHairs.set(head, hair);
         }
         const costumeOwners = new Map([...this.costumeCharacters].map(([costumeNumber, characters]) => [costumeNumber, Math.min(...characters)]));
@@ -352,8 +410,8 @@ export class PoolBuilder {
 
 /** Whether a role of one of `characterIds` can wear `head` in the game. */
 export function wearableBy(pool: Costume3dPool, head: Costume3dPart, characterIds: ReadonlySet<number>): boolean {
-    const bundle = head.model?.bundle;
-    return bundle != null && pool.roles.some(role => characterIds.has(role.characterId) && Boolean(pool.roleHeads.get(roleKey(role))?.has(bundle)));
+    const asset = head.model?.asset;
+    return asset != null && pool.roles.some(role => characterIds.has(role.characterId) && Boolean(pool.roleHeads.get(roleKey(role))?.has(asset)));
 }
 
 const BREAST_SIZES = ["ss", "s", "m", "l"];
@@ -369,50 +427,57 @@ function figureDistance(a: PoolRole, b: PoolRole): number {
     return 10 + (b.figure === "ladies" ? bust(b) : 0);
 }
 
+/** A look borrowed from another role by the cross-role wardrobe, and the role it came from. */
+export interface BorrowedVariant {
+    variant: Costume3dVariant;
+    from: { characterId: number; unit: string };
+}
+
 /**
- * The look of `costume` in `colorId` for the role of `catalog`: its own when it has one, else
- * (unrestricted) the body of the role whose figure is nearest, worn with the role's own face,
- * default hair and motion, and the costume's accessory when the role can wear it. `from` names
- * the role the body was borrowed from.
+ * The look of `costume` in `colorId` for the role of `catalog`: its own when it has one (as the
+ * document gives it), else (cross-role) the body of the role whose figure is nearest — of the
+ * colour's looks, else of the costume's — worn with the role's own face, default hair and motions,
+ * and the costume's accessory when the role can wear it.
  */
 export function costumeVariant(
     costume: Costume3dCostume, catalog: Costume3dCatalog, colorId: number, pool?: Costume3dPool | null,
 ): { variant: Costume3dVariant; from: { characterId: number; unit: string } | null } | null {
     const role = catalog.role;
-    const own = costume.variants.find(entry => entry.characterId === role.characterId && entry.unit === role.unit && entry.colorId === colorId);
-    if (own || !pool) return own ? { variant: own, from: null } : null;
-    const wearer = { characterId: role.characterId, unit: role.unit, figure: role.figure, breastSize: role.breastSize };
+    const own = costume.variants.find(entry => entry.role === roleName(role) || (entry.characterId === role.characterId && entry.unit === role.unit));
+    if (own) return { variant: own, from: null };
+    if (!pool) return null;
+    const wearer: PoolRole = { ...role };
     const distance = (entry: Costume3dVariant) => {
         const of = pool.roles.find(other => other.characterId === entry.characterId && other.unit === entry.unit);
         return (of ? figureDistance(wearer, of) : 20) + (entry.characterId === role.characterId ? 0 : 0.5);
     };
     const donor = costume.variants
-        .filter(entry => entry.colorId === colorId && entry.bodyBundle && !entry.missing?.length)
-        .sort((a, b) => distance(a) - distance(b) || a.characterId - b.characterId)[0];
-    if (!donor) return null;
+        .filter(showable)
+        .sort((a, b) => (a.colorId !== colorId ? 1 : 0) - (b.colorId !== colorId ? 1 : 0) || distance(a) - distance(b) || a.characterId - b.characterId)[0];
+    if (!donor?.models.body) return null;
+    // The role's own hair on its own face; the costume's accessory only when the role can wear it there.
     const hair = partById(catalog, role.defaultHair) ?? hairOptions(catalog)[0] ?? null;
     if (!hair?.model) return null;
-    // The costume's accessory, when the role can wear it with its own hair; the pool's part of it
-    // stands for the donor's head.
-    const wearable = donor.accessoryBundle && pool.roleHeads.get(roleKey(role))?.has(donor.accessoryBundle);
+    const wearable = donor.models.accessory && pool.roleHeads.get(roleKey(role))?.has(donor.models.accessory.asset);
     const accessory = wearable
-        ? [...pool.headsById.values()].find(part => part.model?.bundle === donor.accessoryBundle && part.model?.color === (donor.accessoryColor ?? null))
+        ? [...pool.headsById.values()].find(part => part.model?.asset === donor.models.accessory?.asset
+            && (part.model?.colors?.color ?? null) === (donor.models.accessory?.colors?.color ?? null))
         : undefined;
     return {
         variant: {
+            role: roleName(role),
             characterId: role.characterId,
             unit: role.unit,
             colorId,
             body: donor.body,
             hair: hair.costume3dId,
             head: accessory?.costume3dId ?? 0,
-            bodyBundle: donor.bodyBundle,
-            bodyColor: donor.bodyColor,
-            faceBundle: hair.model.bundle,
-            accessoryBundle: accessory ? donor.accessoryBundle : null,
-            accessoryColor: accessory ? donor.accessoryColor ?? null : null,
-            attach: accessory ? donor.attach ?? null : null,
-            motion: role.motion,
+            alternativeHeads: [],
+            models: {
+                body: donor.models.body,
+                face: hair.model.asset,
+                ...(accessory && donor.models.accessory ? { accessory: donor.models.accessory } : {}),
+            },
         },
         from: { characterId: donor.characterId, unit: donor.unit },
     };
@@ -425,7 +490,7 @@ export interface Costume3dSelection {
     costumeNumber: number;
     colorId: number;
     hair: number | null;
-    /** Another role's hair (unrestricted): that role's unit. */
+    /** Another role's hair (cross-role): that role's unit. */
     hairUnit: string | null;
     head: number | null;
 }
@@ -477,3 +542,8 @@ export function costume3dHref(target: { characterId?: number; unit?: string; cos
     const query = params.toString();
     return query ? `/costume-3d?${query}` : "/costume-3d";
 }
+
+
+
+
+

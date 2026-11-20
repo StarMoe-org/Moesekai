@@ -1,96 +1,107 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback, Suspense } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef, useDeferredValue, Suspense, type ReactNode } from "react";
 
 import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterSection, FilterButton } from "@/components/common/BaseFilters";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import DirectoryTreeSidebar from "@/components/common/DirectoryTreeSidebar";
+import ExplorerSplitPane from "@/components/common/ExplorerSplitPane";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { usePageServer } from "@/hooks/usePageServer";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
+import { useExplorerScrollRestore } from "@/hooks/useExplorerScrollRestore";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
-import LocalizedLink from "@/components/LocalizedLink";
-import { Banner, Button, Card, CircularProgress, EmptyState, ErrorState, Icon, IconButton, LoadingState, PageContainer, PageHeader, Surface } from "@/components/md3";
 import {
+    Banner,
+    Button,
+    Card,
+    CircularProgress,
+    EmptyState,
+    ErrorState,
+    Icon,
+    IconButton,
+    LoadingState,
+    Menu,
+    PageContainer,
+    PageHeader,
+    SegmentedButton,
+    Surface,
+} from "@/components/md3";
+import { isModalHistoryRoundTrip } from "@/components/md3";
+import { getAssetDomain } from "@/lib/assets";
+import {
+    changedFileUrl,
+    conversionCount,
+    fetchVersionChanges,
+    fetchVersionHistory,
+    shortVersion,
+    type ChangedFile,
+    type ChangeKind,
+    type VersionChanges,
+    type VersionEntry,
+} from "@/lib/assetHistory";
+import {
+    mdArticle,
+    mdAudioFile,
     mdCheck,
     mdChevronLeft,
     mdChevronRight,
+    mdClose,
     mdContentCopy,
     mdDescription,
+    mdDockToRight,
     mdDownload,
+    mdDraft,
     mdFolder,
+    mdFolderFill,
     mdFolderOff,
+    mdGridView,
     mdHistory,
+    mdHome,
+    mdImage,
+    mdKeyboardArrowDown,
+    mdKeyboardArrowUp,
     mdRefresh,
+    mdSearch,
+    mdVideoFile,
+    mdViewList,
     mdVolumeUp,
 } from "@/components/md3/icons";
+import {
+    buildDiffDirectoryTree,
+    countDiffCauses,
+    getDiffCause,
+    getDiffMediaCategory,
+    getFileExtension,
+    getFileName,
+    listDiffDirectory,
+    searchDiffDirectory,
+    type DiffCause,
+    type DiffMediaCategory,
+} from "./diffTree";
 
-// ==================== Types (matching the assets gateway responses) ====================
+const PAGE_SIZE = 200;
 
-export interface AssetVersionItem {
-    assetVersion: string;
-    appVersion: string;
-    assetHash?: string;
-    bundleCount: number;
-    committedAt: number; // unix seconds
-    changedAssets: number;
-    /** Client COMMIT stats passthrough — keys are not guaranteed to be stable */
-    stats?: Record<string, number>;
-    diffUrl?: string;
-}
+type KindFilter = "all" | ChangeKind;
+type MediaFilter = "all" | DiffMediaCategory;
+type CauseFilter = "all" | DiffCause;
 
-export interface AssetVersionsResponse {
-    server: string;
-    limit: number;
-    nextCursor?: string;
-    items: AssetVersionItem[];
-}
-
-export interface AssetDiffItem {
-    changeType: "added" | "updated";
-    path: string;
-    url: string;
-    source?: string;
-    size?: number;
-    fingerprint?: string;
-    sha256?: string;
-    bundlePath?: string;
-}
-
-export interface AssetDiffResponse {
-    server: string;
-    assetVersion: string;
-    appVersion: string;
-    assetHash?: string;
-    committedAt: number;
-    types?: string[];
-    totalChanged: number;
-    limit: number;
-    nextCursor?: string;
-    items: AssetDiffItem[];
-}
-
-type AssetDiffMeta = Omit<AssetDiffResponse, "items" | "nextCursor" | "limit">;
-
-const SERVERS = ["jp", "en", "tw", "kr", "cn"] as const;
-const VERSIONS_PAGE_LIMIT = 20;
-const DIFF_PAGE_LIMIT = 200;
-
-// Known COMMIT stat keys → i18n labels; unknown keys fall back to the raw name
-const STAT_LABEL_KEYS: Record<string, string> = {
-    SkippedByLayer1: "page.assetVersions.stats.skippedByLayer1",
-    SkippedByCheck: "page.assetVersions.stats.skippedByCheck",
-    UploadedShared: "page.assetVersions.stats.uploadedShared",
-    UploadedOverride: "page.assetVersions.stats.uploadedOverride",
+const CHANGE_BADGES: Record<ChangeKind, { labelKey: string; className: string }> = {
+    added: { labelKey: "page.assetVersions.changeAdded", className: "bg-primary-container text-on-primary-container" },
+    changed: { labelKey: "page.assetVersions.changeUpdated", className: "bg-tertiary-container text-on-tertiary-container" },
+    removed: { labelKey: "page.assetVersions.changeRemoved", className: "bg-error-container text-on-error-container" },
 };
 
-const STAT_CHIP_CLASSES: Record<string, string> = {
-    UploadedOverride: "bg-tertiary-container text-on-tertiary-container",
-    UploadedShared: "bg-secondary-container text-on-secondary-container",
+const CAUSE_LABEL_KEYS: Record<DiffCause, string> = {
+    source: "page.assetVersions.causeSource",
+    conversion: "page.assetVersions.causeConversion",
+    unknown: "page.assetVersions.causeUnknown",
 };
-const STAT_CHIP_DEFAULT = "bg-surface-container-highest text-on-surface-variant";
 
 function formatBytes(bytes?: number): string {
     if (bytes === undefined || bytes === null) return "-";
@@ -101,295 +112,475 @@ function formatBytes(bytes?: number): string {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
 }
 
-function getFileExtension(path: string): string {
-    const name = path.split("/").pop() || "";
-    const dot = name.lastIndexOf(".");
-    return dot === -1 ? "" : name.slice(dot + 1).toLowerCase();
+function normalizeMediaFilter(raw: string | null): MediaFilter {
+    if (!raw || raw === "default" || raw === "all") return "all";
+    if (raw === "webp" || raw === "png" || raw === "image") return "image";
+    if (raw === "mp3" || raw === "audio") return "audio";
+    if (raw === "mp4" || raw === "video") return "video";
+    if (raw === "json" || raw === "txt" || raw === "text") return "text";
+    if (raw === "other") return "other";
+    return "all";
 }
 
-function isImagePath(path: string): boolean {
-    return ["png", "jpg", "jpeg", "webp", "gif", "svg"].includes(getFileExtension(path));
+function normalizeCauseFilter(raw: string | null): CauseFilter {
+    return raw === "source" || raw === "conversion" || raw === "unknown" ? raw : "all";
 }
 
-function isAudioPath(path: string): boolean {
-    return ["mp3", "wav", "ogg", "m4a", "flac"].includes(getFileExtension(path));
+function getRelativeParent(fullPath: string, basePath: string): string {
+    const rel = basePath && fullPath.startsWith(`${basePath}/`) ? fullPath.slice(basePath.length + 1) : fullPath;
+    const slash = rel.lastIndexOf("/");
+    return slash > 0 ? rel.slice(0, slash) : "";
 }
 
-function isTextPath(path: string): boolean {
-    return ["json", "txt", "csv", "xml", "yaml", "yml"].includes(getFileExtension(path));
+function getDiffFileIcon(category: DiffMediaCategory, size = 20) {
+    switch (category) {
+        case "image": return <Icon path={mdImage} size={size} className="text-primary" />;
+        case "audio": return <Icon path={mdAudioFile} size={size} className="text-tertiary" />;
+        case "video": return <Icon path={mdVideoFile} size={size} className="text-primary" />;
+        case "text": return <Icon path={mdArticle} size={size} className="text-secondary" />;
+        default: return <Icon path={mdDraft} size={size} className="text-on-surface-variant" />;
+    }
+}
+
+function FilterChip({ selected, selectedClassName, onClick, children }: {
+    selected: boolean;
+    selectedClassName: string;
+    onClick: () => void;
+    children: ReactNode;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            aria-pressed={selected}
+            className={`state-layer focus-ring inline-flex h-8 shrink-0 items-center rounded-full px-3 type-label-l transition-colors ${
+                selected
+                    ? selectedClassName
+                    : "border border-outline-variant bg-surface text-on-surface-variant hover:bg-surface-container"
+            }`}
+        >
+            {children}
+        </button>
+    );
 }
 
 function AssetVersionsContent() {
     const { assetSource } = useTheme();
     const { t, formatNumber, formatDate } = useI18n();
 
-    // ==================== Query states (synced to URL) ====================
+    // ==================== Query & layout states ====================
 
-    const [server, setServer] = useState<string>(() => {
-        if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            const queryServer = params.get("server");
-            if (queryServer) return queryServer;
-
-            const savedServer = localStorage.getItem("server-source");
-            if (savedServer === "en" || savedServer === "jp" || savedServer === "cn" || savedServer === "tw" || savedServer === "kr") {
-                return savedServer;
-            }
-            return "jp";
-        }
-        return "jp";
-    });
-    // Selected version — empty string means the version timeline view
+    const { servers, server, pinned, ready, chooseServer } = usePageServer();
     const [version, setVersion] = useState<string>(() => {
         if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            return params.get("version") || "";
+            return new URLSearchParams(window.location.search).get("version") || "";
         }
         return "";
     });
 
-    const [typeFilter, setTypeFilter] = useState<string>(() => {
+    const [prefix, setPrefix] = useState<string>(() => {
         if (typeof window !== "undefined") {
-            const params = new URLSearchParams(window.location.search);
-            const types = params.get("types");
-            if (types) return types;
+            return new URLSearchParams(window.location.search).get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
         }
-        return "default";
+        return "";
     });
+
+    const [historyStack, setHistoryStack] = useState<string[]>(() => [prefix]);
+    const [historyIndex, setHistoryIndex] = useState(0);
+
+    const [viewMode, setViewMode] = useState<"list" | "grid">("list");
+    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [showVersionPicker, setShowVersionPicker] = useState(false);
+    const [versionQuery, setVersionQuery] = useState("");
+
+    const [kindFilter, setKindFilter] = useState<KindFilter>("all");
+    const [causeFilter, setCauseFilter] = useState<CauseFilter>(() => {
+        if (typeof window !== "undefined") {
+            return normalizeCauseFilter(new URLSearchParams(window.location.search).get("cause"));
+        }
+        return "all";
+    });
+    const [mediaFilter, setMediaFilter] = useState<MediaFilter>(() => {
+        if (typeof window !== "undefined") {
+            return normalizeMediaFilter(new URLSearchParams(window.location.search).get("types"));
+        }
+        return "all";
+    });
+    const [searchQuery, setSearchQuery] = useState("");
+    const deferredQuery = useDeferredValue(searchQuery.trim());
+    const [sortBy, setSortBy] = useState<"size" | "path">("path");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
     const [showTos, setShowTos] = useState(false);
 
-    // Sync state to URL query parameters (write-only)
+    // Load persisted view mode and responsive sidebar default on mount
     useEffect(() => {
+        if (typeof window !== "undefined") {
+            const savedMode = localStorage.getItem("asset-versions-view-mode");
+            if (savedMode === "grid" || savedMode === "list") {
+                setViewMode(savedMode);
+            }
+            if (window.innerWidth < 1024) {
+                setSidebarOpen(false);
+            }
+        }
+    }, []);
+
+    const handleViewModeChange = (mode: "list" | "grid") => {
+        setViewMode(mode);
+        if (typeof window !== "undefined") {
+            localStorage.setItem("asset-versions-view-mode", mode);
+        }
+    };
+
+    // The URL of the current history entry, as the state below names it.
+    const stateUrl = useCallback(() => {
         const url = new URL(window.location.href);
-        url.searchParams.set("server", server);
+        if (pinned) {
+            url.searchParams.set("server", pinned);
+        } else {
+            url.searchParams.delete("server");
+        }
         if (version) {
             url.searchParams.set("version", version);
-            if (typeFilter !== "default") {
-                url.searchParams.set("types", typeFilter);
-            } else {
-                url.searchParams.delete("types");
-            }
         } else {
             url.searchParams.delete("version");
-            url.searchParams.delete("action");
+        }
+        if (prefix) {
+            url.searchParams.set("prefix", prefix);
+        } else {
+            url.searchParams.delete("prefix");
+        }
+        if (mediaFilter !== "all") {
+            url.searchParams.set("types", mediaFilter);
+        } else {
             url.searchParams.delete("types");
         }
-        window.history.replaceState({}, "", url.toString());
-    }, [server, version, typeFilter]);
+        if (causeFilter !== "all") {
+            url.searchParams.set("cause", causeFilter);
+        } else {
+            url.searchParams.delete("cause");
+        }
+        url.searchParams.delete("action");
+        return url.toString();
+    }, [pinned, version, prefix, mediaFilter, causeFilter]);
 
-    // Handle back/forward navigation
+    // Sync state to URL query parameters
+    useEffect(() => {
+        if (!ready) return;
+        window.history.replaceState({}, "", stateUrl());
+    }, [ready, stateUrl]);
+
+    // Handle browser back/forward navigation
     useEffect(() => {
         const handlePopState = () => {
-            const params = new URLSearchParams(window.location.search);
-            const serverParam = params.get("server");
-            if (serverParam) {
-                setServer(serverParam);
+            // A modal the picker opened removed its history entry, and this popstate is the
+            // `back` it queued: what the page did while it was open stays, and the entry it
+            // returned to is renamed to match.
+            if (isModalHistoryRoundTrip()) {
+                window.history.replaceState({}, "", stateUrl());
+                return;
             }
-            setVersion(params.get("version") || "");
-            setTypeFilter(params.get("types") || "default");
+            const params = new URLSearchParams(window.location.search);
+            const nextVersion = params.get("version") || "";
+            const nextPrefix = params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
+            setVersion(nextVersion);
+            setPrefix(nextPrefix);
+            setHistoryStack([nextPrefix]);
+            setHistoryIndex(0);
+            setMediaFilter(normalizeMediaFilter(params.get("types")));
+            setCauseFilter(normalizeCauseFilter(params.get("cause")));
         };
 
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
-    }, []);
+    }, [stateUrl]);
 
-    // Versions are server-specific, so switching servers exits the diff view
-    const handleServerChange = useCallback((srv: string) => {
-        setServer(srv);
-        setVersion("");
-    }, []);
-
-    const gatewayDomain = useMemo(() => {
-        return assetSource === "backup" ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe";
-    }, [assetSource]);
+    const origin = useMemo(() => getAssetDomain(assetSource), [assetSource]);
 
     // ==================== Version timeline states ====================
 
-    const [versions, setVersions] = useState<AssetVersionItem[]>([]);
-    const [versionsCursor, setVersionsCursor] = useState<string>("");
+    const [versions, setVersions] = useState<VersionEntry[]>([]);
     const [isVersionsLoading, setIsVersionsLoading] = useState(true);
-    const [isVersionsLoadingMore, setIsVersionsLoadingMore] = useState(false);
     const [versionsError, setVersionsError] = useState<string | null>(null);
+    const versionRef = useRef(version);
+    versionRef.current = version;
 
     const fetchVersions = useCallback(async () => {
+        if (!ready) return;
         try {
             setIsVersionsLoading(true);
             setVersionsError(null);
-            const url = `${gatewayDomain}/api/assets/versions?server=${server}&limit=${VERSIONS_PAGE_LIMIT}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
+            const list = await fetchVersionHistory(origin, server);
+            setVersions(list);
+            if (list.length > 0 && (!versionRef.current || !list.some(v => v.published_version === versionRef.current))) {
+                setVersion(list[0].published_version);
+                setPrefix("");
+                setHistoryStack([""]);
+                setHistoryIndex(0);
             }
-            const data: AssetVersionsResponse = await res.json();
-            setVersions(data.items || []);
-            setVersionsCursor(data.nextCursor || "");
         } catch (err) {
             console.error("Failed to load asset versions:", err);
             setVersionsError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setIsVersionsLoading(false);
         }
-    }, [server, gatewayDomain]);
+    }, [ready, server, origin]);
 
     useEffect(() => {
         fetchVersions();
     }, [fetchVersions]);
 
-    const fetchMoreVersions = useCallback(async () => {
-        if (!versionsCursor || isVersionsLoadingMore) return;
-        try {
-            setIsVersionsLoadingMore(true);
-            const url = `${gatewayDomain}/api/assets/versions?server=${server}&limit=${VERSIONS_PAGE_LIMIT}&cursor=${encodeURIComponent(versionsCursor)}`;
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetVersionsResponse = await res.json();
-            setVersions(prev => [...prev, ...(data.items || [])]);
-            setVersionsCursor(data.nextCursor || "");
-        } catch (err) {
-            console.error("Failed to load more asset versions:", err);
-        } finally {
-            setIsVersionsLoadingMore(false);
-        }
-    }, [server, gatewayDomain, versionsCursor, isVersionsLoadingMore]);
+    // ==================== Changes states ====================
 
-    // ==================== Diff states ====================
-
-    const [diffMeta, setDiffMeta] = useState<AssetDiffMeta | null>(null);
-    const [diffItems, setDiffItems] = useState<AssetDiffItem[]>([]);
-    const [diffCursor, setDiffCursor] = useState<string>("");
+    const [changes, setChanges] = useState<VersionChanges | null>(null);
     const [isDiffLoading, setIsDiffLoading] = useState(false);
-    const [isDiffLoadingMore, setIsDiffLoadingMore] = useState(false);
     const [diffError, setDiffError] = useState<string | null>(null);
 
-    // Diff filters
-    const [searchQuery, setSearchQuery] = useState("");
-    const [sortBy, setSortBy] = useState<"size" | "path">("size");
-    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
-
     // Selected file detail modal
-    const [selectedFile, setSelectedFile] = useState<AssetDiffItem | null>(null);
+    const [selectedFile, setSelectedFile] = useState<ChangedFile | null>(null);
     const [previewText, setPreviewText] = useState<string | null>(null);
     const [isPreviewTextLoading, setIsPreviewTextLoading] = useState(false);
     const [previewTextError, setPreviewTextError] = useState<string | null>(null);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
+    const listScrollRef = useRef<HTMLDivElement | null>(null);
+
     const fetchDiff = useCallback(async () => {
-        if (!version) return;
+        if (!ready || !version) return;
         try {
             setIsDiffLoading(true);
             setDiffError(null);
-            setDiffItems([]);
-            setDiffMeta(null);
-
-            let url = `${gatewayDomain}/api/assets/diff?server=${server}&version=${encodeURIComponent(version)}&limit=${DIFF_PAGE_LIMIT}`;
-            if (typeFilter && typeFilter !== "default") {
-                url += `&types=${encodeURIComponent(typeFilter)}`;
-            }
-
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetDiffResponse = await res.json();
-            setDiffMeta({
-                server: data.server,
-                assetVersion: data.assetVersion,
-                appVersion: data.appVersion,
-                assetHash: data.assetHash,
-                committedAt: data.committedAt,
-                types: data.types,
-                totalChanged: data.totalChanged,
-            });
-            setDiffItems(data.items || []);
-            setDiffCursor(data.nextCursor || "");
+            setChanges(null);
+            setChanges(await fetchVersionChanges(origin, server, version));
         } catch (err) {
             console.error("Failed to load asset diff:", err);
             setDiffError(err instanceof Error ? err.message : "Unknown error");
         } finally {
             setIsDiffLoading(false);
         }
-    }, [server, version, typeFilter, gatewayDomain]);
+    }, [ready, server, version, origin]);
 
     useEffect(() => {
         fetchDiff();
     }, [fetchDiff]);
 
-    const fetchMoreDiff = useCallback(async () => {
-        if (!version || !diffCursor || isDiffLoadingMore) return;
-        try {
-            setIsDiffLoadingMore(true);
+    const diffItems = useMemo(() => changes?.files ?? [], [changes]);
 
-            let url = `${gatewayDomain}/api/assets/diff?server=${server}&version=${encodeURIComponent(version)}&limit=${DIFF_PAGE_LIMIT}&cursor=${encodeURIComponent(diffCursor)}`;
-            if (typeFilter && typeFilter !== "default") {
-                url += `&types=${encodeURIComponent(typeFilter)}`;
-            }
+    // Where the changes tell their causes, the page can show those of one cause only: the
+    // directory tree, its counts and the listing then all follow that cause.
+    const causeCounts = useMemo(() => countDiffCauses(diffItems), [diffItems]);
+    const hasCauses = causeCounts.source + causeCounts.conversion > 0;
+    const activeCause: CauseFilter = hasCauses ? causeFilter : "all";
+    const causeItems = useMemo(
+        () => (activeCause === "all" ? diffItems : diffItems.filter(item => getDiffCause(item) === activeCause)),
+        [diffItems, activeCause],
+    );
 
-            const res = await fetch(url);
-            if (!res.ok) {
-                throw new Error(`HTTP ${res.status}`);
-            }
-            const data: AssetDiffResponse = await res.json();
-            setDiffItems(prev => [...prev, ...(data.items || [])]);
-            setDiffCursor(data.nextCursor || "");
-        } catch (err) {
-            console.error("Failed to load more asset diff entries:", err);
-        } finally {
-            setIsDiffLoadingMore(false);
+    const fileUrl = useCallback(
+        (file: ChangedFile) => (changes ? changedFileUrl(origin, server, changes, file) : ""),
+        [changes, origin, server],
+    );
+
+    // Scroll position & loaded item count per server, version, and directory
+    const viewKey = `${server}:${version}:${prefix}`;
+    const filterSignature = `${deferredQuery}:${activeCause}:${kindFilter}:${mediaFilter}:${sortBy}:${sortOrder}`;
+    const filterKey = `${viewKey}:${filterSignature}`;
+    const { visibleCount, loadMore, rememberScroll } = useExplorerScrollRestore({
+        storageKey: "asset-versions",
+        viewKey,
+        filterSignature,
+        pageSize: PAGE_SIZE,
+        listScrollRef,
+        isReady: !isVersionsLoading && !isDiffLoading && Boolean(changes),
+    });
+
+    // ==================== Navigation handlers ====================
+
+    const selectServer = (srv: (typeof servers)[number]) => {
+        if (srv === server) return;
+        rememberScroll();
+        setVersion("");
+        setPrefix("");
+        setHistoryStack([""]);
+        setHistoryIndex(0);
+        chooseServer(srv);
+    };
+
+    const selectVersion = (nextVersion: string) => {
+        if (nextVersion === version) return;
+        rememberScroll();
+        setVersion(nextVersion);
+        setPrefix("");
+        setHistoryStack([""]);
+        setHistoryIndex(0);
+    };
+
+    const navigateTo = (path: string) => {
+        const normalized = path.replace(/^\/+|\/+$/g, "");
+        if (normalized === prefix) return;
+        rememberScroll();
+        setPrefix(normalized);
+        setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), normalized]);
+        setHistoryIndex(prev => prev + 1);
+    };
+
+    const handleHistoryBack = () => {
+        if (historyIndex <= 0) return;
+        rememberScroll();
+        const nextIdx = historyIndex - 1;
+        setHistoryIndex(nextIdx);
+        setPrefix(historyStack[nextIdx]);
+    };
+
+    const handleHistoryForward = () => {
+        if (historyIndex >= historyStack.length - 1) return;
+        rememberScroll();
+        const nextIdx = historyIndex + 1;
+        setHistoryIndex(nextIdx);
+        setPrefix(historyStack[nextIdx]);
+    };
+
+    const handleGoUp = () => {
+        if (!prefix) return;
+        const parts = prefix.split("/").filter(Boolean);
+        navigateTo(parts.slice(0, -1).join("/"));
+    };
+
+    const handleRefresh = () => {
+        fetchVersions();
+        if (version) fetchDiff();
+    };
+
+    // ==================== Directory tree & filtering ====================
+
+    const diffTree = useMemo(() => buildDiffDirectoryTree(causeItems), [causeItems]);
+
+    const isSearching = deferredQuery.length > 0;
+
+    // Base listing before kind/media filters
+    const scopedListing = useMemo(() => {
+        return isSearching
+            ? searchDiffDirectory(diffTree, prefix, deferredQuery)
+            : listDiffDirectory(diffTree, prefix);
+    }, [diffTree, prefix, isSearching, deferredQuery]);
+
+    // Counts for filter chips based on the current scoped listing
+    const scopeCounts = useMemo(() => {
+        const kinds: Record<KindFilter, number> = {
+            all: scopedListing.files.length,
+            added: 0,
+            changed: 0,
+            removed: 0,
+        };
+        const media: Record<MediaFilter, number> = {
+            all: scopedListing.files.length,
+            image: 0,
+            audio: 0,
+            video: 0,
+            text: 0,
+            other: 0,
+        };
+        for (const item of scopedListing.files) {
+            kinds[item.kind] += 1;
+            media[getDiffMediaCategory(item)] += 1;
         }
-    }, [server, version, typeFilter, gatewayDomain, diffCursor, isDiffLoadingMore]);
+        return { kinds, media };
+    }, [scopedListing]);
 
-    // ==================== Diff filtering & pagination ====================
+    const folders = useMemo(() => {
+        const matched = scopedListing.folders.filter(folder => {
+            if (kindFilter === "all") return true;
+            return folder.counts[kindFilter] > 0;
+        });
+        return [...matched].sort((a, b) =>
+            sortOrder === "asc" ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name),
+        );
+    }, [scopedListing.folders, kindFilter, sortOrder]);
 
-    const processedDiffItems = useMemo(() => {
-        let list = [...diffItems];
-
-        if (searchQuery.trim()) {
-            const query = searchQuery.toLowerCase();
-            list = list.filter(item => item.path.toLowerCase().includes(query));
-        }
+    const files = useMemo(() => {
+        const filtered = scopedListing.files.filter(item => {
+            if (kindFilter !== "all" && item.kind !== kindFilter) return false;
+            if (mediaFilter !== "all" && getDiffMediaCategory(item) !== mediaFilter) return false;
+            return true;
+        });
 
         const isAsc = sortOrder === "asc";
-        if (sortBy === "path") {
-            list.sort((a, b) => isAsc ? a.path.localeCompare(b.path) : b.path.localeCompare(a.path));
-        } else {
-            list.sort((a, b) => {
-                const sizeA = a.size || 0;
-                const sizeB = b.size || 0;
-                return isAsc ? sizeA - sizeB : sizeB - sizeA;
-            });
-        }
+        return [...filtered].sort((a, b) => {
+            if (sortBy === "size") {
+                const diff = (a.size || 0) - (b.size || 0);
+                return isAsc ? diff : -diff;
+            }
+            const nameA = getFileName(a.path);
+            const nameB = getFileName(b.path);
+            return isAsc ? nameA.localeCompare(nameB) : nameB.localeCompare(nameA);
+        });
+    }, [scopedListing.files, kindFilter, mediaFilter, sortBy, sortOrder]);
 
-        return list;
-    }, [diffItems, searchQuery, sortBy, sortOrder]);
+    const currentItemCount = folders.length + files.length;
+    const shownFolders = folders.slice(0, visibleCount);
+    const shownFiles = files.slice(0, Math.max(0, visibleCount - shownFolders.length));
+    const shownItemCount = shownFolders.length + shownFiles.length;
+    const hasMore = currentItemCount > shownItemCount;
+    const loadMoreRef = useAutoLoadMore({
+        hasMore,
+        itemCount: shownItemCount,
+        onLoadMore: loadMore,
+        scrollRootRef: listScrollRef,
+        rootMargin: "600px 0px",
+        resetKey: filterKey,
+    });
 
-    const isDiffView = version !== "";
-    const hasActiveDiffFilters = searchQuery !== "" || typeFilter !== "default" || sortBy !== "size" || sortOrder !== "desc";
+    const breadcrumbs = useMemo(() => {
+        const parts = prefix.split("/").filter(Boolean);
+        return [
+            { name: t("page.assetViewer.root"), path: "" },
+            ...parts.map((part, index) => ({ name: part, path: parts.slice(0, index + 1).join("/") })),
+        ];
+    }, [prefix, t]);
+
+    const selectedVersionIndex = useMemo(
+        () => versions.findIndex(v => v.published_version === version),
+        [versions, version],
+    );
+
+    const selectedVersionMeta = selectedVersionIndex >= 0 ? versions[selectedVersionIndex] : null;
+
+    const filteredVersions = useMemo(() => {
+        const q = versionQuery.trim().toLowerCase();
+        if (!q) return versions;
+        return versions.filter(v =>
+            v.published_version.toLowerCase().includes(q) ||
+            (v.published_at && v.published_at.toLowerCase().includes(q)),
+        );
+    }, [versions, versionQuery]);
+
+    const hasActiveDiffFilters =
+        searchQuery !== "" ||
+        activeCause !== "all" ||
+        kindFilter !== "all" ||
+        mediaFilter !== "all" ||
+        sortBy !== "path" ||
+        sortOrder !== "asc";
 
     const resetFilters = useCallback(() => {
         setSearchQuery("");
-        setTypeFilter("default");
-        setSortBy("size");
-        setSortOrder("desc");
+        setCauseFilter("all");
+        setKindFilter("all");
+        setMediaFilter("all");
+        setSortBy("path");
+        setSortOrder("asc");
     }, []);
-
-    // Reset diff filters when leaving / switching versions
-    useEffect(() => {
-        resetFilters();
-    }, [version, resetFilters]);
 
     // ==================== File preview helpers ====================
 
-    const handleFetchPreviewText = async (file: AssetDiffItem) => {
-        if (!file.url) return;
+    const handleFetchPreviewText = async (file: ChangedFile) => {
         try {
             setIsPreviewTextLoading(true);
             setPreviewTextError(null);
             setPreviewText(null);
 
-            const res = await fetch(`${gatewayDomain}${file.url}`);
+            const res = await fetch(fileUrl(file));
             if (!res.ok) {
                 throw new Error(`HTTP ${res.status}`);
             }
@@ -418,37 +609,88 @@ function AssetVersionsContent() {
         });
     };
 
-    // ==================== Sidebar filters ====================
+    const toggleSortColumn = (col: "path" | "size") => {
+        if (sortBy === col) {
+            setSortOrder(prev => (prev === "asc" ? "desc" : "asc"));
+        } else {
+            setSortBy(col);
+            setSortOrder(col === "size" ? "desc" : "asc");
+        }
+    };
+
+    // ==================== Filter options & helpers ====================
+
+    const kindChipOptions: Array<{ key: KindFilter; label: string; count: number; alwaysShowCount?: boolean }> = [
+        { key: "all", label: t("page.assetVersions.filterAll"), count: scopeCounts.kinds.all, alwaysShowCount: true },
+        { key: "added", label: t("page.assetVersions.changeAdded"), count: scopeCounts.kinds.added },
+        { key: "changed", label: t("page.assetVersions.changeUpdated"), count: scopeCounts.kinds.changed },
+        { key: "removed", label: t("page.assetVersions.changeRemoved"), count: scopeCounts.kinds.removed },
+    ];
+
+    const mediaChipOptions: Array<{ key: MediaFilter; label: string; count: number }> = [
+        { key: "all", label: t("page.assetVersions.filterAll"), count: scopeCounts.media.all },
+        { key: "image", label: t("page.assetViewer.typeImage"), count: scopeCounts.media.image },
+        { key: "audio", label: t("page.assetViewer.typeAudio"), count: scopeCounts.media.audio },
+        { key: "video", label: t("page.assetViewer.typeVideo"), count: scopeCounts.media.video },
+        { key: "text", label: t("page.assetViewer.typeText"), count: scopeCounts.media.text },
+    ];
+    if (scopeCounts.media.other > 0 || mediaFilter === "other") {
+        mediaChipOptions.push({ key: "other", label: t("page.assetViewer.typeOther"), count: scopeCounts.media.other });
+    }
+
+    const causeOptions: Array<{ key: CauseFilter; label: string; count: number }> = [
+        { key: "all", label: t("page.assetVersions.causeAll"), count: diffItems.length },
+        { key: "source", label: t(CAUSE_LABEL_KEYS.source), count: causeCounts.source },
+        { key: "conversion", label: t(CAUSE_LABEL_KEYS.conversion), count: causeCounts.conversion },
+    ];
+    if (causeCounts.unknown > 0 || causeFilter === "unknown") {
+        causeOptions.push({ key: "unknown", label: t(CAUSE_LABEL_KEYS.unknown), count: causeCounts.unknown });
+    }
+
+    const getMediaTypeBadge = (item: ChangedFile): string => {
+        const cat = getDiffMediaCategory(item);
+        switch (cat) {
+            case "image": return t("page.assetViewer.typeImage");
+            case "audio": return t("page.assetViewer.typeAudio");
+            case "video": return t("page.assetViewer.typeVideo");
+            case "text": return t("page.assetViewer.typeText");
+            default: {
+                const ext = getFileExtension(item.path);
+                return ext ? ext.toUpperCase() : t("page.assetViewer.typeAsset");
+            }
+        }
+    };
+
+    // ==================== Sidebar filters (global FilterDrawer) ====================
 
     const quickFilterContent = (
         <BaseFilters
-            filteredCount={isDiffView ? processedDiffItems.length : versions.length}
-            totalCount={isDiffView ? diffItems.length : versions.length}
-            countUnit={isDiffView ? t("page.assetVersions.fileUnit") : t("page.assetVersions.versionUnit")}
+            filteredCount={files.length}
+            totalCount={diffItems.length}
+            countUnit={t("page.assetVersions.fileUnit")}
             searchQuery={searchQuery}
-            onSearchChange={isDiffView ? setSearchQuery : undefined}
+            onSearchChange={setSearchQuery}
             searchPlaceholder={t("page.assetVersions.searchPlaceholder")}
-            showSearch={isDiffView}
-            sortOptions={isDiffView ? [
-                { id: "size", label: t("page.assetVersions.size") },
+            sortOptions={[
                 { id: "path", label: t("page.assetVersions.path") },
-            ] : undefined}
+                { id: "size", label: t("page.assetVersions.size") },
+            ]}
             sortBy={sortBy}
             sortOrder={sortOrder}
-            onSortChange={isDiffView ? (field, order) => {
+            onSortChange={(field, order) => {
                 setSortBy(field as "size" | "path");
                 setSortOrder(order);
-            } : undefined}
-            hasActiveFilters={isDiffView && hasActiveDiffFilters}
+            }}
+            hasActiveFilters={hasActiveDiffFilters}
             onReset={resetFilters}
         >
             <FilterSection label={t("page.assetVersions.serverSelect")}>
                 <div className="flex flex-wrap gap-2">
-                    {SERVERS.map(srv => (
+                    {servers.map(srv => (
                         <FilterButton
                             key={srv}
                             selected={server === srv}
-                            onClick={() => handleServerChange(srv)}
+                            onClick={() => selectServer(srv)}
                         >
                             <ServerRegionLabel server={srv} />
                         </FilterButton>
@@ -456,32 +698,49 @@ function AssetVersionsContent() {
                 </div>
             </FilterSection>
 
-            {isDiffView && (
-                <FilterSection label={t("page.assetVersions.fileTypeLabel")}>
-                    <div className="grid grid-cols-3 gap-2">
-                        <FilterButton
-                            selected={typeFilter === "all" || typeFilter === "default"}
-                            onClick={() => setTypeFilter("all")}
-                        >
-                            {t("page.assetVersions.filterAll")}
-                        </FilterButton>
-                        <FilterButton
-                            selected={typeFilter === "webp"}
-                            onClick={() => setTypeFilter("webp")}
-                        >
-                            webp
-                        </FilterButton>
-                        <FilterButton
-                            selected={typeFilter === "mp3"}
-                            onClick={() => setTypeFilter("mp3")}
-                        >
-                            mp3
-                        </FilterButton>
+            {hasCauses && (
+                <FilterSection label={t("page.assetVersions.causeLabel")}>
+                    <div className="flex flex-wrap gap-2">
+                        {causeOptions.map(opt => (
+                            <FilterButton
+                                key={opt.key}
+                                selected={activeCause === opt.key}
+                                onClick={() => setCauseFilter(opt.key)}
+                            >
+                                {opt.label}
+                            </FilterButton>
+                        ))}
                     </div>
                 </FilterSection>
             )}
 
+            <FilterSection label={t("page.assetVersions.changeTypeLabel")}>
+                <div className="grid grid-cols-2 gap-2">
+                    {kindChipOptions.map(opt => (
+                        <FilterButton
+                            key={opt.key}
+                            selected={kindFilter === opt.key}
+                            onClick={() => setKindFilter(opt.key)}
+                        >
+                            {opt.label}
+                        </FilterButton>
+                    ))}
+                </div>
+            </FilterSection>
 
+            <FilterSection label={t("page.assetVersions.fileTypeLabel")}>
+                <div className="flex flex-wrap gap-2">
+                    {mediaChipOptions.map(opt => (
+                        <FilterButton
+                            key={opt.key}
+                            selected={mediaFilter === opt.key}
+                            onClick={() => setMediaFilter(opt.key)}
+                        >
+                            {opt.label}
+                        </FilterButton>
+                    ))}
+                </div>
+            </FilterSection>
         </BaseFilters>
     );
 
@@ -489,31 +748,32 @@ function AssetVersionsContent() {
         server,
         version,
         searchQuery,
-        typeFilter,
+        causeFilter,
+        causeCounts,
+        kindFilter,
+        mediaFilter,
         sortBy,
         sortOrder,
-        processedDiffItems.length,
+        files.length,
         diffItems.length,
-        versions.length,
-        diffMeta,
-        diffCursor,
         t,
     ]);
 
-    // ==================== Modal header actions ====================
+    // ==================== Modal header & render helpers ====================
 
     const modalHeaderActions = useMemo(() => {
-        if (!selectedFile?.url) return null;
+        if (!selectedFile) return null;
+        const url = fileUrl(selectedFile);
         return (
             <div className="flex items-center gap-1">
                 <IconButton
                     icon={copyFeedback ? mdCheck : mdContentCopy}
                     size="xs"
-                    onClick={() => handleCopyToClipboard(`${gatewayDomain}${selectedFile.url}`)}
+                    onClick={() => handleCopyToClipboard(url)}
                     label={copyFeedback ? t("page.assetVersions.copied") : t("page.assetVersions.copyLink")}
                 />
                 <ExternalLink
-                    href={`${gatewayDomain}${selectedFile.url}`}
+                    href={url}
                     className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
                     title={t("page.assetVersions.download")}
                 >
@@ -521,44 +781,27 @@ function AssetVersionsContent() {
                 </ExternalLink>
             </div>
         );
-    }, [selectedFile, gatewayDomain, copyFeedback, t]);
+    }, [selectedFile, fileUrl, copyFeedback, t]);
 
-    // ==================== Shared render helpers ====================
-
-    const renderStatChips = (stats: Record<string, number> | undefined, wrapperClassName: string) => {
-        const entries = Object.entries(stats || {}).filter(([key, value]) => value > 0 && key !== "SkippedByCheck");
-        if (entries.length === 0) return null;
-        return (
-            <div className={`flex flex-wrap items-center gap-1.5 ${wrapperClassName}`}>
-                {entries.map(([key, value]) => {
-                    const labelKey = STAT_LABEL_KEYS[key];
-                    return (
-                        <span
-                            key={key}
-                            className={`rounded-md3-sm px-2 py-0.5 type-label-s ${STAT_CHIP_CLASSES[key] || STAT_CHIP_DEFAULT}`}
-                        >
-                            {labelKey ? t(labelKey) : key} {formatNumber(value)}
-                        </span>
-                    );
-                })}
-            </div>
-        );
-    };
-
-    const renderChangeTypeBadge = (changeType: AssetDiffItem["changeType"]) => (
-        <span
-            className={`shrink-0 rounded-md3-sm px-2 py-0.5 type-label-s uppercase ${
-                changeType === "added"
-                    ? "bg-primary-container text-on-primary-container"
-                    : "bg-tertiary-container text-on-tertiary-container"
-            }`}
-        >
-            {changeType === "added" ? t("page.assetVersions.changeAdded") : t("page.assetVersions.changeUpdated")}
+    const renderChangeTypeBadge = (kind: ChangeKind) => (
+        <span className={`shrink-0 rounded-md3-sm px-2 py-0.5 type-label-s ${CHANGE_BADGES[kind].className}`}>
+            {t(CHANGE_BADGES[kind].labelKey)}
         </span>
     );
 
-    const formatCommittedAt = (committedAt: number) =>
-        formatDate(new Date(committedAt * 1000), {
+    // Marks the changes that only the conversion made while the changes of every cause are shown.
+    const renderConversionMark = (item: ChangedFile) =>
+        activeCause === "all" && item.cause === "conversion" ? (
+            <span
+                className="shrink-0 rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant"
+                title={t("page.assetVersions.causeConversionHint")}
+            >
+                {t(CAUSE_LABEL_KEYS.conversion)}
+            </span>
+        ) : null;
+
+    const formatPublishedAt = (publishedAt: string) =>
+        formatDate(new Date(publishedAt), {
             year: "numeric",
             month: "2-digit",
             day: "2-digit",
@@ -566,15 +809,13 @@ function AssetVersionsContent() {
             minute: "2-digit",
         });
 
-    const selectedVersionMeta = useMemo(() => {
-        if (!isDiffView) return null;
-        return versions.find(v => v.assetVersion === version) || null;
-    }, [isDiffView, versions, version]);
+    const checkerboardClassName =
+        "bg-surface-container-high bg-[radial-gradient(var(--md-sys-color-outline-variant)_1px,transparent_1px)]";
 
-    // ==================== Render ====================
+    const selectedCategory = selectedFile ? getDiffMediaCategory(selectedFile) : null;
 
     return (
-        <PageContainer>
+        <PageContainer wide>
             {/* Page Header */}
             <PageHeader
                 eyebrow={t("page.assetVersions.badge")}
@@ -595,278 +836,658 @@ function AssetVersionsContent() {
                 }
             />
 
-            {/* Filters live in the global FilterDrawer (registered above via
-                useQuickFilter), so the page body is a single column. */}
-            <div className="min-w-0">
-                {/* Toolbar */}
-                <Surface tone="card" radius="xl" className="mb-4 flex flex-wrap items-center justify-between gap-3 p-3 sm:p-4">
-                    <div className="flex min-w-0 items-center gap-2">
-                        {isDiffView && (
-                            <IconButton
-                                icon={mdChevronLeft}
-                                size="xs"
-                                onClick={() => setVersion("")}
-                                label={t("page.assetVersions.backToList")}
-                            />
+            {/* Compact Version Picker & Server / Explorer Controls */}
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
+                {/* Compact Version Picker + Quick Stepper */}
+                <div className="flex items-center gap-0.5 rounded-full border border-outline-variant bg-surface-card p-0.5">
+                    <IconButton
+                        icon={mdChevronLeft}
+                        size="xs"
+                        disabled={selectedVersionIndex < 0 || selectedVersionIndex >= versions.length - 1}
+                        onClick={() => {
+                            if (selectedVersionIndex >= 0 && selectedVersionIndex < versions.length - 1) {
+                                selectVersion(versions[selectedVersionIndex + 1].published_version);
+                            }
+                        }}
+                        label={t("page.assetVersions.prevVersion")}
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowVersionPicker(true)}
+                        className="state-layer focus-ring inline-flex h-8 items-center gap-2 rounded-full px-2.5 text-left"
+                    >
+                        <Icon path={mdHistory} size={18} className="shrink-0 text-primary" />
+                        <span className="truncate font-mono type-label-l font-medium text-on-surface">
+                            {version ? shortVersion(version) : t("page.assetVersions.selectVersion")}
+                        </span>
+                        {selectedVersionIndex === 0 && (
+                            <span className="hidden rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary sm:inline">
+                                {t("page.assetVersions.latestBadge")}
+                            </span>
                         )}
-                        <div className="flex min-w-0 flex-wrap items-center gap-1.5 type-label-l text-on-surface-variant">
-                            <button
-                                type="button"
-                                onClick={() => setVersion("")}
-                                className={`focus-ring rounded-md3-xs transition-colors hover:text-primary ${!isDiffView ? "type-title-s text-on-surface" : ""}`}
-                            >
-                                {t("page.assetVersions.timeline")}
-                            </button>
-                            {isDiffView && (
-                                <>
-                                    <span className="text-outline">/</span>
-                                    <span className="truncate font-mono type-title-s text-on-surface">{version}</span>
-                                </>
-                            )}
-                        </div>
-                    </div>
+                        <Icon path={mdKeyboardArrowDown} size={18} className="shrink-0 text-on-surface-variant" />
+                    </button>
+                    <IconButton
+                        icon={mdChevronRight}
+                        size="xs"
+                        disabled={selectedVersionIndex <= 0}
+                        onClick={() => {
+                            if (selectedVersionIndex > 0) {
+                                selectVersion(versions[selectedVersionIndex - 1].published_version);
+                            }
+                        }}
+                        label={t("page.assetVersions.nextVersion")}
+                    />
+                </div>
 
-                    <div className="flex items-center gap-1">
-                        <LocalizedLink
-                            href={`/asset-viewer?server=${server}`}
-                            className="state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full text-on-surface-variant"
-                            title={t("layout.nav.items.assetViewer")}
-                            aria-label={t("layout.nav.items.assetViewer")}
-                        >
-                            <Icon path={mdFolder} size={20} />
-                        </LocalizedLink>
+                <div className="flex flex-wrap items-center gap-2">
+                    <Menu
+                        align="end"
+                        anchor={(props) => (
+                            <Button {...props} variant="outlined" size="xs" trailingIcon={mdKeyboardArrowDown}>
+                                <ServerRegionLabel server={server} />
+                            </Button>
+                        )}
+                        items={servers.map(srv => ({
+                            key: srv,
+                            label: <ServerRegionLabel server={srv} />,
+                            onSelect: () => selectServer(srv),
+                        }))}
+                    />
+                    <Button
+                        variant="text"
+                        size="xs"
+                        icon={mdFolder}
+                        href={pinned ? `/asset-viewer?server=${pinned}` : "/asset-viewer"}
+                    >
+                        {t("layout.nav.items.assetViewer")}
+                    </Button>
+                </div>
+            </div>
 
+            {/* Multi-Pane Version & Diff Explorer Frame */}
+            <Surface tone="card" radius="xl" className="overflow-hidden">
+                {/* Top Navigation, Breadcrumbs, Search & View Mode Toolbar */}
+                <div className="flex flex-wrap items-center gap-2 border-b border-outline-variant/70 px-3 py-2.5 sm:px-4">
+                    <div className="flex shrink-0 items-center gap-0.5">
+                        <IconButton
+                            icon={mdDockToRight}
+                            size="xs"
+                            selected={sidebarOpen}
+                            onClick={() => setSidebarOpen(prev => !prev)}
+                            label={t("page.assetViewer.toggleSidebar")}
+                            className={sidebarOpen ? "bg-primary-container/75 text-primary" : undefined}
+                        />
+                        <IconButton
+                            icon={mdChevronLeft}
+                            size="xs"
+                            disabled={historyIndex <= 0}
+                            onClick={handleHistoryBack}
+                            label={t("page.assetViewer.navBack")}
+                        />
+                        <IconButton
+                            icon={mdChevronRight}
+                            size="xs"
+                            disabled={historyIndex >= historyStack.length - 1}
+                            onClick={handleHistoryForward}
+                            label={t("page.assetViewer.navForward")}
+                        />
+                        <IconButton
+                            icon={mdKeyboardArrowUp}
+                            size="xs"
+                            disabled={!prefix}
+                            onClick={handleGoUp}
+                            label={t("page.assetViewer.parentDir")}
+                        />
                         <IconButton
                             icon={mdRefresh}
                             size="xs"
-                            onClick={isDiffView ? fetchDiff : fetchVersions}
+                            onClick={handleRefresh}
                             label={t("common.action.refresh")}
-                            className={(isDiffView ? isDiffLoading : isVersionsLoading) ? "[&_svg]:animate-spin" : undefined}
+                            className={isVersionsLoading || isDiffLoading ? "[&_svg]:animate-spin" : undefined}
                         />
                     </div>
-                </Surface>
 
-                {!isDiffView ? (
-                    /* ==================== Version Timeline View ==================== */
-                    isVersionsLoading ? (
-                        <LoadingState />
-                    ) : versionsError ? (
-                        <ErrorState
-                            title={t("page.assetVersions.loadFailed")}
-                            message={versionsError}
-                            retryLabel={t("common.action.retry")}
-                            onRetry={fetchVersions}
-                        />
-                    ) : versions.length === 0 ? (
-                        <Surface tone="card" radius="xl">
-                            <EmptyState icon={mdHistory} title={t("page.assetVersions.emptyVersions")} />
-                        </Surface>
-                    ) : (
-                        <>
-                            <div className="relative flex flex-col gap-3">
-                                {/* Timeline rail */}
-                                <div className="absolute bottom-4 left-[13px] top-4 hidden w-px bg-outline-variant sm:block" aria-hidden />
-                                {versions.map((v, index) => (
-                                    <div key={`${v.assetVersion}-${index}`} className="relative sm:pl-9">
-                                        {/* Timeline dot */}
-                                        <span
-                                            className={`absolute left-[9px] top-6 hidden h-[9px] w-[9px] rounded-full sm:block ${index === 0 ? "bg-primary ring-4 ring-primary-container" : "bg-outline"}`}
-                                            aria-hidden
-                                        />
-                                        <Card
-                                            variant="filled"
-                                            radius="lg"
-                                            onClick={() => setVersion(v.assetVersion)}
-                                            className="group select-none p-4 text-left sm:p-5"
-                                        >
-                                            <div className="flex items-start justify-between gap-3">
-                                                <div className="min-w-0">
-                                                    <div className="flex flex-wrap items-center gap-2">
-                                                        <span className="font-mono type-title-l type-emphasized text-on-surface transition-colors duration-200 group-hover:text-primary">
-                                                            {v.assetVersion}
-                                                        </span>
-                                                        <span className="rounded-md3-sm bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                                                            App {v.appVersion}
-                                                        </span>
-                                                        {index === 0 && (
-                                                            <span className="rounded-md3-sm bg-primary px-2 py-0.5 type-label-s text-on-primary">
-                                                                {t("page.assetVersions.latestBadge")}
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                    <p className="mt-1 type-body-s text-on-surface-variant">
-                                                        {formatCommittedAt(v.committedAt)}
-                                                    </p>
-                                                </div>
-                                                <div className="flex shrink-0 items-center gap-1 type-label-l text-on-surface-variant transition-colors duration-200 group-hover:text-primary">
-                                                    <span className="hidden sm:inline">{t("page.assetVersions.viewDiff")}</span>
-                                                    <Icon path={mdChevronRight} size={20} />
-                                                </div>
-                                            </div>
-
-                                            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1.5 type-body-s text-on-surface-variant">
-                                                <span>
-                                                    {t("page.assetVersions.changedAssetsLabel")}
-                                                    <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(v.changedAssets)}</span>
-                                                </span>
-                                            </div>
-
-                                            {renderStatChips(v.stats, "mt-2.5")}
-                                        </Card>
-                                    </div>
-                                ))}
-                            </div>
-
-                            {versionsCursor && (
-                                <div className="mt-8 flex justify-center">
-                                    <Button
-                                        variant="tonal"
-                                        size="m"
-                                        onClick={fetchMoreVersions}
-                                        disabled={isVersionsLoadingMore}
+                    {/* Breadcrumbs */}
+                    <nav
+                        aria-label={t("page.assetViewer.directoryTree")}
+                        className="custom-scrollbar flex min-w-0 flex-1 items-center gap-1 overflow-x-auto py-0.5 type-label-l text-on-surface-variant"
+                    >
+                        {breadcrumbs.map((bc, index) => {
+                            const isCurrent = index === breadcrumbs.length - 1;
+                            const isRoot = index === 0;
+                            return (
+                                <div key={bc.path || "root"} className="flex shrink-0 items-center gap-1">
+                                    {index > 0 && <span className="text-outline/70">/</span>}
+                                    <button
+                                        type="button"
+                                        onClick={() => navigateTo(bc.path)}
+                                        className={`state-layer focus-ring inline-flex items-center gap-1.5 rounded-md3-sm px-2 py-1 transition-colors ${
+                                            isCurrent
+                                                ? "bg-primary-container text-on-primary-container font-medium"
+                                                : "hover:bg-surface-container-high hover:text-primary"
+                                        }`}
                                     >
-                                        {isVersionsLoadingMore ? <CircularProgress size={20} /> : t("page.assetVersions.loadMore")}
-                                    </Button>
+                                        {isRoot && <Icon path={mdHome} size={16} />}
+                                        <span>{bc.name}</span>
+                                    </button>
                                 </div>
-                            )}
+                            );
+                        })}
+                    </nav>
 
-                            {!versionsCursor && versions.length > 0 && (
-                                <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                    {t("page.assetVersions.allVersionsLoaded", { count: versions.length })}
-                                </div>
-                            )}
-                        </>
-                    )
-                ) : (
-                    /* ==================== Single Version Diff View ==================== */
-                    <>
-                        {/* Version summary card */}
-                        <Surface tone="card" radius="xl" className="mb-4 p-4 sm:p-5">
-                            {isDiffLoading && !diffMeta ? (
-                                <div className="flex items-center gap-3 type-body-m text-on-surface-variant">
-                                    <CircularProgress size={20} />
-                                    <span>{t("page.assetVersions.loadingDiff")}</span>
-                                </div>
-                            ) : diffMeta ? (
-                                <>
-                                    <div className="flex flex-wrap items-center gap-2">
-                                        <span className="font-mono type-title-l type-emphasized text-on-surface">{diffMeta.assetVersion}</span>
-                                        <span className="rounded-md3-sm bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                                            App {diffMeta.appVersion}
-                                        </span>
-                                        {(diffMeta.types || []).map(type => (
-                                            <span key={type} className="rounded-md3-sm bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">
-                                                {type}
-                                            </span>
-                                        ))}
-                                    </div>
-                                    <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1.5 type-body-s text-on-surface-variant">
-                                        <span>{formatCommittedAt(diffMeta.committedAt)}</span>
-                                        <span>
-                                            {t("page.assetVersions.totalChangedLabel")}
-                                            <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(diffMeta.totalChanged)}</span>
-                                        </span>
-                                        <span>
-                                            {t("page.assetVersions.loadedLabel")}
-                                            <span className="ml-1.5 type-label-l text-on-surface">{formatNumber(diffItems.length)}</span>
-                                        </span>
-                                    </div>
-                                    {selectedVersionMeta && renderStatChips(selectedVersionMeta.stats, "mt-2.5")}
-                                    {diffMeta.assetHash && (
-                                        <p className="mt-2 break-all font-mono type-label-s text-on-surface-variant">
-                                            {diffMeta.assetHash}
-                                        </p>
-                                    )}
-                                </>
-                            ) : null}
-                        </Surface>
-
-                        {/* Diff list */}
-                        {isDiffLoading ? (
-                            <LoadingState />
-                        ) : diffError ? (
-                            <ErrorState
-                                title={t("page.assetVersions.loadFailed")}
-                                message={diffError}
-                                retryLabel={t("common.action.retry")}
-                                onRetry={fetchDiff}
+                    {/* Search & View Toggle */}
+                    <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto">
+                        <div className="relative flex-1 sm:w-64 md:w-72">
+                            <Icon
+                                path={mdSearch}
+                                size={18}
+                                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
                             />
-                        ) : processedDiffItems.length === 0 ? (
-                            <Surface tone="card" radius="xl">
-                                <EmptyState icon={mdFolderOff} title={t("page.assetVersions.emptyDiff")} />
-                            </Surface>
-                        ) : (
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                placeholder={t("page.assetViewer.searchSubtreePlaceholder")}
+                                aria-label={t("page.assetViewer.searchSubtreePlaceholder")}
+                                className="focus-ring h-9 w-full rounded-full border border-outline-variant bg-surface-container-lowest pl-9 pr-8 type-body-s text-on-surface placeholder:text-on-surface-variant/75"
+                            />
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() => setSearchQuery("")}
+                                    aria-label={t("common.md3.clear")}
+                                    className="state-layer focus-ring absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant"
+                                >
+                                    <Icon path={mdClose} size={16} />
+                                </button>
+                            )}
+                        </div>
+
+                        <SegmentedButton
+                            className="w-auto shrink-0"
+                            density={-2}
+                            iconOnly
+                            showCheckmark={false}
+                            aria-label={t("page.assetViewer.viewList")}
+                            value={viewMode}
+                            onValueChange={(mode) => handleViewModeChange(mode as "list" | "grid")}
+                            options={[
+                                { value: "list", label: t("page.assetViewer.viewList"), icon: mdViewList },
+                                { value: "grid", label: t("page.assetViewer.viewGrid"), icon: mdGridView },
+                            ]}
+                        />
+                    </div>
+                </div>
+
+                {/* Status Sub-Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 bg-surface-container-low/60 px-3 py-1.5 type-label-m text-on-surface-variant sm:px-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                        <ServerRegionLabel server={server} />
+                        {version && (
                             <>
-                                <div className="flex flex-col gap-1.5">
-                                    {/* Table header */}
-                                    <div className="mb-1 flex select-none items-center border-b border-outline-variant px-4 py-2.5 type-label-m text-on-surface-variant">
-                                        <div className="w-16">{t("page.assetVersions.changeTypeLabel")}</div>
-                                        <div className="min-w-0 flex-1 pl-3">{t("page.assetVersions.path")}</div>
-                                        <div className="w-24 text-right">{t("page.assetVersions.size")}</div>
-                                    </div>
-                                    {/* Rows */}
-                                    {processedDiffItems.map((item, index) => (
-                                        <Card
-                                            key={`${item.path}-${index}`}
-                                            variant="filled"
-                                            onClick={() => setSelectedFile(item)}
-                                            className="group select-none px-4 py-3 text-left"
-                                        >
-                                            <div className="flex items-center gap-3">
-                                            {renderChangeTypeBadge(item.changeType)}
-                                            <div className="flex min-w-0 flex-1 items-center gap-2">
-                                                <p
-                                                    className="truncate font-mono type-body-s text-on-surface transition-colors duration-200 group-hover:text-primary sm:type-body-m"
-                                                    title={item.path}
-                                                >
-                                                    {item.path}
-                                                </p>
-                                                {item.source === "override" && (
-                                                    <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 type-label-s text-on-tertiary-container">override</span>
-                                                )}
-                                            </div>
-                                            <div className="w-24 shrink-0 text-right type-label-m text-on-surface-variant">
-                                                {formatBytes(item.size)}
-                                            </div>
-                                            </div>
-                                        </Card>
-                                    ))}
-                                </div>
-
-                                {/* Fetch next server page */}
-                                {diffCursor && (
-                                    <div className="mt-8 flex justify-center">
-                                        <Button
-                                            variant="tonal"
-                                            size="m"
-                                            onClick={fetchMoreDiff}
-                                            disabled={isDiffLoadingMore}
-                                        >
-                                            {isDiffLoadingMore ? (
-                                                <CircularProgress size={20} />
-                                            ) : (
-                                                <>
-                                                    {t("page.assetVersions.loadMore")}
-                                                    <span className="type-label-l opacity-80">
-                                                        {formatNumber(diffItems.length)} / {formatNumber(diffMeta?.totalChanged || 0)}
-                                                    </span>
-                                                </>
-                                            )}
-                                        </Button>
-                                    </div>
-                                )}
-
-                                {/* All loaded message */}
-                                {!diffCursor && processedDiffItems.length > 0 && (
-                                    <div className="mt-8 text-center type-body-m text-on-surface-variant">
-                                        {t("page.assetVersions.allDiffLoaded", { count: processedDiffItems.length })}
-                                    </div>
-                                )}
+                                <span className="text-outline">·</span>
+                                <span className="font-mono text-on-surface">{shortVersion(version)}</span>
                             </>
                         )}
-                    </>
-                )}
-            </div>
+                        {selectedVersionMeta?.published_at && (
+                            <span className="hidden text-outline sm:inline">
+                                ({formatPublishedAt(selectedVersionMeta.published_at)})
+                            </span>
+                        )}
+                        {changes?.from && (
+                            <span className="hidden font-mono text-outline md:inline">
+                                · {t("page.assetVersions.comparedFrom", { from: shortVersion(changes.from) })}
+                            </span>
+                        )}
+                    </div>
+                    <div className="flex items-center gap-3 font-mono">
+                        {selectedVersionMeta && (
+                            <span>
+                                {t("page.assetViewer.totalFiles", { count: formatNumber(selectedVersionMeta.files) })}
+                            </span>
+                        )}
+                        {changes && (
+                            <span className="text-on-surface">
+                                {t("page.assetVersions.changesSummary", { count: formatNumber(diffItems.length) })}
+                            </span>
+                        )}
+                    </div>
+                </div>
+
+                {/* Split-Pane Explorer Body (Directory Tree Sidebar + Diff Listing) */}
+                <ExplorerSplitPane
+                    showSidebar={Boolean(sidebarOpen && changes && diffTree.directories.length > 0 && !isDiffLoading && !diffError)}
+                    resizeLabel={t("page.assetViewer.resizeSidebar")}
+                    sidebar={
+                        changes ? (
+                            <DirectoryTreeSidebar
+                                root={diffTree}
+                                rootLabel={t("page.assetViewer.root")}
+                                title={t("page.assetViewer.directoryTree")}
+                                activePath={prefix}
+                                onSelectPath={navigateTo}
+                                renderBadge={(node) => (
+                                    <span className="shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 font-mono type-label-s text-on-surface-variant">
+                                        {formatNumber(node.counts.total)}
+                                    </span>
+                                )}
+                            />
+                        ) : null
+                    }
+                >
+
+                    {/* Right Column: Filter Chips & Diff Explorer Listing */}
+                    <div className="flex min-h-[360px] min-w-0 flex-1 flex-col overflow-hidden">
+                        {isVersionsLoading && !version ? (
+                            <LoadingState label={t("page.assetVersions.loadingFallback")} />
+                        ) : !version ? (
+                            <EmptyState icon={mdHistory} title={t("page.assetVersions.emptyVersions")} />
+                        ) : isDiffLoading ? (
+                            <LoadingState label={t("page.assetVersions.loadingDiff")} />
+                        ) : diffError ? (
+                            <div className="p-4">
+                                <ErrorState
+                                    title={t("page.assetVersions.loadFailed")}
+                                    message={diffError}
+                                    retryLabel={t("common.action.retry")}
+                                    onRetry={fetchDiff}
+                                />
+                            </div>
+                        ) : !changes ? (
+                            <EmptyState icon={mdHistory} title={t("page.assetVersions.noChangeRecord")} />
+                        ) : (
+                            <>
+                                {/* Combined Kind & Media Filter Chips */}
+                                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 px-3 py-2.5 sm:px-4">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        {hasCauses && (
+                                            <>
+                                                {causeOptions.map(opt => (
+                                                    <FilterChip
+                                                        key={opt.key}
+                                                        selected={activeCause === opt.key}
+                                                        selectedClassName="bg-tertiary-container text-on-tertiary-container font-medium"
+                                                        onClick={() => setCauseFilter(opt.key)}
+                                                    >
+                                                        {opt.label}
+                                                        {(opt.key === "all" || opt.count > 0) && ` (${formatNumber(opt.count)})`}
+                                                    </FilterChip>
+                                                ))}
+
+                                                <span className="mx-1 hidden h-4 w-px bg-outline-variant/70 sm:inline-block" aria-hidden />
+                                            </>
+                                        )}
+
+                                        {kindChipOptions.map(opt => (
+                                            <FilterChip
+                                                key={opt.key}
+                                                selected={kindFilter === opt.key}
+                                                selectedClassName="bg-primary text-on-primary"
+                                                onClick={() => setKindFilter(opt.key)}
+                                            >
+                                                {opt.label}
+                                                {(opt.alwaysShowCount || opt.count > 0) && ` (${formatNumber(opt.count)})`}
+                                            </FilterChip>
+                                        ))}
+
+                                        <span className="mx-1 hidden h-4 w-px bg-outline-variant/70 sm:inline-block" aria-hidden />
+
+                                        {mediaChipOptions.map(opt => (
+                                            <FilterChip
+                                                key={opt.key}
+                                                selected={mediaFilter === opt.key}
+                                                selectedClassName="bg-secondary-container text-on-secondary-container font-medium"
+                                                onClick={() => setMediaFilter(opt.key)}
+                                            >
+                                                {opt.label}
+                                                {opt.key !== "all" && opt.count > 0 && ` (${formatNumber(opt.count)})`}
+                                            </FilterChip>
+                                        ))}
+                                    </div>
+
+                                    <span className="shrink-0 type-label-m text-on-surface-variant">
+                                        {t("page.assetViewer.summaryCounts", {
+                                            folders: formatNumber(folders.length),
+                                            files: formatNumber(files.length),
+                                        })}
+                                    </span>
+                                </div>
+
+                                {/* Search indicator */}
+                                {isSearching && (
+                                    <div className="flex items-center justify-between gap-2 border-b border-outline-variant/40 bg-secondary-container/30 px-4 py-1.5 type-body-s text-on-surface-variant">
+                                        <span className="truncate">
+                                            {t("page.assetViewer.searchingSubtree")}:{" "}
+                                            <strong className="text-on-surface">{deferredQuery}</strong>
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => setSearchQuery("")}
+                                            className="focus-ring shrink-0 rounded-md3-xs px-1.5 py-0.5 type-label-m text-primary hover:underline"
+                                        >
+                                            {t("common.md3.clear")}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* Listing Area */}
+                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain">
+                                    {currentItemCount === 0 ? (
+                                        <EmptyState icon={mdFolderOff} title={t("page.assetVersions.emptyDiff")} />
+                                    ) : viewMode === "list" ? (
+                                        <div>
+                                            {/* Sticky Table Header */}
+                                            <div className="sticky top-0 z-10 flex select-none items-center gap-3 border-b border-outline-variant/60 bg-surface-container-lowest/95 px-4 py-2 type-label-m text-on-surface-variant">
+                                                <div className="w-16 shrink-0">{t("page.assetVersions.changeTypeLabel")}</div>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSortColumn("path")}
+                                                    className="focus-ring flex min-w-0 flex-1 items-center gap-1 text-left transition-colors hover:text-primary"
+                                                >
+                                                    <span>{t("page.assetViewer.columnName")}</span>
+                                                    {sortBy === "path" && (
+                                                        <Icon
+                                                            path={mdKeyboardArrowDown}
+                                                            size={16}
+                                                            className={sortOrder === "desc" ? "rotate-180" : undefined}
+                                                        />
+                                                    )}
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => toggleSortColumn("size")}
+                                                    className="focus-ring hidden w-36 shrink-0 items-center justify-end gap-1 transition-colors hover:text-primary sm:flex"
+                                                >
+                                                    <span>{t("page.assetVersions.size")}</span>
+                                                    {sortBy === "size" && (
+                                                        <Icon
+                                                            path={mdKeyboardArrowDown}
+                                                            size={16}
+                                                            className={sortOrder === "desc" ? "rotate-180" : undefined}
+                                                        />
+                                                    )}
+                                                </button>
+                                                <div className="w-20 shrink-0 text-right">{t("page.assetViewer.columnType")}</div>
+                                            </div>
+
+                                            <div className="divide-y divide-outline-variant/40">
+                                                {/* Folder Rows (Tree mode) */}
+                                                {shownFolders.map((folder) => {
+                                                    const relParent = isSearching ? getRelativeParent(folder.path, prefix) : "";
+                                                    return (
+                                                        <button
+                                                            key={folder.path}
+                                                            type="button"
+                                                            onClick={() => navigateTo(folder.path)}
+                                                            className="state-layer focus-ring group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-container/60"
+                                                        >
+                                                            <div className="flex w-16 shrink-0 items-center">
+                                                                <span className="rounded-md3-sm bg-surface-container-high px-2 py-0.5 font-mono type-label-s text-on-surface-variant">
+                                                                    {formatNumber(folder.counts.total)}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md3-md bg-tertiary-container/40 text-tertiary">
+                                                                <Icon path={mdFolderFill} size={22} />
+                                                            </div>
+                                                            <div className="min-w-0 flex-1">
+                                                                <p
+                                                                    className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                    title={folder.name}
+                                                                >
+                                                                    {folder.name}
+                                                                </p>
+                                                                {relParent && (
+                                                                    <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                        {relParent}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+                                                            <div className="hidden w-36 shrink-0 flex-wrap items-center justify-end gap-1 font-mono type-label-s sm:flex">
+                                                                {folder.counts.added > 0 && (
+                                                                    <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-on-primary-container">
+                                                                        +{folder.counts.added}
+                                                                    </span>
+                                                                )}
+                                                                {folder.counts.changed > 0 && (
+                                                                    <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 text-on-tertiary-container">
+                                                                        ~{folder.counts.changed}
+                                                                    </span>
+                                                                )}
+                                                                {folder.counts.removed > 0 && (
+                                                                    <span className="rounded-md3-xs bg-error-container px-1.5 py-0.5 text-on-error-container">
+                                                                        -{folder.counts.removed}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div className="flex w-20 shrink-0 justify-end">
+                                                                <span className="rounded-md3-sm bg-tertiary-container/50 px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                                    {t("page.assetViewer.typeDirectory")}
+                                                                </span>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+
+                                                {/* File Rows */}
+                                                {shownFiles.map((item) => {
+                                                    const category = getDiffMediaCategory(item);
+                                                    const url = fileUrl(item);
+                                                    const displayName = getFileName(item.path);
+                                                    const relParent = isSearching ? getRelativeParent(item.path, prefix) : "";
+                                                    const showDelta = item.kind === "changed" && item.previous_size !== undefined;
+
+                                                    return (
+                                                        <button
+                                                            key={`${item.kind}:${item.path}`}
+                                                            type="button"
+                                                            onClick={() => setSelectedFile(item)}
+                                                            className="state-layer focus-ring group flex w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-container/60"
+                                                        >
+                                                            <div className="flex w-16 shrink-0 items-center">
+                                                                {renderChangeTypeBadge(item.kind)}
+                                                            </div>
+
+                                                            <div
+                                                                className={`flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md3-md [background-size:6px_6px] ${
+                                                                    category === "image" && url ? checkerboardClassName : "bg-surface-container"
+                                                                }`}
+                                                            >
+                                                                {category === "image" && url ? (
+                                                                    <img
+                                                                        src={url}
+                                                                        alt={item.path}
+                                                                        loading="lazy"
+                                                                        className="h-full w-full object-contain p-0.5"
+                                                                        onError={(e) => {
+                                                                            (e.target as HTMLElement).style.display = "none";
+                                                                        }}
+                                                                    />
+                                                                ) : (
+                                                                    getDiffFileIcon(category, 20)
+                                                                )}
+                                                            </div>
+
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex min-w-0 items-center gap-2">
+                                                                    <p
+                                                                        className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                        title={item.path}
+                                                                    >
+                                                                        {displayName}
+                                                                    </p>
+                                                                    {renderConversionMark(item)}
+                                                                </div>
+                                                                {relParent && (
+                                                                    <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                        {relParent}
+                                                                    </p>
+                                                                )}
+                                                            </div>
+
+                                                            <div className="hidden w-36 shrink-0 text-right font-mono type-label-s text-on-surface-variant sm:block">
+                                                                {showDelta
+                                                                    ? `${formatBytes(item.previous_size)} → ${formatBytes(item.size)}`
+                                                                    : formatBytes(item.size)}
+                                                            </div>
+
+                                                            <div className="flex w-20 shrink-0 justify-end">
+                                                                <span className="rounded-md3-sm bg-secondary-container/60 px-2.5 py-0.5 type-label-s text-on-secondary-container">
+                                                                    {getMediaTypeBadge(item)}
+                                                                </span>
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3 p-3 sm:p-4">
+                                            {/* Grid Mode Folders */}
+                                            {shownFolders.length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                                                    {shownFolders.map((folder) => {
+                                                        const relParent = isSearching ? getRelativeParent(folder.path, prefix) : "";
+                                                        return (
+                                                            <Card
+                                                                key={folder.path}
+                                                                variant="filled"
+                                                                radius="lg"
+                                                                onClick={() => navigateTo(folder.path)}
+                                                                className="group select-none p-3.5"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="shrink-0 rounded-md3-md bg-tertiary-container/40 p-2 text-tertiary">
+                                                                        <Icon path={mdFolderFill} size={26} />
+                                                                    </div>
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p
+                                                                            className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                            title={folder.name}
+                                                                        >
+                                                                            {folder.name}
+                                                                        </p>
+                                                                        {relParent && (
+                                                                            <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                                {relParent}
+                                                                            </p>
+                                                                        )}
+                                                                        <div className="mt-1 flex flex-wrap gap-1 font-mono type-label-s">
+                                                                            {folder.counts.added > 0 && (
+                                                                                <span className="text-primary">+{folder.counts.added}</span>
+                                                                            )}
+                                                                            {folder.counts.changed > 0 && (
+                                                                                <span className="text-tertiary">~{folder.counts.changed}</span>
+                                                                            )}
+                                                                            {folder.counts.removed > 0 && (
+                                                                                <span className="text-error">-{folder.counts.removed}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </Card>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* Grid Mode Files */}
+                                            {shownFiles.length > 0 && (
+                                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+                                                    {shownFiles.map((item) => {
+                                                        const category = getDiffMediaCategory(item);
+                                                        const url = fileUrl(item);
+                                                        const fileName = getFileName(item.path);
+                                                        const relParent = getRelativeParent(item.path, prefix);
+                                                        return (
+                                                            <Card
+                                                                key={`${item.kind}:${item.path}`}
+                                                                variant="filled"
+                                                                radius="lg"
+                                                                onClick={() => setSelectedFile(item)}
+                                                                className="group select-none p-3"
+                                                            >
+                                                                <div className="flex flex-col">
+                                                                    <div
+                                                                        className={`relative mb-2.5 flex aspect-square w-full items-center justify-center overflow-hidden rounded-md3-md [background-size:8px_8px] ${
+                                                                            category === "image" && url ? checkerboardClassName : "bg-surface-container-low"
+                                                                        }`}
+                                                                    >
+                                                                        <span className="absolute left-2 top-2 z-10 flex flex-wrap gap-1">
+                                                                            {renderChangeTypeBadge(item.kind)}
+                                                                            {renderConversionMark(item)}
+                                                                        </span>
+                                                                        {category === "image" && url ? (
+                                                                            <img
+                                                                                src={url}
+                                                                                alt={item.path}
+                                                                                loading="lazy"
+                                                                                className="h-full w-full object-contain p-1.5"
+                                                                                onError={(e) => {
+                                                                                    (e.target as HTMLElement).style.display = "none";
+                                                                                }}
+                                                                            />
+                                                                        ) : (
+                                                                            getDiffFileIcon(category, 32)
+                                                                        )}
+                                                                    </div>
+
+                                                                    <p
+                                                                        className="truncate type-label-l text-on-surface transition-colors group-hover:text-primary"
+                                                                        title={item.path}
+                                                                    >
+                                                                        {fileName}
+                                                                    </p>
+                                                                    {relParent && (
+                                                                        <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                                                            {relParent}
+                                                                        </p>
+                                                                    )}
+
+                                                                    <div className="mt-1.5 flex items-center justify-between gap-1">
+                                                                        <span className="type-label-s text-on-surface-variant">
+                                                                            {getMediaTypeBadge(item)}
+                                                                        </span>
+                                                                        <span className="font-mono type-label-s text-on-surface-variant">
+                                                                            {formatBytes(item.size)}
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            </Card>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Load More / All Loaded Footer */}
+                                    {currentItemCount > 0 && (
+                                        <div ref={loadMoreRef} className="px-4 py-6 text-center">
+                                            {hasMore ? (
+                                                <Button
+                                                    variant="tonal"
+                                                    size="m"
+                                                    onClick={loadMore}
+                                                >
+                                                    {t("page.assetViewer.loadMore")}
+                                                    <span className="type-label-l opacity-80">
+                                                        {formatNumber(currentItemCount - shownFolders.length - shownFiles.length)}
+                                                    </span>
+                                                </Button>
+                                            ) : (
+                                                <div className="type-body-m text-on-surface-variant">
+                                                    {t("page.assetVersions.allDiffLoaded", { count: currentItemCount })}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </ExplorerSplitPane>
+            </Surface>
 
             {/* File Detail Modal */}
             <Modal
@@ -876,7 +1497,7 @@ function AssetVersionsContent() {
                     setPreviewText(null);
                     setPreviewTextError(null);
                 }}
-                title={selectedFile ? (selectedFile.path.split("/").pop() || selectedFile.path) : ""}
+                title={selectedFile ? getFileName(selectedFile.path) : ""}
                 size="md"
                 headerActions={modalHeaderActions}
             >
@@ -886,50 +1507,49 @@ function AssetVersionsContent() {
                         <div className="space-y-2.5 rounded-md3-lg bg-surface-container p-4 type-body-s sm:type-body-m">
                             <div className="flex justify-between gap-4">
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.changeTypeLabel")}</span>
-                                {renderChangeTypeBadge(selectedFile.changeType)}
+                                {renderChangeTypeBadge(selectedFile.kind)}
                             </div>
+                            {selectedFile.cause && (
+                                <div className="flex justify-between gap-4">
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.causeLabel")}</span>
+                                    <span className="text-right text-on-surface">
+                                        {t(CAUSE_LABEL_KEYS[selectedFile.cause])}
+                                        {selectedFile.cause === "conversion" && (
+                                            <span className="block type-label-s text-on-surface-variant">
+                                                {t("page.assetVersions.causeConversionHint")}
+                                            </span>
+                                        )}
+                                    </span>
+                                </div>
+                            )}
                             <div className="flex flex-col gap-1">
                                 <span className="text-on-surface-variant">{t("page.assetVersions.path")}</span>
-                                <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">{selectedFile.path}</span>
+                                <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">
+                                    {selectedFile.path}
+                                </span>
                             </div>
                             <div className="flex justify-between gap-4">
                                 <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.size")}</span>
-                                <span className="text-right type-label-l text-on-surface">{formatBytes(selectedFile.size)}</span>
+                                <span className="text-right font-mono type-label-l text-on-surface">{formatBytes(selectedFile.size)}</span>
                             </div>
-                            {selectedFile.source && (
+                            {selectedFile.kind === "changed" && selectedFile.previous_size !== undefined && (
                                 <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.source")}</span>
-                                    <span className="text-right capitalize text-on-surface">{selectedFile.source}</span>
-                                </div>
-                            )}
-                            {selectedFile.bundlePath && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.bundlePath")}</span>
-                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={selectedFile.bundlePath}>{selectedFile.bundlePath}</span>
-                                </div>
-                            )}
-                            {selectedFile.fingerprint && (
-                                <div className="flex justify-between gap-4">
-                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.fingerprint")}</span>
-                                    <span className="max-w-[200px] truncate text-right font-mono text-on-surface" title={selectedFile.fingerprint}>{selectedFile.fingerprint}</span>
-                                </div>
-                            )}
-                            {selectedFile.sha256 && (
-                                <div className="flex flex-col gap-1 border-t border-outline-variant pt-1.5">
-                                    <span className="text-on-surface-variant">{t("page.assetVersions.sha256")}</span>
-                                    <span className="select-all break-all font-mono type-label-s text-on-surface sm:type-label-m">{selectedFile.sha256}</span>
+                                    <span className="shrink-0 text-on-surface-variant">{t("page.assetVersions.previousSize")}</span>
+                                    <span className="text-right font-mono type-label-l text-on-surface-variant">
+                                        {formatBytes(selectedFile.previous_size)}
+                                    </span>
                                 </div>
                             )}
                         </div>
 
                         {/* Inline Previews */}
                         <div className="flex flex-col items-center justify-center">
-                            {isImagePath(selectedFile.path) && selectedFile.url && (
-                                <div className="relative flex max-h-64 w-full justify-center rounded-md3-lg bg-surface-container p-4">
+                            {selectedCategory === "image" && (
+                                <div className={`relative flex max-h-72 w-full justify-center rounded-md3-lg p-4 [background-size:10px_10px] ${checkerboardClassName}`}>
                                     <img
-                                        src={`${gatewayDomain}${selectedFile.url}`}
+                                        src={fileUrl(selectedFile)}
                                         alt={selectedFile.path}
-                                        className="max-h-56 rounded-md3-sm object-contain"
+                                        className="max-h-64 rounded-md3-sm object-contain"
                                         onError={(e) => {
                                             (e.target as HTMLElement).style.display = "none";
                                         }}
@@ -937,21 +1557,35 @@ function AssetVersionsContent() {
                                 </div>
                             )}
 
-                            {isAudioPath(selectedFile.path) && selectedFile.url && (
+                            {selectedCategory === "audio" && (
                                 <div className="w-full rounded-md3-lg bg-surface-container p-4">
                                     <p className="mb-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
                                         <Icon path={mdVolumeUp} size={18} />
                                         {t("page.assetVersions.playAudio")}
                                     </p>
                                     <audio
-                                        src={`${gatewayDomain}${selectedFile.url}`}
+                                        src={fileUrl(selectedFile)}
                                         controls
                                         className="w-full"
                                     />
                                 </div>
                             )}
 
-                            {isTextPath(selectedFile.path) && selectedFile.url && (
+                            {selectedCategory === "video" && (
+                                <div className="w-full rounded-md3-lg bg-surface-container p-4">
+                                    <p className="mb-2 flex items-center gap-1.5 type-label-l text-on-surface-variant">
+                                        <Icon path={mdVideoFile} size={18} />
+                                        {t("page.assetViewer.playVideo")}
+                                    </p>
+                                    <video
+                                        src={fileUrl(selectedFile)}
+                                        controls
+                                        className="max-h-72 w-full rounded-md3-sm bg-surface-container-highest"
+                                    />
+                                </div>
+                            )}
+
+                            {selectedCategory === "text" && (
                                 <div className="w-full">
                                     {previewText === null && !isPreviewTextLoading && !previewTextError && (
                                         <Button
@@ -996,6 +1630,139 @@ function AssetVersionsContent() {
                         </div>
                     </div>
                 )}
+            </Modal>
+
+            {/* Version Picker Modal */}
+            <Modal
+                isOpen={showVersionPicker}
+                onClose={() => {
+                    setShowVersionPicker(false);
+                    setVersionQuery("");
+                }}
+                title={t("page.assetVersions.timeline")}
+                size="md"
+            >
+                <div className="space-y-3">
+                    <div className="relative">
+                        <Icon
+                            path={mdSearch}
+                            size={18}
+                            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant"
+                        />
+                        <input
+                            type="text"
+                            value={versionQuery}
+                            onChange={(e) => setVersionQuery(e.target.value)}
+                            placeholder={t("page.assetVersions.selectVersion")}
+                            aria-label={t("page.assetVersions.selectVersion")}
+                            className="focus-ring h-9 w-full rounded-full border border-outline-variant bg-surface-container-lowest pl-9 pr-8 type-body-s text-on-surface placeholder:text-on-surface-variant/75"
+                        />
+                        {versionQuery && (
+                            <button
+                                type="button"
+                                onClick={() => setVersionQuery("")}
+                                aria-label={t("common.md3.clear")}
+                                className="state-layer focus-ring absolute right-1.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-on-surface-variant"
+                            >
+                                <Icon path={mdClose} size={16} />
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="custom-scrollbar max-h-[55vh] divide-y divide-outline-variant/40 overflow-y-auto rounded-md3-lg border border-outline-variant/60">
+                        {isVersionsLoading ? (
+                            <div className="flex justify-center py-8">
+                                <CircularProgress size={28} />
+                            </div>
+                        ) : versionsError ? (
+                            <div className="p-3">
+                                <ErrorState
+                                    title={t("page.assetVersions.loadFailed")}
+                                    message={versionsError}
+                                    retryLabel={t("common.action.retry")}
+                                    onRetry={fetchVersions}
+                                />
+                            </div>
+                        ) : filteredVersions.length === 0 ? (
+                            <div className="px-4 py-8 text-center type-body-s text-on-surface-variant">
+                                {t("page.assetVersions.emptyVersions")}
+                            </div>
+                        ) : (
+                            filteredVersions.map((v) => {
+                                const isSelected = v.published_version === version;
+                                const isLatest = versions[0]?.published_version === v.published_version;
+                                const hasCounts =
+                                    v.added !== undefined &&
+                                    v.changed !== undefined &&
+                                    v.removed !== undefined;
+                                const conversion = conversionCount(v) ?? 0;
+                                return (
+                                    <button
+                                        key={v.published_version}
+                                        type="button"
+                                        onClick={() => {
+                                            selectVersion(v.published_version);
+                                            setShowVersionPicker(false);
+                                            setVersionQuery("");
+                                        }}
+                                        className={`state-layer focus-ring flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left transition-colors ${
+                                            isSelected
+                                                ? "bg-primary-container/75 text-on-primary-container"
+                                                : "hover:bg-surface-container/70"
+                                        }`}
+                                    >
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className="truncate font-mono type-label-l font-semibold">
+                                                    {shortVersion(v.published_version)}
+                                                </span>
+                                                {isLatest && (
+                                                    <span className="shrink-0 rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary">
+                                                        {t("page.assetVersions.latestBadge")}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div className="mt-0.5 flex items-center gap-2 type-label-s text-on-surface-variant">
+                                                <span>{v.published_at ? formatPublishedAt(v.published_at) : "-"}</span>
+                                                <span>·</span>
+                                                <span className="font-mono">{formatNumber(v.files)}</span>
+                                            </div>
+                                            {conversion > 0 && (
+                                                <div className="mt-0.5 type-label-s text-on-surface-variant">
+                                                    {t("page.assetVersions.conversionCount", { count: formatNumber(conversion) })}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div className="flex shrink-0 items-center gap-1 font-mono type-label-s">
+                                            {hasCounts ? (
+                                                <>
+                                                    {(v.added ?? 0) > 0 && (
+                                                        <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-on-primary-container">
+                                                            +{formatNumber(v.added!)}
+                                                        </span>
+                                                    )}
+                                                    {(v.changed ?? 0) > 0 && (
+                                                        <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 text-on-tertiary-container">
+                                                            ~{formatNumber(v.changed!)}
+                                                        </span>
+                                                    )}
+                                                    {(v.removed ?? 0) > 0 && (
+                                                        <span className="rounded-md3-xs bg-error-container px-1.5 py-0.5 text-on-error-container">
+                                                            -{formatNumber(v.removed!)}
+                                                        </span>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <span className="text-on-surface-variant/80">-</span>
+                                            )}
+                                        </div>
+                                    </button>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
             </Modal>
 
             {/* Terms of Service Overlay Modal */}

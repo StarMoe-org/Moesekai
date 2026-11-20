@@ -873,7 +873,6 @@ function isStringPerformerIds(value: unknown, performers: ReadonlySet<string>): 
 }
 
 const V3_HAN_CHARACTER_PATTERN = /\p{Script=Han}/u;
-const V3_HAN_RUBY_BASE_PATTERN = /^\p{Script=Han}+$/u;
 const V3_NUMBER_PATTERN = /\p{Number}/u;
 const V3_KANA_CHARACTER_PATTERN = /\p{Script=Hiragana}|\p{Script=Katakana}/u;
 const V3_KANA_MARK_PATTERN = /[\p{Mn}\p{Mc}]/u;
@@ -894,8 +893,10 @@ function isV3KanaReading(value: string): boolean {
     return hasKana;
 }
 
-function isV3HanRubyBase(value: string): boolean {
-    return V3_HAN_RUBY_BASE_PATTERN.test(value) && !V3_NUMBER_PATTERN.test(value);
+// Any visible base may carry a kana reading: kanji, and the glosses lyrics
+// write over other text, such as Voc. read ボク, 0 read はじまり or 心の底 read ハコ.
+function isV3RubyBase(value: string): boolean {
+    return /\S/u.test(value);
 }
 
 function isRubySpanV3(value: unknown): value is ILyricsRubySpan {
@@ -911,7 +912,7 @@ function isRubySpanV3(value: unknown): value is ILyricsRubySpan {
         && value.reading.length > 0
         && value.reading.length <= MAX_LYRICS_TEXT_LENGTH
         && !/[\r\n\0]/u.test(value.reading)
-        && isV3HanRubyBase(value.text)
+        && isV3RubyBase(value.text)
         && isV3KanaReading(value.reading);
 }
 

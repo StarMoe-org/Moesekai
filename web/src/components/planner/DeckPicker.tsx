@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
+import { replaceAssetSourceRegion, useTheme } from "@/contexts/ThemeContext";
 import SekaiCardThumbnail from "@/components/cards/SekaiCardThumbnail";
 import { Card } from "@/components/md3";
 import CollapsibleBlock from "./CollapsibleBlock";
@@ -22,6 +23,8 @@ function formatPercent(value: number): string {
 /** Radio list of the engine's top decks; the chosen deck feeds the PT plan and the song-gain table. */
 export default function DeckPicker({ options, selectedRank, onSelect }: DeckPickerProps) {
     const { t, formatNumber } = useI18n();
+    const { assetSource } = useTheme();
+    const cardAssetSource = useMemo(() => replaceAssetSourceRegion(assetSource, "jp"), [assetSource]);
     const [cardsMaster, setCardsMaster] = useState<ICardInfo[]>([]);
 
     const hasOptions = options.length > 0;
@@ -104,7 +107,7 @@ export default function DeckPicker({ options, selectedRank, onSelect }: DeckPick
                                     return (
                                         <span key={`${card.cardId}-${i}`} className="relative block w-10 h-10 shrink-0">
                                             {master ? (
-                                                <SekaiCardThumbnail card={master} trained={trained} mastery={card.masterRank} width={40} />
+                                                <SekaiCardThumbnail card={master} trained={trained} mastery={card.masterRank} width={40} assetSource={cardAssetSource} />
                                             ) : (
                                                 <span className="flex w-10 h-10 rounded-md3-xs bg-surface-container-high items-center justify-center type-label-s text-on-surface-variant">?</span>
                                             )}

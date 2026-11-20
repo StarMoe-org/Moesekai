@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 import { Button } from "./Button";
 import { LoadingIndicator } from "./Progress";
 import { mdErrorFill, mdInfo, mdRefresh, mdSearchOff, mdWarningFill } from "./icons";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 
 /* ==========================================================================
    Page-level MD3 patterns shared by every module page.
@@ -235,6 +236,7 @@ export function LoadMore({
     onLoadMore,
     allLoadedLabel,
     className,
+    autoLoad,
 }: {
     label: React.ReactNode;
     shown: number;
@@ -242,14 +244,22 @@ export function LoadMore({
     onLoadMore: () => void;
     allLoadedLabel?: React.ReactNode;
     className?: string;
+    autoLoad?: boolean;
 }) {
+    const sentinelRef = useAutoLoadMore({
+        hasMore: shown < total,
+        itemCount: shown,
+        onLoadMore,
+        enabled: autoLoad,
+    });
+
     if (shown >= total) {
         return allLoadedLabel && shown > 0 ? (
             <div className={withOverrides("mt-8 text-center type-body-m text-on-surface-variant", className)}>{allLoadedLabel}</div>
         ) : null;
     }
     return (
-        <div className={withOverrides("mt-8 flex justify-center", className)}>
+        <div ref={sentinelRef} className={withOverrides("mt-8 flex justify-center", className)}>
             <Button variant="tonal" color="secondary" size="s" onClick={onLoadMore} data-shortcut-load-more="true">
                 {label}
                 <span className="type-label-l opacity-80">

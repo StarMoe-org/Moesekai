@@ -7,11 +7,14 @@ import {
     verifyHarukiApi,
     createAccount,
     getTopCharacterId,
+    rememberAccount,
     SERVER_OPTIONS,
     type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
-import { startOAuthConnect } from "@/lib/oauth";
+import HarukiConnectButton from "@/components/HarukiConnectButton";
+import { StarMoeApiError } from "@/lib/starmoe-accounts";
+import { useStarMoeAccountSync } from "@/hooks/useStarMoeAccountSync";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { Button, Chip, CircularProgress, Icon, Surface, TextField, cn } from "@/components/md3";
@@ -22,6 +25,7 @@ interface AccountSelectorBarProps {
     activeAccount: MoesekaiAccount | null;
     onSelect: (acc: MoesekaiAccount) => void;
     onAccountAdded: () => void;
+    /** Unused since Haruki is connected on StarMoe Connect, which returns to the current page. */
     returnTo?: string;
 }
 
@@ -30,21 +34,19 @@ export default function AccountSelectorBar({
     activeAccount,
     onSelect,
     onAccountAdded,
-    returnTo = "/profile",
 }: AccountSelectorBarProps) {
     const { t } = useI18n();
+    useStarMoeAccountSync();
     const [showAddForm, setShowAddForm] = useState(false);
     const [gameId, setGameId] = useState("");
     const [server, setServer] = useState<ServerType>("jp");
     const [isVerifying, setIsVerifying] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [oauthError, setOauthError] = useState<string | null>(null);
 
     const handleAdd = useCallback(async () => {
         if (!gameId.trim()) return;
         setIsVerifying(true);
         setError(null);
-        setOauthError(null);
 
         const result = await verifyHarukiApi(server, gameId.trim());
         if (!result.success) {
@@ -63,6 +65,17 @@ export default function AccountSelectorBar({
         const topCharId = getTopCharacterId(chars);
         const nickname = result.userGamedata?.name || "";
         createAccount(gameId.trim(), server, nickname, topCharId, chars, true);
+        try {
+            await rememberAccount(server, gameId.trim());
+        } catch (err) {
+            // Kept in this browser; the StarMoe account is full or could not be reached.
+            setError(err instanceof StarMoeApiError && err.code === "too_many_accounts"
+                ? t("common.account.starmoeAccountsFull")
+                : t("common.account.starmoeSaveFailed"));
+            setIsVerifying(false);
+            onAccountAdded();
+            return;
+        }
 
         setGameId("");
         setIsVerifying(false);
@@ -71,29 +84,18 @@ export default function AccountSelectorBar({
         onAccountAdded();
     }, [gameId, server, onAccountAdded, t]);
 
-    const handleOAuthBind = useCallback(async () => {
-        try {
-            setOauthError(null);
-            await startOAuthConnect(returnTo);
-        } catch (err) {
-            setOauthError(err instanceof Error ? err.message : t("common.harukiErrors.oauthInitFailed"));
-        }
-    }, [returnTo, t]);
-
     return (
         <div className="mb-6">
             <Surface tone="card" radius="lg" className="p-4">
                 <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                     <span className="type-title-s text-on-surface">{t("common.account.selectAccount")}</span>
                     <div className="flex items-center gap-1">
-                        <Button variant="text" size="xs" onClick={() => void handleOAuthBind()}>
-                            {t("common.account.oauthBind")}
-                        </Button>
+                        <HarukiConnectButton variant="text" size="xs" />
                         <Button
                             variant="text"
                             size="xs"
                             icon={mdAdd}
-                            onClick={() => { setShowAddForm(!showAddForm); setError(null); setOauthError(null); }}
+                            onClick={() => { setShowAddForm(!showAddForm); setError(null); }}
                         >
                             {t("common.account.addAccount")}
                         </Button>
@@ -177,10 +179,10 @@ export default function AccountSelectorBar({
                                 </Button>
                             </div>
                         </div>
-                        {(error || oauthError) && (
+                        {error && (
                             <p className="mt-3 flex flex-wrap items-center gap-1 type-body-s text-error">
                                 <Icon path={mdError} size={16} className="shrink-0" />
-                                {error || oauthError}
+                                {error}
                                 <ExternalLink href="https://haruki.seiunx.com" className="ml-1 text-primary hover:underline">
                                     {t("common.account.goHaruki")}
                                 </ExternalLink>

@@ -21,6 +21,9 @@ const ALLOWLIST = new Map([
     ["src/lib/i18n/messages/zh-CN/costume3d.ts", "Simplified Chinese 3D costume page dictionary"],
     ["src/lib/i18n/messages/zh-TW/costume3d.ts", "Traditional Chinese 3D costume page dictionary"],
     ["src/lib/i18n/messages/ja-JP/costume3d.ts", "Japanese 3D costume page dictionary"],
+    ["src/lib/i18n/messages/zh-CN/assetGuide.ts", "Simplified Chinese asset guide dictionary"],
+    ["src/lib/i18n/messages/zh-TW/assetGuide.ts", "Traditional Chinese asset guide dictionary"],
+    ["src/lib/i18n/messages/ja-JP/assetGuide.ts", "Japanese asset guide dictionary"],
     ["src/lib/i18n/locales.ts", "Locale native names shown in the language switcher"],
     ["src/lib/seo-keywords.ts", "Localized SEO copy and Chinese keyword strategy"],
     ["src/lib/seo-zh-tw.ts", "Traditional Chinese (TW) SEO copy"],
@@ -52,6 +55,8 @@ const COMMENT_ONLY_ALLOWLIST = new Map([
     ["src/components/deck-recommend/CardPickerModal.tsx", "Comments describing the deck card picker internals"],
     ["src/lib/deck-engine/wasm-version.ts", "Generated file header comment"],
     ["src/lib/score-control/score-control-calculator.ts", "Comments describing the score control rounding contract"],
+    ["src/lib/assets.ts", "Comments describing public CDN attribution and asset line endpoints"],
+    ["src/lib/fetch.ts", "Comments describing public masterdata CDN attribution"],
 ]);
 
 function isCommentOnlyLine(line) {

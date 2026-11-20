@@ -4,11 +4,12 @@ import Image from "next/image";
 import BaseFilters, { FilterSection, getFilterChipStateClasses, getFilterIconStateClasses } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { CardRarityType, CardAttribute, ATTR_NAMES, SupportUnit, SUPPORT_UNIT_LABEL_KEYS, UNIT_ICON_FILES, UNIT_FIELD_TO_ID } from "@/types/types";
-import { useCardSupplyTypeMapping } from "@/hooks/useCardSupplyType";
+import { getCardSupplyMeta, useCardSupplyTypeMapping } from "@/hooks/useCardSupplyType";
 import { useSkillMapping } from "@/hooks/useSkillMapping";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
-import { SegmentedButton } from "@/components/md3";
+import { getAttrIconUrl } from "@/lib/assets";
+import { Icon, SegmentedButton } from "@/components/md3";
 
 interface CardFiltersProps {
     // Character filter
@@ -71,14 +72,6 @@ const RARITIES: { type: CardRarityType; num: number }[] = [
     { type: "rarity_birthday", num: 5 },
 ];
 
-const ATTR_ICONS: Record<CardAttribute, string> = {
-    "cool": "Cool.webp",
-    "cute": "cute.webp",
-    "happy": "Happy.webp",
-    "mysterious": "Mysterious.webp",
-    "pure": "Pure.webp",
-};
-
 const UNIT_ID_TO_SUPPORT_UNIT: Partial<Record<string, SupportUnit>> = {
     ln: "light_sound",
     mmj: "idol",
@@ -115,7 +108,7 @@ export default function CardFilters({
 }: CardFiltersProps) {
 
     const { t } = useI18n();
-    const { useTrainedThumbnail, setUseTrainedThumbnail } = useTheme();
+    const { useTrainedThumbnail, setUseTrainedThumbnail, assetSource } = useTheme();
     const supplyTypes = useCardSupplyTypeMapping();
     const skillTypes = useSkillMapping();
     const getSupportUnitLabel = (unit: SupportUnit) => t(SUPPORT_UNIT_LABEL_KEYS[unit]);
@@ -367,7 +360,7 @@ export default function CardFilters({
                             >
                                 <div className="w-6 h-6 relative">
                                     <Image
-                                        src={`/data/icon/${ATTR_ICONS[attr]}`}
+                                        src={getAttrIconUrl(attr, assetSource)}
                                         alt={ATTR_NAMES[attr]}
                                         fill
                                         className="object-contain"
@@ -426,13 +419,19 @@ export default function CardFilters({
                 <div className="flex flex-wrap gap-2">
                     {supplyTypes.map((st) => {
                         const isSelected = selectedSupplyTypes.includes(st.type);
+                        const supplyMeta = getCardSupplyMeta(st.type);
                         return (
                             <button
                                 key={st.type}
                                 onClick={() => toggleSupplyType(st.type)}
                                 className={getFilterChipStateClasses(isSelected)}
                             >
-                                {t(`common.cardSupplyTypes.${st.type}`)}
+                                <Icon
+                                    path={supplyMeta.icon}
+                                    size={16}
+                                    className={isSelected ? "shrink-0" : `shrink-0 ${supplyMeta.colorClass}`}
+                                />
+                                <span>{t(`common.cardSupplyTypes.${st.type}`)}</span>
                             </button>
                         );
                     })}

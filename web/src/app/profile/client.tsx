@@ -28,10 +28,15 @@ import {
     getLeaderCardId,
     refreshOAuthAccountData,
     disconnectOAuthAccount,
+    rememberAccount,
+    ACCOUNTS_CHANGED_EVENT,
     type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
-import { startOAuthConnect } from "@/lib/oauth";
+import HarukiConnectButton from "@/components/HarukiConnectButton";
+import { useStarMoeAccountSync } from "@/hooks/useStarMoeAccountSync";
+import { signIn, useMoesekaiAccount } from "@/lib/moesekai-account";
+import { importStarMoeAccounts, loadStarMoeAccounts, StarMoeApiError } from "@/lib/starmoe-accounts";
 import { ServerPicker } from "@/components/common/ServerPicker";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
@@ -56,7 +61,6 @@ import {
     mdChevronRight,
     mdDelete,
     mdLayers,
-    mdLink,
     mdPerson,
     mdStyle,
     mdSync,
@@ -83,6 +87,17 @@ export default function ProfileClient() {
     const [showClearConfirm, setShowClearConfirm] = useState(false);
     const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
+    // StarMoe account: saved accounts and the Haruki connection (StarMoe Connect).
+    const login = useMoesekaiAccount();
+    const saved = useStarMoeAccountSync();
+    const signedIn = login.status === "signed-in";
+    const syncing = signedIn && saved.status === "ready";
+    const [importing, setImporting] = useState(false);
+    const [importMessage, setImportMessage] = useState<{ tone: "info" | "error"; text: string } | null>(null);
+    // Accounts being re-read by their "resync" button, and the last one that failed.
+    const [resyncingIds, setResyncingIds] = useState<ReadonlySet<string>>(() => new Set());
+    const [resyncError, setResyncError] = useState<string | null>(null);
+
     const reload = useCallback(() => {
         const accs = getAccounts();
         setAccounts(accs);
@@ -95,70 +110,110 @@ export default function ProfileClient() {
             reload();
             setLoaded(true);
         });
+        return () => cancelAnimationFrame(raf);
+    }, [reload, searchParams]);
 
+    // Once it is known whether the visitor is signed in (which decides where data is read from), refresh every account.
+    const loginKnown = login.status !== "loading";
+    useEffect(() => {
+        if (loginKnown) refreshAccounts(false);
+    }, [loginKnown, searchParams]); // eslint-disable-line react-hooks/exhaustive-deps
 
-        // Automatically refresh account data (uploadTime, name, avatar, etc.).
+    // Pages elsewhere (and the StarMoe sync) change the list: follow them.
+    useEffect(() => {
+        window.addEventListener(ACCOUNTS_CHANGED_EVENT, reload);
+        return () => window.removeEventListener(ACCOUNTS_CHANGED_EVENT, reload);
+    }, [reload]);
+
+    // Accounts that just arrived from the StarMoe account have no data yet.
+    useEffect(() => {
+        if (syncing) refreshAccounts(true);
+    }, [syncing, saved.accounts]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    /** Automatically refresh account data (uploadTime, name, avatar, etc.); `onlyMissing` skips accounts that have some. */
+    function refreshAccounts(onlyMissing: boolean) {
         const refreshAllAccounts = async () => {
-            const accs = getAccounts();
+            const accs = getAccounts().filter((acc) => !onlyMissing || (!acc.uploadTime && !acc.userGamedata));
             for (const acc of accs) {
-                console.log(`Refreshing account data: ${acc.gameId} (${acc.server})`);
-
-                if (acc.authSource === "oauth2") {
-                    try {
-                        await refreshOAuthAccountData(acc.id);
-                    } catch (error) {
-                        console.warn(`OAuth2 account ${acc.gameId} refresh failed; keeping existing data`, error);
-                    }
-                    continue;
-                }
-
-                const result = await verifyHarukiApi(acc.server, acc.gameId);
-
-                if (!result.success) {
-                    console.warn(`Account ${acc.gameId} refresh failed; keeping existing data`);
-                } else {
-                    const userGamedata = result.userGamedata || null;
-                    const userDecks = result.userDecks || null;
-                    const userCharacters = result.userCharacters || null;
-                    const userChallengeLiveSoloStages = result.userChallengeLiveSoloStages || null;
-                    const userChallengeLiveSoloResults = result.userChallengeLiveSoloResults || null;
-                    const userChallengeLiveSoloHighScoreRewards = result.userChallengeLiveSoloHighScoreRewards || null;
-                    const userBonds = result.userBonds || null;
-                    const userMaterials = result.userMaterials || null;
-                    const userAreas = result.userAreas || null;
-                    const userMysekaiFixtureGameCharacterPerformanceBonuses = result.userMysekaiFixtureGameCharacterPerformanceBonuses || null;
-                    const userMysekaiGates = result.userMysekaiGates || null;
-                    const uploadTime = result.uploadTime || null;
-                    const avatarCardId = getLeaderCardId(userGamedata, userDecks);
-
-                    updateAccount(acc.id, {
-                        userCharacters,
-                        userChallengeLiveSoloStages,
-                        userChallengeLiveSoloResults,
-                        userChallengeLiveSoloHighScoreRewards,
-                        userBonds,
-                        userMaterials,
-                        userAreas,
-                        userMysekaiFixtureGameCharacterPerformanceBonuses,
-                        userMysekaiGates,
-                        userGamedata,
-                        userDecks,
-                        uploadTime,
-                        avatarCardId,
-                        avatarCharacterId: userCharacters && userCharacters.length > 0
-                            ? getTopCharacterId(userCharacters)
-                            : acc.avatarCharacterId,
-                        nickname: userGamedata?.name || acc.nickname,
-                    });
-                }
+                await refreshAccount(acc);
             }
             // Reload after all refreshes finish.
             reload();
         };
 
-        refreshAllAccounts();
-        return () => cancelAnimationFrame(raf);
-    }, [reload, searchParams]);
+        void refreshAllAccounts();
+    }
+
+    /** The "resync" button: re-reads one account and says so when that fails (the old data stays). */
+    async function handleResync(acc: MoesekaiAccount) {
+        if (resyncingIds.has(acc.id)) return;
+        setResyncingIds((ids) => new Set(ids).add(acc.id));
+        setResyncError(null);
+        const error = await refreshAccount(acc);
+        setResyncingIds((ids) => {
+            const next = new Set(ids);
+            next.delete(acc.id);
+            return next;
+        });
+        reload();
+        if (error) {
+            const label = acc.userGamedata?.name || acc.nickname || acc.gameId;
+            const message = error === "OAUTH"
+                ? t("common.harukiErrors.oauthRefreshFailed")
+                : error === "API_NOT_PUBLIC"
+                    ? t("common.harukiErrors.apiNotPublic")
+                    : error === "NOT_FOUND"
+                        ? t("common.harukiErrors.userNotFound")
+                        : t("common.harukiErrors.networkError");
+            setResyncError(`${label}: ${message}`);
+        }
+    }
+
+    /** Re-reads one account's data. Returns why it failed (keeping the old data), or null. */
+    async function refreshAccount(acc: MoesekaiAccount): Promise<"OAUTH" | "API_NOT_PUBLIC" | "NOT_FOUND" | "NETWORK_ERROR" | null> {
+        console.log(`Refreshing account data: ${acc.gameId} (${acc.server})`);
+
+        if (acc.authSource === "oauth2") {
+            try {
+                await refreshOAuthAccountData(acc.id);
+                return null;
+            } catch (error) {
+                console.warn(`OAuth2 account ${acc.gameId} refresh failed; keeping existing data`, error);
+                return "OAUTH";
+            }
+        }
+
+        const result = await verifyHarukiApi(acc.server, acc.gameId);
+        if (!result.success) {
+            console.warn(`Account ${acc.gameId} refresh failed; keeping existing data`);
+            return result.error === "API_NOT_PUBLIC" || result.error === "NOT_FOUND" ? result.error : "NETWORK_ERROR";
+        }
+
+        const userGamedata = result.userGamedata || null;
+        const userDecks = result.userDecks || null;
+        const userCharacters = result.userCharacters || null;
+        updateAccount(acc.id, {
+            userCharacters,
+            userChallengeLiveSoloStages: result.userChallengeLiveSoloStages || null,
+            userChallengeLiveSoloResults: result.userChallengeLiveSoloResults || null,
+            userChallengeLiveSoloHighScoreRewards: result.userChallengeLiveSoloHighScoreRewards || null,
+            userBonds: result.userBonds || null,
+            userMaterials: result.userMaterials || null,
+            userAreas: result.userAreas || null,
+            userMysekaiFixtureGameCharacterPerformanceBonuses: result.userMysekaiFixtureGameCharacterPerformanceBonuses || null,
+            userMysekaiGates: result.userMysekaiGates || null,
+            userGamedata,
+            userDecks,
+            uploadTime: result.uploadTime || null,
+            avatarCardId: getLeaderCardId(userGamedata, userDecks),
+            avatarCharacterId: userCharacters && userCharacters.length > 0
+                ? getTopCharacterId(userCharacters)
+                : acc.avatarCharacterId,
+            nickname: userGamedata?.name || acc.nickname,
+            lastSyncAt: Date.now(),
+        });
+        return null;
+    }
 
     const handleAddAccount = useCallback(async () => {
         if (!formGameId.trim()) return;
@@ -217,6 +272,17 @@ export default function ProfileClient() {
             avatarCardId,
             avatarCharacterId,
         });
+        try {
+            await rememberAccount(formServer, formGameId.trim());
+        } catch (err) {
+            // Kept on this device; the StarMoe account is full or could not be reached.
+            setVerifyError(err instanceof StarMoeApiError && err.code === "too_many_accounts"
+                ? t("common.account.starmoeAccountsFull")
+                : t("common.account.starmoeSaveFailed"));
+            setIsVerifying(false);
+            reload();
+            return;
+        }
 
         setFormGameId("");
         setFormServer("jp");
@@ -244,15 +310,30 @@ export default function ProfileClient() {
         clearAllAccounts();
         setShowClearConfirm(false);
         reload();
-    }, [reload]);
-    const handleOAuthBind = useCallback(async () => {
+        // Signed in, only this device's cache was cleared: bring the saved accounts back.
+        if (signedIn) void loadStarMoeAccounts(true).then(() => refreshAccounts(true)).catch(() => undefined);
+    }, [reload, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    const localOnly = useMemo(() => (syncing ? accounts.filter((acc) => !acc.starmoeSource) : []), [syncing, accounts]);
+    const legacyOAuth = accounts.filter((acc) => acc.authSource === "oauth2" && !acc.starmoeSource);
+    const handleImport = useCallback(async () => {
+        setImporting(true);
+        setImportMessage(null);
         try {
-            setVerifyError(null);
-            await startOAuthConnect("/profile");
+            await importStarMoeAccounts(localOnly.map((acc) => ({ server: acc.server, uid: acc.gameId })));
+            setImportMessage({ tone: "info", text: t("page.profile.importDone") });
         } catch (err) {
-            setVerifyError(err instanceof Error ? err.message : t("common.harukiErrors.oauthInitFailed"));
+            setImportMessage({
+                tone: "error",
+                text: err instanceof StarMoeApiError && err.code === "too_many_accounts"
+                    ? t("common.account.starmoeAccountsFull")
+                    : t("page.profile.importFailed"),
+            });
+        } finally {
+            setImporting(false);
+            reload();
         }
-    }, [t]);
+    }, [localOnly, reload, t]);
 
     const activeAccount = accounts.find((acc) => acc.id === activeId) || null;
     const activeCharacterRanks = new Map((activeAccount?.userCharacters || []).map((c) => [c.characterId, c.characterRank]));
@@ -291,6 +372,13 @@ export default function ProfileClient() {
         );
     }
 
+    const accountBadge = (acc: MoesekaiAccount): string => {
+        if (acc.starmoeSource === "verified") return t("common.account.harukiVerified");
+        if (acc.starmoeSource === "manual") return t("common.account.savedToStarMoe");
+        if (acc.authSource === "oauth2") return "OAuth2";
+        return signedIn ? t("common.account.localOnly") : t("common.account.publicApi");
+    };
+
     const toolLinks = [
         { href: "/deck-recommend", icon: mdStyle, titleKey: "page.profile.tools.deckRecommend.title", descriptionKey: "page.profile.tools.deckRecommend.description" },
         { href: "/score-control", icon: mdCalculate, titleKey: "page.profile.tools.scoreControl.title", descriptionKey: "page.profile.tools.scoreControl.description" },
@@ -304,7 +392,7 @@ export default function ProfileClient() {
                     eyebrow={t("page.profile.badge")}
                     title={t("page.profile.title")}
                     highlight={t("page.profile.titleHighlight")}
-                    description={t("page.profile.description")}
+                    description={signedIn ? t("page.profile.descriptionSignedIn") : t("page.profile.description")}
                 />
 
                 {(oauthMessage || oauthStatus === "success") && (
@@ -369,9 +457,7 @@ export default function ProfileClient() {
                         }
                         actions={
                             <div className="hidden items-center gap-2 sm:flex">
-                                <Button variant="outlined" size="xs" icon={mdLink} onClick={() => void handleOAuthBind()}>
-                                    {t("common.account.oauthBind")}
-                                </Button>
+                                <HarukiConnectButton variant="outlined" size="xs" />
                                 <Button
                                     variant="filled"
                                     size="xs"
@@ -385,9 +471,7 @@ export default function ProfileClient() {
                     >
                         {/* On phones the header only has room for the title. */}
                         <div className="mb-4 grid grid-cols-2 gap-2 sm:hidden">
-                            <Button variant="outlined" size="s" icon={mdLink} onClick={() => void handleOAuthBind()}>
-                                {t("common.account.oauthBind")}
-                            </Button>
+                            <HarukiConnectButton variant="outlined" size="s" />
                             <Button
                                 variant="filled"
                                 size="s"
@@ -396,6 +480,55 @@ export default function ProfileClient() {
                             >
                                 {t("common.account.addAccount")}
                             </Button>
+                        </div>
+                        <div className="mb-4 space-y-3 empty:hidden">
+                            {(login.status === "signed-out" || login.status === "unavailable") && (
+                                <Banner
+                                    tone="info"
+                                    title={t("page.profile.signInTitle")}
+                                    action={
+                                        <Button variant="filled" size="xs" onClick={() => signIn()}>
+                                            {t("page.profile.signInAction")}
+                                        </Button>
+                                    }
+                                >
+                                    {t("page.profile.signInDescription")}
+                                </Banner>
+                            )}
+                            {signedIn && saved.haruki === "needs_reconnect" && (
+                                <Banner
+                                    tone="warning"
+                                    title={t("page.profile.harukiReconnectTitle")}
+                                    action={<HarukiConnectButton variant="filled" size="xs" />}
+                                >
+                                    {t("page.profile.harukiReconnectDescription")}
+                                </Banner>
+                            )}
+                            {localOnly.length > 0 && (
+                                <Banner
+                                    tone="info"
+                                    title={t("page.profile.importTitle", { count: localOnly.length })}
+                                    action={
+                                        <Button variant="filled" size="xs" icon={mdSync} disabled={importing} onClick={() => void handleImport()}>
+                                            {importing && <CircularProgress size={16} strokeWidth={2} />}
+                                            {t("page.profile.importAction")}
+                                        </Button>
+                                    }
+                                >
+                                    {t("page.profile.importDescription")}
+                                </Banner>
+                            )}
+                            {importMessage && <Banner tone={importMessage.tone}>{importMessage.text}</Banner>}
+                            {resyncError && <Banner tone="error">{resyncError}</Banner>}
+                            {legacyOAuth.length > 0 && (
+                                <Banner
+                                    tone="warning"
+                                    title={t("page.profile.legacyOAuthTitle")}
+                                    action={<HarukiConnectButton variant="outlined" size="xs" />}
+                                >
+                                    {t("page.profile.legacyOAuthDescription")}
+                                </Banner>
+                            )}
                         </div>
                         {accounts.length === 0 && !showAddForm ? (
                             <EmptyState
@@ -449,11 +582,13 @@ export default function ProfileClient() {
                                                         )}
                                                         <span className={cn(
                                                             "rounded-md3-xs px-1.5 py-0.5 type-label-s",
-                                                            acc.authSource === "oauth2" ? "bg-secondary-container text-on-secondary-container" : "bg-surface-container-highest text-on-surface-variant",
+                                                            acc.starmoeSource === "verified" || acc.authSource === "oauth2"
+                                                                ? "bg-secondary-container text-on-secondary-container"
+                                                                : "bg-surface-container-highest text-on-surface-variant",
                                                         )}>
-                                                            {acc.authSource === "oauth2" ? "OAuth2" : t("common.account.publicApi")}
+                                                            {accountBadge(acc)}
                                                         </span>
-                                                        {acc.authError === "reauth_required" && (
+                                                        {acc.authError === "reauth_required" && !acc.starmoeSource && (
                                                             <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                                                                 {t("common.account.reauthRequired")}
                                                             </span>
@@ -481,21 +616,18 @@ export default function ProfileClient() {
                                                             {t("common.account.setDefault")}
                                                         </Button>
                                                     )}
-                                                    {acc.authSource === "oauth2" && (
-                                                        <Button
-                                                            variant="text"
-                                                            size="xs"
-                                                            color="secondary"
-                                                            icon={mdSync}
-                                                            onClick={() => void refreshOAuthAccountData(acc.id).then(reload).catch((error) => {
-                                                                console.warn(`OAuth2 account ${acc.gameId} manual sync failed`, error);
-                                                                setVerifyError(t("common.harukiErrors.oauthRefreshFailed"));
-                                                            })}
-                                                        >
-                                                            {t("common.account.resync")}
-                                                        </Button>
-                                                    )}
-                                                    {deleteConfirmId === acc.id ? (
+                                                    <Button
+                                                        variant="text"
+                                                        size="xs"
+                                                        color="secondary"
+                                                        icon={resyncingIds.has(acc.id) ? undefined : mdSync}
+                                                        disabled={resyncingIds.has(acc.id)}
+                                                        onClick={() => void handleResync(acc)}
+                                                    >
+                                                        {resyncingIds.has(acc.id) && <CircularProgress size={14} strokeWidth={2} />}
+                                                        {t("common.account.resync")}
+                                                    </Button>
+                                                    {acc.starmoeSource === "verified" && signedIn ? null : deleteConfirmId === acc.id ? (
                                                         <div className="flex items-center gap-1">
                                                             <Button variant="tonal" size="xs" color="error" onClick={() => handleDelete(acc.id)}>
                                                                 {t("common.action.confirm")}
@@ -629,15 +761,15 @@ export default function ProfileClient() {
                         title={<span className="text-error">{t("page.profile.dangerZone")}</span>}
                     >
                         <p className="mb-4 type-body-s text-on-surface-variant">
-                            {t("page.profile.dangerDescription")}
+                            {signedIn ? t("page.profile.dangerDescriptionSignedIn") : t("page.profile.dangerDescription")}
                         </p>
                         {!showClearConfirm ? (
                             <Button variant="outlined" color="error" onClick={() => setShowClearConfirm(true)}>
-                                {t("page.profile.clearAllData")}
+                                {signedIn ? t("page.profile.clearLocalData") : t("page.profile.clearAllData")}
                             </Button>
                         ) : (
                             <div className="flex flex-wrap items-center gap-3">
-                                <span className="type-body-m text-error">{t("page.profile.clearAllConfirm")}</span>
+                                <span className="type-body-m text-error">{signedIn ? t("page.profile.clearLocalConfirm") : t("page.profile.clearAllConfirm")}</span>
                                 <Button variant="filled" color="error" onClick={handleClearAll}>
                                     {t("page.profile.confirmClear")}
                                 </Button>
@@ -651,7 +783,7 @@ export default function ProfileClient() {
 
                 {/* Info */}
                 <div className="mt-8 text-center type-body-s text-on-surface-variant">
-                    <p>{t("common.account.localOnlyNotice")}</p>
+                    <p>{signedIn ? t("page.profile.syncedNotice") : t("common.account.localOnlyNotice")}</p>
                 </div>
             </PageContainer>
         </MainLayout>

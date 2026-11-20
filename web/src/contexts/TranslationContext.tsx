@@ -72,8 +72,8 @@ export function TranslationProvider({ children }: TranslationProviderProps) {
         // Get translation
         const translated = getTranslation(map, original);
 
-        // If same as original (after trimming whitespace), no translation available
-        if (translated.trim() === original.trim()) return null;
+        // If empty or same as original (after trimming whitespace), no translation available
+        if (!translated.trim() || translated.trim() === original.trim()) return null;
 
         return translated;
     }, [useLLMTranslation, translations]);

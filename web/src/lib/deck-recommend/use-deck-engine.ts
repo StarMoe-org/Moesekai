@@ -7,7 +7,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
-import { getOAuthAccessTokenForGameUser, type ServerType } from "@/lib/account";
+import { getDeckUserDataAccess, type ServerType } from "@/lib/account";
 import { preloadDeckEngine, type DeckSearchCompletion } from "@/lib/deck-engine/wasm-loader";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
 import type { IMusicInfo } from "@/types/music";
@@ -213,15 +213,17 @@ export function useDeckEngine(): DeckEngineState {
         preloadDeckEngine();
         const worker = getOrCreateWorker();
         const trimmedUid = userId.trim();
-        const oauthAccessToken = trimmedUid ? getOAuthAccessTokenForGameUser(server, trimmedUid) : undefined;
         if (!readyRef.current) setStatus("warming");
         warmInflightRef.current += 1;
-        worker.postMessage({
-            warmup: {
-                server,
-                userId: trimmedUid || undefined,
-                oauthAccessToken,
-            },
+        const access = trimmedUid ? getDeckUserDataAccess(server, trimmedUid) : Promise.resolve(undefined);
+        void access.then((userDataAccess) => {
+            worker.postMessage({
+                warmup: {
+                    server,
+                    userId: trimmedUid || undefined,
+                    ...userDataAccess,
+                },
+            });
         });
     }, [getOrCreateWorker]);
 
@@ -229,8 +231,9 @@ export function useDeckEngine(): DeckEngineState {
         const worker = getOrCreateWorker();
         pendingRunRef.current = pending;
         if (!readyRef.current) setStatus("warming");
-        const oauthAccessToken = getOAuthAccessTokenForGameUser(args.server as ServerType, args.userId.trim());
-        worker.postMessage({ args: { ...args, oauthAccessToken } });
+        void getDeckUserDataAccess(args.server as ServerType, args.userId.trim()).then((access) => {
+            worker.postMessage({ args: { ...args, oauthAccessToken: access.oauthAccessToken, viaStarMoe: access.viaStarMoe } });
+        });
     }, [getOrCreateWorker]);
 
     const clearDeckMusic = useCallback(() => {

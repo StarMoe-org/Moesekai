@@ -1,4 +1,5 @@
 import { NextRequest } from "next/server";
+import { getAssetBaseUrl } from "@/lib/assets";
 import { parseSusText } from "@/vendor/sekai-sus2img/parser";
 import { renderScoreToSvg } from "@/vendor/sekai-sus2img/renderer";
 
@@ -8,10 +9,7 @@ const VALID_DIFFICULTIES = new Set(["easy", "normal", "hard", "expert", "master"
 
 // Primary path: render the chart ourselves from the SUS score text (ported from
 // Uni-PJSK-Viewer-Frontend's sekai-sus2img pipeline, see src/vendor/sekai-sus2img).
-const SUS_ASSET_BASES = [
-    "https://storage.pjsk.moe/sekai-jp-assets",
-    "https://storage.exmeaning.com/sekai-jp-assets",
-];
+const SUS_ASSET_BASES = [getAssetBaseUrl("main-jp"), getAssetBaseUrl("backup-jp")];
 const MASTER_DATA_BASES = [
     "https://metadata.pjsk.moe/jp/master",
     "https://metadata.exmeaning.com/jp/master",

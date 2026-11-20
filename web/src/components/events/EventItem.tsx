@@ -3,10 +3,10 @@ import { Card, Icon } from "@/components/md3";
 import { mdCalendarMonth } from "@/components/md3/icons";
 import Image from "next/image";
 import { IEventInfo, EVENT_TYPE_COLORS, getEventStatus, EVENT_STATUS_DISPLAY, EventType } from "@/types/events";
-import { getEventStoryBannerUrl, getEventLogoUrl } from "@/lib/assets";
+import { getAttrIconUrl, getEventStoryBannerUrl, getEventLogoUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { TranslatedText } from "@/components/common/TranslatedText";
-import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_ICON_PATHS, ATTR_NAMES } from "@/types/types";
+import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_NAMES } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
 
 // Build unit icon mapping from UNIT_DATA
@@ -99,10 +99,10 @@ export default function EventItem({ event, isSpoiler, basePath = "/events", unit
                             <span className="px-1.5 py-0.5 rounded-md3-sm bg-surface-container-high text-on-surface-variant type-label-s" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
                         )
                     )}
-                    {bonusAttr && ATTR_ICON_PATHS[bonusAttr as keyof typeof ATTR_ICON_PATHS] && (
+                    {bonusAttr && bonusAttr in ATTR_NAMES && (
                         <div className="w-5 h-5 flex items-center justify-center" title={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES]}>
                             <Image
-                                src={`/data/icon/${ATTR_ICON_PATHS[bonusAttr as keyof typeof ATTR_ICON_PATHS]}`}
+                                src={getAttrIconUrl(bonusAttr, assetSource)}
                                 alt={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES] || bonusAttr}
                                 width={16}
                                 height={16}

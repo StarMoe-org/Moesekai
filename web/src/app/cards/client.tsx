@@ -4,7 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
 import CardGrid from "@/components/cards/CardGrid";
-import ViewToggle, { type ListViewMode } from "@/components/cards/ViewToggle";
+import ViewToggle, { type CardViewMode } from "@/components/cards/ViewToggle";
 import CardFilters from "@/components/cards/CardFilters";
 import SearchSyntaxHelp from "@/components/search/SearchSyntaxHelp";
 import { parseSearchQuery, matchExpr, type SearchTerm, type SearchExpr } from "@/lib/searchQuery";
@@ -23,6 +23,22 @@ interface ICardSupply {
     cardSupplyType: string;
     assetbundleName?: string;
     name?: string;
+}
+
+const STORAGE_KEY = "cards_filters";
+const VIEW_STORAGE_KEY_MOBILE = "cards_view_mode_mobile";
+const VIEW_STORAGE_KEY_DESKTOP = "cards_view_mode_desktop";
+
+function isMobileViewport(): boolean {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth < 768 || screen.width < 768;
+}
+
+function parseCardViewMode(raw: string | null | undefined): CardViewMode | null {
+    if (raw === "table" || raw === "list") return "table";
+    if (raw === "large") return "large";
+    if (raw === "grid") return "grid";
+    return null;
 }
 
 function CardsContent() {
@@ -46,7 +62,8 @@ function CardsContent() {
     const [selectedSupportUnits, setSelectedSupportUnits] = useState<SupportUnit[]>([]);
     const [selectedSkillTypes, setSelectedSkillTypes] = useState<string[]>([]);
     const [searchQuery, setSearchQuery] = useState("");
-    const [view, setView] = useState<ListViewMode>("grid");
+    const [view, setView] = useState<CardViewMode>("grid");
+    const [isMobile, setIsMobile] = useState(false);
 
     // Sort states
     const [sortBy, setSortBy] = useState<"id" | "releaseAt" | "rarity">("id");
@@ -60,10 +77,7 @@ function CardsContent() {
         isReady: !isLoading,
     });
 
-    // Storage key
-    const STORAGE_KEY = "cards_filters";
-
-    // Initialize from URL params first, then fallback to sessionStorage
+    // Initialize from URL params first, then fallback to persistent view / sessionStorage filters
     useEffect(() => {
         const chars = searchParams.get("characters");
         const units = searchParams.get("units");
@@ -76,6 +90,19 @@ function CardsContent() {
         const sort = searchParams.get("sortBy");
         const order = searchParams.get("sortOrder");
         const viewParam = searchParams.get("view");
+
+        const mobile = isMobileViewport();
+        setIsMobile(mobile);
+        const defaultView: CardViewMode = mobile ? "grid" : "large";
+        const viewStorageKey = mobile ? VIEW_STORAGE_KEY_MOBILE : VIEW_STORAGE_KEY_DESKTOP;
+
+        let savedFilters: Record<string, unknown> | null = null;
+        try {
+            const saved = sessionStorage.getItem(STORAGE_KEY);
+            if (saved) savedFilters = JSON.parse(saved);
+        } catch {
+            console.log("Could not restore filters from sessionStorage");
+        }
 
         // If URL has params, use them
         const hasUrlParams = chars || units || attrs || rarities || supplyTypes || supportUnits || skillTypes || search || sort || order || viewParam;
@@ -91,29 +118,29 @@ function CardsContent() {
             if (search) setSearchQuery(search);
             if (sort) setSortBy(sort as "id" | "releaseAt" | "rarity");
             if (order) setSortOrder(order as "asc" | "desc");
-            if (viewParam) setView(viewParam === "table" || viewParam === "list" ? "table" : "grid");
-        } else {
-            // Fallback to sessionStorage
+        } else if (savedFilters) {
+            if (Array.isArray(savedFilters.characters) && savedFilters.characters.length) setSelectedCharacters(savedFilters.characters as number[]);
+            if (Array.isArray(savedFilters.units) && savedFilters.units.length) setSelectedUnitIds(savedFilters.units as string[]);
+            if (Array.isArray(savedFilters.attrs) && savedFilters.attrs.length) setSelectedAttrs(savedFilters.attrs as CardAttribute[]);
+            if (Array.isArray(savedFilters.rarities) && savedFilters.rarities.length) setSelectedRarities(savedFilters.rarities as CardRarityType[]);
+            if (Array.isArray(savedFilters.supplyTypes) && savedFilters.supplyTypes.length) setSelectedSupplyTypes(savedFilters.supplyTypes as string[]);
+            if (Array.isArray(savedFilters.supportUnits) && savedFilters.supportUnits.length) setSelectedSupportUnits(savedFilters.supportUnits as SupportUnit[]);
+            if (Array.isArray(savedFilters.skillTypes) && savedFilters.skillTypes.length) setSelectedSkillTypes(savedFilters.skillTypes as string[]);
+            if (typeof savedFilters.search === "string" && savedFilters.search) setSearchQuery(savedFilters.search);
+            if (savedFilters.sortBy === "id" || savedFilters.sortBy === "releaseAt" || savedFilters.sortBy === "rarity") setSortBy(savedFilters.sortBy);
+            if (savedFilters.sortOrder === "asc" || savedFilters.sortOrder === "desc") setSortOrder(savedFilters.sortOrder);
+        }
+
+        // Resolve view mode: URL param > localStorage per-device preference > device default
+        let resolvedView = parseCardViewMode(viewParam);
+        if (!resolvedView) {
             try {
-                const saved = sessionStorage.getItem(STORAGE_KEY);
-                if (saved) {
-                    const filters = JSON.parse(saved);
-                    if (filters.characters?.length) setSelectedCharacters(filters.characters);
-                    if (filters.units?.length) setSelectedUnitIds(filters.units);
-                    if (filters.attrs?.length) setSelectedAttrs(filters.attrs);
-                    if (filters.rarities?.length) setSelectedRarities(filters.rarities);
-                    if (filters.supplyTypes?.length) setSelectedSupplyTypes(filters.supplyTypes);
-                    if (filters.supportUnits?.length) setSelectedSupportUnits(filters.supportUnits);
-                    if (filters.skillTypes?.length) setSelectedSkillTypes(filters.skillTypes);
-                    if (filters.search) setSearchQuery(filters.search);
-                    if (filters.sortBy) setSortBy(filters.sortBy);
-                    if (filters.sortOrder) setSortOrder(filters.sortOrder);
-                    if (filters.view) setView(filters.view === "table" || filters.view === "list" ? "table" : "grid");
-                }
+                resolvedView = parseCardViewMode(localStorage.getItem(viewStorageKey));
             } catch {
-                console.log("Could not restore filters from sessionStorage");
+                // Ignore localStorage access errors
             }
         }
+        setView(resolvedView ?? defaultView);
         setFiltersInitialized(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Only run once on mount
@@ -137,7 +164,6 @@ function CardsContent() {
             search: searchQuery,
             sortBy,
             sortOrder,
-            view,
         };
         try {
             sessionStorage.setItem(STORAGE_KEY, JSON.stringify(filters));
@@ -160,9 +186,23 @@ function CardsContent() {
 
         if (sortBy !== "id") params.set("sortBy", sortBy);
         if (sortOrder !== "desc") params.set("sortOrder", sortOrder);
-        if (view !== "grid") params.set("view", view);
+        const defaultView: CardViewMode = isMobile ? "grid" : "large";
+        if (view !== defaultView) params.set("view", view);
         replaceCurrentUrlSearchParams(params);
-    }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, view, filtersInitialized, isScreenshotMode]);
+    }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, view, isMobile, filtersInitialized, isScreenshotMode]);
+
+    // Persist explicit view changes per device class (mobile vs desktop)
+    const handleViewChange = useCallback((nextView: CardViewMode) => {
+        setView(nextView);
+        const mobile = isMobileViewport();
+        setIsMobile(mobile);
+        const viewStorageKey = mobile ? VIEW_STORAGE_KEY_MOBILE : VIEW_STORAGE_KEY_DESKTOP;
+        try {
+            localStorage.setItem(viewStorageKey, nextView);
+        } catch {
+            // Ignore localStorage access errors
+        }
+    }, []);
 
     // Fetch cards data
     useEffect(() => {
@@ -332,6 +372,12 @@ function CardsContent() {
     }, [cards, skills, selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, sortBy, sortOrder, isShowSpoiler, parsedSearch, matchCardTerm]);
 
 
+    const skillsMap = useMemo(() => {
+        const map = new Map<number, ISkillInfo>();
+        for (const skill of skills) map.set(skill.id, skill);
+        return map;
+    }, [skills]);
+
     // Displayed cards (with pagination)
     const displayedCards = useMemo(() => {
         const limit = isScreenshotMode ? 100 : displayCount;
@@ -433,8 +479,8 @@ function CardsContent() {
             {/* Card grid. Filters live in the global FilterDrawer (registered
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
-                <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={setView} /></div>
-                <CardGrid cards={displayedCards} isLoading={isLoading} view={view} />
+                <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={handleViewChange} includeLarge /></div>
+                <CardGrid cards={displayedCards} isLoading={isLoading} view={view} skillsMap={skillsMap} />
 
                 {isScreenshotMode && (
                     <Banner tone="info" className="mt-8">

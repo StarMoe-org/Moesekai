@@ -1,18 +1,30 @@
 /**
- * The costume screen's motions (`character/motion/costume_setting/<NN>_00`, `costume3d-motion`):
- * `motion` + `face` play once, then `motion_loop` + `face_loop` repeat, as in the game.
+ * The costume screen's motions (`costume-motion`, a clip document): `motion` + `face` play once,
+ * then `motion_loop` + `face_loop` repeat, as in the game.
  *
- * Curves are Unity's, kept as stored (constant, dense at 60 Hz, or streamed cubic segments), and
- * bound by transform path below the body root (`body`). Values are converted to glTF space here:
- * position x negated, quaternion (x, −y, −z, w), `localEulerAnglesRaw` in degrees applied Z, X,
- * then Y (three's `YXZ`), blendshape weights in percent.
+ * Curves are Unity's, kept as stored (constant, dense at a rate, or streamed cubic segments), and
+ * bound as the clip document binds them: a `Transform` curve by the CRC-32 of its node's path below
+ * the body root, a blend shape curve by the CRC-32 of its channel's name on the face's meshes.
+ * Values are Unity's: a position (x, y, z) is the glTF (−x, y, z), a quaternion (x, y, z, w) is the
+ * glTF (x, −y, −z, w), Euler angles are in degrees and applied Z, X, then Y (three's `YXZ`), and a
+ * blend shape weight is divided by its channel's full weight.
  */
 import * as THREE from "three";
-import type { Costume3dCurve, Costume3dMotion } from "@/types/costume3d";
+import type { Costume3dClip, Costume3dClipCurve } from "@/types/costume3d";
 
 type Evaluate = (t: number) => number;
 
-function curveEvaluator(curve: Costume3dCurve): Evaluate {
+/** CRC-32 (the engine's hashing of paths and channel names), unsigned. */
+export function crc32(text: string): number {
+    let crc = 0xffffffff;
+    for (let i = 0; i < text.length; i++) {
+        crc ^= text.charCodeAt(i);
+        for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ (0xedb88320 & -(crc & 1));
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+}
+
+function curveEvaluator(curve: Costume3dClipCurve): Evaluate {
     if (curve.kind === "constant") {
         const value = curve.value;
         return () => value;
@@ -21,11 +33,10 @@ function curveEvaluator(curve: Costume3dCurve): Evaluate {
         const { samples, begin_time: begin, sample_rate: rate } = curve;
         const last = samples.length - 1;
         return t => {
-            const x = (t - begin) * rate;
-            if (x <= 0) return samples[0];
-            const i = Math.floor(x);
-            if (i >= last) return samples[last];
-            return samples[i] + (samples[i + 1] - samples[i]) * (x - i);
+            const x = Math.max(0, (t - begin) * rate);
+            const i = Math.min(Math.floor(x), last);
+            const j = Math.min(i + 1, last);
+            return samples[i] + (samples[j] - samples[i]) * Math.min(Math.max(x - i, 0), 1);
         };
     }
     // Streamed: per segment a cubic in the time since the segment's start. The first segment
@@ -33,9 +44,9 @@ function curveEvaluator(curve: Costume3dCurve): Evaluate {
     const n = curve.segments.length;
     const starts = new Float64Array(n);
     const coeff = new Float64Array(n * 4);
-    curve.segments.forEach((segment, i) => {
-        starts[i] = segment.t;
-        coeff.set(segment.coeff, i * 4);
+    curve.segments.forEach(([t0, a, b, c, d], i) => {
+        starts[i] = t0;
+        coeff.set([a, b, c, d], i * 4);
     });
     return t => {
         let lo = 0;
@@ -51,21 +62,58 @@ function curveEvaluator(curve: Costume3dCurve): Evaluate {
     };
 }
 
+/** The `Transform` properties a clip drives (clip-documents.md). */
+export const TRANSFORM_PROPERTIES = { position: 1, rotation: 2, scale: 3, euler: 4 } as const;
+
+type TransformProperty = (typeof TRANSFORM_PROPERTIES)[keyof typeof TRANSFORM_PROPERTIES];
+
+/** A clip's curves, bound by what they drive. */
 export interface Clip {
     name: string;
+    start: number;
     stop: number;
-    curves: Array<{ path: string; property: string; evaluate: Evaluate }>;
+    /** `Transform` curves: the CRC-32 of the node's path, the property, and the curves by component. */
+    transforms: Array<{ path: number; attribute: TransformProperty; evaluate: Evaluate[] }>;
+    /** Blend shape curves: the CRC-32 of the channel's name and the curve. */
+    shapes: Array<{ attribute: number; evaluate: Evaluate }>;
+    /** Curves of a binding this viewer does not apply. */
+    unbound: number;
 }
 
-export function clipOf(motion: Costume3dMotion): Clip {
-    return {
-        name: motion.name,
-        stop: motion.stopTime,
-        curves: motion.curves.map(curve => ({ path: curve.path, property: curve.property, evaluate: curveEvaluator(curve) })),
-    };
+/** Whether `attribute` is one of the `Transform` properties above. */
+const isTransformProperty = (attribute: number): attribute is TransformProperty =>
+    attribute >= TRANSFORM_PROPERTIES.position && attribute <= TRANSFORM_PROPERTIES.euler;
+
+/** The class of a `Transform`. */
+const TRANSFORM_CLASS = 4;
+/** The class of a `SkinnedMeshRenderer`, whose blend shape curves have `custom_type`: the channel's name hash. */
+const SKINNED_MESH_RENDERER = 137;
+const SHAPE_CHANNEL = 20;
+
+export function clipOf(document: Costume3dClip): Clip {
+    const transforms = new Map<string, Clip["transforms"][number]>();
+    const shapes: Clip["shapes"] = [];
+    let unbound = 0;
+    for (const curve of document.curves) {
+        const evaluate = curveEvaluator(curve);
+        if (curve.class_id === SKINNED_MESH_RENDERER && curve.custom_type === SHAPE_CHANNEL) {
+            shapes.push({ attribute: curve.attribute, evaluate });
+        } else if (curve.class_id === TRANSFORM_CLASS && isTransformProperty(curve.attribute)) {
+            const key = `${curve.path}:${curve.attribute}`;
+            let transform = transforms.get(key);
+            if (!transform) {
+                transform = { path: curve.path, attribute: curve.attribute, evaluate: [] };
+                transforms.set(key, transform);
+            }
+            transform.evaluate[curve.component] = evaluate;
+        } else {
+            unbound++;
+        }
+    }
+    return { name: document.name, start: document.start_time, stop: document.stop_time, transforms: [...transforms.values()], shapes, unbound };
 }
 
-/** A node's rest transform in Unity's space, which is what the curves leave untouched channels at. */
+/** A node's rest transform in Unity's coordinates, which is what the curves leave untouched channels at. */
 interface Rest {
     position: [number, number, number];
     quaternion: [number, number, number, number];
@@ -84,20 +132,21 @@ function unityRest(node: THREE.Object3D): Rest {
     };
 }
 
-/** The nodes below the body root by transform path, with their rest transforms. */
+/** The nodes below the body root by CRC-32 of their path, with their rest transforms. */
 interface Rig {
-    nodes: Map<string, THREE.Object3D>;
+    nodes: Map<number, THREE.Object3D>;
     rest: Map<THREE.Object3D, Rest>;
 }
 
 export function rigOf(bodyRoot: THREE.Object3D): Rig {
-    const nodes = new Map<string, THREE.Object3D>();
+    const nodes = new Map<number, THREE.Object3D>();
     const rest = new Map<THREE.Object3D, Rest>();
     const walk = (node: THREE.Object3D, path: string) => {
         for (const child of node.children) {
             if ((child as THREE.Mesh).isMesh) continue;
             const childPath = path ? `${path}/${child.name}` : child.name;
-            if (!nodes.has(childPath)) nodes.set(childPath, child);
+            const hash = crc32(childPath);
+            if (!nodes.has(hash)) nodes.set(hash, child);
             rest.set(child, unityRest(child));
             walk(child, childPath);
         }
@@ -115,23 +164,47 @@ interface Track {
     scale: Evaluate[];
 }
 
+/** A blend shape channel of the face: the influences it writes, at `index`, applied fully at `full`. */
+interface Channel {
+    influence: number[];
+    index: number;
+    full: number;
+}
+
 interface BoundClip {
     clip: Clip;
     tracks: Track[];
-    shapes: Array<{ name: string; evaluate: Evaluate }>;
+    /** Blend shape curves with a channel of the face's meshes. */
+    shapes: Array<{ channel: Channel; evaluate: Evaluate }>;
+    /** Curves of an attribute this viewer does not apply. */
     unbound: number;
 }
 
-export function bindClip(clip: Clip, rig: Rig): BoundClip {
+/** The face's meshes' blend shape channels by the CRC-32 of their names. */
+function channels(faceMeshes: THREE.Mesh[]): Map<number, Channel[]> {
+    const byHash = new Map<number, Channel[]>();
+    for (const mesh of faceMeshes) {
+        const influence = mesh.morphTargetInfluences as number[] | undefined;
+        if (!influence) continue;
+        // GLTFLoader turns a mesh's morph targets into a dictionary of names.
+        const names = Object.entries(mesh.morphTargetDictionary ?? {}).sort(([, a], [, b]) => a - b).map(([name]) => name);
+        const fullWeights = (mesh.userData.fullWeights as number[] | undefined) ?? [];
+        names.forEach((name, index) => {
+            if (index >= influence.length) return;
+            const hash = crc32(name);
+            byHash.set(hash, [...(byHash.get(hash) ?? []), { influence, index, full: fullWeights[index] || 100 }]);
+        });
+    }
+    return byHash;
+}
+
+export function bindClip(clip: Clip, rig: Rig, faceMeshes: THREE.Mesh[]): BoundClip {
     const tracks = new Map<THREE.Object3D, Track>();
+    const byHash = channels(faceMeshes);
     const shapes: BoundClip["shapes"] = [];
-    let unbound = 0;
-    for (const curve of clip.curves) {
-        if (curve.property.startsWith("blendShape.")) {
-            shapes.push({ name: curve.property.slice("blendShape.".length), evaluate: curve.evaluate });
-            continue;
-        }
-        const node = rig.nodes.get(curve.path);
+    let unbound = clip.unbound;
+    for (const { path, attribute, evaluate } of clip.transforms) {
+        const node = rig.nodes.get(path);
         const rest = node && rig.rest.get(node);
         if (!node || !rest) {
             unbound++;
@@ -142,14 +215,18 @@ export function bindClip(clip: Clip, rig: Rig): BoundClip {
             track = { node, rest, position: [], quaternion: [], euler: [], scale: [] };
             tracks.set(node, track);
         }
-        const [channel, axis] = curve.property.split(".");
-        const index = "xyzw".indexOf(axis);
-        if (index < 0) unbound++;
-        else if (channel === "m_LocalPosition") track.position[index] = curve.evaluate;
-        else if (channel === "m_LocalRotation") track.quaternion[index] = curve.evaluate;
-        else if (channel === "localEulerAnglesRaw") track.euler[index] = curve.evaluate;
-        else if (channel === "m_LocalScale") track.scale[index] = curve.evaluate;
-        else unbound++;
+        if (attribute === TRANSFORM_PROPERTIES.position) track.position = evaluate;
+        else if (attribute === TRANSFORM_PROPERTIES.rotation) track.quaternion = evaluate;
+        else if (attribute === TRANSFORM_PROPERTIES.scale) track.scale = evaluate;
+        else track.euler = evaluate;
+    }
+    for (const { attribute, evaluate } of clip.shapes) {
+        const found = byHash.get(attribute);
+        if (!found?.length) {
+            unbound++;
+            continue;
+        }
+        for (const channel of found) shapes.push({ channel, evaluate: t => evaluate(t) / channel.full });
     }
     return { clip, tracks: [...tracks.values()], shapes, unbound };
 }
@@ -157,12 +234,10 @@ export function bindClip(clip: Clip, rig: Rig): BoundClip {
 const scratchQ = new THREE.Quaternion();
 const scratchE = new THREE.Euler(0, 0, 0, "YXZ");
 
-function applyClip(bound: BoundClip, t: number, faceMeshes: THREE.Mesh[]): void {
+function applyClip(bound: BoundClip, t: number): void {
     const value = (fns: Evaluate[], rest: readonly number[], i: number) => (fns[i] ? fns[i](t) : rest[i]);
     for (const { node, rest, position, quaternion, euler, scale } of bound.tracks) {
-        if (position.length) {
-            node.position.set(-value(position, rest.position, 0), value(position, rest.position, 1), value(position, rest.position, 2));
-        }
+        if (position.length) node.position.set(-value(position, rest.position, 0), value(position, rest.position, 1), value(position, rest.position, 2));
         if (quaternion.length) {
             scratchQ.set(
                 value(quaternion, rest.quaternion, 0), value(quaternion, rest.quaternion, 1),
@@ -177,13 +252,7 @@ function applyClip(bound: BoundClip, t: number, faceMeshes: THREE.Mesh[]): void 
         }
         if (scale.length) node.scale.set(value(scale, rest.scale, 0), value(scale, rest.scale, 1), value(scale, rest.scale, 2));
     }
-    for (const shape of bound.shapes) {
-        const weight = shape.evaluate(t) / 100;
-        for (const mesh of faceMeshes) {
-            const i = mesh.morphTargetDictionary?.[shape.name];
-            if (i !== undefined && mesh.morphTargetInfluences) mesh.morphTargetInfluences[i] = weight;
-        }
-    }
+    for (const { channel, evaluate } of bound.shapes) channel.influence[channel.index] = evaluate(t);
 }
 
 export interface ClipPair {
@@ -226,7 +295,7 @@ export class MotionPlayer {
         this.tick(0);
     }
 
-    /** The model as converted, with no clip applied (arms out). */
+    /** The model as converted (arms out), with the blend shape weights its nodes store. */
     restPose(): void {
         if (!this.rig) return;
         for (const [node, rest] of this.rig.rest) {
@@ -234,7 +303,8 @@ export class MotionPlayer {
             node.quaternion.set(rest.quaternion[0], -rest.quaternion[1], -rest.quaternion[2], rest.quaternion[3]);
             node.scale.fromArray(rest.scale);
         }
-        for (const mesh of this.faceMeshes) mesh.morphTargetInfluences?.fill(0);
+        // The node's `weights` (stored weights over the channels' full weights) are the mesh's influences as it loads.
+        for (const mesh of this.faceMeshes) mesh.morphTargetInfluences?.forEach((_, i) => { mesh.morphTargetInfluences![i] = mesh.userData.weights?.[i] ?? 0; });
         this.phase = "rest";
     }
 
@@ -253,7 +323,9 @@ export class MotionPlayer {
             }
             this.time %= stop;
         }
-        if (clips.body) applyClip(clips.body, this.time, this.faceMeshes);
-        if (clips.face) applyClip(clips.face, this.time, this.faceMeshes);
+        if (clips.body) applyClip(clips.body, this.time + clips.body.clip.start);
+        if (clips.face) applyClip(clips.face, this.time + clips.face.clip.start);
     }
 }
+
+

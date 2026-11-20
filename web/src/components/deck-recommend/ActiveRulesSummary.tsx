@@ -3,7 +3,8 @@
 import React, { useMemo } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { type AssetSourceType } from "@/contexts/ThemeContext";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import type { ICardInfo } from "@/types/types";
 import { Button, Icon } from "@/components/md3";
 import { mdClose, mdRestartAlt, mdTune } from "@/components/md3/icons";
@@ -16,6 +17,7 @@ interface ActiveRulesSummaryProps {
     onChange: (partial: Partial<CustomRulesState>) => void;
     onResetAll: () => void;
     cardsMaster: ICardInfo[];
+    assetSource?: AssetSourceType;
 }
 
 export default function ActiveRulesSummary({
@@ -24,6 +26,7 @@ export default function ActiveRulesSummary({
     onChange,
     onResetAll,
     cardsMaster,
+    assetSource,
 }: ActiveRulesSummaryProps) {
     const { t } = useI18n();
 
@@ -87,7 +90,7 @@ export default function ActiveRulesSummary({
                     <div className="flex items-center gap-1">
                         {fixedCards.map((cardId) => {
                             const c = cardsMaster.find((item) => item.id === cardId);
-                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                     </div>
                 ),
@@ -103,7 +106,7 @@ export default function ActiveRulesSummary({
                     <div className="flex items-center gap-1">
                         {excludedCards.slice(0, 5).map((cardId) => {
                             const c = cardsMaster.find((item) => item.id === cardId);
-                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                         {excludedCards.length > 5 && (
                             <span className="text-[10px] text-on-surface-variant font-mono">+{excludedCards.length - 5}</span>
@@ -148,7 +151,7 @@ export default function ActiveRulesSummary({
             rules.push({
                 key: "attrFilter",
                 label: t("page.deckRecommend.rules.preview.attrFilter"),
-                detail: a ? <Image src={`/data/icon/${a.icon}`} alt="" width={18} height={18} className="object-contain" /> : attrFilter,
+                detail: a ? <Image src={getAttrIconUrl(a.value)} alt="" width={18} height={18} className="object-contain" unoptimized /> : attrFilter,
                 onRemove: () => onChange({ attrFilter: "" }),
             });
         }
@@ -256,7 +259,7 @@ export default function ActiveRulesSummary({
                     <div className="flex items-center gap-1">
                         {singleCardOverrides.slice(0, 5).map((entry) => {
                             const c = cardsMaster.find((item) => item.id === entry.cardId);
-                            return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} /> : null;
+                            return c ? <SekaiCardThumbnail key={entry.cardId} card={c} trained={false} width={22} assetSource={assetSource} /> : null;
                         })}
                         {singleCardOverrides.length > 5 && (
                             <span className="text-[10px] text-on-surface-variant font-mono">+{singleCardOverrides.length - 5}</span>
@@ -291,7 +294,7 @@ export default function ActiveRulesSummary({
         keepAfterTrainingState, supportMasterMax, supportSkillMax, filterOtherUnit,
         areaItemLevel, areaItemOverrides, characterRank, characterRankOverrides,
         mysekaiGateLevel, mysekaiGateOverrides, mysekaiFixtureBonusRate, mysekaiFixtureOverrides,
-        singleCardOverrides, boost, otherScore, limit, timeoutSeconds, cardsMaster, onChange, t
+        singleCardOverrides, boost, otherScore, limit, timeoutSeconds, cardsMaster, assetSource, onChange, t
     ]);
 
     return (

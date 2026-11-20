@@ -120,9 +120,9 @@ export default function UpcomingLiveTab() {
 
                     return (
                         <Link key={vl.id} href={`/live/${vl.id}`} className="state-layer focus-ring block group rounded-md3-lg">
-                            <div className="relative flex h-20 sm:h-24 rounded-md3-lg overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
+                            <div className="relative flex min-h-20 sm:min-h-24 rounded-md3-lg overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2">
                                 {/* Left: Banner (35%) */}
-                                <div className="w-[35%] relative overflow-hidden">
+                                <div className="w-[35%] shrink-0 relative overflow-hidden">
                                     <Image
                                         src={getVirtualLiveBannerUrl(vl.assetbundleName, assetSource)}
                                         alt={vl.name}
@@ -134,7 +134,7 @@ export default function UpcomingLiveTab() {
                                 </div>
 
                                 {/* Right: Info (65%) */}
-                                <div className="w-[65%] flex flex-col justify-center p-3 sm:p-4 gap-1">
+                                <div className="w-[65%] min-w-0 flex flex-col justify-center p-3 sm:p-4 gap-1">
                                     {/* Badges */}
                                     <div className="flex items-center gap-1.5 flex-wrap">
                                         <span

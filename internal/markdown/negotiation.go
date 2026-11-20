@@ -220,7 +220,7 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 		sb.WriteString(fmt.Sprintf("- [Music & Charts](/%s/music/): Song catalogue, chart previewer, 3DMV/2DMV, lyrics, and difficulty info\n", locale))
 		sb.WriteString(fmt.Sprintf("- [Events](/%s/events/): Historical and active events, event cards, bonus attributes, and schedules\n", locale))
 		sb.WriteString(fmt.Sprintf("- [Gacha](/%s/gacha/): Active and past banner archives, featured pick-up cards, and gacha rates\n", locale))
-		sb.WriteString(fmt.Sprintf("- [Real-time Ranking](/%s/realtime-ranking/): Live top player rankings and event border predictions\n", locale))
+		sb.WriteString(fmt.Sprintf("- [Real-time Ranking](/%s/realtime-ranking-next/): Live top player rankings and event border predictions\n", locale))
 		sb.WriteString(fmt.Sprintf("- [Deck Recommender](/%s/deck-recommend/): Optimize team composition for highest event point multiplier\n", locale))
 		sb.WriteString(fmt.Sprintf("- [Characters](/%s/character/): Unit profiles, character details, and associated cards/songs\n\n", locale))
 	case "ja-jp":
@@ -229,7 +229,7 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 		sb.WriteString(fmt.Sprintf("- [楽曲一覧](/%s/music/): 収録楽曲・譜面プレビュー・3DMV/2DMV・作詞作曲・歌詞\n", locale))
 		sb.WriteString(fmt.Sprintf("- [イベント一覧](/%s/events/): 開催中・過去イベント・ボーナス属性・リアルタイムボーダー\n", locale))
 		sb.WriteString(fmt.Sprintf("- [ガチャ](/%s/gacha/): ガチャ一覧・ピックアップメンバー・提供割合\n", locale))
-		sb.WriteString(fmt.Sprintf("- [リアルタイムランキング](/%s/realtime-ranking/): Top 100 リアルタイムランキングとボーダー予測\n", locale))
+		sb.WriteString(fmt.Sprintf("- [リアルタイムランキング](/%s/realtime-ranking-next/): Top 100 リアルタイムランキングとボーダー予測\n", locale))
 		sb.WriteString(fmt.Sprintf("- [編成シミュレーター](/%s/deck-recommend/): イベント最適編成レコメンド\n", locale))
 		sb.WriteString(fmt.Sprintf("- [キャラクター](/%s/character/): ユニット・キャラクタープロフィール・関連楽曲\n\n", locale))
 	case "zh-tw":
@@ -238,7 +238,7 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 		sb.WriteString(fmt.Sprintf("- [音樂曲目](/%s/music/): 全收錄曲譜面預覽、3DMV/2DMV、作詞作曲、歌詞\n", locale))
 		sb.WriteString(fmt.Sprintf("- [活動總覽](/%s/events/): 歷期活動、加成角色屬性、實時榜線與預測\n", locale))
 		sb.WriteString(fmt.Sprintf("- [轉蛋卡池](/%s/gacha/): 當前及歷史卡池一覽、卡池概率\n", locale))
-		sb.WriteString(fmt.Sprintf("- [實時排行榜](/%s/realtime-ranking/): 日服/台服實時 Top 100 榜線與預測\n", locale))
+		sb.WriteString(fmt.Sprintf("- [實時排行榜](/%s/realtime-ranking-next/): 日服/台服實時 Top 100 榜線與預測\n", locale))
 		sb.WriteString(fmt.Sprintf("- [組卡推薦](/%s/deck-recommend/): 依活動加成推薦最佳隊伍編隊\n", locale))
 		sb.WriteString(fmt.Sprintf("- [角色資料](/%s/character/): 各隊伍與角色詳細資料、關聯卡牌與曲目\n\n", locale))
 	case "ko-kr":
@@ -247,7 +247,7 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 		sb.WriteString(fmt.Sprintf("- [악곡 목록](/%s/music/): 수록곡, 채보 미리보기, 3DMV/2DMV, 작사/작곡, 가사\n", locale))
 		sb.WriteString(fmt.Sprintf("- [이벤트](/%s/events/): 역대 이벤트, 보너스 속성, 실시간 컷 및 예측\n", locale))
 		sb.WriteString(fmt.Sprintf("- [가챠](/%s/gacha/): 진행 중 및 과거 가챠, 픽업 멤버 목록\n", locale))
-		sb.WriteString(fmt.Sprintf("- [실시간 랭킹](/%s/realtime-ranking/): 실시간 Top 100 랭킹 및 컷 예측\n", locale))
+		sb.WriteString(fmt.Sprintf("- [실시간 랭킹](/%s/realtime-ranking-next/): 실시간 Top 100 랭킹 및 컷 예측\n", locale))
 		sb.WriteString(fmt.Sprintf("- [덱 추천](/%s/deck-recommend/): 이벤트 보너스 최적화 덱 추천\n", locale))
 		sb.WriteString(fmt.Sprintf("- [캐릭터](/%s/character/): 유닛 프로필, 캐릭터 정보 및 관련 악곡\n\n", locale))
 	default: // zh-cn
@@ -256,7 +256,7 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 		sb.WriteString(fmt.Sprintf("- [音乐曲目](/%s/music/): 全收录曲谱面预览、3DMV/2DMV、作词作曲、歌词\n", locale))
 		sb.WriteString(fmt.Sprintf("- [活动总览](/%s/events/): 历期活动、加成角色属性、实时榜线与时速预测\n", locale))
 		sb.WriteString(fmt.Sprintf("- [扭蛋卡池](/%s/gacha/): 当前及历史卡池一览、卡池概率与模拟抽取\n", locale))
-		sb.WriteString(fmt.Sprintf("- [实时排行榜](/%s/realtime-ranking/): 日服/国服实时 Top 100 榜线与预测\n", locale))
+		sb.WriteString(fmt.Sprintf("- [实时排行榜](/%s/realtime-ranking-next/): 日服/国服实时 Top 100 榜线与预测\n", locale))
 		sb.WriteString(fmt.Sprintf("- [组卡推荐](/%s/deck-recommend/): 根据活动加成与卡牌自动推荐最佳编队\n", locale))
 		sb.WriteString(fmt.Sprintf("- [角色列表](/%s/character/): 各队伍与角色详细资料、关联卡牌与曲目\n\n", locale))
 	}

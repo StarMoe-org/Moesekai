@@ -5,7 +5,7 @@ import DegreeImage from "@/components/honor/DegreeImage";
 import BondsDegreeImage from "@/components/honor/BondsDegreeImage";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
-import { useTheme } from "@/contexts/ThemeContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { getCardFullUrl } from "@/lib/assets";
 import { getLeaderCardId, type MoesekaiAccount } from "@/lib/account";
 import type { ProfileExtras, ProfileHonor } from "@/hooks/useProfileExtras";
@@ -25,8 +25,7 @@ interface Props {
     onManageAccounts: () => void;
 }
 
-function HonorSlot({ honor, main, master, pending }: { honor?: ProfileHonor; main: boolean; master: RealtimeRankingMasterData | null; pending: boolean }) {
-    const { assetSource } = useTheme();
+function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: ProfileHonor; main: boolean; master: RealtimeRankingMasterData | null; pending: boolean; assetSource: AssetSourceType }) {
     let image: React.ReactNode = null;
 
     if (honor && master) {
@@ -83,7 +82,8 @@ function HonorSlot({ honor, main, master, pending }: { honor?: ProfileHonor; mai
  */
 export default function ProfileHeroCard({ account, extras, master, cards, accountCount, onManageAccounts }: Props) {
     const { t, formatDate, formatNumber } = useI18n();
-    const { assetSource } = useTheme();
+    const { assetSource: themeAssetSource } = useTheme();
+    const assetSource = replaceAssetSourceRegion(themeAssetSource, account.server);
 
     const name = account.userGamedata?.name || account.nickname;
     const rank = account.userGamedata?.rank;
@@ -149,6 +149,7 @@ export default function ProfileHeroCard({ account, extras, master, cards, accoun
                                     master={master}
                                     honor={extras.honors[slot]}
                                     pending={extras.status === "loading" || (!!extras.honors[slot] && !master)}
+                                    assetSource={assetSource}
                                 />
                             ))}
                         </div>

@@ -1,8 +1,8 @@
 import {
     type AssetSourceType,
 } from "@/contexts/ThemeContext";
+import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN } from "@/lib/assetDomains";
 import { defaultContentRegionForPathname } from "@/lib/locale-routing";
-import { sseWebSources } from "@/lib/sseWeb/config";
 
 /**
  * ============================================================================
@@ -30,13 +30,18 @@ export const MOE_RANKINGS_URL = `${MOE_STATIC_BASE_URL}/data/music_meta/rankings
 export const MOE_BGM_DURATIONS_URL = `${MOE_STATIC_BASE_URL}/data/bgm_duration/bgm_durations.json`;
 export const MOE_MUSIC_BPM_URL = `${MOE_STATIC_BASE_URL}/data/music_bpm/music_bpms.json`;
 
-/**
- * 公益 Assets CDN 线路域名（CORS: *，外部引用请在作品任意位置标注 Moesekai / pjsk.moe）
- * - ASSET_DOMAIN_MAIN: 主线 (Cloudflare 国际线路)
- * - ASSET_DOMAIN_BACKUP: 备用线路 (EdgeOne)
- */
-export const ASSET_DOMAIN_MAIN = "https://storage.pjsk.moe";
-export const ASSET_DOMAIN_BACKUP = "https://storage.exmeaning.com";
+export { ASSET_DOMAIN_MAIN, ASSET_DOMAIN_BACKUP };
+
+export type AssetLine = "main" | "backup";
+
+export function getAssetLine(source: AssetSourceType): AssetLine {
+    return source.startsWith("backup") ? "backup" : "main";
+}
+
+/** The asset site of the source's line. */
+export function getAssetDomain(source: AssetSourceType): string {
+    return getAssetLine(source) === "main" ? ASSET_DOMAIN_MAIN : ASSET_DOMAIN_BACKUP;
+}
 
 function getCurrentRegion(): string {
     if (typeof window === "undefined" || typeof localStorage === "undefined") return "cn";
@@ -47,15 +52,19 @@ function getCurrentRegion(): string {
     }
 }
 
-function getAssetRegion(source: AssetSourceType): string {
+/** The game server a source reads: its own suffix, or the server chosen in the settings. */
+export function getAssetRegion(source: AssetSourceType): string {
     const hyphenIndex = source.indexOf("-");
     return hyphenIndex !== -1 ? source.substring(hyphenIndex + 1) : getCurrentRegion();
 }
 
 export function getAssetBaseUrl(source: AssetSourceType): string {
-    const line: "main" | "backup" = source.startsWith("backup") ? "backup" : "main";
-    const domain = line === "main" ? ASSET_DOMAIN_MAIN : ASSET_DOMAIN_BACKUP;
-    return `${domain}/sekai-${getAssetRegion(source)}-assets`;
+    return `${getAssetDomain(source)}/sekai-${getAssetRegion(source)}-assets`;
+}
+
+/** The canonical view of the source's server: every asset in its own form, such as models as GLB. */
+export function getCanonicalBaseUrl(source: AssetSourceType): string {
+    return `${getAssetDomain(source)}/${getAssetRegion(source)}`;
 }
 
 function buildImageAssetUrl(source: AssetSourceType, assetPath: string): string {
@@ -72,6 +81,12 @@ function buildJsonAssetUrl(source: AssetSourceType, assetPath: string): string {
 
 function buildPngImageAssetUrl(source: AssetSourceType, assetPath: string): string {
     return `${getAssetBaseUrl(source)}/${assetPath}.png`;
+}
+
+/** The lossless PNG beside a WebP image of the asset site; any other image stays as it is. */
+export function getLosslessImageUrl(url: string): string {
+    const onAssetSite = [ASSET_DOMAIN_MAIN, ASSET_DOMAIN_BACKUP].some(domain => url.startsWith(`${domain}/`));
+    return onAssetSite && url.endsWith(".webp") ? `${url.slice(0, -".webp".length)}.png` : url;
 }
 
 export function buildRawAssetUrl(source: AssetSourceType, assetPath: string): string {
@@ -124,11 +139,33 @@ export function getCommonMaterialThumbnailUrl(
 }
 
 export function getAttrIconUrl(attr: string, source: AssetSourceType = "main-jp"): string {
-    return buildImageAssetUrl(source, `thumbnail/common/attribute/${attr}`);
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/icon_attribute_${attr}/image.png`;
 }
 
 export function getUnitLogoUrl(unitId: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `thumbnail/common/unit/${unitId}`);
+}
+
+export function getUnitOutlineLogoUrl(unitField: string, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/common/logos_outline/logo_${unitField}.png`;
+}
+
+const UNIT_FIELD_TO_TAB_CODE: Record<string, string> = {
+    light_sound: "ln",
+    idol: "mj",
+    street: "vb",
+    theme_park: "ws",
+    school_refusal: "25",
+    piapro: "vs",
+};
+
+export function getUnitTabIconUrl(unitField: string, source: AssetSourceType = "main-jp"): string {
+    const code = UNIT_FIELD_TO_TAB_CODE[unitField] ?? "vs";
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/icon_tab_unit_${code}_on/image.png`;
+}
+
+export function getCharacterChibiIconUrl(characterId: number, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/chr_il_${characterId}/image.png`;
 }
 
 export function getCardThumbnailUrl(
@@ -243,24 +280,30 @@ export function getVirtualLiveBannerUrl(assetbundleName: string, source: AssetSo
 
 // JP and EN ship each fixture thumbnail as its own bundle, so the image is stored
 // under a directory named after that bundle; CN, TW and KR pack them into a single
-// `mysekai/thumbnail/fixture` bundle and store the image directly in it. A fixture
-// only reaches the other layout once a region using it has released the fixture.
+// bundle (`mysekai/thumbnail/fixture`, `mysekai/thumbnail/surface_appearance`) and
+// store the image directly in it. A fixture only reaches the other layout once a
+// region using it has released the fixture.
 const NESTED_FIXTURE_THUMBNAIL_REGIONS = new Set(["jp", "en"]);
+
+/** The image named `file` of the thumbnail bundle `bundle` in `directory`, in both layouts, the region's own first. */
+function fixtureThumbnailUrls(source: AssetSourceType, directory: string, bundle: string, file: string): string[] {
+    const nested = buildPngImageAssetUrl(source, `${directory}/${bundle}/${file}`);
+    const flat = buildPngImageAssetUrl(source, `${directory}/${file}`);
+    return NESTED_FIXTURE_THUMBNAIL_REGIONS.has(getAssetRegion(source)) ? [nested, flat] : [flat, nested];
+}
+
+/** The surface a wall (genre 7) or floor (genre 8) fixture covers. */
+const SURFACE_GENRES: Record<number, string> = { 7: "wall", 8: "floor" };
 
 /** Candidate thumbnail URLs for a fixture, in the order they should be tried. */
 export function getMysekaiFixtureThumbnailUrls(assetbundleName: string, source: AssetSourceType = "main-jp", genreId: number = 0): string[] {
-    if (genreId === 7) {
-        return [buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_wall_appearance_1`)];
+    const surface = SURFACE_GENRES[genreId];
+    if (surface) {
+        const file = `tex_${assetbundleName}_${surface}_appearance_1`;
+        return fixtureThumbnailUrls(source, "mysekai/thumbnail/surface_appearance", assetbundleName, file);
     }
-
-    if (genreId === 8) {
-        return [buildPngImageAssetUrl(source, `mysekai/thumbnail/surface_appearance/${assetbundleName}/tex_${assetbundleName}_floor_appearance_1`)];
-    }
-
     const name = `${assetbundleName}_1`;
-    const nested = buildPngImageAssetUrl(source, `mysekai/thumbnail/fixture/${name}/${name}`);
-    const flat = buildPngImageAssetUrl(source, `mysekai/thumbnail/fixture/${name}`);
-    return NESTED_FIXTURE_THUMBNAIL_REGIONS.has(getAssetRegion(source)) ? [nested, flat] : [flat, nested];
+    return fixtureThumbnailUrls(source, "mysekai/thumbnail/fixture", name, name);
 }
 
 export function getMysekaiFixtureThumbnailUrl(assetbundleName: string, source: AssetSourceType = "main-jp", genreId: number = 0): string {
@@ -335,25 +378,19 @@ export function getBondsHonorCharacterUrl(characterId: number, source: AssetSour
 
 /**
  * A sprite the game client carries in its own package rather than in a downloadable bundle
- * (the default honor frames, the honor level icons), read from the server's client unpack --
- * the same unpack the story player uses. The CN client keeps these in `data.unity3d`, the JP
- * unpack has them loose. A server left out of the player's unpacks falls back to JP's.
+ * (the default honor frames, the honor level icons). Every server's client ships the same
+ * images, so they are read from the JP client package on the source's asset site.
  */
-export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = "main-jp"): string | undefined {
-    const hyphenIndex = source.indexOf("-");
-    const region = hyphenIndex !== -1 ? source.substring(hyphenIndex + 1) : getCurrentRegion();
-    const inapp = (sseWebSources(region) ?? sseWebSources("jp"))?.inapp;
-    if (!inapp) return undefined;
-    const playerDir = /\/cn-[^/]+\/$/.test(inapp) ? "data.unity3d" : "loose";
-    return `${inapp}player/${playerDir}/Sprite/${spriteName}.png`;
+export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/client/jp/player/loose/Sprite/${spriteName}/image.png`;
 }
 
-export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
 }
 
-export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string | undefined {
+export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string {
     return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
 

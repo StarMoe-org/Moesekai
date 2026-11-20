@@ -704,6 +704,24 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
     },
   ),
+  story_search: definePage(
+    "/story-search",
+    { "zh-CN": "剧情检索器", "en-US": "Story Search", "ja-JP": "ストーリー検索", "ko-KR": "스토리 검색기", "zh-TW": "劇情檢索器" },
+    {
+      "zh-CN": "在浏览器本地极速检索 Project SEKAI 全服剧情台词与正则匹配，并支持 Qwen3 2560维向量 AI 语义搜索活动、主线、卡牌、区域对话与角色剧情。",
+      "en-US": "Search Project SEKAI story dialogues locally with keyword or regex matching, or use AI semantic search powered by Qwen3 2560-dim embeddings across CN and JP servers.",
+      "ja-JP": "Project SEKAI のストーリーセリフをブラウザ上でキーワード・正規表現検索、さらに Qwen3 2560次元ベクトルによる AI 意味検索でシーンを探せます。",
+      "ko-KR": "Project SEKAI 스토리 대사를 브라우저 로컬에서 키워드·정규식으로 검색하거나 Qwen3 2560차원 벡터 기반 AI 의미 검색으로 찾을 수 있습니다.",
+      "zh-TW": "在瀏覽器本機極速檢索 Project SEKAI 劇情台詞與正規表示式，並支援 Qwen3 2560 維向量 AI 語義搜尋活動、主線、卡牌與區域對話。",
+    },
+    {
+      "zh-CN": ["剧情检索器", "台词搜索", "正则搜索", "语义搜索", "剧情搜索"],
+      "en-US": ["story search", "dialogue search", "regex search", "semantic search"],
+      "ja-JP": ["ストーリー検索", "セリフ検索", "正規表現検索", "意味検索"],
+      "ko-KR": ["스토리 검색", "대사 검색", "정규식 검색", "의미 검색"],
+      "zh-TW": ["劇情檢索器", "台詞搜尋", "正規搜尋", "語義搜尋"],
+    },
+  ),
   costume_3d: definePage(
     "/costume-3d",
     { "zh-CN": "3D 服装", "en-US": "3D Costumes", "ja-JP": "3D衣装", "ko-KR": "3D 의상", "zh-TW": "3D 服裝" },
@@ -1006,6 +1024,30 @@ export const SEO_PAGE_METADATA = {
       "zh-CN": ["谷子盲抽", "周边", "抽卡模拟"],
       "en-US": ["goods gacha", "merchandise", "pull simulator"],
       "ja-JP": ["グッズガチャ", "グッズ", "シミュレーター"],
+    },
+  ),
+  gacha_simulator: definePage(
+    "/gacha-simulator",
+    {
+      "zh-CN": "扭蛋模拟器",
+      "en-US": "Gacha Simulator",
+      "ja-JP": "ガチャシミュレーター",
+      "ko-KR": "가챠 시뮬레이터",
+      "zh-TW": "轉蛋模擬器",
+    },
+    {
+      "zh-CN": "在线模拟 Project SEKAI 扭蛋抽卡与 3D 演出，支持快速切换全服历史卡池，自定义星级与单卡 UP 概率、十连保底规则、UP 卡牌与出现的卡牌池。",
+      "en-US": "Simulate Project SEKAI gacha pulls with 3D stage presentation, browse historical banners across servers, and customize rarity rates, pickup cards, 10-pull guarantees, and card pool rules.",
+      "ja-JP": "Project SEKAI のガチャ抽選と 3D 演出をブラウザで再現。過去のガチャ切り替えに加え、レアリティ確率・ピックアップ対象・10連確定枠・出現カードプールの自由なカスタマイズに対応。",
+      "ko-KR": "Project SEKAI 가챠 추첨과 3D 연출을 시뮬레이션하고, 역대 가챠 선택 및 확률·픽업 대상·10연 확정 규칙·등장 카드 풀 커스텀을 지원합니다.",
+      "zh-TW": "線上模擬 Project SEKAI 轉蛋抽卡與 3D 演出，支援切換歷代卡池，自訂星級與單卡 UP 機率、十連保底規則、UP 卡牌與出現的卡牌池。",
+    },
+    {
+      "zh-CN": ["扭蛋模拟器", "抽卡模拟", "自定义卡池", "DIY抽卡", "3D抽卡演出"],
+      "en-US": ["gacha simulator", "pull simulator", "custom gacha", "DIY gacha", "3D gacha"],
+      "ja-JP": ["ガチャシミュレーター", "ガチャ演出", "カスタムガチャ"],
+      "ko-KR": ["가챠 시뮬레이터", "뽑기 시뮬레이션", "커스텀 가챠"],
+      "zh-TW": ["轉蛋模擬器", "抽卡模擬", "自訂卡池"],
     },
   ),
   story: definePage(
