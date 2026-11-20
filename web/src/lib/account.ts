@@ -665,11 +665,34 @@ export function findAccountByGameId(server: ServerType, gameId: string): Moeseka
     return getAccounts().find((account) => account.server === server && account.gameId === normalized) || null;
 }
 
-export function getOAuthAccessTokenForGameUser(server: ServerType, gameId: string): string | undefined {
+/** How the deck workers (deck recommend, score control) read a game account's data. */
+export interface DeckUserDataAccess {
+    /** Through moesekai-api with the StarMoe session; the public API when it cannot answer. */
+    viaStarMoe: boolean;
+    /** The account's browser OAuth2 token, current, when not signed in to StarMoe. */
+    oauthAccessToken?: string;
+}
+
+/**
+ * Signed in to StarMoe, moesekai-api reads every account (through the visitor's Haruki connection where it can),
+ * as fetchAccountGameData does; the browser OAuth2 token is then no longer refreshed and must not be used.
+ * Otherwise the account's OAuth2 token, refreshed when it is about to expire, or none (Haruki's public API).
+ */
+export async function getDeckUserDataAccess(server: ServerType, gameId: string): Promise<DeckUserDataAccess> {
+    if (starMoeDataEnabled()) return { viaStarMoe: true };
     const account = findAccountByGameId(server, gameId);
-    if (!account || account.authSource !== "oauth2") return undefined;
-    if (account.authError === "reauth_required") return undefined;
-    return account.oauthToken?.accessToken || undefined;
+    if (!account || account.authSource !== "oauth2" || account.authError === "reauth_required") {
+        return { viaStarMoe: false };
+    }
+    try {
+        const token = await getRefreshedOAuthToken(account);
+        return { viaStarMoe: false, oauthAccessToken: token.accessToken };
+    } catch (error) {
+        if (normalizeAccountDataError(error) === "OAUTH_REAUTH_REQUIRED") {
+            updateAccount(account.id, { authError: "reauth_required" });
+        }
+        return { viaStarMoe: false };
+    }
 }
 
 /** Set the currently selected account. */

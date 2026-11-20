@@ -1,13 +1,15 @@
 /**
  * Shared data provider for the deck engine workers (deck-recommend and
  * score-control deck building). Master data comes from the self-hosted
- * official source; user data comes from the Haruki suite API.
+ * official source; user data comes from moesekai-api (/api/sekai) for a
+ * signed-in StarMoe visitor, and from the Haruki suite API otherwise.
  */
 import type { IMusicMeta } from "@/types/music";
 import { isValidServer, SERVER_IDS, type ServerType } from "../account-servers";
 import { getHarukiPublicApiBase } from "../haruki-public-api";
 import { augmentMasterDataWithWorldBloomSimulation } from "../world-bloom-simulation";
 import { fetchMusicMetas } from "../fetch";
+import { fetchStarMoeUserData } from "./starmoe-user-data";
 
 // ==================== Types ====================
 
@@ -229,14 +231,16 @@ export class SnowyDataProvider implements DeckDataProvider {
         private userId: string,
         private server: HarukiServer = "jp",
         private oauthAccessToken: string | null = null,
+        /** Read user data through moesekai-api with the StarMoe session first (the visitor is signed in). */
+        private viaStarMoe = false,
     ) {
         if (!isValidServer(server)) {
             throw new Error(`Unsupported server: ${server}. Supported servers: ${SERVER_IDS.join(", ").toUpperCase()}.`);
         }
     }
 
-    public static getCachedInstance(userId: string, server: HarukiServer = "jp", oauthAccessToken: string | null = null): CachedDeckDataProvider {
-        return new CachedDeckDataProvider(new SnowyDataProvider(userId, server, oauthAccessToken));
+    public static getCachedInstance(userId: string, server: HarukiServer = "jp", oauthAccessToken: string | null = null, viaStarMoe = false): CachedDeckDataProvider {
+        return new CachedDeckDataProvider(new SnowyDataProvider(userId, server, oauthAccessToken, viaStarMoe));
     }
 
     private async fetchJsonArray(url: string): Promise<unknown[] | null> {
@@ -319,7 +323,16 @@ export class SnowyDataProvider implements DeckDataProvider {
             userHonors?: UserHonorEntry[];
         };
 
-        if (this.oauthAccessToken) {
+        const viaStarMoe = this.viaStarMoe
+            ? await fetchStarMoeUserData(this.server, this.userId, USER_DATA_KEYS)
+            : null;
+
+        if (viaStarMoe !== null) {
+            data = normalizeSuiteUserDataPayload(viaStarMoe) as UserDataMap & {
+                userCards?: UserCardEntry[];
+                userHonors?: UserHonorEntry[];
+            };
+        } else if (this.oauthAccessToken) {
             const response = await fetch(`${OAUTH2_BASE}/game-data/${this.server}/suite/${this.userId}`, {
                 headers: {
                     Authorization: `Bearer ${this.oauthAccessToken}`,
