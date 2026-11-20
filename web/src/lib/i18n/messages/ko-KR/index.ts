@@ -920,6 +920,10 @@ export const koKRMessages = {
             label: "중국어 번역 사용 (Moe 번역)",
             description: "켜면 일본어 콘텐츠에 중국어 번역을 함께 표시합니다."
         },
+        autoLoadMore: {
+            label: "스크롤 시 자동 더 보기",
+            description: "켜면 목록 하단 근처까지 스크롤할 때 자동으로 더 많은 항목을 불러옵니다."
+        },
         ads: {
             title: "광고",
             label: "광고 표시",

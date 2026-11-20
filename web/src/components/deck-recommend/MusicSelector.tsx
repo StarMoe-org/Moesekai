@@ -19,6 +19,7 @@ import SelectorModal from "./SelectorModal";
 import { Button, Icon, LoadingState } from "@/components/md3";
 import { mdArrowBack, mdArrowForward, mdMusicNote, mdSearch, mdUnfoldMore } from "@/components/md3/icons";
 import MusicFilters, { useMusicLevelFilter, type MusicLevelChart } from "@/components/music/MusicFilters";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 
 /** Sort options for MusicSelector (no level/constant since there's no difficulty context) */
 const SELECTOR_SORT_OPTION_IDS = ["publishedAt", "id"] as const;
@@ -318,6 +319,14 @@ export default function MusicSelector({
         return result;
     }, [matchesLevel, musics, musicTags, selectedTag, selectedCategories, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
 
+    const shownMusicCount = Math.min(displayCount, filteredMusics.length);
+    const hasMoreMusics = filteredMusics.length > displayCount;
+    const loadMoreRef = useAutoLoadMore({
+        hasMore: hasMoreMusics,
+        itemCount: shownMusicCount,
+        onLoadMore: () => setDisplayCount((prev) => prev + 30),
+    });
+
     // Get currently selected music object
     const selectedMusic = useMemo(() => {
         if (!selectedMusicId) return null;
@@ -569,8 +578,8 @@ export default function MusicSelector({
                                     </div>
                                 ))}
 
-                                {filteredMusics.length > displayCount && (
-                                    <div className="col-span-full py-4 text-center">
+                                {hasMoreMusics && (
+                                    <div ref={loadMoreRef} className="col-span-full py-4 text-center">
                                         <Button
                                             type="button"
                                             variant="tonal"

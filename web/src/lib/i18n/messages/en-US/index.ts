@@ -923,6 +923,10 @@ export const enUSMessages = {
             label: "Use English translations (Moe Translation)",
             description: "When enabled, Japanese content will show English translations",
         },
+        autoLoadMore: {
+            label: "Auto-load on scroll",
+            description: "When enabled, lists automatically load more items as you scroll near the bottom",
+        },
         ads: {
             title: "Advertisement",
             label: "Show ads",

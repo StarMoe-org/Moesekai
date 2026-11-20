@@ -280,6 +280,10 @@ export const zhTWSettings = {
         label: "使用中文翻譯（Moe 中文化）",
         description: "啟用後將顯示日文內容的中文翻譯",
     },
+    autoLoadMore: {
+        label: "觸底自動載入更多",
+        description: "啟用後，清單捲動到底部時會自動展開更多內容",
+    },
     ads: {
         title: "廣告",
         label: "顯示廣告",

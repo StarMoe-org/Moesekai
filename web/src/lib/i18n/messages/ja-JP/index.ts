@@ -922,6 +922,10 @@ export const jaJPMessages = {
       label: '中国語翻訳（Moe翻訳）を使用',
       description: 'オンにすると、日本語コンテンツに中国語翻訳を表示します'
     },
+    autoLoadMore: {
+      label: 'スクロールで自動読み込み',
+      description: 'オンにすると、一覧の下端付近までスクロールした際に自動で続きを読み込みます'
+    },
     ads: {
       title: '広告',
       label: '広告を表示',

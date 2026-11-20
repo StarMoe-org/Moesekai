@@ -922,6 +922,10 @@ export const zhCNMessages = {
             label: "使用中文翻译（Moe汉化）",
             description: "开启后将显示日文内容的中文翻译",
         },
+        autoLoadMore: {
+            label: "触底自动加载更多",
+            description: "开启后，列表滚动到底部时会自动展开更多内容",
+        },
         ads: {
             title: "广告",
             label: "显示广告",

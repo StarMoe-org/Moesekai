@@ -13,6 +13,7 @@ import { fetchMasterDataForServer, type ServerSourceType } from "@/lib/fetch";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import { Button, EmptyState, Icon, LoadingState } from "@/components/md3";
 import { mdCasino, mdCheck, mdDeployedCode } from "@/components/md3/icons";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 
 export interface GachaSelectorModalProps {
     isOpen: boolean;
@@ -135,6 +136,14 @@ export default function GachaSelectorModal({
 
         return result;
     }, [gachas, cardMap, selectedCategory, selectedCharacters, searchQuery, isShowSpoiler, now, sortBy, sortOrder, translations]);
+
+    const shownGachaCount = Math.min(displayCount, filteredGachas.length);
+    const hasMoreGachas = filteredGachas.length > displayCount;
+    const loadMoreRef = useAutoLoadMore({
+        hasMore: hasMoreGachas,
+        itemCount: shownGachaCount,
+        onLoadMore: () => setDisplayCount((prev) => prev + 24),
+    });
 
     const modalTitle = title || t("page.gachaSimulator.selector.modalTitle", { count: gachas.length });
 
@@ -291,8 +300,8 @@ export default function GachaSelectorModal({
                             })}
                         </div>
 
-                        {filteredGachas.length > displayCount && (
-                            <div className="pt-2 text-center">
+                        {hasMoreGachas && (
+                            <div ref={loadMoreRef} className="pt-2 text-center">
                                 <Button
                                     type="button"
                                     variant="tonal"

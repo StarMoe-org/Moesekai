@@ -11,6 +11,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { usePageServer } from "@/hooks/usePageServer";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
@@ -513,7 +514,14 @@ function AssetVersionsContent() {
     const currentItemCount = folders.length + files.length;
     const shownFolders = folders.slice(0, visibleCount);
     const shownFiles = files.slice(0, Math.max(0, visibleCount - shownFolders.length));
-    const hasMore = currentItemCount > shownFolders.length + shownFiles.length;
+    const shownItemCount = shownFolders.length + shownFiles.length;
+    const hasMore = currentItemCount > shownItemCount;
+    const loadMoreRef = useAutoLoadMore({
+        hasMore,
+        itemCount: shownItemCount,
+        onLoadMore: () => setVisibleCount(count => count + PAGE_SIZE),
+        scrollRootRef: listScrollRef,
+    });
 
     const breadcrumbs = useMemo(() => {
         const parts = prefix.split("/").filter(Boolean);
@@ -1447,7 +1455,7 @@ function AssetVersionsContent() {
 
                                     {/* Load More / All Loaded Footer */}
                                     {currentItemCount > 0 && (
-                                        <div className="px-4 py-6 text-center">
+                                        <div ref={loadMoreRef} className="px-4 py-6 text-center">
                                             {hasMore ? (
                                                 <Button
                                                     variant="tonal"

@@ -131,6 +131,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         setStoryLive2dAntialiasing,
         storyLive2dHighFps,
         setStoryLive2dHighFps,
+        autoLoadMore = true,
+        setAutoLoadMore,
         serverSource,
         setServerSource,
     } = useTheme();
@@ -347,6 +349,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         onCheckedChange={setUseLLMTranslation}
                         label={t("settings.translation.label")}
                         description={t("settings.translation.description")}
+                    />
+                    <Switch
+                        checked={autoLoadMore}
+                        onCheckedChange={(checked) => setAutoLoadMore?.(checked)}
+                        label={t("settings.autoLoadMore.label")}
+                        description={t("settings.autoLoadMore.description")}
                     />
                     {ADS_SETTINGS_VISIBLE && (
                         <Switch

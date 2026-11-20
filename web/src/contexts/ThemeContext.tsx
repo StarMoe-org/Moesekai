@@ -18,6 +18,7 @@ import {
     SHOW_ADS_STORAGE_KEY,
 } from "@/lib/ads";
 import { UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, normalizeUiLocale } from "@/lib/i18n";
+import { setAutoLoadMoreEnabled, useAutoLoadMoreEnabled } from "@/hooks/useAutoLoadMore";
 import {
     BACKGROUND_ANIMATION_BUDGET_STORAGE_KEY,
     DEFAULT_BACKGROUND_ANIMATION_BUDGET,
@@ -152,6 +153,8 @@ interface ThemeContextType {
     setStoryLive2dAntialiasing: (enabled: boolean) => void;
     storyLive2dHighFps: boolean;
     setStoryLive2dHighFps: (enabled: boolean) => void;
+    autoLoadMore: boolean;
+    setAutoLoadMore: (enabled: boolean) => void;
     serverSource: ServerSourceType;
     hasHydratedThemeSettings: boolean;
     setServerSource: (source: ServerSourceType) => void;
@@ -179,6 +182,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const [costume3dUnrestrictedState, setCostume3dUnrestrictedState] = useState(false);
     const [storyLive2dAntialiasingState, setStoryLive2dAntialiasingState] = useState(false);
     const [storyLive2dHighFpsState, setStoryLive2dHighFpsState] = useState(false);
+    const autoLoadMore = useAutoLoadMoreEnabled();
     const [serverSourceState, setServerSourceState] = useState<ServerSourceType>(DEFAULT_SERVER_SOURCE);
     const themeSwitchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const effectiveShowAds = ADS_FEATURE_ENABLED && showAdsState;
@@ -501,6 +505,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
     };
 
+    const setAutoLoadMore = (enabled: boolean) => {
+        setAutoLoadMoreEnabled(enabled);
+    };
+
     const setServerSource = (source: ServerSourceType) => {
         setServerSourceState(source);
         try {
@@ -511,7 +519,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     return (
-        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, storyLive2dHighFps: storyLive2dHighFpsState, setStoryLive2dHighFps, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
+        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, storyLive2dHighFps: storyLive2dHighFpsState, setStoryLive2dHighFps, autoLoadMore, setAutoLoadMore, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
             {children}
         </ThemeContext.Provider>
     );
