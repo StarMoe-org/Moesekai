@@ -116,6 +116,27 @@ assert.equal(parseLive2DCatalogue({ published_version: "", complete: false, mode
 assert.throws(() => parseLive2DCatalogue(null), /live2d_catalogue_invalid/);
 assert.throws(() => parseLive2DCatalogue({ complete: true }), /live2d_catalogue_invalid/);
 
+// with the masterdata the kind is the characters': character before sub before mob, the
+// character and unit of the most episodes of that kind
+const character2ds = new Map([
+    [1, { characterType: "game_character", characterId: 1, unit: "light_sound" }],
+    [900, { characterType: "mob", characterId: 0 }],
+    [77, { characterType: "sub_game_character", characterId: 0, unit: "none" }],
+]);
+const typed = parseLive2DCatalogue({ complete: true, models: [
+    { id: "01ichika_normal", asset: ichika, characters: [{ character2d_id: 900, episodes: 99 }, { character2d_id: 1, episodes: 2 }] },
+    { id: "sub_airichild", asset: "a", characters: [{ character2d_id: 900, episodes: 3 }] },
+    { id: "sub_airi_lesson", asset: "b", characters: [{ character2d_id: 77, episodes: 3 }, { character2d_id: 900, episodes: 9 }] },
+    { id: "sub_unknown", asset: "c", characters: [{ character2d_id: 5, episodes: 1 }] },
+] }, [], character2ds);
+assert.deepEqual(typed.map(model => [model.id, model.kind, model.characterId]), [
+    ["01ichika_normal", "character", 1],
+    ["sub_airi_lesson", "sub", null],
+    // none the masterdata names: what the id spells
+    ["sub_unknown", "sub", null],
+    ["sub_airichild", "mob", null],
+]);
+
 // --- the site's own listing (the catalogue is not ready) ---
 
 assert.equal(live2dMotionByName("sub_airi_lesson", motionDirectories), "live2d/motion/sub_airi_motion_base");

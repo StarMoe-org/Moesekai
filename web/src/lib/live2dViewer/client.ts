@@ -1,6 +1,7 @@
 import { getAssetBaseUrl, type AssetLine } from "@/lib/assets";
 import { live2dFetchUrl, live2dSources, type Live2DRegion } from "./config";
-import { live2dModelsByName, parseLive2DCatalogue, type Live2DModel } from "./models";
+import { fetchMasterDataForServer } from "@/lib/fetch";
+import { live2dModelsByName, parseLive2DCatalogue, type Live2DCharacter2d, type Live2DModel } from "./models";
 
 /** The network side of the Live2D viewer page: a server's models, and the story backgrounds to stand a model on. */
 
@@ -39,8 +40,16 @@ export async function fetchLive2DModels(region: Live2DRegion, signal: AbortSigna
     const base = await version();
     const motions = await directories(`${base}live2d/motion/`, signal).catch(() => []);
     if (catalogue !== null) {
+        // what the characters are: without the masterdata, what a model's id spells
+        const character2ds = new Map<number, Live2DCharacter2d>();
         try {
-            const models = parseLive2DCatalogue(catalogue, motions);
+            const list = await fetchMasterDataForServer<(Live2DCharacter2d & { id: number })[]>(region, "character2ds.json");
+            for (const c of list) character2ds.set(c.id, c);
+        } catch {
+            if (signal.aborted) throw signal.reason;
+        }
+        try {
+            const models = parseLive2DCatalogue(catalogue, motions, character2ds);
             if (models) return models;
         } catch {
             // a catalogue the page cannot read: the site's own listing instead

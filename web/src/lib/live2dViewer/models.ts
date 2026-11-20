@@ -173,12 +173,49 @@ export function live2dMotionByName(id: string, motionDirectories: readonly strin
     return best === null ? null : `live2d/motion/${best}`;
 }
 
+/** What the masterdata says of a Character2dId (`character2ds.json`). */
+export interface Live2DCharacter2d {
+    characterType: string;
+    characterId: number;
+    unit?: string;
+}
+
+const TYPE_KIND: Record<string, Live2DModelKind> = { game_character: "character", sub_game_character: "sub" };
+const KIND_RANK: Record<Live2DModelKind, number> = { character: 0, sub: 1, mob: 2 };
+
+/**
+ * The kind of a model from the Character2dIds the stories show it as: the first of character,
+ * sub and mob any of them is, and the MasterCharacter id and unit of the one of that kind seen in
+ * the most episodes. Undefined when the masterdata names none of them.
+ */
+function classify(characters: readonly { character2d_id: number; episodes: number }[], character2ds: ReadonlyMap<number, Live2DCharacter2d>):
+    Pick<ILive2DModelIndexEntry, "kind" | "characterId" | "unit"> | undefined {
+    let best: { kind: Live2DModelKind; episodes: number; character: Live2DCharacter2d } | undefined;
+    for (const { character2d_id: id, episodes } of characters) {
+        const character = character2ds.get(id);
+        if (!character) continue;
+        const kind = TYPE_KIND[character.characterType] ?? "mob";
+        if (!best || KIND_RANK[kind] < KIND_RANK[best.kind] || (kind === best.kind && episodes > best.episodes)) {
+            best = { kind, episodes, character };
+        }
+    }
+    if (!best) return undefined;
+    return {
+        kind: best.kind,
+        characterId: best.kind === "character" ? best.character.characterId : null,
+        ...(best.character.unit && best.character.unit !== "none" ? { unit: best.character.unit } : {}),
+    };
+}
+
 /**
  * The models of this site's catalogue, sorted (compareLive2DModels), or null while it is not
  * complete. A model the stories pair with no motion set gets one by the client's naming
- * (`live2dMotionByName`), when `motionDirectories` is given.
+ * (`live2dMotionByName`), when `motionDirectories` is given. With the masterdata's
+ * `character2ds`, a model's kind and character are those of the characters the stories show it
+ * as; else what its id spells.
  */
-export function parseLive2DCatalogue(raw: unknown, motionDirectories: readonly string[] = []): Live2DModel[] | null {
+export function parseLive2DCatalogue(raw: unknown, motionDirectories: readonly string[] = [],
+    character2ds: ReadonlyMap<number, Live2DCharacter2d> = new Map()): Live2DModel[] | null {
     if (typeof raw !== "object" || raw === null) throw new Error("live2d_catalogue_invalid");
     const catalogue = raw as ILive2DCatalogue;
     if (typeof catalogue.complete !== "boolean" || !Array.isArray(catalogue.models)) throw new Error("live2d_catalogue_invalid");
@@ -200,6 +237,7 @@ export function parseLive2DCatalogue(raw: unknown, motionDirectories: readonly s
             motions,
             bytes: typeof item.size === "number" ? item.size : 0,
             textures: typeof item.textures === "number" ? item.textures : 0,
+            ...classify(characters, character2ds),
         }));
     }
     return models.sort(compareLive2DModels);
