@@ -285,7 +285,7 @@ func (s *Server) getServerCard(r *http.Request) map[string]interface{} {
 			{"name": "get_music_detail", "description": "Get song details including difficulty levels (Easy, Normal, Hard, Expert, Master, Append), note counts, and vocal versions."},
 			{"name": "get_event_info", "description": "Get Project SEKAI event details, type (Marathon, Cheer, Carnival), start/end dates, bonus characters, and bonus attribute."},
 			{"name": "get_character_profile", "description": "Get character profile, unit affiliation, birthday, height, voice actor/actress (CV), and representative songs."},
-			{"name": "get_realtime_ranking", "description": "Get real-time ranking leaderboards and tier cutoffs (T50 to T100000) for ongoing Project SEKAI events across JP, CN, EN, and TW servers."},
+			{"name": "get_realtime_ranking", "description": "Get real-time ranking leaderboards and tier cutoffs (T50 to T100000) for ongoing Project SEKAI events across JP, CN, EN, TW, and KR servers."},
 			{"name": "get_event_prediction", "description": "Get event border cutoff predictions with Bayesian-Kalman model confidence intervals (P10/P50/P90) and current velocity."},
 			{"name": "plan_event_strategy", "description": "Calculate optimal event grinding strategy: required daily hours, plays, fire stamina, large energy drinks, crystals, and feasibility rating."},
 			{"name": "search_gachas", "description": "Search Project SEKAI gacha banners, pick-up 4-star cards, schedules, and gacha types (Fes, Limited, Birthday, Permanent)."},
@@ -546,13 +546,13 @@ func (s *Server) getToolsList() []Tool {
 		},
 		{
 			Name:        "get_realtime_ranking",
-			Description: "Get real-time ranking leaderboards and tier cutoffs (T50 to T100000) for ongoing Project SEKAI events across JP, CN, EN, and TW servers.",
+			Description: "Get real-time ranking leaderboards and tier cutoffs (T50 to T100000) for ongoing Project SEKAI events across JP, CN, EN, TW, and KR servers.",
 			InputSchema: map[string]interface{}{
 				"type": "object",
 				"properties": map[string]interface{}{
 					"region": map[string]interface{}{
 						"type":        "string",
-						"enum":        []string{"jp", "cn", "en", "tw"},
+						"enum":        []string{"jp", "cn", "en", "tw", "kr"},
 						"description": "Server region (default: jp)",
 					},
 					"event_id": map[string]interface{}{
@@ -1033,8 +1033,8 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 
 	var sb strings.Builder
 
-	// For EN or TW, attempt v2 API first
-	if region == "en" || region == "tw" {
+	// Query unified v2 API for the live/latest board across all 5 regions when no historical event_id is requested.
+	if eventID <= 0 {
 		url := fmt.Sprintf("https://rks-n.exmeaning.com/api/public/v2/%s/latest", region)
 		data, err := s.cachedFetch(url, 30*time.Second)
 		if err == nil {
@@ -1069,7 +1069,7 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 		}
 	}
 
-	// For JP / CN (or fallback)
+	// Historical event_id lookup or fallback via rk.exmeaning.com (JP / CN)
 	if eventID <= 0 {
 		eventsURL := fmt.Sprintf("https://rk.exmeaning.com/public/events?region=%s", region)
 		data, err := s.cachedFetch(eventsURL, 60*time.Second)
@@ -1107,7 +1107,7 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 	sb.WriteString(fmt.Sprintf("# Project SEKAI 实时档线 (%s 服) - [%d] %s\n\n", strings.ToUpper(region), latest.EventID, eventName))
 	sb.WriteString(fmt.Sprintf("- **活动状态**: %s\n", statusDesc))
 	sb.WriteString(fmt.Sprintf("- **数据采集时间**: %s\n", latest.UpdatedAt))
-	sb.WriteString(fmt.Sprintf("- **实时看板**: https://pjsk.moe/realtime-ranking\n\n"))
+	sb.WriteString(fmt.Sprintf("- **实时看板**: https://pjsk.moe/realtime-ranking-next\n\n"))
 
 	sb.WriteString("### 档线积分表 (Tier Cutoffs)\n\n")
 	sb.WriteString("| 档位 (Tier) | 当前积分 (Score) | 终榜预测 (Prediction) | 状态 (Status) |\n")

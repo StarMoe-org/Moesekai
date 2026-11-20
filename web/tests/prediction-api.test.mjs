@@ -291,7 +291,7 @@ function rkFinal(eventId, top) {
 
 /** Mounts the hook on one WL chapter and returns its chapter rows and the last chapter tier-series request. */
 async function chapterView(region, eventId, gameCharacterId, chapters, expectedRanks) {
-  const v2 = region === "jp" ? "rks-n\\.exmeaning\\.com/api/public/v2/jp" : "rks-n-cn\\.exmeaning\\.com/api/public/v2/cn";
+  const v2 = `rks-n\\.exmeaning\\.com/api/public/v2/${region}`;
   const requested = stubFetch([
     [/rk\.exmeaning\.com\/public\/events/, json(RK_EVENTS[region])],
     [new RegExp(`rk\\.exmeaning\\.com/public/event/${eventId}/latest`), json(rkFinal(eventId, 3_000_000_000))],

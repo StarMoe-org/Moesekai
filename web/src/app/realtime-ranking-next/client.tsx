@@ -23,7 +23,6 @@ import { useRealtimeBoard, POLL_INTERVAL } from "./_hooks/useRealtimeBoard";
 import { useChurnData } from "./_hooks/useChurnData";
 import { useCurrentEvent } from "./_hooks/useCurrentEvent";
 import {
-    getEffectiveLine,
     setRealtimeRankingLine,
     useRealtimeRankingLine,
 } from "@/lib/realtime-ranking-line";
@@ -91,10 +90,9 @@ function RealtimeRankingNextContent() {
     const [parkingModalUserId, setParkingModalUserId] = useState<string | null>(null);
 
     // Compute effective asset source based on the selected server and route.
-    const effectiveLine = getEffectiveLine(line, region);
     const effectiveAssetSource: AssetSourceType = useMemo(
-        () => `${effectiveLine === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
-        [effectiveLine, region],
+        () => `${line === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
+        [line, region],
     );
 
     const board = useRealtimeBoard(region, boardMode, regionReady);

@@ -10,8 +10,7 @@ import {
     REALTIME_RANKING_REGION_OPTIONS,
 } from "@/types/realtime-ranking-next";
 import {
-    getAvailableLines,
-    getEffectiveLine,
+    REALTIME_RANKING_LINE_OPTIONS,
     RealtimeRankingLine,
 } from "@/lib/realtime-ranking-line";
 
@@ -53,9 +52,6 @@ export default function BoardHeader({
         ? new Date(updatedAt).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", second: "2-digit" })
         : "—";
 
-    const availableLines = getAvailableLines(region);
-    const effectiveLine = getEffectiveLine(line, region);
-
     return (
         <div className="mb-6 space-y-4">
             {/* Title Header */}
@@ -92,8 +88,8 @@ export default function BoardHeader({
                         {t("page.realtimeRanking.line.label")}
                     </span>
                     <div className="flex max-w-full flex-wrap gap-1.5">
-                        {availableLines.map((l) => (
-                            <Chip key={l} selected={effectiveLine === l} onClick={() => onLineChange(l)}>
+                        {REALTIME_RANKING_LINE_OPTIONS.map((l) => (
+                            <Chip key={l} selected={line === l} onClick={() => onLineChange(l)}>
                                 {t(`page.realtimeRanking.line.${l}`)}
                             </Chip>
                         ))}

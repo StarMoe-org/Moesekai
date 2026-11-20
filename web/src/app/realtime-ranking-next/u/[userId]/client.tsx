@@ -21,7 +21,6 @@ import {
     isRealtimeRankingRegion,
 } from "@/types/realtime-ranking-next";
 import {
-    getEffectiveLine,
     useRealtimeRankingLine,
 } from "@/lib/realtime-ranking-line";
 import ScoreLineChart, { ScoreSeries } from "../../_components/charts/ScoreLineChart";
@@ -55,10 +54,9 @@ function UserDetailContent() {
     const worldLinkCharacterId = wlParam && /^\d+$/.test(wlParam) ? Number(wlParam) : null;
 
     const line = useRealtimeRankingLine();
-    const effectiveLine = getEffectiveLine(line, region);
     const effectiveAssetSource = useMemo<AssetSourceType>(
-        () => `${effectiveLine === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
-        [effectiveLine, region],
+        () => `${line === "global" ? "main" : "backup"}-${region}` as AssetSourceType,
+        [line, region],
     );
 
     const [masterData, setMasterData] = useState<RealtimeRankingMasterData>(EMPTY_MASTER_DATA);

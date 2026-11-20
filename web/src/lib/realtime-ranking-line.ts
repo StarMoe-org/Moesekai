@@ -1,19 +1,15 @@
 // ============================================================================
-// Data line (API host) selection for the realtime ranking pages.
+// Data line (API host) selection for the realtime ranking pages (/realtime-ranking-next).
 //
-// Both /realtime-ranking (legacy) and /realtime-ranking-next share a single
-// "data line" preference. Only the API host differs between lines; all paths
-// are identical.
+//   main (default): https://rks-n.exmeaning.com
+//   global:         https://rks-n.pjsk.moe
 //
-//   main (default): rks.exmeaning.com   / rks-n.exmeaning.com
-//   global:         rks.pjsk.moe        / rks-n.pjsk.moe
-//
+// All five regions (cn, jp, tw, kr, en) share the same line selector.
 // The preference is persisted in localStorage and exposed as a tiny external
 // store so that components/hooks can subscribe and re-fetch on change.
 // ============================================================================
 
 import { useSyncExternalStore } from "react";
-import { RealtimeRankingRegion } from "@/types/realtime-ranking";
 
 export type RealtimeRankingLine = "main" | "global";
 
@@ -22,43 +18,10 @@ export const REALTIME_RANKING_LINE_OPTIONS: readonly RealtimeRankingLine[] = ["m
 const DEFAULT_LINE: RealtimeRankingLine = "main";
 const STORAGE_KEY = "realtime-ranking:line";
 
-export function isSingleMainLineRegion(region: RealtimeRankingRegion | string | null | undefined): boolean {
-    return region === "cn" || region === "kr";
-}
-
-export function getAvailableLines(region?: RealtimeRankingRegion): readonly RealtimeRankingLine[] {
-    if (region && isSingleMainLineRegion(region)) {
-        return ["main"];
-    }
-    return REALTIME_RANKING_LINE_OPTIONS;
-}
-
-export function getEffectiveLine(line: RealtimeRankingLine, region?: RealtimeRankingRegion): RealtimeRankingLine {
-    if (region && isSingleMainLineRegion(region)) {
-        return "main";
-    }
-    return line;
-}
-
-interface LineHosts {
-    /** Legacy v1 host (rks.*). */
-    legacy: string;
-    /** Next v2 host (rks-n.*). */
-    next: string;
-}
-
-const LINE_HOSTS: Record<RealtimeRankingLine, LineHosts> = {
-    main: {
-        legacy: "https://rks.exmeaning.com",
-        next: "https://rks-n.exmeaning.com",
-    },
-    global: {
-        legacy: "https://rks.pjsk.moe",
-        next: "https://rks-n.pjsk.moe",
-    },
+const NEXT_LINE_HOSTS: Record<RealtimeRankingLine, string> = {
+    main: "https://rks-n.exmeaning.com",
+    global: "https://rks-n.pjsk.moe",
 };
-
-const NEXT_CN_KR_HOST = "https://rks-n-cn.exmeaning.com";
 
 export function isRealtimeRankingLine(value: unknown): value is RealtimeRankingLine {
     return REALTIME_RANKING_LINE_OPTIONS.some((option) => option === value);
@@ -105,21 +68,11 @@ function stripTrailingSlash(value: string): string {
     return value.replace(/\/+$/, "");
 }
 
-/** Legacy v1 API base, honouring the env override when present. */
-export function getLegacyApiBase(): string {
-    const override = process.env.NEXT_PUBLIC_REALTIME_RANKING_API_BASE;
-    if (override) return stripTrailingSlash(override);
-    return `${LINE_HOSTS[currentLine].legacy}/api/public`;
-}
-
 /** Next v2 API base, honouring the env override when present. */
-export function getNextApiBase(region?: RealtimeRankingRegion): string {
+export function getNextApiBase(): string {
     const override = process.env.NEXT_PUBLIC_REALTIME_RANKING_V2_API_BASE;
     if (override) return stripTrailingSlash(override);
-    if (region && isSingleMainLineRegion(region)) {
-        return `${NEXT_CN_KR_HOST}/api/public/v2`;
-    }
-    return `${LINE_HOSTS[currentLine].next}/api/public/v2`;
+    return `${NEXT_LINE_HOSTS[currentLine]}/api/public/v2`;
 }
 
 /** React hook: subscribe to the current data line. */
