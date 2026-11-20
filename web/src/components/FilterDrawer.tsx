@@ -1,6 +1,6 @@
 "use client";
 import React, { useCallback, useEffect, useId, useRef } from "react";
-import { motion, AnimatePresence, useDragControls, useReducedMotion } from "framer-motion";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import { stripRouteLocale } from "@/lib/localized-path";
 import { useQuickFilterContext } from "@/contexts/QuickFilterContext";
@@ -47,7 +47,6 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
     const { filterContent, filterTitle, hasFilters, isOpen, isDocked, open, close } = useQuickFilterContext();
     const titleId = useId();
     const reducedMotion = useReducedMotion();
-    const dragControls = useDragControls();
     /** Compact window (< 640px): the modal sheet is a bottom sheet. */
     const isCompact = !useMediaQuery("(min-width: 640px)", true);
 
@@ -209,11 +208,7 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
         <div ref={panelRef} tabIndex={-1} className="flex min-h-0 flex-1 flex-col outline-none">
             {/* Drag handle (bottom sheet only) */}
             {isModal && (
-                <div
-                    className="flex shrink-0 cursor-grab touch-none justify-center pb-1 pt-3 active:cursor-grabbing sm:hidden"
-                    onPointerDown={(event) => dragControls.start(event)}
-                    aria-hidden="true"
-                >
+                <div className="flex shrink-0 cursor-grab justify-center pb-1 pt-3 active:cursor-grabbing sm:hidden" aria-hidden="true">
                     <span className="h-1 w-8 rounded-full bg-on-surface-variant/40" />
                 </div>
             )}
@@ -243,6 +238,7 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
                     ref={scrollRef}
                     data-filter-drawer-body="true"
                     onScroll={handleBodyScroll}
+                    onPointerDownCapture={isModal && isCompact ? (e) => e.stopPropagation() : undefined}
                     className="min-h-0 flex-grow overflow-y-auto overscroll-contain px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-1"
                 >
                     {filterContent}
@@ -281,8 +277,6 @@ export default function FilterDrawer({ isSidebarOpen }: FilterDrawerProps) {
                         exit={reducedMotion ? { opacity: 0 } : isCompact ? { y: "100%" } : { x: "100%", opacity: 0 }}
                         transition={reducedMotion ? reducedMotionFade : md3SpatialDefault}
                         drag={isCompact && !reducedMotion ? "y" : false}
-                        dragListener={false}
-                        dragControls={dragControls}
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={{ top: 0, bottom: 0.6 }}
                         onDragEnd={(_, info) => {
