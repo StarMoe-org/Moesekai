@@ -91,6 +91,7 @@ export interface StorySearchHit {
     chunk: StoryChunk;
     score: number;
     matchCount?: number;
+    matchedLineIndices?: number[];
 }
 
 export interface SemanticSearchApiResult {

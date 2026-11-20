@@ -1,5 +1,6 @@
 import brotliPromise from "brotli-dec-wasm";
-import { chunkMatchesCharacterIds } from "./characters";
+import { chunkMatchesCharacterIds, speakerMatchesCharacterIds } from "./characters";
+import { parseDialogueLines } from "./dialogue";
 import type {
     CorpusStatusInfo,
     ManifestServerEntry,
@@ -327,7 +328,7 @@ function handleSearchLocal(payload: {
     const q = payload.query.trim();
     const charIds = payload.charIds ?? [];
     const typeFilter = payload.type && payload.type !== "all" ? payload.type : null;
-    const limit = payload.limit ?? 300;
+    const limit = payload.limit ?? 5000;
 
     let re: RegExp | null = null;
     if (q && payload.isRegex) {
@@ -338,6 +339,7 @@ function handleSearchLocal(payload: {
 
     const t0 = performance.now();
     const hits: StorySearchHit[] = [];
+    const seenLineKeys = new Set<string>();
     let totalMatches = 0;
 
     for (let i = 0; i < loaded.chunks.length; i++) {
@@ -345,38 +347,75 @@ function handleSearchLocal(payload: {
         if (typeFilter && chunk.type !== typeFilter) continue;
         if (charIds.length > 0 && !chunkMatchesCharacterIds(chunk, charIds)) continue;
 
-        if (!q) {
-            totalMatches++;
-            if (hits.length < limit) {
-                hits.push({ chunk, score: 1, matchCount: 0 });
+        // Fast whole-chunk pre-filter before splitting lines.
+        if (q) {
+            if (re) {
+                re.lastIndex = 0;
+                if (!re.test(chunk.text ?? "")) continue;
+            } else {
+                const wholeHay = payload.caseSensitive ? (chunk.text ?? "") : chunk.textLower;
+                if (!wholeHay.includes(needle)) continue;
             }
-            continue;
         }
 
-        if (re) {
-            re.lastIndex = 0;
-            const text = chunk.text ?? "";
-            const matches = text.match(re);
-            if (matches && matches.length > 0) {
-                totalMatches++;
-                if (hits.length < limit) {
-                    hits.push({ chunk, score: matches.length, matchCount: matches.length });
+        const dialogueLines = parseDialogueLines(chunk.text ?? "");
+        if (dialogueLines.length === 0) continue;
+
+        const matchedLineIndices: number[] = [];
+        let chunkMatches = 0;
+
+        for (let lineIdx = 0; lineIdx < dialogueLines.length; lineIdx++) {
+            const item = dialogueLines[lineIdx];
+
+            // When character filter is active, only match utterances spoken by the selected character(s).
+            if (charIds.length > 0) {
+                if (item.speaker === null || !speakerMatchesCharacterIds(item.speaker, charIds)) {
+                    continue;
                 }
             }
-        } else {
-            const hay = payload.caseSensitive ? (chunk.text ?? "") : chunk.textLower;
-            if (hay.includes(needle)) {
-                let count = 0;
-                let pos = 0;
-                while ((pos = hay.indexOf(needle, pos)) !== -1) {
-                    count++;
-                    pos += Math.max(1, needle.length);
-                }
-                totalMatches++;
-                if (hits.length < limit) {
-                    hits.push({ chunk, score: count, matchCount: count });
+
+            let lineMatchCount = 1;
+            if (q) {
+                // Match against spoken text when filtered by character, or dialogue line (without metadata header).
+                const target = charIds.length > 0 ? item.speech : item.raw;
+                if (re) {
+                    re.lastIndex = 0;
+                    const matches = target.match(re);
+                    if (!matches || matches.length === 0) continue;
+                    lineMatchCount = matches.length;
+                } else {
+                    const hay = payload.caseSensitive ? target : target.toLowerCase();
+                    if (!hay.includes(needle)) continue;
+                    let count = 0;
+                    let pos = 0;
+                    while ((pos = hay.indexOf(needle, pos)) !== -1) {
+                        count++;
+                        pos += Math.max(1, needle.length);
+                    }
+                    lineMatchCount = count;
                 }
             }
+
+            // Deduplicate overlapping sliding-window utterances across adjacent chunks.
+            const globalLineNo = (chunk.line_start ?? 0) + lineIdx;
+            const lineKey = `${chunk.server}\0${chunk.scenario_id || chunk.story_id}\0${chunk.ep}\0${globalLineNo}\0${item.raw}`;
+            if (seenLineKeys.has(lineKey)) continue;
+            seenLineKeys.add(lineKey);
+
+            matchedLineIndices.push(lineIdx);
+            chunkMatches += lineMatchCount;
+        }
+
+        if (matchedLineIndices.length === 0) continue;
+
+        totalMatches++;
+        if (hits.length < limit) {
+            hits.push({
+                chunk,
+                score: chunkMatches,
+                matchCount: chunkMatches,
+                matchedLineIndices,
+            });
         }
     }
 

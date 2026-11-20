@@ -6,6 +6,7 @@ import { Button, Card } from "@/components/md3";
 import { mdCheck, mdContentCopy, mdMenuBook, mdPlayArrow } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { speakerMatchesCharacterIds } from "@/lib/story-search/characters";
+import { parseDialogueLines, stripChunkHeader, type DialogueLine } from "@/lib/story-search/dialogue";
 import { resolveChunkLinks, type StoryLinkLookup } from "@/lib/story-search/links";
 import type { StoryResultView, StorySearchHit, StorySearchMode } from "@/lib/story-search/types";
 
@@ -18,27 +19,6 @@ interface ResultCardProps {
     isRegex: boolean;
     caseSensitive: boolean;
     lookup?: StoryLinkLookup | null;
-}
-
-function stripChunkHeader(text: string): string {
-    if (text.startsWith("[")) {
-        const idx = text.indexOf("\n");
-        if (idx !== -1) {
-            return text.slice(idx + 1);
-        }
-    }
-    return text;
-}
-
-function splitSpeakerLine(line: string): { speaker: string | null; speech: string } {
-    const colonIdx = line.indexOf(": ");
-    if (colonIdx > 0 && colonIdx < 32) {
-        return {
-            speaker: line.slice(0, colonIdx),
-            speech: line.slice(colonIdx + 2),
-        };
-    }
-    return { speaker: null, speech: line };
 }
 
 function renderHighlightedText(
@@ -114,19 +94,21 @@ export default function ResultCard({
         () => (chunk.text ? stripChunkHeader(chunk.text) : ""),
         [chunk.text],
     );
-    const lines = useMemo(
-        () => (bodyText ? bodyText.split("\n").filter((l) => l.trim().length > 0) : []),
-        [bodyText],
+    const lines = useMemo<DialogueLine[]>(
+        () => (chunk.text ? parseDialogueLines(chunk.text) : []),
+        [chunk.text],
     );
 
-    const briefLines = useMemo(() => {
+    const briefLines = useMemo<DialogueLine[]>(() => {
         if (resultView !== "brief") return lines;
+        if (mode === "local" && Array.isArray(hit.matchedLineIndices) && hit.matchedLineIndices.length > 0) {
+            return hit.matchedLineIndices
+                .map((idx) => lines[idx])
+                .filter((item): item is DialogueLine => Boolean(item));
+        }
         if (selectedCharacters.length === 0) return lines;
-        return lines.filter((line) => {
-            const { speaker } = splitSpeakerLine(line);
-            return speaker !== null && speakerMatchesCharacterIds(speaker, selectedCharacters);
-        });
-    }, [lines, resultView, selectedCharacters]);
+        return lines.filter((item) => item.speaker !== null && speakerMatchesCharacterIds(item.speaker, selectedCharacters));
+    }, [hit.matchedLineIndices, lines, mode, resultView, selectedCharacters]);
 
     const handleCopy = async () => {
         if (!bodyText) return;
@@ -139,22 +121,21 @@ export default function ResultCard({
         }
     };
 
-    // Brief mode: purely render `Speaker: dialogue` lines without story metadata, badges, or action links.
+    // Brief mode: purely render matched `Speaker: dialogue` lines without story metadata, badges, or action links.
     if (resultView === "brief") {
         return (
-            <Card variant="outlined" className="bg-surface-card px-4 py-3">
+            <Card variant="outlined" className="bg-surface-card px-3.5 py-2.5">
                 {briefLines.length > 0 ? (
                     <div className="space-y-1 type-body-m text-on-surface">
-                        {briefLines.map((line, idx) => {
-                            const { speaker, speech } = splitSpeakerLine(line);
-                            if (speaker !== null) {
+                        {briefLines.map((item, idx) => {
+                            if (item.speaker !== null) {
                                 return (
                                     <div key={idx} className="leading-relaxed">
-                                        <span className="font-medium text-primary">{speaker}: </span>
+                                        <span className="font-medium text-primary">{item.speaker}: </span>
                                         <span>
                                             {mode === "local"
-                                                ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
-                                                : speech}
+                                                ? renderHighlightedText(item.speech, highlightQuery, isRegex, caseSensitive)
+                                                : item.speech}
                                         </span>
                                     </div>
                                 );
@@ -162,8 +143,8 @@ export default function ResultCard({
                             return (
                                 <div key={idx} className="leading-relaxed">
                                     {mode === "local"
-                                        ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
-                                        : speech}
+                                        ? renderHighlightedText(item.speech, highlightQuery, isRegex, caseSensitive)
+                                        : item.speech}
                                 </div>
                             );
                         })}
@@ -234,25 +215,27 @@ export default function ResultCard({
             <div className="mt-3 rounded-md3-md bg-surface-container/70 p-3">
                 {lines.length > 0 ? (
                     <div className="space-y-1.5 type-body-m text-on-surface">
-                        {lines.map((line, idx) => {
-                            const { speaker, speech } = splitSpeakerLine(line);
-                            if (speaker !== null) {
+                        {lines.map((item, idx) => {
+                            const isMatchedLine = Array.isArray(hit.matchedLineIndices)
+                                ? hit.matchedLineIndices.includes(idx)
+                                : false;
+                            if (item.speaker !== null) {
                                 return (
-                                    <div key={idx} className="leading-relaxed">
-                                        <span className="font-medium text-primary">{speaker}: </span>
+                                    <div key={idx} className={isMatchedLine ? "leading-relaxed font-medium" : "leading-relaxed"}>
+                                        <span className="font-medium text-primary">{item.speaker}: </span>
                                         <span>
                                             {mode === "local"
-                                                ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
-                                                : speech}
+                                                ? renderHighlightedText(item.speech, highlightQuery, isRegex, caseSensitive)
+                                                : item.speech}
                                         </span>
                                     </div>
                                 );
                             }
                             return (
-                                <div key={idx} className="leading-relaxed">
+                                <div key={idx} className={isMatchedLine ? "leading-relaxed font-medium" : "leading-relaxed"}>
                                     {mode === "local"
-                                        ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
-                                        : speech}
+                                        ? renderHighlightedText(item.speech, highlightQuery, isRegex, caseSensitive)
+                                        : item.speech}
                                 </div>
                             );
                         })}

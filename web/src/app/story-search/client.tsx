@@ -59,7 +59,7 @@ import ResultCard from "./_components/ResultCard";
 import TurnstileWidget from "./_components/TurnstileWidget";
 
 const TOP_K_OPTIONS = [10, 20, 40, 60] as const;
-const LOCAL_RESULT_LIMIT = 300;
+const LOCAL_RESULT_LIMIT = 5000;
 
 function parseServerParam(raw: string | null): StorySearchServer | null {
     if (raw === "cn" || raw === "jp") return raw;
@@ -667,7 +667,7 @@ export default function StorySearchClient() {
                 {/* Mode & Server Controls */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <SegmentedButton
-                        className="w-full shrink-0 sm:w-auto"
+                        className="w-fit max-w-full shrink-0"
                         value={mode}
                         onValueChange={(nextMode) => {
                             setMode(nextMode);
