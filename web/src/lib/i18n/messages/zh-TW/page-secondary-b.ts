@@ -1393,6 +1393,9 @@ export const zhTWPageSecondaryB = {
             emptyTitle: "找不到符合的劇情片段",
             emptyHint: "試著更換關鍵字、關閉正規／大小寫限制，或切換至 AI 語義檢索描述意境。",
             loadMore: "載入更多",
+            viewDetailed: "詳細",
+            viewBrief: "簡略",
+            noSelectedCharLines: "（目前片段無所選角色的發言行）",
         },
         errors: {
             rateLimited: "請求過於頻繁，請稍候再試。",

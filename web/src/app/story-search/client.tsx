@@ -12,6 +12,7 @@ import {
     Chip,
     EmptyState,
     Icon,
+    IconButton,
     LinearProgress,
     LoadMore,
     LoadingState,
@@ -20,13 +21,17 @@ import {
     SectionCard,
     SegmentedButton,
     TextField,
+    Tooltip,
+    cn,
 } from "@/components/md3";
 import {
     mdDelete,
     mdDownload,
+    mdInfo,
+    mdMatchCase,
     mdRefresh,
+    mdRegularExpression,
     mdSearch,
-    mdVerifiedUser,
     mdWandStars,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -44,6 +49,7 @@ import {
     type SemanticSearchApiResponse,
     type StoryChunk,
     type StoryChunkType,
+    type StoryResultView,
     type StorySearchHit,
     type StorySearchMode,
     type StorySearchServer,
@@ -55,12 +61,6 @@ import TurnstileWidget from "./_components/TurnstileWidget";
 const TOP_K_OPTIONS = [10, 20, 40, 60] as const;
 const LOCAL_RESULT_LIMIT = 300;
 
-function formatBytes(bytes: number): string {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
 function parseServerParam(raw: string | null): StorySearchServer | null {
     if (raw === "cn" || raw === "jp") return raw;
     return null;
@@ -69,6 +69,10 @@ function parseServerParam(raw: string | null): StorySearchServer | null {
 function parseModeParam(raw: string | null): StorySearchMode | null {
     if (raw === "local" || raw === "semantic") return raw;
     return null;
+}
+
+function parseViewParam(raw: string | null): StoryResultView {
+    return raw === "brief" ? "brief" : "detailed";
 }
 
 function parseTypeParam(raw: string | null): StoryChunkType | "all" {
@@ -92,6 +96,7 @@ export default function StorySearchClient() {
     const { serverSource, hasHydratedThemeSettings } = useTheme();
 
     const [mode, setMode] = useState<StorySearchMode>("local");
+    const [resultView, setResultView] = useState<StoryResultView>("detailed");
     const [server, setServer] = useState<StorySearchServer>("cn");
     const [query, setQuery] = useState("");
     const [submittedSemanticQuery, setSubmittedSemanticQuery] = useState("");
@@ -107,7 +112,6 @@ export default function StorySearchClient() {
     const workerRef = useRef<StorySearchWorkerClient | null>(null);
     const [corpusByServer, setCorpusByServer] = useState<Partial<Record<StorySearchServer, CorpusStatusInfo>>>({});
     const [corpusProgress, setCorpusProgress] = useState<CorpusLoadProgress | null>(null);
-    const [cacheNotice, setCacheNotice] = useState<string | null>(null);
     const [linkLookup, setLinkLookup] = useState<StoryLinkLookup | null>(null);
 
     // Search result state
@@ -167,8 +171,10 @@ export default function StorySearchClient() {
         const urlCase = searchParams.get("case");
         const urlType = parseTypeParam(searchParams.get("type"));
         const urlChars = parseCharsParam(searchParams.get("chars"));
+        const urlView = parseViewParam(searchParams.get("view"));
 
         if (urlMode) setMode(urlMode);
+        setResultView(urlView);
         if (urlServer) {
             setServer(urlServer);
         } else if (serverSource === "jp") {
@@ -196,8 +202,9 @@ export default function StorySearchClient() {
         if (caseSensitive) params.set("case", "1");
         if (storyType !== "all") params.set("type", storyType);
         if (selectedCharacters.length > 0) params.set("chars", selectedCharacters.join(","));
+        if (resultView !== "detailed") params.set("view", resultView);
         replaceCurrentUrlSearchParams(params);
-    }, [mode, server, query, isRegex, caseSensitive, storyType, selectedCharacters, urlInitialized]);
+    }, [mode, server, query, isRegex, caseSensitive, storyType, selectedCharacters, resultView, urlInitialized]);
 
     // Load masterdata link lookup for `/story/...` and `/story-player` URLs
     useEffect(() => {
@@ -219,7 +226,6 @@ export default function StorySearchClient() {
         const client = workerRef.current;
         if (!client) return null;
 
-        setCacheNotice(null);
         setCorpusProgress({ phase: "checking", server: targetServer });
         try {
             const info = await client.loadCorpus(targetServer, {
@@ -263,7 +269,7 @@ export default function StorySearchClient() {
                 }
             })
             .catch(() => {
-                // Ignore status probe error; search endpoint will enforce auth cleanly.
+                // Ignore status probe error; search endpoint enforces auth cleanly.
             });
         return () => {
             cancelled = true;
@@ -429,7 +435,6 @@ export default function StorySearchClient() {
                 throw new Error(t("page.storySearch.errors.requestFailed", { message: detail }));
             }
 
-            // Session cookie is now established on the browser if Turnstile was required.
             if (turnstileRequired) {
                 const hasRemaining = typeof data.session_remaining !== "number" || data.session_remaining > 0;
                 setSessionActive(hasRemaining);
@@ -489,7 +494,6 @@ export default function StorySearchClient() {
     const handleClearCache = useCallback(async () => {
         const client = workerRef.current;
         if (!client) return;
-        setCacheNotice(t("page.storySearch.corpus.clearing"));
         await client.clearCache(server);
         setCorpusByServer((prev) => {
             const next = { ...prev };
@@ -497,11 +501,10 @@ export default function StorySearchClient() {
             return next;
         });
         setCorpusProgress(null);
-        setCacheNotice(t("page.storySearch.corpus.cacheCleared"));
         if (mode === "local") {
             void loadCorpusForServer(server, true);
         }
-    }, [server, mode, loadCorpusForServer, t]);
+    }, [server, mode, loadCorpusForServer]);
 
     const handleResetFilters = useCallback(() => {
         setQuery("");
@@ -664,7 +667,7 @@ export default function StorySearchClient() {
                 {/* Mode & Server Controls */}
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <SegmentedButton
-                        className="w-full sm:w-auto"
+                        className="w-full shrink-0 sm:w-auto"
                         value={mode}
                         onValueChange={(nextMode) => {
                             setMode(nextMode);
@@ -673,29 +676,18 @@ export default function StorySearchClient() {
                         options={[
                             {
                                 value: "local",
-                                label: (
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Icon path={mdSearch} size={16} />
-                                        <span>{t("page.storySearch.modes.localLabel")}</span>
-                                    </span>
-                                ),
+                                label: t("page.storySearch.modes.localLabel"),
+                                icon: mdSearch,
                             },
                             {
                                 value: "semantic",
-                                label: (
-                                    <span className="inline-flex items-center gap-1.5">
-                                        <Icon path={mdWandStars} size={16} />
-                                        <span>{t("page.storySearch.modes.semanticLabel")}</span>
-                                    </span>
-                                ),
+                                label: t("page.storySearch.modes.semanticLabel"),
+                                icon: mdWandStars,
                             },
                         ]}
                     />
 
                     <div className="flex flex-wrap items-center gap-2">
-                        <span className="type-label-m text-on-surface-variant">
-                            {t("page.storySearch.servers.label")}
-                        </span>
                         {STORY_SEARCH_SERVERS.map((srv) => (
                             <Chip
                                 key={srv}
@@ -708,32 +700,44 @@ export default function StorySearchClient() {
                                 <ServerRegionLabel server={srv} size={16} />
                             </Chip>
                         ))}
+                        {!activeCorpus && !isCorpusBusy && mode === "semantic" && (
+                            <Tooltip label={t("page.storySearch.corpus.loadNow")}>
+                                <IconButton
+                                    icon={mdDownload}
+                                    label={t("page.storySearch.corpus.loadNow")}
+                                    variant="outlined"
+                                    size="xs"
+                                    onClick={() => void loadCorpusForServer(server, false)}
+                                />
+                            </Tooltip>
+                        )}
+                        {activeCorpus && (
+                            <Tooltip label={t("common.action.refresh")}>
+                                <IconButton
+                                    icon={mdRefresh}
+                                    label={t("common.action.refresh")}
+                                    variant="standard"
+                                    size="xs"
+                                    disabled={isCorpusBusy}
+                                    onClick={() => void loadCorpusForServer(server, true)}
+                                />
+                            </Tooltip>
+                        )}
+                        <Tooltip label={t("page.storySearch.corpus.refreshCache")}>
+                            <IconButton
+                                icon={mdDelete}
+                                label={t("page.storySearch.corpus.refreshCache")}
+                                variant="standard"
+                                size="xs"
+                                disabled={isCorpusBusy}
+                                onClick={() => void handleClearCache()}
+                            />
+                        </Tooltip>
                     </div>
                 </div>
 
-                {/* Search & Options Card */}
+                {/* Search Card */}
                 <SectionCard className="mb-5">
-                    {mode === "semantic" && (
-                        <div className="mb-4 space-y-3">
-                            <Banner tone="info" title={t("page.storySearch.modelAttribution")}>
-                                {t("page.storySearch.semanticHint")}
-                            </Banner>
-
-                            {turnstileRequired && (
-                                <TurnstileWidget
-                                    sessionActive={sessionActive}
-                                    resetSeed={turnstileResetSeed}
-                                    onToken={setTurnstileToken}
-                                    onManualReset={() => {
-                                        setSessionActive(false);
-                                        setTurnstileToken("");
-                                        setTurnstileResetSeed((s) => s + 1);
-                                    }}
-                                />
-                            )}
-                        </div>
-                    )}
-
                     <form
                         onSubmit={(e) => {
                             if (mode === "semantic") {
@@ -742,7 +746,7 @@ export default function StorySearchClient() {
                                 e.preventDefault();
                             }
                         }}
-                        className="flex flex-col gap-3 sm:flex-row sm:items-stretch"
+                        className="flex items-center gap-2"
                     >
                         <div className="min-w-0 flex-1">
                             <TextField
@@ -762,18 +766,57 @@ export default function StorySearchClient() {
                             />
                         </div>
 
-                        {mode === "semantic" && (
+                        {mode === "local" ? (
+                            <div className="flex shrink-0 items-center gap-1.5">
+                                <Tooltip label={t("page.storySearch.search.caseSensitive")}>
+                                    <IconButton
+                                        icon={mdMatchCase}
+                                        label={t("page.storySearch.search.caseSensitive")}
+                                        variant="outlined"
+                                        size="s"
+                                        selected={caseSensitive}
+                                        className={cn(
+                                            caseSensitive
+                                                ? "border-transparent bg-primary-container text-on-primary-container"
+                                                : "border-outline-variant bg-surface-container-high text-on-surface-variant",
+                                        )}
+                                        onClick={() => {
+                                            setCaseSensitive((v) => !v);
+                                            resetDisplayCount();
+                                        }}
+                                    />
+                                </Tooltip>
+                                <Tooltip label={t("page.storySearch.search.regexToggle")}>
+                                    <IconButton
+                                        icon={mdRegularExpression}
+                                        label={t("page.storySearch.search.regexToggle")}
+                                        variant="outlined"
+                                        size="s"
+                                        selected={isRegex}
+                                        className={cn(
+                                            isRegex
+                                                ? "border-transparent bg-primary-container text-on-primary-container"
+                                                : "border-outline-variant bg-surface-container-high text-on-surface-variant",
+                                        )}
+                                        onClick={() => {
+                                            setIsRegex((v) => !v);
+                                            resetDisplayCount();
+                                        }}
+                                    />
+                                </Tooltip>
+                            </div>
+                        ) : (
                             <Button
                                 type="submit"
                                 variant="filled"
-                                size="m"
+                                size="s"
                                 icon={mdWandStars}
                                 disabled={
                                     isSemanticSearching
                                     || !query.trim()
                                     || (turnstileRequired && !sessionActive && !turnstileToken)
                                 }
-                                className="sm:h-10 sm:self-center"
+                                className="shrink-0"
                             >
                                 {isSemanticSearching
                                     ? t("page.storySearch.search.searching")
@@ -782,144 +825,30 @@ export default function StorySearchClient() {
                         )}
                     </form>
 
-                    {/* Quick Inline Options & Story Type Chips */}
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                        {mode === "local" && (
-                            <>
-                                <Chip
-                                    selected={isRegex}
-                                    onClick={() => {
-                                        setIsRegex((v) => !v);
-                                        resetDisplayCount();
-                                    }}
-                                >
-                                    {t("page.storySearch.search.regexToggle")}
-                                </Chip>
-                                <Chip
-                                    selected={caseSensitive}
-                                    onClick={() => {
-                                        setCaseSensitive((v) => !v);
-                                        resetDisplayCount();
-                                    }}
-                                >
-                                    {t("page.storySearch.search.caseSensitive")}
-                                </Chip>
-                                <span className="mx-1 h-4 w-px bg-outline-variant" aria-hidden />
-                            </>
-                        )}
-
-                        <Chip
-                            selected={storyType === "all"}
-                            onClick={() => {
-                                setStoryType("all");
-                                resetDisplayCount();
-                            }}
-                        >
-                            {t("page.storySearch.filters.allTypes")}
-                        </Chip>
-                        {STORY_CHUNK_TYPES.map((typeOption) => (
-                            <Chip
-                                key={typeOption}
-                                selected={storyType === typeOption}
-                                onClick={() => {
-                                    setStoryType(typeOption);
-                                    resetDisplayCount();
-                                }}
-                            >
-                                {t(`page.storySearch.filters.types.${typeOption}`)}
-                            </Chip>
-                        ))}
-                    </div>
-
-                    {/* Corpus Status & Cache Control */}
-                    <div className="mt-4 border-t border-outline-variant/60 pt-3">
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="type-label-m text-on-surface-variant">
-                                    {t("page.storySearch.corpus.title")}:
-                                </span>
-                                {activeCorpus ? (
-                                    <>
-                                        <span className="inline-flex items-center gap-1 rounded-md3-sm bg-secondary-container px-2.5 py-1 type-label-m text-on-secondary-container">
-                                            <Icon path={mdVerifiedUser} size={14} className="text-primary" />
-                                            {t("page.storySearch.corpus.ready", {
-                                                version: activeCorpus.version,
-                                                count: activeCorpus.chunkCount.toLocaleString(),
-                                            })}
-                                        </span>
-                                        <span className="inline-flex items-center rounded-md3-sm bg-surface-container-high px-2 py-1 type-label-s text-on-surface-variant">
-                                            {activeCorpus.source === "idb"
-                                                ? t("page.storySearch.corpus.fromCache")
-                                                : t("page.storySearch.corpus.fromNetwork")}
-                                            {` · ${formatBytes(activeCorpus.brBytes)}`}
-                                        </span>
-                                    </>
-                                ) : isCorpusBusy ? (
-                                    <span className="type-label-m text-primary">
-                                        {corpusProgress?.phase === "checking"
-                                            ? t("page.storySearch.corpus.checking")
-                                            : corpusProgress?.phase === "decompressing"
-                                                ? t("page.storySearch.corpus.decompressing")
-                                                : corpusProgress?.totalBytes
-                                                    ? t("page.storySearch.corpus.downloading", {
-                                                        server: server.toUpperCase(),
-                                                        loaded: formatBytes(corpusProgress.loadedBytes ?? 0),
-                                                        total: formatBytes(corpusProgress.totalBytes),
-                                                    })
-                                                    : t("page.storySearch.corpus.downloadingUnknown", {
-                                                        server: server.toUpperCase(),
-                                                        loaded: formatBytes(corpusProgress?.loadedBytes ?? 0),
-                                                    })}
-                                    </span>
-                                ) : (
-                                    <span className="type-label-m text-on-surface-variant">
-                                        {t("page.storySearch.corpus.notLoaded")}
-                                    </span>
-                                )}
-                                {cacheNotice && (
-                                    <span className="type-label-s text-on-surface-variant">{cacheNotice}</span>
-                                )}
+                    {mode === "semantic" && (
+                        <div className="mt-3 flex flex-col gap-3 border-t border-outline-variant/50 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex items-center gap-2 type-body-s text-on-surface-variant">
+                                <Icon path={mdInfo} size={16} className="shrink-0 text-primary" />
+                                <span>{t("page.storySearch.modelAttribution")}</span>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2">
-                                {!activeCorpus && !isCorpusBusy && (
-                                    <Button
-                                        variant="tonal"
-                                        size="s"
-                                        icon={mdDownload}
-                                        onClick={() => void loadCorpusForServer(server, false)}
-                                    >
-                                        {t("page.storySearch.corpus.loadNow")}
-                                    </Button>
-                                )}
-                                {activeCorpus && (
-                                    <Button
-                                        variant="text"
-                                        size="s"
-                                        icon={mdRefresh}
-                                        onClick={() => void loadCorpusForServer(server, true)}
-                                    >
-                                        {t("common.action.refresh")}
-                                    </Button>
-                                )}
-                                <Button
-                                    variant="text"
-                                    size="s"
-                                    icon={mdDelete}
-                                    disabled={isCorpusBusy}
-                                    onClick={() => void handleClearCache()}
-                                >
-                                    {t("page.storySearch.corpus.refreshCache")}
-                                </Button>
-                            </div>
+                            {turnstileRequired && !sessionActive && (
+                                <div className="shrink-0">
+                                    <TurnstileWidget
+                                        sessionActive={sessionActive}
+                                        resetSeed={turnstileResetSeed}
+                                        onToken={setTurnstileToken}
+                                    />
+                                </div>
+                            )}
                         </div>
+                    )}
 
-                        {isCorpusBusy && (
-                            <div className="mt-2.5">
-                                <LinearProgress value={downloadProgressRatio} wavy={downloadProgressRatio !== undefined} />
-                            </div>
-                        )}
-                    </div>
+                    {isCorpusBusy && (
+                        <div className="mt-3">
+                            <LinearProgress value={downloadProgressRatio} wavy={downloadProgressRatio !== undefined} />
+                        </div>
+                    )}
                 </SectionCard>
 
                 {/* Error Banners */}
@@ -972,7 +901,7 @@ export default function StorySearchClient() {
                     />
                 )}
 
-                {/* Results Summary */}
+                {/* Results Toolbar (Summary + Detailed / Brief View Toggle) */}
                 {!isSearching && activeHits.length > 0 && (
                     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 px-1">
                         <div className="flex flex-wrap items-center gap-2 type-label-l text-on-surface-variant">
@@ -999,17 +928,30 @@ export default function StorySearchClient() {
                                 </>
                             )}
                         </div>
+
+                        <SegmentedButton
+                            className="w-auto"
+                            density={-2}
+                            value={resultView}
+                            onValueChange={setResultView}
+                            options={[
+                                { value: "detailed", label: t("page.storySearch.results.viewDetailed") },
+                                { value: "brief", label: t("page.storySearch.results.viewBrief") },
+                            ]}
+                        />
                     </div>
                 )}
 
                 {/* Results List */}
                 {!isSearching && displayedHits.length > 0 && (
-                    <div className="space-y-3">
+                    <div className={resultView === "brief" ? "space-y-2" : "space-y-3"}>
                         {displayedHits.map((hit) => (
                             <ResultCard
                                 key={`${hit.chunk.server}-${hit.chunk.id}`}
                                 hit={hit}
                                 mode={mode}
+                                resultView={resultView}
+                                selectedCharacters={selectedCharacters}
                                 highlightQuery={mode === "local" ? query : submittedSemanticQuery}
                                 isRegex={isRegex}
                                 caseSensitive={caseSensitive}
@@ -1022,17 +964,9 @@ export default function StorySearchClient() {
                 {/* Empty / Prompt States */}
                 {!isSearching && !isCorpusBusy && activeHits.length === 0 && (
                     mode === "local" && activeCorpus && !query.trim() && storyType === "all" && selectedCharacters.length === 0 ? (
-                        <EmptyState
-                            title={t("page.storySearch.search.localReadyHint", {
-                                count: activeCorpus.chunkCount.toLocaleString(),
-                            })}
-                            description={t("page.storySearch.search.emptyPrompt")}
-                        />
+                        <EmptyState title={t("page.storySearch.search.emptyPrompt")} />
                     ) : mode === "semantic" && !submittedSemanticQuery ? (
-                        <EmptyState
-                            title={t("page.storySearch.search.semanticReadyHint")}
-                            description={t("page.storySearch.search.emptyPrompt")}
-                        />
+                        <EmptyState title={t("page.storySearch.search.emptyPrompt")} />
                     ) : (
                         <EmptyState
                             title={t("page.storySearch.results.emptyTitle")}

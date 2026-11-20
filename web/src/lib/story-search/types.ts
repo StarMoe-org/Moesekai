@@ -1,4 +1,5 @@
 export type StorySearchMode = "local" | "semantic";
+export type StoryResultView = "detailed" | "brief";
 export type StorySearchServer = "cn" | "jp";
 export type StoryChunkType = "unit" | "event" | "card" | "talk" | "self" | "special";
 

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Button, Icon } from "@/components/md3";
-import { mdRefresh, mdVerifiedUser } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 
 export const STORY_SEARCH_TURNSTILE_SITE_KEY = "0x4AAAAAAGKO8xcwCQ39Blz6";
@@ -38,14 +36,12 @@ interface TurnstileWidgetProps {
     sessionActive: boolean;
     resetSeed: number;
     onToken: (token: string) => void;
-    onManualReset: () => void;
 }
 
 export default function TurnstileWidget({
     sessionActive,
     resetSeed,
     onToken,
-    onManualReset,
 }: TurnstileWidgetProps) {
     const { t } = useI18n();
     const hostRef = useRef<HTMLDivElement>(null);
@@ -60,9 +56,9 @@ export default function TurnstileWidget({
     const [scriptReady, setScriptReady] = useState(
         () => Boolean(getTurnstileApi()),
     );
-    const [statusInfo, setStatusInfo] = useState<{ seed: number; message: string } | null>(null);
+    const [errorMessage, setErrorMessage] = useState<{ seed: number; message: string } | null>(null);
     const effectiveScriptReady = scriptReady || Boolean(getTurnstileApi());
-    const statusMessage = statusInfo && statusInfo.seed === resetSeed ? statusInfo.message : null;
+    const visibleError = errorMessage && errorMessage.seed === resetSeed ? errorMessage.message : null;
 
     useEffect(() => {
         if (sessionActive) return;
@@ -82,7 +78,7 @@ export default function TurnstileWidget({
         script.src = `${TURNSTILE_SCRIPT_SRC}&onload=__storySearchTurnstileLoaded`;
         script.async = true;
         script.defer = true;
-        script.onerror = () => setStatusInfo({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.scriptFailed") });
+        script.onerror = () => setErrorMessage({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.scriptFailed") });
         document.head.appendChild(script);
     }, [sessionActive, t]);
 
@@ -98,15 +94,15 @@ export default function TurnstileWidget({
             theme: docTheme,
             size: "normal",
             callback: (token) => {
-                setStatusInfo({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.completed") });
+                setErrorMessage(null);
                 onTokenRef.current(token);
             },
             "expired-callback": () => {
-                setStatusInfo({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.expired") });
+                setErrorMessage({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.expired") });
                 onTokenRef.current("");
             },
             "error-callback": () => {
-                setStatusInfo({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.failed") });
+                setErrorMessage({ seed: resetSeedRef.current, message: t("page.storySearch.turnstile.failed") });
                 onTokenRef.current("");
             },
         });
@@ -127,32 +123,15 @@ export default function TurnstileWidget({
     }, [resetSeed, sessionActive]);
 
     if (sessionActive) {
-        return (
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-md3-lg bg-secondary-container/60 px-4 py-3 text-on-secondary-container">
-                <div className="flex items-center gap-2.5">
-                    <Icon path={mdVerifiedUser} size={20} className="shrink-0 text-primary" />
-                    <span className="type-label-l">{t("page.storySearch.turnstile.sessionActive")}</span>
-                </div>
-                <Button variant="text" size="s" icon={mdRefresh} onClick={onManualReset}>
-                    {t("page.storySearch.turnstile.reset")}
-                </Button>
-            </div>
-        );
+        return null;
     }
 
-    const displayMessage = statusMessage ?? (
-        effectiveScriptReady ? t("page.storySearch.turnstile.prompt") : t("page.storySearch.turnstile.loading")
-    );
-
     return (
-        <div className="rounded-md3-lg bg-surface-container p-3.5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                    <div className="type-label-l text-on-surface">{t("page.storySearch.turnstile.title")}</div>
-                    <div className="mt-1 type-body-s text-on-surface-variant">{displayMessage}</div>
-                </div>
-                <div ref={hostRef} className="min-h-[65px] min-w-[300px] shrink-0 overflow-hidden rounded-md3-md" />
-            </div>
+        <div className="flex flex-col items-start gap-2">
+            <div ref={hostRef} className="min-h-[65px] overflow-hidden rounded-md3-md" />
+            {visibleError && (
+                <div className="type-body-s text-error">{visibleError}</div>
+            )}
         </div>
     );
 }

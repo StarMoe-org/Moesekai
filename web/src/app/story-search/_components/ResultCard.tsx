@@ -5,12 +5,15 @@ import LocalizedLink from "@/components/LocalizedLink";
 import { Button, Card } from "@/components/md3";
 import { mdCheck, mdContentCopy, mdMenuBook, mdPlayArrow } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
+import { speakerMatchesCharacterIds } from "@/lib/story-search/characters";
 import { resolveChunkLinks, type StoryLinkLookup } from "@/lib/story-search/links";
-import type { StorySearchHit, StorySearchMode } from "@/lib/story-search/types";
+import type { StoryResultView, StorySearchHit, StorySearchMode } from "@/lib/story-search/types";
 
 interface ResultCardProps {
     hit: StorySearchHit;
     mode: StorySearchMode;
+    resultView: StoryResultView;
+    selectedCharacters: number[];
     highlightQuery: string;
     isRegex: boolean;
     caseSensitive: boolean;
@@ -27,14 +30,25 @@ function stripChunkHeader(text: string): string {
     return text;
 }
 
-function renderHighlightedLine(
-    line: string,
+function splitSpeakerLine(line: string): { speaker: string | null; speech: string } {
+    const colonIdx = line.indexOf(": ");
+    if (colonIdx > 0 && colonIdx < 32) {
+        return {
+            speaker: line.slice(0, colonIdx),
+            speech: line.slice(colonIdx + 2),
+        };
+    }
+    return { speaker: null, speech: line };
+}
+
+function renderHighlightedText(
+    text: string,
     query: string,
     isRegex: boolean,
     caseSensitive: boolean,
 ): React.ReactNode {
     const q = query.trim();
-    if (!q) return line;
+    if (!q) return text;
 
     let re: RegExp | null = null;
     try {
@@ -45,14 +59,14 @@ function renderHighlightedLine(
             re = new RegExp(escaped, caseSensitive ? "g" : "ig");
         }
     } catch {
-        return line;
+        return text;
     }
 
     const parts: React.ReactNode[] = [];
     let lastIndex = 0;
     let matchCount = 0;
 
-    for (const match of line.matchAll(re)) {
+    for (const match of text.matchAll(re)) {
         const start = match.index ?? 0;
         const matched = match[0];
         if (!matched) {
@@ -60,7 +74,7 @@ function renderHighlightedLine(
             continue;
         }
         if (start > lastIndex) {
-            parts.push(line.slice(lastIndex, start));
+            parts.push(text.slice(lastIndex, start));
         }
         parts.push(
             <mark
@@ -74,9 +88,9 @@ function renderHighlightedLine(
         if (matchCount++ > 64) break;
     }
 
-    if (parts.length === 0) return line;
-    if (lastIndex < line.length) {
-        parts.push(line.slice(lastIndex));
+    if (parts.length === 0) return text;
+    if (lastIndex < text.length) {
+        parts.push(text.slice(lastIndex));
     }
     return parts;
 }
@@ -84,6 +98,8 @@ function renderHighlightedLine(
 export default function ResultCard({
     hit,
     mode,
+    resultView,
+    selectedCharacters,
     highlightQuery,
     isRegex,
     caseSensitive,
@@ -99,9 +115,18 @@ export default function ResultCard({
         [chunk.text],
     );
     const lines = useMemo(
-        () => (bodyText ? bodyText.split("\n") : []),
+        () => (bodyText ? bodyText.split("\n").filter((l) => l.trim().length > 0) : []),
         [bodyText],
     );
+
+    const briefLines = useMemo(() => {
+        if (resultView !== "brief") return lines;
+        if (selectedCharacters.length === 0) return lines;
+        return lines.filter((line) => {
+            const { speaker } = splitSpeakerLine(line);
+            return speaker !== null && speakerMatchesCharacterIds(speaker, selectedCharacters);
+        });
+    }, [lines, resultView, selectedCharacters]);
 
     const handleCopy = async () => {
         if (!bodyText) return;
@@ -113,6 +138,46 @@ export default function ResultCard({
             // Clipboard unavailable
         }
     };
+
+    // Brief mode: purely render `Speaker: dialogue` lines without story metadata, badges, or action links.
+    if (resultView === "brief") {
+        return (
+            <Card variant="outlined" className="bg-surface-card px-4 py-3">
+                {briefLines.length > 0 ? (
+                    <div className="space-y-1 type-body-m text-on-surface">
+                        {briefLines.map((line, idx) => {
+                            const { speaker, speech } = splitSpeakerLine(line);
+                            if (speaker !== null) {
+                                return (
+                                    <div key={idx} className="leading-relaxed">
+                                        <span className="font-medium text-primary">{speaker}: </span>
+                                        <span>
+                                            {mode === "local"
+                                                ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
+                                                : speech}
+                                        </span>
+                                    </div>
+                                );
+                            }
+                            return (
+                                <div key={idx} className="leading-relaxed">
+                                    {mode === "local"
+                                        ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
+                                        : speech}
+                                </div>
+                            );
+                        })}
+                    </div>
+                ) : (
+                    <p className="type-body-s text-on-surface-variant">
+                        {bodyText
+                            ? t("page.storySearch.results.noSelectedCharLines")
+                            : t("page.storySearch.results.noContextAvailable")}
+                    </p>
+                )}
+            </Card>
+        );
+    }
 
     const scoreBadge = mode === "semantic"
         ? t("page.storySearch.results.scoreLabel", { score: hit.score.toFixed(3) })
@@ -170,16 +235,14 @@ export default function ResultCard({
                 {lines.length > 0 ? (
                     <div className="space-y-1.5 type-body-m text-on-surface">
                         {lines.map((line, idx) => {
-                            const colonIdx = line.indexOf(": ");
-                            if (colonIdx > 0 && colonIdx < 24) {
-                                const speaker = line.slice(0, colonIdx);
-                                const speech = line.slice(colonIdx + 2);
+                            const { speaker, speech } = splitSpeakerLine(line);
+                            if (speaker !== null) {
                                 return (
                                     <div key={idx} className="leading-relaxed">
                                         <span className="font-medium text-primary">{speaker}: </span>
                                         <span>
                                             {mode === "local"
-                                                ? renderHighlightedLine(speech, highlightQuery, isRegex, caseSensitive)
+                                                ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
                                                 : speech}
                                         </span>
                                     </div>
@@ -188,8 +251,8 @@ export default function ResultCard({
                             return (
                                 <div key={idx} className="leading-relaxed">
                                     {mode === "local"
-                                        ? renderHighlightedLine(line, highlightQuery, isRegex, caseSensitive)
-                                        : line}
+                                        ? renderHighlightedText(speech, highlightQuery, isRegex, caseSensitive)
+                                        : speech}
                                 </div>
                             );
                         })}

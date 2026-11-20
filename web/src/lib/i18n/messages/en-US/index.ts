@@ -5942,6 +5942,9 @@ export const enUSMessages = {
                 emptyTitle: "No matching story passages found",
                 emptyHint: "Try different keywords, disable regex/case matching, or switch to AI Semantic search.",
                 loadMore: "Load more",
+                viewDetailed: "Detailed",
+                viewBrief: "Brief",
+                noSelectedCharLines: "(No lines spoken by the selected character(s) in this passage)",
             },
             errors: {
                 rateLimited: "Too many requests. Please try again shortly.",

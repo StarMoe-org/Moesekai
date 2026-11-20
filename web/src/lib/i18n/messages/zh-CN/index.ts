@@ -5941,6 +5941,9 @@ export const zhCNMessages = {
                 emptyTitle: "未找到匹配的剧情片段",
                 emptyHint: "试试更换关键词、关闭正则/大小写限制，或切换到 AI 语义检索描述意境。",
                 loadMore: "加载更多",
+                viewDetailed: "详细",
+                viewBrief: "简略",
+                noSelectedCharLines: "（当前片段无所选角色的发言行）",
             },
             errors: {
                 rateLimited: "请求过于频繁，请稍候再试。",

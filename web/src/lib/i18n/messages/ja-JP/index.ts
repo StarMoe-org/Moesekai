@@ -5967,6 +5967,9 @@ export const jaJPMessages = {
         emptyTitle: '一致するストーリーが見つかりませんでした',
         emptyHint: 'キーワードを変えるか、正規表現・大小文字設定をオフにするか、AI 意味検索をお試しください。',
         loadMore: 'もっと読み込む',
+        viewDetailed: '詳細',
+        viewBrief: '簡易',
+        noSelectedCharLines: '（この区間には選択中のキャラクターの発言がありません）',
       },
       errors: {
         rateLimited: 'リクエストが多すぎます。しばらくしてからお試しください。',

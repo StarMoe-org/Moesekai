@@ -5963,6 +5963,9 @@ export const koKRMessages = {
                 emptyTitle: "일치하는 스토리 장면을 찾지 못했습니다",
                 emptyHint: "다른 키워드를 입력하거나 정규식/대소문자 옵션을 끄거나 AI 의미 검색을 사용해 보세요.",
                 loadMore: "더 불러오기",
+                viewDetailed: "상세",
+                viewBrief: "간략",
+                noSelectedCharLines: "(이 구간에는 선택한 캐릭터의 대사가 없습니다)",
             },
             errors: {
                 rateLimited: "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
