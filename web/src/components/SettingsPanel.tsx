@@ -50,14 +50,18 @@ import {
     mdKeyboardArrowDown,
     mdClose,
     mdTune,
+    mdWandStars,
 } from "@/components/md3/icons";
+
+export type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    requestedTab?: { tab: SettingsTab; nonce: number } | null;
+    onOpenReleaseNotes?: () => void;
 }
 
-type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 type ColorSchemeOption = "system" | "light" | "dark";
 type ServerRegion = "en" | "jp" | "cn" | "tw" | "kr";
 type AssetLine = "main" | "backup";
@@ -105,7 +109,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     return <h4 className="mb-2 type-title-s text-primary">{children}</h4>;
 }
 
-export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
+export default function SettingsPanel({
+    isOpen,
+    onClose,
+    requestedTab,
+    onOpenReleaseNotes,
+}: SettingsPanelProps) {
     const {
         themeCharId,
         setThemeCharacter,
@@ -150,6 +159,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     if (wasOpen !== isOpen) {
         setWasOpen(isOpen);
         setThemeExpanded(false);
+    }
+
+    const [lastRequestedTabNonce, setLastRequestedTabNonce] = useState<number | null>(null);
+    if (requestedTab && requestedTab.nonce !== lastRequestedTabNonce) {
+        setLastRequestedTabNonce(requestedTab.nonce);
+        setActiveTab(requestedTab.tab);
     }
 
     useEffect(() => {
@@ -513,6 +528,19 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         </div>
                     </dl>
                     <div className="flex w-full flex-col gap-2">
+                        {onOpenReleaseNotes && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose();
+                                    onOpenReleaseNotes();
+                                }}
+                                className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                            >
+                                <Icon path={mdWandStars} size={18} />
+                                {t("settings.about.viewReleaseHighlights")}
+                            </button>
+                        )}
                         <ExternalLink href={APP_RELEASE_URL} className={buttonClassName({ variant: "tonal", fullWidth: true })}>
                             {t("settings.about.viewRelease")}
                             <Icon path={mdOpenInNew} size={18} />

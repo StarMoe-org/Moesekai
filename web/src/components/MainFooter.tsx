@@ -21,7 +21,11 @@ const EXPLORE_LINKS = [
     "/events",
 ];
 
-export default function MainFooter() {
+interface MainFooterProps {
+    onOpenReleaseNotes?: () => void;
+}
+
+export default function MainFooter({ onOpenReleaseNotes }: MainFooterProps) {
     const { t } = useI18n();
     return (
         <footer className="relative z-[5] mt-auto w-full px-3 pb-4 sm:px-4 sm:pb-6">
@@ -165,7 +169,7 @@ export default function MainFooter() {
                                     mail@exmeaning.com
                                 </ExternalLink>
                             </li>
-                            <li className="flex items-center gap-3 pt-2 type-body-s text-on-surface-variant">
+                            <li className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-2 type-body-s text-on-surface-variant">
                                 <Link href="/privacy" className="focus-ring rounded-full hover:text-primary">
                                     {t("layout.footer.privacyPolicy")}
                                 </Link>
@@ -173,6 +177,18 @@ export default function MainFooter() {
                                 <Link href="/terms" className="focus-ring rounded-full hover:text-primary">
                                     {t("layout.footer.termsOfService")}
                                 </Link>
+                                {onOpenReleaseNotes && (
+                                    <>
+                                        <span className="text-outline-variant">·</span>
+                                        <button
+                                            type="button"
+                                            onClick={onOpenReleaseNotes}
+                                            className="focus-ring cursor-pointer rounded-full hover:text-primary"
+                                        >
+                                            {t("common.releaseNotes.v2_1.reopenTrigger")}
+                                        </button>
+                                    </>
+                                )}
                             </li>
                         </ul>
                     </div>
