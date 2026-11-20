@@ -704,6 +704,24 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
     },
   ),
+  story_search: definePage(
+    "/story-search",
+    { "zh-CN": "剧情检索器", "en-US": "Story Search", "ja-JP": "ストーリー検索", "ko-KR": "스토리 검색기", "zh-TW": "劇情檢索器" },
+    {
+      "zh-CN": "在浏览器本地极速检索 Project SEKAI 全服剧情台词与正则匹配，并支持 Qwen3 2560维向量 AI 语义搜索活动、主线、卡牌、区域对话与角色剧情。",
+      "en-US": "Search Project SEKAI story dialogues locally with keyword or regex matching, or use AI semantic search powered by Qwen3 2560-dim embeddings across CN and JP servers.",
+      "ja-JP": "Project SEKAI のストーリーセリフをブラウザ上でキーワード・正規表現検索、さらに Qwen3 2560次元ベクトルによる AI 意味検索でシーンを探せます。",
+      "ko-KR": "Project SEKAI 스토리 대사를 브라우저 로컬에서 키워드·정규식으로 검색하거나 Qwen3 2560차원 벡터 기반 AI 의미 검색으로 찾을 수 있습니다.",
+      "zh-TW": "在瀏覽器本機極速檢索 Project SEKAI 劇情台詞與正規表示式，並支援 Qwen3 2560 維向量 AI 語義搜尋活動、主線、卡牌與區域對話。",
+    },
+    {
+      "zh-CN": ["剧情检索器", "台词搜索", "正则搜索", "语义搜索", "剧情搜索"],
+      "en-US": ["story search", "dialogue search", "regex search", "semantic search"],
+      "ja-JP": ["ストーリー検索", "セリフ検索", "正規表現検索", "意味検索"],
+      "ko-KR": ["스토리 검색", "대사 검색", "정규식 검색", "의미 검색"],
+      "zh-TW": ["劇情檢索器", "台詞搜尋", "正規搜尋", "語義搜尋"],
+    },
+  ),
   costume_3d: definePage(
     "/costume-3d",
     { "zh-CN": "3D 服装", "en-US": "3D Costumes", "ja-JP": "3D衣装", "ko-KR": "3D 의상", "zh-TW": "3D 服裝" },

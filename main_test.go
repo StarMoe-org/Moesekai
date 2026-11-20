@@ -15,6 +15,7 @@ import (
 	"testing"
 	"time"
 
+	"snowy_viewer/internal/config"
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/middleware"
 )
@@ -504,5 +505,109 @@ func TestMoesekaiAPIProxyAddsNoCredentialedCORS(t *testing.T) {
 		if origin == "https://evil.example" && response.Header.Get("Access-Control-Allow-Origin") != "" {
 			t.Fatal("an unknown origin was allowed")
 		}
+	}
+}
+
+func TestConfigLoadsStorySearchAPIURL(t *testing.T) {
+	t.Setenv("STORY_SEARCH_API_URL", " http://sekai-story-search.apps.svc.cluster.local:8080 ")
+	cfg := config.Load()
+	if cfg.StorySearchAPIURL != "http://sekai-story-search.apps.svc.cluster.local:8080" {
+		t.Fatalf("StorySearchAPIURL = %q, want trimmed URL", cfg.StorySearchAPIURL)
+	}
+}
+
+func TestStorySearchAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
+	for _, rawURL := range []string{"", "sekai-story-search:8080", "http://user:secret@sekai-story-search:8080"} {
+		t.Run(rawURL, func(t *testing.T) {
+			mux := http.NewServeMux()
+			registerStorySearchAPIRoutes(mux, rawURL)
+			mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			})
+
+			for _, path := range []string{"/api/story-search", "/api/story-search/status", "/api/story-search/search"} {
+				response := httptest.NewRecorder()
+				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")
+			}
+			other := httptest.NewRecorder()
+			mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, "/api/story-search-other", nil))
+			if other.Code != http.StatusNotFound {
+				t.Fatalf("/api/story-search-other status = %d, want 404", other.Code)
+			}
+		})
+	}
+}
+
+func TestStorySearchAPIProxyForwardsHeadersAndCookies(t *testing.T) {
+	type seenRequest struct {
+		method, path, body, cookie, turnstile     string
+		forwardedFor, forwardedProto, connectingIP string
+	}
+	seen := make(chan seenRequest, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		seen <- seenRequest{
+			method:         r.Method,
+			path:           r.URL.Path,
+			body:           string(body),
+			cookie:         r.Header.Get("Cookie"),
+			turnstile:      r.Header.Get("CF-Turnstile-Response"),
+			forwardedFor:   r.Header.Get("X-Forwarded-For"),
+			forwardedProto: r.Header.Get("X-Forwarded-Proto"),
+			connectingIP:   r.Header.Get("CF-Connecting-IP"),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Add("Set-Cookie", "story_search_session=sig123; Path=/api/story-search; HttpOnly; Secure; SameSite=Lax")
+		_, _ = io.WriteString(w, `{"results":[]}`)
+	}))
+	defer upstream.Close()
+
+	mux := http.NewServeMux()
+	registerStorySearchAPIRoutes(mux, upstream.URL)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("%s reached the frontend and HTML cache", r.URL.Path)
+		http.NotFound(w, r)
+	})
+	front := httptest.NewServer(middleware.Chain(mux, middleware.CORS, middleware.Gzip))
+	defer front.Close()
+
+	req, err := http.NewRequest(http.MethodPost, front.URL+"/api/story-search/search", strings.NewReader(`{"query":"star","server":"cn"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", "story_search_session=old")
+	req.Header.Set("CF-Turnstile-Response", "tok_abc")
+	req.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("CF-Connecting-IP", "203.0.113.9")
+
+	resp, err := front.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	got := <-seen
+	want := seenRequest{
+		method:         http.MethodPost,
+		path:           "/api/story-search/search",
+		body:           `{"query":"star","server":"cn"}`,
+		cookie:         "story_search_session=old",
+		turnstile:      "tok_abc",
+		forwardedFor:   "203.0.113.9, 10.0.0.1, 127.0.0.1",
+		forwardedProto: "https",
+		connectingIP:   "203.0.113.9",
+	}
+	if got != want {
+		t.Fatalf("upstream saw %+v, want %+v", got, want)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	cookies := resp.Header.Values("Set-Cookie")
+	if len(cookies) != 1 || cookies[0] != "story_search_session=sig123; Path=/api/story-search; HttpOnly; Secure; SameSite=Lax" {
+		t.Fatalf("Set-Cookie = %q", cookies)
 	}
 }

@@ -144,6 +144,11 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "使用 MikuMikuWorld 風格的 3D 譜面預覽器檢視歌曲譜面，或載入自訂 SUS／BGM 網址。",
         ["譜面預覽", "3D 譜面", "SUS", "MikuMikuWorld"],
     ),
+    story_search: page(
+        "劇情檢索器",
+        "在瀏覽器本機極速檢索 Project SEKAI 劇情台詞與正規表示式，並支援 Qwen3 2560 維向量 AI 語義搜尋活動、主線、卡牌與區域對話。",
+        ["劇情檢索器", "台詞搜尋", "正規搜尋", "語義搜尋"],
+    ),
     chart_image: page(
         "譜面圖片預覽",
         "在瀏覽器中將 Project SEKAI 譜面渲染為可縮放的整曲譜面圖，並支援匯出 PNG。",

@@ -40,6 +40,11 @@ const (
 // is listed on its own because a subtree pattern does not match its root.
 var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/accounts", "/api/accounts/", "/api/sekai/"}
 
+// sekai-story-search runs as its own service on the private network.
+// Forwarding /api/story-search keeps Turnstile cookies first-party on the
+// same origin without CORS or HTML caching.
+var storySearchAPIPrefixes = []string{"/api/story-search", "/api/story-search/"}
+
 // frontendAPIPrefixes are Next.js route handlers under /api/ that belong to
 // the frontend, not to Go or moesekai-api: the public sponsor list and the
 // Ko-fi webhook receiver below it. They must reach the Next.js proxy instead
@@ -70,9 +75,11 @@ func main() {
 	mcpServer := mcp.New(store)
 	mcpServer.RegisterRoutes(mux)
 
-	// Sign-in and guess-music live in moesekai-api (both normal and API-only
-	// modes); registered on the mux so they never reach the HTML cache.
+	// Sign-in, guess-music, and story-search live in private backend services
+	// (both normal and API-only modes); registered on the mux so they never
+	// reach the HTML cache.
 	registerMoesekaiAPIRoutes(mux, cfg.MoesekaiAPIURL)
+	registerStorySearchAPIRoutes(mux, cfg.StorySearchAPIURL)
 
 	// Prevent unknown /api/* paths from bouncing between Go and Next.js.
 	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
@@ -210,17 +217,25 @@ func newFrontendProxy(nextjsURL *url.URL) *httputil.ReverseProxy {
 }
 
 func registerMoesekaiAPIRoutes(mux *http.ServeMux, rawURL string) {
+	registerProxyAPIRoutes(mux, "moesekai-api", "MOESEKAI_API_URL", moesekaiAPIPrefixes, rawURL)
+}
+
+func registerStorySearchAPIRoutes(mux *http.ServeMux, rawURL string) {
+	registerProxyAPIRoutes(mux, "sekai-story-search", "STORY_SEARCH_API_URL", storySearchAPIPrefixes, rawURL)
+}
+
+func registerProxyAPIRoutes(mux *http.ServeMux, serviceName, envName string, prefixes []string, rawURL string) {
 	handler := http.Handler(http.HandlerFunc(serveMoesekaiAPIUnavailable))
 	if rawURL == "" {
-		fmt.Println("MOESEKAI_API_URL is not set; sign-in and guess-music are unavailable.")
+		fmt.Printf("%s is not set; %s routes are unavailable.\n", envName, serviceName)
 	} else if target, err := parseProxyTargetURL(rawURL); err != nil {
 		// Not echoed: a rejected value may carry credentials.
-		fmt.Println("Invalid MOESEKAI_API_URL (want an absolute HTTP(S) URL without credentials); sign-in and guess-music are unavailable.")
+		fmt.Printf("Invalid %s (want an absolute HTTP(S) URL without credentials); %s routes are unavailable.\n", envName, serviceName)
 	} else {
 		handler = newMoesekaiAPIProxy(target)
-		fmt.Printf("Proxying %s to moesekai-api on %s\n", strings.Join(moesekaiAPIPrefixes, ", "), target.Host)
+		fmt.Printf("Proxying %s to %s on %s\n", strings.Join(prefixes, ", "), serviceName, target.Host)
 	}
-	for _, prefix := range moesekaiAPIPrefixes {
+	for _, prefix := range prefixes {
 		mux.Handle(prefix, handler)
 	}
 }
