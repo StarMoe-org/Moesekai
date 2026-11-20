@@ -200,6 +200,41 @@ export const jaJPMessages = {
       migrateSignedIn: 'Haruki と連携する',
       later: '今はしない',
     },
+    communityPrompts: {
+      later: 'あとで',
+      dontShowAgain: '今後表示しない',
+      otherChannels: 'その他の公式チャンネル',
+      channels: {
+        bilibili: 'Bilibili @Moesekai情报局',
+        discord: '公式 Discord',
+        qq: 'QQ グループ {qqGroup}',
+      },
+      qqFeedback: {
+        title: '公式 QQ グループに参加しませんか',
+        body: 'いつも Moesekai をご利用いただきありがとうございます！公式 QQ グループ {qqGroup} で交流やご意見・フィードバックをお待ちしています。',
+        groupLabel: '公式 QQ グループ番号',
+        copyGroup: '番号をコピー',
+        copied: 'コピーしました',
+        action: 'QQ グループに参加',
+      },
+      bilibiliPromo: {
+        title: 'Bilibili @Moesekai情报局 をフォロー',
+        body: '公式 Bilibili アカウントでは、日本版の生放送まとめやイベントストーリーの中文翻訳、サイト更新情報をお届けしています！',
+        action: 'Bilibili へ移動',
+      },
+      discordPromo: {
+        title: '公式 Discord コミュニティに参加',
+        body: 'StarMoe 公式 Discord で、プレイヤーや開発者と交流したり、ご意見や最新情報をチェックしましょう！',
+        action: 'Discord に参加',
+      },
+      sponsorSupport: {
+        title: 'Moesekai を {count} 回閲覧しました！',
+        body: 'Moesekai がお役に立てていれば、少しだけご支援いただけませんか……サーバーやドメインの維持費に大切に使わせていただきます！',
+        freePromise: '支援がなくても、これからも変わらず無料で運営を続けていきます！',
+        afdian: '愛発電 (Afdian)',
+        action: '支援ページへ',
+      },
+    },
     starmoe: {
       unavailable: 'StarMoe ログインは現在利用できません',
       signIn: 'StarMoe パスでログイン',
@@ -851,7 +886,7 @@ export const jaJPMessages = {
       buildDateLabel: 'ビルド日',
       viewRelease: 'リリース',
       viewChangelog: '更新履歴',
-      viewSupport: 'サポートする'
+      viewSupport: 'サポートする',
     },
     appearance: {
       sectionTitle: '表示設定',

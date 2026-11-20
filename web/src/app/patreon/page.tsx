@@ -17,6 +17,10 @@ export default function PatreonPage() {
                 <PageHeader title="支持 moesekai!" />
 
                 <Surface tone="card" className="space-y-8 p-6 type-body-l text-on-surface sm:p-8">
+                    <section className="pb-8 border-b border-outline-variant">
+                        <SponsorWall />
+                    </section>
+
                     <section className="space-y-4">
                         <p className="type-title-m">
                             Welcome to the official support page of moesekai!
@@ -155,9 +159,9 @@ export default function PatreonPage() {
                         <h2 className="mb-2 type-headline-s text-on-surface">赞助</h2>
 
                         <p className="mb-6 rounded-md3-md bg-secondary-container p-4 text-on-secondary-container">
-                            <strong className="font-medium">提示：</strong>通过爱发电 / Ko-fi 赞助后，你的平台昵称会自动出现在下方赞助者名单中，无需再附言个人ID。
+                            <strong className="font-medium">提示：</strong>通过爱发电 / Ko-fi 赞助后，你的平台昵称会自动出现在上方赞助者名单中，无需再附言个人ID。
                             <br />
-                            <span className="type-body-m">Sponsor via Afdian / Ko-fi and your platform nickname will automatically appear in the sponsor list below.</span>
+                            <span className="type-body-m">Sponsor via Afdian / Ko-fi and your platform nickname will automatically appear in the sponsor list above.</span>
                         </p>
 
                         <p className="mb-6 text-center type-body-m text-on-surface-variant">
@@ -201,10 +205,6 @@ export default function PatreonPage() {
                                     />
                                 </ExternalLink>
                             </div>
-                        </div>
-
-                        <div className="mt-12 border-t border-outline-variant pt-8">
-                            <SponsorWall />
                         </div>
 
                         <div className="mt-12 pt-8 border-t border-outline-variant">

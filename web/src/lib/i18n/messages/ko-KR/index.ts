@@ -198,6 +198,41 @@ export const koKRMessages = {
             migrateSignedIn: "Haruki 연결하기",
             later: "나중에",
         },
+        communityPrompts: {
+            later: "나중에",
+            dontShowAgain: "다시 보지 않기",
+            otherChannels: "기타 공식 채널",
+            channels: {
+                bilibili: "Bilibili @Moesekai情报局",
+                discord: "공식 Discord",
+                qq: "QQ 그룹 {qqGroup}",
+            },
+            qqFeedback: {
+                title: "공식 QQ 그룹에 참여해 보세요",
+                body: "사이트를 자주 방문해 주셔서 감사합니다! 공식 QQ 그룹 {qqGroup}에 참여해 의견을 나누고 피드백을 보내 주세요.",
+                groupLabel: "공식 QQ 그룹 번호",
+                copyGroup: "번호 복사",
+                copied: "복사됨",
+                action: "QQ 그룹 참여",
+            },
+            bilibiliPromo: {
+                title: "Bilibili @Moesekai情报局 팔로우",
+                body: "공식 Bilibili 채널에서 일본 서버 생방송 요약, 이벤트 스토리 번역, 사이트 업데이트 소식을 확인해 보세요!",
+                action: "Bilibili 바로가기",
+            },
+            discordPromo: {
+                title: "공식 Discord 커뮤니티 참여",
+                body: "StarMoe 공식 Discord 커뮤니티에 참여해 다른 플레이어 및 개발자와 소통하고 피드백을 공유해 보세요!",
+                action: "Discord 참여",
+            },
+            sponsorSupport: {
+                title: "Moesekai를 {count}회 둘러보셨습니다!",
+                body: "Moesekai가 도움이 되셨다면 작은 후원으로 응원해 주실 수 있을까요? 서버와 도메인 운영비를 유지하는 데 큰 힘이 됩니다!",
+                freePromise: "후원하지 않으셔도 계속 즐겨 주시는 한 무료로 꾸준히 운영하겠습니다!",
+                afdian: "아이파뎬 (Afdian)",
+                action: "후원 페이지로 이동",
+            },
+        },
         starmoe: {
             unavailable: "지금은 StarMoe 로그인을 사용할 수 없습니다",
             signIn: "StarMoe 패스로 로그인",
@@ -849,7 +884,7 @@ export const koKRMessages = {
             buildDateLabel: "빌드 날짜",
             viewRelease: "릴리스",
             viewChangelog: "변경 로그",
-            viewSupport: "후원하기"
+            viewSupport: "후원하기",
         },
         appearance: {
             sectionTitle: "화면 모드",

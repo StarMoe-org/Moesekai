@@ -200,6 +200,41 @@ export const zhCNMessages = {
             migrateSignedIn: "去连接 Haruki",
             later: "暂不迁移",
         },
+        communityPrompts: {
+            later: "稍后再说",
+            dontShowAgain: "今后不再显示",
+            otherChannels: "其他官方频道",
+            channels: {
+                bilibili: "B站 @Moesekai情报局",
+                discord: "官方 Discord",
+                qq: "QQ 群 {qqGroup}",
+            },
+            qqFeedback: {
+                title: "欢迎来情报局官群坐坐",
+                body: "我们注意到你经常浏览我们的网站，欢迎加入情报局官方 QQ 群 {qqGroup}，和大家交流并向我们提供反馈！",
+                groupLabel: "官方 QQ 群号",
+                copyGroup: "复制群号",
+                copied: "已复制",
+                action: "加入 QQ 群",
+            },
+            bilibiliPromo: {
+                title: "关注 @Moesekai情报局",
+                body: "欢迎关注情报局 B 站官号，获取最新日服生放图文速报、活动剧情中字与站点最新动态！",
+                action: "前往 B 站官号",
+            },
+            discordPromo: {
+                title: "加入官方 Discord 社区",
+                body: "欢迎加入 StarMoe 官方 Discord 社区，与玩家和开发者实时交流、反馈建议、获取更新消息！",
+                action: "加入 Discord",
+            },
+            sponsorSupport: {
+                title: "你已经浏览了 {count} 次萌萌世界了！",
+                body: "如果 Moesekai 帮到了你，能不能给我们一点点赞助呢……你的支持能帮我们分担服务器与域名开销！",
+                freePromise: "哪怕不赞助也没有关系，只要你一直支持我们，我们都会持续免费运营下去！",
+                afdian: "爱发电",
+                action: "前往支持我们",
+            },
+        },
         starmoe: {
             unavailable: "StarMoe 登录暂不可用",
             signIn: "使用 StarMoe 通行证登录",

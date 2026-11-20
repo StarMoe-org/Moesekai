@@ -10,6 +10,7 @@ import FilterTabHandle from "./FilterTabHandle";
 import BackgroundPattern from "./BackgroundPattern";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
 import OAuthMigrationPrompt from "./OAuthMigrationPrompt";
+import CommunityPromoPrompt from "./CommunityPromoPrompt";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -473,6 +474,9 @@ function AppChrome({
 
                     {/* One-time prompt for visitors still on the retired in-browser Haruki OAuth2 binding. */}
                     <OAuthMigrationPrompt />
+
+                    {/* Visit counter and dismissible community/support popups. */}
+                    <CommunityPromoPrompt blocked={anyOverlayOpen || isFilterDrawerModal || isScreenshotMode} />
                 </>
             )}
         </main>

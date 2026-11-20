@@ -196,6 +196,41 @@ export const zhTWCommon = {
         migrateSignedIn: "前往連接 Haruki",
         later: "暫不遷移",
     },
+    communityPrompts: {
+        later: "稍後再說",
+        dontShowAgain: "今後不再顯示",
+        otherChannels: "其他官方頻道",
+        channels: {
+            bilibili: "B站 @Moesekai情报局",
+            discord: "官方 Discord",
+            qq: "QQ 群 {qqGroup}",
+        },
+        qqFeedback: {
+            title: "歡迎來情報局官方群坐坐",
+            body: "我們注意到你經常瀏覽我們的網站，歡迎加入情報局官方 QQ 群 {qqGroup}，和大家交流並向我們提供意見與回饋！",
+            groupLabel: "官方 QQ 群號",
+            copyGroup: "複製群號",
+            copied: "已複製",
+            action: "加入 QQ 群",
+        },
+        bilibiliPromo: {
+            title: "關注 @Moesekai情报局",
+            body: "歡迎關注情報局 B 站官方帳號，獲取最新日服生放圖文速報、活動劇情中字翻譯與網站最新動態！",
+            action: "前往 B 站主頁",
+        },
+        discordPromo: {
+            title: "加入官方 Discord 社群",
+            body: "歡迎加入 StarMoe 官方 Discord 社群，與玩家和開發者即時交流、提供建議並追蹤更新動態！",
+            action: "加入 Discord",
+        },
+        sponsorSupport: {
+            title: "你已經瀏覽了 {count} 次萌萌世界了！",
+            body: "如果 Moesekai 對你有幫助，能不能給我們一點點贊助呢……你的支持能幫忙分擔伺服器與網域開銷！",
+            freePromise: "就算不贊助也沒關係，只要你一直支持我們，我們都會持續免費營運下去！",
+            afdian: "愛發電",
+            action: "前往支持我們",
+        },
+    },
     starmoe: {
         unavailable: "StarMoe 登入暫時無法使用",
         signIn: "使用 StarMoe 通行證登入",

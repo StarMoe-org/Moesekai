@@ -200,6 +200,41 @@ export const enUSMessages = {
             migrateSignedIn: "Connect Haruki",
             later: "Not now",
         },
+        communityPrompts: {
+            later: "Maybe later",
+            dontShowAgain: "Don't show again",
+            otherChannels: "Other official channels",
+            channels: {
+                bilibili: "Bilibili @Moesekai情报局",
+                discord: "Official Discord",
+                qq: "QQ Group {qqGroup}",
+            },
+            qqFeedback: {
+                title: "Join our official QQ group",
+                body: "We noticed you visit our site often! Feel free to join our official QQ group {qqGroup} to chat and share feedback with us.",
+                groupLabel: "Official QQ Group ID",
+                copyGroup: "Copy ID",
+                copied: "Copied",
+                action: "Join QQ Group",
+            },
+            bilibiliPromo: {
+                title: "Follow @Moesekai情报局 on Bilibili",
+                body: "Follow our official Bilibili channel for JP broadcast summaries, translated event stories, and the latest site updates.",
+                action: "Visit Bilibili",
+            },
+            discordPromo: {
+                title: "Join the official Discord",
+                body: "Join the StarMoe official Discord community to chat with players and developers, share feedback, and follow updates!",
+                action: "Join Discord",
+            },
+            sponsorSupport: {
+                title: "You've visited Moesekai {count} times!",
+                body: "If Moesekai has been helpful to you, would you consider supporting us a little? Your support helps cover server and domain costs!",
+                freePromise: "Even if you don't donate, as long as you keep enjoying Moesekai, we will keep running it for free!",
+                afdian: "Afdian",
+                action: "Support Us",
+            },
+        },
         starmoe: {
             unavailable: "StarMoe sign-in isn't available right now",
             signIn: "Sign in with StarMoe Pass",
