@@ -16,7 +16,6 @@ services:
       - GITHUB_WORKFLOW_REF=${GITHUB_WORKFLOW_REF:-main}
       - TRANSLATOR_ACCOUNTS=${TRANSLATOR_ACCOUNTS:-}
       - JWT_SECRET=${JWT_SECRET:-dev-translate-secret}
-      - REDIS_URL=${REDIS_URL:-localhost:6379}
     volumes:
       - ./:/app
     ports:

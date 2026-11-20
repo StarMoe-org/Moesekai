@@ -80,7 +80,6 @@ AGPL-3.0
 ### 基础后端配置 (Go API Server)
 
 - **PORT**: 后端监听端口（默认 `8080`）
-- **REDIS_URL**: Redis 地址（默认 `localhost:6379`）
 - **MASTER_DATA_PATH**: 可选本地 masterdata 缓存路径（默认 `./data/master`）。仓库不再提交完整 masterdata；本地文件缺失时 Go API 会从远端数据源加载。
 - **STATIC_ARCHIVE_DIR**: Next.js 静态文件归档持久化目录（默认 `./data/static_archive`）。在全量 Docker 容器部署时，启动脚本会自动将新构建的 `.next/static` 产物增量归档保存至该目录，防止新版本部署导致未刷新的在线客户端加载旧 Chunk JS 出现 404 错误。
 - **STATIC_CACHE_MAX_DAYS**: 静态归档产物保留天数（默认 `30`）；设为 `0` 禁用过期清理，其他值必须是非负整数。
@@ -133,7 +132,6 @@ docker run -d \
   -p 8080:8080 \
   --name pjsk-backend \
   -e PORT=8080 \
-  -e REDIS_URL=localhost:6379 \
   -v "$(pwd)/data:/app/data" \
   pjsk-go-backend
 ```
