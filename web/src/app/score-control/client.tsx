@@ -6,7 +6,7 @@ import Link from "@/components/LocalizedLink";
 import { IMusicInfo, IMusicMeta } from "@/types/music";
 import type { ICardInfo } from "@/types/types";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
-import { saveToolState, getAccount, getOAuthAccessTokenForGameUser, isValidServer, SERVER_OPTIONS, type ServerType } from "@/lib/account";
+import { saveToolState, getAccount, getDeckUserDataAccess, isValidServer, SERVER_OPTIONS, type ServerType } from "@/lib/account";
 import AccountSelector from "@/components/AccountSelector";
 import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
@@ -591,22 +591,23 @@ export default function ScoreControlClient() {
                 setDbIsCalculating(false);
             };
 
-            const oauthAccessToken = getOAuthAccessTokenForGameUser(dbServer, dbUserId.trim());
-            w.postMessage({
-                args: {
-                    userId: dbUserId.trim(),
-                    server: dbServer,
-                    oauthAccessToken,
-                    eventId: parseInt(dbEventId),
-                    bonusTiers,
-                    minBonus: bonusMin,
-                    maxBonus: bonusMax,
-                    liveType: dbLiveType,
-                    musicId: parseInt(musicId),
-                    difficulty,
-                    supportCharacterId: dbSupportCharacterId || undefined,
-                    cardConfig: configForCalc,
-                },
+            void getDeckUserDataAccess(dbServer, dbUserId.trim()).then((access) => {
+                w.postMessage({
+                    args: {
+                        userId: dbUserId.trim(),
+                        server: dbServer,
+                        ...access,
+                        eventId: parseInt(dbEventId),
+                        bonusTiers,
+                        minBonus: bonusMin,
+                        maxBonus: bonusMax,
+                        liveType: dbLiveType,
+                        musicId: parseInt(musicId),
+                        difficulty,
+                        supportCharacterId: dbSupportCharacterId || undefined,
+                        cardConfig: configForCalc,
+                    },
+                });
             });
         }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -696,6 +697,8 @@ export default function ScoreControlClient() {
         // Start fake progress for the step
         startFakeProgress(setInfiniteStepProgress, infiniteStepTimerRef);
 
+        const userDataAccess = await getDeckUserDataAccess(dbServer, dbUserId.trim());
+
         // Process a single task and return result
         const processTask = (task: InfTask): Promise<void> => {
             return new Promise<void>((resolve) => {
@@ -764,12 +767,11 @@ export default function ScoreControlClient() {
                     totalChecked++;
                     resolve();
                 };
-                const oauthAccessToken = getOAuthAccessTokenForGameUser(dbServer, dbUserId.trim());
                 w.postMessage({
                     args: {
                         userId: dbUserId.trim(),
                         server: dbServer,
-                        oauthAccessToken,
+                        ...userDataAccess,
                         eventId: parseInt(dbEventId),
                         minBonus: bonusMin,
                         maxBonus: bonusMax,

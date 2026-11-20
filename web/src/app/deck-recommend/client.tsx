@@ -21,7 +21,7 @@ import ActiveRulesSummary from "@/components/deck-recommend/ActiveRulesSummary";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCharacterIconUrl } from "@/lib/assets";
 import {
-    getOAuthAccessTokenForGameUser,
+    getDeckUserDataAccess,
     SERVER_OPTIONS,
     type ServerType,
 } from "@/lib/account";
@@ -743,10 +743,12 @@ export default function DeckRecommendClient() {
         if (!trimmed) return;
         (async () => {
             try {
+                const access = await getDeckUserDataAccess(server, trimmed);
                 const provider = SnowyDataProvider.getCachedInstance(
                     trimmed,
                     server,
-                    getOAuthAccessTokenForGameUser(server, trimmed),
+                    access.oauthAccessToken ?? null,
+                    access.viaStarMoe,
                 );
                 const userData = await provider.getUserDataAll();
                 if (cancelled) return;
