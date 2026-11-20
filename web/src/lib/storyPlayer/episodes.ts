@@ -1,7 +1,7 @@
 /**
  * The episodes the story player page lists: what each server's masterdata names, kept to
- * those its story library holds (`ripper.lock.json`). An episode is named by its selector in
- * the library, as the story pages name it to the Live2D player:
+ * those the site publishes for it (`fetchPublishedEpisodes`). An episode is named by its
+ * selector, as the story pages name it to the Live2D player:
  *
  * - event `event:<event>/<episode>`
  * - main story `unit:<chapter's assetbundleName>/<episode>`
@@ -9,7 +9,7 @@
  * - special `special:<id>/<episode>`
  * - area talk `area:<area>/<actionSet>`
  *
- * Self introductions are not in the library and are not listed.
+ * Self introductions are not published and are not listed.
  */
 import { getAreaCategory, categoryToUrlParam, type IActionSet } from "@/app/story/area/areaCategory";
 import { selectCardStoryParts, type ICardStoryEpisode } from "@/app/story/card/cardStoryParts";
@@ -21,7 +21,7 @@ export const STORY_KINDS = ["event", "unit", "card", "special", "area"] as const
 
 export type StoryKind = (typeof STORY_KINDS)[number];
 
-/** The page's address for an episode of a server's library. */
+/** The page's address for an episode of a server. */
 export function storyPlayerHref(region: string, selector?: string | null): string {
     // the selector's `:` and `/` may stand in a query as they are: the address stays readable
     const query = [`server=${encodeURIComponent(region)}`, ...(selector ? [`ep=${encodeURIComponent(selector).replace(/%3A/g, ":").replace(/%2F/g, "/")}`] : [])];
@@ -124,37 +124,60 @@ function master<T>(region: SseWebRegion, path: string): Promise<T> {
     return fetchMasterData<T>(path, false, region);
 }
 
-interface RipperLock {
-    episodes?: unknown;
+/** What a server publishes of one kind: whether it has the episode of a selector. */
+export interface PublishedEpisodes {
+    has(selector: string): boolean;
 }
 
-const libraries = new Map<SseWebRegion, Promise<Set<string>>>();
+/** A directory listing of the site: the names of its subdirectories and of its files. */
+interface Listing {
+    directories?: unknown;
+    files?: unknown;
+}
+
+const published = new Map<string, Promise<PublishedEpisodes>>();
 
 /**
- * The selectors the server's story library holds (its `ripper.lock.json`), cards written
- * `former` / `latter`. Read once per page load.
+ * Of one kind, the episodes the server publishes, read from the listings of its `episode/`
+ * directory. Events, cards and special stories are known by the directory of each (an event
+ * or a card publishes its episodes together); the episodes of the main story's chapters and of
+ * the areas are read from the directory of each chapter or area. Read once per page load.
  */
-export function fetchLibraryEpisodes(region: SseWebRegion): Promise<Set<string>> {
-    const known = libraries.get(region);
+export function fetchPublishedEpisodes(region: SseWebRegion, kind: StoryKind): Promise<PublishedEpisodes> {
+    const key = `${region}:${kind}`;
+    const known = published.get(key);
     if (known) return known;
     const sources = sseWebSources(region);
-    if (!sources) return Promise.resolve(new Set());
-    const url = `${sources.library}ripper.lock.json`;
-    const loading = fetch(sources.proxy ? url.replace(/^https:\/\//, sources.proxy) : url)
-        .then(response => {
-            if (!response.ok) throw new Error(`ripper.lock.json: HTTP ${response.status}`);
-            return response.json() as Promise<RipperLock>;
-        })
-        .then(lock => {
-            if (!Array.isArray(lock.episodes)) throw new Error("ripper.lock.json: no episodes");
-            return new Set(lock.episodes.flatMap(episode => {
-                const selector = parseSelector(typeof episode === "string" ? episode : null);
-                return selector ? [selector] : [];
+    if (!sources) return Promise.resolve({ has: () => false });
+    const base = `${sources.site}${region}/episode/${kind}/`;
+    const listing = async (path: string): Promise<{ directories: string[]; files: string[] }> => {
+        const url = `${base}${path}`;
+        const response = await fetch(sources.proxy ? url.replace(/^https:\/\//, sources.proxy) : url, { cache: "no-cache" });
+        if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+        const read = await response.json() as Listing;
+        const names = (list: unknown) => Array.isArray(list)
+            ? list.flatMap(entry => typeof entry === "string" ? [entry] : typeof entry?.name === "string" ? [entry.name as string] : [])
+            : [];
+        return { directories: names(read.directories), files: names(read.files) };
+    };
+    const loading = (async (): Promise<PublishedEpisodes> => {
+        const keys = (await listing("")).directories;
+        if (kind === "unit" || kind === "area") {
+            const selectors = new Set<string>();
+            await Promise.all(keys.map(async key => {
+                for (const file of (await listing(`${encodeURIComponent(key)}/`)).files) {
+                    const episode = file.match(/^(.+)\.asset\.json$/)?.[1];
+                    if (episode) selectors.add(`${kind}:${key}/${episode}`);
+                }
             }));
-        });
-    libraries.set(region, loading);
+            return { has: selector => selectors.has(selector) };
+        }
+        const held = new Set(keys);
+        return { has: selector => held.has(selector.slice(kind.length + 1).split("/")[0]) };
+    })();
+    published.set(key, loading);
     // a failure is not kept: the next call tries again
-    loading.catch(() => libraries.delete(region));
+    loading.catch(() => published.delete(key));
     return loading;
 }
 
@@ -182,7 +205,7 @@ interface ISpecialStory {
 interface IArea { id: number; name: string; subName?: string }
 interface ICharacter2D { id: number; characterType: string; characterId: number }
 
-type Builder = (region: SseWebRegion, library: Set<string>) => Promise<{ groups: StoryGroup[]; byEvent?: StoryGroup[] }>;
+type Builder = (region: SseWebRegion, library: PublishedEpisodes) => Promise<{ groups: StoryGroup[]; byEvent?: StoryGroup[] }>;
 
 /** A group for an event, named and pictured as the event is. */
 function eventGroup(key: string, kind: StoryKind, event: IEventInfo | undefined, id: number): StoryGroup {
@@ -402,14 +425,14 @@ const BUILDERS: Record<StoryKind, Builder> = {
 const catalogs = new Map<string, Promise<StoryCatalog>>();
 
 /**
- * The episodes of one kind that the server's library holds, grouped as the story pages group
+ * The episodes of one kind that the server publishes, grouped as the story pages group
  * them. Kept for the page's life; a failed load is tried again on the next call.
  */
 export function fetchStoryCatalog(region: SseWebRegion, kind: StoryKind): Promise<StoryCatalog> {
     const key = `${region}:${kind}`;
     const known = catalogs.get(key);
     if (known) return known;
-    const loading = fetchLibraryEpisodes(region)
+    const loading = fetchPublishedEpisodes(region, kind)
         .then(library => BUILDERS[kind](region, library))
         .then(built => {
             const groups = built.groups.filter(group => group.episodes.length > 0);

@@ -19,9 +19,9 @@ export interface Live2DStoryPlayerHandle {
 }
 
 interface Live2DStoryPlayerProps {
-    /** The episode in the story library, e.g. `event:219/1`. */
+    /** The episode, e.g. `event:219/1`. */
     selector: string;
-    /** The game server whose library the episode is read from. */
+    /** The game server whose published stories the episode is read from. */
     region: string;
     /** The player is loaded (true) or was closed (false). */
     onActiveChange?: (active: boolean) => void;

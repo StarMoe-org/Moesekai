@@ -8,10 +8,10 @@ SekaiStoryExporter 编译成 WebAssembly 后在浏览器里实时播放一话剧
 |---|---|
 | `player.js` | 页面引入的 ES 模块，导出 `SsePlayer` |
 | `sim-worker.js` | 模拟 Worker：时间轴、Pass 1、混音 |
-| `render-worker.js` | 渲染 Worker：OffscreenCanvas 上的 Pass 2，UI 套件派生 |
+| `render-worker.js` | 渲染 Worker：OffscreenCanvas 上的 Pass 2 |
 | `audio-worklet.js` | 播放混音并充当时钟 |
-| `kit-worker.js` | 派生 UI 套件的 Worker：加载期间运行，开播前结束；派生结果存进浏览器的 Cache API，下次访问直接取 |
 | `common.js` | 各 Worker 共用的加载器 |
+| `movies.js` | 渲染 Worker 用 WebCodecs 解影片画面 |
 | `pkg/sse_web.js`、`pkg/sse_web_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入） |
 | `manifest.json` | 这份发布物的来历：版本、构建它的提交（`dirty` 为真表示工作区有未提交的改动）、工具链，以及其余每个文件的 SHA-256。把发布物拷到别处的一方可以据此校验 |
 
@@ -21,14 +21,14 @@ SekaiStoryExporter 编译成 WebAssembly 后在浏览器里实时播放一话剧
 
 ## 浏览器要求
 
-WebGPU、OffscreenCanvas、AudioWorklet（只在安全上下文即 HTTPS 下可用），以及能用 `importScripts` 的经典 Worker。不需要跨源隔离（不用 SharedArrayBuffer）。
+WebGPU、OffscreenCanvas、AudioWorklet（只在安全上下文即 HTTPS 下可用），以及能用 `importScripts` 的经典 Worker。不需要跨源隔离（不用 SharedArrayBuffer）。影片画面还要 WebCodecs（`VideoDecoder`）；没有它的浏览器（较旧的 Safari）照常播放，影片只有声音，画面是黑的。
 
 开播前可以先问浏览器缺什么，不加载任何文件：
 
 ```js
-const { ok, missing } = await SsePlayer.supported();
+const { ok, missing, movies } = await SsePlayer.supported();
 // missing 里的项：webgpu（没有 WebGPU）、webgpu-adapter（有 WebGPU 但拿不到适配器：被关闭或显卡被屏蔽）、
-// offscreen-canvas、audio-worklet、worker
+// offscreen-canvas、audio-worklet、worker；movies 为假时影片没有画面
 if (!ok) showTextOnly(missing);
 ```
 
@@ -45,18 +45,20 @@ const player = await SsePlayer.create({
   pkg: "pkg/",                              // 相对于 js 的 wasm 目录
   // core: "https://<站点>/live2dcubismcore.min.js",  // 可选：站点自己托管的 Cubism Core；不给则用 Live2D 的官方地址
   sources: {
-    library: "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/",
-    inapp: "https://assets.pjsk.moe/sekai-extra-assets/inapp/jp-7.0.0/",
+    site: "https://storage.pjsk.moe",       // 发布剧情数据的站点
+    region: "jp",                           // 区服：jp、en、tw、kr、cn
+    // version: "<发布版本>",                // 可选：固定一个发布版本；不给则用站点当前发布的版本
   },
   selector: "event:219/1",
   width: 1920, height: 1080,
   playerName: "「世界」的居民",              // 替换剧本里的玩家名（可选）
+  // areaDate: "041512",                     // 可选：区域对话发生的日期（MMDDHH），角色穿这一天的区域服装
   auto: true,                               // AUTO 或手动模式（可选，默认 AUTO）
   // experimentalAntialiasing: { method: "msaa", msaaSamples: 4 },  // 实验性（可选）：Live2D 抗锯齿，见下
   // highFps: true,                          // 实验性：高于 60 Hz 的显示器按其刷新率绘制，帧间插值（可选，默认关闭）
-  onProgress: ({ sim, render, kit }) => {}, // 加载进度（可选）；kit 是 UI 套件的派生，已缓存时没有
+  onProgress: ({ sim, render }) => {},     // 加载进度（可选）：各 Worker 最近的 {phase, done, total, bytes}
 });
-// create 在这一话需要的文件全部载入后才返回（ADR-0031：先载完再播）
+// create 在这一话打开、渲染器建好之后返回；播放用到的文件提前取，没到的文件让播放停下等它（stall）
 
 startButton.onclick = () => player.play();  // 浏览器要求音频由用户操作启动
 canvas.onclick = (e) => {                   // 点击：推进对话、选择选项等
@@ -68,12 +70,13 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 
 剧集与区服：
 
-- `selector` 与导出的写法相同，五类剧情都能播：活动 `event:<活动>/<话>`、主线 `unit:<章节的 assetbundleName>/<话>`（如 `unit:idol-story-chapter/1`）、卡面 `card:<卡>/former`（前篇）与 `card:<卡>/latter`（后篇，旧写法 `first` / `second` 仍可用）、特别 `special:<id>/<话>`、区域对话 `area:<区域>/<actionSet>`。剧情库的 `ripper.lock.json` 里有全部剧集的列表（`episodes`）。
-- 区服由 `sources.library` 决定：`…/sekai-story/ripper/<jp|cn|tw|kr|en>/`。界面贴图和字体来自 `sources.inapp`，目前只有日服（`jp-7.0.0`）和国服（`cn-6.4.0`）两份客户端解包；繁中、韩、英三个区服的剧情库可以配国服的解包播放，文字能正常显示，但界面和字体是国服客户端的，与这三个区服的游戏不一定相同。
+- `selector` 与导出的写法相同，五类剧情都能播：活动 `event:<活动>/<话>`、主线 `unit:<章节的 assetbundleName>/<话>`（如 `unit:idol-story-chapter/1`）、卡面 `card:<卡>/former`（前篇）与 `card:<卡>/latter`（后篇，旧写法 `first` / `second` 仍可用）、特别 `special:<id>/<话>`、区域对话 `area:<区域>/<actionSet>`。发布版本的 `episode/` 目录列出全部剧集。
+- 剧情来自站点上这个区服的发布版本 `<site>/<region>@<版本>/`；不给 `version` 时，播放器先读 `<site>/<region>/`，用其中的 `published_version`。
+- 界面的贴图、对话框、转场、字体和界面音效来自站点的客户端视图 `<site>/client/<客户端区服>@<版本>/`，用它当前发布的版本：jp 用 jp 的客户端，其他区服都用 cn 的。繁中、韩、英三个区服的文字能正常显示，但界面和字体是国服客户端的，与这三个区服的游戏不一定相同。
 
 字体：
 
-- 默认用客户端解包里的两个字体（正文一个、名字一个），由 UI 套件带出来。
+- 默认用客户端视图里的两个字体（正文一个、名字一个）。
 - `SsePlayer.create` 的 `fonts` 可以换成页面自己的字体：
 
   ```js
@@ -84,21 +87,21 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
   ```
 
   每一项是一个列表：第一个是主字体，后面的只用来补它缺的字（按字符逐个查，哪个字体先有就用哪个）。`weight` 给可变字体定字重；给了 `weight` 而文件没有字重轴会报错。文件要是 TTF 或 OTF（不支持 WOFF），跨源时主机要放行。
-- `body` 和 `name` 都给了的时候，UI 套件派生时**不读也不下载客户端的字体文件**（套件另存一份，目录名以 `-nofonts` 结尾）。只给其中一个时，另一个仍用客户端的。
+- `body` 和 `name` 都给了的时候，**不下载客户端的字体文件**。只给其中一个时，另一个仍用客户端的。
 - 换了字体就不是游戏的原样：字形不同；拉丁字母和数字的宽度不同时，个别句子的换行位置也会变。全角字符的宽度各家相同，纯日文、中文的换行不变。原生的导出不受影响，仍用客户端的字体。
 
-资源地址：`assets.pjsk.moe` 只对 `https://pjsk.moe` 放行跨域，其他来源（例如本地开发）要经代理，用 `sources.proxy` 指定，见 `dev/serve.py`。
+跨域：站点要对页面的来源放行跨域读取。不放行时（例如本地开发），经代理读取，用 `sources.proxy` 指定：它替换每个地址开头的 `https://`，见 `dev/serve.py`。
 
 ## 接口
 
 | 成员 | 说明 |
 |---|---|
-| `SsePlayer.supported()` | 静态方法：`{ok, missing}`，见“浏览器要求” |
+| `SsePlayer.supported()` | 静态方法：`{ok, missing, movies}`，见“浏览器要求” |
 | `play()` / `pause()` | 播放、暂停 |
 | `setAuto(bool)` | AUTO 与手动模式，随时可切换 |
 | `click(x, y)` | 在画布坐标（渲染尺寸的像素）处点击：点中选项按钮即作答，其余是对话、地点字幕、等待的点击；不带坐标时就是点击 |
 | `nodes` | 播放的全部节点，按顺序：点击会作用到的指令——对话、字幕（telop）、全屏文字、选项。每个是 `{kind, snippet, …}`：`kind` 为 `talk`（带 `speaker`、`body`）、`telop` 或 `text`（带 `body`）、`choices`（带 `options`）；`snippet` 是这条指令在剧本 `Snippets` 里的位置，站点用它对到自己的文本行 |
-| `unsupported` | 这一话里网页端不播放的内容：`{reason, name?}`，`reason` 为 `movie`（library 里没有视频文件的影片：黑底加名称，声音照常；有视频文件的影片正常播放，不在此列）、`music_video`（3D MV）、`input_name`、`selectable`、`unknown_effect_type`、`unknown_action`。站点可在开播前提示 |
+| `unsupported` | 这一话里网页端不播放的内容：`{reason, name?}`，`reason` 为 `movie`（发布物里没有的影片：黑底加名称；发布物里有的影片正常播放，不在此列）、`music_video`（3D MV）、`input_name`、`selectable`、`unknown_effect_type`、`unknown_action`。站点可在开播前提示 |
 | `node` | 当前所在的节点序号（从 0 起；播完最后一个后等于 `nodes.length`） |
 | `seek(k)` / `next()` / `previous()` | 跳到第 k 个节点、下一个、上一个的开头：画面与从头 AUTO 播放到那里时相同 |
 | `setVolume(v)` | 总音量 0–1 |
@@ -125,7 +128,7 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 | `kind` | 含义 | 建议的提示 |
 |---|---|---|
 | `unsupported` | 浏览器缺少必需的能力，`missing` 列出缺什么 | 说明不支持，保留文本阅读；不提供重试 |
-| `not-found` | library 里没有这一话 | 说明没有这一话；不提供重试 |
+| `not-found` | 发布版本里没有这一话 | 说明没有这一话；不提供重试 |
 | `network` | 某个文件取不到，`url` 是它的地址 | 提示检查网络，提供重试 |
 | `internal` | 其他错误 | 显示 `message`，提供重试 |
 
@@ -136,16 +139,17 @@ player.addEventListener("node", (e) => highlight(e.detail.node));
 
 ## 行为
 
-- 节奏、点击、选项、片尾都按游戏处理，与导出视频同源。行为上唯一的差别是选项：导出 1.5 秒后自动选第一个，网页等用户选。画面上背景用资源站的 WebP（有损），与导出的 PNG 不逐像素相同。
+- 节奏、点击、选项、片尾都按游戏处理，与导出视频同源。行为上唯一的差别是选项：导出 1.5 秒后自动选第一个，网页等用户选。
 - 一个页面同时只放一个播放器：两个 Worker 各持有这一话的文件（长的一话合计约 240 MB），桌面 Chrome 上 1080p 播放最重的一话时，页面进程约占 540 MB，另有 GPU 进程约 510 MB。离开或换一话时要 `destroy()`。
-- 浏览器里留下的缓存：Cache API 的 `sse-ui-kit-v1`（派生好的 UI 套件，每个客户端版本约 8 MB）。
+- 浏览器里留下的缓存：Cache API 的 `sse-files-v1`，按地址存取过的文件。发布版本里的文件不再改变，所以下次访问直接用；区服根目录的列表（当前发布的版本）每次都重新请求。
+- 一个页面开着期间，它读的发布版本可能被站点回收，那之后取不到的文件报 `network` 错误；站点可以提示用户刷新页面。
 - 用户把标签页切到后台时，声音和模拟照常进行（时钟在音频线程），画面在回到前台时追上。
-- 影片（片头、片尾等）在渲染 Worker 里用编入的解码器播放（ADR-0033）：加载时多取这一话的视频文件（多数 10 MB 左右，最大 58 MB），画面与导出不是逐像素相同。library 里没有视频文件的影片显示黑底和影片名。
-- 背景 prefab（粒子背景、影片背景）与导出相同：加载时多取 library 解包的背景 bundle（模拟 Worker 取对象图，多数 1 MB 左右，最大约 5.6 MB；渲染 Worker 取整个 bundle），影片背景的视频文件随影片一起取。library 里没有影片文件的影片背景，遮罩照样退去，背景是空的（黑色）。
+- 影片（片头、片尾等）是 H.264 的 MP4：渲染 Worker 用浏览器的 WebCodecs 解画面，声音取自影片的 AAC 音轨，与其他声音一起混音。打开一话时要取它的影片文件（影片的长度和声音在文件里），画面与导出不是逐像素相同。发布物里没有的影片显示黑底和影片名。
+- 背景 prefab（粒子背景、影片背景）与导出相同，读发布物的 scenario-prefab 资产；影片背景的视频文件随影片一起取。发布物里没有影片文件的影片背景，遮罩照样退去，背景是空的（黑色）。
 - `highFps`（实验性，默认关闭）：在高于 60 Hz 的显示器上每次刷新都绘制，两帧之间显示按正在听到的样本在帧内的位置插值的状态（位置、淡入淡出、Live2D 参数）；文字、特效粒子与转场仍是 60 fps 的阶梯（ADR-0037）。绘制次数随刷新率增加，渲染跟不上时只画最新的一次请求；等待点击或播放结束时（没有下一帧）不重画。音频时钟在 Windows 上每 10 ms 左右才走一次，两次之间按页面时钟往前推，否则 144 Hz 的显示器上只有约 100 fps（ADR-0037）。Safari 默认把 `requestAnimationFrame` 限在 60 Hz（Feature Flags 的「Prefer Page Rendering Updates near 60fps」），那里仍是 60 fps。
 
 ## 许可
 
 见同目录的 `LICENSE`（AGPL-3.0-or-later）与 `LICENSE-EXCEPTION`；wasm 的许可与仓库相同（ADR-0032）。
 
-wasm 里编入了第三方代码 [pl_mpeg](https://github.com/phoboslab/pl_mpeg)（MPEG-1 解码器，Dominic Szablewski，MIT 许可），有一处改动，见仓库的 `crates/sse-mpeg/c/README.md`。其余第三方 Rust 依赖的许可声明还没有随发布物提供。
+第三方 Rust 依赖的许可声明还没有随发布物提供。

@@ -1,6 +1,6 @@
 # 剧情阅读页的 Live2D 播放
 
-剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读自己的剧情库。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web）。发布物原样放在本仓库的 `web/vendor/sse-web/`，站点另有加载它的组件。
+剧情阅读页可以在浏览器里实时播放这一话的 Live2D 演出：活动、主线、卡面、特别剧情和区域对话五类都有，五个资源服务器（日、国、繁中、韩、英）各读站点发布的自己那一区的剧情。播放器是 SekaiStoryExporter 编译成 WebAssembly 的发布物（sse-web）。发布物原样放在本仓库的 `web/vendor/sse-web/`，站点另有加载它的组件。
 
 同一个播放器还用在「工具」里的剧情浏览器（`/story-player`，舞台与剧本并排，可以在页面里换服务器和剧集），见 [story-player.md](story-player.md)。
 
@@ -28,11 +28,9 @@ bun run --cwd web copy:wasm
 | 变量 | 含义 | 默认 |
 |---|---|---|
 | `NEXT_PUBLIC_SSE_WEB_CORE_URL` | 站点自己托管的 `live2dcubismcore.min.js`（Cubism Core for Web）。发布物不含 Cubism Core；不设时播放器从 Live2D 的官方地址加载，那个地址不带版本号，提供的是 Live2D 当前放在那里的版本 | `https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js`（写在播放器里） |
-| `NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE` | 各区服剧情库的上级目录，剧情库是 `<它>/<jp\|cn\|tw\|kr\|en>/` | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
-| `NEXT_PUBLIC_SSE_WEB_INAPP_BASE` | 各份客户端解包的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/inapp/` |
-| `NEXT_PUBLIC_SSE_WEB_INAPPS` | 每个区服用哪份客户端解包（界面贴图和字体取自它），写成 `区服=解包` 用逗号分隔；没列出的区服不提供 Live2D 播放 | `jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0` |
+| `NEXT_PUBLIC_SSE_WEB_SITE` | 发布剧情的站点（以 `/` 结尾）：各区服的剧情在 `<它><jp\|cn\|tw\|kr\|en>/`，日服和国服的客户端视图在 `<它>client/<jp\|cn>/`。播放器读每一区当前发布的版本 | `https://storage.pjsk.moe/` |
 | `NEXT_PUBLIC_SSE_WEB_FONT_BASE` | 另一个放开源字体的目录（见下「字体」） | 仓库里的 `public/story-fonts/` |
-| `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS` | 设为 `1` 时日服改用客户端解包里的字体（商业字体，见下「字体」） | 不设 |
+| `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS` | 设为 `1` 时日服改用日服客户端视图里的字体（商业字体，见下「字体」） | 不设 |
 
 `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` 只用于本地开发。地址必须是规范的 https（本机回环地址可以用 http），写错会让构建失败。
 
@@ -40,8 +38,8 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 ## 行为
 
-- 读的是设置里所选资源服务器的剧情库，画面里的文字是那个服务器的原文。目前只有日服和国服的客户端解包；繁中、韩、英三个服务器的剧情库配国服的解包播放，文字能正常显示，但对话框和字体是国服客户端的，播放时页面上有一行说明。等这三个服务器的客户端解包收录后，改 `NEXT_PUBLIC_SSE_WEB_INAPPS` 即可。
-- 各类剧情在剧情库里的名字：活动 `event:<活动>/<话>`，主线 `unit:<章节的 assetbundleName>/<话>`，卡面 `card:<卡>/former`（前篇）、`card:<卡>/latter`（后篇），特别 `special:<id>/<话>`，区域对话 `area:<区域>/<actionSet>`。角色自我介绍不在剧情库里，没有入口。剧情库里没有的一话（例如资源还没上线）点了以后提示「这一话还没有 Live2D 数据」。
+- 读的是设置里所选资源服务器在站点上当前发布的版本，画面里的文字是那个服务器的原文。站点只发布日服和国服的客户端视图；繁中、韩、英三个服务器的剧情配国服的客户端视图播放，文字能正常显示，但对话框和字体是国服客户端的，播放时页面上有一行说明。
+- 各类剧情的选择器：活动 `event:<活动>/<话>`，主线 `unit:<章节的 assetbundleName>/<话>`，卡面 `card:<卡>/former`（前篇）、`card:<卡>/latter`（后篇），特别 `special:<id>/<话>`，区域对话 `area:<区域>/<actionSet>`。角色自我介绍没有入口。站点上没有的一话（例如资源还没上线）点了以后提示「这一话还没有 Live2D 数据」。
 - 一个页面上可以有几个入口（卡面的前后篇、特别剧情的各话），同一时间只有一个在播：开始另一个时，前一个自动关闭。剧情浏览器也遵守这条。
 - 说明卡片上有「在剧情浏览器中打开」，跳到 `/story-player?server=<所选资源服务器>&ep=<这一话的选择器>`。
 - 点「加载并播放」之前不下载任何东西。之后先下载这一话的全部资源（长的一话两百多 MB）再开始。
@@ -56,7 +54,7 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 - 播放以「节点」为单位，位置显示为第几句：节点是点击会作用到的内容——对话、字幕（telop）、全屏文字、选项。没有可拖动的时间条；可以上一个、下一个，或点文本列表里对应的那一行跳过去（这四种行都能点）。播放时列表高亮当前这一行并跟着滚动（可关），滚动时让开悬浮窗。
 - 节点和列表的行靠剧本里的位置对上：播放器给每个节点带上它在剧本 `Snippets` 里的序号，`storyLoader` 给每一行记同一个序号（`snippetIndex`）。列表里没有对应行的节点不影响其他行。
 - AUTO 与手动两种模式；手动模式下点画面推进。选项要在画面上点。
-- 浏览器不支持（需要 WebGPU 等）、剧情库里没有这一话、网络出错时各有提示，文本阅读不受影响。
+- 浏览器不支持（需要 WebGPU 等）、站点上没有这一话、网络出错时各有提示，文本阅读不受影响。
 - 与原有的「自动播放」（只播语音）互斥：打开 Live2D 播放时自动播放停止并隐藏。
 
 ## 界面
@@ -76,7 +74,7 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 - 正文和名字用 **M PLUS 1**（可变字重，正文 460、名字 820，是与客户端两个字体实测笔画粗细相同的值），M PLUS 1 缺的字用**思源黑体 JP** 补（正文补 Medium，名字补 Heavy）。
 - 播放器这时不读也不下载客户端的字体文件。
-- 其他区服不变：它们用的国服解包里本来就是思源黑体。
+- 其他区服不变：它们用的国服客户端视图里本来就是思源黑体。
 - 播放时页面上有一行说明：字体不是游戏内的，字形和个别句子的换行略有不同（全角字符宽度相同，差别来自拉丁字母和数字的宽度）。
 
 三个字体文件放在仓库的 `web/public/story-fonts/`，是上游的原文件、用上游的文件名，许可文本（都是 SIL OFL 1.1）在旁边，`SOURCE.json` 记着各自的来源提交和 SHA-256（`test:sse-web-config` 会核对）：
@@ -89,7 +87,7 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 用哪套字体按下面的顺序定：
 
-1. 设了 `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS=1`：用客户端解包里的字体（从资源站下载）。
+1. 设了 `NEXT_PUBLIC_SSE_WEB_CLIENT_FONTS=1`：用日服客户端视图里的字体（从站点下载）。
 2. 设了 `NEXT_PUBLIC_SSE_WEB_FONT_BASE`：用那个目录里的三个开源字体（文件名同上，许可文本放在旁边）。
 3. 否则用仓库里的开源字体。构建时 `next.config.ts` 检查 `public/story-fonts/` 里三个文件是否齐全，缺了才退回客户端的字体。
 
@@ -114,7 +112,7 @@ Cubism Core 由 Worker 用 `importScripts` 加载，可以跨源。它是 Live2D
 
 ## 本地联调
 
-剧情库所在的主机只允许 `https://pjsk.moe` 跨源读取，本地开发要经过一个中转。在 SekaiStoryExporter 仓库里跑 `python3 crates/sse-web/dev/serve.py`，然后在 `web/.env.local` 里：
+站点允许任何来源跨源读取，本地开发不需要设置。要经中转读站点时（例如对照另一份站点数据），在 SekaiStoryExporter 仓库里跑 `python3 crates/sse-web/dev/serve.py`，然后在 `web/.env.local` 里：
 
 ```
 NEXT_PUBLIC_SSE_WEB_ASSET_PROXY=http://127.0.0.1:8787/remote/
