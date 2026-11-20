@@ -990,7 +990,7 @@ function AssetViewerContent() {
                                 )}
 
                                 {/* Scrollable Directory/File Listing */}
-                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain">
+                                <div ref={listScrollRef} className="custom-scrollbar flex-1 lg:overflow-y-auto lg:overscroll-y-contain">
                                     {currentItemCount === 0 ? (
                                         <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
                                     ) : viewMode === "list" ? (
