@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 const AUTO_LOAD_MORE_STORAGE_KEY = "auto-load-more";
 const DEFAULT_ROOT_MARGIN = "320px 0px";
+const DEFAULT_MARGIN_PX = 320;
 const listeners = new Set<() => void>();
 
 function readAutoLoadMorePreference(): boolean {
@@ -58,19 +59,37 @@ export function useAutoLoadMoreEnabled(): boolean {
     return useSyncExternalStore(subscribeAutoLoadMore, readAutoLoadMorePreference, () => true);
 }
 
+/**
+ * Determine whether an element is an active constrained scroll container rather
+ * than a full-height mobile wrapper whose scroll is handled by `window`.
+ */
+export function isScrollContainerActive(element: HTMLElement | null): boolean {
+    if (!element || typeof window === "undefined") return false;
+    const overflowY = window.getComputedStyle(element).overflowY;
+    if (overflowY !== "auto" && overflowY !== "scroll" && overflowY !== "overlay") {
+        return false;
+    }
+    if (element.scrollHeight <= element.clientHeight + 2) {
+        return false;
+    }
+    return element.clientHeight < window.innerHeight - 1 || element.scrollHeight > element.clientHeight + 32;
+}
+
 function findScrollContainer(element: HTMLElement | null): HTMLElement | null {
     let current = element?.parentElement ?? null;
     while (current && current !== document.body && current !== document.documentElement) {
-        const overflowY = window.getComputedStyle(current).overflowY;
-        if (
-            (overflowY === "auto" || overflowY === "scroll" || overflowY === "overlay") &&
-            current.scrollHeight > current.clientHeight + 1
-        ) {
+        if (isScrollContainerActive(current)) {
             return current;
         }
         current = current.parentElement;
     }
     return null;
+}
+
+function parseTopBottomMarginPx(rootMargin: string): number {
+    const firstToken = rootMargin.trim().split(/\s+/)[0] ?? "";
+    const parsed = Number.parseFloat(firstToken);
+    return Number.isFinite(parsed) ? parsed : DEFAULT_MARGIN_PX;
 }
 
 export interface UseAutoLoadMoreOptions {
@@ -84,6 +103,8 @@ export interface UseAutoLoadMoreOptions {
     rootMargin?: string;
     /** Optional explicit scroll container ref (otherwise auto-detected). */
     scrollRootRef?: React.RefObject<HTMLElement | null>;
+    /** Re-arms and re-evaluates when switching directories, views, or filters even if `itemCount` stays equal. */
+    resetKey?: string | number;
 }
 
 /**
@@ -97,6 +118,7 @@ export function useAutoLoadMore<T extends HTMLElement = HTMLDivElement>({
     enabled,
     rootMargin = DEFAULT_ROOT_MARGIN,
     scrollRootRef,
+    resetKey,
 }: UseAutoLoadMoreOptions): React.RefCallback<T> {
     const [targetNode, setTargetNode] = useState<T | null>(null);
     const globalEnabled = useAutoLoadMoreEnabled();
@@ -110,22 +132,46 @@ export function useAutoLoadMore<T extends HTMLElement = HTMLDivElement>({
     const triggeredCountRef = useRef<number | null>(null);
 
     useEffect(() => {
+        triggeredCountRef.current = null;
         if (!isEnabled || !hasMore || itemCount <= 0 || !targetNode) {
-            triggeredCountRef.current = null;
             return;
         }
         if (typeof IntersectionObserver === "undefined") return;
 
         let cancelled = false;
         let observer: IntersectionObserver | null = null;
+        let removeListeners: (() => void) | null = null;
+        let scrollCheckRaf: number | null = null;
+
+        const triggerLoadMore = () => {
+            if (cancelled || triggeredCountRef.current === itemCount) return;
+            triggeredCountRef.current = itemCount;
+            onLoadMoreRef.current();
+        };
+
+        const marginPx = parseTopBottomMarginPx(rootMargin);
 
         // Defer one frame so newly rendered items commit their layout before measuring intersection.
         const rafId = window.requestAnimationFrame(() => {
             if (cancelled) return;
-            const explicitRoot = scrollRootRef?.current;
-            const root = explicitRoot && explicitRoot.scrollHeight > explicitRoot.clientHeight + 1
+            const explicitRoot = scrollRootRef?.current ?? null;
+            const root = explicitRoot && isScrollContainerActive(explicitRoot)
                 ? explicitRoot
                 : findScrollContainer(targetNode);
+
+            const checkNearBottom = () => {
+                if (cancelled || triggeredCountRef.current === itemCount) return;
+                const rect = targetNode.getBoundingClientRect();
+                if (rect.width === 0 && rect.height === 0) return;
+                if (root) {
+                    const rootRect = root.getBoundingClientRect();
+                    if (rect.top <= rootRect.bottom + marginPx && rect.bottom >= rootRect.top - marginPx) {
+                        triggerLoadMore();
+                    }
+                } else if (rect.top <= window.innerHeight + marginPx && rect.bottom >= -marginPx) {
+                    triggerLoadMore();
+                }
+            };
 
             observer = new IntersectionObserver(
                 (entries) => {
@@ -134,21 +180,40 @@ export function useAutoLoadMore<T extends HTMLElement = HTMLDivElement>({
                         triggeredCountRef.current = null;
                         return;
                     }
-                    if (triggeredCountRef.current === itemCount) return;
-                    triggeredCountRef.current = itemCount;
-                    onLoadMoreRef.current();
+                    triggerLoadMore();
                 },
                 { root, rootMargin },
             );
             observer.observe(targetNode);
+
+            // Passive scroll fallback in case nested overflow containers skip an intersection edge.
+            const handleScrollOrResize = () => {
+                if (scrollCheckRaf !== null) return;
+                scrollCheckRaf = window.requestAnimationFrame(() => {
+                    scrollCheckRaf = null;
+                    checkNearBottom();
+                });
+            };
+            const scrollTarget = root ?? window;
+            scrollTarget.addEventListener("scroll", handleScrollOrResize, { passive: true });
+            window.addEventListener("resize", handleScrollOrResize, { passive: true });
+            removeListeners = () => {
+                scrollTarget.removeEventListener("scroll", handleScrollOrResize);
+                window.removeEventListener("resize", handleScrollOrResize);
+            };
+            checkNearBottom();
         });
 
         return () => {
             cancelled = true;
             window.cancelAnimationFrame(rafId);
+            if (scrollCheckRaf !== null) {
+                window.cancelAnimationFrame(scrollCheckRaf);
+            }
             observer?.disconnect();
+            removeListeners?.();
         };
-    }, [isEnabled, hasMore, itemCount, targetNode, rootMargin, scrollRootRef]);
+    }, [isEnabled, hasMore, itemCount, targetNode, rootMargin, scrollRootRef, resetKey]);
 
     return setTargetNode;
 }

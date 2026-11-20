@@ -9,6 +9,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { usePageServer } from "@/hooks/usePageServer";
 import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
+import { useExplorerScrollRestore } from "@/hooks/useExplorerScrollRestore";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
@@ -270,7 +271,6 @@ function AssetViewerContent() {
     const [sortBy, setSortBy] = useState<"name" | "size">("name");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
     const [viewMode, setViewMode] = useState<"grid" | "list">("list");
-    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
     // Load view mode preference and responsive sidebar default on mount
     useEffect(() => {
@@ -314,18 +314,19 @@ function AssetViewerContent() {
     const [previewTextError, setPreviewTextError] = useState<string | null>(null);
     const [copyFeedback, setCopyFeedback] = useState(false);
 
-    // Scroll position per region and directory inside the explorer listing pane
+    // Scroll position & loaded item count per region, view, and directory
     const listScrollRef = useRef<HTMLDivElement | null>(null);
-    const scrollByViewRef = useRef<Map<string, number>>(new Map());
     const viewKey = `${server}:${view}:${prefix}`;
-
-    // Reset visibleCount whenever the listing context changes
-    const filterKey = `${viewKey}:${deferredQuery}:${filterType}:${sortBy}:${sortOrder}`;
-    const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-    if (filterKey !== prevFilterKey) {
-        setPrevFilterKey(filterKey);
-        setVisibleCount(PAGE_SIZE);
-    }
+    const filterSignature = `${deferredQuery}:${filterType}:${sortBy}:${sortOrder}`;
+    const filterKey = `${viewKey}:${filterSignature}`;
+    const { visibleCount, loadMore, rememberScroll } = useExplorerScrollRestore({
+        storageKey: "asset-viewer",
+        viewKey,
+        filterSignature,
+        pageSize: PAGE_SIZE,
+        listScrollRef,
+        isReady: !isLoading && Boolean(tree),
+    });
 
     // Fetch the tree of the selected region and view (cached per region and view)
     useEffect(() => {
@@ -348,13 +349,6 @@ function AssetViewerContent() {
             active = false;
         };
     }, [ready, server, view, reloadToken]);
-
-    // Restore the scroll position of the listing pane when navigating
-    useEffect(() => {
-        if (listScrollRef.current) {
-            listScrollRef.current.scrollTop = scrollByViewRef.current.get(viewKey) ?? 0;
-        }
-    }, [viewKey]);
 
     // The URL of the current history entry, as the state below names it.
     const stateUrl = useCallback(() => {
@@ -401,12 +395,6 @@ function AssetViewerContent() {
         window.addEventListener("popstate", handlePopState);
         return () => window.removeEventListener("popstate", handlePopState);
     }, [stateUrl]);
-
-    const rememberScroll = () => {
-        if (listScrollRef.current) {
-            scrollByViewRef.current.set(viewKey, listScrollRef.current.scrollTop);
-        }
-    };
 
     const navigateTo = (path: string) => {
         const normalized = path.replace(/^\/+|\/+$/g, "");
@@ -511,8 +499,10 @@ function AssetViewerContent() {
     const loadMoreRef = useAutoLoadMore({
         hasMore,
         itemCount: shownItemCount,
-        onLoadMore: () => setVisibleCount(count => count + PAGE_SIZE),
+        onLoadMore: loadMore,
         scrollRootRef: listScrollRef,
+        rootMargin: "600px 0px",
+        resetKey: filterKey,
     });
 
     // Breadcrumbs list
@@ -1000,7 +990,7 @@ function AssetViewerContent() {
                                 )}
 
                                 {/* Scrollable Directory/File Listing */}
-                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto">
+                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain">
                                     {currentItemCount === 0 ? (
                                         <EmptyState icon={mdFolderOpen} title={t("page.assetViewer.emptyFolder")} />
                                     ) : viewMode === "list" ? (
@@ -1278,7 +1268,7 @@ function AssetViewerContent() {
                                                 <Button
                                                     variant="tonal"
                                                     size="m"
-                                                    onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+                                                    onClick={loadMore}
                                                 >
                                                     {t("page.assetViewer.loadMore")}
                                                     <span className="type-label-l opacity-80">
