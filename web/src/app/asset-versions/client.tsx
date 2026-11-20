@@ -12,6 +12,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { usePageServer } from "@/hooks/usePageServer";
 import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
+import { useExplorerScrollRestore } from "@/hooks/useExplorerScrollRestore";
 import Modal from "@/components/common/Modal";
 import ExternalLink from "@/components/ExternalLink";
 import AssetTosModal from "@/components/common/AssetTosModal";
@@ -209,7 +210,6 @@ function AssetVersionsContent() {
     const deferredQuery = useDeferredValue(searchQuery.trim());
     const [sortBy, setSortBy] = useState<"size" | "path">("path");
     const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-    const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
 
     const [showTos, setShowTos] = useState(false);
 
@@ -382,18 +382,24 @@ function AssetVersionsContent() {
         [changes, origin, server],
     );
 
-    // Reset visibleCount when query, filters, directory, or version changes
-    const filterKey = `${server}:${version}:${prefix}:${deferredQuery}:${activeCause}:${kindFilter}:${mediaFilter}:${sortBy}:${sortOrder}`;
-    const [prevFilterKey, setPrevFilterKey] = useState(filterKey);
-    if (filterKey !== prevFilterKey) {
-        setPrevFilterKey(filterKey);
-        setVisibleCount(PAGE_SIZE);
-    }
+    // Scroll position & loaded item count per server, version, and directory
+    const viewKey = `${server}:${version}:${prefix}`;
+    const filterSignature = `${deferredQuery}:${activeCause}:${kindFilter}:${mediaFilter}:${sortBy}:${sortOrder}`;
+    const filterKey = `${viewKey}:${filterSignature}`;
+    const { visibleCount, loadMore, rememberScroll } = useExplorerScrollRestore({
+        storageKey: "asset-versions",
+        viewKey,
+        filterSignature,
+        pageSize: PAGE_SIZE,
+        listScrollRef,
+        isReady: !isVersionsLoading && !isDiffLoading && Boolean(changes),
+    });
 
     // ==================== Navigation handlers ====================
 
     const selectServer = (srv: (typeof servers)[number]) => {
         if (srv === server) return;
+        rememberScroll();
         setVersion("");
         setPrefix("");
         setHistoryStack([""]);
@@ -403,36 +409,36 @@ function AssetVersionsContent() {
 
     const selectVersion = (nextVersion: string) => {
         if (nextVersion === version) return;
+        rememberScroll();
         setVersion(nextVersion);
         setPrefix("");
         setHistoryStack([""]);
         setHistoryIndex(0);
-        if (listScrollRef.current) listScrollRef.current.scrollTop = 0;
     };
 
     const navigateTo = (path: string) => {
         const normalized = path.replace(/^\/+|\/+$/g, "");
         if (normalized === prefix) return;
+        rememberScroll();
         setPrefix(normalized);
         setHistoryStack(prev => [...prev.slice(0, historyIndex + 1), normalized]);
         setHistoryIndex(prev => prev + 1);
-        if (listScrollRef.current) listScrollRef.current.scrollTop = 0;
     };
 
     const handleHistoryBack = () => {
         if (historyIndex <= 0) return;
+        rememberScroll();
         const nextIdx = historyIndex - 1;
         setHistoryIndex(nextIdx);
         setPrefix(historyStack[nextIdx]);
-        if (listScrollRef.current) listScrollRef.current.scrollTop = 0;
     };
 
     const handleHistoryForward = () => {
         if (historyIndex >= historyStack.length - 1) return;
+        rememberScroll();
         const nextIdx = historyIndex + 1;
         setHistoryIndex(nextIdx);
         setPrefix(historyStack[nextIdx]);
-        if (listScrollRef.current) listScrollRef.current.scrollTop = 0;
     };
 
     const handleGoUp = () => {
@@ -519,8 +525,10 @@ function AssetVersionsContent() {
     const loadMoreRef = useAutoLoadMore({
         hasMore,
         itemCount: shownItemCount,
-        onLoadMore: () => setVisibleCount(count => count + PAGE_SIZE),
+        onLoadMore: loadMore,
         scrollRootRef: listScrollRef,
+        rootMargin: "600px 0px",
+        resetKey: filterKey,
     });
 
     const breadcrumbs = useMemo(() => {
@@ -1164,7 +1172,7 @@ function AssetVersionsContent() {
                                 )}
 
                                 {/* Listing Area */}
-                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto">
+                                <div ref={listScrollRef} className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain">
                                     {currentItemCount === 0 ? (
                                         <EmptyState icon={mdFolderOff} title={t("page.assetVersions.emptyDiff")} />
                                     ) : viewMode === "list" ? (
@@ -1460,7 +1468,7 @@ function AssetVersionsContent() {
                                                 <Button
                                                     variant="tonal"
                                                     size="m"
-                                                    onClick={() => setVisibleCount(count => count + PAGE_SIZE)}
+                                                    onClick={loadMore}
                                                 >
                                                     {t("page.assetViewer.loadMore")}
                                                     <span className="type-label-l opacity-80">

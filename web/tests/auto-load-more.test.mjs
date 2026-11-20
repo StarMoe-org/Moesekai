@@ -15,6 +15,7 @@ for (const key of ["window", "document", "navigator", "HTMLElement", "Node", "Ev
     Object.defineProperty(globalThis, key, { configurable: true, value: key === "window" ? window : window[key] });
 }
 Object.defineProperty(globalThis, "localStorage", { configurable: true, value: window.localStorage });
+Object.defineProperty(globalThis, "sessionStorage", { configurable: true, value: window.sessionStorage });
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
 let frameId = 0;
@@ -24,6 +25,13 @@ globalThis.requestAnimationFrame = window.requestAnimationFrame = (callback) => 
     return frameId;
 };
 globalThis.cancelAnimationFrame = window.cancelAnimationFrame = (id) => frames.delete(id);
+
+const scrollCalls = [];
+window.scrollTo = (arg1, arg2) => {
+    const top = typeof arg1 === "object" && arg1 !== null ? (arg1.top ?? 0) : (arg2 ?? 0);
+    window.scrollY = top;
+    scrollCalls.push(top);
+};
 
 const observers = [];
 class MockIntersectionObserver {
@@ -90,7 +98,8 @@ function loadSource(relativePath) {
     return compiledModule.exports;
 }
 
-const { useAutoLoadMore, setAutoLoadMoreEnabled, getAutoLoadMoreEnabled } = loadSource("src/hooks/useAutoLoadMore.ts");
+const { useAutoLoadMore, setAutoLoadMoreEnabled, getAutoLoadMoreEnabled, isScrollContainerActive } = loadSource("src/hooks/useAutoLoadMore.ts");
+const { useExplorerScrollRestore, resetExplorerSavedStateCache } = loadSource("src/hooks/useExplorerScrollRestore.ts");
 const { LoadMore } = loadSource("src/components/md3/Patterns.tsx");
 
 const host = document.getElementById("root");
@@ -123,7 +132,12 @@ afterEach(async () => {
     root = undefined;
     frames.clear();
     observers.length = 0;
+    scrollCalls.length = 0;
+    window.scrollY = 0;
+    window.innerHeight = 768;
     window.localStorage.clear();
+    window.sessionStorage.clear();
+    resetExplorerSavedStateCache();
     setAutoLoadMoreEnabled(true);
 });
 
@@ -228,6 +242,72 @@ test("useAutoLoadMore picks the nearest scrolling container and skips non-scroll
     assert.equal(calls, 1);
 });
 
+test("isScrollContainerActive ignores expanded mobile containers with minor subpixel overflow", () => {
+    const mobileExpanded = document.createElement("div");
+    mobileExpanded.style.overflowY = "auto";
+    Object.defineProperty(mobileExpanded, "clientHeight", { configurable: true, value: 2400 });
+    Object.defineProperty(mobileExpanded, "scrollHeight", { configurable: true, value: 2410 });
+    assert.equal(isScrollContainerActive(mobileExpanded), false);
+
+    const desktopSplitPane = document.createElement("div");
+    desktopSplitPane.style.overflowY = "auto";
+    Object.defineProperty(desktopSplitPane, "clientHeight", { configurable: true, value: 520 });
+    Object.defineProperty(desktopSplitPane, "scrollHeight", { configurable: true, value: 9000 });
+    assert.equal(isScrollContainerActive(desktopSplitPane), true);
+});
+
+test("useAutoLoadMore resets trigger guard when resetKey changes across directories with equal itemCount", async () => {
+    let calls = 0;
+    function DirHarness({ dir }) {
+        const ref = useAutoLoadMore({
+            hasMore: true,
+            itemCount: 200,
+            resetKey: dir,
+            onLoadMore: () => { calls++; },
+        });
+        return h("div", { ref }, "sentinel");
+    }
+
+    await render(h(DirHarness, { dir: "dir-a" }));
+    assert.equal(activeObservers().length, 1);
+    await act(async () => activeObservers()[0].trigger(true));
+    assert.equal(calls, 1);
+
+    // Switching to another directory that also has 200 initial items must re-arm triggering
+    await render(h(DirHarness, { dir: "dir-b" }));
+    assert.equal(activeObservers().length, 1);
+    await act(async () => activeObservers()[0].trigger(true));
+    assert.equal(calls, 2);
+});
+
+test("useAutoLoadMore triggers via passive scroll fallback inside constrained scroll container", async () => {
+    let calls = 0;
+    function FallbackScrollHarness() {
+        const scrollRef = React.useRef(null);
+        const sentinelRef = useAutoLoadMore({
+            hasMore: true,
+            itemCount: 200,
+            rootMargin: "600px 0px",
+            scrollRootRef: scrollRef,
+            onLoadMore: () => { calls++; },
+        });
+        React.useLayoutEffect(() => {
+            if (!scrollRef.current) return;
+            Object.defineProperty(scrollRef.current, "clientHeight", { configurable: true, value: 500 });
+            Object.defineProperty(scrollRef.current, "scrollHeight", { configurable: true, value: 4000 });
+            scrollRef.current.getBoundingClientRect = () => ({ top: 100, bottom: 600, left: 0, right: 800, width: 800, height: 500 });
+            const sentinelEl = scrollRef.current.firstElementChild;
+            sentinelEl.getBoundingClientRect = () => ({ top: 900, bottom: 940, left: 0, right: 800, width: 800, height: 40 });
+        }, []);
+
+        return h("div", { ref: scrollRef, style: { overflowY: "auto" } }, h("div", { ref: sentinelRef }, "sentinel"));
+    }
+
+    await render(h(FallbackScrollHarness));
+    // 900 <= 600 + 600 triggers immediately via layout check without waiting on IntersectionObserver
+    assert.equal(calls, 1);
+});
+
 test("useAutoLoadMore does not trigger when shown is 0 or already all loaded", async () => {
     let calls = 0;
     function GuardHarness({ count, total }) {
@@ -245,4 +325,117 @@ test("useAutoLoadMore does not trigger when shown is 0 or already all loaded", a
     await render(h(GuardHarness, { count: 50, total: 50 }));
     assert.equal(activeObservers().length, 0);
     assert.equal(calls, 0);
+});
+
+test("useExplorerScrollRestore preserves visibleCount and listScrollTop across folder navigation and route remounts", async () => {
+    let api;
+    function ExplorerHarness({ viewKey, filterSignature = "all", isReady = true }) {
+        const listScrollRef = React.useRef(null);
+        const state = useExplorerScrollRestore({
+            storageKey: "asset-viewer",
+            viewKey,
+            filterSignature,
+            pageSize: 200,
+            listScrollRef,
+            isReady,
+        });
+        React.useEffect(() => {
+            api = state;
+        });
+        return h(
+            "div",
+            { ref: listScrollRef, "data-visible": String(state.visibleCount), style: { overflowY: "auto", height: "500px" } },
+            h("div", { style: { height: `${state.visibleCount * 40}px` } }, String(state.visibleCount)),
+        );
+    }
+
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:" }));
+    assert.equal(api.visibleCount, 200);
+
+    // User loads more twice (200 -> 600) and scrolls down inside listScrollRef
+    await act(async () => {
+        api.loadMore();
+        api.loadMore();
+    });
+    await flushFrames();
+    assert.equal(api.visibleCount, 600);
+
+    const listNode = host.firstElementChild;
+    listNode.scrollTop = 14200;
+    await act(async () => {
+        listNode.dispatchEvent(new window.Event("scroll"));
+    });
+
+    // Navigate into subfolder ("second page")
+    await act(async () => api.rememberScroll());
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:music" }));
+    assert.equal(api.visibleCount, 200);
+    assert.equal(host.firstElementChild.scrollTop, 0);
+
+    // Return to parent folder -> both visibleCount (600) and scrollTop (14200) must be restored!
+    await act(async () => api.rememberScroll());
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:" }));
+    assert.equal(api.visibleCount, 600);
+    assert.equal(host.firstElementChild.scrollTop, 14200);
+
+    // Filter change in the same folder resets visibleCount to 200 and scrollTop to 0
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:", filterSignature: "image" }));
+    assert.equal(api.visibleCount, 200);
+    assert.equal(host.firstElementChild.scrollTop, 0);
+
+    // Simulate navigating away and returning via browser Back (new mount reading sessionStorage)
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:music" }));
+    await act(async () => api.loadMore());
+    await flushFrames();
+    host.firstElementChild.scrollTop = 6400;
+    await act(async () => api.rememberScroll());
+
+    await act(async () => root.unmount());
+    root = undefined;
+    resetExplorerSavedStateCache();
+
+    // First render while loading (isReady=false), then ready (isReady=true)
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:music", isReady: false }));
+    assert.equal(api.visibleCount, 400);
+    await render(h(ExplorerHarness, { viewKey: "jp:storage:music", isReady: true }));
+    assert.equal(api.visibleCount, 400);
+    assert.equal(host.firstElementChild.scrollTop, 6400);
+});
+
+test("useExplorerScrollRestore restores mobile window.scrollY when list container does not constrain scroll", async () => {
+    let api;
+    function MobileExplorerHarness({ viewKey }) {
+        const listScrollRef = React.useRef(null);
+        const state = useExplorerScrollRestore({
+            storageKey: "asset-versions",
+            viewKey,
+            filterSignature: "all",
+            pageSize: 200,
+            listScrollRef,
+            isReady: true,
+        });
+        React.useEffect(() => {
+            api = state;
+        });
+        React.useLayoutEffect(() => {
+            const node = document.querySelector("[data-mobile-list='true']");
+            if (!node) return;
+            Object.defineProperty(node, "clientHeight", { configurable: true, value: 4000 });
+            Object.defineProperty(node, "scrollHeight", { configurable: true, value: 4000 });
+        }, []);
+        return h("div", { ref: listScrollRef, "data-mobile-list": "true", style: { overflowY: "auto" } }, String(state.visibleCount));
+    }
+
+    await render(h(MobileExplorerHarness, { viewKey: "jp:v2:" }));
+    await act(async () => api.loadMore());
+    await flushFrames();
+    window.scrollY = 2850;
+    await act(async () => api.rememberScroll());
+
+    await render(h(MobileExplorerHarness, { viewKey: "jp:v2:ondemand" }));
+    assert.equal(window.scrollY, 0);
+
+    await render(h(MobileExplorerHarness, { viewKey: "jp:v2:" }));
+    assert.equal(api.visibleCount, 400);
+    assert.equal(window.scrollY, 2850);
 });
