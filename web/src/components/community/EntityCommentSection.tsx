@@ -113,6 +113,17 @@ export function EntityCommentSection({
     const [appealTargetId, setAppealTargetId] = useState<number | null>(null);
     const pendingSubmitRef = useRef<(() => Promise<void>) | null>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const onCommentCountChangeRef = useRef(onCommentCountChange);
+    const tRef = useRef(t);
+    const requestSeqRef = useRef(0);
+
+    useEffect(() => {
+        onCommentCountChangeRef.current = onCommentCountChange;
+    }, [onCommentCountChange]);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
 
     // Expanded replies map keyed by root comment ID
     const [repliesByRoot, setRepliesByRoot] = useState<
@@ -141,6 +152,7 @@ export function EntityCommentSection({
 
     const loadComments = useCallback(
         async (cursor?: string) => {
+            const seq = ++requestSeqRef.current;
             if (cursor) {
                 setLoadingMore(true);
             } else {
@@ -154,10 +166,11 @@ export function EntityCommentSection({
                     cursor,
                     limit: 20,
                 });
+                if (seq !== requestSeqRef.current) return;
                 setThread(res.thread);
                 setCommunityMode(res.community_mode);
                 setNextCursor(res.next_cursor);
-                onCommentCountChange?.(res.thread.comment_count);
+                onCommentCountChangeRef.current?.(res.thread.comment_count);
                 if (cursor) {
                     setComments((prev) => [...prev, ...res.items]);
                 } else {
@@ -165,19 +178,25 @@ export function EntityCommentSection({
                     setRepliesByRoot({});
                 }
             } catch (err) {
+                if (seq !== requestSeqRef.current) return;
                 if (!cursor) {
-                    setLoadError(getCommunityErrorMessage(err, t));
+                    setLoadError(getCommunityErrorMessage(err, tRef.current));
                 }
             } finally {
-                setLoading(false);
-                setLoadingMore(false);
+                if (seq === requestSeqRef.current) {
+                    setLoading(false);
+                    setLoadingMore(false);
+                }
             }
         },
-        [normalizedTargetId, onCommentCountChange, ownedOnly, sort, t, targetType],
+        [targetType, normalizedTargetId, sort, ownedOnly],
     );
 
     useEffect(() => {
         void loadComments();
+        return () => {
+            requestSeqRef.current += 1;
+        };
     }, [loadComments]);
 
     const insertAtCursor = useCallback((token: string) => {
@@ -271,12 +290,13 @@ export function EntityCommentSection({
 
                 setReplyTarget(null);
                 if (countsTowardPublic) {
-                    setThread((prev) => {
-                        if (!prev) return prev;
-                        const nextCount = prev.comment_count + 1;
-                        onCommentCountChange?.(nextCount);
-                        return { ...prev, comment_count: nextCount };
-                    });
+                    const nextCount = thread ? thread.comment_count + 1 : null;
+                    setThread((prev) =>
+                        prev ? { ...prev, comment_count: prev.comment_count + 1 } : prev,
+                    );
+                    if (nextCount !== null) {
+                        onCommentCountChangeRef.current?.(nextCount);
+                    }
                 }
 
                 if (res.moderation_notice === "pending_review") {
@@ -310,13 +330,13 @@ export function EntityCommentSection({
             insertAtCursor,
             isSpoiler,
             normalizedTargetId,
-            onCommentCountChange,
             replyTarget,
             session.authenticated,
             session.profile,
             needsTurnstile,
             t,
             targetType,
+            thread,
             turnstileToken,
         ],
     );
@@ -400,12 +420,15 @@ export function EntityCommentSection({
                 setComments((prev) => prev.filter((item) => item.id !== comment.id));
             }
             if (countedInPublic) {
-                setThread((prev) => {
-                    if (!prev) return prev;
-                    const nextCount = Math.max(0, prev.comment_count - 1);
-                    onCommentCountChange?.(nextCount);
-                    return { ...prev, comment_count: nextCount };
-                });
+                const nextCount = thread ? Math.max(0, thread.comment_count - 1) : null;
+                setThread((prev) =>
+                    prev
+                        ? { ...prev, comment_count: Math.max(0, prev.comment_count - 1) }
+                        : prev,
+                );
+                if (nextCount !== null) {
+                    onCommentCountChangeRef.current?.(nextCount);
+                }
             }
         } catch (err) {
             setSubmitError(getCommunityErrorMessage(err, t));

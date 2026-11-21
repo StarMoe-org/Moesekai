@@ -138,7 +138,12 @@ export default function CommunityFeedClient() {
     }, [category, debouncedSearch, filtersReady, langFilter, serverTag, sort, tagFilter, updateURL]);
 
     const preferredLang = useMemo(() => uiLocaleToContentLang(locale), [locale]);
+    const tRef = useRef(t);
     const requestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
 
     const fetchFeed = useCallback(
         async (cursor?: string) => {
@@ -175,7 +180,7 @@ export default function CommunityFeedClient() {
             } catch (err) {
                 if (seq !== requestSeqRef.current) return;
                 if (!cursor) {
-                    setError(getCommunityErrorMessage(err, t));
+                    setError(getCommunityErrorMessage(err, tRef.current));
                 }
             } finally {
                 if (seq === requestSeqRef.current) {
@@ -184,12 +189,15 @@ export default function CommunityFeedClient() {
                 }
             }
         },
-        [category, debouncedSearch, langFilter, preferredLang, serverTag, sort, t, tagFilter],
+        [category, debouncedSearch, langFilter, preferredLang, serverTag, sort, tagFilter],
     );
 
     useEffect(() => {
         if (!filtersReady) return;
         void fetchFeed();
+        return () => {
+            requestSeqRef.current += 1;
+        };
     }, [fetchFeed, filtersReady]);
 
     const handleResetFilters = useCallback(() => {

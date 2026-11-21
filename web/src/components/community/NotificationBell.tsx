@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useI18n } from "@/contexts/I18nContext";
 import { useMoesekaiAccount } from "@/lib/moesekai-account";
@@ -93,24 +93,39 @@ export function NotificationBell() {
     const [error, setError] = useState<string | null>(null);
     const [markingAll, setMarkingAll] = useState(false);
 
+    const tRef = useRef(t);
+    const requestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
+
     const loadList = useCallback(async () => {
+        const seq = ++requestSeqRef.current;
         setLoading(true);
         setError(null);
         try {
             const res = await fetchNotifications({ limit: 30 });
+            if (seq !== requestSeqRef.current) return;
             setItems(res.items);
             setUnreadNotificationsCount(res.unread_count);
         } catch (err) {
-            setError(getCommunityErrorMessage(err, t));
+            if (seq !== requestSeqRef.current) return;
+            setError(getCommunityErrorMessage(err, tRef.current));
         } finally {
-            setLoading(false);
+            if (seq === requestSeqRef.current) {
+                setLoading(false);
+            }
         }
-    }, [t]);
+    }, []);
 
     useEffect(() => {
         if (open && isSignedIn) {
             void loadList();
         }
+        return () => {
+            requestSeqRef.current += 1;
+        };
     }, [open, isSignedIn, loadList]);
 
     if (!isSignedIn || session.status === "unavailable") {

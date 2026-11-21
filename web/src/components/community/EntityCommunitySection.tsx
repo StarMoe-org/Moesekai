@@ -113,8 +113,22 @@ export function EntityCommunitySection({
         return () => observer.disconnect();
     }, [visible]);
 
+    const tRef = useRef(t);
+    const postsRequestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
+
+    useEffect(() => {
+        return () => {
+            postsRequestSeqRef.current += 1;
+        };
+    }, [targetKey]);
+
     const loadRelatedPosts = useCallback(async () => {
         if (!linkableEntityType) return;
+        const seq = ++postsRequestSeqRef.current;
         setPostsLoading(true);
         setPostsError(null);
         try {
@@ -124,20 +138,31 @@ export function EntityCommunitySection({
                 sort: "hot",
                 limit: 10,
             });
+            if (seq !== postsRequestSeqRef.current) return;
             setPosts(res.items);
             setPostsLoaded(true);
         } catch (err) {
-            setPostsError(getCommunityErrorMessage(err, t));
+            if (seq !== postsRequestSeqRef.current) return;
+            setPostsError(getCommunityErrorMessage(err, tRef.current));
         } finally {
-            setPostsLoading(false);
+            if (seq === postsRequestSeqRef.current) {
+                setPostsLoading(false);
+            }
         }
-    }, [linkableEntityType, normalizedTargetId, t]);
+    }, [linkableEntityType, normalizedTargetId]);
 
     useEffect(() => {
-        if (hasRelatedPosts && visible && activeTab === "posts" && !postsLoaded && !postsLoading) {
+        if (
+            hasRelatedPosts &&
+            visible &&
+            activeTab === "posts" &&
+            !postsLoaded &&
+            !postsLoading &&
+            !postsError
+        ) {
             void loadRelatedPosts();
         }
-    }, [hasRelatedPosts, visible, activeTab, postsLoaded, postsLoading, loadRelatedPosts]);
+    }, [hasRelatedPosts, visible, activeTab, postsLoaded, postsLoading, postsError, loadRelatedPosts]);
 
     const handlePostLike = async (post: PostItem) => {
         if (!session.authenticated) {

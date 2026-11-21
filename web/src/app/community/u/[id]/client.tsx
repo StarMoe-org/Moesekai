@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
@@ -89,9 +89,17 @@ export default function CommunityUserProfileClient() {
     const isViewerMod = isModeratorRole(session.profile?.role);
     const canManageMods = session.canManageMods;
 
+    const tRef = useRef(t);
+    const requestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
+
     const loadProfile = useCallback(async () => {
+        const seq = ++requestSeqRef.current;
         if (!userSub) {
-            setError(t("common.comments.errors.notFound"));
+            setError(tRef.current("common.comments.errors.notFound"));
             setLoading(false);
             return;
         }
@@ -102,27 +110,40 @@ export default function CommunityUserProfileClient() {
                 fetchCommunityUser(userSub),
                 fetchCommunityUserPosts(userSub, { limit: 20 }),
             ]);
+            if (seq !== requestSeqRef.current) return;
             setProfile(loadedProfile);
             setBioDraft(loadedProfile.bio || "");
             setPosts(loadedPosts.items);
             setNextCursor(loadedPosts.next_cursor);
             setDetailName(loadedProfile.display_name || userSub);
         } catch (err) {
-            setError(getCommunityErrorMessage(err, t));
+            if (seq !== requestSeqRef.current) return;
+            setError(getCommunityErrorMessage(err, tRef.current));
         } finally {
-            setLoading(false);
+            if (seq === requestSeqRef.current) {
+                setLoading(false);
+            }
         }
-    }, [setDetailName, t, userSub]);
+    }, [setDetailName, userSub]);
 
     useEffect(() => {
         void loadProfile();
+        return () => {
+            requestSeqRef.current += 1;
+        };
     }, [loadProfile]);
 
     useEffect(() => {
         if (!isSelf) return;
+        let cancelled = false;
         fetchBlockedUsers()
-            .then(setBlockedList)
+            .then((items) => {
+                if (!cancelled) setBlockedList(items);
+            })
             .catch(() => undefined);
+        return () => {
+            cancelled = true;
+        };
     }, [isSelf]);
 
     const handleLoadMorePosts = async () => {
