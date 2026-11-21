@@ -2,7 +2,7 @@
 
 import { type ChangeEvent, type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 
-import AccountSelector from "@/components/AccountSelector";
+import GameAccountQuickFill from "@/components/account/GameAccountQuickFill";
 import MainLayout from "@/components/MainLayout";
 import { Banner, Button, PageContainer, PageHeader, SegmentedButton, TextField } from "@/components/md3";
 import { mdArrowBack } from "@/components/md3/icons";
@@ -415,7 +415,7 @@ export default function MysekaiPreviewSceneClient() {
                             <p className="mt-1 type-body-m text-on-surface-variant">{t("page.mysekaiPreview.scene.uidForm.description")}</p>
                         </div>
 
-                        <AccountSelector
+                        <GameAccountQuickFill
                             allowedServers={[SCENE_SERVER]}
                             currentUserId={uid}
                             currentServer={SCENE_SERVER}

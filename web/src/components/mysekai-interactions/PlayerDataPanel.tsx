@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import AccountSelector from "@/components/AccountSelector";
+import GameAccountQuickFill from "@/components/account/GameAccountQuickFill";
 import Link from "@/components/LocalizedLink";
 import { fetchAccountMysekaiText } from "@/lib/account";
 import type { MolyPlayerDataCommand, MolyPlayerDataState, MolyRegion } from "@/lib/moly/contract";
@@ -45,7 +45,7 @@ export default function PlayerDataPanel({ region, ready, blocked, value, send, o
     };
     return <section className="interaction-player-data" aria-label={t("page.mysekaiInteractions.r4b.importPlayer")}>
         <p>{t("page.mysekaiInteractions.r4b.playerPrivacy")}</p>
-        <AccountSelector allowedServers={allowedServers} currentUserId={uid} currentServer={region}
+        <GameAccountQuickFill allowedServers={allowedServers} currentUserId={uid} currentServer={region}
             onSelect={id => setUid(id)} />
         <div className="interaction-import-row">
             <label>{t("page.mysekaiInteractions.r4b.playerUid")}<input inputMode="numeric" autoComplete="off" maxLength={20} value={uid}

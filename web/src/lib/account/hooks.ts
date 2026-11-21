@@ -47,3 +47,21 @@ function subscribe(listener: () => void): () => void {
 export function useGameAccounts(): GameAccountsSnapshot {
     return useSyncExternalStore(subscribe, getSnapshot, () => EMPTY);
 }
+
+let viewed: MoesekaiAccount | null = null;
+
+function getViewedSnapshot(): MoesekaiAccount | null {
+    const { active } = getSnapshot();
+    if (!active) viewed = null;
+    else if (viewed?.id !== active.id) viewed = active;
+    return viewed;
+}
+
+/**
+ * The account being viewed, kept as the same object until another account is viewed or it is removed. Use it as
+ * the dependency of effects that fetch the account's data: `useGameAccounts().active` is a new object whenever the
+ * account's record is written (fresh game data, a refreshed token), which would fetch again each time.
+ */
+export function useViewedGameAccount(): MoesekaiAccount | null {
+    return useSyncExternalStore(subscribe, getViewedSnapshot, () => null);
+}

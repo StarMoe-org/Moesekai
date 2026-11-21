@@ -120,6 +120,22 @@ export const accountMessages = {
         manageShort: "管理",
         accountCenterShort: "帳號中心",
     },
+    tools: {
+        viewing: "正在查看",
+        switch: "切換",
+        add: "新增",
+        mine: "我的遊戲帳號",
+        fillHint: "點一下填入",
+        manage: "管理",
+    },
+    link: {
+        linked: "排行榜顯示：{name}",
+        notVerified: "這個遊戲帳號不在你的 Haruki 已驗證帳號裡。",
+        connectRequired: "先連接 Haruki，才能關聯遊戲帳號。",
+        connectToLink: "連接 Haruki 來關聯遊戲帳號",
+        reconnectToLink: "重新連接 Haruki 來關聯遊戲帳號",
+        noVerified: "Haruki 裡還沒有已驗證的遊戲帳號",
+    },
     profile: {
         emptyTitle: "還沒有可以查看的遊戲帳號",
         emptyBody: "新增遊戲帳號後，這裡會顯示它的卡組、樂曲通關、角色等級和羈絆。",

@@ -120,6 +120,22 @@ export const accountMessages = {
         manageShort: "관리",
         accountCenterShort: "계정 센터",
     },
+    tools: {
+        viewing: "보는 중",
+        switch: "전환",
+        add: "추가",
+        mine: "내 게임 계정",
+        fillHint: "눌러서 입력",
+        manage: "관리",
+    },
+    link: {
+        linked: "랭킹 표시: {name}",
+        notVerified: "이 게임 계정은 Haruki 인증 계정 목록에 없습니다.",
+        connectRequired: "게임 계정을 연결하려면 먼저 Haruki를 연결하세요.",
+        connectToLink: "Haruki를 연결해 게임 계정 연결",
+        reconnectToLink: "Haruki를 다시 연결해 게임 계정 연결",
+        noVerified: "Haruki에 인증된 게임 계정이 아직 없습니다",
+    },
     profile: {
         emptyTitle: "볼 수 있는 게임 계정이 없습니다",
         emptyBody: "게임 계정을 추가하면 덱, 곡 클리어 현황, 캐릭터 랭크, 인연이 여기에 표시됩니다.",

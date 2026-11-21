@@ -60,7 +60,7 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 | `web/src/lib/account/game-data.ts` | 读 Haruki 数据、刷新已保存的账号、MySekai 数据 |
 | `web/src/lib/account/actions.ts` | 添加游戏账号、删除游戏账号、把仅本机的账号保存到通行证（所有页面共用） |
 | `web/src/lib/account/game-data-format.ts` | 把各种 Haruki 响应整理成同一种结构，错误码归一（纯函数） |
-| `web/src/lib/account/hooks.ts` | `useGameAccounts()` |
+| `web/src/lib/account/hooks.ts` | `useGameAccounts()`（列表和当前查看的账号，用于显示）；`useViewedGameAccount()`（只在换账号时变化，用作拉取数据的 effect 依赖） |
 | `web/src/lib/starmoe-accounts.ts` | moesekai-api 的 `/api/v1/me` 客户端、Haruki 连接状态 |
 | `web/src/lib/moesekai-account.ts` | 通行证登录状态 |
 | `web/src/lib/legacy-oauth/` | **旧**浏览器 OAuth2 绑定（见第 5 节） |
@@ -77,6 +77,10 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 | `web/src/components/account/GameAccountList.tsx` | 游戏账号列表：来源、保存位置、数据时间、行内刷新错误、删除对话框 |
 | `web/src/components/account/GameAccountSwitchMenu.tsx` | 切换当前查看的游戏账号的菜单 |
 | `web/src/app/profile/` | 只展示当前查看的游戏账号的资料；旧链接 `/profile#profile-accounts` 自动转到 `/account` |
+| `web/src/components/account/GameAccountBar.tsx` | 展示某个账号数据的页面（卡牌、歌曲、素材进度）顶部的“正在查看”栏：切换、添加 |
+| `web/src/components/account/NoGameAccount.tsx` | 上述页面没有账号时的空状态：登录 StarMoe，或直接输入 UID |
+| `web/src/components/account/GameAccountQuickFill.tsx` | 要填任意玩家 UID 的工具（组卡推荐、控分、MySekai）里一键填入自己的账号，带添加和管理入口 |
+| `web/src/components/guess-music/StarMoeAccountChip.tsx` | 猜歌标题栏：未登录时给登录；登录后从已验证账号里选一个关联到排行榜 |
 
 文案在 `web/src/lib/i18n/messages/<语言>/account.ts`，挂在 `page.account`。
 
@@ -88,13 +92,15 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
   - `/oauth2/*` 页面；
   - `OAuthMigrationPrompt`；
   - `game-data.ts` 里 `isLegacyOAuthAccount` 的分支；
-  - 猜歌的 `StarMoeAccountChip`（用旧令牌证明游戏账号归属）。
+  - 猜歌的 `StarMoeAccountChip`：已验证账号按 `{server, userId}` 关联（服务端经 StarMoe Connect 核对）；旧绑定的账号仍用浏览器里的令牌关联，删除时去掉这条路径。
 - 删除时，已有的旧账号要降级为公开 API 账号保留，不能直接丢掉。
 - 新代码不要再依赖它。
 
 ## 6. 新增涉及账号的功能时
 
-- 需要游戏账号：用 `GameAccountSwitchMenu` 和 `AddGameAccountDialog`，添加和删除走 `actions.ts`，不要再写一套表单。
+- 需要游戏账号：展示某个账号数据的页面用 `GameAccountBar` + `NoGameAccount`，工具页用 `GameAccountQuickFill`，其余场景用 `GameAccountSwitchMenu` 和 `AddGameAccountDialog`；添加和删除走 `actions.ts`，不要再写一套表单。
+- 页面跟随全站“当前查看”的账号：显示用 `useGameAccounts()`，拉数据的 effect 依赖 `useViewedGameAccount()`，不要在挂载时读一次 `getActiveAccount()` 存进 state（侧边栏切换后页面不会跟着变）。
+- 显示账号的组件要调用 `useStarMoeAccountSync()`，登录后才会拉回通行证里的账号和 Haruki 连接状态。
 - 管理账号的入口一律指向 `/account`，不要再指向 `/profile`。
 - 需要身份（排行、收藏、跨设备设置）：用 `useMoesekaiAccount()`；未登录时给登录入口，不要退回到用游戏 UID 充当身份。
 - 只有手动添加的游戏账号会保存到 StarMoe 账号；工具页临时输入的 UID 只留在本机。

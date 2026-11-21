@@ -7,7 +7,7 @@ import { IMusicInfo, IMusicMeta } from "@/types/music";
 import type { ICardInfo } from "@/types/types";
 import { fetchMasterDataForServer, fetchMusicMetas } from "@/lib/fetch";
 import { saveToolState, getAccount, getDeckUserDataAccess, isValidServer, SERVER_OPTIONS, type ServerType } from "@/lib/account";
-import AccountSelector from "@/components/AccountSelector";
+import GameAccountQuickFill from "@/components/account/GameAccountQuickFill";
 import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
 import MusicSelector from "@/components/deck-recommend/MusicSelector";
@@ -1088,7 +1088,7 @@ export default function ScoreControlClient() {
                             </h3>
 
                             {/* Account Selector + User ID + Server */}
-                            <AccountSelector
+                            <GameAccountQuickFill
                                 onSelect={(gameId, srv) => {
                                     setDbUserId(gameId);
                                     setDbServer(srv);

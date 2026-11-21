@@ -300,6 +300,9 @@ export interface DailyApi {
     finish(sessionId: string): Promise<DailyFinishResult>;
     leaderboard(query: LeaderboardQuery, signal?: AbortSignal): Promise<DailyLeaderboard>;
     me(signal?: AbortSignal): Promise<GuessMusicMe>;
+    /** Links one of the player's Haruki-verified game accounts (checked by the server through StarMoe Connect). */
+    linkVerifiedGame(server: string, userId: string): Promise<{ game: DailyGameAccount }>;
+    /** Links the game account behind a legacy browser Haruki token. Goes with the legacy OAuth2 binding. */
     linkGame(harukiAccessToken: string): Promise<{ game: DailyGameAccount }>;
     unlinkGame(): Promise<void>;
 }
@@ -453,6 +456,7 @@ export function createDailyApi(options: DailyApiOptions = {}): DailyApi {
             return json<DailyLeaderboard>("GET", `${ROOT}/daily/leaderboard?${params.toString()}`, undefined, signal);
         },
         me: (signal) => json<GuessMusicMe>("GET", `${ROOT}/me`, undefined, signal),
+        linkVerifiedGame: (server, userId) => json<{ game: DailyGameAccount }>("POST", `${ROOT}/me/game-link`, { server, userId }),
         linkGame: (harukiAccessToken) => json<{ game: DailyGameAccount }>("POST", `${ROOT}/me/game-link`, { harukiAccessToken }),
         async unlinkGame() {
             await send("DELETE", `${ROOT}/me/game-link`);
