@@ -195,6 +195,20 @@ export function getCardFullUrl(
     return buildImageAssetUrl(source, `character/member/${assetbundleName}/card_${status}`);
 }
 
+/**
+ * The game's own list-size card art (940x530, the size of the large card frame). For card
+ * tiles: the full art is 2520x1440, seven times the pixels, and decoding hundreds of those
+ * while a list scrolls is what makes the page stutter. Fall back to getCardFullUrl on error.
+ */
+export function getCardSmallUrl(
+    assetbundleName: string,
+    trained: boolean = false,
+    source: AssetSourceType = "main-jp"
+): string {
+    const status = trained ? "after_training" : "normal";
+    return buildImageAssetUrl(source, `character/member_small/${assetbundleName}/card_${status}`);
+}
+
 export function getEventBannerUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `event/${assetbundleName}/screen/bg`);
 }

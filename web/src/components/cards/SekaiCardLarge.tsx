@@ -6,7 +6,7 @@ import {
     isTrainableCard,
     getCardDefaultTrainedStatus,
 } from "@/types/types";
-import { getCardFullUrl } from "@/lib/assets";
+import { getCardFullUrl, getCardSmallUrl } from "@/lib/assets";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 
 const ASSET_BASE = "/data/sekai_cards_assets";
@@ -71,8 +71,16 @@ export default function SekaiCardLarge({
             : `${ASSET_BASE}/rare_star_normal.png`;
     const starCount = isBirthday ? 1 : rarityNumber;
 
-    const normalUrl = getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource);
-    const trainedUrl = getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource);
+    // The list-size art matches the frame; the full art is the fallback, and a tile whose
+    // art fails both ways shows the frame over the empty background.
+    const artUrl = (isTrained: boolean): string | null => {
+        const small = getCardSmallUrl(card.assetbundleName, isTrained, assetSource);
+        if (!failedUrls[small]) return small;
+        const full = getCardFullUrl(card.characterId, card.assetbundleName, isTrained, assetSource);
+        return failedUrls[full] ? null : full;
+    };
+    const normalUrl = artUrl(false);
+    const trainedUrl = artUrl(true);
     const singleUrl = singleTrained ? trainedUrl : normalUrl;
 
     const markFailed = (url: string) => {
@@ -109,7 +117,7 @@ export default function SekaiCardLarge({
                         className="relative h-full overflow-hidden bg-surface-container-high transition-[width] duration-300 ease-md3-standard"
                         style={{ width: normalWidth }}
                     >
-                        {!failedUrls[normalUrl] && (
+                        {normalUrl && (
                             <img
                                 src={normalUrl}
                                 alt={card.prefix}
@@ -124,7 +132,7 @@ export default function SekaiCardLarge({
                         className="relative h-full overflow-hidden bg-surface-container-high transition-[width] duration-300 ease-md3-standard"
                         style={{ width: trainedWidth }}
                     >
-                        {!failedUrls[trainedUrl] && (
+                        {trainedUrl && (
                             <img
                                 src={trainedUrl}
                                 alt={card.prefix}
@@ -137,7 +145,7 @@ export default function SekaiCardLarge({
                     </div>
                 </div>
             ) : (
-                !failedUrls[singleUrl] && (
+                singleUrl && (
                     <img
                         src={singleUrl}
                         alt={card.prefix}
