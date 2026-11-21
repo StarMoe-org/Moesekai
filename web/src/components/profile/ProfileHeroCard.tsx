@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import GameAccountSwitchMenu from "@/components/account/GameAccountSwitchMenu";
 import DegreeImage from "@/components/honor/DegreeImage";
 import BondsDegreeImage from "@/components/honor/BondsDegreeImage";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
@@ -11,7 +12,7 @@ import { getLeaderCardId, type MoesekaiAccount } from "@/lib/account";
 import type { ProfileExtras, ProfileHonor } from "@/hooks/useProfileExtras";
 import type { RealtimeRankingMasterData } from "@/types/realtime-ranking";
 import type { ICardInfo } from "@/types/types";
-import { Button, IconButton, cn } from "@/components/md3";
+import { Button, cn } from "@/components/md3";
 import { mdSwapHoriz } from "@/components/md3/icons";
 import { showsTrainedArt } from "./profile-cards";
 import ProfileDeck from "./ProfileDeck";
@@ -22,7 +23,6 @@ interface Props {
     master: RealtimeRankingMasterData | null;
     cards: Map<number, ICardInfo> | null;
     accountCount: number;
-    onManageAccounts: () => void;
 }
 
 function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: ProfileHonor; main: boolean; master: RealtimeRankingMasterData | null; pending: boolean; assetSource: AssetSourceType }) {
@@ -80,7 +80,7 @@ function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: Prof
  * The player card from the game's profile screen: leader card art, name and
  * player rank, the one-line comment, the three equipped honors and the deck.
  */
-export default function ProfileHeroCard({ account, extras, master, cards, accountCount, onManageAccounts }: Props) {
+export default function ProfileHeroCard({ account, extras, master, cards, accountCount }: Props) {
     const { t, formatDate, formatNumber } = useI18n();
     const { assetSource: themeAssetSource } = useTheme();
     const assetSource = replaceAssetSourceRegion(themeAssetSource, account.server);
@@ -123,14 +123,20 @@ export default function ProfileHeroCard({ account, extras, master, cards, accoun
                             </div>
                         </div>
                         {accountCount > 1 && (
-                            <>
-                                <IconButton variant="tonal" size="xs" icon={mdSwapHoriz} label={t("page.profile.hero.switchAccount")} onClick={onManageAccounts} className="shrink-0 sm:hidden" />
-                                <span className="hidden shrink-0 sm:block">
-                                    <Button variant="tonal" size="xs" icon={mdSwapHoriz} onClick={onManageAccounts}>
-                                        {t("page.profile.hero.switchAccount")}
+                            <GameAccountSwitchMenu
+                                anchor={(anchorProps) => (
+                                    <Button
+                                        {...anchorProps}
+                                        variant="tonal"
+                                        size="xs"
+                                        icon={mdSwapHoriz}
+                                        aria-label={t("page.profile.hero.switchAccount")}
+                                        className="shrink-0"
+                                    >
+                                        <span className="hidden sm:inline">{t("page.profile.hero.switchAccount")}</span>
                                     </Button>
-                                </span>
-                            </>
+                                )}
+                            />
                         )}
                     </div>
 

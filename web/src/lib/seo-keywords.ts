@@ -870,14 +870,28 @@ export const SEO_PAGE_METADATA = {
     "/profile",
     { "zh-CN": "个人主页", "en-US": "My Profile", "ja-JP": "マイプロフィール" },
     {
-      "zh-CN": "管理 Moesekai 个人主页、绑定账号、公开 API 与 OAuth2 授权数据。",
-      "en-US": "Manage your Moesekai profile, connected accounts, Public API data, and OAuth2 bindings.",
-      "ja-JP": "Moesekai のプロフィール、連携アカウント、Public API データ、OAuth2 連携を管理できます。",
+      "zh-CN": "查看当前游戏账号的卡组、乐曲通关、角色等级、挑战与羁绊。",
+      "en-US": "See your game account's deck, song clears, character ranks, challenge stages and bonds.",
+      "ja-JP": "表示中のゲームアカウントのデッキ、楽曲クリア状況、キャラクターランク、チャレンジ、絆を確認できます。",
     },
     {
-      "zh-CN": ["个人主页", "账号管理", "OAuth2"],
-      "en-US": ["profile", "account management", "OAuth2"],
-      "ja-JP": ["プロフィール", "アカウント管理", "OAuth2"],
+      "zh-CN": ["个人主页", "游戏账号", "卡组"],
+      "en-US": ["profile", "game account", "deck"],
+      "ja-JP": ["プロフィール", "ゲームアカウント", "デッキ"],
+    },
+  ),
+  account: definePage(
+    "/account",
+    { "zh-CN": "我的账号", "en-US": "My Account", "ja-JP": "マイアカウント" },
+    {
+      "zh-CN": "管理 StarMoe 通行证、Haruki 连接和你关注的游戏账号。",
+      "en-US": "Manage your StarMoe Passport, your Haruki connection and the game accounts you follow.",
+      "ja-JP": "StarMoe パスポート、Haruki 連携、フォローしているゲームアカウントを管理できます。",
+    },
+    {
+      "zh-CN": ["我的账号", "StarMoe 通行证", "游戏账号"],
+      "en-US": ["my account", "StarMoe Passport", "game accounts"],
+      "ja-JP": ["マイアカウント", "StarMoe パスポート", "ゲームアカウント"],
     },
   ),
   score_control: definePage(
@@ -1246,9 +1260,9 @@ export const SEO_PAGE_METADATA = {
     "/privacy",
     { "zh-CN": "隐私政策", "en-US": "Privacy Policy", "ja-JP": "プライバシーポリシー" },
     {
-      "zh-CN": "阅读 Moesekai 隐私政策，了解本地存储、Cookie、广告与第三方服务说明。",
-      "en-US": "Read the Moesekai privacy policy covering local storage, cookies, ads, and third-party services.",
-      "ja-JP": "Moesekai のローカルストレージ、Cookie、広告、外部サービスに関するプライバシーポリシーを確認できます。",
+      "zh-CN": "阅读 Moesekai 隐私政策，了解 StarMoe 通行证登录、本机与服务器上保存的数据、Cookie 和第三方服务。",
+      "en-US": "Read the Moesekai privacy policy covering StarMoe Passport sign-in, data kept on your device and our servers, cookies, and third-party services.",
+      "ja-JP": "StarMoe パスポートでのログイン、端末とサーバーに保存されるデータ、Cookie、外部サービスに関する Moesekai のプライバシーポリシーです。",
     },
     {
       "zh-CN": ["隐私政策", "Cookie", "广告"],

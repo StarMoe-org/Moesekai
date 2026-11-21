@@ -13,6 +13,10 @@
 
 ### 资源管理 — `web/src/lib/assets.ts`
 
+### 账号 — `web/src/lib/account/`
+
+StarMoe 通行证、游戏账号、Haruki 数据来源三层的定位、用词和数据流见 `docs/account-system.md`；涉及账号的改动先读它。
+
 ### 类型定义 — `web/src/types/`
 
 ## 设计规范 — Material 3 Expressive

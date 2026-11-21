@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
@@ -259,7 +260,6 @@ export const koKRMessages = {
         },
         form: {
             uid: "UID",
-            gameUid: "게임 UID",
             server: "서버"
         },
         server: {
@@ -296,48 +296,13 @@ export const koKRMessages = {
             }
         },
         account: {
-            selectAccount: "계정 선택",
-            savedAccounts: "저장된 계정",
-            quickFill: "눌러서 빠르게 입력",
-            addAccount: "계정 추가",
-            addFirstAccount: "첫 번째 계정 추가",
-            addNewAccount: "새 계정 추가",
-            noAccounts: "아직 연동된 계정이 없습니다",
-            oauthBind: "OAuth2 연동",
             oauthBindSuccess: "OAuth2 계정이 연동되어 현재 사용 계정으로 자동 설정되었습니다.",
             connectHaruki: "Haruki 툴박스 연결",
             reconnectHaruki: "Haruki 다시 연결",
             manageHarukiConnection: "Haruki 연결 관리",
             signInToConnectHaruki: "로그인 후 Haruki 연결",
-            starmoeAccountsFull: "이 기기에는 추가했지만, StarMoe 계정에 직접 추가할 수 있는 계정은 최대 20개라 이 계정은 동기화되지 않았습니다.",
-            starmoeSaveFailed: "이 기기에는 추가했지만 StarMoe 계정에 동기화하지 못했습니다. 나중에 프로필에서 다시 가져오세요.",
-            harukiVerified: "Haruki 인증됨",
-            savedToStarMoe: "동기화됨",
-            localOnly: "이 기기만",
-            verifiedNotRemovable: "Haruki 툴박스에서 인증된 계정입니다. 삭제하려면 Haruki 툴박스에서 연결을 해제하세요",
-            publicApi: "공개 API",
-            current: "사용 중",
-            reauthRequired: "재인증 필요",
-            setDefault: "기본으로 설정",
-            resync: "다시 동기화",
-            deleteAccount: "계정 삭제",
-            verifying: "확인 중",
-            verifyingWithDots: "확인 중...",
-            add: "추가",
-            verifyAndAdd: "확인 후 추가",
-            inputGameUid: "게임 UID 입력",
             goHaruki: "Haruki 툴박스로 이동 →",
-            addHint: "추가하면 Haruki API에서 프로필 메시지와 캐릭터 데이터를 가져와 아바타로 사용합니다.",
-            createdAt: "{date}에 추가됨",
             dataUpdatedAt: "데이터 업데이트: {date}",
-            localOnlyNotice: "모든 데이터는 브라우저(localStorage)에만 저장되며, Moesekai는 개인 정보를 업로드하거나 보관하지 않습니다.",
-            quickBindTitle: "빠른 계정 연동",
-            quickBindDefaultDescription: "게임 UID를 입력하면 바로 시작할 수 있습니다",
-            verifyAndBind: "확인 후 연동",
-            oauthAuthorizeBind: "OAuth2로 연동",
-            manualBindHintStart: "UID로 직접 연동하려면 먼저",
-            manualBindHintHaruki: "Haruki 툴박스",
-            manualBindHintEnd: "에서 데이터를 업로드하고 공개 API를 켜야 합니다. StarMoe에 로그인해 Haruki 툴박스를 연결하면 공개 API를 켜지 않아도 됩니다."
         },
         accountDataErrors: {
             apiNotPublic: "이 계정은 공개 API가 꺼져 있고 OAuth2 데이터도 불러올 수 없습니다. Haruki에서 공개 API를 켜거나 OAuth2 인증을 다시 진행해 주세요.",
@@ -351,22 +316,12 @@ export const koKRMessages = {
             dataTime: "데이터 시점: {time}",
             suiteUploadHint: "Haruki에 Suite 데이터를 업로드했는지 확인해 주세요."
         },
-        harukiErrors: {
-            apiNotPublic: "이 사용자의 공개 API가 꺼져 있습니다. 먼저 Haruki 툴박스에서 「공개 API 접근」을 켜 주세요.",
-            userNotFound: "사용자 데이터를 찾을 수 없습니다. UID와 서버가 올바른지, Haruki에 데이터를 업로드했는지 확인해 주세요.",
-            networkError: "네트워크 오류가 발생했습니다. 나중에 다시 시도해 주세요.",
-            oauthInitFailed: "OAuth2 인증을 시작하지 못했습니다.",
-            oauthRefreshFailed: "OAuth2 계정을 새로고침하지 못했습니다. 나중에 다시 시도하거나 콘솔 로그를 확인해 주세요.",
-            apiNotPublicShort: "공개 API 꺼짐",
-            userNotFoundShort: "사용자를 찾을 수 없음",
-            networkErrorShort: "네트워크 오류"
-        },
         oauthMigration: {
             title: "Haruki 연동 방식 변경",
             body: "이 기기에서 브라우저 OAuth2로 Haruki 계정 {count}개를 연동했습니다. 이 방식은 곧 종료되며, 앞으로는 StarMoe에 로그인한 뒤 StarMoe Connect에서 Haruki 툴박스를 연결해야 합니다.",
             pointSync: "한 번 연결하면 모든 기기에서 사용할 수 있고 계정도 동기화됩니다.",
             pointPublic: "이전하지 않으면 종료 후 이 계정들은 공개 데이터만 불러올 수 있습니다.",
-            pointLater: "'나중에'를 선택해도 프로필에서 언제든 이전할 수 있습니다.",
+            pointLater: "'나중에'를 선택해도 '내 계정'에서 언제든 이전할 수 있습니다.",
             migrate: "로그인하고 이전",
             migrateSignedIn: "Haruki 연결하기",
             later: "나중에",
@@ -472,11 +427,7 @@ export const koKRMessages = {
             signIn: "StarMoe 패스로 로그인",
             signInShort: "로그인",
             accountMenu: "StarMoe 패스 계정: {name}",
-            signOut: "로그아웃",
-            signOutFailed: "로그아웃하지 못했습니다. 잠시 후 다시 시도해 주세요.",
-            linkedGame: "연결됨: {name}",
             linkGame: "게임 계정 연결: {name}",
-            authorizeGame: "Haruki 게임 계정 연동하기",
             unlinkGame: "게임 계정 연결 해제",
             linkSuccess: "게임 계정 {name}을(를) 연결했습니다.",
             unlinkSuccess: "게임 계정 연결을 해제했습니다.",
@@ -1234,11 +1185,6 @@ export const koKRMessages = {
         footer: {
             version: "Moesekai · {version}"
         },
-        sidebar: {
-            notLoggedIn: "로그인되지 않음",
-            manageAccount: "눌러서 계정 관리",
-            bindAccount: "눌러서 계정 연동"
-        }
     },
     shortcuts: {
         title: "키보드 단축키",
@@ -1364,6 +1310,7 @@ export const koKRMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        account: accountMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
@@ -1796,55 +1743,86 @@ export const koKRMessages = {
         },
         privacy: {
             title: "개인정보 처리방침",
-            updated: "최종 업데이트: 2026년 8월 12일",
+            updated: "최종 업데이트: 2026년 11월 21일",
             overview: {
                 title: "1. 개요",
-                body: "Moesekai(pjsk.moe)는 비영리 PROJECT SEKAI 팬 데이터 뷰어입니다. 이 방침은 기기에 저장되는 정보, 제3자 서비스와 통신하는 시점, 이용자가 데이터를 관리하는 방법을 설명합니다."
+                body: "Moesekai(pjsk.moe)는 비영리 PROJECT SEKAI 팬 데이터 뷰어입니다. 보기 기능은 모두 로그인 없이 쓸 수 있으며, StarMoe 패스포트로 로그인하면 게임 계정을 다른 기기에서도 쓸 수 있습니다. 이 방침은 사이트가 기기와 서버에 무엇을 저장하는지, 언제 제3자 서비스와 통신하는지, 이용자가 그 데이터를 어떻게 관리할 수 있는지 설명합니다.",
+            },
+            account: {
+                title: "2. StarMoe 패스포트와 게임 계정",
+                intro: "로그인은 선택 사항입니다. 로그인하면:",
+                passport: "로그인은 StarMoe 패스포트(passport.star.moe)가 처리합니다. Moesekai는 패스포트의 사용자 ID, 표시 이름, 사용자 이름, 아바타만 받으며 비밀번호에는 접근하지 않습니다.",
+                games: "직접 추가한 게임 계정(서버, UID, 메모)은 Moesekai 서버에 저장되어 다른 기기에서 로그인해도 쓸 수 있습니다.",
+                haruki: "Haruki 툴박스를 연결하면 인증은 StarMoe Connect(connect.star.moe)가 보관하며 Moesekai는 Haruki 토큰에 접근하지 않습니다. Haruki에서 인증한 게임 계정이 자동으로 나타나고, 게임 데이터는 Moesekai 서버가 대신 Haruki에서 읽어 옵니다.",
+                guest: "로그인하지 않으면(게스트 모드) 게임 계정과 게임 데이터는 이 브라우저에만 저장됩니다.",
             },
             local: {
-                title: "2. 기기에 저장되는 데이터",
-                intro: "Moesekai 서버 계정은 필요하지 않지만 일부 기능은 브라우저 localStorage 또는 sessionStorage에 다음 정보를 저장합니다.",
+                title: "3. 기기에 저장되는 데이터",
+                intro: "사이트는 브라우저의 localStorage 또는 sessionStorage에 다음을 저장합니다:",
                 preferences: "언어, 테마, 사이드바, 필터 등의 화면 설정.",
-                account: "이용자가 추가한 게임 계정 식별자, 서버, 닉네임, 아바타 등의 프로필 정보.",
-                tokens: "OAuth2 연결 시 받은 액세스 토큰, 리프레시 토큰, 권한 범위, 만료 시간. 토큰은 민감한 인증 정보입니다.",
+                account: "게임 계정의 UID, 서버, 닉네임, 아바타 등: 게스트 모드에서는 여기에만 저장되고, 로그인 중에는 서버에 있는 데이터의 로컬 사본입니다.",
+                tokens: "2026년 12월 20일까지는 예전 방식으로 브라우저에서 직접 Haruki와 연동한 계정의 OAuth2 액세스 토큰과 리프레시 토큰이 기기에 남아 있으며, 이후에는 사용하지 않습니다. 토큰은 민감한 인증 정보입니다.",
                 gameData: "캐릭터, 덱, 재료, 에어리어 아이템, MYSEKAI 데이터 등 계정 도구를 위해 동기화한 게임 데이터 스냅샷.",
-                note: "이 계정 정보와 OAuth2 토큰은 현재 브라우저에 저장되며 Moesekai 클라우드 계정 데이터베이스로 업로드되지 않습니다. 공용 기기에서는 사용 후 계정과 사이트 데이터를 삭제하세요."
+                note: "공용 기기에서는 떠나기 전에 로그아웃하고 '내 계정' 페이지에서 이 기기의 데이터를 지우세요.",
+            },
+            server: {
+                title: "4. 서버에 저장되는 데이터",
+                intro: "Moesekai 서버에는 다음이 저장됩니다:",
+                accounts: "로그인 중: 패스포트의 사용자 ID, 표시 이름, 아바타, 그리고 저장한 게임 계정 목록.",
+                gameData: "빠르게 불러오기 위해 Haruki에서 읽은 게임 데이터를 잠시 캐시합니다. 공개되지 않은 데이터는 메모리에만 두고 디스크에 쓰지 않습니다.",
+                guessMusic: "곡 맞히기: 데일리 챌린지 성적과 랭킹 기록(패스포트 이름, 아바타, 연결한 게임 계정 표시)을 약 40일간 보관합니다. 부정 이용을 막기 위해 IP 주소별로 요청 횟수를 제한합니다.",
+                community: "커뮤니티: 작성한 게시물, 댓글, 즐겨찾기, 신고, 받은 알림, 그리고 검토 기록. 게시물과 댓글은 공개됩니다.",
             },
             network: {
-                title: "3. 네트워크 요청과 제3자 서비스",
-                intro: "관련 기능을 사용하면 브라우저가 콘텐츠, 공개 게임 API 또는 OAuth2 제공자에게 요청을 보냅니다.",
-                oauth: "OAuth2 제공자는 자체 정책에 따라 로그인, 인증 코드, 토큰, 연결된 게임 계정을 처리합니다.",
-                publicApi: "공개 또는 인증 API는 선택한 서버와 게임 UID를 받고 사이트 도구에 필요한 게임 데이터를 반환합니다.",
-                analytics: "운영 사이트는 Google Analytics를 불러옵니다. Google은 페이지, 기기, 브라우저, IP 주소, 시간 등의 기술 정보를 받을 수 있습니다."
+                title: "5. 네트워크 요청과 제3자 서비스",
+                intro: "관련 기능을 쓰면 다음 서비스와 통신합니다:",
+                publicApi: "Haruki 툴박스: 게임 데이터를 제공합니다. 게스트 모드에서는 브라우저가 선택한 서버와 게임 UID를 보내 공개 API를 직접 호출하고, 로그인 중에는 Moesekai 서버가 대신 호출합니다.",
+                analytics: "운영 사이트는 Google Analytics를 불러옵니다. Google은 페이지, 기기, 브라우저, IP 주소, 시간 등의 기술 정보를 받을 수 있습니다.",
+                starmoe: "StarMoe 패스포트와 StarMoe Connect: 로그인과 Haruki 인증을 처리하며 StarMoe의 정책을 따릅니다.",
+                turnstile: "Cloudflare Turnstile: 스토리 검색, 커뮤니티 글쓰기 등에서 자동화된 악용을 막는 데 씁니다. Cloudflare는 브라우저와 기기의 기술 정보를 받습니다.",
             },
             cookies: {
-                title: "4. 쿠키, 분석 및 광고",
+                title: "6. 쿠키, 분석 및 광고",
                 analytics: "운영 사이트는 집계된 방문 현황을 파악하기 위해 Google Analytics를 사용합니다. Google이 분석 쿠키를 설정할 수 있습니다.",
-                adsDisabled: "현재 광고 기능은 비활성화되어 있습니다. Google AdSense 광고 스크립트를 불러오지 않으며 광고 수익에 의존하지 않습니다. 향후 광고를 활성화하기 전에 이 방침과 동의 화면을 업데이트합니다."
+                adsDisabled: "현재 광고 기능은 비활성화되어 있습니다. Google AdSense 광고 스크립트를 불러오지 않으며 광고 수익에 의존하지 않습니다. 향후 광고를 활성화하기 전에 이 방침과 동의 화면을 업데이트합니다.",
+                session: "로그인하면 pjsk.moe는 로그인 상태를 유지하는 데 필요한 세션 쿠키 하나를 설정합니다. 분석이나 광고에는 쓰지 않습니다.",
             },
             use: {
-                title: "5. 데이터 이용 목적",
-                functionality: "설정을 기억하고 계정, 덱, 계산 도구를 제공하기 위해 사용합니다.",
+                title: "7. 데이터 이용 목적",
+                functionality: "설정을 저장하고 로그인, 계정, 덱, 계산 도구를 제공하기 위해 사용합니다.",
                 sync: "요청에 따라 선택한 API에서 게임 데이터를 동기화하고 표시하기 위해 사용합니다.",
-                analytics: "집계된 이용 현황을 파악해 사이트를 유지하고 개선하기 위해 사용합니다."
+                analytics: "집계된 이용 현황을 파악해 사이트를 유지하고 개선하기 위해 사용합니다.",
+                safety: "요청 제한, 봇 확인, 커뮤니티 검토 등으로 악용을 막기 위해 사용합니다.",
             },
             sharing: {
-                title: "6. 공유 및 판매",
-                body: "로컬에 저장된 계정 데이터나 OAuth2 토큰을 판매하지 않습니다. 기능에 필요한 데이터만 브라우저에서 해당 API, OAuth2 또는 분석 제공자에게 전송하며, 각 제3자는 자체 정책에 따라 처리합니다."
+                title: "8. 공유 및 판매",
+                body: "이용자의 데이터를 판매하지 않습니다. 관련 기능을 사용할 때에만 필요한 데이터를 StarMoe 패스포트, StarMoe Connect, Haruki, Cloudflare 또는 Google에 보내며, 각 서비스는 자체 정책에 따라 처리합니다.",
             },
             controls: {
-                title: "7. 이용자 선택권",
-                delete: "계정 관리에서 저장된 계정을 삭제할 수 있습니다. 브라우저에서 pjsk.moe 사이트 데이터를 지우면 모든 로컬 설정, 계정 스냅샷, 토큰이 삭제됩니다.",
-                browser: "브라우저의 쿠키, 저장소, Do Not Track 또는 Global Privacy Control 설정으로 처리를 추가 제한할 수 있습니다."
+                title: "9. 이용자 선택권",
+                delete: "'내 계정' 페이지에서 게임 계정을 삭제하거나, 이 기기에만 있는 계정을 패스포트에 저장하거나, 이 기기의 데이터를 지울 수 있습니다. 브라우저에서 pjsk.moe의 사이트 데이터를 지울 수도 있습니다.",
+                browser: "브라우저의 쿠키, 저장소, Do Not Track 또는 Global Privacy Control 설정으로 처리를 추가 제한할 수 있습니다.",
+                account: "패스포트 계정 센터에서 StarMoe 계정을 탈퇴할 수 있습니다. 탈퇴하면 Moesekai는 저장된 게임 계정, 로그인 세션, 곡 맞히기의 게임 계정 연결을 삭제하며, 지난 랭킹에서 이름과 아바타가 지워집니다.",
             },
             links: {
-                title: "8. 제3자 링크",
+                title: "10. 제3자 링크",
                 body: "외부 링크는 Moesekai의 사이트 이탈 안내를 거칩니다. 제3자 사이트에는 별도의 콘텐츠와 개인정보 처리방침이 있습니다.",
-                googlePrivacy: "Google 개인정보처리방침"
+                googlePrivacy: "Google 개인정보처리방침",
             },
-            children: { title: "9. 아동 개인정보", body: "이 사이트는 만 13세 미만 아동을 대상으로 하지 않으며, 아동의 개인정보를 고의로 수집하지 않습니다." },
-            changes: { title: "10. 방침 변경", body: "변경 사항은 갱신된 날짜와 함께 이 페이지에 게시합니다. 데이터 처리에 중대한 변화가 있으면 필요한 경우 별도로 알립니다." },
-            contact: { title: "11. 문의", body: "이 방침 또는 데이터 처리에 관한 문의처:", github: "GitHub", qq: "QQ 그룹" }
+            children: {
+                title: "11. 아동 개인정보",
+                body: "이 사이트는 만 13세 미만 아동을 대상으로 하지 않으며, 아동의 개인정보를 고의로 수집하지 않습니다.",
+            },
+            changes: {
+                title: "12. 방침 변경",
+                body: "변경 사항은 갱신된 날짜와 함께 이 페이지에 게시합니다. 데이터 처리에 중대한 변화가 있으면 필요한 경우 별도로 알립니다.",
+            },
+            contact: {
+                title: "13. 문의",
+                body: "이 방침 또는 데이터 처리에 관한 문의처:",
+                github: "GitHub",
+                qq: "QQ 그룹",
+            },
         },
         leave: {
             badge: "외부 링크 안내",
@@ -4426,7 +4404,6 @@ export const koKRMessages = {
             title: "내",
             titleHighlight: "프로필",
             description: "게임 계정을 관리하세요. 모든 데이터는 이 브라우저에만 저장됩니다",
-            boundAccounts: "연동된 계정",
             toolQuickLinks: "도구 바로가기",
             toolQuickLinksHint: "연동된 계정은 아래 도구에서 바로 골라 쓸 수 있습니다",
             goTo: "바로 가기 →",
@@ -4444,28 +4421,6 @@ export const koKRMessages = {
                     description: "카드 수집 진행도 확인"
                 }
             },
-            dangerZone: "위험 구역",
-            dangerDescription: "모든 계정을 지우면 이 브라우저에 저장된 데이터가 전부 삭제되며, 되돌릴 수 없습니다",
-            clearAllData: "모든 데이터 지우기",
-            clearAllConfirm: "정말 모든 계정을 지울까요?",
-            confirmClear: "지우기",
-            descriptionSignedIn: "게임 계정을 관리하세요. 계정은 StarMoe 계정에 동기화됩니다",
-            signInTitle: "StarMoe 계정 로그인",
-            signInDescription: "로그인하면 계정이 StarMoe 계정에 저장되어 기기 간에 동기화됩니다. Haruki 툴박스를 연결하면 공개 API를 켜지 않아도 전체 데이터를 불러올 수 있습니다.",
-            signInAction: "로그인",
-            importTitle: "이 기기에 StarMoe 계정으로 동기화되지 않은 계정이 {count}개 있습니다",
-            importDescription: "가져오면 다른 기기에서 로그인해도 바로 사용할 수 있습니다.",
-            importAction: "모두 가져오기",
-            importDone: "StarMoe 계정으로 가져왔습니다.",
-            importFailed: "가져오지 못했습니다. 잠시 후 다시 시도하세요.",
-            harukiReconnectTitle: "Haruki 인증이 만료되었습니다",
-            harukiReconnectDescription: "다시 연결해야 비공개 게임 데이터를 계속 불러올 수 있습니다. 그전까지는 공개 데이터만 불러옵니다.",
-            legacyOAuthTitle: "브라우저 내 OAuth2 연동은 곧 종료됩니다",
-            legacyOAuthDescription: "StarMoe에 로그인한 뒤 StarMoe Connect에서 Haruki 툴박스를 연결하세요. 종료 후에는 이 계정들을 공개 API로만 불러올 수 있습니다.",
-            dangerDescriptionSignedIn: "이 기기에 캐시된 계정만 지웁니다. StarMoe 계정에 동기화된 계정은 그대로 남아 다시 동기화됩니다.",
-            clearLocalData: "이 기기 캐시 지우기",
-            clearLocalConfirm: "이 기기에 캐시된 계정을 지울까요?",
-            syncedNotice: "계정은 StarMoe 계정에 동기화되어 있습니다. Haruki 인증은 StarMoe Connect가 보관하며, 게임 데이터는 Moesekai 서버를 통해 불러옵니다.",
             hero: {
                 rank: "랭크",
                 switchAccount: "계정 전환",
@@ -4550,7 +4505,7 @@ export const koKRMessages = {
             titleHighlight: "진행도",
             description: "카드 수집 진행도와 상세 정보를 확인하세요",
             filterTitle: "카드 진행도 필터",
-            quickBindDescription: "계정을 연동하면 카드 수집 진행도를 볼 수 있습니다",
+            quickBindDescription: "게임 계정을 추가하면 카드 수집 진행도가 여기에 표시됩니다.",
             loadDataFailed: "카드 데이터를 불러오지 못했습니다",
             noResult: "조건에 맞는 카드가 없습니다",
             loadMore: "더 불러오기",
@@ -4564,7 +4519,7 @@ export const koKRMessages = {
             titleHighlight: "진행도",
             description: "악곡 클리어 진행도와 성적을 확인하세요",
             filterTitle: "악곡 진행도 필터",
-            quickBindDescription: "계정을 연동하면 악곡 클리어 현황과 Best30을 볼 수 있습니다",
+            quickBindDescription: "게임 계정을 추가하면 악곡 클리어 현황과 Best30이 여기에 표시됩니다.",
             loadDataFailed: "악곡 데이터를 불러오지 못했습니다",
             noResult: "조건에 맞는 악곡이 없습니다",
             loadMore: "더 불러오기",
@@ -4580,7 +4535,7 @@ export const koKRMessages = {
             titleHighlight: "조회",
             description: "보유한 재료와 자원을 확인하세요",
             filterTitle: "자원 필터",
-            quickBindDescription: "계정을 연동하면 재료 보유 현황을 볼 수 있습니다",
+            quickBindDescription: "게임 계정을 추가하면 재료 보유 현황이 여기에 표시됩니다.",
             searchPlaceholder: "재료 이름 또는 ID 검색...",
             countUnit: "종",
             tabs: {

@@ -1,19 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo, useSyncExternalStore } from "react";
-import Image from "next/image";
-import Link from "@/components/LocalizedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
-import {
-    ACCOUNTS_CHANGED_EVENT,
-    getActiveAccount,
-    getCharacterIconUrl,
-    getTopCharacterId,
-    getCachedAvatarUrl,
-    type MoesekaiAccount,
-} from "@/lib/account";
-import { useCardThumbnail } from "@/hooks/useCardThumbnail";
-import { useTheme } from "@/contexts/ThemeContext";
+import AccountCenter from "@/components/account/AccountCenter";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     NAV_ITEM_LABEL_KEYS,
@@ -131,7 +120,6 @@ import {
     mdHome,
     mdHomeFill,
     mdKeyboardArrowDown,
-    mdChevronRight,
     mdMenuOpen,
     mdGraphicEq,
 } from "@/components/md3/icons";
@@ -354,7 +342,6 @@ export default function Sidebar({
 }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { assetSource } = useTheme();
     const { t } = useI18n();
     // On the home page, the mobile navbar stays single-row (~64px tall); on
     // other pages it grows by a breadcrumb row (~32px + border). The sidebar
@@ -394,8 +381,6 @@ export default function Sidebar({
         () => navigationGroups.map((group) => group.id).filter((id) => groupPreferences[id] ?? id === activeGroupId),
         [groupPreferences, activeGroupId]
     );
-    const [activeAccount, setActiveAccountState] = useState<MoesekaiAccount | null>(null);
-    const activeAccountCardThumbnail = useCardThumbnail(activeAccount?.avatarCardId ?? null, assetSource);
     const navRef = useRef<HTMLElement>(null);
 
     // Keyboard navigation state: -1 means no focused item.
@@ -413,22 +398,6 @@ export default function Sidebar({
         }
         return items;
     }, [expandedGroups]);
-
-    // Load and sync the active account.
-    useEffect(() => {
-        const syncActiveAccount = () => {
-            const account = getActiveAccount();
-            setActiveAccountState(account);
-        };
-
-        syncActiveAccount();
-        window.addEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-        window.addEventListener("storage", syncActiveAccount);
-        return () => {
-            window.removeEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-            window.removeEventListener("storage", syncActiveAccount);
-        };
-    }, []);
 
     // Restore the sidebar scroll position once the groups have their final
     // layout. After a route change the saved offset was measured on the
@@ -672,45 +641,9 @@ export default function Sidebar({
                     })}
                 </nav>
 
-                {/* Account */}
+                {/* Account: who you are (StarMoe Passport) and the game account being viewed. */}
                 <div className="shrink-0 border-t border-outline-variant p-3">
-                    <Link
-                        href="/profile"
-                        prefetch={false}
-                        onClick={handleNavClick}
-                        className="state-layer focus-ring flex items-center gap-3 rounded-md3-lg p-2"
-                    >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container text-on-primary-container">
-                            {activeAccount ? (
-                                <Image
-                                    src={
-                                        activeAccountCardThumbnail ||
-                                        getCachedAvatarUrl(activeAccount.id) ||
-                                        getCharacterIconUrl(
-                                            activeAccount.avatarCharacterId ||
-                                            (activeAccount.userCharacters ? getTopCharacterId(activeAccount.userCharacters) : 21)
-                                        )
-                                    }
-                                    alt={activeAccount.userGamedata?.name || activeAccount.nickname || activeAccount.gameId}
-                                    width={40}
-                                    height={40}
-                                    className="h-full w-full object-cover"
-                                    unoptimized
-                                />
-                            ) : (
-                                <Icon path={mdPerson} size={24} />
-                            )}
-                        </span>
-                        <span className="min-w-0 flex-grow">
-                            <span className="block truncate type-label-l text-on-surface">
-                                {activeAccount?.userGamedata?.name || activeAccount?.nickname || t("settings.sidebar.notLoggedIn")}
-                            </span>
-                            <span className="block truncate type-body-s text-on-surface-variant">
-                                {activeAccount ? t("settings.sidebar.manageAccount") : t("settings.sidebar.bindAccount")}
-                            </span>
-                        </span>
-                        <Icon path={mdChevronRight} size={24} className="shrink-0 text-on-surface-variant" />
-                    </Link>
+                    <AccountCenter onNavigate={handleNavClick} />
                 </div>
             </aside>
         </>

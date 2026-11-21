@@ -1,4 +1,4 @@
-import { normalizeServer, type ServerType } from "./account-servers";
+import { normalizeServer, type ServerType } from "../account-servers";
 
 import { localizePathForBrowser } from "@/lib/localized-path";
 

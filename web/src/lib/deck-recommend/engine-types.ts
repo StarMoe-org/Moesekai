@@ -107,7 +107,7 @@ export interface DeckWorkerInput {
     userId: string;
     server: string;
     oauthAccessToken?: string;
-    /** 已登录 StarMoe：用户数据经 moesekai-api（/api/sekai）读取。 */
+    /** 已登录 StarMoe：用户数据经 moesekai-api（/api/v1/me/sekai）读取。 */
     viaStarMoe?: boolean;
     /** 活动 ID（模拟活动开启时忽略）。 */
     eventId?: number;

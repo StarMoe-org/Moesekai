@@ -1,6 +1,7 @@
 /**
- * Game accounts kept with the visitor's StarMoe account (moesekai-api /api/accounts), and game data read through
- * moesekai-api (/api/sekai), which uses the visitor's Haruki connection on StarMoe Connect when it has one.
+ * Game accounts kept with the visitor's StarMoe account (moesekai-api /api/v1/me/accounts), and game data read
+ * through moesekai-api (/api/v1/me/sekai), which uses the visitor's Haruki connection on StarMoe Connect when it
+ * has one. The browser only holds the session cookie: no token, no Authorization header.
  *
  * Signed out, or when moesekai-api does not offer these routes yet, everything here reports "off" and the account
  * library keeps working from the browser alone, as before.
@@ -34,11 +35,14 @@ export interface StarMoeAccounts {
 
 const OFF: StarMoeAccounts = { status: "off", accounts: [], haruki: "unknown", harukiName: "", connectUrl: "", maxManual: 20 };
 const CONNECT_FALLBACK = "https://connect.star.moe/";
+/** moesekai-api's versioned routes for the signed-in visitor (the site and Moebot share them). */
+const ACCOUNTS_BASE = "/api/v1/me/accounts";
+const SEKAI_BASE = "/api/v1/me/sekai";
 const REQUEST_TIMEOUT_MS = 20_000;
 const REFRESH_AFTER_MS = 60_000;
 
 let state: StarMoeAccounts = OFF;
-/** moesekai-api answered 404 for /api/accounts: this deployment does not have the feature. */
+/** moesekai-api answered 404 for the accounts route: this deployment does not have the feature (or does not forward it). */
 let unsupported = false;
 let inFlight: Promise<StarMoeAccounts> | null = null;
 let lastLoadAt = 0;
@@ -66,8 +70,14 @@ export function onStarMoeAccountsLoaded(hook: (next: StarMoeAccounts) => void): 
 }
 
 export class StarMoeApiError extends Error {
-    constructor(public readonly status: number, public readonly code: string) {
+    readonly status: number;
+    readonly code: string;
+
+    // Plain fields rather than parameter properties, so Node's type stripping can load this module in scripts.
+    constructor(status: number, code: string) {
         super(code);
+        this.status = status;
+        this.code = code;
     }
 }
 
@@ -160,7 +170,7 @@ export function loadStarMoeAccounts(force = false): Promise<StarMoeAccounts> {
     if (!force && state.status === "ready" && Date.now() - lastLoadAt < REFRESH_AFTER_MS) return Promise.resolve(state);
     if (inFlight) return inFlight;
     if (state.status === "off") setState({ ...OFF, status: "loading" });
-    inFlight = request("/api/accounts")
+    inFlight = request(ACCOUNTS_BASE)
         .then(answer)
         .catch((error: unknown) => {
             if (state.status !== "ready") setState({ ...OFF, status: "error" });
@@ -173,18 +183,18 @@ export function loadStarMoeAccounts(force = false): Promise<StarMoeAccounts> {
 }
 
 function accountPath(server: ServerType, uid: string): string {
-    return `/api/accounts/${encodeURIComponent(server)}/${encodeURIComponent(uid)}`;
+    return `${ACCOUNTS_BASE}/${encodeURIComponent(server)}/${encodeURIComponent(uid)}`;
 }
 
 /** Saves a hand-added account with the StarMoe account. Rejects with code too_many_accounts at the limit. */
 export async function saveStarMoeAccount(server: ServerType, uid: string, label = ""): Promise<StarMoeAccounts> {
-    return answer(await request("/api/accounts", { method: "POST", body: JSON.stringify({ server, uid, label }) }));
+    return answer(await request(ACCOUNTS_BASE, { method: "POST", body: JSON.stringify({ server, uid, label }) }));
 }
 
 /** Copies accounts kept only in this browser to the StarMoe account (up to the limit; existing ones stay). */
 export async function importStarMoeAccounts(items: { server: ServerType; uid: string; label?: string }[]): Promise<StarMoeAccounts> {
     const accounts = items.map((item) => ({ server: item.server, uid: item.uid, label: item.label ?? "" }));
-    return answer(await request("/api/accounts/import", { method: "POST", body: JSON.stringify({ accounts }) }));
+    return answer(await request(`${ACCOUNTS_BASE}/import`, { method: "POST", body: JSON.stringify({ accounts }) }));
 }
 
 /** Removes a hand-added account. Verified ones come from Haruki and cannot be removed here. */
@@ -230,7 +240,7 @@ function readError(status: number, code: string): SekaiReadError {
 
 async function sekaiResponse(server: ServerType, type: "suite" | "mysekai", uid: string, keys?: string[]): Promise<Response> {
     const query = keys && keys.length > 0 ? `?key=${encodeURIComponent(keys.join(","))}` : "";
-    const response = await request(`/api/sekai/${server}/${type}/${encodeURIComponent(uid)}${query}`);
+    const response = await request(`${SEKAI_BASE}/${server}/${type}/${encodeURIComponent(uid)}${query}`);
     if (response.ok) {
         if (response.headers.get("X-Haruki-Reconnect") === "1") markHarukiReconnect();
         return response;

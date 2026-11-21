@@ -31,7 +31,7 @@ import {
     type Wl3SimulationGroup,
 } from "@/lib/world-bloom-simulation";
 import { getCharacterName } from "@/lib/i18n";
-import AccountSelector from "@/components/AccountSelector";
+import GameAccountQuickFill from "@/components/account/GameAccountQuickFill";
 import EventSelector from "@/components/deck-recommend/EventSelector";
 import MusicSelector from "@/components/deck-recommend/MusicSelector";
 import { type OverrideCatalogItem } from "@/components/deck-recommend/DataOverridePanel";
@@ -1080,7 +1080,7 @@ export default function DeckRecommendClient() {
                             </Button>
                         </div>
                     </div>
-                    <AccountSelector
+                    <GameAccountQuickFill
                         onSelect={(gameId, srv) => {
                             setUserId(gameId);
                             setServer(srv);
