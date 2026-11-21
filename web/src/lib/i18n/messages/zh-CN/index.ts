@@ -1,6 +1,7 @@
 import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { storyMakerMessages } from "./storyMaker";
 import type { MessageTree } from "../types";
 
 export const zhCNMessages = {
@@ -800,6 +801,7 @@ export const zhCNMessages = {
                 guessMusic: "猜歌曲",
                 chartPreview: "谱面预览器",
                 storyPlayer: "剧情浏览器",
+                storyMaker: "剧情制作器",
                 storySearch: "剧情检索器",
                 costume3d: "3D 服装",
                 live2dViewer: "Live2D 预览",
@@ -878,6 +880,7 @@ export const zhCNMessages = {
             guessMusic: "听片段猜出歌曲",
             chartPreview: "预览谱面文件",
             storyPlayer: "播放 Live2D 剧情演出并对照剧本",
+            storyMaker: "使用 Live2D 模型与游戏素材创作并播放原创剧情",
             storySearch: "本地关键词/正则与 AI 语义检索全服剧情台词",
             costume3d: "按角色查看服装的 3D 模型与动作",
             live2dViewer: "查看剧情里的 Live2D 模型、动作和表情",
@@ -1191,6 +1194,7 @@ export const zhCNMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        storyMaker: storyMakerMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},

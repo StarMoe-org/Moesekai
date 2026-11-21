@@ -1,6 +1,7 @@
 import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { storyMakerMessages } from "./storyMaker";
 import type { MessageTree } from "../types";
 
 export const jaJPMessages = {
@@ -800,6 +801,7 @@ export const jaJPMessages = {
         guessMusic: '曲当てクイズ',
         chartPreview: '譜面プレビュー',
         storyPlayer: 'ストーリープレイヤー',
+        storyMaker: 'ストーリーメーカー',
         storySearch: 'ストーリー検索',
         costume3d: '3D衣装',
         live2dViewer: 'Live2D ビューア',
@@ -878,6 +880,7 @@ export const jaJPMessages = {
       guessMusic: '短いフレーズを聴いて曲を当てる',
       chartPreview: 'Preview chart files',
       storyPlayer: 'ストーリーを Live2D で再生し台本と並べて読む',
+      storyMaker: 'Live2D モデルと公式素材でオリジナルストーリーを作成・再生する',
       storySearch: 'キーワード・正規表現と AI 意味検索でストーリーのセリフを検索',
       costume3d: 'キャラクターの衣装を 3D で見る',
       live2dViewer: 'ストーリーの Live2D モデルとモーション・表情を見る',
@@ -1191,6 +1194,7 @@ export const jaJPMessages = {
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
       costume3d: costume3dMessages,
+      storyMaker: storyMakerMessages,
       assetGuide: assetGuideMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},

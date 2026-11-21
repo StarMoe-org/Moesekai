@@ -1,6 +1,7 @@
 import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { storyMakerMessages } from "./storyMaker";
 export const koKRMessages = {
     common: {
         md3: {
@@ -798,6 +799,7 @@ export const koKRMessages = {
                 guessMusic: "곡 맞히기",
                 chartPreview: "채보 미리보기",
                 storyPlayer: "스토리 플레이어",
+                storyMaker: "스토리 메이커",
                 storySearch: "스토리 검색기",
                 costume3d: "3D 의상",
                 live2dViewer: "Live2D 뷰어",
@@ -876,6 +878,7 @@ export const koKRMessages = {
             guessMusic: "짧은 구간을 듣고 악곡 맞히기",
             chartPreview: "채보 파일 미리보기",
             storyPlayer: "스토리를 Live2D로 재생하고 대본과 함께 보기",
+            storyMaker: "Live2D 모델과 게임 에셋으로 오리지널 스토리 제작 및 재생",
             storySearch: "로컬 키워드/정규식 및 AI 의미 검색으로 스토리 대사 찾기",
             costume3d: "캐릭터의 의상을 3D로 보기",
             live2dViewer: "스토리의 Live2D 모델과 모션·표정 보기",
@@ -1189,6 +1192,7 @@ export const koKRMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        storyMaker: storyMakerMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},

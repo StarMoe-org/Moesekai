@@ -1,6 +1,7 @@
 import { assetGuideMessages } from "./assetGuide";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { storyMakerMessages } from "./storyMaker";
 import type { MessageTree } from "../types";
 
 export const enUSMessages = {
@@ -801,6 +802,7 @@ export const enUSMessages = {
                 guessMusic: "Guess the Song",
                 chartPreview: "Chart Preview",
                 storyPlayer: "Story Player",
+                storyMaker: "Story Maker",
                 storySearch: "Story Search",
                 costume3d: "3D Costumes",
                 live2dViewer: "Live2D Viewer",
@@ -879,6 +881,7 @@ export const enUSMessages = {
             guessMusic: "Guess the song from a short clip",
             chartPreview: "Preview chart files",
             storyPlayer: "Play stories in Live2D beside their script",
+            storyMaker: "Create and play custom Live2D fan stories",
             storySearch: "Search story dialogues locally with keyword/regex or AI semantic search",
             costume3d: "See each character's costumes in 3D",
             live2dViewer: "View the stories' Live2D models, motions and facials",
@@ -1192,6 +1195,7 @@ export const enUSMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        storyMaker: storyMakerMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},
