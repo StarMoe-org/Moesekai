@@ -171,9 +171,12 @@ export async function dress(
             return index == null ? null : images[index] ?? null;
         };
         if (/Eye-Highlight/.test(unity.shader ?? "")) {
-            mesh.material = new THREE.MeshBasicMaterial({ map: source.map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
-            // GLTFLoader's own texture, not one of the texture source's: released with the look.
-            mesh.material.userData.ownsMap = true;
+            // The loader's own images are blanks: the highlight's `_MainTex` comes from the
+            // texture source, as the toon materials' do.
+            const file = slot("_MainTex");
+            const map = file ? await texture(file, true) : null;
+            mesh.material = new THREE.MeshBasicMaterial({ map, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending });
+            mesh.visible = map !== null;
             mesh.renderOrder = 2;
             source.dispose();
             return;
