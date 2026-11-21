@@ -1,0 +1,158 @@
+"use client";
+import { useState } from "react";
+import { Button, Dialog, ErrorState, IconButton, LoadingState, TextField } from "@/components/md3";
+import { mdDelete, mdEdit, mdPersonAdd } from "@/components/md3/icons";
+import { Live2DModelPicker } from "@/components/live2d/Live2DModelPicker";
+import { live2dCostumeLabel, live2dGroupKey, live2dOwnerName } from "@/components/live2d/labels";
+import { useI18n } from "@/contexts/I18nContext";
+import { getCharacterIconUrl } from "@/lib/assets";
+import { castUsage } from "@/lib/storyMaker/document";
+import { STORY_LIMITS } from "@/lib/storyMaker/limits";
+import type { Live2DModel } from "@/lib/live2dViewer/models";
+import type { StoryCastMember, StoryDocument } from "@/types/storyMaker";
+import type { StoryModelList } from "./useStoryModels";
+
+interface CastModelDialogProps {
+    isOpen: boolean;
+    onClose: () => void;
+    list: StoryModelList;
+    onRetry: () => void;
+    current: Live2DModel | null;
+    onSelect: (model: Live2DModel) => void;
+}
+
+/** Choosing a model of the server's story library for a cast member. */
+export function CastModelDialog({ isOpen, onClose, list, onRetry, current, onSelect }: CastModelDialogProps) {
+    const { t } = useI18n();
+    const [group, setGroup] = useState(() => (current ? live2dGroupKey(current) : "character:1"));
+    return (
+        <Dialog isOpen={isOpen} onClose={onClose} title={t("page.storyMaker.cast.pickModel")} size="lg" fullscreenOnMobile>
+            {list.status === "loading" ? (
+                <LoadingState label={t("page.live2d.listLoading")} />
+            ) : list.status === "error" ? (
+                <ErrorState title={t("page.live2d.listFailed")} message={list.message} retryLabel={t("common.action.retry")} onRetry={onRetry} />
+            ) : list.models.length === 0 ? (
+                <p className="py-6 text-center type-body-m text-on-surface-variant">{t("page.live2d.listEmptyDescription")}</p>
+            ) : (
+                <Live2DModelPicker models={list.models} current={current} group={group} onGroupChange={setGroup} onSelect={onSelect} />
+            )}
+        </Dialog>
+    );
+}
+
+interface CastPanelProps {
+    doc: StoryDocument;
+    list: StoryModelList;
+    onRetryList: () => void;
+    onAdd: (member: Omit<StoryCastMember, "key">) => void;
+    onUpdate: (key: string, patch: Partial<Omit<StoryCastMember, "key">>) => void;
+    onRemove: (key: string) => void;
+}
+
+/** The story's cast: up to eight models, each with the name shown on its lines. */
+export function CastPanel({ doc, list, onRetryList, onAdd, onUpdate, onRemove }: CastPanelProps) {
+    const { t } = useI18n();
+    const [picking, setPicking] = useState<{ key: string | null } | null>(null);
+    const [removing, setRemoving] = useState<StoryCastMember | null>(null);
+    const models = list.status === "ready" ? list.models : [];
+    const modelOf = (member: StoryCastMember) => models.find(model => model.id === member.modelId) ?? null;
+    const full = doc.cast.length >= STORY_LIMITS.cast;
+
+    const choose = (model: Live2DModel) => {
+        const name = live2dOwnerName(t, model);
+        const patch = { modelId: model.id, ...(model.characterId ? { characterId: model.characterId } : { characterId: undefined }) };
+        if (picking?.key) onUpdate(picking.key, patch);
+        else onAdd({ ...patch, name });
+        setPicking(null);
+    };
+
+    return (
+        <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+                <p className="type-title-s text-on-surface">
+                    {t("page.storyMaker.cast.title")}
+                    <span className="ml-2 type-label-m text-on-surface-variant">{doc.cast.length}/{STORY_LIMITS.cast}</span>
+                </p>
+                <Button size="s" variant="tonal" icon={mdPersonAdd} disabled={full} onClick={() => setPicking({ key: null })}>
+                    {t("page.storyMaker.cast.add")}
+                </Button>
+            </div>
+            {doc.cast.length === 0 && <p className="type-body-m text-on-surface-variant">{t("page.storyMaker.cast.empty")}</p>}
+            <ul className="space-y-2">
+                {doc.cast.map(member => {
+                    const model = modelOf(member);
+                    return (
+                        <li key={member.key} className="flex items-start gap-3 rounded-md3-md bg-surface-container px-3 py-2">
+                            {member.characterId ? (
+                                <img src={getCharacterIconUrl(member.characterId)} alt="" className="mt-1 size-10 shrink-0 rounded-full bg-surface-container-highest object-cover" />
+                            ) : (
+                                <span className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary-container type-title-s text-on-secondary-container">
+                                    {(member.name || "?").slice(0, 1)}
+                                </span>
+                            )}
+                            <div className="min-w-0 flex-1 space-y-1">
+                                <TextField
+                                    value={member.name}
+                                    maxLength={STORY_LIMITS.castName}
+                                    onChange={event => onUpdate(member.key, { name: event.target.value })}
+                                    aria-label={t("page.storyMaker.cast.name")}
+                                    placeholder={t("page.storyMaker.cast.name")}
+                                />
+                                <p className="truncate type-label-s text-on-surface-variant">
+                                    {model ? `${live2dCostumeLabel(t, model)} · ` : ""}
+                                    <span className="font-mono">{member.modelId}</span>
+                                </p>
+                                {list.status === "ready" && !model && (
+                                    <p className="type-label-s text-error">{t("page.storyMaker.cast.modelMissing")}</p>
+                                )}
+                            </div>
+                            <div className="flex shrink-0 flex-col">
+                                <IconButton size="xs" icon={mdEdit} label={t("page.storyMaker.cast.changeModel")} onClick={() => setPicking({ key: member.key })} />
+                                <IconButton size="xs" icon={mdDelete} label={t("page.storyMaker.cast.remove")} onClick={() => setRemoving(member)} />
+                            </div>
+                        </li>
+                    );
+                })}
+            </ul>
+
+            {picking && (() => {
+                const target = picking.key ? doc.cast.find(member => member.key === picking.key) : undefined;
+                return (
+                    <CastModelDialog
+                        isOpen
+                        onClose={() => setPicking(null)}
+                        list={list}
+                        onRetry={onRetryList}
+                        current={target ? modelOf(target) : null}
+                        onSelect={choose}
+                    />
+                );
+            })()}
+            <Dialog
+                isOpen={removing !== null}
+                onClose={() => setRemoving(null)}
+                title={t("page.storyMaker.cast.removeTitle")}
+                size="sm"
+                actions={(
+                    <>
+                        <Button variant="text" onClick={() => setRemoving(null)}>{t("common.action.cancel")}</Button>
+                        <Button
+                            variant="filled"
+                            color="error"
+                            onClick={() => {
+                                if (removing) onRemove(removing.key);
+                                setRemoving(null);
+                            }}
+                        >
+                            {t("page.storyMaker.cast.remove")}
+                        </Button>
+                    </>
+                )}
+            >
+                <p className="type-body-m text-on-surface-variant">
+                    {removing && t("page.storyMaker.cast.removeDescription", { name: removing.name || removing.modelId, count: castUsage(doc, removing.key) })}
+                </p>
+            </Dialog>
+        </div>
+    );
+}
