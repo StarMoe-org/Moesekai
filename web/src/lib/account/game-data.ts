@@ -96,7 +96,12 @@ async function readAndStore(account: MoesekaiAccount): Promise<AccountRefreshErr
         return code === "API_NOT_PUBLIC" || code === "NOT_FOUND" ? code : "NETWORK_ERROR";
     }
     if (!result.success) return result.error === "API_NOT_PUBLIC" || result.error === "NOT_FOUND" ? result.error : "NETWORK_ERROR";
+    storeGameData(account, result);
+    return null;
+}
 
+/** Stores what a successful read returned on the account (data, upload time, avatar, in-game name). */
+export function storeGameData(account: MoesekaiAccount, result: HarukiApiResult): void {
     const userGamedata = result.userGamedata ?? null;
     const userDecks = result.userDecks ?? null;
     const userCharacters = result.userCharacters ?? null;
@@ -118,7 +123,6 @@ async function readAndStore(account: MoesekaiAccount): Promise<AccountRefreshErr
         nickname: userGamedata?.name || account.nickname,
         lastSyncAt: Date.now(),
     });
-    return null;
 }
 
 /**

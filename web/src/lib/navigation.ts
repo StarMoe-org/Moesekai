@@ -95,6 +95,7 @@ const allNavigationGroups: NavGroupData[] = [
         href: "/breadcrumb-personal",
         items: [
             { href: "/profile" },
+            { href: "/account" },
             { href: "/my-cards" },
             { href: "/my-musics" },
             { href: "/my-materials" },
@@ -227,7 +228,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/mysekai-preview/scene", group: "tools", keywords: ["mysekai preview", "scene preview", "mysekai", "3d", "obj", "scene"] },
     { href: "/sticker-maker", group: "tools", keywords: ["sticker maker", "meme"] },
 
-    { href: "/profile", group: "personal", keywords: ["profile", "user", "account"] },
+    { href: "/profile", group: "personal", keywords: ["profile", "user", "player"] },
+    { href: "/account", group: "personal", keywords: ["account", "my account", "sign in", "login", "passport", "starmoe", "haruki", "uid", "game account"] },
     { href: "/my-cards", group: "personal", keywords: ["my cards", "card progress"] },
     { href: "/my-musics", group: "personal", keywords: ["my musics", "music progress", "song progress"] },
     { href: "/my-materials", group: "personal", keywords: ["my materials", "materials", "resources", "mysekai materials"] },
@@ -332,6 +334,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/asset-viewer": "layout.nav.items.assetViewer",
     "/asset-versions": "layout.nav.items.assetVersions",
     "/profile": "layout.nav.items.profile",
+    "/account": "page.account.title",
     "/my-cards": "layout.nav.items.myCards",
     "/my-musics": "layout.nav.items.myMusics",
     "/my-materials": "layout.nav.items.myMaterials",
@@ -387,6 +390,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/asset-viewer": "layout.groupPages.assetViewer",
     "/asset-versions": "layout.groupPages.assetVersions",
     "/profile": "layout.groupPages.profile",
+    "/account": "page.account.description",
     "/my-cards": "layout.groupPages.myCards",
     "/my-musics": "layout.groupPages.myMusics",
     "/my-materials": "layout.groupPages.myMaterials",

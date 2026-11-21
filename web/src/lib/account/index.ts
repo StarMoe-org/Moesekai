@@ -6,6 +6,7 @@
  * - starmoe-sync.ts     following the StarMoe account's list when signed in
  * - game-data.ts        reading data from Haruki (moesekai-api, public API) and refreshing saved accounts
  * - game-data-format.ts normalizing Haruki answers and errors
+ * - actions.ts          adding and deleting game accounts, saving local ones to the Passport
  * - display.ts          avatar helpers
  * - hooks.ts            useGameAccounts() (import from "@/lib/account/hooks" in client components)
  *
@@ -23,5 +24,7 @@ export {
     getDeckUserDataAccess,
     refreshGameAccount,
     refreshGameAccounts,
+    storeGameData,
     verifyHarukiApi,
 } from "./game-data";
+export { addGameAccount, deleteGameAccount, saveLocalAccountsToPassport, type AddedTo, type AddGameAccountResult } from "./actions";

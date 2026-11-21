@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -368,7 +369,7 @@ export const zhCNMessages = {
             body: "你在这台设备上用浏览器 OAuth2 绑定了 {count} 个 Haruki 账号。这种绑定方式即将停用，今后改为登录 StarMoe 账号，并在 StarMoe 互联中心连接 Haruki 工具箱。",
             pointSync: "连接一次，所有设备都能用，账号也会同步保存。",
             pointPublic: "不迁移的话，停用后这些账号只能读取公开数据。",
-            pointLater: "选择“暂不迁移”后，之后也可以在个人主页随时迁移。",
+            pointLater: "选择“暂不迁移”后，之后也可以在“我的账号”里随时迁移。",
             migrate: "登录并迁移",
             migrateSignedIn: "去连接 Haruki",
             later: "暂不迁移",
@@ -1366,6 +1367,7 @@ export const zhCNMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        account: accountMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"内容分页","previous":"上一页","next":"下一页","page":"第 {page} 页，共 {pages} 页","range":"{start}–{end} / {total}","preparing":"正在准备资源…","ready":"准备就绪，点击播放"},

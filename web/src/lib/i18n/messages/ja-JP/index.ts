@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -368,7 +369,7 @@ export const jaJPMessages = {
       body: 'この端末では {count} 件の Haruki アカウントをブラウザの OAuth2 で連携しています。この連携方法は終了予定のため、今後は StarMoe にログインし、StarMoe Connect で Haruki Toolbox と連携してください。',
       pointSync: '一度連携すればすべての端末で使え、アカウントも同期されます。',
       pointPublic: '移行しない場合、終了後これらのアカウントは公開データのみ読み込めます。',
-      pointLater: '「今はしない」を選んでも、あとでプロフィールからいつでも移行できます。',
+      pointLater: '「今はしない」を選んでも、あとで「マイアカウント」からいつでも移行できます。',
       migrate: 'ログインして移行',
       migrateSignedIn: 'Haruki と連携する',
       later: '今はしない',
@@ -1366,6 +1367,7 @@ export const jaJPMessages = {
     },
       mysekaiWorkspace: mysekaiWorkspaceMessages,
       costume3d: costume3dMessages,
+      account: accountMessages,
       assetGuide: assetGuideMessages,
     mysekaiInteractions: {
             r5: {"pagination":"コンテンツのページ","previous":"前のページ","next":"次のページ","page":"{pages} ページ中 {page} ページ","range":"{start}–{end} / {total}","preparing":"リソースを準備中…","ready":"再生できます"},

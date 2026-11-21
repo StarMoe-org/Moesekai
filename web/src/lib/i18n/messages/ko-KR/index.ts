@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 export const koKRMessages = {
@@ -366,7 +367,7 @@ export const koKRMessages = {
             body: "이 기기에서 브라우저 OAuth2로 Haruki 계정 {count}개를 연동했습니다. 이 방식은 곧 종료되며, 앞으로는 StarMoe에 로그인한 뒤 StarMoe Connect에서 Haruki 툴박스를 연결해야 합니다.",
             pointSync: "한 번 연결하면 모든 기기에서 사용할 수 있고 계정도 동기화됩니다.",
             pointPublic: "이전하지 않으면 종료 후 이 계정들은 공개 데이터만 불러올 수 있습니다.",
-            pointLater: "'나중에'를 선택해도 프로필에서 언제든 이전할 수 있습니다.",
+            pointLater: "'나중에'를 선택해도 '내 계정'에서 언제든 이전할 수 있습니다.",
             migrate: "로그인하고 이전",
             migrateSignedIn: "Haruki 연결하기",
             later: "나중에",
@@ -1364,6 +1365,7 @@ export const koKRMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        account: accountMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"콘텐츠 페이지","previous":"이전 페이지","next":"다음 페이지","page":"{pages}페이지 중 {page}페이지","range":"{start}–{end} / {total}","preparing":"리소스 준비 중…","ready":"재생 준비 완료"},
