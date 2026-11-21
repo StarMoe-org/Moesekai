@@ -542,11 +542,6 @@ export function StoryEditorBin({
 
             {activeTab === "components" && (
                 <div className="min-h-0 flex-1 space-y-3.5 overflow-y-auto p-3">
-                    <div className="flex items-start gap-2 rounded-md3-md border border-primary/25 bg-primary-container/30 px-2.5 py-2 text-on-surface">
-                        <Icon path={mdDragIndicator} size={16} className="mt-0.5 shrink-0 text-primary" />
-                        <p className="type-body-s text-on-surface-variant">{t("page.storyMaker.nle.dragHint")}</p>
-                    </div>
-
                     {renderPaletteGroup(t("page.storyMaker.v2.palette.groupNodes"), nodeItems)}
                     {renderPaletteGroup(t("page.storyMaker.v2.palette.groupBgComponents"), bgItems)}
                     {renderPaletteGroup(t("page.storyMaker.v2.palette.groupBgmComponents"), bgmItems)}
@@ -558,11 +553,6 @@ export function StoryEditorBin({
 
             {activeTab === "assets" && (
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
-                    <div className="flex items-start gap-2 rounded-md3-md border border-outline-variant/60 bg-surface-container px-2.5 py-2">
-                        <Icon path={mdDragIndicator} size={16} className="mt-0.5 shrink-0 text-primary" />
-                        <p className="type-body-s text-on-surface-variant">{t("page.storyMaker.nle.dragHint")}</p>
-                    </div>
-
                     {/* Cast Characters */}
                     <section className="space-y-1.5">
                         <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binCastGroup")}</h3>

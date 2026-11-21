@@ -1,10 +1,10 @@
 "use client";
-import { useMemo } from "react";
-import { Icon, IconButton, LinearProgress, Surface, cn } from "@/components/md3";
+import { useMemo, useState } from "react";
+import { Icon, IconButton, LinearProgress, Surface, Tabs, cn } from "@/components/md3";
 import {
     mdAccountTree, mdAltRoute, mdAutoplay, mdBolt, mdCalculate, mdChat, mdCheckCircle, mdClose,
-    mdFlag, mdGraphicEq, mdHourglassTop, mdImage, mdMonitoring, mdMovie, mdMusicNote, mdMyLocation,
-    mdNumbers, mdPerson, mdPlayCircle, mdRecordVoiceOver, mdTag, mdWarning,
+    mdFlag, mdGraphicEq, mdHistory, mdHourglassTop, mdImage, mdMonitoring, mdMovie, mdMusicNote, mdMyLocation,
+    mdNumbers, mdPerson, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdTag, mdWarning,
 } from "@/components/md3/icons";
 import { StoryFlowCanvas } from "@/components/story-maker/StoryFlowCanvas";
 import { useI18n } from "@/contexts/I18nContext";
@@ -23,6 +23,17 @@ export interface ActiveVoiceProgress {
     start?: number;
     end?: number;
     label: string;
+}
+
+export interface LivePhaseBacklogItem {
+    key: string;
+    kind: "talk" | "narration" | "telop" | "choice";
+    speaker?: string;
+    body: string;
+    voiceUrls?: string[];
+    voiceStart?: number;
+    voiceEnd?: number;
+    voiceLabel?: string;
 }
 
 export interface LivePhaseTelemetryProps {
@@ -50,9 +61,16 @@ export interface LivePhasePanelProps {
     stageState: StoryStageState;
     liveVariables?: StoryVarValues;
     activeVoiceProgress?: ActiveVoiceProgress | null;
+    /** Optional dialogue/choice history shown in docked playtest mode. */
+    backlog?: readonly LivePhaseBacklogItem[];
+    /** Optional callback to replay a backlog voice line. */
+    onReplayVoice?: (item: LivePhaseBacklogItem) => void;
     onSelectNode?: (nodeId: string) => void;
     onSelectBeat?: (nodeId: string, beatId: string) => void;
     onClose?: () => void;
+    /** Docked sidebar layout for NLE left pane (hides duplicate Flow Canvas & outer card chrome). */
+    docked?: boolean;
+    className?: string;
 }
 
 export const PHASE_META: Record<StoryRuntimePhase, {
@@ -204,7 +222,7 @@ export function getNodeDisplayLabel(
     return t(NODE_TYPE_META[node.type].labelKey);
 }
 
-function summarizeActiveBeat(
+export function summarizeActiveBeat(
     beat: SceneBeat,
     doc: StoryDocument,
     vars: StoryVarValues,
@@ -764,7 +782,8 @@ export function LivePhaseTelemetry({
 }
 
 /**
- * Full standalone Live Phase, Variables & Flow Monitor panel (for Theater & mobile views).
+ * Full standalone Live Phase, Variables & Flow Monitor panel (for Theater & mobile views),
+ * or compact docked sidebar monitor (for NLE Playtest left pane with Telemetry & Dialogue Log tabs).
  */
 export function LivePhasePanel({
     doc,
@@ -774,11 +793,16 @@ export function LivePhasePanel({
     stageState,
     liveVariables,
     activeVoiceProgress = null,
+    backlog,
+    onReplayVoice,
     onSelectNode,
     onSelectBeat,
     onClose,
+    docked = false,
+    className,
 }: LivePhasePanelProps) {
     const { t } = useI18n();
+    const [dockedTab, setDockedTab] = useState<"phase" | "backlog">("phase");
 
     const activeNodeId = frame?.nodeId ?? null;
     const activeBeatId = frame?.beatId ?? null;
@@ -794,11 +818,103 @@ export function LivePhasePanel({
         : -1;
     const activeBeatTotal = activeNode?.type === "scene" ? activeNode.beats.length : 0;
 
+    const dockedTabs = useMemo(() => ([
+        { value: "phase" as const, label: t("page.storyMaker.nle.tabPhase"), icon: mdMonitoring },
+        { value: "backlog" as const, label: t("page.storyMaker.nle.tabBacklog"), icon: mdHistory },
+    ]), [t]);
+
+    if (docked) {
+        return (
+            <div className={cn("flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden", className)}>
+                <div className="flex shrink-0 items-center justify-between gap-2 border-b border-outline-variant/50 px-3 py-2">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                        <Icon path={mdMonitoring} size={17} className="shrink-0 text-primary" />
+                        <h3 className="truncate type-label-l text-on-surface">
+                            {t("page.storyMaker.phase.title")}
+                        </h3>
+                    </div>
+                    <span
+                        className={cn(
+                            "inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 type-label-s",
+                            phaseMeta.chipClass,
+                        )}
+                    >
+                        <Icon path={phaseMeta.icon} size={12} className="shrink-0" />
+                        <span>{t(phaseMeta.labelKey)}</span>
+                    </span>
+                </div>
+
+                {backlog !== undefined && (
+                    <Tabs<"phase" | "backlog">
+                        variant="secondary"
+                        value={dockedTab}
+                        onValueChange={setDockedTab}
+                        items={dockedTabs}
+                        aria-label={t("page.storyMaker.phase.title")}
+                        className="shrink-0"
+                    />
+                )}
+
+                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                    {backlog !== undefined && dockedTab === "backlog" ? (
+                        backlog.length === 0 ? (
+                            <p className="py-8 text-center type-body-m text-on-surface-variant">
+                                {t("page.storyMaker.player.backlogEmpty")}
+                            </p>
+                        ) : (
+                            <ol className="min-w-0 space-y-2">
+                                {backlog.map(entry => (
+                                    <li key={entry.key} className="min-w-0 rounded-md3-md bg-surface-container p-2.5">
+                                        <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                                            <span className="min-w-0 truncate type-label-l text-primary">
+                                                {entry.kind === "talk"
+                                                    ? entry.speaker || "?"
+                                                    : entry.kind === "narration"
+                                                        ? t("page.storyMaker.v2.beats.narration")
+                                                        : entry.kind === "telop"
+                                                            ? t("page.storyMaker.v2.beats.telop")
+                                                            : t("page.storyMaker.player.chosenOption")}
+                                            </span>
+                                            {onReplayVoice && entry.voiceUrls && entry.voiceUrls.length > 0 && (
+                                                <IconButton
+                                                    size="xs"
+                                                    icon={mdPlayArrowFill}
+                                                    label={t("page.storyMaker.player.replayVoice")}
+                                                    onClick={() => onReplayVoice(entry)}
+                                                />
+                                            )}
+                                        </div>
+                                        <p className="whitespace-pre-wrap break-words type-body-s text-on-surface">
+                                            {entry.body}
+                                        </p>
+                                    </li>
+                                ))}
+                            </ol>
+                        )
+                    ) : (
+                        <LivePhaseTelemetry
+                            doc={doc}
+                            program={program}
+                            frame={frame}
+                            runtimePhase={runtimePhase}
+                            stageState={stageState}
+                            liveVariables={liveVariables}
+                            activeVoiceProgress={activeVoiceProgress}
+                            onSelectNode={onSelectNode}
+                            onSelectBeat={onSelectBeat}
+                            compact
+                        />
+                    )}
+                </div>
+            </div>
+        );
+    }
+
     return (
         <Surface
             tone="low"
             radius="lg"
-            className="min-w-0 max-w-full space-y-3 border border-outline-variant/60 p-3 sm:p-4"
+            className={cn("min-w-0 max-w-full space-y-3 border border-outline-variant/60 p-3 sm:p-4", className)}
         >
             {/* Header */}
             <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">

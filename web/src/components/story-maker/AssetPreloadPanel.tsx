@@ -4,7 +4,7 @@ import {
     Button, Dialog, Icon, LinearProgress, LoadingIndicator, Switch, cn,
 } from "@/components/md3";
 import {
-    mdCheckCircle, mdCloudDone, mdDownload, mdErrorFill, mdFace, mdImage, mdInfo,
+    mdCheckCircle, mdCloudDone, mdDownload, mdErrorFill, mdFace, mdImage,
     mdLayers, mdMusicNote, mdRefresh,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -250,7 +250,6 @@ export function AssetPreloadDialog({
             isOpen={open}
             onClose={onClose}
             title={t("page.storyMaker.preload.dialogTitle")}
-            supportingText={t("page.storyMaker.preload.dialogSubtitle")}
             size="md"
             showClose
             actions={(
@@ -430,21 +429,7 @@ export function AssetPreloadDialog({
                         checked={effectiveAutoPreload}
                         onCheckedChange={handleAutoPreloadToggle}
                         label={t("page.storyMaker.preload.autoPreloadLabel")}
-                        description={t("page.storyMaker.preload.autoPreloadDesc")}
                     />
-                </div>
-
-                {/* Browser cache explanation */}
-                <div className="flex min-w-0 items-start gap-2.5 rounded-md3-md bg-secondary-container/40 px-3.5 py-3">
-                    <Icon path={mdInfo} size={18} className="mt-0.5 shrink-0 text-on-secondary-container" />
-                    <div className="min-w-0 space-y-0.5">
-                        <p className="type-label-l text-on-surface">
-                            {t("page.storyMaker.preload.cacheInfoTitle")}
-                        </p>
-                        <p className="break-words type-body-s text-on-surface-variant">
-                            {t("page.storyMaker.preload.cacheInfoBody")}
-                        </p>
-                    </div>
                 </div>
             </div>
         </Dialog>

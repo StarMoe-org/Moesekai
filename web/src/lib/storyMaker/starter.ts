@@ -1,19 +1,42 @@
 /**
- * Starter demo template and browser file download helpers (`.moesekai-story.json` and `.msk`)
- * for `moesekai-story/2` graph documents.
+ * Starter demo templates and MoeSekai Script (`.msk`) browser download helper for
+ * `moesekai-story/2` graph documents.
  *
  * Showcases:
+ * - Built-in localized `.msk` starter scripts (`createStarterStoryFromScript`)
  * - Componentized stage slots (`bg_a000401`, `bgm00020`, place banner, fadeBlack transition, 2-actor cast)
  * - Talk beats with synchronous off-speaker Live2D reactions & accompanying SE (`se_pack00001_b/se00001_b`)
- * - Low-code counter variable (`affection`) mutated by Choice option effects (`affection += 1`)
- * - Template variable interpolation (`{{affection}}`)
- * - Condition node branching (`affection >= 1` -> `end_practice`, `else` -> `end_cafe`)
- * - Two named multi-endings with clean non-overlapping canvas coordinates
+ * - Low-code counter variable mutated by Choice option effects
+ * - Template variable interpolation (`{{var}}`)
+ * - Condition node branching & named multi-endings with clean non-overlapping canvas coordinates
  */
 import { STORY_SCHEMA_VERSION, type StoryDocument, type StoryRegion } from "../../types/storyMaker.ts";
-import { serializeStory, storyFileName, storyScriptFileName } from "./document.ts";
+import { storyScriptFileName } from "./document.ts";
 import { DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE } from "./limits.ts";
-import { serializeStoryScript } from "./script.ts";
+import { parseStoryScript, serializeStoryScript } from "./script.ts";
+import { STARTER_STORY_SCRIPTS, type StarterLocale } from "./starters/index.ts";
+
+export type { StarterLocale };
+
+/**
+ * Builds a valid localized `moesekai-story/2` starter document by parsing the built-in
+ * MoeSekai Script (`.msk`) template for `locale` and injecting the requested `region`.
+ */
+export function createStarterStoryFromScript(
+    region: StoryRegion,
+    locale: StarterLocale,
+): StoryDocument {
+    const source = STARTER_STORY_SCRIPTS[locale] ?? STARTER_STORY_SCRIPTS.zh;
+    const parsed = parseStoryScript(source);
+    if (!parsed.ok) {
+        const detail = parsed.diagnostics.map(d => `${d.line}:${d.col} ${d.message}`).join("; ");
+        throw new Error(`Built-in starter script (${locale}) failed to parse: ${detail}`);
+    }
+    return {
+        ...parsed.doc,
+        region,
+    };
+}
 
 export interface StarterStoryStrings {
     title: string;
@@ -254,11 +277,6 @@ function triggerDownload(content: string, mime: string, filename: string): void 
     link.click();
     link.remove();
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-
-/** Downloads `doc` as a `.moesekai-story.json` file in the browser. */
-export function downloadStoryJson(doc: StoryDocument): void {
-    triggerDownload(serializeStory(doc), "application/json;charset=utf-8", storyFileName(doc));
 }
 
 /** Downloads `doc` as a MoeSekai Script `.msk` file in the browser. */

@@ -4,10 +4,10 @@ import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import {
     Banner, Button, Card, Dialog, EmptyState, Icon, IconButton, LoadMore, LoadingState, Menu, PageContainer,
-    PageHeader, SectionCard, Select, Snackbar, TextField,
+    PageHeader, Select, Snackbar, TextField,
 } from "@/components/md3";
 import {
-    mdAccountTree, mdAdd, mdAutoStories, mdCode, mdContentCopy, mdDelete, mdDownload, mdEdit,
+    mdAccountTree, mdAdd, mdAutoStories, mdCode, mdContentCopy, mdDelete, mdEdit,
     mdFlag, mdMoreVert, mdPlayArrowFill, mdSearch, mdStar, mdTitle, mdUploadFile,
 } from "@/components/md3/icons";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
@@ -26,7 +26,7 @@ import {
     StoryDraftsUnavailableError, createDraft, deleteDraft, duplicateDraft, listDrafts, renameDraft,
 } from "@/lib/storyMaker/drafts";
 import { STORY_LIMITS } from "@/lib/storyMaker/limits";
-import { downloadStoryJson, downloadStoryScript } from "@/lib/storyMaker/starter";
+import { downloadStoryScript } from "@/lib/storyMaker/starter";
 import { STORY_REGIONS, type StoryDocument, type StoryDraft, type StoryRegion } from "@/types/storyMaker";
 
 const subscribeNever = () => () => {};
@@ -212,13 +212,6 @@ function StoryMakerContent() {
         }
     };
 
-    const guideSteps = [
-        { num: 1, title: t("page.storyMaker.guide.step1Title"), desc: t("page.storyMaker.guide.step1Desc") },
-        { num: 2, title: t("page.storyMaker.guide.step2Title"), desc: t("page.storyMaker.guide.step2Desc") },
-        { num: 3, title: t("page.storyMaker.guide.step3Title"), desc: t("page.storyMaker.guide.step3Desc") },
-        { num: 4, title: t("page.storyMaker.guide.step4Title"), desc: t("page.storyMaker.guide.step4Desc") },
-    ];
-
     const rawTitle = t("page.storyMaker.title");
     const betaBadge = t("page.storyMaker.betaBadge");
     const displayTitle = rawTitle.endsWith(` ${betaBadge}`)
@@ -243,7 +236,7 @@ function StoryMakerContent() {
                             {t("page.storyMaker.landing.playFile")}
                         </Button>
                         <Button variant="tonal" icon={mdUploadFile} disabled={storageError !== null} onClick={() => setImportOpen(true)} className="px-3 sm:px-4">
-                            {t("page.storyMaker.landing.importJson")}
+                            {t("page.storyMaker.landing.importScript")}
                         </Button>
                         <Button variant="filled" icon={mdAdd} disabled={storageError !== null} onClick={() => setCreatingOpen(true)} className="px-3 sm:px-4">
                             {t("page.storyMaker.landing.newStory")}
@@ -251,6 +244,10 @@ function StoryMakerContent() {
                     </>
                 )}
             />
+
+            <Banner tone="info" className="mb-4 lg:hidden">
+                {t("page.storyMaker.desktopOnly.landingNotice")}
+            </Banner>
 
             {storageError && (
                 <Banner
@@ -319,7 +316,7 @@ function StoryMakerContent() {
                                         {t("page.storyMaker.landing.newStory")}
                                     </Button>
                                     <Button variant="outlined" icon={mdUploadFile} disabled={storageError !== null} onClick={() => setImportOpen(true)}>
-                                        {t("page.storyMaker.landing.importJson")}
+                                        {t("page.storyMaker.landing.importScript")}
                                     </Button>
                                 </div>
                             )}
@@ -383,15 +380,6 @@ function StoryMakerContent() {
                                                             onSelect: () => {
                                                                 downloadStoryScript(draft.doc);
                                                                 setSnack(t("page.storyMaker.v2.script.downloadScript"));
-                                                            },
-                                                        },
-                                                        {
-                                                            key: "export-json",
-                                                            label: t("page.storyMaker.action.exportJson"),
-                                                            icon: mdDownload,
-                                                            onSelect: () => {
-                                                                downloadStoryJson(draft.doc);
-                                                                setSnack(t("page.storyMaker.exportedToast"));
                                                             },
                                                         },
                                                         {
@@ -502,24 +490,6 @@ function StoryMakerContent() {
                     </>
                 )}
             </section>
-
-            <SectionCard title={t("page.storyMaker.guide.title")} icon={mdAutoStories} className="mt-8">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    {guideSteps.map(item => (
-                        <div key={item.num} className="rounded-md3-md bg-surface-container p-4">
-                            <span className="inline-flex size-7 items-center justify-center rounded-full bg-primary-container type-label-l text-on-primary-container">
-                                {item.num}
-                            </span>
-                            <h3 className="mt-2 type-title-s text-on-surface">{item.title}</h3>
-                            <p className="mt-1 type-body-s text-on-surface-variant">{item.desc}</p>
-                        </div>
-                    ))}
-                </div>
-                <p className="mt-4 flex items-center gap-2 type-body-s text-on-surface-variant">
-                    <Icon path={mdAutoStories} size={18} className="shrink-0 text-primary" />
-                    <span>{t("page.storyMaker.guide.localNotice")}</span>
-                </p>
-            </SectionCard>
 
             <StoryMetaDialog
                 isOpen={creatingOpen}

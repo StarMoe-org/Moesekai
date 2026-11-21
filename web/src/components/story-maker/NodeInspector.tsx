@@ -7,10 +7,10 @@ import {
     type SelectOption,
 } from "@/components/md3";
 import {
-    mdAdd, mdAltRoute, mdArrowBack, mdBolt, mdCalculate, mdChat, mdClose, mdContentCopy, mdDelete, mdFlag,
-    mdGroup, mdImage, mdKeyboardArrowDown, mdKeyboardArrowUp, mdLink, mdLinkOff, mdMovie, mdMusicNote, mdNotes,
-    mdNumbers, mdPerson, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRestartAlt, mdStopFill,
-    mdTitle, mdVolumeUp, mdWarningFill,
+    mdAdd, mdAltRoute, mdArrowBack, mdBolt, mdCalculate, mdChat, mdClose, mdContentCopy, mdContentCut,
+    mdDelete, mdFlag, mdGroup, mdImage, mdKeyboardArrowDown, mdKeyboardArrowUp, mdLink, mdLinkOff,
+    mdMovie, mdMusicNote, mdMusicOff, mdNotes, mdNumbers, mdPerson, mdPlayArrow, mdPlayArrowFill,
+    mdPlayCircle, mdRecordVoiceOver, mdRestartAlt, mdStopFill, mdTitle, mdVolumeUp, mdWarningFill,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
@@ -89,6 +89,13 @@ export interface NodeInspectorProps {
     onSelectBeat: (nodeId: string, beatId: string | null) => void;
     onPreviewClip?: (cast: StoryCastMember, clip: { motion?: string; facial?: string }) => void;
     onPlayFromScene?: (nodeId: string) => void;
+    onContinueScene?: (
+        sceneId: string,
+        options?: {
+            preset?: "inherit" | "bgmStop" | "bgmChange" | "bgChange";
+            splitAtBeatId?: string;
+        },
+    ) => void;
     onPreviewEffect?: (cue: { cueType: "flash" | "shake"; color?: StoryEffectColor; duration?: number }) => void;
 }
 
@@ -116,6 +123,7 @@ export function NodeInspector({
     onSelectBeat,
     onPreviewClip,
     onPlayFromScene,
+    onContinueScene,
     onPreviewEffect,
 }: NodeInspectorProps) {
     const { t } = useI18n();
@@ -262,32 +270,27 @@ export function NodeInspector({
         facial: string | undefined,
         onMotionChange: (next: string | undefined) => void,
         onFacialChange: (next: string | undefined) => void,
-        options?: { disabled?: boolean; helperText?: string; showReplay?: boolean },
+        options?: { disabled?: boolean; showReplay?: boolean },
     ) => {
         const disabled = options?.disabled ?? false;
         const targetCast = castMemberOf(castKey);
         const canPreview = Boolean(!disabled && onPreviewClip && targetCast);
         return (
             <div className="min-w-0 space-y-2.5">
-                {(options?.helperText || (canPreview && targetCast && (options?.showReplay ?? true) && (motion || facial))) && (
-                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                        <span className="min-w-0 flex-1 type-label-s text-on-surface-variant">
-                            {options?.helperText ?? t("page.storyMaker.nle.quickPreviewHint")}
-                        </span>
-                        {canPreview && targetCast && (motion || facial) && (
-                            <Button
-                                size="xs"
-                                variant="tonal"
-                                icon={mdPlayArrow}
-                                className="shrink-0"
-                                onClick={() => onPreviewClip?.(targetCast, {
-                                    ...(motion ? { motion } : {}),
-                                    ...(facial ? { facial } : {}),
-                                })}
-                            >
-                                {t("page.storyMaker.nle.replayAction")}
-                            </Button>
-                        )}
+                {canPreview && targetCast && (options?.showReplay ?? true) && (motion || facial) && (
+                    <div className="flex justify-end">
+                        <Button
+                            size="xs"
+                            variant="tonal"
+                            icon={mdPlayArrow}
+                            className="shrink-0"
+                            onClick={() => onPreviewClip?.(targetCast, {
+                                ...(motion ? { motion } : {}),
+                                ...(facial ? { facial } : {}),
+                            })}
+                        >
+                            {t("page.storyMaker.nle.replayAction")}
+                        </Button>
                     </div>
                 )}
                 <ClipPickerField
@@ -473,6 +476,8 @@ export function NodeInspector({
         });
     };
 
+    const nodesFull = Object.keys(doc.nodes).length >= STORY_LIMITS.nodes;
+
     return (
         <div className="min-w-0 space-y-4">
             {/* ==================== SCENE BEAT INSPECTOR ==================== */}
@@ -506,18 +511,35 @@ export function NodeInspector({
                         </div>
                     </div>
 
-                    <div className="flex min-w-0 items-center gap-2.5">
-                        <span className="flex size-8 shrink-0 items-center justify-center rounded-md3-sm bg-secondary-container text-on-secondary-container">
-                            <Icon path={BEAT_ICONS[selectedBeat.kind]} size={18} />
-                        </span>
-                        <div className="min-w-0 flex-1">
-                            <p className="truncate type-title-s text-on-surface">
-                                {t(`page.storyMaker.v2.beats.${selectedBeat.kind}`)}
-                            </p>
-                            <p className="truncate font-mono type-label-s text-on-surface-variant">
-                                #{selectedBeatIndex + 1} / {selectedScene.beats.length} · {selectedBeat.id}
-                            </p>
+                    <div className="flex min-w-0 items-center justify-between gap-2">
+                        <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                            <span className="flex size-8 shrink-0 items-center justify-center rounded-md3-sm bg-secondary-container text-on-secondary-container">
+                                <Icon path={BEAT_ICONS[selectedBeat.kind]} size={18} />
+                            </span>
+                            <div className="min-w-0 flex-1">
+                                <p className="truncate type-title-s text-on-surface">
+                                    {t(`page.storyMaker.v2.beats.${selectedBeat.kind}`)}
+                                </p>
+                                <p className="truncate font-mono type-label-s text-on-surface-variant">
+                                    #{selectedBeatIndex + 1} / {selectedScene.beats.length} · {selectedBeat.id}
+                                </p>
+                            </div>
                         </div>
+                        {onContinueScene && selectedBeatIndex > 0 && (
+                            <Button
+                                size="xs"
+                                variant="outlined"
+                                icon={mdContentCut}
+                                disabled={nodesFull}
+                                className="shrink-0"
+                                onClick={() => onContinueScene(selectedScene.id, {
+                                    preset: "inherit",
+                                    splitAtBeatId: selectedBeat.id,
+                                })}
+                            >
+                                {t("page.storyMaker.v2.scene.splitFromBeat")}
+                            </Button>
+                        )}
                     </div>
 
                     {renderDiagnostics()}
@@ -586,7 +608,6 @@ export function NodeInspector({
                                     value={beat.speakerName ?? ""}
                                     maxLength={STORY_LIMITS.speakerName}
                                     placeholder={speakerCast?.name ?? t("page.storyMaker.inspector.speakerNamePlaceholder")}
-                                    supportingText={beat.speakerKey ? t("page.storyMaker.inspector.speakerOverrideHint") : undefined}
                                     onChange={(event) => {
                                         const value = event.target.value;
                                         const next: TalkBeat = { ...beat };
@@ -641,7 +662,6 @@ export function NodeInspector({
                                                 else delete next.facial;
                                                 updateSelectedBeat(next);
                                             },
-                                            { helperText: t("page.storyMaker.v2.beats.keepCurrentPose") },
                                         )}
                                     </div>
                                 )}
@@ -741,7 +761,6 @@ export function NodeInspector({
                                                     updateSelectedBeat(next);
                                                 }}
                                                 label={t("page.storyMaker.inspector.voiceRef")}
-                                                description={t("page.storyMaker.inspector.voiceRefHint")}
                                             />
                                         </div>
                                         {beat.voice?.region && beat.voice.region !== doc.region && (
@@ -944,7 +963,7 @@ export function NodeInspector({
                                     value={beat.text}
                                     maxLength={STORY_LIMITS.telop}
                                     placeholder={t("page.storyMaker.inspector.telopPlaceholder")}
-                                    supportingText={`${beat.text.length}/${STORY_LIMITS.telop} · ${t("page.storyMaker.inspector.telopHint")}`}
+                                    supportingText={`${beat.text.length}/${STORY_LIMITS.telop}`}
                                     onChange={event => updateSelectedBeat({ ...beat, text: event.target.value })}
                                 />
                                 <VariableInsertRow
@@ -1345,18 +1364,57 @@ export function NodeInspector({
                                 />
                             </div>
 
+                            {onContinueScene && (
+                                <div className="space-y-1.5 rounded-md3-md border border-outline-variant/60 bg-surface-container p-2.5">
+                                    <Button
+                                        size="xs"
+                                        variant="tonal"
+                                        icon={mdContentCut}
+                                        disabled={nodesFull}
+                                        onClick={() => onContinueScene(scene.id, { preset: "inherit" })}
+                                        className="w-full justify-center"
+                                    >
+                                        {t("page.storyMaker.v2.scene.continueAndCut")}
+                                    </Button>
+                                    <div className="flex flex-wrap gap-1">
+                                        <Button
+                                            size="xs"
+                                            variant="outlined"
+                                            icon={mdMusicOff}
+                                            disabled={nodesFull}
+                                            onClick={() => onContinueScene(scene.id, { preset: "bgmStop" })}
+                                        >
+                                            {t("page.storyMaker.v2.scene.continueBgmStop")}
+                                        </Button>
+                                        <Button
+                                            size="xs"
+                                            variant="outlined"
+                                            icon={mdMusicNote}
+                                            disabled={nodesFull}
+                                            onClick={() => onContinueScene(scene.id, { preset: "bgmChange" })}
+                                        >
+                                            {t("page.storyMaker.v2.scene.continueBgmChange")}
+                                        </Button>
+                                        <Button
+                                            size="xs"
+                                            variant="outlined"
+                                            icon={mdImage}
+                                            disabled={nodesFull}
+                                            onClick={() => onContinueScene(scene.id, { preset: "bgChange" })}
+                                        >
+                                            {t("page.storyMaker.v2.scene.continueBgChange")}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+
                             <Divider />
 
                             {/* Stage Configuration Slots */}
                             <div className="space-y-3">
-                                <div className="space-y-0.5">
-                                    <p className="type-title-s text-on-surface">
-                                        {t("page.storyMaker.v2.slots.sectionTitle")}
-                                    </p>
-                                    <p className="type-body-s text-on-surface-variant">
-                                        {t("page.storyMaker.v2.slots.newSceneToChangeHint")}
-                                    </p>
-                                </div>
+                                <p className="type-title-s text-on-surface">
+                                    {t("page.storyMaker.v2.slots.sectionTitle")}
+                                </p>
 
                                 {/* 1. Background Slot */}
                                 <div className="space-y-2.5 rounded-md3-md bg-surface-container p-3">
@@ -1800,11 +1858,11 @@ export function NodeInspector({
                                 ) : (
                                     <ul className="space-y-1">
                                         {scene.beats.map((beat, idx) => (
-                                            <li key={beat.id}>
+                                            <li key={beat.id} className="flex min-w-0 items-center gap-1">
                                                 <button
                                                     type="button"
                                                     onClick={() => onSelectBeat(scene.id, beat.id)}
-                                                    className="state-layer focus-ring flex w-full cursor-pointer items-center gap-2 rounded-md3-sm bg-surface-container px-2.5 py-1.5 text-left"
+                                                    className="state-layer focus-ring flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-md3-sm bg-surface-container px-2.5 py-1.5 text-left"
                                                 >
                                                     <Icon path={BEAT_ICONS[beat.kind]} size={15} className="shrink-0 text-primary" />
                                                     <span className="shrink-0 font-mono type-label-s text-on-surface-variant">
@@ -1820,6 +1878,19 @@ export function NodeInspector({
                                                                     : t(`page.storyMaker.v2.beats.${beat.kind}`)}
                                                     </span>
                                                 </button>
+                                                {onContinueScene && idx > 0 && (
+                                                    <IconButton
+                                                        size="xs"
+                                                        icon={mdContentCut}
+                                                        label={t("page.storyMaker.v2.scene.splitFromBeat")}
+                                                        title={t("page.storyMaker.v2.scene.splitFromBeat")}
+                                                        disabled={nodesFull}
+                                                        onClick={() => onContinueScene(scene.id, {
+                                                            preset: "inherit",
+                                                            splitAtBeatId: beat.id,
+                                                        })}
+                                                    />
+                                                )}
                                             </li>
                                         ))}
                                     </ul>
@@ -2682,12 +2753,6 @@ function ActorFramingControls({
                     formatValue={val => (val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2))}
                 />
             </div>
-
-            {mode === "move" && scale === undefined && y === undefined && (
-                <p className="type-body-s text-on-surface-variant">
-                    {t("page.storyMaker.inspector.keepCurrentFraming")}
-                </p>
-            )}
         </div>
     );
 }

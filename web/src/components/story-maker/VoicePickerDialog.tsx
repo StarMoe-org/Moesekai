@@ -655,12 +655,6 @@ export function VoicePickerDialog({
                             </p>
                         )}
 
-                        {activeCorpus && !hasActiveQuery && (
-                            <p className="rounded-md3-md bg-surface-container px-4 py-6 text-center type-body-m text-on-surface-variant">
-                                {t("page.storyMaker.voiceSearch.searchHint")}
-                            </p>
-                        )}
-
                         {isSearching && (
                             <div className="space-y-1.5 py-2">
                                 <p className="type-label-m text-on-surface-variant">

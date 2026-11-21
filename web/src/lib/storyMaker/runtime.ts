@@ -394,17 +394,31 @@ interface PathStep {
 
 /**
  * Finds a shortest valid directed path from `doc.startNodeId` to `targetNodeId` in deterministic
- * port order so inherited scene state and upstream variable mutations can be reconstructed cleanly.
+ * `doc.edges` order so inherited scene state and upstream variable mutations never fluctuate even
+ * on multi-in-degree merge nodes.
  * Returns `null` when `targetNodeId` is unreachable from `startNodeId`.
  */
 function findGraphPathFromStart(doc: StoryDocument, targetNodeId: string): PathStep[] | null {
     if (!doc.nodes[doc.startNodeId] || !doc.nodes[targetNodeId]) return null;
     if (targetNodeId === doc.startNodeId) return [{ nodeId: doc.startNodeId }];
 
-    const edgeByPort = new Map<string, StoryEdge>();
+    const seenPort = new Set<string>();
+    const outgoingByNode = new Map<string, StoryEdge[]>();
     for (const edge of doc.edges) {
-        const key = `${edge.fromNodeId}\0${edge.fromPortId}`;
-        if (!edgeByPort.has(key)) edgeByPort.set(key, edge);
+        const fromNode = doc.nodes[edge.fromNodeId];
+        const toNode = doc.nodes[edge.toNodeId];
+        if (!fromNode || fromNode.type === "end" || !toNode) continue;
+        if (toNode.id === doc.startNodeId || toNode.type === "start") continue;
+        if (!getNodeOutPorts(fromNode).includes(edge.fromPortId)) continue;
+        const portKey = `${edge.fromNodeId}\0${edge.fromPortId}`;
+        if (seenPort.has(portKey)) continue;
+        seenPort.add(portKey);
+        let list = outgoingByNode.get(edge.fromNodeId);
+        if (!list) {
+            list = [];
+            outgoingByNode.set(edge.fromNodeId, list);
+        }
+        list.push(edge);
     }
 
     const visited = new Set<string>([doc.startNodeId]);
@@ -413,12 +427,7 @@ function findGraphPathFromStart(doc: StoryDocument, targetNodeId: string): PathS
 
     for (let head = 0; head < queue.length; head++) {
         const currentId = queue[head];
-        const currentNode = doc.nodes[currentId];
-        if (!currentNode) continue;
-
-        for (const portId of getNodeOutPorts(currentNode)) {
-            const edge = edgeByPort.get(`${currentId}\0${portId}`);
-            if (!edge || !doc.nodes[edge.toNodeId]) continue;
+        for (const edge of outgoingByNode.get(currentId) ?? []) {
             if (visited.has(edge.toNodeId)) continue;
             visited.add(edge.toNodeId);
             parent.set(edge.toNodeId, { prev: currentId, edge });

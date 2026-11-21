@@ -45,6 +45,8 @@ import {
     type VarOp,
 } from "../../types/storyMaker.ts";
 import {
+    DEFAULT_STORY_BACKGROUND,
+    DEFAULT_STORY_BGM,
     DEFAULT_STORY_SE,
     STORY_ID_PATTERN,
     STORY_LIMITS,
@@ -448,6 +450,111 @@ export function duplicateNode(
             nodes: { ...doc.nodes, [newId]: copy },
         },
         node: copy,
+    };
+}
+
+export type ContinueScenePreset = "inherit" | "bgmStop" | "bgmChange" | "bgChange";
+
+export interface ContinueSceneOptions {
+    title?: string;
+    preset?: ContinueScenePreset;
+    splitAtBeatId?: string;
+}
+
+function findOpenScenePos(doc: StoryDocument, preferred: StoryNodePos): StoryNodePos {
+    const existing = Object.values(doc.nodes);
+    const isOccupied = (x: number, y: number) =>
+        existing.some(node => Math.abs(node.pos.x - x) < 120 && Math.abs(node.pos.y - y) < 120);
+    const baseX = clampCoord(preferred.x);
+    const baseY = clampCoord(preferred.y);
+    if (!isOccupied(baseX, baseY)) return { x: baseX, y: baseY };
+    for (let step = 1; step <= 24; step++) {
+        const downY = clampCoord(baseY + step * GRAPH_ROW_GAP);
+        if (!isOccupied(baseX, downY)) return { x: baseX, y: downY };
+        const upY = clampCoord(baseY - step * GRAPH_ROW_GAP);
+        if (!isOccupied(baseX, upY)) return { x: baseX, y: upY };
+    }
+    return { x: clampCoord(baseX + 48), y: clampCoord(baseY + 48) };
+}
+
+/**
+ * Syntactic sugar for "Continue Stage & Cut Scene":
+ * Creates a follow-up `SceneNode` to the right of `sourceSceneId` inheriting all stage slots
+ * (with optional preset override), optionally splits beats starting from `splitAtBeatId` into
+ * the new scene, and inserts it into `source`'s outgoing `"out"` wire using normal detachable
+ * edges (`source.out -> newScene -> oldTarget`). `createNode()` itself stays 100% isolated.
+ */
+export function continueAndCutScene(
+    doc: StoryDocument,
+    sourceSceneId: string,
+    options?: ContinueSceneOptions,
+): { doc: StoryDocument; node: SceneNode | null } {
+    const source = doc.nodes[sourceSceneId];
+    if (!source || source.type !== "scene") {
+        return { doc, node: null };
+    }
+    if (Object.keys(doc.nodes).length >= STORY_LIMITS.nodes) {
+        return { doc, node: null };
+    }
+
+    const prevOutEdge = getOutgoingEdge(doc, sourceSceneId, "out");
+    const pos = findOpenScenePos(doc, { x: source.pos.x + GRAPH_COL_GAP, y: source.pos.y });
+    const title = (options?.title ?? source.title).slice(0, STORY_LIMITS.nodeTitle);
+    const created = createNode(doc, "scene", pos, { title });
+    if (!created.node) {
+        return { doc, node: null };
+    }
+
+    const preset: ContinueScenePreset = options?.preset ?? "inherit";
+    let background: BackgroundSlot = { mode: "inherit" };
+    let bgm: BgmSlot = { mode: "inherit" };
+    if (preset === "bgmStop") {
+        bgm = { mode: "stop" };
+    } else if (preset === "bgmChange") {
+        bgm = { mode: "play", name: DEFAULT_STORY_BGM, volume: 0.75 };
+    } else if (preset === "bgChange") {
+        background = { mode: "set", asset: DEFAULT_STORY_BACKGROUND };
+    }
+
+    let keptSourceBeats = source.beats;
+    let movedBeats: SceneBeat[] = [];
+    if (options?.splitAtBeatId) {
+        const splitIdx = source.beats.findIndex(b => b.id === options.splitAtBeatId);
+        if (splitIdx !== -1) {
+            keptSourceBeats = source.beats.slice(0, splitIdx);
+            movedBeats = source.beats.slice(splitIdx);
+        }
+    }
+
+    const newScene: SceneNode = {
+        ...created.node,
+        background,
+        bgm,
+        place: { mode: "inherit" },
+        transition: { kind: "none", duration: 0.4 },
+        stageCast: { mode: "inherit" },
+        beats: movedBeats,
+    };
+
+    let nextDoc: StoryDocument = {
+        ...created.doc,
+        nodes: {
+            ...created.doc.nodes,
+            ...(keptSourceBeats !== source.beats
+                ? { [sourceSceneId]: { ...source, beats: keptSourceBeats } }
+                : {}),
+            [newScene.id]: newScene,
+        },
+    };
+
+    nextDoc = connectEdge(nextDoc, sourceSceneId, "out", newScene.id);
+    if (prevOutEdge && prevOutEdge.toNodeId !== newScene.id) {
+        nextDoc = connectEdge(nextDoc, newScene.id, "out", prevOutEdge.toNodeId);
+    }
+
+    return {
+        doc: nextDoc,
+        node: nextDoc.nodes[newScene.id] as SceneNode,
     };
 }
 

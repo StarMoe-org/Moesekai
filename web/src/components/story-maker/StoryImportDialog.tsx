@@ -7,8 +7,7 @@ import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { compileStoryGraph, type CompiledStoryProgram } from "@/lib/storyMaker/compiler";
 import { totalBeatCount } from "@/lib/storyMaker/document";
 import { parseStoryScript, type StoryScriptDiagnostic } from "@/lib/storyMaker/script";
-import { parseStoryJson } from "@/lib/storyMaker/validate";
-import type { StoryCompileDiagnostic, StoryDocument, StoryIssue } from "@/types/storyMaker";
+import type { StoryCompileDiagnostic, StoryDocument } from "@/types/storyMaker";
 import { StoryIssueList } from "./StoryIssueList";
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -22,49 +21,24 @@ export interface StoryImportDialogProps {
 }
 
 type ImportEvaluation =
-    | { ok: true; format: "json" | "msk"; doc: StoryDocument; program: CompiledStoryProgram }
-    | { ok: false; format: "json"; issues: StoryIssue[]; diagnostics?: StoryCompileDiagnostic[] }
-    | { ok: false; format: "msk"; scriptErrors?: StoryScriptDiagnostic[]; diagnostics?: StoryCompileDiagnostic[] };
+    | { ok: true; doc: StoryDocument; program: CompiledStoryProgram }
+    | { ok: false; scriptErrors?: StoryScriptDiagnostic[]; diagnostics?: StoryCompileDiagnostic[] };
 
-function detectInputFormat(raw: string, fileName?: string): "json" | "msk" {
-    const trimmed = raw.trimStart();
-    if (trimmed.startsWith("{") || trimmed.startsWith("[")) return "json";
-    if (fileName && /\.json$/i.test(fileName) && !trimmed.startsWith("@story") && !trimmed.startsWith("#")) {
-        return "json";
-    }
-    return "msk";
-}
-
-function evaluateImportText(raw: string, fileName?: string): ImportEvaluation {
-    const format = detectInputFormat(raw, fileName);
-    if (format === "json") {
-        const res = parseStoryJson(raw);
-        if (res.ok) {
-            return { ok: true, format: "json", doc: res.doc, program: res.program };
-        }
-        return {
-            ok: false,
-            format: "json",
-            issues: res.issues,
-            ...(res.diagnostics ? { diagnostics: res.diagnostics } : {}),
-        };
-    }
-
+function evaluateImportText(raw: string): ImportEvaluation {
     const parsed = parseStoryScript(raw);
     if (!parsed.ok) {
-        return { ok: false, format: "msk", scriptErrors: parsed.diagnostics };
+        return { ok: false, scriptErrors: parsed.diagnostics };
     }
     const program = compileStoryGraph(parsed.doc);
     if (!program.ok) {
-        return { ok: false, format: "msk", diagnostics: program.errors };
+        return { ok: false, diagnostics: program.errors };
     }
-    return { ok: true, format: "msk", doc: parsed.doc, program };
+    return { ok: true, doc: parsed.doc, program };
 }
 
 /**
- * Imports either a MoeSekai Script (`.msk`) or a `moesekai-story/2` JSON file / pasted source.
- * Auto-detects format, runs strict structural validation and graph compilation, and displays
- * syntax or compiler diagnostics before accepting the document.
+ * Imports a MoeSekai Script (`.msk`) file or pasted source, running strict syntax parsing and
+ * graph compilation before accepting the document.
  */
 export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImport }: StoryImportDialogProps) {
     const { t } = useI18n();
@@ -73,14 +47,14 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
     const [fileError, setFileError] = useState<string | null>(null);
     const [parsed, setParsed] = useState<ImportEvaluation | null>(null);
 
-    const evaluate = (raw: string, fileName?: string) => {
+    const evaluate = (raw: string) => {
         setText(raw);
         setFileError(null);
         if (!raw.trim()) {
             setParsed(null);
             return;
         }
-        setParsed(evaluateImportText(raw, fileName));
+        setParsed(evaluateImportText(raw));
     };
 
     const loadFile = async (file: File | undefined) => {
@@ -92,7 +66,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
         }
         try {
             const content = await file.text();
-            evaluate(content, file.name);
+            evaluate(content);
         } catch {
             setFileError(t("page.storyMaker.import.readFailed"));
             setParsed(null);
@@ -116,9 +90,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
     };
 
     const errorCount = parsed && !parsed.ok
-        ? (parsed.format === "json"
-            ? (parsed.diagnostics ? parsed.diagnostics.filter(d => d.severity === "error").length : parsed.issues.length)
-            : (parsed.scriptErrors?.length ?? parsed.diagnostics?.length ?? 0))
+        ? (parsed.scriptErrors?.length ?? parsed.diagnostics?.length ?? 0)
         : 0;
 
     return (
@@ -126,7 +98,6 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
             isOpen={isOpen}
             onClose={resetAndClose}
             title={title ?? t("page.storyMaker.import.title")}
-            supportingText={t("page.storyMaker.import.description")}
             size="lg"
             fullscreenOnMobile
             actions={(
@@ -142,7 +113,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                 <input
                     ref={inputRef}
                     type="file"
-                    accept=".msk,.json,application/json,text/plain"
+                    accept=".msk,text/plain"
                     className="hidden"
                     onChange={event => {
                         void loadFile(event.target.files?.[0]);
@@ -161,15 +132,9 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                 >
                     <Icon path={mdUploadFile} size={28} className="text-primary" />
                     <span className="type-title-s text-on-surface">{t("page.storyMaker.import.dropLabel")}</span>
-                    <span className="type-body-s text-on-surface-variant">{t("page.storyMaker.import.dropHint")}</span>
-                    <span className="mt-1 inline-flex flex-wrap items-center justify-center gap-1.5">
-                        <span className="inline-flex items-center gap-1 rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
-                            <Icon path={mdCode} size={14} />
-                            <span>{t("page.storyMaker.v2.script.tabScript")}</span>
-                        </span>
-                        <span className="inline-flex items-center gap-1 rounded-md3-full bg-surface-container-high px-2.5 py-0.5 type-label-s text-on-surface-variant">
-                            <span>{t("page.storyMaker.v2.script.tabJson")}</span>
-                        </span>
+                    <span className="inline-flex items-center gap-1 rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
+                        <Icon path={mdCode} size={14} />
+                        <span>{t("page.storyMaker.v2.script.tabScript")}</span>
                     </span>
                 </button>
 
@@ -191,7 +156,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
 
                 {parsed && !parsed.ok && (
                     <Banner tone="error" title={t("page.storyMaker.import.invalidTitle", { count: errorCount })}>
-                        {parsed.format === "msk" && parsed.scriptErrors && parsed.scriptErrors.length > 0 ? (
+                        {parsed.scriptErrors && parsed.scriptErrors.length > 0 ? (
                             <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto font-mono type-body-s text-on-surface">
                                 {parsed.scriptErrors.map((err, idx) => (
                                     <li key={`${err.line}-${err.col}-${idx}`} className="break-words">
@@ -209,12 +174,6 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                                 compact
                                 className="mt-2 max-h-48 overflow-y-auto"
                             />
-                        ) : parsed.format === "json" ? (
-                            <StoryIssueList
-                                issues={parsed.issues}
-                                compact
-                                className="mt-2 max-h-48 overflow-y-auto"
-                            />
                         ) : null}
                     </Banner>
                 )}
@@ -227,7 +186,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                                 <span className="type-title-s">{t("page.storyMaker.import.validTitle")}</span>
                             </div>
                             <span className="rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
-                                {t(parsed.format === "msk" ? "page.storyMaker.v2.script.tabScript" : "page.storyMaker.v2.script.tabJson")}
+                                {t("page.storyMaker.v2.script.tabScript")}
                             </span>
                         </div>
                         <p className="type-title-m text-on-surface">

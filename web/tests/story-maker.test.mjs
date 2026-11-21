@@ -14,7 +14,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { STORY_SCHEMA_VERSION } = await import("../src/types/storyMaker.ts");
+const { STORY_ISSUE_CODES, STORY_SCHEMA_VERSION } = await import("../src/types/storyMaker.ts");
 const {
     DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE, SLOT_X, STORY_AUDIO_PATH_PATTERN,
     STORY_LIMITS, STORY_MOTION_PATTERN,
@@ -22,6 +22,7 @@ const {
 const {
     STORY_DRAG_MIME, STORY_BEAT_DRAG_MIME, GRAPH_COL_GAP, GRAPH_ROW_GAP,
     newStoryId, createStoryDocument, createNode, moveNode, removeNode, duplicateNode,
+    continueAndCutScene,
     connectEdge, disconnectEdge, disconnectPort, getNodeOutPorts, canConnectNodes,
     setSceneBackground, setSceneBgm, setScenePlace, setSceneTransition, setSceneStageCast,
     addActorToSceneCast, addCastKeyToScene, updateActorInSceneCast, removeActorFromSceneCast,
@@ -42,7 +43,8 @@ const {
 const {
     STORY_SCRIPT_EXT, STORY_SCRIPT_NAME, serializeStoryScript, parseStoryScript,
 } = await import("../src/lib/storyMaker/script.ts");
-const { createStarterStoryDocument } = await import("../src/lib/storyMaker/starter.ts");
+const starterModule = await import("../src/lib/storyMaker/starter.ts");
+const { createStarterStoryDocument, createStarterStoryFromScript } = starterModule;
 const {
     extractWaveformPeaks, decodeStoryAudio, getCachedStoryAudio, clearStoryAudioCache,
 } = await import("../src/lib/storyMaker/audioCache.ts");
@@ -1753,4 +1755,229 @@ end 03-end "End"
     assert.equal(compact.ok, true, JSON.stringify(compact.diagnostics));
     assert.deepEqual(compact.doc.nodes["02-scene"].beats[0].ops, [{ varId: "01", op: "sub", value: 5 }]);
     assert.equal(compact.doc.edges.find(e => e.fromNodeId === "02-scene")?.toNodeId, "03-end");
+});
+
+// ==================== 9. Merge Node Warning, Continue & Cut Scene, .msk Starters ====================
+
+test("compiler emits non-blocking mergeNodeInheritAmbiguous warning on multi-in-degree scene with inherit slots and clears it once all slots are explicit", () => {
+    assert.ok(STORY_ISSUE_CODES.includes("mergeNodeInheritAmbiguous"));
+
+    let doc = createStoryDocument("jp", "Merge Test");
+    doc = addCastMember(doc, { key: "ichika", modelId: "v2_01ichika_casual", name: "Ichika", characterId: 1 });
+    doc = createNode(doc, "choice", { x: 320, y: 120 }, { id: "ch1", title: "Split" }).doc;
+    doc.nodes.ch1.options = [
+        { id: "opt1", text: "Branch A" },
+        { id: "opt2", text: "Branch B" },
+    ];
+    doc = createNode(doc, "scene", { x: 640, y: 20 }, { id: "s_a", title: "A" }).doc;
+    doc = setSceneBackground(doc, "s_a", { mode: "set", asset: "bg_a000401" });
+    doc = setSceneBgm(doc, "s_a", { mode: "play", name: "bgm00020", volume: 0.7 });
+    doc = setScenePlace(doc, "s_a", { mode: "set", text: "Place A" });
+    doc = setSceneStageCast(doc, "s_a", { mode: "set", actors: [{ castKey: "ichika", slot: "left" }] });
+    doc = insertBeat(doc, "s_a", { id: "b_a", kind: "narration", body: "In A." });
+
+    doc = createNode(doc, "scene", { x: 640, y: 240 }, { id: "s_b", title: "B" }).doc;
+    doc = setSceneBackground(doc, "s_b", { mode: "set", asset: "bg_a000402" });
+    doc = setSceneBgm(doc, "s_b", { mode: "play", name: "bgm00018", volume: 0.6 });
+    doc = setScenePlace(doc, "s_b", { mode: "set", text: "Place B" });
+    doc = setSceneStageCast(doc, "s_b", { mode: "set", actors: [{ castKey: "ichika", slot: "right" }] });
+    doc = insertBeat(doc, "s_b", { id: "b_b", kind: "narration", body: "In B." });
+
+    // Merge scene with all 4 slots set to inherit (default of createNode).
+    doc = createNode(doc, "scene", { x: 960, y: 120 }, { id: "s_merge", title: "Merge" }).doc;
+    doc = insertBeat(doc, "s_merge", { id: "b_m", kind: "narration", body: "Rejoined." });
+    doc = createNode(doc, "end", { x: 1280, y: 120 }, { id: "e1", title: "Fin" }).doc;
+
+    doc = connectEdge(doc, "start", "out", "ch1");
+    doc = connectEdge(doc, "ch1", "opt1", "s_a");
+    doc = connectEdge(doc, "ch1", "opt2", "s_b");
+    doc = connectEdge(doc, "s_a", "out", "s_merge");
+    doc = connectEdge(doc, "s_b", "out", "s_merge");
+    doc = connectEdge(doc, "s_merge", "out", "e1");
+
+    // 1. All 4 slots inherited on 2-in-degree scene -> warning emitted, still non-blocking (ok === true).
+    const progAll = compileStoryGraph(doc);
+    assert.equal(progAll.ok, true, JSON.stringify(progAll.errors));
+    const warnAll = progAll.warnings.find(w => w.code === "mergeNodeInheritAmbiguous");
+    assert.ok(warnAll, "expected mergeNodeInheritAmbiguous warning");
+    assert.equal(warnAll.severity, "warning");
+    assert.equal(warnAll.nodeId, "s_merge");
+    assert.equal(warnAll.path, "nodes.s_merge");
+    assert.deepEqual(warnAll.params, { count: 2, slots: "background, bgm, place, stageCast" });
+
+    // 2. Partial explicit slots -> warning only lists remaining inherited slots.
+    let partial = setSceneBackground(doc, "s_merge", { mode: "clear" });
+    partial = setScenePlace(partial, "s_merge", { mode: "hide" });
+    const warnPartial = compileStoryGraph(partial).warnings.find(w => w.code === "mergeNodeInheritAmbiguous");
+    assert.ok(warnPartial);
+    assert.deepEqual(warnPartial.params, { count: 2, slots: "bgm, stageCast" });
+
+    // 3. All 4 slots explicitly declared (set/clear/stop/hide) -> warning completely cleared (0 warnings total)!
+    let resolved = setSceneBgm(partial, "s_merge", { mode: "stop" });
+    resolved = setSceneStageCast(resolved, "s_merge", { mode: "clear" });
+    const progResolved = compileStoryGraph(resolved);
+    assert.equal(progResolved.ok, true);
+    assert.equal(progResolved.warnings.length, 0, JSON.stringify(progResolved.warnings));
+
+    // 4. Deterministic BFS resolution in evaluateStageAt ordered by doc.edges order!
+    const snap1 = evaluateStageAt(doc, "s_merge");
+    const snap2 = evaluateStageAt(doc, "s_merge");
+    assert.deepEqual(snap1, snap2);
+    assert.equal(snap1.stage.background, "bg_a000401"); // opt1 edge appeared before opt2 in doc.edges
+    assert.equal(snap1.stage.place, "Place A");
+
+    // Swapping edge order for ch1 puts s_b first in BFS -> deterministically resolves to s_b's stage.
+    const reordered = {
+        ...doc,
+        edges: [
+            doc.edges.find(e => e.fromNodeId === "start"),
+            doc.edges.find(e => e.fromPortId === "opt2"),
+            doc.edges.find(e => e.fromPortId === "opt1"),
+            doc.edges.find(e => e.fromNodeId === "s_b"),
+            doc.edges.find(e => e.fromNodeId === "s_a"),
+            doc.edges.find(e => e.fromNodeId === "s_merge"),
+        ],
+    };
+    const snapReordered = evaluateStageAt(reordered, "s_merge");
+    assert.equal(snapReordered.stage.background, "bg_a000402");
+    assert.equal(snapReordered.stage.place, "Place B");
+    assert.equal(snapReordered.stage.actors[0]?.slot, "right");
+});
+
+test("continueAndCutScene creates continuation scenes with presets, splitAtBeatId migration, and A -> new -> B rewiring while keeping createNode isolated", () => {
+    let doc = createStoryDocument("jp", "Cut Scene Sugar");
+    doc = addCastMember(doc, { key: "ichika", modelId: "v2_01ichika_casual", name: "Ichika", characterId: 1 });
+    const s1Res = createNode(doc, "scene", { x: 300, y: 120 }, { id: "s_a", title: "Act 1" });
+    doc = s1Res.doc;
+    // createNode itself MUST remain 100% isolated (0 edges)!
+    assert.equal(doc.edges.length, 0);
+
+    doc = setSceneBackground(doc, "s_a", { mode: "set", asset: DEFAULT_STORY_BACKGROUND });
+    doc = setSceneBgm(doc, "s_a", { mode: "play", name: DEFAULT_STORY_BGM, volume: 0.75 });
+    doc = setScenePlace(doc, "s_a", { mode: "set", text: "Classroom" });
+    doc = setSceneStageCast(doc, "s_a", { mode: "set", actors: [{ castKey: "ichika", slot: "center" }] });
+    doc = insertBeat(doc, "s_a", { id: "b1", kind: "telop", text: "Beat 1" });
+    doc = insertBeat(doc, "s_a", { id: "b2", kind: "talk", speakerKey: "ichika", body: "Beat 2" });
+    doc = insertBeat(doc, "s_a", { id: "b3", kind: "narration", body: "Beat 3" });
+
+    // Place downstream node right at (s_a.pos.x + GRAPH_COL_GAP, s_a.pos.y) to also test occupancy nudging!
+    doc = createNode(doc, "end", { x: 300 + GRAPH_COL_GAP, y: 120 }, { id: "end_b", title: "End" }).doc;
+    doc = connectEdge(doc, "start", "out", "s_a");
+    doc = connectEdge(doc, "s_a", "out", "end_b");
+
+    // Non-scene or missing node returns safe no-op.
+    assert.deepEqual(continueAndCutScene(doc, "missing"), { doc, node: null });
+    assert.deepEqual(continueAndCutScene(doc, "end_b"), { doc, node: null });
+    assert.deepEqual(continueAndCutScene(doc, "start"), { doc, node: null });
+
+    // 1. Default inherit continuation + splitAtBeatId="b2" + rewiring s_a -> newScene -> end_b!
+    const cut1 = continueAndCutScene(doc, "s_a", { title: "Act 1 (Cont.)", splitAtBeatId: "b2" });
+    assert.ok(cut1.node);
+    const newId1 = cut1.node.id;
+    assert.equal(cut1.node.title, "Act 1 (Cont.)");
+    assert.deepEqual(cut1.node.background, { mode: "inherit" });
+    assert.deepEqual(cut1.node.bgm, { mode: "inherit" });
+    assert.deepEqual(cut1.node.place, { mode: "inherit" });
+    assert.deepEqual(cut1.node.stageCast, { mode: "inherit" });
+    assert.deepEqual(cut1.node.transition, { kind: "none", duration: 0.4 });
+    // Nudged away from occupied end_b position!
+    assert.equal(cut1.node.pos.x, 300 + GRAPH_COL_GAP);
+    assert.notEqual(cut1.node.pos.y, 120);
+    // Beat migration: b1 stays on s_a, [b2, b3] move to newScene!
+    assert.deepEqual(cut1.doc.nodes.s_a.beats.map(b => b.id), ["b1"]);
+    assert.deepEqual(cut1.doc.nodes[newId1].beats.map(b => b.id), ["b2", "b3"]);
+    // Edge rewiring: s_a.out -> newId1 AND newId1.out -> end_b (both normal detachable edges)!
+    assert.equal(cut1.doc.edges.find(e => e.fromNodeId === "s_a" && e.fromPortId === "out")?.toNodeId, newId1);
+    assert.equal(cut1.doc.edges.find(e => e.fromNodeId === newId1 && e.fromPortId === "out")?.toNodeId, "end_b");
+    assert.equal(compileStoryGraph(cut1.doc).ok, true);
+    assert.equal(compileStoryGraph(cut1.doc).warnings.length, 0);
+
+    // 2. Presets: bgmStop, bgmChange, bgChange on an unwired tail scene.
+    const tailBase = disconnectPort(cut1.doc, newId1, "out");
+    const stopCut = continueAndCutScene(tailBase, newId1, { preset: "bgmStop" });
+    assert.ok(stopCut.node);
+    assert.deepEqual(stopCut.node.bgm, { mode: "stop" });
+    assert.deepEqual(stopCut.node.background, { mode: "inherit" });
+    assert.equal(stopCut.doc.edges.find(e => e.fromNodeId === newId1)?.toNodeId, stopCut.node.id);
+    assert.equal(stopCut.doc.edges.some(e => e.fromNodeId === stopCut.node.id), false);
+
+    const bgmChangeCut = continueAndCutScene(tailBase, newId1, { preset: "bgmChange" });
+    assert.deepEqual(bgmChangeCut.node?.bgm, { mode: "play", name: DEFAULT_STORY_BGM, volume: 0.75 });
+
+    const bgChangeCut = continueAndCutScene(tailBase, newId1, { preset: "bgChange" });
+    assert.deepEqual(bgChangeCut.node?.background, { mode: "set", asset: DEFAULT_STORY_BACKGROUND });
+
+    // 3. Respects STORY_LIMITS.nodes.
+    let fullDoc = createStoryDocument("jp", "Full");
+    fullDoc = createNode(fullDoc, "scene", { x: 300, y: 120 }, { id: "s0" }).doc;
+    for (let i = Object.keys(fullDoc.nodes).length; i < STORY_LIMITS.nodes; i++) {
+        fullDoc.nodes[`pad_${i}`] = { id: `pad_${i}`, type: "end", title: "", pos: { x: 0, y: i * 10 } };
+    }
+    assert.equal(Object.keys(fullDoc.nodes).length, STORY_LIMITS.nodes);
+    assert.deepEqual(continueAndCutScene(fullDoc, "s0"), { doc: fullDoc, node: null });
+});
+
+test("createStarterStoryFromScript parses zh/en/ja .msk templates with 0 errors and 0 warnings, and starter.ts is .msk-only", () => {
+    assert.equal("downloadStoryJson" in starterModule, false, "downloadStoryJson must be removed from starter.ts");
+    assert.equal(typeof starterModule.downloadStoryScript, "function");
+
+    const cases = [
+        { locale: "zh", region: "cn" },
+        { locale: "en", region: "en" },
+        { locale: "ja", region: "jp" },
+    ];
+    for (const { locale, region } of cases) {
+        const doc = createStarterStoryFromScript(region, locale);
+        assert.equal(doc.schema, STORY_SCHEMA_VERSION);
+        assert.equal(doc.region, region);
+
+        const validated = validateStoryDocument(doc);
+        assert.equal(validated.ok, true, `${locale}: ${JSON.stringify(validated.ok ? [] : validated.issues)}`);
+        assert.equal(validated.program.errors.length, 0, `${locale} errors`);
+        assert.equal(validated.program.warnings.length, 0, `${locale} warnings: ${JSON.stringify(validated.program.warnings)}`);
+
+        const declaredEndings = Object.values(doc.nodes)
+            .filter(node => node.type === "end")
+            .map(node => node.id);
+        assert.ok(declaredEndings.length >= 2, `${locale}: expected >= 2 endings, got ${declaredEndings.length}`);
+        assert.equal(validated.program.endingNodeIds.length, declaredEndings.length, `${locale}: all endings must be graph-reachable`);
+
+        // Generic BFS branch explorer across arbitrary choices/conditions to verify every declared ending is reachable.
+        const reachedEndings = new Set();
+        const queue = [{ frame: createInitialRuntime(validated.program), seenChoiceStates: new Set() }];
+        let exploredPaths = 0;
+
+        while (queue.length > 0) {
+            assert.ok(exploredPaths < 128, `${locale}: BFS exceeded 128 branches`);
+            const { frame: startFrame, seenChoiceStates } = queue.shift();
+            let cur = startFrame;
+            let steps = 0;
+            while (cur.stoppedReason === "blocking") {
+                steps += 1;
+                assert.ok(steps <= 500, `${locale}: blocking beat step limit exceeded`);
+                cur = advanceRuntime(validated.program, cur);
+            }
+
+            if (cur.stoppedReason === "choice") {
+                const available = cur.pendingChoice.options.filter(opt => opt.available);
+                assert.ok(available.length > 0, `${locale}: deadlocked choice at ${cur.nodeId}`);
+                const varSig = JSON.stringify(cur.variables);
+                for (const opt of available) {
+                    const stateKey = `${cur.nodeId}\0${opt.id}\0${varSig}`;
+                    if (seenChoiceStates.has(stateKey)) continue;
+                    const nextSeen = new Set(seenChoiceStates);
+                    nextSeen.add(stateKey);
+                    queue.push({ frame: advanceRuntime(validated.program, cur, opt.id), seenChoiceStates: nextSeen });
+                }
+            } else {
+                exploredPaths += 1;
+                assert.equal(cur.stoppedReason, "end", `${locale}: branch stopped unexpectedly with ${cur.stoppedReason} at ${cur.nodeId}`);
+                reachedEndings.add(cur.ending.nodeId);
+            }
+        }
+
+        for (const endId of declaredEndings) {
+            assert.ok(reachedEndings.has(endId), `${locale}: declared ending '${endId}' was not reached by BFS (reached: ${[...reachedEndings].join(", ")})`);
+        }
+    }
 });

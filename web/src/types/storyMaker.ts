@@ -391,10 +391,12 @@ export const STORY_ISSUE_CODES = [
     "actorDuplicate", "actorLimitExceeded",
     "variableNotFound", "variableTypeMismatch", "templateVarMissing", "conditionInvalid",
     "endingMissing", "sceneEmptyBeats", "choiceOptionEmpty", "cycleDetected",
+    "mergeNodeInheritAmbiguous",
 ] as const;
 
 export type StoryIssueCode = (typeof STORY_ISSUE_CODES)[number];
 export type StoryValidationCode = StoryIssueCode;
+export type StoryDiagnosticCode = StoryIssueCode;
 
 export interface StoryIssue {
     code: StoryIssueCode;

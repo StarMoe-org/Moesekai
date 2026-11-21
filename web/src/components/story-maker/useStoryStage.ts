@@ -97,6 +97,38 @@ function pick(name: string | null, list: readonly string[] | undefined, fallback
     return fallback;
 }
 
+/**
+ * Structural stage fingerprint covering background, place, active beat id, and mounted actor
+ * identities/transforms (deliberately excluding per-actor motion/facial so clip auditioning
+ * and picking on the same beat do not trigger a structural reset or tear down solo preview).
+ */
+function stageStructureKey(target: StoryStageState, castList: readonly StoryCastMember[]): string {
+    const modelByKey = new Map(castList.map(member => [member.key, member.modelId]));
+    const stepId = target.dialogue?.stepId ?? target.narration?.stepId ?? target.telop?.stepId ?? "";
+    const actorsSig = target.actors
+        .map(actor => `${actor.cast}:${modelByKey.get(actor.cast) ?? ""}:${actor.x}:${actor.y}:${actor.scale}:${actor.mirror ? 1 : 0}`)
+        .join(",");
+    return `${target.background ?? ""}|${target.place ?? ""}|${stepId}|${actorsSig}`;
+}
+
+/** Safely invokes `stage.playMotion` catching both synchronous validation throws and rejections. */
+function safePlayMotion(stage: Live2DStage, actorId: string, name: string, loop = false): Promise<boolean> {
+    try {
+        return stage.playMotion(actorId, name, { loop }).catch(() => false);
+    } catch {
+        return Promise.resolve(false);
+    }
+}
+
+/** Safely invokes `stage.setFacial` catching both synchronous validation throws and rejections. */
+function safeSetFacial(stage: Live2DStage, actorId: string, name: string): Promise<boolean> {
+    try {
+        return stage.setFacial(actorId, name).catch(() => false);
+    } catch {
+        return Promise.resolve(false);
+    }
+}
+
 interface UseStoryStageOptions {
     /** The story library's root, as fetched; null while unknown. */
     library: string | null;
@@ -118,6 +150,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
     const appliedRef = useRef(new Map<string, AppliedActor>());
     const infoCacheRef = useRef(new Map<string, Live2DActorInfo>());
     const lastStateRef = useRef<StoryStageState | null>(null);
+    const lastStructureKeyRef = useRef<string | null>(null);
     const soloPreviewRef = useRef<SoloPreviewActor | null>(null);
     const hiddenForSoloRef = useRef(new Set<string>());
     const libraryRef = useRef(library);
@@ -125,6 +158,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
     const modelsRef = useRef(models);
     const queueRef = useRef<Promise<void>>(Promise.resolve());
     const generationRef = useRef(0);
+    const structuralGenRef = useRef(0);
     const previewGenRef = useRef(0);
     const [attempt, setAttempt] = useState(0);
     const key = library ? `${library}|${attempt}` : null;
@@ -233,9 +267,11 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
             window.clearTimeout(settling);
             stageRef.current = null;
             applied.clear();
+            lastStructureKeyRef.current = null;
             soloPreviewRef.current = null;
             hiddenForSolo.clear();
             generationRef.current += 1;
+            structuralGenRef.current += 1;
             previewGenRef.current += 1;
             stage?.destroy();
             host.replaceChildren();
@@ -262,13 +298,20 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
         setSoloPreviewByKey({ key: activeKey, castKey: null });
     }, []);
 
-    const runApply = useCallback(async (target: StoryStageState, options: StoryStageApplyOptions, generation: number) => {
+    const runApply = useCallback(async (
+        target: StoryStageState,
+        options: StoryStageApplyOptions,
+        generation: number,
+        structureChanged: boolean,
+    ) => {
         const stage = stageRef.current;
         const activeLibrary = libraryRef.current;
         if (!stage || generation !== generationRef.current) return;
 
-        // Navigating or syncing stage state automatically exits any solo clip preview.
+        // Only exit solo clip preview on structural stage navigation/changes or non-instant playback;
+        // editing an off-stage actor's motion/facial on the same beat preserves the solo preview.
         if (soloPreviewRef.current || hiddenForSoloRef.current.size > 0) {
+            if (!structureChanged) return;
             teardownSoloPreview(stage, key);
         }
 
@@ -328,12 +371,12 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
                 const info = current.info;
                 const motion = pick(actor.motion, info?.motions, info?.defaultMotion ?? null);
                 if (motion && motion !== current.motion) {
-                    tasks.push(stage.playMotion(id, motion).catch(() => undefined));
+                    tasks.push(safePlayMotion(stage, id, motion, false));
                     current.motion = motion;
                 }
                 const facial = pick(actor.facial, info?.facials, info?.defaultFacial ?? null);
                 if (facial && facial !== current.facial) {
-                    tasks.push(stage.setFacial(id, facial).catch(() => undefined));
+                    tasks.push(safeSetFacial(stage, id, facial));
                     current.facial = facial;
                 }
                 continue;
@@ -374,14 +417,14 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
                     library: activeLibrary,
                     info: previous.library === activeLibrary ? { ...previous.info, [modelId]: info } : { [modelId]: info },
                 }));
-                // the names given before the model's lists were known
-                const wantMotion = pick(actor.motion, info.motions, info.defaultMotion);
-                const wantFacial = pick(actor.facial, info.facials, info.defaultFacial);
+                // Preserve any clip explicitly auditioned while the actor was loading.
+                const wantMotion = pick(entry.motion ?? actor.motion, info.motions, info.defaultMotion);
+                const wantFacial = pick(entry.facial ?? actor.facial, info.facials, info.defaultFacial);
                 entry.motion = wantMotion;
                 entry.facial = wantFacial;
                 const steps: Promise<unknown>[] = [];
-                if (!motion && wantMotion && wantMotion !== info.defaultMotion) steps.push(stage.playMotion(id, wantMotion).catch(() => undefined));
-                if (!facial && wantFacial && wantFacial !== info.defaultFacial) steps.push(stage.setFacial(id, wantFacial).catch(() => undefined));
+                if (!motion && wantMotion && wantMotion !== info.defaultMotion) steps.push(safePlayMotion(stage, id, wantMotion, false));
+                if (!facial && wantFacial && wantFacial !== info.defaultFacial) steps.push(safeSetFacial(stage, id, wantFacial));
                 if (fadeIn) steps.push(stage.setActor(id, { alpha: 1 }, { duration: STORY_FADE_SECONDS, easing: "in" }).catch(() => undefined));
                 await Promise.all(steps);
             }, () => {
@@ -412,45 +455,39 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
 
     /** Brings the stage to `target` (see the hook's comment); settles when the changes have played. */
     const apply = useCallback((target: StoryStageState, options: StoryStageApplyOptions): Promise<void> => {
+        const nextStructureKey = stageStructureKey(target, castRef.current);
+        const structureChanged = !options.instant || lastStructureKeyRef.current !== nextStructureKey;
         lastStateRef.current = target;
+        lastStructureKeyRef.current = nextStructureKey;
         const generation = ++generationRef.current;
-        const next = queueRef.current.then(() => runApply(target, options, generation)).catch(() => undefined);
+        if (structureChanged) {
+            structuralGenRef.current += 1;
+        }
+        const next = queueRef.current
+            .then(() => runApply(target, options, generation, structureChanged))
+            .catch(() => undefined);
         queueRef.current = next;
         return next;
     }, [runApply]);
 
     /**
      * Live-auditions a motion and/or facial clip for `cast`:
-     * - When `cast` is already mounted on stage and `clip` specifies a motion/facial (not solo showcase),
-     *   forces immediate replay directly on the mounted stage actor.
+     * - When `cast` is already the active solo preview actor, replays directly with zero reload latency.
+     * - When `cast` is mounted on stage and `clip` specifies a motion/facial, forces immediate replay
+     *   directly on the mounted stage actor (even if it is the same clip name).
      * - Otherwise hides current stage actors and mounts `cast` centered (`x: 0, scale: 1.15`) as a solo
-     *   preview actor until `clearClipPreview()` or the next `apply()`.
+     *   preview actor until `clearClipPreview()` or a structural stage change.
      */
     const previewClip = useCallback((castMember: StoryCastMember, clip?: StoryClipPreviewRequest): Promise<void> => {
-        const stageGen = generationRef.current;
+        const structGen = structuralGenRef.current;
         const previewGen = ++previewGenRef.current;
         const next = queueRef.current.then(async () => {
             const stage = stageRef.current;
             const activeLibrary = libraryRef.current;
-            if (!stage || generationRef.current !== stageGen || previewGenRef.current !== previewGen) return;
+            if (!stage || structuralGenRef.current !== structGen || previewGenRef.current !== previewGen) return;
 
             const hasExplicitClip = Boolean(clip?.motion || clip?.facial);
             const mounted = appliedRef.current.get(castMember.key);
-
-            // In-place force replay when the actor is already visible on stage and a specific clip is requested.
-            if (hasExplicitClip && mounted && mounted.modelId === castMember.modelId && !soloPreviewRef.current) {
-                const tasks: Promise<unknown>[] = [];
-                if (clip?.motion) {
-                    tasks.push(stage.playMotion(castMember.key, clip.motion, { loop: false }).catch(() => undefined));
-                    mounted.motion = clip.motion;
-                }
-                if (clip?.facial) {
-                    tasks.push(stage.setFacial(castMember.key, clip.facial).catch(() => undefined));
-                    mounted.facial = clip.facial;
-                }
-                await Promise.all(tasks);
-                return;
-            }
 
             // Already mounted as the active solo preview actor: replay with zero reload latency.
             const existingSolo = soloPreviewRef.current;
@@ -458,12 +495,34 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
                 setSoloPreviewByKey({ key, castKey: castMember.key });
                 const tasks: Promise<unknown>[] = [];
                 if (clip?.motion) {
-                    tasks.push(stage.playMotion(SOLO_PREVIEW_ACTOR_ID, clip.motion, { loop: false }).catch(() => undefined));
+                    tasks.push(safePlayMotion(stage, SOLO_PREVIEW_ACTOR_ID, clip.motion, false));
                 }
                 if (clip?.facial) {
-                    tasks.push(stage.setFacial(SOLO_PREVIEW_ACTOR_ID, clip.facial).catch(() => undefined));
+                    tasks.push(safeSetFacial(stage, SOLO_PREVIEW_ACTOR_ID, clip.facial));
                 }
-                await Promise.all(tasks);
+                if (tasks.length > 0) await Promise.all(tasks);
+                return;
+            }
+
+            // In-place force replay when the actor is mounted on stage and a specific clip is requested.
+            if (hasExplicitClip && mounted && mounted.modelId === castMember.modelId) {
+                if (soloPreviewRef.current || hiddenForSoloRef.current.size > 0) {
+                    teardownSoloPreview(stage, key);
+                }
+                const tasks: Promise<unknown>[] = [];
+                if (clip?.motion) {
+                    tasks.push(safePlayMotion(stage, castMember.key, clip.motion, false));
+                    if (!mounted.info || mounted.info.motions.includes(clip.motion)) {
+                        mounted.motion = clip.motion;
+                    }
+                }
+                if (clip?.facial) {
+                    tasks.push(safeSetFacial(stage, castMember.key, clip.facial));
+                    if (!mounted.info || mounted.info.facials.includes(clip.facial)) {
+                        mounted.facial = clip.facial;
+                    }
+                }
+                if (tasks.length > 0) await Promise.all(tasks);
                 return;
             }
 
@@ -487,8 +546,12 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
             }
 
             const cached = infoCacheRef.current.get(castMember.modelId);
-            const initialMotion = clip?.motion ?? (cached?.defaultMotion ?? undefined);
-            const initialFacial = clip?.facial ?? (cached?.defaultFacial ?? undefined);
+            const initialMotion = cached
+                ? (clip?.motion && cached.motions.includes(clip.motion) ? clip.motion : cached.defaultMotion ?? undefined)
+                : undefined;
+            const initialFacial = cached
+                ? (clip?.facial && cached.facials.includes(clip.facial) ? clip.facial : cached.defaultFacial ?? undefined)
+                : undefined;
 
             setSoloPreviewByKey({ key, castKey: castMember.key });
             setLoadingActors(count => count + 1);
@@ -509,7 +572,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
                 if (
                     libraryRef.current !== activeLibrary
                     || stageRef.current !== stage
-                    || generationRef.current !== stageGen
+                    || structuralGenRef.current !== structGen
                 ) {
                     if (stageRef.current === stage) {
                         try {
@@ -530,11 +593,11 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
                 }));
                 if (previewGenRef.current !== previewGen) return;
                 const tasks: Promise<unknown>[] = [];
-                if (clip?.motion) {
-                    tasks.push(stage.playMotion(SOLO_PREVIEW_ACTOR_ID, clip.motion, { loop: false }).catch(() => undefined));
+                if (clip?.motion && clip.motion !== initialMotion && info.motions.includes(clip.motion)) {
+                    tasks.push(safePlayMotion(stage, SOLO_PREVIEW_ACTOR_ID, clip.motion, false));
                 }
-                if (clip?.facial) {
-                    tasks.push(stage.setFacial(SOLO_PREVIEW_ACTOR_ID, clip.facial).catch(() => undefined));
+                if (clip?.facial && clip.facial !== initialFacial && info.facials.includes(clip.facial)) {
+                    tasks.push(safeSetFacial(stage, SOLO_PREVIEW_ACTOR_ID, clip.facial));
                 }
                 if (tasks.length > 0) await Promise.all(tasks);
             } catch {
@@ -552,6 +615,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
     /** Exits any active solo clip preview and immediately restores the current stage state. */
     const clearClipPreview = useCallback(() => {
         previewGenRef.current += 1;
+        structuralGenRef.current += 1;
         const generation = generationRef.current;
         const next = queueRef.current.then(async () => {
             const stage = stageRef.current;
@@ -564,7 +628,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions): 
             const hadSolo = Boolean(soloPreviewRef.current || hiddenForSoloRef.current.size > 0);
             teardownSoloPreview(stage, key);
             if (hadSolo && lastStateRef.current && generation === generationRef.current) {
-                await runApply(lastStateRef.current, { instant: true }, generation);
+                await runApply(lastStateRef.current, { instant: true }, generation, true);
             }
         }).catch(() => undefined);
         queueRef.current = next;

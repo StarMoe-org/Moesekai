@@ -3,11 +3,11 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { Button, Icon, IconButton, cn } from "@/components/md3";
 import {
     mdAccessibilityNew, mdAccountTree, mdAdd, mdAltRoute, mdAnimation, mdArticle, mdBlock,
-    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdContentCopy, mdDelete, mdDragIndicator,
-    mdErrorFill, mdFlag, mdGroups, mdHourglassTop, mdImage, mdKeyboardArrowDown, mdKeyboardArrowUp,
-    mdLabel, mdLink, mdLinkOff, mdLock, mdMood, mdMovie, mdMusicNote, mdMusicOff, mdPlayArrowFill,
-    mdPlayCircle, mdRecordVoiceOver, mdRedo, mdTitle, mdUnfoldLess, mdUnfoldMore, mdVolumeUp,
-    mdWandStars, mdWarning, mdWarningFill, mdZoomIn, mdZoomOut,
+    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdContentCopy, mdContentCut, mdDelete,
+    mdDragIndicator, mdErrorFill, mdFlag, mdGroups, mdHourglassTop, mdImage, mdKeyboardArrowDown,
+    mdKeyboardArrowUp, mdLabel, mdLink, mdLinkOff, mdLock, mdMood, mdMovie, mdMusicNote, mdMusicOff,
+    mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdTitle, mdUnfoldLess, mdUnfoldMore,
+    mdVolumeUp, mdWandStars, mdWarning, mdWarningFill, mdZoomIn, mdZoomOut,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import {
@@ -23,7 +23,7 @@ import type {
 
 export interface StoryFlowCanvasProps {
     doc: StoryDocument;
-    mode: "edit" | "monitor";
+    mode: "edit" | "monitor" | "play";
     activeNodeId?: string | null;
     activeBeatId?: string | null;
     visitedNodeIds?: readonly string[];
@@ -43,6 +43,13 @@ export interface StoryFlowCanvasProps {
     onDeleteBeat?: (nodeId: string, beatId: string) => void;
     onDuplicateBeat?: (nodeId: string, beatId: string) => void;
     onPlayFromNode?: (nodeId: string) => void;
+    onContinueScene?: (
+        sceneId: string,
+        options?: {
+            preset?: "inherit" | "bgmStop" | "bgmChange" | "bgChange";
+            splitAtBeatId?: string;
+        },
+    ) => void;
     onAutoLayout?: () => void;
     activeDragPayload?: StoryDragPayload | null;
     className?: string;
@@ -487,6 +494,7 @@ export function StoryFlowCanvas({
     onDeleteBeat,
     onDuplicateBeat,
     onPlayFromNode,
+    onContinueScene,
     onAutoLayout,
     activeDragPayload = null,
     className,
@@ -496,6 +504,8 @@ export function StoryFlowCanvas({
     const markerPrefix = rawId.replace(/[^a-zA-Z0-9_-]/g, "");
 
     const isEdit = mode === "edit";
+    const isPlay = mode === "play";
+    const isReadonly = !isEdit;
 
     const nodesList = useMemo(() => {
         const all = Object.values(doc.nodes);
@@ -669,7 +679,7 @@ export function StoryFlowCanvas({
             if (node.pos.y + size.h > maxY) maxY = node.pos.y + size.h;
         }
 
-        const pad = mode === "monitor" ? 28 : 44;
+        const pad = isReadonly ? 28 : 44;
         const contentW = Math.max(120, maxX - minX);
         const contentH = Math.max(80, maxY - minY);
         const availW = Math.max(60, rect.width - pad * 2);
@@ -678,7 +688,7 @@ export function StoryFlowCanvas({
         const nextX = (rect.width - contentW * nextZoom) / 2 - minX * nextZoom;
         const nextY = (rect.height - contentH * nextZoom) / 2 - minY * nextZoom;
         setView({ x: nextX, y: nextY, zoom: nextZoom });
-    }, [mode]);
+    }, [isReadonly]);
 
     const measureAllNodes = useCallback((): MeasuredGeometry => {
         const sizes: Record<string, NodeSize> = {};
@@ -1292,12 +1302,46 @@ export function StoryFlowCanvas({
                     onSelect: () => onPlayFromNode(node.id),
                 });
             }
+            if (node.type === "scene" && onContinueScene) {
+                actions.push(
+                    {
+                        key: "continue-scene",
+                        label: t("page.storyMaker.v2.scene.continueAndCut"),
+                        icon: mdContentCut,
+                        disabled: nodesFull,
+                        dividerBefore: actions.length > 0,
+                        onSelect: () => onContinueScene(node.id, { preset: "inherit" }),
+                    },
+                    {
+                        key: "continue-scene-bgm-stop",
+                        label: t("page.storyMaker.v2.scene.continueBgmStop"),
+                        icon: mdMusicOff,
+                        disabled: nodesFull,
+                        onSelect: () => onContinueScene(node.id, { preset: "bgmStop" }),
+                    },
+                    {
+                        key: "continue-scene-bgm-change",
+                        label: t("page.storyMaker.v2.scene.continueBgmChange"),
+                        icon: mdMusicNote,
+                        disabled: nodesFull,
+                        onSelect: () => onContinueScene(node.id, { preset: "bgmChange" }),
+                    },
+                    {
+                        key: "continue-scene-bg-change",
+                        label: t("page.storyMaker.v2.scene.continueBgChange"),
+                        icon: mdImage,
+                        disabled: nodesFull,
+                        onSelect: () => onContinueScene(node.id, { preset: "bgChange" }),
+                    },
+                );
+            }
             if (node.type !== "start" && onDuplicateNode) {
                 actions.push({
                     key: "duplicate-node",
                     label: t("common.action.copy"),
                     icon: mdContentCopy,
                     disabled: nodesFull,
+                    dividerBefore: actions.length > 0 && node.type === "scene" && Boolean(onContinueScene),
                     onSelect: () => onDuplicateNode(node.id),
                 });
             }
@@ -1316,7 +1360,20 @@ export function StoryFlowCanvas({
 
         if (contextMenu.kind === "beat") {
             const { nodeId, beatId } = contextMenu;
+            const ownerNode = doc.nodes[nodeId];
+            const beatIndex = ownerNode?.type === "scene"
+                ? ownerNode.beats.findIndex(b => b.id === beatId)
+                : -1;
             const actions: ContextMenuAction[] = [];
+            if (onContinueScene && beatIndex > 0) {
+                actions.push({
+                    key: "split-from-beat",
+                    label: t("page.storyMaker.v2.scene.splitFromBeat"),
+                    icon: mdContentCut,
+                    disabled: nodesFull,
+                    onSelect: () => onContinueScene(nodeId, { preset: "inherit", splitAtBeatId: beatId }),
+                });
+            }
             if (onDuplicateBeat) {
                 actions.push({
                     key: "duplicate-beat",
@@ -1387,7 +1444,7 @@ export function StoryFlowCanvas({
 
         return [];
     }, [
-        contextMenu, doc.nodes, onAddNode, onDeleteBeat, onDeleteNode,
+        contextMenu, doc.nodes, onAddNode, onContinueScene, onDeleteBeat, onDeleteNode,
         onDisconnectEdge, onDuplicateBeat, onDuplicateNode, onPlayFromNode, t,
     ]);
 
@@ -1439,13 +1496,13 @@ export function StoryFlowCanvas({
                 label,
                 tone,
                 dashed,
-                visited: mode === "monitor" && visitedEdgeSet.has(edge.id),
+                visited: isReadonly && visitedEdgeSet.has(edge.id),
             });
         }
 
         list.sort((a, b) => Number(a.visited) - Number(b.visited));
         return list;
-    }, [doc.edges, doc.nodes, getPortWorldPoint, mode, t, varById, visitedEdgeSet]);
+    }, [doc.edges, doc.nodes, getPortWorldPoint, isReadonly, t, varById, visitedEdgeSet]);
 
     const rubberBandPath = useMemo(() => {
         if (!wireDrag || !wireDrag.dragged) return null;
@@ -1921,7 +1978,8 @@ export function StoryFlowCanvas({
                                             onClick={(event) => {
                                                 if (clickConnectSource) return;
                                                 event.stopPropagation();
-                                                onSelectBeat?.(scene.id, beat.id);
+                                                if (onSelectBeat) onSelectBeat(scene.id, beat.id);
+                                                else onSelectNode?.(scene.id);
                                             }}
                                             className={cn(
                                                 "state-layer focus-ring flex min-w-0 flex-1 items-center gap-1.5 rounded-md3-sm px-1.5 py-1 text-left",
@@ -2022,7 +2080,8 @@ export function StoryFlowCanvas({
     return (
         <div
             className={cn(
-                "relative flex min-h-[14rem] min-w-0 flex-col overflow-hidden rounded-md3-xl border border-outline-variant/70 bg-surface-container-lowest",
+                "relative flex min-h-[14rem] min-w-0 flex-col overflow-hidden rounded-md3-xl border bg-surface-container-lowest",
+                isPlay ? "border-primary/50" : "border-outline-variant/70",
                 className,
             )}
         >
@@ -2080,6 +2139,12 @@ export function StoryFlowCanvas({
                     </div>
                 ) : (
                     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                        {isPlay && (
+                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md3-full bg-primary px-2.5 py-0.5 type-label-m text-on-primary">
+                                <Icon path={mdLock} size={13} className="shrink-0" />
+                                <span className="truncate">{t("page.storyMaker.v2.mode.canvasReadonlyHint")}</span>
+                            </span>
+                        )}
                         {activeNodeObj && (
                             <span className="inline-flex max-w-full items-center gap-1.5 rounded-md3-full bg-primary-container px-2.5 py-0.5 type-label-m text-on-primary-container">
                                 <span aria-hidden className="inline-block size-2 shrink-0 animate-pulse rounded-full bg-primary" />
@@ -2281,7 +2346,7 @@ export function StoryFlowCanvas({
                                 ? `${markerPrefix}-arrow-primary`
                                 : `${markerPrefix}-arrow-${tone}`;
                             const strokeWidth = visited ? 3.4 : isHot ? 3.2 : 2.3;
-                            const strokeOpacity = mode === "monitor" && !visited ? 0.45 : isHot ? 1 : 0.9;
+                            const strokeOpacity = isReadonly && !visited ? 0.45 : isHot ? 1 : 0.9;
 
                             return (
                                 <g key={edge.id}>
@@ -2397,7 +2462,7 @@ export function StoryFlowCanvas({
                         const pos = getNodePos(node);
                         const isDragging = dragState?.nodeId === node.id && dragState.moved;
                         const isActive = activeNodeId === node.id;
-                        const isVisited = mode === "monitor" && !isActive && visitedNodeSet.has(node.id);
+                        const isVisited = isReadonly && !isActive && visitedNodeSet.has(node.id);
                         const isReachable = reachableNodeSet.has(node.id);
                         const diagSummary = nodeDiags.get(node.id);
                         const isValidConnectTarget = isEdit
@@ -2616,7 +2681,7 @@ export function StoryFlowCanvas({
                                         {isEdit && <Icon path={mdDragIndicator} size={15} className="shrink-0 opacity-65" />}
                                         <Icon path={mdAltRoute} size={17} className="shrink-0" />
                                         <span className="min-w-0 flex-1 truncate type-title-s">{title}</span>
-                                        {mode === "monitor" && isActive && (
+                                        {isReadonly && isActive && (
                                             <span aria-hidden className="inline-block size-2.5 shrink-0 animate-pulse rounded-full bg-primary ring-2 ring-surface-container-lowest" />
                                         )}
                                         {renderDiagnosticDot(diagSummary)}
@@ -2761,7 +2826,7 @@ export function StoryFlowCanvas({
                                         {isEdit && <Icon path={mdDragIndicator} size={15} className="shrink-0 opacity-65" />}
                                         <Icon path={mdCalculate} size={17} className="shrink-0" />
                                         <span className="min-w-0 flex-1 truncate type-title-s">{title}</span>
-                                        {mode === "monitor" && isActive && (
+                                        {isReadonly && isActive && (
                                             <span aria-hidden className="inline-block size-2.5 shrink-0 animate-pulse rounded-full bg-primary ring-2 ring-surface-container-lowest" />
                                         )}
                                         {renderDiagnosticDot(diagSummary)}
@@ -2932,7 +2997,7 @@ export function StoryFlowCanvas({
                                     <Icon path={mdMovie} size={17} className="shrink-0 text-primary" />
                                     <span className="min-w-0 flex-1 truncate type-title-s">{title}</span>
 
-                                    {mode === "monitor" && isActive && (
+                                    {isReadonly && isActive && (
                                         <span
                                             aria-hidden
                                             className="inline-block size-2.5 shrink-0 animate-pulse rounded-full bg-primary ring-2 ring-surface-container-lowest"
@@ -2981,16 +3046,6 @@ export function StoryFlowCanvas({
                         );
                     })}
                 </div>
-
-                {/* Subtle Canvas Help Overlay */}
-                {isEdit && !clickConnectSource && !wireDrag?.dragged && (
-                    <div
-                        title={t("page.storyMaker.flow.canvasHelp")}
-                        className="glass pointer-events-none absolute bottom-2 left-2.5 z-10 hidden max-w-[calc(100%-1.5rem)] items-center rounded-md3-full px-3 py-1 type-label-s text-on-surface-variant sm:flex"
-                    >
-                        <span className="truncate">{t("page.storyMaker.nle.connectPortHint")}</span>
-                    </div>
-                )}
             </div>
 
             {/* MD3 Right-Click Context Menu (fixed z-[180], viewport-clamped) */}

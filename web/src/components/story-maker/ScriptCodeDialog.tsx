@@ -1,19 +1,15 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banner, Button, Dialog, Icon, Tabs } from "@/components/md3";
+import { Banner, Button, Dialog, Icon } from "@/components/md3";
 import {
-    mdCheckCircle, mdCode, mdContentCopy, mdDownload, mdErrorFill, mdInfo, mdWarning,
+    mdCheckCircle, mdCode, mdContentCopy, mdDownload, mdErrorFill, mdWarning,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { compileStoryGraph, type CompiledStoryProgram } from "@/lib/storyMaker/compiler";
-import { serializeStory } from "@/lib/storyMaker/document";
 import { parseStoryScript, serializeStoryScript, type StoryScriptDiagnostic } from "@/lib/storyMaker/script";
-import { downloadStoryJson, downloadStoryScript } from "@/lib/storyMaker/starter";
-import { parseStoryJson } from "@/lib/storyMaker/validate";
-import type { StoryCompileDiagnostic, StoryDocument, StoryIssue } from "@/types/storyMaker";
+import { downloadStoryScript } from "@/lib/storyMaker/starter";
+import type { StoryCompileDiagnostic, StoryDocument } from "@/types/storyMaker";
 import { StoryIssueList } from "./StoryIssueList";
-
-type CodeTab = "script" | "json";
 
 export interface ScriptCodeDialogProps {
     isOpen: boolean;
@@ -24,29 +20,25 @@ export interface ScriptCodeDialogProps {
 
 type CodeEval =
     | { ok: true; doc: StoryDocument; program: CompiledStoryProgram }
-    | { ok: false; scriptErrors?: StoryScriptDiagnostic[]; issues?: StoryIssue[]; diagnostics?: StoryCompileDiagnostic[] };
+    | { ok: false; scriptErrors?: StoryScriptDiagnostic[]; diagnostics?: StoryCompileDiagnostic[] };
 
 /**
- * Bidirectional MoeSekai Script (`.msk`) and `moesekai-story/2` JSON source editor dialog.
+ * Bidirectional MoeSekai Script (`.msk`) source editor dialog.
  * Serializes the live canvas graph on open, validates & compiles edits in real time with
  * exact `line:col` syntax feedback, and syncs valid edits back onto the canvas undo stack.
  */
 export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDialogProps) {
     const { t } = useI18n();
-    const [tab, setTab] = useState<CodeTab>("script");
     const [scriptText, setScriptText] = useState(() => serializeStoryScript(doc));
-    const [jsonText, setJsonText] = useState(() => serializeStory(doc));
     const [copied, setCopied] = useState(false);
     const [prevOpen, setPrevOpen] = useState(isOpen);
     const copyTimerRef = useRef<number | null>(null);
 
-    // Re-sync code buffers fresh from the live document whenever the dialog opens.
+    // Re-sync code buffer fresh from the live document whenever the dialog opens.
     if (isOpen !== prevOpen) {
         setPrevOpen(isOpen);
         if (isOpen) {
-            setTab("script");
             setScriptText(serializeStoryScript(doc));
-            setJsonText(serializeStory(doc));
             setCopied(false);
         }
     }
@@ -58,47 +50,20 @@ export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDi
     }, []);
 
     const evaluation = useMemo<CodeEval>(() => {
-        if (tab === "script") {
-            const parsed = parseStoryScript(scriptText);
-            if (!parsed.ok) {
-                return { ok: false, scriptErrors: parsed.diagnostics };
-            }
-            const program = compileStoryGraph(parsed.doc);
-            if (!program.ok) {
-                return { ok: false, diagnostics: program.errors };
-            }
-            return { ok: true, doc: parsed.doc, program };
+        const parsed = parseStoryScript(scriptText);
+        if (!parsed.ok) {
+            return { ok: false, scriptErrors: parsed.diagnostics };
         }
-
-        const res = parseStoryJson(jsonText);
-        if (res.ok) {
-            return { ok: true, doc: res.doc, program: res.program };
+        const program = compileStoryGraph(parsed.doc);
+        if (!program.ok) {
+            return { ok: false, diagnostics: program.errors };
         }
-        return {
-            ok: false,
-            issues: res.issues,
-            ...(res.diagnostics ? { diagnostics: res.diagnostics } : {}),
-        };
-    }, [tab, scriptText, jsonText]);
-
-    const handleTabChange = (nextTab: CodeTab) => {
-        if (nextTab === tab) return;
-        // Carry valid edits seamlessly across .msk <-> JSON tabs when switching.
-        if (evaluation.ok) {
-            if (nextTab === "json") {
-                setJsonText(serializeStory(evaluation.doc));
-            } else {
-                setScriptText(serializeStoryScript(evaluation.doc));
-            }
-        }
-        setTab(nextTab);
-    };
-
-    const activeSource = tab === "script" ? scriptText : jsonText;
+        return { ok: true, doc: parsed.doc, program };
+    }, [scriptText]);
 
     const handleCopy = async () => {
         try {
-            await navigator.clipboard.writeText(activeSource);
+            await navigator.clipboard.writeText(scriptText);
             setCopied(true);
             if (copyTimerRef.current !== null) {
                 window.clearTimeout(copyTimerRef.current);
@@ -114,10 +79,6 @@ export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDi
 
     const handleDownloadScript = () => {
         downloadStoryScript(evaluation.ok ? evaluation.doc : doc);
-    };
-
-    const handleDownloadJson = () => {
-        downloadStoryJson(evaluation.ok ? evaluation.doc : doc);
     };
 
     const handleApply = () => {
@@ -152,16 +113,10 @@ export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDi
         >
             <div className="min-w-0 space-y-3">
                 <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
-                    <Tabs<CodeTab>
-                        variant="secondary"
-                        value={tab}
-                        onValueChange={handleTabChange}
-                        aria-label={t("page.storyMaker.v2.script.dialogTitle")}
-                        items={[
-                            { value: "script", label: t("page.storyMaker.v2.script.tabScript"), icon: mdCode },
-                            { value: "json", label: t("page.storyMaker.v2.script.tabJson") },
-                        ]}
-                    />
+                    <span className="inline-flex items-center gap-1.5 rounded-md3-full bg-secondary-container px-2.5 py-1 type-label-m text-on-secondary-container">
+                        <Icon path={mdCode} size={16} />
+                        <span>{t("page.storyMaker.v2.script.tabScript")}</span>
+                    </span>
                     <div className="flex min-w-0 flex-wrap items-center gap-1.5">
                         <Button
                             size="xs"
@@ -179,26 +134,15 @@ export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDi
                         >
                             {t("page.storyMaker.v2.script.downloadScript")}
                         </Button>
-                        <Button
-                            size="xs"
-                            variant="outlined"
-                            icon={mdDownload}
-                            onClick={handleDownloadJson}
-                        >
-                            {t("page.storyMaker.v2.script.downloadJson")}
-                        </Button>
                     </div>
                 </div>
 
                 <textarea
-                    aria-label={t(tab === "script" ? "page.storyMaker.v2.script.tabScript" : "page.storyMaker.v2.script.tabJson")}
+                    aria-label={t("page.storyMaker.v2.script.tabScript")}
                     spellCheck={false}
                     rows={16}
-                    value={activeSource}
-                    onChange={(event) => {
-                        if (tab === "script") setScriptText(event.target.value);
-                        else setJsonText(event.target.value);
-                    }}
+                    value={scriptText}
+                    onChange={event => setScriptText(event.target.value)}
                     className="min-h-[18rem] w-full resize-y rounded-md3-md border border-outline bg-surface-container-lowest px-3.5 py-3 font-mono type-body-s leading-relaxed text-on-surface focus:border-2 focus:border-primary focus:outline-none"
                 />
 
@@ -257,21 +201,10 @@ export function ScriptCodeDialog({ isOpen, onClose, doc, onApply }: ScriptCodeDi
                                     compact
                                     className="max-h-36 overflow-y-auto"
                                 />
-                            ) : evaluation.issues && evaluation.issues.length > 0 ? (
-                                <StoryIssueList
-                                    issues={evaluation.issues}
-                                    compact
-                                    className="max-h-36 overflow-y-auto"
-                                />
                             ) : null}
                         </div>
                     </Banner>
                 )}
-
-                <p className="flex items-start gap-2 rounded-md3-md bg-surface-container px-3 py-2 type-body-s text-on-surface-variant">
-                    <Icon path={mdInfo} size={16} className="mt-0.5 shrink-0 text-primary" />
-                    <span className="min-w-0 break-words">{t("page.storyMaker.v2.script.mcpHint")}</span>
-                </p>
             </div>
         </Dialog>
     );

@@ -146,7 +146,7 @@ function formatSec(value: number): string {
  * IR instruction inside `frame.executedInstructions` smoothly (scene transitions, stage actions,
  * cues, varOps, talk + synchronous co-star reactions) before settling on `frame.stage`.
  */
-function applyInstructionToStage(
+export function applyInstructionToStage(
     stage: StoryStageState,
     vars: StoryVarValues,
     inst: StoryIR,
@@ -412,7 +412,7 @@ export function StoryPlayerView({
         modelsRef.current = models;
     }, [models]);
 
-    const { kit: uiKit, status: uiKitStatus } = useStoryUiKit(doc.region);
+    const { kit: uiKit } = useStoryUiKit(doc.region);
     const library = useMemo(() => live2dSources(doc.region).library, [doc.region]);
     const {
         hostRef: stageHostRef,
@@ -1368,11 +1368,6 @@ export function StoryPlayerView({
     const phaseMeta = PHASE_META[runtimePhase];
     const isPreloadReady = !preloadRunning && (cacheReady || Boolean(preloadProgress?.done && preloadProgress.failed === 0));
     const showEndSign = !uiHidden && !running && !isTyping && !autoPlay && !currentChoice && Boolean(stageState.dialogue);
-    const uiKitLabel = uiKitStatus === "ready"
-        ? t("page.storyMaker.player.uiKitGame")
-        : uiKitStatus === "loading"
-            ? t("page.storyMaker.player.uiKitLoading")
-            : t("page.storyMaker.player.uiKitFallback");
     const quickMenuTransition = reduced ? reducedMotionFade : md3EffectsFast;
     const audioItems = useMemo<StoryPreloadAudioItem[]>(
         () => [...assetManifest.bgm, ...assetManifest.se, ...assetManifest.voices],
@@ -1964,18 +1959,6 @@ export function StoryPlayerView({
                                             />
                                         </div>
                                     )}
-                                    {uiKitStatus !== "idle" && (
-                                        <span className="inline-flex items-center gap-1.5 type-label-s text-on-surface-variant">
-                                            <span
-                                                aria-hidden
-                                                className={cn(
-                                                    "inline-block size-2 shrink-0 rounded-full",
-                                                    uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
-                                                )}
-                                            />
-                                            <span className="truncate">{uiKitLabel}</span>
-                                        </span>
-                                    )}
                                 </div>
                             </div>
                         )}
@@ -2055,22 +2038,6 @@ export function StoryPlayerView({
                                                             <p className="truncate type-title-m text-on-surface">
                                                                 {t("page.storyMaker.player.menuTitle")}
                                                             </p>
-                                                            {uiKitStatus !== "idle" && (
-                                                                <span className="mt-0.5 inline-flex max-w-full items-center gap-1.5 type-label-s text-on-surface-variant">
-                                                                    {uiKitStatus === "loading" ? (
-                                                                        <LoadingIndicator size={12} />
-                                                                    ) : (
-                                                                        <span
-                                                                            aria-hidden
-                                                                            className={cn(
-                                                                                "inline-block size-2 shrink-0 rounded-full",
-                                                                                uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
-                                                                            )}
-                                                                        />
-                                                                    )}
-                                                                    <span className="truncate">{uiKitLabel}</span>
-                                                                </span>
-                                                            )}
                                                         </div>
                                                         <IconButton
                                                             size="s"

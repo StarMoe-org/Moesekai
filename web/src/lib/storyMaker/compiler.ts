@@ -795,6 +795,11 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
         edgeByPort.set(portKey, edge);
     });
 
+    const inDegreeByNode = new Map<string, number>();
+    for (const edge of edgeByPort.values()) {
+        inDegreeByNode.set(edge.toNodeId, (inDegreeByNode.get(edge.toNodeId) ?? 0) + 1);
+    }
+
     // 6. Start wire & reachability analysis.
     const reachableNodeIds: string[] = [];
     const reachableSet = new Set<string>();
@@ -836,6 +841,22 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                     addWarning("portUnwired", `nodes.${nodeId}.ports.${portId}`, {
                         nodeId,
                         params: { port: portId },
+                    });
+                }
+            }
+        }
+        if (node.type === "scene") {
+            const inDegree = inDegreeByNode.get(nodeId) ?? 0;
+            if (inDegree >= 2) {
+                const inheritedSlotNames: string[] = [];
+                if (node.background.mode === "inherit") inheritedSlotNames.push("background");
+                if (node.bgm.mode === "inherit") inheritedSlotNames.push("bgm");
+                if (node.place.mode === "inherit") inheritedSlotNames.push("place");
+                if (node.stageCast.mode === "inherit") inheritedSlotNames.push("stageCast");
+                if (inheritedSlotNames.length > 0) {
+                    addWarning("mergeNodeInheritAmbiguous", `nodes.${nodeId}`, {
+                        nodeId,
+                        params: { count: inDegree, slots: inheritedSlotNames.join(", ") },
                     });
                 }
             }

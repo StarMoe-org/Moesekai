@@ -8,7 +8,7 @@ import {
     SegmentedButton, Snackbar, cn,
 } from "@/components/md3";
 import {
-    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdDownload, mdEdit,
+    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdEdit,
     mdErrorFill, mdOpenInFull, mdPlayArrowFill, mdTheaters, mdUploadFile, mdWarning,
 } from "@/components/md3/icons";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
@@ -18,7 +18,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { compileStoryGraph } from "@/lib/storyMaker/compiler";
 import { StoryDraftsUnavailableError, createDraft, getDraft } from "@/lib/storyMaker/drafts";
-import { downloadStoryJson, downloadStoryScript } from "@/lib/storyMaker/starter";
+import { downloadStoryScript } from "@/lib/storyMaker/starter";
 import type { StoryDocument } from "@/types/storyMaker";
 
 type PlaySource =
@@ -183,6 +183,9 @@ function StoryMakerPlayContent() {
     }, [handleImmersiveChange, isImmersiveActive]);
 
     const headerButtonSize = isImmersiveActive ? "s" : undefined;
+    const editHref = source.kind === "draft"
+        ? `/story-maker/edit?id=${encodeURIComponent(source.id)}${immersive ? "&immersive=1" : ""}`
+        : null;
 
     return (
         <PageContainer
@@ -277,8 +280,8 @@ function StoryMakerPlayContent() {
                         <Button size={headerButtonSize} variant="text" icon={mdArrowBack} href="/story-maker" className="max-w-full px-3 sm:px-4">
                             {t("page.storyMaker.action.backToDrafts")}
                         </Button>
-                        {source.kind === "draft" && (
-                            <Button size={headerButtonSize} variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`} className="max-w-full px-3 sm:px-4">
+                        {editHref && (
+                            <Button size={headerButtonSize} variant="tonal" icon={mdEdit} href={editHref} className="max-w-full px-3 sm:px-4">
                                 {t("page.storyMaker.action.edit")}
                             </Button>
                         )}
@@ -288,35 +291,21 @@ function StoryMakerPlayContent() {
                             </Button>
                         )}
                         {activeDoc && (
-                            <>
-                                <Button
-                                    size={headerButtonSize}
-                                    variant="outlined"
-                                    icon={mdDownload}
-                                    className="max-w-full px-3 sm:px-4"
-                                    onClick={() => {
-                                        downloadStoryJson(activeDoc);
-                                        setSnack(t("page.storyMaker.exportedToast"));
-                                    }}
-                                >
-                                    {t("page.storyMaker.v2.script.downloadJson")}
-                                </Button>
-                                <Button
-                                    size={headerButtonSize}
-                                    variant="outlined"
-                                    icon={mdCode}
-                                    className="max-w-full px-3 sm:px-4"
-                                    onClick={() => {
-                                        downloadStoryScript(activeDoc);
-                                        setSnack(t("page.storyMaker.v2.script.downloadScript"));
-                                    }}
-                                >
-                                    {t("page.storyMaker.v2.script.downloadScript")}
-                                </Button>
-                            </>
+                            <Button
+                                size={headerButtonSize}
+                                variant="outlined"
+                                icon={mdCode}
+                                className="max-w-full px-3 sm:px-4"
+                                onClick={() => {
+                                    downloadStoryScript(activeDoc);
+                                    setSnack(t("page.storyMaker.v2.script.downloadScript"));
+                                }}
+                            >
+                                {t("page.storyMaker.v2.script.downloadScript")}
+                            </Button>
                         )}
                         <Button size={headerButtonSize} variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="max-w-full px-3 sm:px-4">
-                            {t("page.storyMaker.player.openJson")}
+                            {t("page.storyMaker.player.openScript")}
                         </Button>
                     </>
                 )}
@@ -332,7 +321,7 @@ function StoryMakerPlayContent() {
                         action={(
                             <div className="mt-2 flex flex-wrap justify-center gap-2">
                                 <Button variant="filled" icon={mdUploadFile} onClick={() => setImportOpen(true)}>
-                                    {t("page.storyMaker.player.openJson")}
+                                    {t("page.storyMaker.player.openScript")}
                                 </Button>
                                 <Button variant="tonal" icon={mdArrowBack} href="/story-maker">
                                     {t("page.storyMaker.action.backToDrafts")}
@@ -350,7 +339,7 @@ function StoryMakerPlayContent() {
                         action={(
                             <div className="mt-2 flex flex-wrap justify-center gap-2">
                                 <Button variant="filled" icon={mdUploadFile} onClick={() => setImportOpen(true)}>
-                                    {t("page.storyMaker.player.openJson")}
+                                    {t("page.storyMaker.player.openScript")}
                                 </Button>
                                 <Button variant="tonal" icon={mdArrowBack} href="/story-maker">
                                     {t("page.storyMaker.action.backToDrafts")}
@@ -384,13 +373,13 @@ function StoryMakerPlayContent() {
                         layoutMode={layoutMode}
                         onLayoutModeChange={handleLayoutModeChange}
                         immersive={isImmersiveActive}
-                        endAction={source.kind === "draft" ? (
-                            <Button variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`}>
+                        endAction={editHref ? (
+                            <Button variant="tonal" icon={mdEdit} href={editHref}>
                                 {t("page.storyMaker.action.edit")}
                             </Button>
                         ) : (
                             <Button variant="tonal" icon={mdUploadFile} onClick={() => setImportOpen(true)}>
-                                {t("page.storyMaker.player.openJson")}
+                                {t("page.storyMaker.player.openScript")}
                             </Button>
                         )}
                     />
