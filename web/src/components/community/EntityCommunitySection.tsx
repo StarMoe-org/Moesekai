@@ -31,7 +31,9 @@ export type DetailCommunityTargetType =
     | "gacha"
     | "costume"
     | "character"
-    | "guide";
+    | "live"
+    | "ranking"
+    | "story";
 
 const ENTITY_LINKABLE_TYPES = new Set<string>([
     "card",
@@ -40,6 +42,7 @@ const ENTITY_LINKABLE_TYPES = new Set<string>([
     "gacha",
     "costume",
     "character",
+    "live",
 ]);
 
 function isEntityLinkable(type: DetailCommunityTargetType): type is EntityLinkType {
@@ -49,7 +52,7 @@ function isEntityLinkable(type: DetailCommunityTargetType): type is EntityLinkTy
 export interface EntityCommunitySectionProps {
     targetType: DetailCommunityTargetType;
     targetId: string | number;
-    /** Show Related Posts tab and deep-link composer button. Defaults to true for entity-linkable types, false for guides. */
+    /** Show Related Posts tab and deep-link composer button. Defaults to true for entity-linkable types. */
     showRelatedPosts?: boolean;
     className?: string;
 }
@@ -162,7 +165,11 @@ export function EntityCommunitySection({
         : "";
     const sectionTitle = hasRelatedPosts
         ? t("page.community.entityDiscussion.title", { entity: entityLabel })
-        : t("page.community.entityDiscussion.guideTitle");
+        : targetType === "ranking"
+          ? t("page.community.entityDiscussion.rankingTitle")
+          : targetType === "story"
+            ? t("page.community.entityDiscussion.storyTitle")
+            : t("common.comments.heading");
     const composeHref = linkableEntityType
         ? `/community/new?entityType=${linkableEntityType}&entityId=${encodeURIComponent(normalizedTargetId)}`
         : "/community/new";
@@ -221,6 +228,7 @@ export function EntityCommunitySection({
                     <LoadingState label={t("common.state.loading")} />
                 ) : !hasRelatedPosts || activeTab === "comments" ? (
                     <EntityCommentSection
+                        key={targetKey}
                         targetType={targetType}
                         targetId={normalizedTargetId}
                         onCommentCountChange={setCommentCount}

@@ -2,6 +2,7 @@
 import { PageContainer } from "@/components/md3";
 import { ServerSourceBadge, StoryBackButton, StoryEpisodeNav, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
@@ -10,6 +11,12 @@ import { fetchMasterData } from "@/lib/fetch";
 import { IUnitProfile } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 function getUnitOutlineLogoUrl(unitCode: string, server: string): string {
     const s = server === "cn" ? "cn" : "jp";
@@ -107,6 +114,14 @@ export default function StoryUnitReaderClient() {
                     <StoryEpisodeNav
                         prev={prevEp ? { href: `/story/unit/${unitId}/${encodeURIComponent(prevEp.scenarioId)}`, title: prevEp.title } : null}
                         next={nextEp ? { href: `/story/unit/${unitId}/${encodeURIComponent(nextEp.scenarioId)}`, title: nextEp.title } : null}
+                    />
+                )}
+
+                {Number.isFinite(unitId) && episodeId && (
+                    <EntityCommunitySection
+                        targetType="story"
+                        targetId={sanitizeCommunityTargetId(`unit_${unitId}_${episodeId}`)}
+                        showRelatedPosts={false}
                     />
                 )}
             </PageContainer>

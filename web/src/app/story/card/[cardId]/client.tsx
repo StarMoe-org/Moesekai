@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { Button, Icon, LoadingState, PageContainer, Surface } from "@/components/md3";
 import { mdFormatListBulleted, mdOpenInNew } from "@/components/md3/icons";
 import { ServerSourceBadge, StoryBadge, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
@@ -24,6 +25,12 @@ import { IProcessedScenarioData } from "@/types/story";
 import { useI18n } from "@/contexts/I18nContext";
 import type { UiLocale } from "@/lib/i18n";
 import { ICardStoryEpisode, selectCardStoryParts } from "../cardStoryParts";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 export default function StoryCardReaderClient() {
     const params = useParams();
@@ -209,6 +216,16 @@ export default function StoryCardReaderClient() {
                                 );
                             })}
                         </div>
+                    </div>
+                )}
+
+                {Number.isFinite(cardId) && (
+                    <div className="mx-auto max-w-4xl">
+                        <EntityCommunitySection
+                            targetType="story"
+                            targetId={sanitizeCommunityTargetId(`card_${cardId}`)}
+                            showRelatedPosts={false}
+                        />
                     </div>
                 )}
             </PageContainer>

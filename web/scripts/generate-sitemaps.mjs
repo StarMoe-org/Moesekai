@@ -17,11 +17,9 @@ import { fileURLToPath } from 'url';
 import { spawnSync } from 'child_process';
 import {
     BUILD_DATA_REGIONS,
-    fetchGuidesJson,
     fetchMangaJson,
     fetchMasterJson,
     getBuildFetchConcurrency,
-    getConfiguredGuidesDataUrls,
     getConfiguredMangaDataUrls,
     getConfiguredMasterDataUrls,
     mapWithConcurrency,
@@ -183,18 +181,6 @@ function buildMangaRoutes(mangasRaw, existingData) {
         return {
             path: routePath,
             lastmod: stableLastmod(existingData, routePath, manga?.publishedAt || manga?.updatedAt),
-            priority: 0.5,
-            changefreq: 'monthly',
-        };
-    });
-}
-
-function buildGuideRoutes(guidesRaw, existingData) {
-    return (guidesRaw?.guides || []).map(guide => {
-        const routePath = `/guides/${guide.id}/`;
-        return {
-            path: routePath,
-            lastmod: stableLastmod(existingData, routePath, guide.date || guidesRaw?.generated_at),
             priority: 0.5,
             changefreq: 'monthly',
         };
@@ -578,20 +564,6 @@ const routeSources = [
         ],
     },
     {
-        label: 'guides',
-        fallback: { guides: [] },
-        validate: data => data && Array.isArray(data.guides),
-        fetch: () => fetchGuidesJson('guides'),
-        groups: [
-            {
-                key: 'guides',
-                logLabel: 'guide pages',
-                prefix: '/guides/',
-                build: buildGuideRoutes,
-            },
-        ],
-    },
-    {
         label: 'storyEvents',
         filename: 'events.json + eventStories.json',
         fallback: { events: [], eventStories: [] },
@@ -793,7 +765,6 @@ async function main() {
     console.log(`=== Sitemap Data Generator (${BUILD_REGION}) ===\n`);
     console.log(`Master APIs: ${getConfiguredMasterDataUrls().join(', ')}`);
     console.log(`Manga APIs: ${getConfiguredMangaDataUrls().join(', ')}`);
-    console.log(`Guides APIs: ${getConfiguredGuidesDataUrls().join(', ')}`);
     console.log(`Require fresh build data: ${REQUIRE_FRESH ? 'yes' : 'no'}`);
     console.log(`Output: ${OUT_FILE}\n`);
 

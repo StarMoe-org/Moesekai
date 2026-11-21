@@ -6,7 +6,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { getCharacterName } from "@/lib/i18n";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import {
     getCardAvatarImageUrls,
     useCommunityCards,
@@ -18,6 +18,7 @@ import {
     getCardDefaultTrainedStatus,
     getRarityNumber,
     isTrainableCard,
+    type CardAttribute,
     type CardRarityType,
     type ICardInfo,
 } from "@/types/types";
@@ -48,6 +49,8 @@ const RARITY_FILTERS: readonly { id: CardRarityType | "all"; label?: string }[] 
     { id: "rarity_1", label: "1★" },
 ];
 
+const ATTR_FILTERS: readonly CardAttribute[] = ["cute", "cool", "pure", "happy", "mysterious"];
+
 function CardThumbImg({
     primaryUrl,
     jpFallbackUrl,
@@ -74,10 +77,15 @@ function CardThumbImg({
     );
 }
 
+type AvatarPickerProfile = Pick<
+    CommunityProfile,
+    "display_name" | "avatar_url" | "avatar_card_id" | "avatar_card_trained"
+>;
+
 interface CardAvatarPickerProps {
     isOpen: boolean;
     onClose: () => void;
-    profile: CommunityProfile;
+    profile: AvatarPickerProfile;
     onSaved: (updated: CommunityProfile, wasReset: boolean) => void;
 }
 
@@ -98,10 +106,14 @@ export function CardAvatarPicker({
     const [selectedTrained, setSelectedTrained] = useState<boolean>(
         Boolean(profile.avatar_card_trained),
     );
+    const [gridTrained, setGridTrained] = useState<boolean>(
+        Boolean(profile.avatar_card_trained),
+    );
     const [wasOpen, setWasOpen] = useState(isOpen);
 
     const [selectedCharId, setSelectedCharId] = useState<number | null>(null);
     const [selectedRarity, setSelectedRarity] = useState<CardRarityType | "all">("all");
+    const [selectedAttr, setSelectedAttr] = useState<CardAttribute | "all">("all");
     const [searchQuery, setSearchQuery] = useState("");
     const [visibleLimit, setVisibleLimit] = useState(PAGE_SIZE);
     const [nowTs] = useState<number>(() => Date.now());
@@ -113,7 +125,9 @@ export function CardAvatarPicker({
         setWasOpen(isOpen);
         if (isOpen) {
             setSelectedCardId(profile.avatar_card_id ?? null);
-            setSelectedTrained(Boolean(profile.avatar_card_trained));
+            const initialTrained = Boolean(profile.avatar_card_trained);
+            setSelectedTrained(initialTrained);
+            setGridTrained(initialTrained);
             setError(null);
             setVisibleLimit(PAGE_SIZE);
         }
@@ -144,6 +158,9 @@ export function CardAvatarPicker({
             if (selectedRarity !== "all" && card.cardRarityType !== selectedRarity) {
                 return false;
             }
+            if (selectedAttr !== "all" && card.attr !== selectedAttr) {
+                return false;
+            }
             if (!q) return true;
             const charName = getCharacterName(t, card.characterId).toLowerCase();
             const translated = translateGameData("cards", "prefix", card.prefix)?.toLowerCase() ?? "";
@@ -155,12 +172,19 @@ export function CardAvatarPicker({
             );
         });
         return [...result].sort((a, b) => b.id - a.id);
-    }, [cards, isShowSpoiler, nowTs, searchQuery, selectedCharId, selectedRarity, t, translateGameData]);
+    }, [cards, isShowSpoiler, nowTs, searchQuery, selectedAttr, selectedCharId, selectedRarity, t, translateGameData]);
 
     const displayedCards = useMemo(
         () => filteredCards.slice(0, visibleLimit),
         [filteredCards, visibleLimit],
     );
+
+    const handleGridTrainedChange = (nextTrained: boolean) => {
+        setGridTrained(nextTrained);
+        if (selectedCard && isTrainableCard(selectedCard) && !getCardDefaultTrainedStatus(selectedCard)) {
+            setSelectedTrained(nextTrained);
+        }
+    };
 
     const handleSelectCard = (card: ICardInfo) => {
         setSelectedCardId(card.id);
@@ -168,6 +192,8 @@ export function CardAvatarPicker({
             setSelectedTrained(true);
         } else if (!isTrainableCard(card)) {
             setSelectedTrained(false);
+        } else {
+            setSelectedTrained(gridTrained);
         }
         setError(null);
     };
@@ -310,35 +336,84 @@ export function CardAvatarPicker({
                 </div>
             )}
 
-            {/* Search & rarity filter */}
+            {/* Search, global untrained/trained toggle, rarity & attribute filters */}
             <div className="flex shrink-0 flex-col gap-2">
-                <TextField
-                    value={searchQuery}
-                    onValueChange={(value) => {
-                        setSearchQuery(value);
-                        setVisibleLimit(PAGE_SIZE);
-                    }}
-                    icon={mdSearch}
-                    clearable
-                    placeholder={t("page.community.avatarPicker.searchPlaceholder")}
-                />
-                <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5 sm:flex-wrap sm:overflow-visible">
-                    {RARITY_FILTERS.map((rf) => (
-                        <Chip
-                            key={rf.id}
-                            variant="filter"
-                            selected={selectedRarity === rf.id}
-                            className="shrink-0"
-                            onClick={() => {
-                                setSelectedRarity(rf.id);
-                                setVisibleLimit(PAGE_SIZE);
-                            }}
-                        >
-                            {rf.id === "all"
-                                ? t("page.community.avatarPicker.allRarities")
-                                : rf.label}
-                        </Chip>
-                    ))}
+                <div className="flex flex-wrap items-center gap-2">
+                    <TextField
+                        value={searchQuery}
+                        onValueChange={(value) => {
+                            setSearchQuery(value);
+                            setVisibleLimit(PAGE_SIZE);
+                        }}
+                        icon={mdSearch}
+                        clearable
+                        placeholder={t("page.community.avatarPicker.searchPlaceholder")}
+                        containerClassName="min-w-[180px] flex-1"
+                    />
+                    <SegmentedButton<"normal" | "trained">
+                        aria-label={t("page.community.avatarPicker.trained")}
+                        value={gridTrained ? "trained" : "normal"}
+                        onValueChange={(val) => handleGridTrainedChange(val === "trained")}
+                        density={-1}
+                        className="w-44 shrink-0"
+                        options={[
+                            { value: "normal", label: t("page.community.avatarPicker.normal") },
+                            { value: "trained", label: t("page.community.avatarPicker.trained") },
+                        ]}
+                    />
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-hide py-0.5 sm:flex-wrap sm:overflow-visible">
+                        {RARITY_FILTERS.map((rf) => (
+                            <Chip
+                                key={rf.id}
+                                variant="filter"
+                                selected={selectedRarity === rf.id}
+                                className="shrink-0"
+                                onClick={() => {
+                                    setSelectedRarity(rf.id);
+                                    setVisibleLimit(PAGE_SIZE);
+                                }}
+                            >
+                                {rf.id === "all"
+                                    ? t("page.community.avatarPicker.allRarities")
+                                    : rf.label}
+                            </Chip>
+                        ))}
+                    </div>
+                    <div className="flex items-center gap-1">
+                        {ATTR_FILTERS.map((attr) => {
+                            const active = selectedAttr === attr;
+                            return (
+                                <button
+                                    key={attr}
+                                    type="button"
+                                    onClick={() => {
+                                        setSelectedAttr(active ? "all" : attr);
+                                        setVisibleLimit(PAGE_SIZE);
+                                    }}
+                                    aria-pressed={active}
+                                    aria-label={attr}
+                                    title={attr}
+                                    className={cn(
+                                        "state-layer focus-ring flex h-8 w-8 items-center justify-center rounded-full border transition-colors",
+                                        active
+                                            ? "border-primary bg-primary-container"
+                                            : "border-outline-variant bg-surface-container-lowest hover:border-primary",
+                                    )}
+                                >
+                                    <Image
+                                        src={getAttrIconUrl(attr)}
+                                        alt={attr}
+                                        width={20}
+                                        height={20}
+                                        className="h-5 w-5 object-contain"
+                                        unoptimized
+                                    />
+                                </button>
+                            );
+                        })}
+                    </div>
                 </div>
             </div>
 
@@ -410,7 +485,7 @@ export function CardAvatarPicker({
                                 const isSelected = selectedCardId === card.id;
                                 const previewTrained =
                                     getCardDefaultTrainedStatus(card) ||
-                                    (selectedTrained && isTrainableCard(card));
+                                    (gridTrained && isTrainableCard(card));
                                 const urls = getCardAvatarImageUrls(
                                     card,
                                     previewTrained,

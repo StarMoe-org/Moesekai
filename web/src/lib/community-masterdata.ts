@@ -22,6 +22,7 @@ import type { ICardInfo, IGachaInfo } from "@/types/types";
 import type { IMusicInfo } from "@/types/music";
 import type { IEventInfo } from "@/types/events";
 import type { ICostumeInfo, IMoeCostumeData } from "@/types/costume";
+import type { IVirtualLiveInfo } from "@/types/virtualLive";
 import type { EntityLinkType } from "@/types/community";
 
 export interface ICommunityStamp {
@@ -108,6 +109,8 @@ interface CatalogSnapshot {
     gachasMap: Map<number, IGachaInfo> | null;
     costumes: ICostumeInfo[];
     costumesMap: Map<number, ICostumeInfo> | null;
+    virtualLives: IVirtualLiveInfo[];
+    virtualLivesMap: Map<number, IVirtualLiveInfo> | null;
     loadingKeys: ReadonlySet<string>;
 }
 
@@ -129,6 +132,8 @@ const INITIAL_SNAPSHOT: CatalogSnapshot = {
     gachasMap: null,
     costumes: [],
     costumesMap: null,
+    virtualLives: [],
+    virtualLivesMap: null,
     loadingKeys: EMPTY_SET,
 };
 
@@ -398,6 +403,22 @@ export async function loadCommunityCostumes(): Promise<{
     });
 }
 
+export async function loadCommunityVirtualLives(): Promise<{
+    list: IVirtualLiveInfo[];
+    map: Map<number, IVirtualLiveInfo>;
+}> {
+    if (snapshot.virtualLivesMap) {
+        return { list: snapshot.virtualLives, map: snapshot.virtualLivesMap };
+    }
+    return dedupe("live", async () => {
+        const list = await fetchMasterData<IVirtualLiveInfo[]>("virtualLives.json");
+        const map = new Map<number, IVirtualLiveInfo>();
+        for (const item of list) map.set(item.id, item);
+        updateSnapshot({ virtualLives: list, virtualLivesMap: map });
+        return { list, map };
+    });
+}
+
 export function getCachedStamp(id: number): ICommunityStamp | undefined {
     return snapshot.stampsMap?.get(id);
 }
@@ -459,6 +480,8 @@ export interface EntityCatalogState {
     gachasMap: Map<number, IGachaInfo> | null;
     costumes: ICostumeInfo[];
     costumesMap: Map<number, ICostumeInfo> | null;
+    virtualLives: IVirtualLiveInfo[];
+    virtualLivesMap: Map<number, IVirtualLiveInfo> | null;
     loading: boolean;
 }
 
@@ -481,6 +504,7 @@ export function useCommunityEntityLoader(types: readonly EntityLinkType[]): Enti
         if (needed.includes("event") && !snapshot.eventsMap) void loadCommunityEvents().catch(() => undefined);
         if (needed.includes("gacha") && !snapshot.gachasMap) void loadCommunityGachas().catch(() => undefined);
         if (needed.includes("costume") && !snapshot.costumesMap) void loadCommunityCostumes().catch(() => undefined);
+        if (needed.includes("live") && !snapshot.virtualLivesMap) void loadCommunityVirtualLives().catch(() => undefined);
     }, [hasHydratedThemeSettings, serverSource, typeKey]);
 
     const neededList = typeKey ? (typeKey.split(",") as EntityLinkType[]) : [];
@@ -502,6 +526,8 @@ export function useCommunityEntityLoader(types: readonly EntityLinkType[]): Enti
         gachasMap: state.gachasMap,
         costumes: state.costumes,
         costumesMap: state.costumesMap,
+        virtualLives: state.virtualLives,
+        virtualLivesMap: state.virtualLivesMap,
         loading,
     };
 }

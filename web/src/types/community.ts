@@ -12,6 +12,7 @@ export type PostCategory =
     | "showcase"
     | "review"
     | "story"
+    | "guide"
     | "question"
     | "tiering";
 
@@ -32,7 +33,9 @@ export type TargetType =
     | "gacha"
     | "costume"
     | "character"
-    | "guide";
+    | "live"
+    | "ranking"
+    | "story";
 
 export type EntityLinkType =
     | "card"
@@ -40,7 +43,8 @@ export type EntityLinkType =
     | "event"
     | "gacha"
     | "costume"
-    | "character";
+    | "character"
+    | "live";
 
 export type ReportReason =
     | "political"
@@ -411,6 +415,7 @@ export const POST_CATEGORY_OPTIONS: readonly LabeledOption<PostCategory>[] = [
     { id: "showcase", labelKey: "page.community.categories.showcase" },
     { id: "review", labelKey: "page.community.categories.review" },
     { id: "story", labelKey: "page.community.categories.story" },
+    { id: "guide", labelKey: "page.community.categories.guide" },
     { id: "question", labelKey: "page.community.categories.question" },
     { id: "tiering", labelKey: "page.community.categories.tiering" },
 ];
@@ -420,6 +425,7 @@ export const POST_CATEGORY_LABEL_KEYS: Record<PostCategory, string> = {
     showcase: "page.community.categories.showcase",
     review: "page.community.categories.review",
     story: "page.community.categories.story",
+    guide: "page.community.categories.guide",
     question: "page.community.categories.question",
     tiering: "page.community.categories.tiering",
 };
@@ -528,6 +534,7 @@ export const ENTITY_LINK_TYPE_OPTIONS: readonly LabeledOption<EntityLinkType>[] 
     { id: "gacha", labelKey: "page.community.entities.gacha" },
     { id: "costume", labelKey: "page.community.entities.costume" },
     { id: "character", labelKey: "page.community.entities.character" },
+    { id: "live", labelKey: "page.community.entities.live" },
 ];
 
 export function isPostCategory(value: string | null | undefined): value is PostCategory {
@@ -536,9 +543,14 @@ export function isPostCategory(value: string | null | undefined): value is PostC
         value === "showcase" ||
         value === "review" ||
         value === "story" ||
+        value === "guide" ||
         value === "question" ||
         value === "tiering"
     );
+}
+
+export function sanitizeCommunityTargetId(raw: string): string {
+    return raw.replace(/[^A-Za-z0-9_-]/g, "_").slice(0, 64);
 }
 
 export function isServerTag(value: string | null | undefined): value is ServerTag {

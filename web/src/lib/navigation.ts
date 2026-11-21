@@ -61,7 +61,6 @@ const allNavigationGroups: NavGroupData[] = [
         href: "/breadcrumb-community",
         items: [
             { href: "/community" },
-            { href: "/guides" },
         ],
     },
     {
@@ -315,7 +314,6 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/story/self": "layout.nav.items.selfIntro",
     "/story/special": "layout.nav.items.specialStory",
     "/community": "layout.nav.items.community",
-    "/guides": "layout.nav.items.guides",
     "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/deck-recommend": "layout.nav.items.deckRecommend",
     "/deck-comparator": "layout.nav.items.deckComparator",
@@ -370,7 +368,6 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/story/special": "layout.groupPages.storySpecial",
     "/prediction": "layout.groupPages.prediction",
     "/community": "layout.groupPages.community",
-    "/guides": "layout.groupPages.guides",
     "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/deck-recommend": "layout.groupPages.deckRecommend",
     "/deck-comparator": "layout.groupPages.deckComparator",

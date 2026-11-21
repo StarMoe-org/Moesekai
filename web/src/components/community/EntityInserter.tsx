@@ -11,6 +11,7 @@ import {
     getEventLogoUrl,
     getGachaLogoUrl,
     getMusicJacketUrl,
+    getVirtualLiveBannerUrl,
 } from "@/lib/assets";
 import { getCardDefaultTrainedStatus, getRarityNumber } from "@/types/types";
 import {
@@ -156,6 +157,23 @@ export function EntityInserter({ isOpen, onClose, onInsert }: EntityInserterProp
                     imageUrl: firstPart
                         ? getCostumeThumbnailUrl(firstPart.assetbundleName, assetSource)
                         : null,
+                });
+                if (result.length >= MAX_RESULTS) break;
+            }
+            return result;
+        }
+
+        if (activeType === "live") {
+            const list = [...catalog.virtualLives].sort((a, b) => b.id - a.id);
+            const result: PickerRow[] = [];
+            for (const live of list) {
+                const translated = translateGameData("virtualLive", "name", live.name);
+                if (!matches(live.id, live.name, translated)) continue;
+                result.push({
+                    id: live.id,
+                    title: translated || live.name,
+                    subtitle: `#${live.id}`,
+                    imageUrl: getVirtualLiveBannerUrl(live.assetbundleName, assetSource),
                 });
                 if (result.length >= MAX_RESULTS) break;
             }

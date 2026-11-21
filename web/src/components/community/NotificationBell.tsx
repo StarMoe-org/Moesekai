@@ -40,8 +40,38 @@ function notificationHref(item: CommunityNotification): string {
             return `/costumes/${item.target_id}`;
         case "character":
             return `/character/${item.target_id}`;
-        case "guide":
-            return `/guides/${encodeURIComponent(item.target_id)}`;
+        case "live":
+            return `/live/${item.target_id}`;
+        case "ranking": {
+            const sep = item.target_id.indexOf("_");
+            const region = sep > 0 ? item.target_id.slice(0, sep) : "";
+            return region
+                ? `/realtime-ranking-next?region=${encodeURIComponent(region)}`
+                : "/realtime-ranking-next";
+        }
+        case "story": {
+            const parts = item.target_id.split("_");
+            const kind = parts[0];
+            if (kind === "event" && parts.length >= 3) {
+                return `/story/event/${encodeURIComponent(parts[1])}/${encodeURIComponent(parts[2])}`;
+            }
+            if (kind === "unit" && parts.length >= 3) {
+                return `/story/unit/${encodeURIComponent(parts[1])}/${encodeURIComponent(parts.slice(2).join("_"))}`;
+            }
+            if (kind === "card" && parts.length >= 2) {
+                return `/story/card/${encodeURIComponent(parts[1])}`;
+            }
+            if (kind === "self" && parts.length >= 2) {
+                return `/story/self/${encodeURIComponent(parts[1])}`;
+            }
+            if (kind === "special" && parts.length >= 2) {
+                return `/story/special/${encodeURIComponent(parts[1])}`;
+            }
+            if (kind === "area") {
+                return "/story/area";
+            }
+            return "/story";
+        }
         case "post":
             return `/community/post/${item.target_id}`;
         default:

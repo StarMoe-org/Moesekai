@@ -913,7 +913,6 @@ export const jaJPMessages = {
         selfIntro: 'キャラクター紹介',
         specialStory: 'スペシャルストーリー',
         community: 'コミュニティ広場',
-        guides: 'ガイド',
         gachaSimulator: 'ガチャシミュレーター',
         deckRecommend: '編成おすすめ',
         deckComparator: '編成比較',
@@ -992,7 +991,6 @@ export const jaJPMessages = {
       storySpecial: 'Read special stories',
       prediction: 'View event ranking predictions',
       community: '日常共有・ガチャ報告・カードコメント',
-      guides: 'View community guides',
       gachaSimulator: '確率・ピックアップ・出現メンバーを自由に設定してガチャをシミュレーション',
       deckRecommend: 'Recommend the best deck by conditions',
       deckComparator: 'Compare deck performance',
@@ -1804,7 +1802,7 @@ export const jaJPMessages = {
         title: '9. 利用者による管理',
         delete: '「マイアカウント」ページで、ゲームアカウントの削除、端末のみのアカウントのパスポートへの保存、端末のデータの消去ができます。ブラウザーから pjsk.moe のサイトデータを消去することもできます。',
         browser: 'Cookie、ストレージ、Do Not Track、Global Privacy Control のブラウザー設定でも処理を制限できます。',
-        account: 'パスポートのアカウントセンターで StarMoe アカウントを削除できます。削除すると、Moesekai は保存したゲームアカウント、ログインセッション、曲当てクイズのゲームアカウント紐付けを削除し、過去のランキングから名前とアイコンが削除されます。',
+        account: 'パスポートのセキュリティセンターで StarMoe アカウントを削除できます。削除すると、Moesekai は保存したゲームアカウント、ログインセッション、曲当てクイズのゲームアカウント紐付けを削除し、過去のランキングから名前とアイコンが削除されます。',
       },
       links: {
         title: '10. 第三者リンク',
@@ -1856,7 +1854,8 @@ export const jaJPMessages = {
       spoilerHiddenPreview: 'ネタバレ設定あり — 投稿を開いて表示',
       entityDiscussion: {
         title: '{entity}コメント・関連投稿',
-        guideTitle: 'ガイドコメント',
+        rankingTitle: 'イベントランキング議論',
+        storyTitle: 'ストーリー感想',
       },
       categories: {
         general: '雑談・日常',
@@ -1865,6 +1864,7 @@ export const jaJPMessages = {
         story: 'ストーリー考察',
         question: '質問・相談',
         tiering: 'イベラン・協力',
+        guide: '攻略',
       },
       servers: {
         all: '全サーバー',
@@ -1915,6 +1915,7 @@ export const jaJPMessages = {
         gacha: 'ガチャ',
         costume: '衣装',
         character: 'キャラクター',
+        live: 'バーチャルライブ',
       },
       relatedPosts: {
         tab: '関連投稿',
@@ -2125,28 +2126,6 @@ export const jaJPMessages = {
         emptyAudit: '監査ログはありません',
         emptyAuditDesc: 'モデレーターの操作履歴がここに表示されます。',
       },
-    },
-    guides: {
-      badge: 'コミュニティ',
-      title: 'ゲーム',
-      titleHighlight: 'ガイド',
-      description: 'A PROJECT SEKAI guide collection written by the Moe Guide Team.',
-      filterTitle: 'ガイドフィルター',
-      countUnit: 'guides',
-      searchPlaceholder: 'Search guide titles or tags...',
-      toolSiteTitle: 'Sekai Tools',
-      toolSiteDescription: 'sekaitools.exmeaning.com — practical calculator tools',
-      loadFailed: '読み込みに失敗しました',
-      loadingFallback: 'Loading guides...',
-      noResult: 'No guides match the current filters',
-      loadMore: 'もっと読み込む',
-      allLoaded: 'Showing all {count} guides',
-      detailNotFound: 'Guide not found',
-      unknownError: '不明なエラー',
-      backToList: 'Back to Guide List',
-      supervisor: ' · Supervisor: {name}',
-      viewOriginal: '原文を見る',
-      machineTranslationNotice: '一部のコンテンツは機械翻訳されています'
     },
     oauth2: {
       connect: {

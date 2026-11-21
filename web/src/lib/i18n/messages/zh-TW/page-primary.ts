@@ -575,7 +575,7 @@ export const zhTWPagePrimary = {
                 title: "9. 你的控制權",
                 delete: "在「我的帳號」頁可以刪除遊戲帳號、把只在本機的帳號儲存到通行證，或清除本機資料；也可以透過瀏覽器清除 pjsk.moe 的網站資料。",
                 browser: "可使用瀏覽器的 Cookie、儲存空間、Do Not Track 或 Global Privacy Control 設定進一步限制處理。",
-                account: "在通行證帳號中心可以註銷 StarMoe 帳號。註銷後，Moesekai 會刪除你儲存的遊戲帳號、登入工作階段和猜歌曲的遊戲帳號關聯，過去排行榜上的名字和頭像會被移除。",
+                account: "在通行證安全中心可以註銷 StarMoe 帳號。註銷後，Moesekai 會刪除你儲存的遊戲帳號、登入工作階段和猜歌曲的遊戲帳號關聯，過去排行榜上的名字和頭像會被移除。",
             },
             links: {
                 title: "10. 第三方連結",
@@ -627,7 +627,8 @@ export const zhTWPagePrimary = {
         spoilerHiddenPreview: "此貼文含劇透內容，點擊進入詳情檢視",
         entityDiscussion: {
             title: "{entity}討論與社群熱帖",
-            guideTitle: "攻略討論",
+            rankingTitle: "活動衝榜討論",
+            storyTitle: "劇情討論",
         },
         categories: {
             general: "日常綜合",
@@ -636,6 +637,7 @@ export const zhTWPagePrimary = {
             story: "劇情討論",
             question: "新手發問",
             tiering: "衝榜 / 協力",
+            guide: "攻略",
         },
         servers: {
             all: "全部伺服器",
@@ -686,6 +688,7 @@ export const zhTWPagePrimary = {
             gacha: "轉蛋",
             costume: "服裝",
             character: "角色",
+            live: "虛擬演唱會",
         },
         relatedPosts: {
             tab: "相關貼文",
@@ -897,29 +900,6 @@ export const zhTWPagePrimary = {
             emptyAuditDesc: "版主操作紀錄將顯示在這裡。",
         },
     },
-    guides: {
-            badge: "社區",
-            title: "遊戲",
-            titleHighlight: "攻略",
-            description: "由 Moe攻略組 編寫的 PROJECT SEKAI 攻略合集",
-            filterTitle: "攻略篩選",
-
-            countUnit: "篇",
-            searchPlaceholder: "搜尋攻略標題或標簽...",
-            toolSiteTitle: "Sekai Tools 工具站",
-            toolSiteDescription: "sekaitools.exmeaning.com — 實用計算工具合集",
-            loadFailed: "載入失敗",
-            loadingFallback: "正在載入攻略...",
-            noResult: "沒有找到匹配的攻略",
-            loadMore: "載入更多",
-            allLoaded: "已顯示全部 {count} 篇攻略",
-            detailNotFound: "找不到該攻略",
-            unknownError: "未知錯誤",
-            backToList: "返回攻略列表",
-            supervisor: " · 監修 {name}",
-            viewOriginal: "檢視原文",
-            machineTranslationNotice: "部分內容使用機器翻譯",
-        },
         oauth2: {
             connect: {
                 badge: "OAuth2 Connect",

@@ -3,6 +3,7 @@ import { Button, Icon, LoadingState, PageContainer, Surface } from "@/components
 import { mdFormatListBulleted } from "@/components/md3/icons";
 import { ServerSourceBadge, StoryBackButton, StoryBadge, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
@@ -14,6 +15,12 @@ import { useI18n } from "@/contexts/I18nContext";
 import { fetchStoryAssetFromMirror, StoryAssetMissingError } from "@/lib/storyAsset";
 import { processScenarioForDisplay } from "@/lib/storyLoader";
 import { IProcessedScenarioData } from "@/types/story";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 export default function StorySelfReaderClient() {
     const params = useParams();
@@ -142,6 +149,16 @@ export default function StorySelfReaderClient() {
                                 </div>
                             ))}
                         </div>
+                    </div>
+                )}
+
+                {Number.isFinite(charaId) && (
+                    <div className="mx-auto max-w-4xl">
+                        <EntityCommunitySection
+                            targetType="story"
+                            targetId={sanitizeCommunityTargetId(`self_${charaId}`)}
+                            showRelatedPosts={false}
+                        />
                     </div>
                 )}
             </PageContainer>

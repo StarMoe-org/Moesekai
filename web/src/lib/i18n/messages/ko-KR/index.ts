@@ -911,7 +911,6 @@ export const koKRMessages = {
                 selfIntro: "자기소개",
                 specialStory: "스페셜 스토리",
                 community: "커뮤니티 광장",
-                guides: "공략",
                 gachaSimulator: "가챠 시뮬레이터",
                 deckRecommend: "덱 추천",
                 deckComparator: "덱 비교",
@@ -990,7 +989,6 @@ export const koKRMessages = {
             storySpecial: "스페셜 스토리 읽기",
             prediction: "이벤트 순위 예측 보기",
             community: "일상 공유, 가샤 자랑 및 카드 리뷰",
-            guides: "커뮤니티 공략 보기",
             gachaSimulator: "확률, 픽업, 등장 카드 풀을 자유롭게 설정하여 가챠 시뮬레이션",
             deckRecommend: "조건에 맞는 최적의 덱 추천",
             deckComparator: "덱별 종합력 비교",
@@ -1802,7 +1800,7 @@ export const koKRMessages = {
                 title: "9. 이용자 선택권",
                 delete: "'내 계정' 페이지에서 게임 계정을 삭제하거나, 이 기기에만 있는 계정을 패스포트에 저장하거나, 이 기기의 데이터를 지울 수 있습니다. 브라우저에서 pjsk.moe의 사이트 데이터를 지울 수도 있습니다.",
                 browser: "브라우저의 쿠키, 저장소, Do Not Track 또는 Global Privacy Control 설정으로 처리를 추가 제한할 수 있습니다.",
-                account: "패스포트 계정 센터에서 StarMoe 계정을 탈퇴할 수 있습니다. 탈퇴하면 Moesekai는 저장된 게임 계정, 로그인 세션, 곡 맞히기의 게임 계정 연결을 삭제하며, 지난 랭킹에서 이름과 아바타가 지워집니다.",
+                account: "패스포트 보안 센터에서 StarMoe 계정을 탈퇴할 수 있습니다. 탈퇴하면 Moesekai는 저장된 게임 계정, 로그인 세션, 곡 맞히기의 게임 계정 연결을 삭제하며, 지난 랭킹에서 이름과 아바타가 지워집니다.",
             },
             links: {
                 title: "10. 제3자 링크",
@@ -1854,7 +1852,8 @@ export const koKRMessages = {
             spoilerHiddenPreview: "스포일러 포함 — 글을 열어 확인하세요",
             entityDiscussion: {
                 title: "{entity} 댓글 및 관련 게시글",
-                guideTitle: "공략 댓글",
+                rankingTitle: "이벤트 랭킹 토론",
+                storyTitle: "스토리 토론",
             },
             categories: {
                 general: "자유 / 일상",
@@ -1863,6 +1862,7 @@ export const koKRMessages = {
                 story: "스토리 토론",
                 question: "질문 / 도움",
                 tiering: "런 / 협동",
+                guide: "공략",
             },
             servers: {
                 all: "전체 서버",
@@ -1913,6 +1913,7 @@ export const koKRMessages = {
                 gacha: "가샤",
                 costume: "의상",
                 character: "캐릭터",
+                live: "버추얼 라이브",
             },
             relatedPosts: {
                 tab: "관련 게시글",
@@ -2123,28 +2124,6 @@ export const koKRMessages = {
                 emptyAudit: "감사 로그가 없습니다",
                 emptyAuditDesc: "모더레이터 활동 기록이 여기에 표시됩니다.",
             },
-        },
-        guides: {
-            badge: "커뮤니티",
-            title: "게임",
-            titleHighlight: "공략",
-            description: "Moe 공략팀이 작성한 PROJECT SEKAI 공략 모음",
-            filterTitle: "공략 필터",
-            countUnit: "편",
-            searchPlaceholder: "공략 제목 또는 태그 검색...",
-            toolSiteTitle: "Sekai Tools 도구 사이트",
-            toolSiteDescription: "sekaitools.exmeaning.com — 유용한 계산 도구 모음",
-            loadFailed: "불러오기 실패",
-            loadingFallback: "공략 불러오는 중...",
-            noResult: "일치하는 공략이 없습니다",
-            loadMore: "더 불러오기",
-            allLoaded: "공략 {count}편을 모두 표시했습니다",
-            detailNotFound: "공략을 찾을 수 없습니다",
-            unknownError: "알 수 없는 오류",
-            backToList: "공략 목록으로 돌아가기",
-            supervisor: " · 감수 {name}",
-            viewOriginal: "원문 보기",
-            machineTranslationNotice: "일부 콘텐츠는 기계 번역되었습니다"
         },
         oauth2: {
             connect: {

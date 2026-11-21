@@ -1226,22 +1226,6 @@ export const SEO_PAGE_METADATA = {
       "ko-KR": ["커뮤니티 프로필", "회원"],
     },
   ),
-  guides: definePage(
-    "/guides",
-    { "zh-CN": "社区攻略", "en-US": "Guides", "ja-JP": "コミュニティガイド", "ko-KR": "커뮤니티 가이드" },
-    {
-      "zh-CN": "浏览 PROJECT SEKAI 社区攻略与教程，查找玩法机制、活动规划、养成建议和实用工具的专题指南。",
-      "en-US": "Browse PROJECT SEKAI community guides covering game mechanics, event planning, progression advice, practical tools, and other reference topics.",
-      "ja-JP": "PROJECT SEKAI のゲームシステム、イベント計画、育成、便利ツールを扱うコミュニティ攻略やチュートリアルを閲覧できます。",
-      "ko-KR": "PROJECT SEKAI의 게임 시스템, 이벤트 계획, 성장 조언, 실용 도구를 다루는 커뮤니티 공략과 튜토리얼을 찾아볼 수 있습니다.",
-    },
-    {
-      "zh-CN": ["攻略", "社区攻略", "Guide"],
-      "en-US": ["guides", "community guides", "tutorials"],
-      "ja-JP": ["攻略", "コミュニティガイド", "チュートリアル"],
-      "ko-KR": ["가이드", "커뮤니티 가이드", "튜토리얼"],
-    },
-  ),
   patreon: definePage(
     "/patreon",
     { "zh-CN": "支持我们", "en-US": "Support Us", "ja-JP": "サポート" },
@@ -1422,20 +1406,6 @@ export const SEO_PAGE_METADATA = {
       "zh-CN": ["空白页", "素材页"],
       "en-US": ["blank page", "asset page"],
       "ja-JP": ["空白ページ", "アセットページ"],
-    },
-  ),
-  guides_detail: definePage(
-    "/guides",
-    { "zh-CN": "攻略详情", "en-US": "Guide Details", "ja-JP": "ガイド詳細" },
-    {
-      "zh-CN": "阅读 PROJECT SEKAI 社区攻略详情。",
-      "en-US": "Read detailed PROJECT SEKAI community guide content.",
-      "ja-JP": "PROJECT SEKAI コミュニティガイドの詳細を閲覧できます。",
-    },
-    {
-      "zh-CN": ["攻略详情", "社区攻略"],
-      "en-US": ["guide details", "community guides"],
-      "ja-JP": ["ガイド詳細", "コミュニティガイド"],
     },
   ),
   oauth2_connect: definePage(

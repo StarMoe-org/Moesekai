@@ -75,8 +75,6 @@ import {
     mdRecordVoiceOverFill,
     mdStar,
     mdStarFill,
-    mdSchool,
-    mdSchoolFill,
     mdRedeem,
     mdRedeemFill,
     mdQuiz,
@@ -207,7 +205,6 @@ const navigationGroups: NavGroup[] = [
         id: "community",
         items: [
             { id: "community", href: "/community", icon: mdForum, activeIcon: mdForumFill },
-            { id: "guides", href: "/guides", icon: mdSchool, activeIcon: mdSchoolFill },
         ],
     },
     {

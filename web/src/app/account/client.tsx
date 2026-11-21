@@ -12,6 +12,7 @@ import HarukiConnectButton from "@/components/HarukiConnectButton";
 import AddGameAccountDialog from "@/components/account/AddGameAccountDialog";
 import GameAccountList from "@/components/account/GameAccountList";
 import PassportAvatar from "@/components/account/PassportAvatar";
+import CardAvatarPicker from "@/components/community/CardAvatarPicker";
 import {
     Banner,
     Button,
@@ -29,6 +30,7 @@ import {
     mdAdd,
     mdDelete,
     mdDevices,
+    mdEdit,
     mdLink,
     mdLogin,
     mdLogout,
@@ -56,6 +58,7 @@ import {
     useMoesekaiAccount,
 } from "@/lib/moesekai-account";
 import { StarMoeApiError, loadStarMoeAccounts } from "@/lib/starmoe-accounts";
+import { useCommunitySession } from "@/lib/community-session";
 
 export default function AccountClient() {
     const { t, formatDate } = useI18n();
@@ -64,9 +67,11 @@ export default function AccountClient() {
     const saved = useStarMoeAccountSync();
     const { accounts, active } = useGameAccounts();
     const signedIn = login.status === "signed-in";
+    const communitySession = useCommunitySession({ eager: signedIn });
     const savedReady = signedIn && saved.status === "ready";
 
     const [addOpen, setAddOpen] = useState(false);
+    const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
     const [clearOpen, setClearOpen] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const [saving, setSaving] = useState(false);
@@ -177,9 +182,20 @@ export default function AccountClient() {
                         {login.status === "signed-in" && (
                             <div className="space-y-4">
                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                                    <span className="h-12 w-12 shrink-0 overflow-hidden rounded-full">
-                                        <PassportAvatar user={login.user} />
-                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAvatarPickerOpen(true)}
+                                        aria-label={t("page.community.profile.changeAvatar")}
+                                        title={t("page.community.profile.changeAvatar")}
+                                        className="focus-ring group relative h-12 w-12 shrink-0 rounded-full"
+                                    >
+                                        <span className="block h-full w-full overflow-hidden rounded-full ring-2 ring-outline-variant/60 transition-shadow group-hover:ring-primary">
+                                            <PassportAvatar user={login.user} />
+                                        </span>
+                                        <span className="absolute -bottom-0.5 -right-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-outline-variant/70 bg-surface-container-high text-on-surface shadow-elev-1 transition-colors group-hover:bg-primary group-hover:text-on-primary">
+                                            <Icon path={mdEdit} size={12} />
+                                        </span>
+                                    </button>
                                     <div className="min-w-0 flex-1 basis-40">
                                         <div className="truncate type-title-m text-on-surface">{login.user.name}</div>
                                         <div className="truncate type-body-s text-on-surface-variant">
@@ -187,6 +203,9 @@ export default function AccountClient() {
                                         </div>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
+                                        <Button variant="tonal" size="xs" icon={mdEdit} onClick={() => setAvatarPickerOpen(true)}>
+                                            {t("page.community.profile.changeAvatar")}
+                                        </Button>
                                         <ExternalLink
                                             href={PASSPORT_ACCOUNT_CENTER_URL}
                                             target="_blank"
@@ -334,6 +353,28 @@ export default function AccountClient() {
             </PageContainer>
 
             <AddGameAccountDialog open={addOpen} onClose={() => setAddOpen(false)} onAdded={(_id, notice) => notice && setToast(notice)} />
+
+            {login.status === "signed-in" && (
+                <CardAvatarPicker
+                    isOpen={avatarPickerOpen}
+                    onClose={() => setAvatarPickerOpen(false)}
+                    profile={
+                        communitySession.profile ?? {
+                            display_name: login.user.name,
+                            avatar_url: login.user.avatar ?? "",
+                            avatar_card_id: null,
+                            avatar_card_trained: false,
+                        }
+                    }
+                    onSaved={(_updated, wasReset) => {
+                        setToast(
+                            wasReset
+                                ? t("page.community.profile.avatarReset")
+                                : t("page.community.profile.avatarSaved"),
+                        );
+                    }}
+                />
+            )}
 
             <Dialog
                 isOpen={clearOpen}

@@ -294,11 +294,6 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "檢視 Moesekai 社群成員的貼文紀錄與認證徽章。",
         ["社群主頁", "玩家資料"],
     ),
-    guides: page(
-        "社群攻略",
-        "瀏覽 PROJECT SEKAI 社群攻略、教學與實用指南。",
-        ["攻略", "社群攻略", "Guide"],
-    ),
     patreon: page(
         "支持我們",
         "支持 Moesekai 持續維護、更新資料與開發社群工具。",
@@ -363,11 +358,6 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "空白素材頁",
         "Moesekai 空白素材展示頁。",
         ["空白頁", "素材頁"],
-    ),
-    guides_detail: page(
-        "攻略詳情",
-        "閱讀 PROJECT SEKAI 社群攻略的詳細內容。",
-        ["攻略詳情", "社群攻略"],
     ),
     oauth2_connect: page(
         "OAuth2 綁定",

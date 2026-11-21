@@ -28,6 +28,7 @@ import { useCardThumbnail } from "@/hooks/useCardThumbnail";
 import { getCachedAvatarUrl, getCharacterIconUrl, getTopCharacterId, setActiveAccount, type MoesekaiAccount } from "@/lib/account";
 import { useGameAccounts } from "@/lib/account/hooks";
 import { PASSPORT_ACCOUNT_CENTER_URL, signIn, signOut, useMoesekaiAccount, type MoesekaiUser } from "@/lib/moesekai-account";
+import { useCommunitySession } from "@/lib/community-session";
 import { gameAccountName } from "./GameAccountList";
 import PassportAvatar from "./PassportAvatar";
 
@@ -35,7 +36,11 @@ const LAST_USER_KEY = "moesekai_passport_last_user";
 /** The panel follows the sidebar pane's width, but never gets narrower than this. */
 const PANEL_MIN_WIDTH = 240;
 
-type LastUser = Pick<MoesekaiUser, "name" | "avatar"> & { username?: string | null };
+type LastUser = Pick<MoesekaiUser, "name" | "avatar"> & {
+    username?: string | null;
+    avatarCardId?: number | null;
+    avatarCardTrained?: boolean;
+};
 
 function readLastUserRaw(): string | null {
     try {
@@ -53,7 +58,14 @@ function parseLastUser(raw: string | null): LastUser | null {
     if (!raw) return null;
     try {
         const parsed = JSON.parse(raw) as Partial<LastUser>;
-        return typeof parsed.name === "string" ? { name: parsed.name, avatar: typeof parsed.avatar === "string" ? parsed.avatar : null } : null;
+        return typeof parsed.name === "string"
+            ? {
+                  name: parsed.name,
+                  avatar: typeof parsed.avatar === "string" ? parsed.avatar : null,
+                  avatarCardId: typeof parsed.avatarCardId === "number" ? parsed.avatarCardId : null,
+                  avatarCardTrained: Boolean(parsed.avatarCardTrained),
+              }
+            : null;
     } catch {
         return null;
     }
@@ -80,6 +92,7 @@ export default function AccountCenter({ onNavigate }: { onNavigate?: () => void 
     const { t } = useI18n();
     const pathname = usePathname();
     const login = useMoesekaiAccount();
+    const communitySession = useCommunitySession({ eager: login.status === "signed-in" });
     const { accounts, active } = useGameAccounts();
     const lastUserRaw = useSyncExternalStore(subscribeNothing, readLastUserRaw, () => null);
     const lastUser = useMemo(() => parseLastUser(lastUserRaw), [lastUserRaw]);
@@ -96,15 +109,34 @@ export default function AccountCenter({ onNavigate }: { onNavigate?: () => void 
     }, []);
     const { overlayRef: panelRef, overlayContext, onFocusCapture, isTopOverlay } = useOverlay(open, close, { syncHistory: false, modal: false });
 
-    // Remember who signed in last, for the entry shown while the next visit checks the session.
+    // Remember who signed in last (including card-face avatar), for the entry shown while the next visit checks the session.
     useEffect(() => {
         try {
-            if (login.status === "signed-in") localStorage.setItem(LAST_USER_KEY, JSON.stringify({ name: login.user.name, avatar: login.user.avatar }));
-            else if (login.status === "signed-out") localStorage.removeItem(LAST_USER_KEY);
+            if (login.status === "signed-in") {
+                const avatarCardId =
+                    communitySession.authenticated && communitySession.profile
+                        ? (communitySession.profile.avatar_card_id ?? null)
+                        : (lastUser?.avatarCardId ?? null);
+                const avatarCardTrained =
+                    communitySession.authenticated && communitySession.profile
+                        ? Boolean(communitySession.profile.avatar_card_trained)
+                        : Boolean(lastUser?.avatarCardTrained);
+                localStorage.setItem(
+                    LAST_USER_KEY,
+                    JSON.stringify({
+                        name: login.user.name,
+                        avatar: login.user.avatar,
+                        avatarCardId,
+                        avatarCardTrained,
+                    }),
+                );
+            } else if (login.status === "signed-out") {
+                localStorage.removeItem(LAST_USER_KEY);
+            }
         } catch {
             // storage full or blocked: only the loading entry loses its hint
         }
-    }, [login]);
+    }, [login, communitySession.authenticated, communitySession.profile, lastUser?.avatarCardId, lastUser?.avatarCardTrained]);
 
     // A route change (any link in the panel, or elsewhere) never leaves the panel open.
     useEffect(() => {

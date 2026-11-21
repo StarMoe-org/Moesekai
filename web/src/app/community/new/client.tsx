@@ -85,7 +85,7 @@ export default function NewPostClient() {
         if (
             entityType &&
             entityId &&
-            /^(card|music|event|gacha|costume|character)$/.test(entityType) &&
+            /^(card|music|event|gacha|costume|character|live)$/.test(entityType) &&
             /^\d{1,8}$/.test(entityId)
         ) {
             prefilledRef.current = true;
@@ -351,7 +351,7 @@ export default function NewPostClient() {
                                         value={bodyMd}
                                         onChange={(e) => setBodyMd(e.target.value)}
                                         rows={10}
-                                        maxLength={8000}
+                                        maxLength={30000}
                                         placeholder={t("page.community.composer.bodyPlaceholder")}
                                         className="w-full resize-y rounded-md3-md border border-outline-variant bg-surface-container-lowest p-3.5 type-body-m text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
                                     />

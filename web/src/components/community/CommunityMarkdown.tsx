@@ -15,6 +15,7 @@ import {
     getEventLogoUrl,
     getGachaLogoUrl,
     getMusicJacketUrl,
+    getVirtualLiveBannerUrl,
 } from "@/lib/assets";
 import { getCardDefaultTrainedStatus, getRarityNumber } from "@/types/types";
 import {
@@ -31,8 +32,8 @@ import { mdHideImage, mdOpenInNew, mdVisibility, mdVisibilityOff } from "@/compo
 import type { EntityLinkType } from "@/types/community";
 
 const PURE_STAMP_RE = /^\s*\[stamp:(\d{1,6})\]\s*$/;
-const RICH_TOKEN_RE = /(\|\|[^|\n]{1,500}\|\||\[(?:stamp|card|music|event|gacha|costume|character):\d{1,8}\])/g;
-const ENTITY_DETECT_RE = /\[(card|music|event|gacha|costume|character):(\d{1,8})\]/g;
+const RICH_TOKEN_RE = /(\|\|[^|\n]{1,500}\|\||\[(?:stamp|card|music|event|gacha|costume|character|live):\d{1,8}\])/g;
+const ENTITY_DETECT_RE = /\[(card|music|event|gacha|costume|character|live):(\d{1,8})\]/g;
 const STAMP_DETECT_RE = /\[stamp:(\d{1,6})\]/;
 
 interface CommunityMarkdownProps {
@@ -294,6 +295,15 @@ function EntityEmbedCard({
         label = getCharacterName(t, id);
         subtitle = `${t("page.community.entities.character")} · #${id}`;
         imageUrl = getCharacterIconUrl(id);
+    } else if (type === "live") {
+        href = `/live/${id}`;
+        const live = catalog.virtualLivesMap?.get(id);
+        if (live) {
+            const translatedName = translateGameData("virtualLive", "name", live.name);
+            label = translatedName || live.name;
+            subtitle = `${t("page.community.entities.live")} · #${id}`;
+            imageUrl = getVirtualLiveBannerUrl(live.assetbundleName, assetSource);
+        }
     }
 
     return (
@@ -348,7 +358,7 @@ function renderRichTokensInString(
             nodes.push(<InlineSpoiler key={key} text={token.slice(2, -2)} />);
             continue;
         }
-        const match = /^\[(stamp|card|music|event|gacha|costume|character):(\d{1,8})\]$/.exec(token);
+        const match = /^\[(stamp|card|music|event|gacha|costume|character|live):(\d{1,8})\]$/.exec(token);
         if (!match) {
             nodes.push(token);
             continue;

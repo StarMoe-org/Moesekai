@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -119,6 +120,11 @@ interface IResolvedVirtualLiveRewardBox {
     box?: IResourceBoxInfo;
     details: IResolvedVirtualLiveReward[];
 }
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 // API URL for virtual live-event mapping
 const VIRTUAL_LIVE_EVENT_MAP_URL = (process.env.NEXT_PUBLIC_API_URL || "") + "/api/virtuallive-event-map";
@@ -865,6 +871,13 @@ export default function VirtualLiveDetailClient() {
                         <DetailPageAdCard />
                     </div>
                 </div>
+
+                {/* Community Discussion */}
+                <EntityCommunitySection
+                    targetType="live"
+                    targetId={String(virtualLive.id)}
+                    showRelatedPosts={true}
+                />
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">
