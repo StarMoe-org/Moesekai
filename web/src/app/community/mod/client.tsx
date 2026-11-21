@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MainLayout from "@/components/MainLayout";
 import Link from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
@@ -152,6 +152,13 @@ export default function CommunityModClient() {
             .map(([sub, label]) => ({ sub, label }));
     }, [appealItems, pendingItems, reportItems]);
 
+    const tRef = useRef(t);
+    const tabRequestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
+
     const loadMode = useCallback(async () => {
         try {
             const res = await fetchModMode();
@@ -165,39 +172,49 @@ export default function CommunityModClient() {
 
     const loadActiveTab = useCallback(async () => {
         if (!isMod || activeTab === "users") return;
+        const seq = ++tabRequestSeqRef.current;
         setLoading(true);
         setError(null);
         try {
             if (activeTab === "pending") {
                 const res = await fetchModQueue("pending", { limit: 30 });
+                if (seq !== tabRequestSeqRef.current) return;
                 setCounts(res.counts);
                 setPendingItems(res.items);
                 setSelectedMode(res.community_mode);
             } else if (activeTab === "reports") {
                 const res = await fetchModQueue("reports", { limit: 30 });
+                if (seq !== tabRequestSeqRef.current) return;
                 setCounts(res.counts);
                 setReportItems(res.items);
             } else if (activeTab === "appeals") {
                 const res = await fetchModQueue("appeals", { limit: 30 });
+                if (seq !== tabRequestSeqRef.current) return;
                 setCounts(res.counts);
                 setAppealItems(res.items);
             } else if (activeTab === "events") {
                 const res = await fetchModQueue("events", { limit: 30 });
+                if (seq !== tabRequestSeqRef.current) return;
                 setCounts(res.counts);
                 setEventItems(res.items);
             } else if (activeTab === "rules") {
                 const items = await fetchModRules();
+                if (seq !== tabRequestSeqRef.current) return;
                 setRuleItems(items);
             } else if (activeTab === "audit") {
                 const res = await fetchModAudit({ limit: 40 });
+                if (seq !== tabRequestSeqRef.current) return;
                 setAuditItems(res.items);
             }
         } catch (err) {
-            setError(getCommunityErrorMessage(err, t));
+            if (seq !== tabRequestSeqRef.current) return;
+            setError(getCommunityErrorMessage(err, tRef.current));
         } finally {
-            setLoading(false);
+            if (seq === tabRequestSeqRef.current) {
+                setLoading(false);
+            }
         }
-    }, [activeTab, isMod, t]);
+    }, [activeTab, isMod]);
 
     const handleLookupUser = useCallback(
         async (overrideSub?: string) => {
@@ -240,6 +257,9 @@ export default function CommunityModClient() {
         if (isMod) {
             void loadActiveTab();
         }
+        return () => {
+            tabRequestSeqRef.current += 1;
+        };
     }, [isMod, loadActiveTab]);
 
     const handleApplyMode = async () => {

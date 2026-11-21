@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import Link from "@/components/LocalizedLink";
@@ -99,9 +99,17 @@ export default function CommunityPostClient() {
     const [deleting, setDeleting] = useState(false);
     const [modBusy, setModBusy] = useState(false);
 
+    const tRef = useRef(t);
+    const requestSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
+
     const loadPost = useCallback(async () => {
+        const seq = ++requestSeqRef.current;
         if (!Number.isFinite(postId) || postId <= 0) {
-            setError(t("common.comments.errors.notFound"));
+            setError(tRef.current("common.comments.errors.notFound"));
             setLoading(false);
             return;
         }
@@ -109,18 +117,29 @@ export default function CommunityPostClient() {
         setError(null);
         try {
             const loaded = await fetchCommunityPost(postId);
+            if (seq !== requestSeqRef.current) return;
             setPost(loaded);
             setDetailName(loaded.title);
         } catch (err) {
-            setError(getCommunityErrorMessage(err, t));
+            if (seq !== requestSeqRef.current) return;
+            setError(getCommunityErrorMessage(err, tRef.current));
         } finally {
-            setLoading(false);
+            if (seq === requestSeqRef.current) {
+                setLoading(false);
+            }
         }
-    }, [postId, setDetailName, t]);
+    }, [postId, setDetailName]);
 
     useEffect(() => {
         void loadPost();
+        return () => {
+            requestSeqRef.current += 1;
+        };
     }, [loadPost]);
+
+    const handleCommentCountChange = useCallback((count: number) => {
+        setPost((prev) => (!prev || prev.comment_count === count ? prev : { ...prev, comment_count: count }));
+    }, []);
 
     const openEditModal = () => {
         if (!post) return;
@@ -526,9 +545,7 @@ export default function CommunityPostClient() {
                             <EntityCommentSection
                                 targetType="post"
                                 targetId={post.id}
-                                onCommentCountChange={(count) =>
-                                    setPost((prev) => (prev ? { ...prev, comment_count: count } : prev))
-                                }
+                                onCommentCountChange={handleCommentCountChange}
                             />
                         </SectionCard>
 
