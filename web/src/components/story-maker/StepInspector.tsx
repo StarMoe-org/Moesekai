@@ -1,19 +1,21 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
     Banner, Button, Chip, Dialog, Divider, Icon, IconButton, SegmentedButton, Select, Slider, Switch, TextField,
     type SelectOption,
 } from "@/components/md3";
 import {
-    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdRestartAlt, mdStopFill, mdVolumeUp,
+    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdRecordVoiceOver, mdRestartAlt, mdStopFill,
+    mdVolumeUp,
 } from "@/components/md3/icons";
 import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl, type AssetLine } from "@/lib/assets";
+import { live2dSources } from "@/lib/live2dViewer/config";
 import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
-import { storyBackgroundUrl, storyBgmUrl, storySeUrl, storyVoiceUrl } from "@/lib/storyMaker/assets";
+import { storyBackgroundUrl, storyBgmUrl, storySeCandidateUrls, storyVoiceUrl } from "@/lib/storyMaker/assets";
 import { newStoryId, storyLabels } from "@/lib/storyMaker/document";
-import { DEFAULT_STORY_BGM, STORY_LIMITS } from "@/lib/storyMaker/limits";
+import { DEFAULT_STORY_BGM, DEFAULT_STORY_SE, STORY_LIMITS } from "@/lib/storyMaker/limits";
 import { stageStateAt } from "@/lib/storyMaker/state";
 import {
     BACKGROUND_TRANSITIONS, BGM_ACTIONS, EFFECT_COLORS, STORY_EFFECTS, STORY_SLOTS, VOICE_KINDS,
@@ -25,6 +27,14 @@ import { ClipPickerField } from "./ClipPickerField";
 import { STEP_ICONS, stepLabel } from "./stepMeta";
 import { StoryIssueList } from "./StoryIssueList";
 import { previewStorySound } from "./useStoryAudio";
+import { useStoryModels } from "./useStoryModels";
+import { VoicePickerDialog } from "./VoicePickerDialog";
+
+const VOICE_PLACEHOLDERS: Record<StoryVoiceKind, { scenarioId: string; voiceId: string }> = {
+    story: { scenarioId: "event_210_01", voiceId: "voice_ev_night_26_01_01_19" },
+    card: { scenarioId: "001001_ichika01", voiceId: "voice_card_01_01a_01_01" },
+    area: { scenarioId: "areatalk01_001", voiceId: "area1_001_001" },
+};
 
 interface StepInspectorProps {
     doc: StoryDocument;
@@ -46,24 +56,42 @@ export function StepInspector({
     doc, step, stepIndex, line, modelInfo, issues, onChange, onPreviewEffect,
 }: StepInspectorProps) {
     const { t } = useI18n();
+    const { models } = useStoryModels(doc.region);
+    const library = useMemo(() => live2dSources(doc.region).library, [doc.region]);
     const [bgPickerOpen, setBgPickerOpen] = useState(false);
     const [assetPicker, setAssetPicker] = useState<"bgm" | "se" | null>(null);
-    const [previewing, setPreviewing] = useState<{ stepId: string; url: string } | null>(null);
+    const [voicePickerOpen, setVoicePickerOpen] = useState(false);
+    const [failedBgUrl, setFailedBgUrl] = useState<string | null>(null);
+    const [previewing, setPreviewing] = useState<{ stepId: string; key: string } | null>(null);
+    const [previewError, setPreviewError] = useState<string | null>(null);
+    const [trackedStepId, setTrackedStepId] = useState<string | null>(step?.id ?? null);
+
+    if ((step?.id ?? null) !== trackedStepId) {
+        setTrackedStepId(step?.id ?? null);
+        setPreviewing(null);
+        setPreviewError(null);
+        setVoicePickerOpen(false);
+    }
 
     useEffect(() => () => previewStorySound(null), [step?.id]);
 
-    const togglePreview = (url: string, volume?: number) => {
+    const togglePreview = (key: string, source: string | readonly string[], volume?: number) => {
         if (!step) return;
-        if (previewing?.stepId === step.id && previewing.url === url) {
+        setPreviewError(null);
+        if (previewing?.stepId === step.id && previewing.key === key) {
             previewStorySound(null);
             setPreviewing(null);
             return;
         }
-        const token = { stepId: step.id, url };
+        const token = { stepId: step.id, key };
         setPreviewing(token);
-        previewStorySound(url, {
+        previewStorySound(source, {
             volume,
             onEnd: () => setPreviewing(curr => (curr === token ? null : curr)),
+            onError: () => {
+                setPreviewing(curr => (curr === token ? null : curr));
+                setPreviewError(key);
+            },
         });
     };
 
@@ -107,6 +135,13 @@ export function StepInspector({
         return member ? modelInfo[member.modelId] : undefined;
     };
 
+    const motionBundleOf = (castKey: string | undefined): string | null => {
+        if (!castKey || !models) return null;
+        const member = doc.cast.find(item => item.key === castKey);
+        if (!member) return null;
+        return models.find(item => item.id === member.modelId)?.motions[0] ?? null;
+    };
+
     const patch = <T extends StoryStep>(current: T, partial: Partial<T>) => {
         onChange({ ...current, ...partial });
     };
@@ -133,78 +168,85 @@ export function StepInspector({
 
             <Divider />
 
-            {step.op === "background" && (
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.backgroundImage")}</span>
-                        <div className="overflow-hidden rounded-md3-md border border-outline-variant bg-surface-container-highest">
-                            {step.name ? (
-                                <img
-                                    src={storyBackgroundUrl(step.name, doc.region, line)}
-                                    alt=""
-                                    className="aspect-video w-full object-cover"
+            {step.op === "background" && (() => {
+                const bgPreviewUrl = step.name ? storyBackgroundUrl(step.name, doc.region, line) : null;
+                const bgFailed = Boolean(bgPreviewUrl) && failedBgUrl === bgPreviewUrl;
+                return (
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.backgroundImage")}</span>
+                            <div className="overflow-hidden rounded-md3-md border border-outline-variant bg-surface-container-highest">
+                                {bgPreviewUrl && !bgFailed ? (
+                                    <img
+                                        key={bgPreviewUrl}
+                                        src={bgPreviewUrl}
+                                        alt=""
+                                        onError={() => setFailedBgUrl(bgPreviewUrl)}
+                                        className="aspect-video w-full object-cover"
+                                    />
+                                ) : (
+                                    <div className="flex aspect-video items-center justify-center px-3 text-center type-body-s text-on-surface-variant">
+                                        {t(bgFailed ? "page.storyMaker.inspector.backgroundPreviewFailed" : "page.storyMaker.summary.noBackground")}
+                                    </div>
+                                )}
+                            </div>
+                            <div className="flex min-w-0 flex-wrap items-start gap-2">
+                                <TextField
+                                    label={t("page.storyMaker.inspector.assetName")}
+                                    value={step.name ?? ""}
+                                    maxLength={64}
+                                    placeholder={t("page.storyMaker.summary.noBackground")}
+                                    onChange={event => patch(step, { name: event.target.value.trim() || null })}
+                                    className="min-w-[9rem] flex-1 font-mono"
                                 />
-                            ) : (
-                                <div className="flex aspect-video items-center justify-center type-body-s text-on-surface-variant">
-                                    {t("page.storyMaker.summary.noBackground")}
-                                </div>
-                            )}
+                                <Button
+                                    size="s"
+                                    variant="tonal"
+                                    icon={mdImage}
+                                    onClick={() => setBgPickerOpen(true)}
+                                    className="mt-1 shrink-0"
+                                >
+                                    {t("page.storyMaker.inspector.pickBackground")}
+                                </Button>
+                            </div>
                         </div>
-                        <div className="flex min-w-0 flex-wrap items-start gap-2">
-                            <TextField
-                                label={t("page.storyMaker.inspector.assetName")}
-                                value={step.name ?? ""}
-                                maxLength={64}
-                                placeholder={t("page.storyMaker.summary.noBackground")}
-                                onChange={event => patch(step, { name: event.target.value.trim() || null })}
-                                className="min-w-[9rem] flex-1 font-mono"
+
+                        <div className="space-y-1.5">
+                            <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.transition")}</span>
+                            <SegmentedButton<BackgroundTransition>
+                                density={-1}
+                                value={step.transition}
+                                onValueChange={transition => patch(step, { transition })}
+                                options={BACKGROUND_TRANSITIONS.map(value => ({
+                                    value,
+                                    label: t(`page.storyMaker.transition.${value}`),
+                                }))}
+                                aria-label={t("page.storyMaker.inspector.transition")}
                             />
-                            <Button
-                                size="s"
-                                variant="tonal"
-                                icon={mdImage}
-                                onClick={() => setBgPickerOpen(true)}
-                                className="mt-1 shrink-0"
-                            >
-                                {t("page.storyMaker.inspector.pickBackground")}
-                            </Button>
                         </div>
-                    </div>
 
-                    <div className="space-y-1.5">
-                        <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.transition")}</span>
-                        <SegmentedButton<BackgroundTransition>
-                            density={-1}
-                            value={step.transition}
-                            onValueChange={transition => patch(step, { transition })}
-                            options={BACKGROUND_TRANSITIONS.map(value => ({
-                                value,
-                                label: t(`page.storyMaker.transition.${value}`),
-                            }))}
-                            aria-label={t("page.storyMaker.inspector.transition")}
-                        />
+                        <Dialog
+                            isOpen={bgPickerOpen}
+                            onClose={() => setBgPickerOpen(false)}
+                            title={t("page.storyMaker.inspector.pickBackground")}
+                            size="lg"
+                            fullscreenOnMobile
+                        >
+                            <Live2DBackgroundGrid
+                                key={`${doc.region}|${line}`}
+                                region={doc.region}
+                                line={line}
+                                current={step.name}
+                                defaultCategory="scene"
+                                onSelect={(name) => {
+                                    patch(step, { name });
+                                    setBgPickerOpen(false);
+                                }}
+                            />
+                        </Dialog>
                     </div>
-
-                    <Dialog
-                        isOpen={bgPickerOpen}
-                        onClose={() => setBgPickerOpen(false)}
-                        title={t("page.storyMaker.inspector.pickBackground")}
-                        size="lg"
-                        fullscreenOnMobile
-                    >
-                        <Live2DBackgroundGrid
-                            key={`${doc.region}|${line}`}
-                            region={doc.region}
-                            line={line}
-                            current={step.name}
-                            onSelect={(name) => {
-                                patch(step, { name });
-                                setBgPickerOpen(false);
-                            }}
-                        />
-                    </Dialog>
-                </div>
-            )}
+                );
+            })()}
 
             {step.op === "place" && (
                 <div className="space-y-3">
@@ -286,6 +328,8 @@ export function StepInspector({
                         kind="motion"
                         value={step.motion}
                         info={actorInfoOf(step.cast)}
+                        library={library}
+                        motionBundle={motionBundleOf(step.cast)}
                         disabled={!step.cast}
                         onChange={motion => patch(step, { motion })}
                     />
@@ -293,6 +337,8 @@ export function StepInspector({
                         kind="facial"
                         value={step.facial}
                         info={actorInfoOf(step.cast)}
+                        library={library}
+                        motionBundle={motionBundleOf(step.cast)}
                         disabled={!step.cast}
                         onChange={facial => patch(step, { facial })}
                     />
@@ -390,6 +436,8 @@ export function StepInspector({
                         kind="motion"
                         value={step.motion}
                         info={actorInfoOf(step.cast)}
+                        library={library}
+                        motionBundle={motionBundleOf(step.cast)}
                         disabled={!step.cast}
                         onChange={motion => patch(step, { motion })}
                     />
@@ -397,6 +445,8 @@ export function StepInspector({
                         kind="facial"
                         value={step.facial}
                         info={actorInfoOf(step.cast)}
+                        library={library}
+                        motionBundle={motionBundleOf(step.cast)}
                         disabled={!step.cast}
                         onChange={facial => patch(step, { facial })}
                     />
@@ -460,12 +510,16 @@ export function StepInspector({
                                 kind="motion"
                                 value={step.motion}
                                 info={actorInfoOf(step.cast)}
+                                library={library}
+                                motionBundle={motionBundleOf(step.cast)}
                                 onChange={motion => patch(step, { motion })}
                             />
                             <ClipPickerField
                                 kind="facial"
                                 value={step.facial}
                                 info={actorInfoOf(step.cast)}
+                                library={library}
+                                motionBundle={motionBundleOf(step.cast)}
                                 onChange={facial => patch(step, { facial })}
                             />
                         </>
@@ -483,51 +537,69 @@ export function StepInspector({
                             label={t("page.storyMaker.inspector.voiceRef")}
                             description={t("page.storyMaker.inspector.voiceRefHint")}
                         />
-                        {step.voice && (
-                            <div className="space-y-3 rounded-md3-md bg-surface-container p-3">
-                                <SegmentedButton<StoryVoiceKind>
-                                    density={-2}
-                                    value={step.voice.kind}
-                                    onValueChange={kind => patch(step, { voice: { ...step.voice!, kind } })}
-                                    options={VOICE_KINDS.map(kind => ({
-                                        value: kind,
-                                        label: t(`page.storyMaker.voiceKind.${kind}`),
-                                    }))}
-                                    aria-label={t("page.storyMaker.inspector.voiceKind")}
-                                />
-                                <TextField
-                                    label={t("page.storyMaker.inspector.scenarioId")}
-                                    value={step.voice.scenarioId}
-                                    maxLength={64}
-                                    className="font-mono"
-                                    onChange={event => patch(step, { voice: { ...step.voice!, scenarioId: event.target.value.trim() } })}
-                                />
-                                <TextField
-                                    label={t("page.storyMaker.inspector.voiceId")}
-                                    value={step.voice.voiceId}
-                                    maxLength={64}
-                                    className="font-mono"
-                                    onChange={event => patch(step, { voice: { ...step.voice!, voiceId: event.target.value.trim() } })}
-                                />
-                                {(() => {
-                                    const voiceUrl = step.voice.scenarioId && step.voice.voiceId
-                                        ? storyVoiceUrl(step.voice, doc.region, line)
-                                        : "";
-                                    const playingVoice = Boolean(voiceUrl) && previewing?.stepId === step.id && previewing.url === voiceUrl;
-                                    return (
+                        {step.voice && (() => {
+                            const voice = step.voice;
+                            const placeholders = VOICE_PLACEHOLDERS[voice.kind];
+                            const voiceUrl = voice.scenarioId && voice.voiceId
+                                ? storyVoiceUrl(voice, doc.region, line)
+                                : "";
+                            const voiceKey = voiceUrl ? `voice:${voiceUrl}` : "";
+                            const playingVoice = Boolean(voiceKey) && previewing?.stepId === step.id && previewing.key === voiceKey;
+                            return (
+                                <div className="min-w-0 space-y-3 rounded-md3-md bg-surface-container p-3">
+                                    <SegmentedButton<StoryVoiceKind>
+                                        density={-2}
+                                        value={voice.kind}
+                                        onValueChange={kind => patch(step, { voice: { ...voice, kind } })}
+                                        options={VOICE_KINDS.map(kind => ({
+                                            value: kind,
+                                            label: t(`page.storyMaker.voiceKind.${kind}`),
+                                        }))}
+                                        aria-label={t("page.storyMaker.inspector.voiceKind")}
+                                    />
+                                    <TextField
+                                        label={t("page.storyMaker.inspector.scenarioId")}
+                                        value={voice.scenarioId}
+                                        maxLength={64}
+                                        placeholder={placeholders.scenarioId}
+                                        className="font-mono"
+                                        onChange={event => patch(step, { voice: { ...voice, scenarioId: event.target.value.trim() } })}
+                                    />
+                                    <TextField
+                                        label={t("page.storyMaker.inspector.voiceId")}
+                                        value={voice.voiceId}
+                                        maxLength={64}
+                                        placeholder={placeholders.voiceId}
+                                        className="font-mono"
+                                        onChange={event => patch(step, { voice: { ...voice, voiceId: event.target.value.trim() } })}
+                                    />
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <Button
+                                            size="xs"
+                                            variant="tonal"
+                                            icon={mdRecordVoiceOver}
+                                            onClick={() => setVoicePickerOpen(true)}
+                                        >
+                                            {t("page.storyMaker.inspector.browse")}
+                                        </Button>
                                         <Button
                                             size="xs"
                                             variant="tonal"
                                             icon={playingVoice ? mdStopFill : mdPlayArrowFill}
                                             disabled={!voiceUrl}
-                                            onClick={() => voiceUrl && togglePreview(voiceUrl)}
+                                            onClick={() => voiceUrl && togglePreview(voiceKey, voiceUrl)}
                                         >
                                             {t(playingVoice ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
                                         </Button>
-                                    );
-                                })()}
-                            </div>
-                        )}
+                                    </div>
+                                    {previewError === voiceKey && voiceKey && (
+                                        <p role="alert" className="type-label-s text-error">
+                                            {t("page.storyMaker.inspector.audioPreviewFailed")}
+                                        </p>
+                                    )}
+                                </div>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
@@ -639,34 +711,42 @@ export function StepInspector({
                     </div>
                     {step.action === "play" && (() => {
                         const bgmUrl = step.name ? storyBgmUrl(step.name, doc.region, line) : "";
-                        const playingBgm = Boolean(bgmUrl) && previewing?.stepId === step.id && previewing.url === bgmUrl;
+                        const bgmKey = bgmUrl ? `bgm:${bgmUrl}` : "";
+                        const playingBgm = Boolean(bgmKey) && previewing?.stepId === step.id && previewing.key === bgmKey;
                         return (
-                            <div className="flex min-w-0 flex-wrap items-start gap-2">
-                                <TextField
-                                    label={t("page.storyMaker.inspector.bgmName")}
-                                    value={step.name ?? ""}
-                                    maxLength={64}
-                                    placeholder={DEFAULT_STORY_BGM}
-                                    onChange={event => patch(step, { name: event.target.value.trim() })}
-                                    className="min-w-[9rem] flex-1 font-mono"
-                                />
-                                <div className="mt-1 flex shrink-0 items-center gap-1.5">
-                                    <Button
-                                        size="s"
-                                        variant="tonal"
-                                        icon={mdMusicNote}
-                                        onClick={() => setAssetPicker("bgm")}
-                                    >
-                                        {t("page.storyMaker.inspector.browse")}
-                                    </Button>
-                                    <IconButton
-                                        size="s"
-                                        icon={playingBgm ? mdStopFill : mdPlayArrowFill}
-                                        label={t(playingBgm ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
-                                        disabled={!bgmUrl}
-                                        onClick={() => bgmUrl && togglePreview(bgmUrl, step.volume ?? 0.75)}
+                            <div className="space-y-1.5">
+                                <div className="flex min-w-0 flex-wrap items-start gap-2">
+                                    <TextField
+                                        label={t("page.storyMaker.inspector.bgmName")}
+                                        value={step.name ?? ""}
+                                        maxLength={STORY_LIMITS.audioPath}
+                                        placeholder={DEFAULT_STORY_BGM}
+                                        onChange={event => patch(step, { name: event.target.value.trim() })}
+                                        className="min-w-[9rem] flex-1 font-mono"
                                     />
+                                    <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                                        <Button
+                                            size="s"
+                                            variant="tonal"
+                                            icon={mdMusicNote}
+                                            onClick={() => setAssetPicker("bgm")}
+                                        >
+                                            {t("page.storyMaker.inspector.browse")}
+                                        </Button>
+                                        <IconButton
+                                            size="s"
+                                            icon={playingBgm ? mdStopFill : mdPlayArrowFill}
+                                            label={t(playingBgm ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                            disabled={!bgmUrl}
+                                            onClick={() => bgmUrl && togglePreview(bgmKey, bgmUrl, step.volume ?? 0.75)}
+                                        />
+                                    </div>
                                 </div>
+                                {previewError === bgmKey && bgmKey && (
+                                    <p role="alert" className="type-label-s text-error">
+                                        {t("page.storyMaker.inspector.audioPreviewFailed")}
+                                    </p>
+                                )}
                             </div>
                         );
                     })()}
@@ -691,35 +771,43 @@ export function StepInspector({
             )}
 
             {step.op === "se" && (() => {
-                const seUrl = step.name ? storySeUrl(step.name, doc.region, line) : "";
-                const playingSe = Boolean(seUrl) && previewing?.stepId === step.id && previewing.url === seUrl;
+                const seCandidates = step.name ? storySeCandidateUrls(step.name, doc.region, line) : [];
+                const seKey = step.name ? `se:${doc.region}:${line}:${step.name}` : "";
+                const playingSe = Boolean(seKey) && previewing?.stepId === step.id && previewing.key === seKey;
                 return (
-                    <div className="flex min-w-0 flex-wrap items-start gap-2">
-                        <TextField
-                            label={t("page.storyMaker.inspector.seName")}
-                            value={step.name}
-                            maxLength={64}
-                            placeholder="se00001_b"
-                            onChange={event => patch(step, { name: event.target.value.trim() })}
-                            className="min-w-[9rem] flex-1 font-mono"
-                        />
-                        <div className="mt-1 flex shrink-0 items-center gap-1.5">
-                            <Button
-                                size="s"
-                                variant="tonal"
-                                icon={mdVolumeUp}
-                                onClick={() => setAssetPicker("se")}
-                            >
-                                {t("page.storyMaker.inspector.browse")}
-                            </Button>
-                            <IconButton
-                                size="s"
-                                icon={playingSe ? mdStopFill : mdPlayArrowFill}
-                                label={t(playingSe ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
-                                disabled={!seUrl}
-                                onClick={() => seUrl && togglePreview(seUrl)}
+                    <div className="space-y-1.5">
+                        <div className="flex min-w-0 flex-wrap items-start gap-2">
+                            <TextField
+                                label={t("page.storyMaker.inspector.seName")}
+                                value={step.name}
+                                maxLength={STORY_LIMITS.audioPath}
+                                placeholder={DEFAULT_STORY_SE}
+                                onChange={event => patch(step, { name: event.target.value.trim() })}
+                                className="min-w-[9rem] flex-1 font-mono"
                             />
+                            <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                                <Button
+                                    size="s"
+                                    variant="tonal"
+                                    icon={mdVolumeUp}
+                                    onClick={() => setAssetPicker("se")}
+                                >
+                                    {t("page.storyMaker.inspector.browse")}
+                                </Button>
+                                <IconButton
+                                    size="s"
+                                    icon={playingSe ? mdStopFill : mdPlayArrowFill}
+                                    label={t(playingSe ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                    disabled={seCandidates.length === 0}
+                                    onClick={() => seCandidates.length > 0 && togglePreview(seKey, seCandidates)}
+                                />
+                            </div>
                         </div>
+                        {previewError === seKey && seKey && (
+                            <p role="alert" className="type-label-s text-error">
+                                {t("page.storyMaker.inspector.audioPreviewFailed")}
+                            </p>
+                        )}
                     </div>
                 );
             })()}
@@ -826,6 +914,24 @@ export function StepInspector({
                     onSelect={(name) => {
                         if (assetPicker === "bgm" && step.op === "bgm") patch(step, { name });
                         if (assetPicker === "se" && step.op === "se") patch(step, { name });
+                    }}
+                />
+            )}
+
+            {voicePickerOpen && step.op === "talk" && step.voice && (
+                <VoicePickerDialog
+                    key={`${step.id}|${step.voice.kind}|${doc.region}|${line}`}
+                    isOpen
+                    onClose={() => setVoicePickerOpen(false)}
+                    kind={step.voice.kind}
+                    region={doc.region}
+                    line={line}
+                    currentScenarioId={step.voice.scenarioId}
+                    currentVoiceId={step.voice.voiceId}
+                    onSelect={(scenarioId, voiceId) => {
+                        if (step.op === "talk" && step.voice) {
+                            patch(step, { voice: { ...step.voice, scenarioId, voiceId } });
+                        }
                     }}
                 />
             )}

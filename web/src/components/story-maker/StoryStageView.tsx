@@ -1,6 +1,6 @@
 "use client";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import type { ReactNode, RefObject } from "react";
+import { useState, type ReactNode, type RefObject } from "react";
 import { Button, Icon, LoadingIndicator, cn } from "@/components/md3";
 import { mdErrorFill, mdInfo, mdRefresh, mdWarningFill } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -150,6 +150,8 @@ export function StoryStageView({
 }: StoryStageViewProps) {
     const reduced = useReducedMotion();
     const background = state.background ? storyBackgroundUrl(state.background, doc.region, line) : null;
+    const [failedBackground, setFailedBackground] = useState<string | null>(null);
+    const showBackground = Boolean(background) && failedBackground !== background;
     const showPortraitFallback = phase.kind === "unavailable" || phase.kind === "unsupported" || phase.kind === "failed";
     const fade = reduced ? 0 : fadeSeconds;
 
@@ -160,12 +162,13 @@ export function StoryStageView({
         >
             {/* Layer 0: Background */}
             <AnimatePresence initial={false}>
-                {background && (
+                {showBackground && background && (
                     <motion.img
                         key={background}
                         src={background}
                         alt=""
                         draggable={false}
+                        onError={() => setFailedBackground(background)}
                         className="absolute inset-0 z-0 size-full object-cover"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}

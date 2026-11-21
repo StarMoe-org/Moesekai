@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Chip, Dialog, IconButton, TextField } from "@/components/md3";
 import { mdClose, mdTune } from "@/components/md3/icons";
 import { Live2DClipRows } from "@/components/live2d/Live2DClipRows";
@@ -8,26 +8,58 @@ import {
     groupLive2DFacials, groupLive2DMotions, live2dMotionStyle, type Live2DClipRow, type Live2DMotionGroup,
 } from "@/lib/live2dViewer/clips";
 import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
+import { fetchMotionBundleClips, type StoryMotionBundleClips } from "@/lib/storyMaker/assets";
 
 interface ClipPickerFieldProps {
     kind: "motion" | "facial";
     value: string | undefined;
     info: Live2DActorInfo | undefined;
+    /** Story library root + model motion bundle, used to load `_ripper.json` without WebGPU. */
+    library?: string | null;
+    motionBundle?: string | null;
     disabled?: boolean;
     onChange: (value: string | undefined) => void;
 }
 
+type BundleLoadState =
+    | { key: string; status: "ready"; clips: StoryMotionBundleClips }
+    | { key: string; status: "error" };
+
 /**
  * Choosing a Live2D body motion or facial expression for a step: offers a free-text field so
- * clips can always be entered offline or before the stage loads, plus a visual picker dialog
- * reusing the Live2D viewer's grouped clip rows once ActorInfo is available.
+ * clips can always be entered offline, plus a visual picker dialog reusing the Live2D viewer's
+ * grouped clip rows from either WebGPU ActorInfo or the lightweight `_ripper.json` manifest.
  */
-export function ClipPickerField({ kind, value, info, disabled, onChange }: ClipPickerFieldProps) {
+export function ClipPickerField({ kind, value, info, library, motionBundle, disabled, onChange }: ClipPickerFieldProps) {
     const { t } = useI18n();
     const [open, setOpen] = useState(false);
     const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
+    const [loaded, setLoaded] = useState<BundleLoadState | null>(null);
 
-    const clips = useMemo(() => (kind === "motion" ? info?.motions ?? [] : info?.facials ?? []), [kind, info]);
+    const bundleKey = !disabled && !info && library && motionBundle ? `${library}|${motionBundle}` : null;
+
+    useEffect(() => {
+        if (!bundleKey || !library || !motionBundle) return;
+        const controller = new AbortController();
+        fetchMotionBundleClips(library, motionBundle, controller.signal).then(
+            clips => setLoaded({ key: bundleKey, status: "ready", clips }),
+            () => {
+                if (!controller.signal.aborted) setLoaded({ key: bundleKey, status: "error" });
+            },
+        );
+        return () => controller.abort();
+    }, [bundleKey, library, motionBundle]);
+
+    const manifestClips = bundleKey && loaded?.key === bundleKey && loaded.status === "ready" ? loaded.clips : null;
+    const manifestLoading = Boolean(bundleKey && loaded?.key !== bundleKey);
+    const manifestFailed = Boolean(bundleKey && loaded?.key === bundleKey && loaded.status === "error");
+
+    const clips = useMemo(() => {
+        if (info) return kind === "motion" ? info.motions : info.facials;
+        if (manifestClips) return kind === "motion" ? manifestClips.motions : manifestClips.facials;
+        return [];
+    }, [info, manifestClips, kind]);
+
     const fallback = kind === "motion" ? info?.defaultMotion ?? null : info?.defaultFacial ?? null;
     const motionGroups = useMemo(() => (kind === "motion" ? groupLive2DMotions(clips) : []), [kind, clips]);
     const facialRows = useMemo(() => (kind === "facial" ? groupLive2DFacials(clips) : []), [kind, clips]);
@@ -66,7 +98,11 @@ export function ClipPickerField({ kind, value, info, disabled, onChange }: ClipP
                     maxLength={64}
                     disabled={disabled}
                     placeholder={fallback ?? t("page.storyMaker.inspector.clipDefault")}
-                    onChange={event => onChange(event.target.value.trim() || undefined)}
+                    onChange={event => onChange(event.target.value || undefined)}
+                    onBlur={event => {
+                        const trimmed = event.target.value.trim();
+                        if (trimmed !== (value ?? "")) onChange(trimmed || undefined);
+                    }}
                     className="min-w-[9rem] flex-1 font-mono"
                     trailing={value ? (
                         <IconButton
@@ -90,7 +126,15 @@ export function ClipPickerField({ kind, value, info, disabled, onChange }: ClipP
                 </Button>
             </div>
             {!disabled && clips.length === 0 && (
-                <p className="type-label-s text-on-surface-variant">{t("page.storyMaker.inspector.clipPickerHint")}</p>
+                <p className={manifestFailed ? "type-label-s text-error" : "type-label-s text-on-surface-variant"}>
+                    {t(
+                        manifestFailed
+                            ? "page.storyMaker.inspector.clipLoadFailed"
+                            : manifestLoading
+                                ? "page.storyMaker.inspector.clipLoading"
+                                : "page.storyMaker.inspector.clipPickerHint",
+                    )}
+                </p>
             )}
 
             <Dialog

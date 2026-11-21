@@ -12,7 +12,8 @@ import {
     type StoryRegion, type StoryStep, type StoryVoiceRef,
 } from "../../types/storyMaker.ts";
 import {
-    STORY_ASSET_PATTERN, STORY_ID_PATTERN, STORY_LIMITS, STORY_MODEL_PATTERN, STORY_MOTION_PATTERN,
+    STORY_ASSET_PATTERN, STORY_AUDIO_PATH_PATTERN, STORY_ID_PATTERN, STORY_LIMITS, STORY_MODEL_PATTERN,
+    STORY_MOTION_PATTERN,
 } from "./limits.ts";
 
 export type StoryValidation =
@@ -61,7 +62,7 @@ class Checker {
     pattern(raw: Raw, key: string, path: string, pattern: RegExp, code: StoryIssueCode, required = true): string | undefined {
         const value = raw[key];
         const at = `${path}.${key}`;
-        if (value === undefined || value === null) {
+        if (value === undefined || value === null || value === "") {
             if (required) this.add("fieldMissing", at);
             return undefined;
         }
@@ -278,7 +279,7 @@ function checkStep(checker: Checker, raw: Raw, path: string, id: string): StoryS
         }
         case "bgm": {
             const action = checker.oneOf(raw, "action", path, BGM_ACTIONS);
-            const name = action === "play" ? checker.pattern(raw, "name", path, STORY_ASSET_PATTERN, "assetNameInvalid") : undefined;
+            const name = action === "play" ? checker.pattern(raw, "name", path, STORY_AUDIO_PATH_PATTERN, "assetNameInvalid") : undefined;
             const volume = action === "stop" || raw.volume === undefined ? undefined : checker.number(raw, "volume", path, 0, 1);
             if (!action || (action === "play" && !name) || (action === "volume" && volume === undefined)) {
                 if (action === "volume" && raw.volume === undefined) checker.add("fieldMissing", `${path}.volume`);
@@ -287,7 +288,7 @@ function checkStep(checker: Checker, raw: Raw, path: string, id: string): StoryS
             return done({ id, op, action, ...(name ? { name } : {}), ...(volume !== undefined ? { volume } : {}) });
         }
         case "se": {
-            const name = checker.pattern(raw, "name", path, STORY_ASSET_PATTERN, "assetNameInvalid");
+            const name = checker.pattern(raw, "name", path, STORY_AUDIO_PATH_PATTERN, "assetNameInvalid");
             return name ? done({ id, op, name }) : undefined;
         }
         case "choice": {

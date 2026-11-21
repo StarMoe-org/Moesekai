@@ -12,7 +12,7 @@ interface BgmEntry {
 
 export interface StoryAudioControls {
     syncBgm: (url: string | null, level: number) => void;
-    playSe: (url: string) => void;
+    playSe: (urlOrUrls: string | readonly string[]) => void;
     playVoice: (url: string) => Promise<void>;
     stopVoice: () => void;
     stopAll: () => void;
@@ -36,6 +36,12 @@ function errorName(error: unknown): string | undefined {
     return undefined;
 }
 
+function errorReason(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) return error.message;
+    if (typeof error === "string" && error) return error;
+    return fallback;
+}
+
 /**
  * The story player's sound: one looping BGM, one-shot SEs and one voice at a time, all through
  * HTMLAudioElement at the reader's volume. Sounds that fail to load are skipped silently (a
@@ -46,6 +52,7 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
     const bgmRef = useRef<BgmEntry | null>(null);
     const voiceRef = useRef<HTMLAudioElement | null>(null);
     const effectsRef = useRef(new Set<HTMLAudioElement>());
+    const seGenerationRef = useRef(0);
     const masterRef = useRef(muted ? 0 : clamp01(volume));
     const unlockCleanupRef = useRef<(() => void) | null>(null);
     const attemptPlayRef = useRef<(entry: BgmEntry) => void>(() => undefined);
@@ -119,6 +126,9 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
         }
         if (!pending || typeof pending.then !== "function") {
             entry.starting = false;
+            if (clamp01(entry.level * masterRef.current) <= 0) {
+                entry.audio.pause();
+            }
             detachUnlockListeners();
             setRawBlocked(false);
             return;
@@ -127,6 +137,9 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
             () => {
                 entry.starting = false;
                 if (bgmRef.current !== entry) return;
+                if (clamp01(entry.level * masterRef.current) <= 0) {
+                    entry.audio.pause();
+                }
                 detachUnlockListeners();
                 setRawBlocked(false);
             },
@@ -233,14 +246,45 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
         }
     }, [attemptPlayBgm, detachUnlockListeners, stopBgm, teardownBgm]);
 
-    const playSe = useCallback((url: string) => {
-        const audio = new Audio(url);
-        audio.volume = masterRef.current;
-        effectsRef.current.add(audio);
-        const done = () => effectsRef.current.delete(audio);
-        audio.addEventListener("ended", done, { once: true });
-        audio.addEventListener("error", done, { once: true });
-        audio.play().catch(done);
+    const playSe = useCallback((urlOrUrls: string | readonly string[]) => {
+        const candidates = (typeof urlOrUrls === "string" ? [urlOrUrls] : urlOrUrls).filter(Boolean);
+        if (candidates.length === 0) return;
+        const generation = seGenerationRef.current;
+        const tryAt = (index: number) => {
+            if (seGenerationRef.current !== generation || index >= candidates.length) return;
+            const audio = new Audio(candidates[index]);
+            audio.volume = masterRef.current;
+            effectsRef.current.add(audio);
+            let settled = false;
+            const cleanup = () => {
+                audio.removeEventListener("ended", onEnded);
+                audio.removeEventListener("error", onError);
+                effectsRef.current.delete(audio);
+            };
+            const onEnded = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+            };
+            const onError = () => {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                if (seGenerationRef.current === generation && index + 1 < candidates.length) {
+                    tryAt(index + 1);
+                }
+            };
+            audio.addEventListener("ended", onEnded, { once: true });
+            audio.addEventListener("error", onError, { once: true });
+            audio.play().catch((error: unknown) => {
+                if (errorName(error) === "AbortError") {
+                    onEnded();
+                    return;
+                }
+                onError();
+            });
+        };
+        tryAt(0);
     }, []);
 
     const stopVoice = useCallback(() => {
@@ -263,6 +307,7 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
     }, [stopVoice]);
 
     const stopAll = useCallback(() => {
+        seGenerationRef.current += 1;
         stopBgm();
         stopVoice();
         for (const audio of effectsRef.current) audio.pause();
@@ -284,6 +329,7 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
     }, [attemptPlayBgm, detachUnlockListeners]);
 
     useEffect(() => () => {
+        seGenerationRef.current += 1;
         teardownBgm();
         stopVoice();
         for (const audio of effectsRef.current) audio.pause();
@@ -304,13 +350,16 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
 export interface PreviewSoundOptions {
     volume?: number;
     onEnd?: () => void;
+    onError?: (reason: string) => void;
 }
 
-/** A one-shot preview of an asset (the pickers' play button). */
+/** A one-shot preview of an asset (the pickers' and inspector's play button). */
 let previewAudio: HTMLAudioElement | null = null;
 let previewCleanup: (() => void) | null = null;
+let previewToken = 0;
 
-export function previewStorySound(url: string | null, options?: PreviewSoundOptions): void {
+export function previewStorySound(urlOrUrls: string | readonly string[] | null, options?: PreviewSoundOptions): void {
+    const token = ++previewToken;
     previewCleanup?.();
     previewCleanup = null;
     if (previewAudio) {
@@ -318,22 +367,65 @@ export function previewStorySound(url: string | null, options?: PreviewSoundOpti
         previewAudio.removeAttribute("src");
         previewAudio = null;
     }
-    if (!url) return;
-    const audio = new Audio(url);
-    audio.volume = clamp01(options?.volume ?? 0.85);
-    const finish = () => {
-        if (previewAudio === audio) {
-            previewAudio = null;
-            previewCleanup = null;
-        }
-        options?.onEnd?.();
+    if (!urlOrUrls) return;
+    const candidates = (typeof urlOrUrls === "string" ? [urlOrUrls] : urlOrUrls).filter(Boolean);
+    if (candidates.length === 0) return;
+
+    const tryAt = (index: number) => {
+        if (token !== previewToken || index >= candidates.length) return;
+        const audio = new Audio(candidates[index]);
+        audio.volume = clamp01(options?.volume ?? 0.85);
+        let settled = false;
+
+        const detach = () => {
+            audio.removeEventListener("ended", onEnded);
+            audio.removeEventListener("error", onMediaError);
+            if (previewAudio === audio) {
+                previewAudio = null;
+                previewCleanup = null;
+            }
+        };
+
+        const onEnded = () => {
+            if (settled || token !== previewToken) return;
+            settled = true;
+            detach();
+            options?.onEnd?.();
+        };
+
+        const failWith = (reason: string) => {
+            if (settled || token !== previewToken) return;
+            settled = true;
+            detach();
+            if (index + 1 < candidates.length) {
+                tryAt(index + 1);
+                return;
+            }
+            if (options?.onError) {
+                options.onError(reason);
+            } else {
+                options?.onEnd?.();
+            }
+        };
+
+        const onMediaError = () => {
+            const code = audio.error?.code;
+            const detail = audio.error?.message || (code ? `Media error (${code})` : "Audio load failed");
+            failWith(detail);
+        };
+
+        audio.addEventListener("ended", onEnded, { once: true });
+        audio.addEventListener("error", onMediaError, { once: true });
+        previewCleanup = () => {
+            audio.removeEventListener("ended", onEnded);
+            audio.removeEventListener("error", onMediaError);
+        };
+        previewAudio = audio;
+        audio.play().catch((error: unknown) => {
+            if (token !== previewToken || errorName(error) === "AbortError") return;
+            failWith(errorReason(error, "Audio playback failed"));
+        });
     };
-    audio.addEventListener("ended", finish, { once: true });
-    audio.addEventListener("error", finish, { once: true });
-    previewCleanup = () => {
-        audio.removeEventListener("ended", finish);
-        audio.removeEventListener("error", finish);
-    };
-    previewAudio = audio;
-    audio.play().catch(finish);
+
+    tryAt(0);
 }

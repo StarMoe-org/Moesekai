@@ -89,6 +89,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
     const stageRef = useRef<Live2DStage | null>(null);
     const appliedRef = useRef(new Map<string, AppliedActor>());
     const infoCacheRef = useRef(new Map<string, Live2DActorInfo>());
+    const libraryRef = useRef(library);
     const castRef = useRef(cast);
     const modelsRef = useRef(models);
     const queueRef = useRef<Promise<void>>(Promise.resolve());
@@ -97,15 +98,28 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
     const key = library ? `${library}|${attempt}` : null;
     const [phaseOf, setPhaseOf] = useState<{ key: string; phase: StoryStagePhase } | null>(null);
     /** What each model has (motions, facials), by model id, once it has been on the stage. */
-    const [modelInfo, setModelInfo] = useState<Record<string, Live2DActorInfo>>({});
-    const [problems, setProblems] = useState<Record<string, StoryActorProblem>>({});
+    const [modelInfoByLib, setModelInfoByLib] = useState<{ library: string | null; info: Record<string, Live2DActorInfo> }>({
+        library,
+        info: {},
+    });
+    const [problemsByLib, setProblemsByLib] = useState<{ library: string | null; problems: Record<string, StoryActorProblem> }>({
+        library,
+        problems: {},
+    });
     const [loadingActors, setLoadingActors] = useState(0);
     const phase: StoryStagePhase = !key ? { kind: "idle" } : phaseOf?.key === key ? phaseOf.phase : { kind: "loading" };
+    const modelInfo: Record<string, Live2DActorInfo> = modelInfoByLib.library === library ? modelInfoByLib.info : {};
+    const problems: Record<string, StoryActorProblem> = problemsByLib.library === library ? problemsByLib.problems : {};
 
     useEffect(() => {
         castRef.current = cast;
         modelsRef.current = models;
     }, [cast, models]);
+
+    useEffect(() => {
+        libraryRef.current = library;
+        infoCacheRef.current.clear();
+    }, [library]);
 
     useEffect(() => {
         const host = hostRef.current;
@@ -188,6 +202,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
 
     const runApply = useCallback(async (target: StoryStageState, options: StoryStageApplyOptions, generation: number) => {
         const stage = stageRef.current;
+        const activeLibrary = libraryRef.current;
         if (!stage || generation !== generationRef.current) return;
         const applied = appliedRef.current;
         const castByKey = new Map(castRef.current.map(member => [member.key, member]));
@@ -283,10 +298,14 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
                 x: actor.x, y: actor.y, scale: actor.scale, mirror: actor.mirror, order, alpha: fadeIn ? 0 : 1,
                 ...(motion ? { motion } : {}), ...(facial ? { facial } : {}),
             }).then(async (info) => {
+                if (libraryRef.current !== activeLibrary || stageRef.current !== stage) return;
                 infoCacheRef.current.set(modelId, info);
-                if (appliedRef.current.get(id) !== entry || stageRef.current !== stage) return;
+                if (appliedRef.current.get(id) !== entry) return;
                 entry.info = info;
-                setModelInfo(previous => ({ ...previous, [modelId]: info }));
+                setModelInfoByLib(previous => ({
+                    library: activeLibrary,
+                    info: previous.library === activeLibrary ? { ...previous.info, [modelId]: info } : { [modelId]: info },
+                }));
                 // the names given before the model's lists were known
                 const wantMotion = pick(actor.motion, info.motions, info.defaultMotion);
                 const wantFacial = pick(actor.facial, info.facials, info.defaultFacial);
@@ -298,17 +317,22 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
                 if (fadeIn) steps.push(stage.setActor(id, { alpha: 1 }, { duration: STORY_FADE_SECONDS, easing: "in" }).catch(() => undefined));
                 await Promise.all(steps);
             }, () => {
+                if (libraryRef.current !== activeLibrary || stageRef.current !== stage) return;
                 if (appliedRef.current.get(id) === entry) appliedRef.current.delete(id);
-                setProblems(previous => ({ ...previous, [id]: "loadFailed" }));
+                setProblemsByLib(previous => ({
+                    library: activeLibrary,
+                    problems: previous.library === activeLibrary ? { ...previous.problems, [id]: "loadFailed" } : { [id]: "loadFailed" },
+                }));
             }).finally(() => setLoadingActors(count => Math.max(0, count - 1))));
         }
 
-        setProblems(previous => {
+        setProblemsByLib(previous => {
+            const base = previous.library === activeLibrary ? previous.problems : {};
             const next: Record<string, StoryActorProblem> = { ...nextProblems };
-            for (const [id, problem] of Object.entries(previous)) {
+            for (const [id, problem] of Object.entries(base)) {
                 if (problem === "loadFailed" && wanted.has(id) && !applied.has(id)) next[id] = problem;
             }
-            return next;
+            return { library: activeLibrary, problems: next };
         });
         if (options.instant) {
             // seeking: actors still loading arrive at their place; the rest snaps there now

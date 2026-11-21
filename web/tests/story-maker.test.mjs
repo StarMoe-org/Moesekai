@@ -13,8 +13,12 @@ const {
     createStoryDocument, createStep, insertStep, moveStep, duplicateStep, removeStep, addCastMember, removeCastMember,
     castUsage, storyFileName, serializeStory, newStoryId,
 } = await import("../src/lib/storyMaker/document.ts");
-const { DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
+const {
+    DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE, SLOT_X, STORY_AUDIO_PATH_PATTERN, STORY_LIMITS,
+    STORY_MOTION_PATTERN,
+} = await import("../src/lib/storyMaker/limits.ts");
 const { createStarterStoryDocument } = await import("../src/lib/storyMaker/starter.ts");
+const { importWebTypeScript } = await import("./characterization/test-helpers.mjs");
 
 function sample() {
     return {
@@ -126,13 +130,16 @@ test("strings, counts and numbers are capped", () => {
 });
 
 test("asset names are limited to the game's naming", () => {
-    for (const name of ["../secret", "https://evil.example/x", "bg a", ""]) {
+    for (const name of ["../secret", "https://evil.example/x", "bg a"]) {
         const raw = sample();
         raw.steps[0].name = name;
         const result = validateStoryDocument(raw);
         assert.equal(result.ok, false, name);
         assert.equal(result.issues[0].code, "assetNameInvalid");
     }
+    const emptyBg = sample();
+    emptyBg.steps[0].name = "";
+    assert.equal(validateStoryDocument(emptyBg).issues[0].code, "fieldMissing");
     const model = sample();
     model.cast[0].modelId = "V2/../x";
     assert.equal(validateStoryDocument(model).issues[0].code, "modelIdInvalid");
@@ -460,13 +467,17 @@ test("SLOT_X uses authentic game stand positions and appear/move validate and pe
     badType.steps[0].scale = "big";
     assert.equal(validateStoryDocument(badType).issues[0].code, "fieldType");
 
-    // Default background and BGM steps use verified assets that pass strict validation immediately.
+    // Default background, BGM and SE steps use verified assets that pass strict validation immediately.
     const defaultBg = createStep("background", doc);
     assert.equal(defaultBg.name, DEFAULT_STORY_BACKGROUND);
     const defaultBgm = createStep("bgm", doc);
     assert.equal(defaultBgm.action, "play");
     assert.equal(defaultBgm.name, DEFAULT_STORY_BGM);
     assert.equal(defaultBgm.volume, 0.75);
+    const defaultSe = createStep("se", doc);
+    assert.equal(defaultSe.name, DEFAULT_STORY_SE);
+    const seDoc = { ...doc, steps: [...doc.steps, defaultSe] };
+    assert.equal(validateStoryDocument(seDoc).ok, true);
 });
 
 test("useStoryAudio unlocks autoplay-blocked BGM on first user gesture without leaks or restarting", async () => {
@@ -631,5 +642,369 @@ test("useStoryAudio unlocks autoplay-blocked BGM on first user gesture without l
         globalThis.document = prevDocument;
         globalThis.Audio = prevAudio;
         globalThis.IS_REACT_ACT_ENVIRONMENT = prevActEnv;
+    }
+});
+
+test("STORY_MOTION_PATTERN accepts official space-containing facials and rejects leading/trailing spaces", () => {
+    for (const valid of [
+        "face_ worry_01",
+        "face_ serious_01",
+        "face _angry_01",
+        "face_ expressionless_01",
+        "face_ sing_02",
+        "w-cool-normal01",
+        "a",
+        "a".repeat(64),
+    ]) {
+        assert.equal(STORY_MOTION_PATTERN.test(valid), true, `expected valid: ${JSON.stringify(valid)}`);
+        const raw = sample();
+        raw.steps[2].facial = valid;
+        const result = validateStoryDocument(raw);
+        assert.equal(result.ok, true, `validateStoryDocument failed for ${JSON.stringify(valid)}: ${JSON.stringify(result.ok ? [] : result.issues)}`);
+        assert.equal(result.doc.steps[2].facial, valid);
+    }
+
+    for (const invalid of [
+        " face_worry_01",
+        "face_worry_01 ",
+        " ",
+        "   ",
+        "../face_smile_01",
+        "facial/face_smile_01",
+        "a".repeat(65),
+    ]) {
+        assert.equal(STORY_MOTION_PATTERN.test(invalid), false, `expected invalid: ${JSON.stringify(invalid)}`);
+        const raw = sample();
+        raw.steps[2].facial = invalid;
+        const result = validateStoryDocument(raw);
+        assert.equal(result.ok, false, `expected reject for ${JSON.stringify(invalid)}`);
+        assert.equal(result.issues[0].code, "assetNameInvalid");
+    }
+});
+
+test("BGM and SE accept bare IDs, pack paths, and MySEKAI soundtrack paths up to 128 chars", () => {
+    for (const bgmName of [
+        "bgm00020",
+        "bgm00016_01/bgm00016_01_1",
+        "bgm10001/bgm_area_leoneed_untitled",
+        "mysekai/sound/bgm/music0001/music0001",
+        "sound/scenario/bgm/bgm_area00001/bgm_area00001",
+        "a".repeat(STORY_LIMITS.audioPath),
+    ]) {
+        assert.equal(STORY_AUDIO_PATH_PATTERN.test(bgmName), true, bgmName);
+        const raw = sample();
+        raw.steps[1].name = bgmName;
+        const result = validateStoryDocument(raw);
+        assert.equal(result.ok, true, `${bgmName}: ${JSON.stringify(result.ok ? [] : result.issues)}`);
+        assert.equal(result.doc.steps[1].name, bgmName);
+    }
+
+    for (const seName of [
+        DEFAULT_STORY_SE,
+        "se_pack00001/se00056",
+        "se_pack00001_b/se_walk_men_001_1",
+        "se00001_b",
+    ]) {
+        const raw = sample();
+        raw.steps.push({ id: "se1", op: "se", name: seName });
+        const result = validateStoryDocument(raw);
+        assert.equal(result.ok, true, `${seName}: ${JSON.stringify(result.ok ? [] : result.issues)}`);
+        assert.equal(result.doc.steps.at(-1).name, seName);
+    }
+
+    for (const bad of [
+        "../secret",
+        "/bgm00020",
+        "bgm00020/",
+        "se_pack00001_b//se00001_b",
+        "a/b/c/d/e/f",
+        "bgm 00020",
+        "https://evil.example/a.mp3",
+        "a".repeat(STORY_LIMITS.audioPath + 1),
+    ]) {
+        assert.equal(STORY_AUDIO_PATH_PATTERN.test(bad), false, bad);
+        const rawBgm = sample();
+        rawBgm.steps[1].name = bad;
+        assert.equal(validateStoryDocument(rawBgm).issues[0].code, "assetNameInvalid", bad);
+
+        const rawSe = sample();
+        rawSe.steps.push({ id: "se_bad", op: "se", name: bad });
+        assert.equal(validateStoryDocument(rawSe).issues[0].code, "assetNameInvalid", bad);
+    }
+});
+
+test("Checker.pattern emits fieldMissing instead of format errors when required fields are empty strings", () => {
+    const cases = [
+        ["bgm.name", (raw) => { raw.steps[1].name = ""; }, "steps[1].name"],
+        ["se.name", (raw) => { raw.steps.push({ id: "se_empty", op: "se", name: "" }); }, "steps[16].name"],
+        ["appear.cast", (raw) => { raw.steps[2].cast = ""; }, "steps[2].cast"],
+        ["move.cast", (raw) => { raw.steps[5].cast = ""; }, "steps[5].cast"],
+        ["hide.cast", (raw) => { raw.steps[11].cast = ""; }, "steps[11].cast"],
+        ["pose.cast", (raw) => { raw.steps.push({ id: "p_empty", op: "pose", cast: "" }); }, "steps[16].cast"],
+        ["jump.target", (raw) => { raw.steps[9].target = ""; }, "steps[9].target"],
+        ["choice.option.target", (raw) => { raw.steps[6].options[0].target = ""; }, "steps[6].options[0].target"],
+        ["voice.scenarioId", (raw) => { raw.steps[3].voice = { kind: "story", scenarioId: "", voiceId: "v1" }; }, "steps[3].voice.scenarioId"],
+        ["voice.voiceId", (raw) => { raw.steps[3].voice = { kind: "story", scenarioId: "ev1", voiceId: "" }; }, "steps[3].voice.voiceId"],
+        ["cast.modelId", (raw) => { raw.cast[0].modelId = ""; }, "cast[0].modelId"],
+        ["step.id", (raw) => { raw.steps[0].id = ""; }, "steps[0].id"],
+    ];
+    for (const [label, mutate, expectedPath] of cases) {
+        const raw = sample();
+        mutate(raw);
+        const result = validateStoryDocument(raw);
+        assert.equal(result.ok, false, label);
+        const match = result.issues.find(issue => issue.path === expectedPath);
+        assert.ok(match, `${label}: missing issue at ${expectedPath}, got ${JSON.stringify(result.issues)}`);
+        assert.equal(match.code, "fieldMissing", `${label}: expected fieldMissing, got ${match.code}`);
+    }
+});
+
+test("storyMaker assets URL resolution and cached catalogs (SE, BGM/soundtrack, motion clips, voices)", async () => {
+    const masterMock = {
+        fail: false,
+        tracks: [
+            { id: 1, seq: 1, title: "With Gratitude", musicSoundTrackCategoryId: 1, assetbundleName: "sound/scenario/bgm/bgm_area00001", assetbundleFileName: "bgm_area00001" },
+            { id: 101, seq: 10, title: "一緒に歌おう！", pronunciation: "いっしょにうたおう", musicSoundTrackCategoryId: 12, assetbundleName: "mysekai/sound/bgm/music0001", assetbundleFileName: "music0001" },
+            { id: 104, seq: 20, title: "斜陽に照らされて", musicSoundTrackCategoryId: 3, assetbundleName: "sound/scenario/bgm/bgm_area00001", assetbundleFileName: "bgm_area00001" },
+            { id: 121, seq: 30, title: "今、ここにある日常", musicSoundTrackCategoryId: 13, assetbundleName: "sound/scenario/bgm/bgm00018", assetbundleFileName: "bgm00018" },
+        ],
+        categories: [
+            { id: 1, name: "ユニット総合" },
+            { id: 3, name: "レオニ" },
+            { id: 12, name: "マイセカイ" },
+            { id: 13, name: "シナリオ" },
+        ],
+    };
+    globalThis.__testMasterMock = masterMock;
+
+    const assetsMod = await importWebTypeScript("src/lib/storyMaker/assets.ts", [
+        [
+            `import {\n    getAreaTalkVoiceUrl, getAssetBaseUrl, getBackgroundImageUrl, getCardStoryVoiceUrl, getStoryBgmUrl,\n    getStorySoundEffectUrl, getStoryVoiceUrl, type AssetLine,\n} from "@/lib/assets";`,
+            `const getAssetBaseUrl = (s) => (s.startsWith("backup-") ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe") + "/sekai-" + s.slice(s.indexOf("-") + 1) + "-assets";
+const getBackgroundImageUrl = (n, s) => getAssetBaseUrl(s) + "/scenario/background/" + n + "/" + n + ".webp";
+const getStoryBgmUrl = (n, s) => getAssetBaseUrl(s) + "/sound/scenario/bgm/" + n + "/" + n + ".mp3";
+const getStorySoundEffectUrl = (n, s) => getAssetBaseUrl(s) + "/sound/scenario/se/" + n + ".mp3";
+const getStoryVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/scenario/voice/" + sc + "/" + v + ".mp3";
+const getCardStoryVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/card_scenario/voice/" + sc + "/" + v + ".mp3";
+const getAreaTalkVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/actionset/voice/" + sc + "/" + v + ".mp3";`,
+        ],
+        [
+            `import { fetchMasterDataForServer } from "@/lib/fetch";`,
+            `const fetchMasterDataForServer = async (_server, path) => {
+    if (globalThis.__testMasterMock.fail) throw new Error("masterdata down");
+    if (path === "musicSoundTracks.json") return globalThis.__testMasterMock.tracks;
+    if (path === "musicSoundTrackCategories.json") return globalThis.__testMasterMock.categories;
+    return [];
+};`,
+        ],
+        [
+            `import { STORY_ASSET_PATTERN, STORY_AUDIO_PATH_PATTERN } from "./limits";`,
+            `const STORY_ASSET_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;
+const STORY_AUDIO_PATH_PATTERN = /^(?=.{1,128}$)[A-Za-z0-9_-]+(?:\\/[A-Za-z0-9_-]+){0,4}$/;`,
+        ],
+    ]);
+
+    // 1. URL builders (BGM + SE)
+    assert.equal(
+        assetsMod.storyBgmUrl("bgm00020", "jp", "main"),
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00020/bgm00020.mp3",
+    );
+    assert.equal(
+        assetsMod.storyBgmUrl("bgm00016_01/bgm00016_01_1", "jp", "main"),
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00016_01/bgm00016_01_1.mp3",
+    );
+    assert.equal(
+        assetsMod.storyBgmUrl("mysekai/sound/bgm/music0001/music0001", "cn", "backup"),
+        "https://storage.exmeaning.com/sekai-cn-assets/mysekai/sound/bgm/music0001/music0001.mp3",
+    );
+    assert.equal(
+        assetsMod.storySeUrl("se_pack00001_b/se00001_b", "jp", "main"),
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001_b/se00001_b.mp3",
+    );
+    assert.equal(
+        assetsMod.storySeUrl("se_pack00001/se00056", "jp", "main"),
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/se00056.mp3",
+    );
+    assert.deepEqual(assetsMod.storySeCandidateUrls("se_pack00001/se00056", "jp", "main"), [
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/se00056.mp3",
+    ]);
+    // Before catalog is fetched, bare SE name tries se_pack00001_b then se_pack00001.
+    assert.deepEqual(assetsMod.storySeCandidateUrls("se00056", "jp", "main"), [
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001_b/se00056.mp3",
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/se00056.mp3",
+    ]);
+
+    const prevFetch = globalThis.fetch;
+    const requested = [];
+    const routes = {
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001_b/": {
+            format: "directory-listing", version: 1,
+            files: [{ name: "se00001_b.mp3" }, { name: "se00950.mp3" }],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/": {
+            format: "directory-listing", version: 1,
+            files: [{ name: "se00056.mp3" }],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/": {
+            format: "directory-listing", version: 1,
+            directories: ["bgm", "bgm00000", "bgm00016_01", "bgm00018", "bgm00020", "bgm10001", "bgm90001", "bgm90040"],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00016_01/": {
+            format: "directory-listing", version: 1,
+            files: [{ name: "bgm00016_01_1.mp3" }, { name: "bgm00016_01_2.mp3" }],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm10001/": {
+            format: "directory-listing", version: 1,
+            files: [{ name: "bgm_area_leoneed_untitled.mp3" }],
+        },
+        "https://storage.pjsk.moe/sekai-cn-assets/sound/scenario/bgm/": {
+            format: "directory-listing", version: 1,
+            directories: ["bgm00020"],
+        },
+        "https://assets.pjsk.moe/lib/jp/library/live2d/motion/v2_02saki_motion_base/_ripper.json": {
+            crc: 123,
+            files: [
+                { path: "motion/w-cute01-nod.sse-motion.json" },
+                { path: "facial/face_smile_01.sse-motion.json" },
+                { path: "facial/face_ worry_01.sse-motion.json" },
+                { path: "other/ignored.json" },
+            ],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/voice/": {
+            format: "directory-listing", version: 1,
+            directories: ["event_210_01", "bad dir!"],
+        },
+        "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/voice/event_210_01/": {
+            format: "directory-listing", version: 1,
+            files: [{ name: "voice_ev_night_26_01_02_19.mp3" }, { name: "voice_ev_night_26_01_01_19.mp3" }],
+        },
+    };
+    globalThis.fetch = async (url) => {
+        const key = String(url);
+        requested.push(key);
+        const body = routes[key];
+        if (!body) return { ok: false, status: 404, json: async () => ({}) };
+        return { ok: true, status: 200, json: async () => structuredClone(body) };
+    };
+
+    try {
+        // 2. SE catalog populates deterministic <pack>/<file> items AND bare-name pack index.
+        const seItems = await assetsMod.fetchStorySeCatalog("jp", "main");
+        assert.deepEqual(seItems, [
+            { name: "se_pack00001_b/se00001_b", pack: "se_pack00001_b", label: "se00001_b" },
+            { name: "se_pack00001/se00056", pack: "se_pack00001", label: "se00056" },
+            { name: "se_pack00001_b/se00950", pack: "se_pack00001_b", label: "se00950" },
+        ]);
+        // Now bare "se00056" resolves straight to se_pack00001!
+        assert.equal(
+            assetsMod.storySeUrl("se00056", "jp", "main"),
+            "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/se00056.mp3",
+        );
+        assert.equal(
+            assetsMod.storySeCandidateUrls("se00056", "jp", "main")[0],
+            "https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/se/se_pack00001/se00056.mp3",
+        );
+
+        // 3. BGM catalog merges /soundtrack (deduped + MySEKAI) + expanded/unlisted scenario BGMs, skipping silent & stem dirs.
+        const bgm = await assetsMod.fetchStoryBgmCatalog("jp", "main");
+        assert.deepEqual(bgm.categories.map(c => c.id), [3, 12, 13]);
+        assert.deepEqual(bgm.items.map(i => i.name), [
+            "mysekai/sound/bgm/music0001/music0001",
+            "bgm_area00001",
+            "bgm00018",
+            "bgm00016_01/bgm00016_01_1",
+            "bgm00016_01/bgm00016_01_2",
+            "bgm00020",
+            "bgm10001/bgm_area_leoneed_untitled",
+            "bgm90040",
+        ]);
+        const mysekaiTrack = bgm.items.find(i => i.name.startsWith("mysekai/"));
+        assert.equal(mysekaiTrack?.mysekai, true);
+        assert.equal(mysekaiTrack?.title, "一緒に歌おう！");
+        const area1 = bgm.items.find(i => i.name === "bgm_area00001");
+        assert.equal(area1?.title, "斜陽に照らされて");
+        assert.equal(area1?.categoryId, 3);
+        const unlisted = bgm.items.find(i => i.name === "bgm00020");
+        assert.equal(unlisted?.source, "scenario");
+        assert.equal(unlisted?.categoryId, null);
+
+        // Masterdata failure gracefully falls back to scenario directory listing.
+        masterMock.fail = true;
+        const fallbackBgm = await assetsMod.fetchStoryBgmCatalog("cn", "main");
+        assert.deepEqual(fallbackBgm.categories, []);
+        assert.deepEqual(fallbackBgm.items.map(i => i.name), ["bgm00020"]);
+
+        // 4. Live2D _ripper.json clip loader parses motions and space-containing facials sorted.
+        const clips = await assetsMod.fetchMotionBundleClips("https://assets.pjsk.moe/lib/jp/", "live2d/motion/v2_02saki_motion_base");
+        assert.deepEqual(clips, {
+            motions: ["w-cute01-nod"],
+            facials: ["face_ worry_01", "face_smile_01"],
+        });
+
+        // 5. 2-step Voice directory loaders list valid scenarios and voice files and reject invalid scenarioIds.
+        assert.deepEqual(await assetsMod.fetchStoryVoiceScenarios("story", "jp", "main"), ["event_210_01"]);
+        assert.deepEqual(
+            await assetsMod.fetchStoryVoiceFiles("story", "event_210_01", "jp", "main"),
+            ["voice_ev_night_26_01_01_19", "voice_ev_night_26_01_02_19"],
+        );
+        await assert.rejects(() => assetsMod.fetchStoryVoiceFiles("story", "../evil", "jp", "main"));
+    } finally {
+        globalThis.fetch = prevFetch;
+        delete globalThis.__testMasterMock;
+    }
+});
+
+test("isStoryCgBackground classifies CG vs scene backgrounds and fetchStoryBackgrounds caches per region|line", async () => {
+    const clientMod = await importWebTypeScript("src/lib/live2dViewer/client.ts", [
+        [
+            `import { getAssetBaseUrl, type AssetLine } from "@/lib/assets";`,
+            `const getAssetBaseUrl = (s) => "https://storage.pjsk.moe/sekai-" + s.slice(s.indexOf("-") + 1) + "-assets";`,
+        ],
+        [
+            `import { live2dSources, type Live2DRegion } from "./config";`,
+            `const live2dSources = (r) => ({ library: "", index: "https://assets.pjsk.moe/" + r + "/models.json" });`,
+        ],
+        [
+            `import { parseLive2DModelIndex, type Live2DModel } from "./models";`,
+            `const parseLive2DModelIndex = (v) => v;`,
+        ],
+    ]);
+
+    for (const cg of ["bg_a000001", "bg_a000099", "bg_s000001", "bg_s000569"]) {
+        assert.equal(clientMod.isStoryCgBackground(cg), true, cg);
+    }
+    for (const scene of ["bg_a000000", "bg_a000100", "bg_a000401", "bg_b000101", "bg_white", "bg00026"]) {
+        assert.equal(clientMod.isStoryCgBackground(scene), false, scene);
+    }
+
+    const prevFetch = globalThis.fetch;
+    let calls = 0;
+    let failFirst = true;
+    globalThis.fetch = async () => {
+        calls += 1;
+        if (failFirst) {
+            failFirst = false;
+            return { ok: false, status: 503, json: async () => ({}) };
+        }
+        return {
+            ok: true, status: 200,
+            json: async () => ({
+                format: "directory-listing",
+                version: 1,
+                directories: ["background", "bg_a000001", "bg_a000401", "livetalk_default"],
+            }),
+        };
+    };
+
+    try {
+        // Rejection evicts cache so retry works.
+        await assert.rejects(() => clientMod.fetchStoryBackgrounds("jp", "main"));
+        const first = await clientMod.fetchStoryBackgrounds("jp", "main");
+        const second = await clientMod.fetchStoryBackgrounds("jp", "main");
+        assert.deepEqual(first, ["bg_a000001", "bg_a000401"]);
+        assert.deepEqual(second, first);
+        assert.equal(calls, 2, "cached region|line must not re-fetch on second call");
+    } finally {
+        globalThis.fetch = prevFetch;
     }
 });

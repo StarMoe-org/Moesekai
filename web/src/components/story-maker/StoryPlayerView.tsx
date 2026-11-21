@@ -12,7 +12,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import type { AssetLine } from "@/lib/assets";
 import { live2dSources } from "@/lib/live2dViewer/config";
 import { md3EffectsFast, reducedMotionFade } from "@/lib/motion";
-import { storyBgmUrl, storySeUrl, storyVoiceUrl } from "@/lib/storyMaker/assets";
+import { storyBgmUrl, storySeCandidateUrls, storyVoiceUrl } from "@/lib/storyMaker/assets";
 import { speakerName } from "@/lib/storyMaker/document";
 import { STORY_FADE_SECONDS } from "@/lib/storyMaker/limits";
 import { advance, labelIndices, runFrom, type PlaybackRun } from "@/lib/storyMaker/playback";
@@ -243,7 +243,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                     syncBgm(state.bgm.name ? storyBgmUrl(state.bgm.name, doc.region, line) : null, state.bgm.volume);
                     break;
                 case "se":
-                    if (step.name) playSe(storySeUrl(step.name, doc.region, line));
+                    if (step.name) playSe(storySeCandidateUrls(step.name, doc.region, line));
                     break;
                 case "talk": {
                     void applyStage(state, { instant: false });
