@@ -24,16 +24,16 @@ scene scene_classroom "放学后的教室" @pos(368, 176) {
   place set "宫益坂女子学园 教室"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at right scale=1 facial="face_sparkling_01"
   ]
   cue se "se_pack00001/se00005" vol=0.65
   telop "放学后的星光副歌"
   talk ichika "下课铃响了呢。咲希，你从午休开始就一直盯着笔记本笑，是不是想到新歌的副歌了？" motion="w-normal01-tilthead" facial="face_smile_01" react(saki motion="w-cute01-glad" facial="face_sparkling_01")
   talk saki "欸嘿嘿，被一歌发现了！其实昨晚练习键盘的时候，脑海里突然蹦出一段超闪亮的旋律——你听听看！" motion="w-normal01-pose" facial="face_wink_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") se="se_pack00001/se00124" seVol=0.8
   cue se "se_pack00001/se00046" vol=0.75
-  stage enter honami at farLeft scale=1.05 motion="w-normal01-nod" facial="face_smile_01"
-  stage enter shiho at farRight scale=1.05 motion="w-cool06-nod" facial="face_normal_01"
+  stage enter honami at farLeft scale=1 motion="w-normal01-nod" facial="face_smile_01"
+  stage enter shiho at farRight scale=1 motion="w-cool06-nod" facial="face_normal_01"
   talk honami "大家辛苦了！刚才在走廊就听见很温柔的琴声了，是咲希的新灵感吗？" motion="w-adult01-tilthead" facial="face_smile_02" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_01")
   talk shiho "离下周的演出只剩几天了，副歌衔接还差临门一脚。既然大家都在，今天放学后先去哪边整理灵感？" motion="w-cool02-pose" facial="face_normal_01" react(honami motion="w-normal01-nod" facial="face_smile_01") react(ichika motion="w-adult01-think" facial="face_normal_01")
 } -> choice_afterschool
@@ -49,10 +49,10 @@ scene scene_studio "排练室即兴合奏" @pos(1152, 0) {
   place set "排练工作室"
   transition fadeBlack 0.5
   cast set [
-    honami at farLeft scale=1.05 facial="face_smile_01"
-    ichika at left scale=1.05 facial="face_purpose_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
-    shiho at farRight scale=1.05 facial="face_sharp_01"
+    honami at farLeft scale=1 facial="face_smile_01"
+    ichika at left scale=1 facial="face_purpose_01"
+    saki at right scale=1 facial="face_sparkling_01"
+    shiho at farRight scale=1 facial="face_sharp_01"
   ]
   talk saki "好——乐器全员就位！穗波起拍，我们直接把刚想到的过渡段合一遍吧！三、二、一！" motion="w-happy11-guts" facial="face_sparkling_01" react(honami motion="w-normal01-nod" facial="face_smile_02") react(shiho motion="w-cool02-guts" facial="face_sharp_01")
   cue se "se_pack00001/se00123" vol=0.8
@@ -72,10 +72,10 @@ scene scene_cafe "咖啡馆的歌词时间" @pos(1152, 448) {
   place set "街角咖啡馆"
   transition fadeBlack 0.5
   cast set [
-    ichika at farLeft scale=1.05 facial="face_smile_01"
-    honami at left scale=1.05 facial="face_sparkling_01"
-    saki at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_normal_01"
+    ichika at farLeft scale=1 facial="face_smile_01"
+    honami at left scale=1 facial="face_sparkling_01"
+    saki at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_normal_01"
   ]
   talk honami "哇，今天正好赶上刚出炉的肉桂苹果派……谢谢大家陪我顺路过来，光是闻到香气就觉得干劲满满了！" motion="w-cute01-glad" facial="face_sparkling_01" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_02")
   talk saki "欸嘿嘿，志步嘴上说着随便，刚才不是也盯着限定莓果苏打看了好久吗？来嘛来嘛，放松一下灵感才会上门！" motion="w-cute14-smug" facial="face_wink_01" react(shiho motion="w-cool13-sigh" facial="face_shy_01")
@@ -94,13 +94,13 @@ scene scene_rooftop "夕阳下的天台" @pos(1568, 192) {
   place set "宫益坂女子学园 天台"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at center scale=1.05 facial="face_smile_02"
-    honami at right scale=1.05 facial="face_smile_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at center scale=1 facial="face_smile_02"
+    honami at right scale=1 facial="face_smile_01"
   ]
   cue se "se_pack00001/se00064" vol=0.7
   talk saki "呼——天台的风好舒服！橘红色的晚霞把整座城市都染得暖洋洋的，感觉就像演出开场前的灯光一样！" motion="w-happy14-glad" facial="face_sparkling_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") react(honami facial="face_smile_02")
-  stage enter shiho at farRight scale=1.05 motion="w-cool02-pose" facial="face_normal_01"
+  stage enter shiho at farRight scale=1 motion="w-cool02-pose" facial="face_normal_01"
   stage move ichika to farLeft dur=0.45
   stage move saki to left dur=0.45
   stage move honami to right dur=0.45
@@ -134,10 +134,10 @@ scene scene_sekai_encore "教室的SEKAI·星光安可" @pos(2784, 0) {
   place set "教室的SEKAI 星光天台"
   transition fadeWhite 0.6
   cast set [
-    ichika at farLeft scale=1.05 facial="face_sparkling_01"
-    saki at left scale=1.05 facial="face_sparkling_01"
-    honami at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_bright_01"
+    ichika at farLeft scale=1 facial="face_sparkling_01"
+    saki at left scale=1 facial="face_sparkling_01"
+    honami at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_bright_01"
   ]
   cue se "se_pack00001/se00091" vol=0.8
   telop "教室的SEKAI — 星光安可"

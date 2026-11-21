@@ -17,7 +17,7 @@ import assert from "node:assert/strict";
 const { STORY_ISSUE_CODES, STORY_SCHEMA_VERSION } = await import("../src/types/storyMaker.ts");
 const {
     DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE, SLOT_X, STORY_AUDIO_PATH_PATTERN,
-    STORY_LIMITS, STORY_MOTION_PATTERN,
+    STORY_LIMITS, STORY_MOTION_PATTERN, detectStageActorOverlaps, layoutStageActors,
 } = await import("../src/lib/storyMaker/limits.ts");
 const {
     STORY_DRAG_MIME, STORY_BEAT_DRAG_MIME, GRAPH_COL_GAP, GRAPH_ROW_GAP,
@@ -589,8 +589,10 @@ test("runtime VM executes both branches of starter story, mutates counters, eval
     assert.equal(a1.variables.affection, 1);
     assert.equal(a1.stage.background, DEFAULT_STORY_BACKGROUND); // inherited!
     assert.equal(a1.stage.bgm.name, DEFAULT_STORY_BGM); // inherited without restarting!
-    assert.equal(a1.stage.actors.find(a => a.cast === "ichika")?.slot, "center");
-    assert.equal(a1.stage.actors.find(a => a.cast === "ichika")?.x, SLOT_X.center);
+    const a1Ichika = a1.stage.actors.find(a => a.cast === "ichika");
+    const a1Saki = a1.stage.actors.find(a => a.cast === "saki");
+    assert.equal(a1Ichika?.slot, "center");
+    assert.ok(a1Ichika && a1Saki && a1Saki.x - a1Ichika.x >= 0.45, "anti-overlap layout keeps center+right separated");
 
     const a2 = advanceRuntime(program, a1); // narration
     assert.equal(a2.beatId, "scene_practice_b3");
@@ -1036,14 +1038,99 @@ const storyVoiceCandidateUrls = (v, r) => ["https://storage.pjsk.moe/sekai-" + (
 
 // ==================== 7. Retained Engine & Catalog Tests ====================
 
-test("SLOT_X uses authentic Project SEKAI stand coordinates", () => {
+test("SLOT_X and layoutStageActors use balanced, non-overlapping Project SEKAI stand coordinates", () => {
     assert.deepEqual(SLOT_X, {
-        farLeft: -0.62,
+        farLeft: -0.75,
         left: -0.365,
         center: 0,
         right: 0.365,
-        farRight: 0.62,
+        farRight: 0.75,
     });
+
+    // 2 actors (left + right): official SIDE_X_DEFAULT ±0.365
+    const duo = layoutStageActors([
+        { cast: "a", slot: "left", x: 0, scale: 1 },
+        { cast: "b", slot: "right", x: 0, scale: 1 },
+    ]);
+    assert.deepEqual(duo.map(a => a.x), [-0.365, 0.365]);
+
+    // 3 actors (left + center + right): official SIDE_X_THREE ±0.573 & 0
+    const trio = layoutStageActors([
+        { cast: "a", slot: "left", x: 0, scale: 1 },
+        { cast: "b", slot: "center", x: 0, scale: 1 },
+        { cast: "c", slot: "right", x: 0, scale: 1 },
+    ]);
+    assert.deepEqual(trio.map(a => a.x), [-0.573, 0, 0.573]);
+
+    // 4 actors (farLeft + left + right + farRight): uniform 0.50 spacing, zero overlap
+    const quartet = layoutStageActors([
+        { cast: "a", slot: "farLeft", x: 0, scale: 1 },
+        { cast: "b", slot: "left", x: 0, scale: 1 },
+        { cast: "c", slot: "right", x: 0, scale: 1 },
+        { cast: "d", slot: "farRight", x: 0, scale: 1 },
+    ]);
+    assert.deepEqual(quartet.map(a => a.x), [-0.75, -0.25, 0.25, 0.75]);
+    assert.deepEqual(detectStageActorOverlaps(quartet), { duplicateSlots: [], overlaps: [] });
+
+    // 5 actors: uniform 0.40 spacing, zero overlap at scale=1
+    const quintet = layoutStageActors([
+        { cast: "a", slot: "farLeft", x: 0, scale: 1 },
+        { cast: "b", slot: "left", x: 0, scale: 1 },
+        { cast: "c", slot: "center", x: 0, scale: 1 },
+        { cast: "d", slot: "right", x: 0, scale: 1 },
+        { cast: "e", slot: "farRight", x: 0, scale: 1 },
+    ]);
+    assert.deepEqual(quintet.map(a => a.x), [-0.8, -0.4, 0, 0.4, 0.8]);
+    assert.deepEqual(detectStageActorOverlaps(quintet), { duplicateSlots: [], overlaps: [] });
+
+    // Asymmetric 4-actor lineup (left + center + right + farRight): stays well separated
+    const asym4 = layoutStageActors([
+        { cast: "a", slot: "left", x: 0, scale: 1 },
+        { cast: "b", slot: "center", x: 0, scale: 1 },
+        { cast: "c", slot: "right", x: 0, scale: 1 },
+        { cast: "d", slot: "farRight", x: 0, scale: 1 },
+    ]);
+    for (let i = 0; i < asym4.length - 1; i += 1) {
+        assert.ok(asym4[i + 1].x - asym4[i].x >= 0.47, `expected gap >= 0.47, got ${asym4[i + 1].x - asym4[i].x}`);
+    }
+    assert.deepEqual(detectStageActorOverlaps(asym4), { duplicateSlots: [], overlaps: [] });
+
+    // Duplicate slots: PAV still separates visually while audit reports duplicateSlots
+    const dupSlot = layoutStageActors([
+        { cast: "a", slot: "center", x: 0, scale: 1 },
+        { cast: "b", slot: "center", x: 0, scale: 1 },
+    ]);
+    assert.ok(dupSlot[1].x - dupSlot[0].x >= 0.47);
+    const dupAudit = detectStageActorOverlaps(dupSlot);
+    assert.equal(dupAudit.duplicateSlots.length, 1);
+    assert.equal(dupAudit.duplicateSlots[0].slot, "center");
+
+    // Compiler emits stageSlotDuplicate & stageActorOverlap warnings on colliding/overscaled scenes
+    const warnScript = `@story "Overlap Warn" region=jp id="overlap_warn"
+@cast ichika "Ichika" model="v2_01ichika_casual"
+@cast saki "Saki" model="v2_02saki_casual"
+@cast honami "Honami" model="v2_03honami_casual"
+@cast shiho "Shiho" model="v2_04shiho_casual"
+start -> s1
+scene s1 "Crowded" {
+  cast set [
+    ichika at farLeft scale=1.4
+    saki at left scale=1.4
+    honami at right scale=1.4
+    shiho at farRight scale=1.4
+  ]
+  talk ichika "Big!"
+  stage move saki to farLeft dur=0.3
+  talk saki "Same slot!"
+} -> e1
+end e1 "Fin"
+`;
+    const parsedWarn = parseStoryScript(warnScript);
+    assert.equal(parsedWarn.ok, true);
+    const compiledWarn = compileStoryGraph(parsedWarn.doc);
+    assert.equal(compiledWarn.ok, true);
+    assert.ok(compiledWarn.warnings.some(w => w.code === "stageActorOverlap"), "expected stageActorOverlap warning");
+    assert.ok(compiledWarn.warnings.some(w => w.code === "stageSlotDuplicate"), "expected stageSlotDuplicate warning");
 });
 
 test("extractWaveformPeaks normalizes stereo buffers and decodeStoryAudio caches LRU hits with fallback", async () => {

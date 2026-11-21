@@ -391,7 +391,7 @@ export const STORY_ISSUE_CODES = [
     "actorDuplicate", "actorLimitExceeded",
     "variableNotFound", "variableTypeMismatch", "templateVarMissing", "conditionInvalid",
     "endingMissing", "sceneEmptyBeats", "choiceOptionEmpty", "cycleDetected",
-    "mergeNodeInheritAmbiguous",
+    "mergeNodeInheritAmbiguous", "stageSlotDuplicate", "stageActorOverlap",
 ] as const;
 
 export type StoryIssueCode = (typeof STORY_ISSUE_CODES)[number];

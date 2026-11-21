@@ -24,16 +24,16 @@ scene scene_classroom "After-School Classroom" @pos(368, 176) {
   place set "Miyamasuzaka Girls Academy - Classroom"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at right scale=1 facial="face_sparkling_01"
   ]
   cue se "se_pack00001/se00005" vol=0.65
   telop "After-School Starlight Chorus"
   talk ichika "There's the bell. Saki, you've been grinning at your notebook since lunch—did you come up with a new chorus?" motion="w-normal01-tilthead" facial="face_smile_01" react(saki motion="w-cute01-glad" facial="face_sparkling_01")
   talk saki "Hehe, you caught me! Last night at my keyboard, this super sparkly melody just popped into my head—here, take a listen!" motion="w-normal01-pose" facial="face_wink_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") se="se_pack00001/se00124" seVol=0.8
   cue se "se_pack00001/se00046" vol=0.75
-  stage enter honami at farLeft scale=1.05 motion="w-normal01-nod" facial="face_smile_01"
-  stage enter shiho at farRight scale=1.05 motion="w-cool06-nod" facial="face_normal_01"
+  stage enter honami at farLeft scale=1 motion="w-normal01-nod" facial="face_smile_01"
+  stage enter shiho at farRight scale=1 motion="w-cool06-nod" facial="face_normal_01"
   talk honami "Good work today, you two! I could hear such a gentle melody from the hallway—is that a new phrase, Saki?" motion="w-adult01-tilthead" facial="face_smile_02" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_01")
   talk shiho "Our live show is next week, and the chorus transition still needs one final spark. Since we're all here, where should we start?" motion="w-cool02-pose" facial="face_normal_01" react(honami motion="w-normal01-nod" facial="face_smile_01") react(ichika motion="w-adult01-think" facial="face_normal_01")
 } -> choice_afterschool
@@ -49,10 +49,10 @@ scene scene_studio "Studio Jam Session" @pos(1152, 0) {
   place set "Rehearsal Studio"
   transition fadeBlack 0.5
   cast set [
-    honami at farLeft scale=1.05 facial="face_smile_01"
-    ichika at left scale=1.05 facial="face_purpose_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
-    shiho at farRight scale=1.05 facial="face_sharp_01"
+    honami at farLeft scale=1 facial="face_smile_01"
+    ichika at left scale=1 facial="face_purpose_01"
+    saki at right scale=1 facial="face_sparkling_01"
+    shiho at farRight scale=1 facial="face_sharp_01"
   ]
   talk saki "Alright, instruments ready! Count us in, Honami—let's run that bridge together right now! Three, two, one!" motion="w-happy11-guts" facial="face_sparkling_01" react(honami motion="w-normal01-nod" facial="face_smile_02") react(shiho motion="w-cool02-guts" facial="face_sharp_01")
   cue se "se_pack00001/se00123" vol=0.8
@@ -72,10 +72,10 @@ scene scene_cafe "Cafe Lyric Break" @pos(1152, 448) {
   place set "Corner Cafe"
   transition fadeBlack 0.5
   cast set [
-    ichika at farLeft scale=1.05 facial="face_smile_01"
-    honami at left scale=1.05 facial="face_sparkling_01"
-    saki at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_normal_01"
+    ichika at farLeft scale=1 facial="face_smile_01"
+    honami at left scale=1 facial="face_sparkling_01"
+    saki at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_normal_01"
   ]
   talk honami "Oh, they just pulled fresh cinnamon apple pies from the oven! Thank you all for coming—just the aroma gives me a boost of energy." motion="w-cute01-glad" facial="face_sparkling_01" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_02")
   talk saki "Hehe, Shiho acted so chill, yet I totally saw you eyeing the seasonal berry soda! Come on, great ideas love a good snack break!" motion="w-cute14-smug" facial="face_wink_01" react(shiho motion="w-cool13-sigh" facial="face_shy_01")
@@ -94,13 +94,13 @@ scene scene_rooftop "Sunset on the Rooftop" @pos(1568, 192) {
   place set "Miyamasuzaka Girls Academy - Rooftop"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at center scale=1.05 facial="face_smile_02"
-    honami at right scale=1.05 facial="face_smile_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at center scale=1 facial="face_smile_02"
+    honami at right scale=1 facial="face_smile_01"
   ]
   cue se "se_pack00001/se00064" vol=0.7
   talk saki "Whew, this breeze feels amazing! The whole skyline is glowing gold—it looks just like stage lights right before a show!" motion="w-happy14-glad" facial="face_sparkling_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") react(honami facial="face_smile_02")
-  stage enter shiho at farRight scale=1.05 motion="w-cool02-pose" facial="face_normal_01"
+  stage enter shiho at farRight scale=1 motion="w-cool02-pose" facial="face_normal_01"
   stage move ichika to farLeft dur=0.45
   stage move saki to left dur=0.45
   stage move honami to right dur=0.45
@@ -134,10 +134,10 @@ scene scene_sekai_encore "School SEKAI - Starlight Encore" @pos(2784, 0) {
   place set "School SEKAI - Starry Rooftop"
   transition fadeWhite 0.6
   cast set [
-    ichika at farLeft scale=1.05 facial="face_sparkling_01"
-    saki at left scale=1.05 facial="face_sparkling_01"
-    honami at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_bright_01"
+    ichika at farLeft scale=1 facial="face_sparkling_01"
+    saki at left scale=1 facial="face_sparkling_01"
+    honami at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_bright_01"
   ]
   cue se "se_pack00001/se00091" vol=0.8
   telop "School SEKAI — Starlight Encore"

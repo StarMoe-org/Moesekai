@@ -24,16 +24,16 @@ scene scene_classroom "放課後の教室" @pos(368, 176) {
   place set "宮益坂女子学園 教室"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at right scale=1 facial="face_sparkling_01"
   ]
   cue se "se_pack00001/se00005" vol=0.65
   telop "放課後の星屑コーラス"
   talk ichika "チャイム鳴ったね。咲希、お昼休みからずっとノート見て嬉しそうだったけど、新しいサビでも思いついた？" motion="w-normal01-tilthead" facial="face_smile_01" react(saki motion="w-cute01-glad" facial="face_sparkling_01")
   talk saki "えへへ、一ちゃんにはお見通しだったかぁ！昨日の夜キーボード触ってたら、キラキラしたフレーズが浮かんじゃって――ほら、聴いて聴いて！" motion="w-normal01-pose" facial="face_wink_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") se="se_pack00001/se00124" seVol=0.8
   cue se "se_pack00001/se00046" vol=0.75
-  stage enter honami at farLeft scale=1.05 motion="w-normal01-nod" facial="face_smile_01"
-  stage enter shiho at farRight scale=1.05 motion="w-cool06-nod" facial="face_normal_01"
+  stage enter honami at farLeft scale=1 motion="w-normal01-nod" facial="face_smile_01"
+  stage enter shiho at farRight scale=1 motion="w-cool06-nod" facial="face_normal_01"
   talk honami "ふたりともお疲れさま！廊下まですごく優しいメロディが聴こえてきたけど、咲希ちゃんの新曲アイデアかな？" motion="w-adult01-tilthead" facial="face_smile_02" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_01")
   talk shiho "来週のライブまで時間もないし、サビ前のつなぎがまだ決まってない。せっかく４人揃ったんだ、今日はどこから始める？" motion="w-cool02-pose" facial="face_normal_01" react(honami motion="w-normal01-nod" facial="face_smile_01") react(ichika motion="w-adult01-think" facial="face_normal_01")
 } -> choice_afterschool
@@ -49,10 +49,10 @@ scene scene_studio "スタジオ即興セッション" @pos(1152, 0) {
   place set "レッスンスタジオ"
   transition fadeBlack 0.5
   cast set [
-    honami at farLeft scale=1.05 facial="face_smile_01"
-    ichika at left scale=1.05 facial="face_purpose_01"
-    saki at right scale=1.05 facial="face_sparkling_01"
-    shiho at farRight scale=1.05 facial="face_sharp_01"
+    honami at farLeft scale=1 facial="face_smile_01"
+    ichika at left scale=1 facial="face_purpose_01"
+    saki at right scale=1 facial="face_sparkling_01"
+    shiho at farRight scale=1 facial="face_sharp_01"
   ]
   talk saki "よーし、セッティング完了！穂波ちゃんカウントお願い！サビ前のつなぎ、思いっきり合わせよっか！せーのっ！" motion="w-happy11-guts" facial="face_sparkling_01" react(honami motion="w-normal01-nod" facial="face_smile_02") react(shiho motion="w-cool02-guts" facial="face_sharp_01")
   cue se "se_pack00001/se00123" vol=0.8
@@ -72,10 +72,10 @@ scene scene_cafe "カフェで歌詞づくり" @pos(1152, 448) {
   place set "街角のカフェ"
   transition fadeBlack 0.5
   cast set [
-    ichika at farLeft scale=1.05 facial="face_smile_01"
-    honami at left scale=1.05 facial="face_sparkling_01"
-    saki at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_normal_01"
+    ichika at farLeft scale=1 facial="face_smile_01"
+    honami at left scale=1 facial="face_sparkling_01"
+    saki at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_normal_01"
   ]
   talk honami "わぁ、ちょうど焼きたてのシナモンアップルパイがあるみたい……みんな付き合ってくれてありがとう！甘い香りだけで元気が出てきちゃう。" motion="w-cute01-glad" facial="face_sparkling_01" react(saki motion="w-normal01-glad" facial="face_smile_03") react(ichika facial="face_smile_02")
   talk saki "えへへ、志歩ちゃんもクールな顔して限定のベリーソーダ気になってたでしょ？ほらほら、たまには息抜きも大事なんだから！" motion="w-cute14-smug" facial="face_wink_01" react(shiho motion="w-cool13-sigh" facial="face_shy_01")
@@ -94,13 +94,13 @@ scene scene_rooftop "夕焼けの屋上" @pos(1568, 192) {
   place set "宮益坂女子学園 屋上"
   transition fadeBlack 0.5
   cast set [
-    ichika at left scale=1.05 facial="face_smile_01"
-    saki at center scale=1.05 facial="face_smile_02"
-    honami at right scale=1.05 facial="face_smile_01"
+    ichika at left scale=1 facial="face_smile_01"
+    saki at center scale=1 facial="face_smile_02"
+    honami at right scale=1 facial="face_smile_01"
   ]
   cue se "se_pack00001/se00064" vol=0.7
   talk saki "ふぁーっ、夕方の風きもちいい！オレンジ色の空が街ぜんぶを照らしてて、なんだかライブ開演前の照明みたいだね！" motion="w-happy14-glad" facial="face_sparkling_01" react(ichika motion="w-normal01-nod" facial="face_smile_02") react(honami facial="face_smile_02")
-  stage enter shiho at farRight scale=1.05 motion="w-cool02-pose" facial="face_normal_01"
+  stage enter shiho at farRight scale=1 motion="w-cool02-pose" facial="face_normal_01"
   stage move ichika to farLeft dur=0.45
   stage move saki to left dur=0.45
   stage move honami to right dur=0.45
@@ -134,10 +134,10 @@ scene scene_sekai_encore "教室のセカイ・星屑アンコール" @pos(2784,
   place set "教室のセカイ 星空の屋上"
   transition fadeWhite 0.6
   cast set [
-    ichika at farLeft scale=1.05 facial="face_sparkling_01"
-    saki at left scale=1.05 facial="face_sparkling_01"
-    honami at right scale=1.05 facial="face_smile_02"
-    shiho at farRight scale=1.05 facial="face_bright_01"
+    ichika at farLeft scale=1 facial="face_sparkling_01"
+    saki at left scale=1 facial="face_sparkling_01"
+    honami at right scale=1 facial="face_smile_02"
+    shiho at farRight scale=1 facial="face_bright_01"
   ]
   cue se "se_pack00001/se00091" vol=0.8
   telop "教室のセカイ ―― 星屑アンコール"

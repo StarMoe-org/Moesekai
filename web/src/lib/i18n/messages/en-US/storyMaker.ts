@@ -384,6 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "Choice option text cannot be empty.",
         cycleDetected: "Non-blocking cycle detected; playback may halt to prevent an infinite loop.",
         mergeNodeInheritAmbiguous: "This node merges {count} branches while stage slots ({slots}) use Inherit, which may be ambiguous. Declare them explicitly.",
+        stageSlotDuplicate: "Multiple actors ({actors}) share the same slot \"{slot}\". Assign distinct slots to avoid overlap.",
+        stageActorOverlap: "Actors ({actors}) spacing ({gap}) is tighter than the safe width ({minGap}) at their current scale; reduce scale or on-stage count.",
     },
     flow: {
         viewModeStudio: "Studio",

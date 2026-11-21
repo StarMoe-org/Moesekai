@@ -384,6 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "選項文案不可為空。",
         cycleDetected: "偵測到無停頓循環，播放時可能會觸發無窮迴圈保護。",
         mergeNodeInheritAmbiguous: "此節點有 {count} 條分支匯合，但舞台槽位（{slots}）設為「沿用上一幕」，可能產生狀態歧義，建議明確宣告。",
+        stageSlotDuplicate: "多名角色（{actors}）被安排在同一站位「{slot}」，請錯開站位以避免重疊。",
+        stageActorOverlap: "角色（{actors}）站位間距（{gap}）小於目前縮放下的安全間距（{minGap}），可能重疊，建議調小縮放或減少同屏人數。",
     },
     flow: {
         viewModeStudio: "工作台",

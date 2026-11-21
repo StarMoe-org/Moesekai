@@ -25,6 +25,7 @@ import process from "node:process";
 import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN } from "../../../../web/src/lib/assetDomains.ts";
 import { live2dSources } from "../../../../web/src/lib/live2dViewer/config.ts";
 import { compileStoryGraph } from "../../../../web/src/lib/storyMaker/compiler.ts";
+import { detectStageActorOverlaps } from "../../../../web/src/lib/storyMaker/limits.ts";
 import { advanceRuntime, createInitialRuntime } from "../../../../web/src/lib/storyMaker/runtime.ts";
 import { parseStoryScript } from "../../../../web/src/lib/storyMaker/script.ts";
 import { STORY_REGIONS } from "../../../../web/src/types/storyMaker.ts";
@@ -528,9 +529,38 @@ function simulateAllBranches(program, maxPaths) {
     const paths = [];
     const reachedEndingsSet = new Set();
     const offStageTalkMap = new Map();
+    const stageOverlapMap = new Map();
     let truncated = false;
 
-    const recordOffStageIfNeeded = (frame) => {
+    const recordFrameAudits = (frame) => {
+        if (frame.nodeId && frame.stage.actors.length >= 2) {
+            const audit = detectStageActorOverlaps(frame.stage.actors);
+            for (const dup of audit.duplicateSlots) {
+                const key = `dup:${frame.nodeId}:${frame.beatId ?? ""}:${dup.slot}:${dup.actors.join(",")}`;
+                if (!stageOverlapMap.has(key)) {
+                    stageOverlapMap.set(key, {
+                        kind: "duplicateSlot",
+                        nodeId: frame.nodeId,
+                        beatId: frame.beatId,
+                        slot: dup.slot,
+                        actors: dup.actors,
+                    });
+                }
+            }
+            for (const ov of audit.overlaps) {
+                const key = `ov:${frame.nodeId}:${frame.beatId ?? ""}:${ov.leftActor}:${ov.rightActor}`;
+                if (!stageOverlapMap.has(key)) {
+                    stageOverlapMap.set(key, {
+                        kind: "overlap",
+                        nodeId: frame.nodeId,
+                        beatId: frame.beatId,
+                        actors: [ov.leftActor, ov.rightActor],
+                        gap: ov.gap,
+                        minGap: ov.minGap,
+                    });
+                }
+            }
+        }
         if (frame.stoppedReason !== "blocking" || !frame.nodeId || !frame.beatId) return;
         const inst = program.instructions[frame.pc];
         if (inst?.op === "talk" && inst.beat.speakerKey && frame.stage.speaking === null) {
@@ -563,7 +593,7 @@ function simulateAllBranches(program, maxPaths) {
         let beatCount = entry.beatCount;
         let stepsInSegment = 0;
 
-        recordOffStageIfNeeded(cur);
+        recordFrameAudits(cur);
 
         while (cur.stoppedReason === "blocking") {
             if (stepsInSegment >= MAX_BLOCKING_STEPS_PER_PATH) {
@@ -582,9 +612,9 @@ function simulateAllBranches(program, maxPaths) {
             }
             cur = advanceRuntime(program, cur);
             stepsInSegment += 1;
+            recordFrameAudits(cur);
             if (cur.stoppedReason === "blocking") {
                 beatCount += 1;
-                recordOffStageIfNeeded(cur);
             }
         }
 
@@ -668,6 +698,7 @@ function simulateAllBranches(program, maxPaths) {
         loopPaths,
         deadlockPaths,
         offStageTalks: [...offStageTalkMap.values()],
+        stageOverlaps: [...stageOverlapMap.values()],
         paths,
     };
 }
@@ -775,6 +806,17 @@ function printHumanReport(report, strictMode = false) {
                 console.log(`  - ${item.nodeId}/${item.beatId}: speakerKey="${item.speakerKey}"`);
             }
         }
+        if (sim.stageOverlaps && sim.stageOverlaps.length > 0) {
+            console.log(`Stage placement warnings (${sim.stageOverlaps.length} frame(s) with duplicate slots or tight spacing):`);
+            for (const item of sim.stageOverlaps) {
+                const loc = item.beatId ? `${item.nodeId}/${item.beatId}` : item.nodeId;
+                if (item.kind === "duplicateSlot") {
+                    console.log(`  - ${loc}: duplicate slot "${item.slot}" shared by [${item.actors.join(", ")}]`);
+                } else {
+                    console.log(`  - ${loc}: tight spacing between [${item.actors.join(", ")}] (gap=${item.gap}, minSafe=${item.minGap})`);
+                }
+            }
+        }
     }
 
     if (report.assets) {
@@ -880,7 +922,8 @@ async function main() {
         : undefined;
 
     const ok = program.ok && (assetVerification ? assetVerification.ok : true);
-    const strictOk = ok && program.warnings.length === 0;
+    const hasSimOverlaps = Boolean(simulation && !simulation.skipped && simulation.stageOverlaps?.length > 0);
+    const strictOk = ok && program.warnings.length === 0 && !hasSimOverlaps;
 
     const report = {
         file: opts.file,

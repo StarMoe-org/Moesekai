@@ -233,11 +233,27 @@ end <nodeId> ["<title>"] [subtitle="<subtitle>"] [@pos(x, y)]
 | Code | Cause | How to Resolve |
 | --- | --- | --- |
 | **`mergeNodeInheritAmbiguous`** | A `scene` node has **2 or more incoming edges (`inDegree >= 2`)** AND uses `inherit` on any of `background`, `bgm`, `place`, or `stageCast`. Depending on which branch the player took, the inherited stage state could differ ambiguously (and static single-node preview in the editor picks the shortest BFS path by edge order). | **Explicitly declare all 4 stage slots on merge scenes**: `bg set "..."` (or `clear`), `bgm play "..."` (or `stop`), `place set "..."` (or `hide`), and `cast set [...]` (or `clear`). Or merge into a `condition` / `choice` / `end` node instead of an `inherit` scene. |
+| **`stageSlotDuplicate`** | Two or more actors occupy the **same semantic slot** (e.g., both on `center`, or `stage enter`/`stage move` lands on a slot already held by another character). | Assign distinct slots (`farLeft`, `left`, `center`, `right`, `farRight`), or move/exit the occupying actor first. |
+| **`stageActorOverlap`** | Adjacent actors' resolved horizontal spacing (`gap`) is narrower than their combined safe visual envelope (`0.195 × (scale_a + scale_b)`) — typically caused by scaling up too many simultaneous actors (e.g. 4 actors at `scale >= 1.3` or 5 actors at `scale > 1.0`). | Keep `scale` at `1` (true 1:1 in-game size) for multi-actor scenes, reduce `scale`, or stage fewer simultaneous actors. |
 | `nodeUnreachable` | Node cannot be reached from `start` | Wire it into the flow or delete unused draft nodes |
 | `portUnwired` | A `scene`, `choice` option, or `condition` rule/`else` has no `-> target` | Wire every port to a scene, choice, condition, or `end` |
 | `sceneEmptyBeats` | A `scene` has 0 beats | Add at least one beat (or merge setup into the next scene) |
 | `endingMissing` | No `end` node is reachable from `start` | Add at least one reachable `end` node |
 | `cycleDetected` | Zero-wait cycle over non-blocking nodes (`condition` / beatless `scene`) | Ensure every loop passes through a blocking `talk`/`narration`/`telop` or `choice` |
+
+### Stage Framing & Safe Non-Overlapping Placement
+The stage engine (`layoutStageActors` in `limits.ts`) automatically computes authentic, balanced Project SEKAI horizontal positions (`x` in `[-1, +1]` half-frame units) from the occupied semantic slots so characters never crowd into the corners:
+
+| Actors on Stage | Recommended Slots | Resolved `x` Positions | Center-to-Center Gap | Safe `scale` Range |
+| --- | --- | --- | --- | --- |
+| **1 actor** | `center` (or any slot) | `0` (`farLeft=-0.75`, `left=-0.365`, `right=0.365`, `farRight=0.75`) | — | `0.85 – 1.30` |
+| **2 actors** | `left`, `right` | `-0.365, +0.365` (official `SIDE_X_DEFAULT`) | `0.73` | `0.90 – 1.25` |
+| **3 actors** | `left`, `center`, `right` | `-0.573, 0, +0.573` (official `SIDE_X_THREE`) | `0.573` | `0.90 – 1.15` |
+| **4 actors** | `farLeft`, `left`, `right`, `farRight` | `-0.75, -0.25, +0.25, +0.75` | `0.50` | `0.90 – 1.05` (**prefer `1` / omit `scale`**) |
+| **5 actors** | all 5 slots | `-0.80, -0.40, 0, +0.40, +0.80` | `0.40` | `0.85 – 1.00` (**prefer `<= 1`**) |
+
+- **Default `scale = 1` is exact 1:1 in-game PJSK height/scale.** Omit `scale` (or use `scale=1`) for normal multi-character framing; reserve `scale=1.1–1.25` for dramatic 1–2 character close-ups!
+- **Never share a slot**: `stage enter` / `stage move` onto an occupied slot triggers `stageSlotDuplicate` (and `--simulate` catches inherited-cast overlaps across scene boundaries too). When shifting a lineup (e.g. 3 actors → 4 actors), move existing actors off the target slot *or* enter into an unoccupied slot first.
 
 ### Off-Stage Speaker Check
 In `--simulate`, the validator reports any `talk <castKey>` beat where `<castKey>` is **not** mounted on stage (`stage.speaking === null`). Verify each reported line is intentional (e.g. phone call / intercom); otherwise add the actor to `cast set [...]` or emit `stage enter <castKey> at <slot>` before the line.

@@ -23,7 +23,7 @@ import { live2dSources } from "@/lib/live2dViewer/config";
 import { md3EffectsFast, reducedMotionFade } from "@/lib/motion";
 import { storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls } from "@/lib/storyMaker/assets";
 import { compileStoryGraph, type StoryIR } from "@/lib/storyMaker/compiler";
-import { SLOT_X, STORY_FADE_SECONDS, STORY_LIMITS } from "@/lib/storyMaker/limits";
+import { SLOT_X, STORY_FADE_SECONDS, STORY_LIMITS, layoutStageActors } from "@/lib/storyMaker/limits";
 import {
     collectStoryAssets, inspectStoryCacheStatus, preloadStoryAssets,
     type StoryPreloadAudioItem, type StoryPreloadProgress,
@@ -173,7 +173,7 @@ export function applyInstructionToStage(
                 ? stage.actors
                 : inst.stageCast.mode === "clear"
                     ? []
-                    : inst.stageCast.actors.map(actor => ({
+                    : layoutStageActors(inst.stageCast.actors.map(actor => ({
                         cast: actor.castKey,
                         slot: actor.slot,
                         x: SLOT_X[actor.slot],
@@ -182,7 +182,7 @@ export function applyInstructionToStage(
                         mirror: false,
                         motion: actor.motion ?? null,
                         facial: actor.facial ?? null,
-                    }));
+                    })));
             const screenColor: StoryEffectColor = inst.transition.kind === "fadeWhite" ? "white" : "black";
             return {
                 stage: {
@@ -295,13 +295,13 @@ export function applyInstructionToStage(
                     facial: beat.facial ?? null,
                 };
                 return {
-                    stage: { ...base, actors: [...stage.actors.filter(a => a.cast !== beat.castKey), actor] },
+                    stage: { ...base, actors: layoutStageActors([...stage.actors.filter(a => a.cast !== beat.castKey), actor]) },
                     variables: vars,
                 };
             }
             if (beat.action === "exit") {
                 return {
-                    stage: { ...base, actors: stage.actors.filter(a => a.cast !== beat.castKey) },
+                    stage: { ...base, actors: layoutStageActors(stage.actors.filter(a => a.cast !== beat.castKey)) },
                     variables: vars,
                 };
             }
@@ -309,7 +309,7 @@ export function applyInstructionToStage(
                 return {
                     stage: {
                         ...base,
-                        actors: stage.actors.map((actor) => {
+                        actors: layoutStageActors(stage.actors.map((actor) => {
                             if (actor.cast !== beat.castKey) return actor;
                             const nextSlot = beat.slot ?? actor.slot;
                             return {
@@ -321,7 +321,7 @@ export function applyInstructionToStage(
                                 motion: beat.motion ?? actor.motion,
                                 facial: beat.facial ?? actor.facial,
                             };
-                        }),
+                        })),
                     },
                     variables: vars,
                 };

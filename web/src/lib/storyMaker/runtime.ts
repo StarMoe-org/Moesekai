@@ -27,7 +27,7 @@ import type {
 } from "../../types/storyMaker.ts";
 import type { CompiledStoryProgram, StoryIR } from "./compiler.ts";
 import { getNodeOutPorts } from "./document.ts";
-import { SLOT_X, STORY_LIMITS, STORY_TEMPLATE_VAR_PATTERN } from "./limits.ts";
+import { SLOT_X, STORY_LIMITS, STORY_TEMPLATE_VAR_PATTERN, layoutStageActors } from "./limits.ts";
 
 export type { StoryActorState, StoryStageActorState, StoryStageState, StoryVarValues };
 
@@ -201,7 +201,7 @@ function applySceneSlots(
         ? stage.actors
         : slots.stageCast.mode === "clear"
             ? []
-            : slots.stageCast.actors.map(actor => ({
+            : layoutStageActors(slots.stageCast.actors.map(actor => ({
                 cast: actor.castKey,
                 slot: actor.slot,
                 x: SLOT_X[actor.slot],
@@ -210,7 +210,7 @@ function applySceneSlots(
                 mirror: false,
                 motion: actor.motion ?? null,
                 facial: actor.facial ?? null,
-            }));
+            })));
 
     const screenColor = slots.transition.kind === "fadeWhite" ? "white" : "black";
 
@@ -327,7 +327,7 @@ function applySceneBeat(
                 return {
                     stage: {
                         ...base,
-                        actors: [...stage.actors.filter(a => a.cast !== beat.castKey), actor],
+                        actors: layoutStageActors([...stage.actors.filter(a => a.cast !== beat.castKey), actor]),
                     },
                     variables: vars,
                 };
@@ -336,7 +336,7 @@ function applySceneBeat(
                 return {
                     stage: {
                         ...base,
-                        actors: stage.actors.filter(a => a.cast !== beat.castKey),
+                        actors: layoutStageActors(stage.actors.filter(a => a.cast !== beat.castKey)),
                     },
                     variables: vars,
                 };
@@ -345,7 +345,7 @@ function applySceneBeat(
                 return {
                     stage: {
                         ...base,
-                        actors: stage.actors.map((actor) => {
+                        actors: layoutStageActors(stage.actors.map((actor) => {
                             if (actor.cast !== beat.castKey) return actor;
                             const nextSlot = beat.slot ?? actor.slot;
                             return {
@@ -357,7 +357,7 @@ function applySceneBeat(
                                 motion: beat.motion ?? actor.motion,
                                 facial: beat.facial ?? actor.facial,
                             };
-                        }),
+                        })),
                     },
                     variables: vars,
                 };

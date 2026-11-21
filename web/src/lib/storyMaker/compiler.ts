@@ -29,6 +29,7 @@ import {
     type StoryEdge,
     type StoryIssueCode,
     type StoryNode,
+    type StorySlot,
     type StoryVariable,
     type StoryVoiceRef,
     type TalkBeat,
@@ -38,6 +39,7 @@ import {
 } from "../../types/storyMaker.ts";
 import { getNodeOutPorts } from "./document.ts";
 import {
+    SLOT_X,
     STORY_ASSET_PATTERN,
     STORY_AUDIO_PATH_PATTERN,
     STORY_ID_PATTERN,
@@ -45,6 +47,8 @@ import {
     STORY_MODEL_PATTERN,
     STORY_MOTION_PATTERN,
     STORY_TEMPLATE_VAR_PATTERN,
+    detectStageActorOverlaps,
+    layoutStageActors,
 } from "./limits.ts";
 
 // ==================== Intermediate Representation (IR) ====================
@@ -489,6 +493,34 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                     nodeId: key, params: { min: STORY_LIMITS.duration.min, max: STORY_LIMITS.duration.max },
                 });
             }
+            const emitStageOverlapWarnings = (
+                actors: ReadonlyArray<{ cast: string; slot: StorySlot; x: number; scale: number }>,
+                path: string,
+                beatId?: string,
+            ) => {
+                const audit = detectStageActorOverlaps(actors);
+                for (const dup of audit.duplicateSlots) {
+                    addWarning("stageSlotDuplicate", path, {
+                        nodeId: key,
+                        ...(beatId ? { beatId } : {}),
+                        params: { slot: dup.slot, actors: dup.actors.join(", ") },
+                    });
+                }
+                for (const ov of audit.overlaps) {
+                    addWarning("stageActorOverlap", path, {
+                        nodeId: key,
+                        ...(beatId ? { beatId } : {}),
+                        params: {
+                            actors: `${ov.leftActor}, ${ov.rightActor}`,
+                            gap: ov.gap.toFixed(2),
+                            minGap: ov.minGap.toFixed(2),
+                        },
+                    });
+                }
+            };
+
+            let trackedStage: Array<{ cast: string; slot: StorySlot; x: number; scale: number }> = [];
+
             if (node.stageCast.mode === "set") {
                 if (node.stageCast.actors.length > STORY_LIMITS.stageActors) {
                     addError("actorLimitExceeded", `${nodePath}.stageCast.actors`, {
@@ -506,6 +538,14 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                         addError("actorDuplicate", `${actorPath}.castKey`, { nodeId: key, params: { key: actor.castKey } });
                     } else {
                         seenStageActors.add(actor.castKey);
+                        if ((STORY_SLOTS as readonly string[]).includes(actor.slot)) {
+                            trackedStage.push({
+                                cast: actor.castKey,
+                                slot: actor.slot,
+                                x: SLOT_X[actor.slot],
+                                scale: typeof actor.scale === "number" && Number.isFinite(actor.scale) ? actor.scale : 1,
+                            });
+                        }
                     }
                     if (!(STORY_SLOTS as readonly string[]).includes(actor.slot)) {
                         addError("enumInvalid", `${actorPath}.slot`, {
@@ -516,6 +556,8 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                     checkOptionalMotion(actor.motion, `${actorPath}.motion`, key);
                     checkOptionalMotion(actor.facial, `${actorPath}.facial`, key);
                 });
+                trackedStage = layoutStageActors(trackedStage);
+                emitStageOverlapWarnings(trackedStage, `${nodePath}.stageCast.actors`);
             }
 
             // Beats validation
@@ -633,6 +675,35 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                                 addError("numberRange", `${beatPath}.duration`, {
                                     nodeId: key, beatId: beat.id, params: { min: STORY_LIMITS.duration.min, max: STORY_LIMITS.duration.max },
                                 });
+                            }
+                        }
+                        if (beat.castKey && castKeys.has(beat.castKey)) {
+                            if (beat.action === "enter") {
+                                const slot = beat.slot && (STORY_SLOTS as readonly string[]).includes(beat.slot) ? beat.slot : "center";
+                                const scale = typeof beat.scale === "number" && Number.isFinite(beat.scale) ? beat.scale : 1;
+                                trackedStage = layoutStageActors([
+                                    ...trackedStage.filter(a => a.cast !== beat.castKey),
+                                    { cast: beat.castKey, slot, x: SLOT_X[slot], scale },
+                                ]);
+                                emitStageOverlapWarnings(trackedStage, beatPath, beat.id);
+                            } else if (beat.action === "exit") {
+                                trackedStage = layoutStageActors(trackedStage.filter(a => a.cast !== beat.castKey));
+                            } else if (beat.action === "move") {
+                                let changed = false;
+                                trackedStage = layoutStageActors(trackedStage.map((actor) => {
+                                    if (actor.cast !== beat.castKey) return actor;
+                                    const nextSlot = beat.slot && (STORY_SLOTS as readonly string[]).includes(beat.slot)
+                                        ? beat.slot
+                                        : actor.slot;
+                                    const nextScale = typeof beat.scale === "number" && Number.isFinite(beat.scale)
+                                        ? beat.scale
+                                        : actor.scale;
+                                    if (nextSlot !== actor.slot || nextScale !== actor.scale) changed = true;
+                                    return { ...actor, slot: nextSlot, x: SLOT_X[nextSlot], scale: nextScale };
+                                }));
+                                if (changed) {
+                                    emitStageOverlapWarnings(trackedStage, beatPath, beat.id);
+                                }
                             }
                         }
                         break;
