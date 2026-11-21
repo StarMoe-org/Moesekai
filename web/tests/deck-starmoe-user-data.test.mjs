@@ -23,13 +23,13 @@ function installFetch(response) {
     return calls;
 }
 
-test("reads the suite from /api/sekai on the page's origin with the session cookie, past the CDN cache", async () => {
+test("reads the suite from /api/v1/me/sekai on the page's origin with the session cookie, past the CDN cache", async () => {
     const calls = installFetch(json(200, { userCards: [{ cardId: 1 }], upload_time: 5 }));
     const data = await fetchStarMoeUserData("jp", "123456", "userCards,upload_time", "");
     assert.deepEqual(data, { userCards: [{ cardId: 1 }], upload_time: 5 });
     assert.equal(calls.length, 1);
     const url = new URL(calls[0].url, "https://pjsk.moe");
-    assert.equal(url.pathname, "/api/sekai/jp/suite/123456");
+    assert.equal(url.pathname, "/api/v1/me/sekai/jp/suite/123456");
     assert.equal(url.searchParams.get("key"), "userCards,upload_time");
     assert.ok(url.searchParams.get("_"), "a one-off nonce keeps Cloudflare from sharing the answer");
     assert.equal(calls[0].init.credentials, "same-origin");
@@ -40,7 +40,7 @@ test("reads the suite from /api/sekai on the page's origin with the session cook
 test("sends the cookie across origins when moesekai-api has its own", async () => {
     const calls = installFetch(json(200, { userCards: [] }));
     await fetchStarMoeUserData("cn", "1", "userCards", "https://api.example.test");
-    assert.ok(calls[0].url.startsWith("https://api.example.test/api/sekai/cn/suite/1?"));
+    assert.ok(calls[0].url.startsWith("https://api.example.test/api/v1/me/sekai/cn/suite/1?"));
     assert.equal(calls[0].init.credentials, "include");
 });
 

@@ -9,9 +9,10 @@ import { isValidServer, SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, Button, Card, CircularProgress, Icon, PageContainer, PageHeader, Surface } from "@/components/md3";
 import { mdChevronRight } from "@/components/md3/icons";
-import { createOrUpdateOAuthAccount, fetchOAuthBindingInitialData } from "@/lib/account";
 import {
     clearPendingOAuthState,
+    createOrUpdateOAuthAccount,
+    fetchOAuthBindingInitialData,
     formatOAuthErrorMessage,
     getOAuthReturnTo,
     normalizeBindingGameId,
@@ -20,7 +21,7 @@ import {
     sanitizeOAuthReturnTo,
     type OAuthAuthorizationPhase,
     type OAuthBinding,
-} from "@/lib/oauth";
+} from "@/lib/legacy-oauth";
 
 type CallbackPhase = OAuthAuthorizationPhase | "loading_initial_data" | "saving_account" | "redirecting" | "selecting_binding";
 

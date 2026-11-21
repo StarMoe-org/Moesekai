@@ -1,7 +1,7 @@
 /**
  * Shared data provider for the deck engine workers (deck-recommend and
  * score-control deck building). Master data comes from the self-hosted
- * official source; user data comes from moesekai-api (/api/sekai) for a
+ * official source; user data comes from moesekai-api (/api/v1/me/sekai) for a
  * signed-in StarMoe visitor, and from the Haruki suite API otherwise.
  */
 import type { IMusicMeta } from "@/types/music";
