@@ -10,16 +10,17 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { getCharacterName } from "@/lib/i18n";
 import {
-    getCardThumbnailUrl,
     getCharacterIconUrl,
     getCostumeThumbnailUrl,
     getEventLogoUrl,
     getGachaLogoUrl,
     getMusicJacketUrl,
-    getStampUrl,
 } from "@/lib/assets";
 import { getCardDefaultTrainedStatus, getRarityNumber } from "@/types/types";
 import {
+    getCardAvatarImageUrls,
+    getStampImageUrls,
+    stripStampPrefix,
     useCommunityEntityLoader,
     useCommunityStamps,
     type EntityCatalogState,
@@ -91,6 +92,36 @@ function InlineSpoiler({ text }: { text: string }) {
     );
 }
 
+function StampImgWithFallback({
+    primaryUrl,
+    jpFallbackUrl,
+    alt,
+    onAllFailed,
+}: {
+    primaryUrl: string;
+    jpFallbackUrl: string;
+    alt: string;
+    onAllFailed: () => void;
+}) {
+    const [usedJpFallback, setUsedJpFallback] = useState(false);
+    const src = usedJpFallback ? jpFallbackUrl : primaryUrl;
+    return (
+        <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            onError={() => {
+                if (!usedJpFallback && jpFallbackUrl !== primaryUrl) {
+                    setUsedJpFallback(true);
+                } else {
+                    onAllFailed();
+                }
+            }}
+            className="h-full w-full object-contain"
+        />
+    );
+}
+
 function StampView({
     stampId,
     stampsMap,
@@ -100,12 +131,15 @@ function StampView({
     stampsMap: Map<number, ICommunityStamp> | null;
     large?: boolean;
 }) {
-    const { assetSource } = useTheme();
+    const { assetSource, serverSource } = useTheme();
     const { t } = useI18n();
-    const [imgError, setImgError] = useState(false);
+    const { t: translateGameData } = useTranslation();
+    const [failedKey, setFailedKey] = useState<string | null>(null);
     const stamp = stampsMap?.get(stampId);
 
-    if (!stamp || imgError) {
+    const imgKey = `${stampId}-${assetSource}-${serverSource}`;
+
+    if (!stamp || failedKey === imgKey) {
         return (
             <span className="inline-flex items-center rounded-md3-sm border border-outline-variant bg-surface-container px-2 py-0.5 type-label-m text-on-surface-variant">
                 {t("common.comments.stampFallback", { id: stampId })}
@@ -113,22 +147,56 @@ function StampView({
         );
     }
 
+    const urls = getStampImageUrls(stamp, assetSource, serverSource);
+    const jpKey = stamp.jpName || stamp.name;
+    const translated =
+        serverSource === "jp" || stamp.availableOnCurrentServer === false
+            ? translateGameData("sticker", "name", jpKey)
+            : null;
+    const label = stripStampPrefix(translated || stamp.name);
+
     return (
         <span
             className={cn(
                 "inline-flex shrink-0 align-middle select-none",
                 large ? "my-1 h-28 w-28 sm:h-32 sm:w-32" : "mx-1 h-16 w-16 sm:h-20 sm:w-20",
             )}
-            title={stamp.name}
+            title={label}
         >
-            <img
-                src={getStampUrl(stamp.assetbundleName, assetSource)}
-                alt={stamp.name}
-                loading="lazy"
-                onError={() => setImgError(true)}
-                className="h-full w-full object-contain"
+            <StampImgWithFallback
+                key={imgKey}
+                primaryUrl={urls.primaryUrl}
+                jpFallbackUrl={urls.jpFallbackUrl}
+                alt={label}
+                onAllFailed={() => setFailedKey(imgKey)}
             />
         </span>
+    );
+}
+
+function EmbedThumbnailImg({
+    primaryUrl,
+    fallbackUrl,
+    alt,
+}: {
+    primaryUrl: string;
+    fallbackUrl?: string | null;
+    alt: string;
+}) {
+    const [usedFallback, setUsedFallback] = useState(false);
+    const src = usedFallback && fallbackUrl ? fallbackUrl : primaryUrl;
+    return (
+        <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            className="h-full w-full object-cover"
+            onError={() => {
+                if (!usedFallback && fallbackUrl && fallbackUrl !== primaryUrl) {
+                    setUsedFallback(true);
+                }
+            }}
+        />
     );
 }
 
@@ -151,7 +219,7 @@ function EntityEmbedCard({
     id: number;
     catalog: EntityCatalogState;
 }) {
-    const { assetSource } = useTheme();
+    const { assetSource, serverSource } = useTheme();
     const { t } = useI18n();
     const { t: translateGameData } = useTranslation();
 
@@ -159,6 +227,7 @@ function EntityEmbedCard({
     let label = `#${id}`;
     let subtitle = t(`page.community.entities.${type}`);
     let imageUrl: string | null = null;
+    let fallbackImageUrl: string | null = null;
     let badgeText: string | null = null;
 
     if (type === "card") {
@@ -171,12 +240,15 @@ function EntityEmbedCard({
             const rarity = getRarityNumber(card.cardRarityType);
             subtitle = `${charName} · #${id}`;
             badgeText = card.cardRarityType === "rarity_birthday" ? "BD" : `${rarity}★`;
-            imageUrl = getCardThumbnailUrl(
-                card.characterId,
-                card.assetbundleName,
+            const urls = getCardAvatarImageUrls(
+                card,
                 getCardDefaultTrainedStatus(card),
                 assetSource,
+                serverSource,
+                catalog.cardsLocalIds ? catalog.cardsLocalIds.has(card.id) : undefined,
             );
+            imageUrl = urls.primaryUrl;
+            fallbackImageUrl = urls.jpFallbackUrl;
         }
     } else if (type === "music") {
         href = `/music/${id}`;
@@ -231,11 +303,11 @@ function EntityEmbedCard({
         >
             {imageUrl && (
                 <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md3-sm bg-surface-container-high">
-                    <img
-                        src={imageUrl}
+                    <EmbedThumbnailImg
+                        key={`${imageUrl}|${fallbackImageUrl ?? ""}`}
+                        primaryUrl={imageUrl}
+                        fallbackUrl={fallbackImageUrl}
                         alt={label}
-                        loading="lazy"
-                        className="h-full w-full object-cover"
                     />
                 </span>
             )}

@@ -367,9 +367,6 @@ export default function NewPostClient() {
                                         )}
                                     </div>
                                 )}
-                                <p className="mt-1.5 type-label-s text-on-surface-variant">
-                                    {t("page.community.composer.markdownHint")}
-                                </p>
                             </div>
 
                             {/* Tags */}

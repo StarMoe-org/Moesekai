@@ -268,6 +268,8 @@ export interface UpdateCommunityPreferencesInput {
     hidden_categories?: PostCategory[];
     hidden_tags?: string[];
     favorite_stamps?: number[];
+    avatar_card_id?: number | null;
+    avatar_card_trained?: boolean;
 }
 
 export async function updateCommunityPreferences(

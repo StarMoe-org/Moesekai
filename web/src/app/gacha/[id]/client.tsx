@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import Link from "@/components/LocalizedLink";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
@@ -40,6 +41,11 @@ import {
 } from "@/components/md3/icons";
 
 const STAGE_3D_KEY = "gacha-stage-3d";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 const CARD_TILE_BASE = "rounded-md3-sm overflow-hidden bg-surface-container-lowest transition-shadow";
 const CARD_TILE_IDLE = "ring-1 ring-outline-variant group-hover:ring-2 group-hover:ring-primary";
@@ -1416,6 +1422,11 @@ export default function GachaDetailClient() {
                         <DetailPageAdCard hidden={isScreenshotMode} />
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts (hidden in screenshot mode) */}
+                {!isScreenshotMode && gacha && (
+                    <EntityCommunitySection targetType="gacha" targetId={gacha.id} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">

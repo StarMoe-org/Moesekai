@@ -120,6 +120,8 @@ export interface AuthorSummary {
     sub: string;
     display_name: string;
     avatar_url: string;
+    avatar_card_id?: number | null;
+    avatar_card_trained?: boolean;
     trust_level: TrustLevel;
     role: CommunityRole;
     is_deleted: boolean;
@@ -130,6 +132,8 @@ export interface CommunityProfile {
     sub: string;
     display_name: string;
     avatar_url: string;
+    avatar_card_id?: number | null;
+    avatar_card_trained?: boolean;
     bio: string;
     trust_level: TrustLevel;
     health_score?: number;
@@ -211,6 +215,8 @@ export interface BlockedUserItem {
     blocked_sub: string;
     display_name: string;
     avatar_url: string;
+    avatar_card_id?: number | null;
+    avatar_card_trained?: boolean;
     created_at: string;
 }
 
