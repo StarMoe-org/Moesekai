@@ -85,10 +85,22 @@ export type ModActionType =
     | "mute_user"
     | "unmute_user"
     | "set_trust_level"
+    | "set_role"
     | "resolve_report"
     | "dismiss_report"
     | "approve_appeal"
     | "reject_appeal";
+
+export interface ModActionRequest {
+    action: ModActionType;
+    target_type: ModTargetType;
+    target_id: string;
+    reason?: string;
+    health_delta?: number;
+    mute_hours?: number;
+    trust_level?: number;
+    role?: "user" | "mod";
+}
 
 export type ModTargetType =
     | "post"
@@ -328,6 +340,8 @@ export interface CommunityMeResponse {
     unread_notifications: number;
     community_mode: CommunityMode;
     turnstile_site_key: string;
+    turnstile_required: boolean;
+    can_manage_mods: boolean;
     blocked_subs: string[];
 }
 
@@ -466,13 +480,29 @@ export const REPORT_REASON_OPTIONS: readonly LabeledOption<ReportReason>[] = [
     { id: "other", labelKey: "common.comments.report.reasons.other" },
 ];
 
+export type MemberTrustLevel = 1 | 2 | 3 | 4;
+
 export const TRUST_LEVEL_LABEL_KEYS: Record<TrustLevel, string> = {
-    0: "page.community.trustLevels.tl0",
-    1: "page.community.trustLevels.tl1",
-    2: "page.community.trustLevels.tl2",
-    3: "page.community.trustLevels.tl3",
-    4: "page.community.trustLevels.tl4",
+    0: "page.community.trustLevels.lv1",
+    1: "page.community.trustLevels.lv1",
+    2: "page.community.trustLevels.lv2",
+    3: "page.community.trustLevels.lv3",
+    4: "page.community.trustLevels.lv4",
 };
+
+export const TRUST_LEVEL_OPTIONS: readonly LabeledOption<MemberTrustLevel>[] = [
+    { id: 1, labelKey: "page.community.trustLevels.lv1" },
+    { id: 2, labelKey: "page.community.trustLevels.lv2" },
+    { id: 3, labelKey: "page.community.trustLevels.lv3" },
+    { id: 4, labelKey: "page.community.trustLevels.lv4" },
+];
+
+export function getTrustLevelLabelKey(level: number | undefined | null): string {
+    if (level === 4) return TRUST_LEVEL_LABEL_KEYS[4];
+    if (level === 3) return TRUST_LEVEL_LABEL_KEYS[3];
+    if (level === 2) return TRUST_LEVEL_LABEL_KEYS[2];
+    return TRUST_LEVEL_LABEL_KEYS[1];
+}
 
 export const COMMUNITY_MODE_OPTIONS: readonly LabeledOption<CommunityMode>[] = [
     { id: "normal", labelKey: "page.community.mod.modes.normal" },

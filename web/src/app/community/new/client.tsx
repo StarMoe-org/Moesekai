@@ -75,6 +75,7 @@ export default function NewPostClient() {
 
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const prefilledRef = useRef(false);
+    const needsTurnstile = Boolean(session.turnstileSiteKey) && session.turnstileRequired;
 
     // Support deep link from entity detail pages (e.g. /community/new?entityType=card&entityId=1234)
     useEffect(() => {
@@ -143,7 +144,7 @@ export default function NewPostClient() {
             setPolicyOpen(true);
             return;
         }
-        if (session.turnstileSiteKey && !turnstileToken) {
+        if (needsTurnstile && !turnstileToken) {
             setError(t("common.comments.errors.turnstileFailed"));
             return;
         }
@@ -158,7 +159,7 @@ export default function NewPostClient() {
                 body_md: trimmedBody,
                 tags,
                 is_spoiler: isSpoiler,
-                turnstile_token: turnstileToken || undefined,
+                turnstile_token: needsTurnstile ? turnstileToken || undefined : undefined,
             });
             setTurnstileToken("");
             setTurnstileResetNonce((n) => n + 1);
@@ -193,7 +194,7 @@ export default function NewPostClient() {
         session.authenticated,
         session.communityMode,
         session.profile,
-        session.turnstileSiteKey,
+        needsTurnstile,
         t,
         tags,
         title,
@@ -421,7 +422,7 @@ export default function NewPostClient() {
                                 description={t("page.community.composer.spoilerDesc")}
                             />
 
-                            {session.turnstileSiteKey && (
+                            {needsTurnstile && (
                                 <TurnstileWidget
                                     siteKey={session.turnstileSiteKey}
                                     onToken={setTurnstileToken}
@@ -445,7 +446,7 @@ export default function NewPostClient() {
                                         session.communityMode === "read_only" ||
                                         !title.trim() ||
                                         !bodyMd.trim() ||
-                                        (Boolean(session.turnstileSiteKey) && !turnstileToken)
+                                        (needsTurnstile && !turnstileToken)
                                     }
                                     onClick={() => void handleSubmit()}
                                 >

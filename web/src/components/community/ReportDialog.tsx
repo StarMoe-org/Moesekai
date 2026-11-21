@@ -25,7 +25,7 @@ export function ReportDialog({
     onSubmitted,
 }: ReportDialogProps) {
     const { t } = useI18n();
-    const session = useCommunitySession({ eager: false });
+    const session = useCommunitySession({ eager: isOpen });
     const [reason, setReason] = useState<ReportReason>("harassment");
     const [detail, setDetail] = useState("");
     const [submitting, setSubmitting] = useState(false);
@@ -34,7 +34,7 @@ export function ReportDialog({
     const [turnstileToken, setTurnstileToken] = useState("");
     const [turnstileResetNonce, setTurnstileResetNonce] = useState(0);
 
-    const needsTurnstile = Boolean(session.turnstileSiteKey);
+    const needsTurnstile = Boolean(session.turnstileSiteKey) && session.turnstileRequired;
 
     const handleClose = () => {
         setError(null);
@@ -57,7 +57,7 @@ export function ReportDialog({
                 target_id: targetId,
                 reason,
                 detail: detail.trim() || undefined,
-                turnstile_token: turnstileToken || undefined,
+                turnstile_token: needsTurnstile ? turnstileToken || undefined : undefined,
             });
             setTurnstileToken("");
             setTurnstileResetNonce((n) => n + 1);
@@ -181,7 +181,7 @@ export function AppealDialog({
     moderationEventId,
 }: AppealDialogProps) {
     const { t } = useI18n();
-    const session = useCommunitySession({ eager: false });
+    const session = useCommunitySession({ eager: isOpen });
     const [reason, setReason] = useState("");
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -189,7 +189,7 @@ export function AppealDialog({
     const [turnstileToken, setTurnstileToken] = useState("");
     const [turnstileResetNonce, setTurnstileResetNonce] = useState(0);
 
-    const needsTurnstile = Boolean(session.turnstileSiteKey);
+    const needsTurnstile = Boolean(session.turnstileSiteKey) && session.turnstileRequired;
 
     const handleClose = () => {
         setError(null);
@@ -217,7 +217,7 @@ export function AppealDialog({
                 target_id: targetId,
                 reason: trimmed,
                 moderation_event_id: moderationEventId,
-                turnstile_token: turnstileToken || undefined,
+                turnstile_token: needsTurnstile ? turnstileToken || undefined : undefined,
             });
             setTurnstileToken("");
             setTurnstileResetNonce((n) => n + 1);

@@ -229,7 +229,7 @@ export const zhTWCommon = {
             duplicateContent: "請勿短時間內重複提交相同內容。",
             emptyContent: "請輸入有效內容後再提交。",
             contentTooLong: "內容超出長度限制，請適當精簡。",
-            linksNotAllowed: "新成員暫不支援發布站外連結。",
+            linksNotAllowed: "目前帳號信用分較低，暫不支援發布站外連結，合規互動恢復信用分後將自動解鎖。",
             tooManyTags: "最多只能新增 5 個標籤。",
             alreadyReported: "你已經檢舉過這則內容了。",
             alreadyAppealed: "你已經針對此項目提交過申訴。",

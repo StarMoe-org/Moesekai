@@ -20,7 +20,7 @@ import type {
     ContentLang,
     CustomWordRule,
     EntityLinkType,
-    ModActionType,
+    ModActionRequest,
     ModAppealItem,
     ModAuditItem,
     ModModeResponse,
@@ -28,7 +28,6 @@ import type {
     ModQueueResponse,
     ModQueueTab,
     ModReportItem,
-    ModTargetType,
     ModerationEvent,
     NotificationsResponse,
     PostCategory,
@@ -569,17 +568,9 @@ export function fetchModQueue(
     );
 }
 
-export interface ModActionInput {
-    action: ModActionType;
-    target_type: ModTargetType;
-    target_id: string;
-    reason?: string;
-    health_delta?: number;
-    mute_hours?: number;
-    trust_level?: number;
-}
+export type ModActionInput = ModActionRequest;
 
-export function submitModAction(input: ModActionInput): Promise<{ ok: boolean; audit_id: number }> {
+export function submitModAction(input: ModActionRequest): Promise<{ ok: boolean; audit_id: number }> {
     return requestJson<{ ok: boolean; audit_id: number }>("/api/community/mod/actions", {
         method: "POST",
         body: JSON.stringify(input),
