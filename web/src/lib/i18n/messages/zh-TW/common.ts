@@ -364,7 +364,7 @@ export const zhTWCommon = {
         body: "你在這台裝置上用瀏覽器 OAuth2 綁定了 {count} 個 Haruki 帳號。這種綁定方式即將停用，之後改為登入 StarMoe 帳號，並在 StarMoe 互聯中心連接 Haruki 工具箱。",
         pointSync: "連接一次，所有裝置都能用，帳號也會同步儲存。",
         pointPublic: "不遷移的話，停用後這些帳號只能讀取公開資料。",
-        pointLater: "選擇「暫不遷移」後，之後也可以在個人主頁隨時遷移。",
+        pointLater: "選擇「暫不遷移」後，之後也可以在「我的帳號」裡隨時遷移。",
         migrate: "登入並遷移",
         migrateSignedIn: "前往連接 Haruki",
         later: "暫不遷移",

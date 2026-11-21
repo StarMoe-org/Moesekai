@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import type { MessageTree } from "../types";
@@ -368,7 +369,7 @@ export const enUSMessages = {
             body: "You bound {count} Haruki accounts on this device with in-browser OAuth2. That binding is being retired: from now on, sign in to StarMoe and connect Haruki Toolbox in StarMoe Connect.",
             pointSync: "Connect once and it works on every device, with your accounts synced.",
             pointPublic: "Without migrating, these accounts can only read public data once the old binding stops.",
-            pointLater: "If you choose Not now, you can migrate any time from your profile.",
+            pointLater: "If you choose Not now, you can migrate any time from My account.",
             migrate: "Sign in and migrate",
             migrateSignedIn: "Connect Haruki",
             later: "Not now",
@@ -1367,6 +1368,7 @@ export const enUSMessages = {
         },
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        account: accountMessages,
         assetGuide: assetGuideMessages,
         mysekaiInteractions: {
             r5: {"pagination":"Content pages","previous":"Previous page","next":"Next page","page":"Page {page} of {pages}","range":"{start}–{end} / {total}","preparing":"Preparing resources…","ready":"Ready to play"},

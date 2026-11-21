@@ -57,7 +57,7 @@ export default function PlayerDataPanel({ region, ready, blocked, value, send, o
         </div>
         {!ready && <p role="status">{t("page.mysekaiInteractions.r4b.playerWait")}</p>}
         {blocked && <p role="status">{t("page.mysekaiInteractions.r4b.playerStopFirst")}</p>}
-        {error && <p role="alert">{t(`page.mysekaiInteractions.r4b.${error}`)} <Link href="/profile/">{t("page.mysekaiInteractions.r4b.playerAccount")}</Link></p>}
+        {error && <p role="alert">{t(`page.mysekaiInteractions.r4b.${error}`)} <Link href="/account/">{t("page.mysekaiInteractions.r4b.playerAccount")}</Link></p>}
         {value?.error && <p role="alert">{value.status}</p>}
         {busy || value?.busy ? <p role="status">{t("page.mysekaiInteractions.r4b.playerChecking")}</p> : null}
         {value?.summary && !value.error && <p>{t("page.mysekaiInteractions.r4b.playerSummary", value.summary)}</p>}

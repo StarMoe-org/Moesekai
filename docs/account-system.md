@@ -58,6 +58,7 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 | `web/src/lib/account/store.ts` | 本机列表的读写、当前查看的账号、头像缓存 |
 | `web/src/lib/account/starmoe-sync.ts` | 与 StarMoe 账号合并、保存手动添加的账号 |
 | `web/src/lib/account/game-data.ts` | 读 Haruki 数据、刷新已保存的账号、MySekai 数据 |
+| `web/src/lib/account/actions.ts` | 添加游戏账号、删除游戏账号、把仅本机的账号保存到通行证（所有页面共用） |
 | `web/src/lib/account/game-data-format.ts` | 把各种 Haruki 响应整理成同一种结构，错误码归一（纯函数） |
 | `web/src/lib/account/hooks.ts` | `useGameAccounts()` |
 | `web/src/lib/starmoe-accounts.ts` | moesekai-api 的 `/api/v1/me` 客户端、Haruki 连接状态 |
@@ -65,6 +66,19 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 | `web/src/lib/legacy-oauth/` | **旧**浏览器 OAuth2 绑定（见第 5 节） |
 
 `@/lib/account` 是上面这些模块的统一出口。客户端组件里的 hook 从 `@/lib/account/hooks` 引入。
+
+界面：
+
+| 位置 | 内容 |
+|---|---|
+| `web/src/components/account/AccountCenter.tsx` | 侧边栏底部的账号中心：第一行是通行证（未登录时是“登录 StarMoe”），第二行是当前查看的游戏账号；菜单里切换、添加、管理游戏账号，打开通行证账号中心，登录或退出 |
+| `web/src/app/account/` | “我的账号”页：通行证、Haruki 数据来源、游戏账号、这台设备四块 |
+| `web/src/components/account/AddGameAccountDialog.tsx` | 全站唯一的按 UID 添加入口（`/account?add=1` 直接打开） |
+| `web/src/components/account/GameAccountList.tsx` | 游戏账号列表：来源、保存位置、数据时间、行内刷新错误、删除对话框 |
+| `web/src/components/account/GameAccountSwitchMenu.tsx` | 切换当前查看的游戏账号的菜单 |
+| `web/src/app/profile/` | 只展示当前查看的游戏账号的资料；旧链接 `/profile#profile-accounts` 自动转到 `/account` |
+
+文案在 `web/src/lib/i18n/messages/<语言>/account.ts`，挂在 `page.account`。
 
 ## 5. 旧浏览器 OAuth2 绑定（2026-12-20 删除）
 
@@ -80,7 +94,8 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 
 ## 6. 新增涉及账号的功能时
 
-- 需要游戏账号：用统一的游戏账号选择器和添加入口，不要再写一套表单。
+- 需要游戏账号：用 `GameAccountSwitchMenu` 和 `AddGameAccountDialog`，添加和删除走 `actions.ts`，不要再写一套表单。
+- 管理账号的入口一律指向 `/account`，不要再指向 `/profile`。
 - 需要身份（排行、收藏、跨设备设置）：用 `useMoesekaiAccount()`；未登录时给登录入口，不要退回到用游戏 UID 充当身份。
 - 只有手动添加的游戏账号会保存到 StarMoe 账号；工具页临时输入的 UID 只留在本机。
 - 文案按第 2 节用词，五种语言都要补。

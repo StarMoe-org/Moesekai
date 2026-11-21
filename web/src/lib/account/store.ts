@@ -178,11 +178,14 @@ export function updateAccount(accountId: string, updates: Partial<MoesekaiAccoun
     notifyAccountsChanged();
 }
 
-/** Remove an account. A hand-added account saved with the StarMoe account is removed there too. */
-export function removeAccount(accountId: string): void {
+/**
+ * Remove an account. A hand-added account saved with the StarMoe account is removed there too, in the background,
+ * unless `remote` is false (deleteGameAccount in actions.ts has already done that and waited for it).
+ */
+export function removeAccount(accountId: string, { remote = true }: { remote?: boolean } = {}): void {
     let accounts = getAccounts();
     const removed = accounts.find(a => a.id === accountId);
-    if (removed?.starmoeSource === "manual" && starMoeDataEnabled()) {
+    if (remote && removed?.starmoeSource === "manual" && starMoeDataEnabled()) {
         void removeStarMoeAccount(removed.server, removed.gameId).catch((error) => {
             console.warn(`Removing ${removed.id} from the StarMoe account failed`, error);
         });
