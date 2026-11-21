@@ -120,6 +120,7 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards", varia
                         card={card}
                         trained={showTrainedThumbnail}
                         className="w-full"
+                        hoverSwitch
                     />
                     {isSpoiler && (
                         <span className="absolute right-1 top-1 rounded-md3-xs bg-tertiary px-1.5 type-label-s text-on-tertiary shadow-elev-1">

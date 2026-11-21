@@ -1,5 +1,5 @@
 "use client";
-import React, { memo, useState } from "react";
+import React, { memo, useCallback, useEffect, useRef, useState } from "react";
 import {
     ICardInfo,
     getRarityNumber,
@@ -8,6 +8,7 @@ import {
 } from "@/types/types";
 import { getCardFullUrl, getCardSmallUrl } from "@/lib/assets";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
+import { registerTouchEndCleanup } from "./cardTouchFocus";
 import styles from "./SekaiCardLarge.module.css";
 
 const ASSET_BASE = "/data/sekai_cards_assets";
@@ -54,6 +55,9 @@ function SekaiCardLarge({
     const { assetSource: themeAssetSource } = useTheme();
     const assetSource = customAssetSource ?? themeAssetSource;
     const [failedUrls, setFailedUrls] = useState<Record<string, true>>({});
+    const rootRef = useRef<HTMLDivElement>(null);
+    const touchRectRef = useRef<DOMRect | null>(null);
+    const cleanupTouchRef = useRef<(() => void) | null>(null);
 
     const rarityNumber = getRarityNumber(card.cardRarityType);
     const isBirthday = card.cardRarityType === "rarity_birthday";
@@ -62,6 +66,34 @@ function SekaiCardLarge({
 
     const isSplit = (split ?? (trained === undefined && hasBothArts)) && hasBothArts;
     const singleTrained = trained ?? defaultTrainedOnly;
+
+    const clearTouchFocus = useCallback(() => {
+        touchRectRef.current = null;
+        if (rootRef.current) delete rootRef.current.dataset.touchFocus;
+        cleanupTouchRef.current?.();
+        cleanupTouchRef.current = null;
+    }, []);
+
+    useEffect(() => clearTouchFocus, [clearTouchFocus]);
+
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!isSplit || e.pointerType === "mouse") return;
+        const el = rootRef.current;
+        if (!el) return;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        touchRectRef.current = rect;
+        el.dataset.touchFocus = e.clientX - rect.left < rect.width / 2 ? "normal" : "trained";
+        registerTouchEndCleanup(cleanupTouchRef, clearTouchFocus);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+        const rect = touchRectRef.current;
+        const el = rootRef.current;
+        if (!rect || !el || e.pointerType === "mouse") return;
+        const side = e.clientX - rect.left < rect.width / 2 ? "normal" : "trained";
+        if (el.dataset.touchFocus !== side) el.dataset.touchFocus = side;
+    };
 
     const raritySuffix = isBirthday ? "birthday" : rarityNumber.toString();
     const frameUrl = `${ASSET_BASE}/cardFrame_L_rarity_${raritySuffix}.png`;
@@ -118,6 +150,12 @@ function SekaiCardLarge({
 
     return (
         <div
+            ref={rootRef}
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={clearTouchFocus}
+            onPointerCancel={clearTouchFocus}
+            onPointerLeave={clearTouchFocus}
             className={`${styles.cardFrame} relative aspect-[940/530] w-full overflow-hidden select-none bg-surface-container-high ${className}`}
         >
             {/* Pure CSS hover hit-zones (must precede .splitRoot and .starLayer siblings) */}

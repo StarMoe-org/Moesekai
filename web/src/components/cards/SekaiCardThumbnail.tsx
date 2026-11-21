@@ -1,8 +1,15 @@
 "use client";
-import React from "react";
-import { ICardInfo, getRarityNumber } from "@/types/types";
+import React, { memo, useCallback, useEffect, useRef } from "react";
+import {
+    ICardInfo,
+    getCardDefaultTrainedStatus,
+    getRarityNumber,
+    isTrainableCard,
+} from "@/types/types";
 import { getCardThumbnailUrl } from "@/lib/assets";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
+import { registerTouchEndCleanup } from "./cardTouchFocus";
+import styles from "./SekaiCardThumbnail.module.css";
 
 interface SekaiCardThumbnailProps {
     card: ICardInfo;
@@ -11,19 +18,24 @@ interface SekaiCardThumbnailProps {
     width?: number; // Default 156
     className?: string;
     assetSource?: AssetSourceType;
+    /** Hover/touch flips between pre-trained and post-trained art for trainable cards. */
+    hoverSwitch?: boolean;
 }
 
-export default function SekaiCardThumbnail({
+function SekaiCardThumbnail({
     card,
     trained,
     mastery = 0,
     width = 156,
     className = "",
     assetSource: customAssetSource,
+    hoverSwitch = false,
 }: SekaiCardThumbnailProps) {
     const { assetSource: themeAssetSource } = useTheme();
     const assetSource = customAssetSource ?? themeAssetSource;
-    const [failedUrl, setFailedUrl] = React.useState<string | null>(null);
+    const [failedUrls, setFailedUrls] = React.useState<Record<string, true>>({});
+    const rootRef = useRef<HTMLDivElement>(null);
+    const cleanupTouchRef = useRef<(() => void) | null>(null);
     // Card grids render many of these; a literal id would collide and every
     // clipPath reference would resolve to the first instance in the document.
     const clipId = `cardClip-${React.useId()}`;
@@ -39,6 +51,11 @@ export default function SekaiCardThumbnail({
     // Rarity handling
     const rarityNumber = getRarityNumber(card.cardRarityType);
     const isBirthday = card.cardRarityType === "rarity_birthday";
+    const canHoverSwitch =
+        hoverSwitch &&
+        isTrainableCard(card) &&
+        !isBirthday &&
+        !getCardDefaultTrainedStatus(card);
 
     // Asset Paths ( Local proxy to Official Assets )
     // Base URL for local assets: /data/sekai_cards_assets/
@@ -51,7 +68,31 @@ export default function SekaiCardThumbnail({
         isTrained,
         assetSource
     );
-    const imageError = failedUrl === cardImageUrl;
+    const altCardImageUrl = canHoverSwitch
+        ? getCardThumbnailUrl(card.characterId, card.assetbundleName, !isTrained, assetSource)
+        : null;
+    const imageError = Boolean(failedUrls[cardImageUrl]);
+    const altImageError = altCardImageUrl ? Boolean(failedUrls[altCardImageUrl]) : true;
+
+    const markFailed = (url: string) => {
+        setFailedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
+    };
+
+    const clearTouchFlip = useCallback(() => {
+        if (rootRef.current) delete rootRef.current.dataset.touchFlipped;
+        cleanupTouchRef.current?.();
+        cleanupTouchRef.current = null;
+    }, []);
+
+    useEffect(() => clearTouchFlip, [clearTouchFlip]);
+
+    const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+        if (!canHoverSwitch || e.pointerType === "mouse") return;
+        const el = rootRef.current;
+        if (!el) return;
+        el.dataset.touchFlipped = "true";
+        registerTouchEndCleanup(cleanupTouchRef, clearTouchFlip);
+    };
 
     // 2. Frame
     // frame_rarity_{rarity}.png
@@ -66,11 +107,14 @@ export default function SekaiCardThumbnail({
     // 4. Stars
     // rare_star_{normal|after_training}.png
     // Birthday: rare_birthday.png
-    const starUrl = isBirthday
-        ? `${ASSET_BASE}/rare_birthday.png`
-        : isTrained
-            ? `${ASSET_BASE}/rare_star_after_training.png`
-            : `${ASSET_BASE}/rare_star_normal.png`;
+    const getStarUrl = (trainedState: boolean) =>
+        isBirthday
+            ? `${ASSET_BASE}/rare_birthday.png`
+            : trainedState
+                ? `${ASSET_BASE}/rare_star_after_training.png`
+                : `${ASSET_BASE}/rare_star_normal.png`;
+    const starUrl = getStarUrl(isTrained);
+    const altStarUrl = canHoverSwitch ? getStarUrl(!isTrained) : null;
 
     // 5. Mastery
     // train_rank_{mastery}.png (0-5)
@@ -97,13 +141,13 @@ export default function SekaiCardThumbnail({
 
     const starCount = isBirthday ? 1 : rarityNumber;
 
-    const renderStars = () => {
+    const renderStars = (href: string) => {
         if (isBirthday) {
             // Birthday star fixed at (10, 125)
             // Note: User said "Birthday star ... fixed at (10, 125)"
             return (
                 <image
-                    href={starUrl}
+                    href={href}
                     x="10"
                     y="125"
                     width="24"
@@ -115,7 +159,7 @@ export default function SekaiCardThumbnail({
         return Array.from({ length: starCount }).map((_, index) => (
             <image
                 key={index}
-                href={starUrl}
+                href={href}
                 x={STAR_START_X + index * STAR_GAP}
                 y={STAR_Y}
                 width="24" // Estimating size
@@ -126,7 +170,12 @@ export default function SekaiCardThumbnail({
 
     return (
         <div
-            className={`relative ${className ? "" : "inline-block"} select-none ${className}`}
+            ref={rootRef}
+            onPointerDown={handlePointerDown}
+            onPointerUp={clearTouchFlip}
+            onPointerCancel={clearTouchFlip}
+            onPointerLeave={clearTouchFlip}
+            className={`relative ${className ? "" : "inline-block"} select-none ${canHoverSwitch ? styles.interactive : ""} ${className}`}
             style={className ? { aspectRatio: '1 / 1' } : { width, height: width }}
         >
             <svg
@@ -160,8 +209,23 @@ export default function SekaiCardThumbnail({
                     height="152"
                     preserveAspectRatio="xMidYMid slice"
                     clipPath={`url(#${clipId})`}
-                    onError={() => setFailedUrl(cardImageUrl)}
+                    onError={() => markFailed(cardImageUrl)}
                 />
+
+                {altCardImageUrl && !altImageError && (
+                    <g className={styles.altLayer}>
+                        <image
+                            href={altCardImageUrl}
+                            x="2"
+                            y="2"
+                            width="152"
+                            height="152"
+                            preserveAspectRatio="xMidYMid slice"
+                            clipPath={`url(#${clipId})`}
+                            onError={() => markFailed(altCardImageUrl)}
+                        />
+                    </g>
+                )}
 
                 {/* 2. Frame */}
                 {/* Frames usually include the rounded corners and border */}
@@ -184,7 +248,14 @@ export default function SekaiCardThumbnail({
                 />
 
                 {/* 4. Stars */}
-                {renderStars()}
+                {altStarUrl ? (
+                    <>
+                        <g className={styles.baseStarLayer}>{renderStars(starUrl)}</g>
+                        <g className={styles.altLayer}>{renderStars(altStarUrl)}</g>
+                    </>
+                ) : (
+                    renderStars(starUrl)
+                )}
 
                 {/* 5. Mastery/Break Rank */}
                 {masteryUrl && (
@@ -200,3 +271,5 @@ export default function SekaiCardThumbnail({
         </div>
     );
 }
+
+export default memo(SekaiCardThumbnail);

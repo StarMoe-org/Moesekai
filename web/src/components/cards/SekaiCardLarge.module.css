@@ -91,6 +91,35 @@
     }
 }
 
+.cardFrame[data-touch-focus="normal"] .normalLayer,
+.cardFrame[data-touch-focus="normal"] .normalArtwork {
+    transform: translate3d(0%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="normal"] .trainedArtwork {
+    transform: translate3d(50%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="normal"] .starNormal {
+    opacity: 1;
+}
+
+.cardFrame[data-touch-focus="normal"] .starTrained {
+    opacity: 0;
+}
+
+.cardFrame[data-touch-focus="trained"] .normalLayer {
+    transform: translate3d(-100%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="trained"] .normalArtwork {
+    transform: translate3d(50%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="trained"] .trainedArtwork {
+    transform: translate3d(0%, 0, 0);
+}
+
 @media (prefers-reduced-motion: reduce) {
     .normalLayer,
     .splitArtwork,
