@@ -31,6 +31,87 @@ function getTurnstileApi(): TurnstileApi | undefined {
     return (window as unknown as { turnstile?: TurnstileApi }).turnstile;
 }
 
+// Module-level loader shared across concurrent TurnstileWidget instances so
+// opening ReportDialog/AppealDialog never clobbers an already-mounted widget.
+const readyListeners = new Set<() => void>();
+const errorListeners = new Set<() => void>();
+let pollTimer: number | null = null;
+let pollDeadline = 0;
+
+function stopPolling(): void {
+    if (pollTimer !== null) {
+        window.clearInterval(pollTimer);
+        pollTimer = null;
+    }
+}
+
+function notifyReady(): void {
+    stopPolling();
+    readyListeners.forEach((cb) => cb());
+}
+
+function notifyError(): void {
+    stopPolling();
+    errorListeners.forEach((cb) => cb());
+}
+
+function ensurePollForTurnstile(): void {
+    if (pollTimer !== null || typeof window === "undefined") return;
+    pollDeadline = Date.now() + 10_000;
+    pollTimer = window.setInterval(() => {
+        if (getTurnstileApi()) {
+            notifyReady();
+        } else if (Date.now() >= pollDeadline || readyListeners.size === 0) {
+            stopPolling();
+        }
+    }, 100);
+}
+
+function subscribeTurnstileScript(onReady: () => void, onError: () => void): () => void {
+    if (getTurnstileApi()) {
+        onReady();
+        return () => undefined;
+    }
+
+    readyListeners.add(onReady);
+    errorListeners.add(onError);
+
+    window.__communityTurnstileLoaded = notifyReady;
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+        `script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]`,
+    );
+    if (existingScript) {
+        const handleLoad = () => {
+            if (getTurnstileApi()) notifyReady();
+            else ensurePollForTurnstile();
+        };
+        existingScript.addEventListener("load", handleLoad, { once: true });
+        // The script may already have loaded under another onload callback name.
+        ensurePollForTurnstile();
+        return () => {
+            existingScript.removeEventListener("load", handleLoad);
+            readyListeners.delete(onReady);
+            errorListeners.delete(onError);
+            if (readyListeners.size === 0) stopPolling();
+        };
+    }
+
+    const script = document.createElement("script");
+    script.src = `${TURNSTILE_SCRIPT_SRC}&onload=__communityTurnstileLoaded`;
+    script.async = true;
+    script.defer = true;
+    script.onerror = notifyError;
+    document.head.appendChild(script);
+    ensurePollForTurnstile();
+
+    return () => {
+        readyListeners.delete(onReady);
+        errorListeners.delete(onError);
+        if (readyListeners.size === 0) stopPolling();
+    };
+}
+
 interface TurnstileWidgetProps {
     siteKey: string;
     onToken: (token: string) => void;
@@ -57,26 +138,14 @@ export function TurnstileWidget({ siteKey, onToken, resetNonce = 0 }: TurnstileW
         if (!siteKey) return;
         if (getTurnstileApi()) return;
 
-        window.__communityTurnstileLoaded = () => setScriptReady(true);
-        const existingScript = document.querySelector<HTMLScriptElement>(
-            `script[src^="https://challenges.cloudflare.com/turnstile/v0/api.js"]`,
+        return subscribeTurnstileScript(
+            () => setScriptReady(true),
+            () =>
+                setErrorState({
+                    nonce: resetNonceRef.current,
+                    message: t("common.comments.turnstile.scriptFailed"),
+                }),
         );
-        if (existingScript) {
-            const handleLoad = () => setScriptReady(true);
-            existingScript.addEventListener("load", handleLoad, { once: true });
-            return () => existingScript.removeEventListener("load", handleLoad);
-        }
-
-        const script = document.createElement("script");
-        script.src = `${TURNSTILE_SCRIPT_SRC}&onload=__communityTurnstileLoaded`;
-        script.async = true;
-        script.defer = true;
-        script.onerror = () =>
-            setErrorState({
-                nonce: resetNonceRef.current,
-                message: t("common.comments.turnstile.scriptFailed"),
-            });
-        document.head.appendChild(script);
     }, [siteKey, t]);
 
     useEffect(() => {

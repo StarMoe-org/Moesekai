@@ -239,6 +239,7 @@ export function EntityCommentSection({
                 setTurnstileResetNonce((n) => n + 1);
 
                 const created = res.comment;
+                const countsTowardPublic = created.status === "published";
                 if (created.root_id) {
                     const rootId = created.root_id;
                     setComments((prev) =>
@@ -246,7 +247,7 @@ export function EntityCommentSection({
                             item.id === rootId
                                 ? {
                                       ...item,
-                                      reply_count: item.reply_count + 1,
+                                      reply_count: item.reply_count + (countsTowardPublic ? 1 : 0),
                                       preview_replies: [...item.preview_replies, created],
                                   }
                                 : item,
@@ -268,12 +269,14 @@ export function EntityCommentSection({
                 }
 
                 setReplyTarget(null);
-                setThread((prev) => {
-                    if (!prev) return prev;
-                    const nextCount = prev.comment_count + 1;
-                    onCommentCountChange?.(nextCount);
-                    return { ...prev, comment_count: nextCount };
-                });
+                if (countsTowardPublic) {
+                    setThread((prev) => {
+                        if (!prev) return prev;
+                        const nextCount = prev.comment_count + 1;
+                        onCommentCountChange?.(nextCount);
+                        return { ...prev, comment_count: nextCount };
+                    });
+                }
 
                 if (res.moderation_notice === "pending_review") {
                     setSubmitNotice(t("common.comments.notices.pendingReview"));
@@ -364,6 +367,7 @@ export function EntityCommentSection({
     const handleDeleteComment = async (comment: CommentItem) => {
         try {
             await deleteComment(comment.id);
+            const countedInPublic = comment.status === "published";
             if (comment.root_id) {
                 const rootId = comment.root_id;
                 setComments((prev) =>
@@ -371,7 +375,10 @@ export function EntityCommentSection({
                         item.id === rootId
                             ? {
                                   ...item,
-                                  reply_count: Math.max(0, item.reply_count - 1),
+                                  reply_count: Math.max(
+                                      0,
+                                      item.reply_count - (countedInPublic ? 1 : 0),
+                                  ),
                                   preview_replies: item.preview_replies.filter((r) => r.id !== comment.id),
                               }
                             : item,
@@ -391,12 +398,14 @@ export function EntityCommentSection({
             } else {
                 setComments((prev) => prev.filter((item) => item.id !== comment.id));
             }
-            setThread((prev) => {
-                if (!prev) return prev;
-                const nextCount = Math.max(0, prev.comment_count - 1);
-                onCommentCountChange?.(nextCount);
-                return { ...prev, comment_count: nextCount };
-            });
+            if (countedInPublic) {
+                setThread((prev) => {
+                    if (!prev) return prev;
+                    const nextCount = Math.max(0, prev.comment_count - 1);
+                    onCommentCountChange?.(nextCount);
+                    return { ...prev, comment_count: nextCount };
+                });
+            }
         } catch (err) {
             setSubmitError(getCommunityErrorMessage(err, t));
         }

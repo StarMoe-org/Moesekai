@@ -25,11 +25,20 @@ function getInitials(name: string): string {
     return Array.from(trimmed)[0]?.toUpperCase() ?? "?";
 }
 
-function safeAvatarUrl(url: string | null | undefined): string | null {
+export function safeAvatarUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     const trimmed = url.trim();
-    if (trimmed.startsWith("https://") || trimmed.startsWith("http://") || trimmed.startsWith("/")) {
+    if (!trimmed) return null;
+    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
         return trimmed;
+    }
+    try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
+            return parsed.toString();
+        }
+    } catch {
+        // Reject malformed or non-http(s) URLs
     }
     return null;
 }

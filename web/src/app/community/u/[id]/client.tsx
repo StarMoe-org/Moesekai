@@ -24,6 +24,7 @@ import {
     useCommunitySession,
 } from "@/lib/community-session";
 import PostCard from "@/components/community/PostCard";
+import { safeAvatarUrl } from "@/components/community/CommunityAuthorBadge";
 import {
     Banner,
     Button,
@@ -259,9 +260,9 @@ export default function CommunityUserProfileClient() {
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container type-headline-s text-on-primary-container">
-                                        {profile.avatar_url ? (
+                                        {safeAvatarUrl(profile.avatar_url) ? (
                                             <img
-                                                src={profile.avatar_url}
+                                                src={safeAvatarUrl(profile.avatar_url)!}
                                                 alt={profile.display_name}
                                                 className="h-full w-full object-cover"
                                                 referrerPolicy="no-referrer"
@@ -430,7 +431,7 @@ export default function CommunityUserProfileClient() {
                                             label={t("page.community.profile.bioLabel")}
                                             value={bioDraft}
                                             onValueChange={setBioDraft}
-                                            maxLength={240}
+                                            maxLength={200}
                                             placeholder={t("page.community.profile.bioPlaceholder")}
                                             containerClassName="flex-1"
                                         />

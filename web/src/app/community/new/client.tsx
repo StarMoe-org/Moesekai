@@ -350,7 +350,7 @@ export default function NewPostClient() {
                                         value={bodyMd}
                                         onChange={(e) => setBodyMd(e.target.value)}
                                         rows={10}
-                                        maxLength={10000}
+                                        maxLength={8000}
                                         placeholder={t("page.community.composer.bodyPlaceholder")}
                                         className="w-full resize-y rounded-md3-md border border-outline-variant bg-surface-container-lowest p-3.5 type-body-m text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
                                     />

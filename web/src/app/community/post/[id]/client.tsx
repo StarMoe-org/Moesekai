@@ -592,7 +592,7 @@ export default function CommunityPostClient() {
                                     value={editBody}
                                     onChange={(e) => setEditBody(e.target.value)}
                                     rows={8}
-                                    maxLength={10000}
+                                    maxLength={8000}
                                     className="w-full resize-y rounded-md3-md border border-outline-variant bg-surface-container-lowest p-3 type-body-m text-on-surface focus:border-primary focus:outline-none"
                                 />
                                 <Switch

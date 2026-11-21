@@ -126,16 +126,13 @@ export function StickerPicker({
     );
 
     const favoriteIds = useMemo(
-        () =>
-            !localDirty && serverFavorites && serverFavorites.length > 0
-                ? serverFavorites
-                : localFavorites,
+        () => (!localDirty && serverFavorites !== null ? serverFavorites : localFavorites),
         [localDirty, localFavorites, serverFavorites],
     );
 
-    // Mirror server-hydrated favorites to localStorage for offline/fast startup.
+    // Mirror server-hydrated favorites (including empty list) to localStorage.
     useEffect(() => {
-        if (!localDirty && serverFavorites && serverFavorites.length > 0) {
+        if (!localDirty && serverFavorites !== null) {
             persistIds(FAVORITE_STAMPS_KEY, serverFavorites);
         }
     }, [localDirty, serverFavorites]);
