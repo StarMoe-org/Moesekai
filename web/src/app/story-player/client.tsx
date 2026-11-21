@@ -66,7 +66,7 @@ function useEpisodeScript(episode: StoryEpisode | undefined, region: SseWebRegio
 }
 
 /**
- * The story player: one episode of a server's story library played on a stage, with its
+ * The story player: one episode a server publishes played on a stage, with its
  * script beside it, the two following each other. The address names the server and the
  * episode (`?server=jp&ep=event:140/1`), so a link opens the same one.
  */

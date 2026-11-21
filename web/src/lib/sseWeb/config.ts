@@ -51,62 +51,38 @@ export function sseWebCoreUrl(): string | null {
     return parsed.href;
 }
 
-/** The game servers a story library is published for. */
+/** The game servers whose stories the site publishes. */
 export const SSE_WEB_REGIONS = ["jp", "cn", "tw", "kr", "en"] as const;
 
 export type SseWebRegion = (typeof SSE_WEB_REGIONS)[number];
 
-const DEFAULT_LIBRARY_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/";
-const DEFAULT_INAPP_BASE = "https://assets.pjsk.moe/sekai-extra-assets/inapp/";
-// Only the JP and CN clients are unpacked. The other three servers' libraries play with the
-// CN client's UI and fonts, which draw their text but are not those servers' own.
-const DEFAULT_INAPPS = "jp=jp-7.0.0,cn=cn-6.4.0,tw=cn-6.4.0,kr=cn-6.4.0,en=cn-6.4.0";
+const DEFAULT_SITE = "https://storage.pjsk.moe/";
 
 export interface SseWebSources {
-    /** The story library (SekaiStoryRipper's output), holding `ripper.lock.json`. */
-    library: string;
-    /** The client unpack the player derives its UI from. */
-    inapp: string;
-    /** The client unpack is another server's: the picture's UI and fonts are not this server's own. */
+    /** The site that publishes the story data: `<site>/<region>/` and `<site>/client/<region>/`. */
+    site: string;
+    region: SseWebRegion;
+    /**
+     * The client view is another server's: only the JP and CN clients are published, and the
+     * other three servers' stories play with the CN client's UI and fonts.
+     */
     borrowedUi: boolean;
-    /** Development only: a relay put in front of `https://host/...` (the library's host allows one origin). */
+    /** Development only: a relay put in front of `https://host/...`. */
     proxy?: string;
 }
 
 /**
- * The client unpack each server's stories are played with, as `NEXT_PUBLIC_SSE_WEB_INAPPS`
- * gives it: `<region>=<unpack>` pairs separated by commas, an unpack being a directory under
- * the unpacks' base (e.g. `jp-7.0.0`). A server that is left out has no Live2D playback.
- */
-function inapps(): Partial<Record<SseWebRegion, string>> {
-    const invalid = new Error("sse_web_config_invalid:NEXT_PUBLIC_SSE_WEB_INAPPS");
-    const raw = process.env.NEXT_PUBLIC_SSE_WEB_INAPPS?.trim() || DEFAULT_INAPPS;
-    const map: Partial<Record<SseWebRegion, string>> = {};
-    for (const pair of raw.split(",")) {
-        const [region, unpack, ...rest] = pair.trim().split("=");
-        if (rest.length > 0 || !SSE_WEB_REGIONS.includes(region as SseWebRegion) || region in map
-            || !/^[a-z0-9][a-z0-9.-]*$/.test(unpack ?? "") || unpack.includes("..")) throw invalid;
-        map[region as SseWebRegion] = unpack;
-    }
-    return map;
-}
-
-/**
- * Where the player reads the episodes of `region`'s server from, or null when that server
- * has no client unpack to play with. The libraries are `<base>/<region>/`, the unpacks
- * `<base>/<unpack>/`; both bases can be moved (`NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE`,
- * `NEXT_PUBLIC_SSE_WEB_INAPP_BASE`).
+ * Where the player reads the episodes of `region`'s server from, or null for a server the site
+ * does not publish. The site can be moved (`NEXT_PUBLIC_SSE_WEB_SITE`).
  */
 export function sseWebSources(region: string): SseWebSources | null {
-    const unpack = inapps()[region as SseWebRegion];
-    if (!unpack) return null;
-    const libraries = directory(process.env.NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE, "NEXT_PUBLIC_SSE_WEB_LIBRARY_BASE") ?? DEFAULT_LIBRARY_BASE;
-    const unpacks = directory(process.env.NEXT_PUBLIC_SSE_WEB_INAPP_BASE, "NEXT_PUBLIC_SSE_WEB_INAPP_BASE") ?? DEFAULT_INAPP_BASE;
+    if (!SSE_WEB_REGIONS.includes(region as SseWebRegion)) return null;
+    const site = directory(process.env.NEXT_PUBLIC_SSE_WEB_SITE, "NEXT_PUBLIC_SSE_WEB_SITE") ?? DEFAULT_SITE;
     const proxy = directory(process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY, "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY");
     return {
-        library: `${libraries}${region}/`,
-        inapp: `${unpacks}${unpack}/`,
-        borrowedUi: !unpack.startsWith(`${region}-`),
+        site,
+        region: region as SseWebRegion,
+        borrowedUi: region !== "jp" && region !== "cn",
         ...(proxy ? { proxy } : {}),
     };
 }
@@ -140,7 +116,7 @@ export interface SseWebFonts {
  * missing and no other directory is named (next.config.ts tells through
  * `NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS`).
  *
- * The other servers' text is drawn with Source Han Sans SC, an open font their client unpack
+ * The other servers' text is drawn with Source Han Sans SC, an open font the CN client view
  * carries, and is left as it is.
  */
 const FONT_TEXT = "MPLUS1[wght].ttf";

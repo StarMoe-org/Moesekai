@@ -56,7 +56,7 @@ function newestCardsFirst(episodes: readonly StoryEpisode[]): StoryEpisode[] {
  * them; these never scroll. Below them only the list scrolls: each group (an event, a unit
  * chapter, a character, a special story, an area or an area talk category) is a list item
  * that opens to its episodes, its header staying on top of its open list. Only the episodes
- * the server's story library holds are listed; the current one is marked.
+ * the server publishes are listed; the current one is marked.
  */
 export function StoryPickerDialog({ isOpen, onClose, region, kind, onKindChange, catalog, onRetry, current, onSelect }: StoryPickerDialogProps) {
     const { t } = useI18n();
