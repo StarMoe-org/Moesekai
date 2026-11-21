@@ -120,6 +120,22 @@ export const accountMessages = {
         manageShort: "Manage",
         accountCenterShort: "Account center",
     },
+    tools: {
+        viewing: "Viewing",
+        switch: "Switch",
+        add: "Add",
+        mine: "My game accounts",
+        fillHint: "Tap to fill in",
+        manage: "Manage",
+    },
+    link: {
+        linked: "Leaderboard name: {name}",
+        notVerified: "This game account isn't one of your Haruki-verified accounts.",
+        connectRequired: "Connect Haruki first to link a game account.",
+        connectToLink: "Connect Haruki to link a game account",
+        reconnectToLink: "Reconnect Haruki to link a game account",
+        noVerified: "No verified game accounts in Haruki yet",
+    },
     profile: {
         emptyTitle: "No game account to show yet",
         emptyBody: "Add a game account and its deck, song clears, character ranks and bonds show up here.",

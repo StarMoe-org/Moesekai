@@ -120,6 +120,22 @@ export const accountMessages = {
         manageShort: "管理",
         accountCenterShort: "アカウントセンター",
     },
+    tools: {
+        viewing: "表示中",
+        switch: "切り替え",
+        add: "追加",
+        mine: "自分のゲームアカウント",
+        fillHint: "タップで入力",
+        manage: "管理",
+    },
+    link: {
+        linked: "ランキング表示：{name}",
+        notVerified: "このゲームアカウントは Haruki の認証済みアカウントにありません。",
+        connectRequired: "ゲームアカウントを紐付けるには、先に Haruki を連携してください。",
+        connectToLink: "Haruki を連携してゲームアカウントを紐付け",
+        reconnectToLink: "Haruki を再連携してゲームアカウントを紐付け",
+        noVerified: "Haruki に認証済みのゲームアカウントがまだありません",
+    },
     profile: {
         emptyTitle: "表示できるゲームアカウントがありません",
         emptyBody: "ゲームアカウントを追加すると、デッキ、楽曲のクリア状況、キャラクターランク、絆がここに表示されます。",

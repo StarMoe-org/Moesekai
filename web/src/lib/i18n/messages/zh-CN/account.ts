@@ -120,6 +120,22 @@ export const accountMessages = {
         manageShort: "管理",
         accountCenterShort: "账号中心",
     },
+    tools: {
+        viewing: "正在查看",
+        switch: "切换",
+        add: "添加",
+        mine: "我的游戏账号",
+        fillHint: "点一下填入",
+        manage: "管理",
+    },
+    link: {
+        linked: "排行榜显示：{name}",
+        notVerified: "这个游戏账号不在你的 Haruki 已验证账号里。",
+        connectRequired: "先连接 Haruki，才能关联游戏账号。",
+        connectToLink: "连接 Haruki 来关联游戏账号",
+        reconnectToLink: "重新连接 Haruki 来关联游戏账号",
+        noVerified: "Haruki 里还没有已验证的游戏账号",
+    },
     profile: {
         emptyTitle: "还没有可以查看的游戏账号",
         emptyBody: "添加游戏账号后，这里会显示它的卡组、乐曲通关、角色等级和羁绊。",
