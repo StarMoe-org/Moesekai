@@ -43,6 +43,9 @@ test("resolveVersion derives the version from a real git history", () => {
         git(["init", "-q", "-b", "main"]);
         git(["config", "user.email", "test@example.com"]);
         git(["config", "user.name", "Test"]);
+        // A developer's global signing settings would make the lightweight tag below ask for a message.
+        git(["config", "commit.gpgSign", "false"]);
+        git(["config", "tag.gpgSign", "false"]);
         git(["commit", "-q", "--allow-empty", "-m", "first"]);
 
         let info = resolveVersion(dir);
