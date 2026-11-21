@@ -308,15 +308,17 @@ func TestMoesekaiAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
 				http.NotFound(w, r)
 			})
 
-			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123"} {
+			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123", "/api/community", "/api/community/me", "/api/community/posts"} {
 				response := httptest.NewRecorder()
 				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")
 			}
-			other := httptest.NewRecorder()
-			mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, "/api/authors", nil))
-			if other.Code != http.StatusNotFound {
-				t.Fatalf("/api/authors status = %d, want 404", other.Code)
+			for _, unknownPath := range []string{"/api/authors", "/api/community-other"} {
+				other := httptest.NewRecorder()
+				mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, unknownPath, nil))
+				if other.Code != http.StatusNotFound {
+					t.Fatalf("%s status = %d, want 404", unknownPath, other.Code)
+				}
 			}
 		})
 	}
@@ -379,6 +381,25 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 			want: seenRequest{
 				method: http.MethodGet, path: "/api/auth/callback", query: "code=c&state=s",
 				forwardedFor: "127.0.0.1", forwardedHost: strings.TrimPrefix(front.URL, "http://"), forwardedProto: "http",
+			},
+		},
+		{
+			name:   "community api forwarded without html cache",
+			method: http.MethodPost,
+			target: "/api/community/posts?category=general",
+			body:   `{"title":"hello","body_md":"world"}`,
+			headers: map[string]string{
+				"Cookie":            "__Host-ms_session=active",
+				"X-Forwarded-For":   "198.51.100.12",
+				"X-Forwarded-Host":  "pjsk.moe",
+				"X-Forwarded-Proto": "https",
+				"CF-Connecting-IP":  "198.51.100.12",
+			},
+			want: seenRequest{
+				method: http.MethodPost, path: "/api/community/posts", query: "category=general",
+				body: `{"title":"hello","body_md":"world"}`, cookie: "__Host-ms_session=active",
+				forwardedFor: "198.51.100.12, 127.0.0.1", forwardedHost: "pjsk.moe",
+				forwardedProto: "https", connectingIP: "198.51.100.12",
 			},
 		},
 	}

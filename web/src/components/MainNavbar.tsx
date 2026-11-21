@@ -4,6 +4,7 @@ import Link from "@/components/LocalizedLink";
 import { usePathname } from "next/navigation";
 import SettingsPanel, { type SettingsTab } from "./SettingsPanel";
 import CommandPalette from "./CommandPalette";
+import NotificationBell from "./community/NotificationBell";
 import { getPrimaryShortcutLabel } from "@/lib/shortcuts";
 import { MOE_LOGO_URL } from "@/lib/assets";
 import Breadcrumb from "./Breadcrumb";
@@ -128,6 +129,8 @@ export default function MainNavbar({
                             onClick={onShortcutsHelpToggle}
                         />
                     </div>
+
+                    <NotificationBell />
 
                     <div className="relative">
                         <IconButton

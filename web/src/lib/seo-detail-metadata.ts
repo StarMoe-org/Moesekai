@@ -22,11 +22,21 @@ import {
 import { createElement, Suspense, type ComponentType, type ReactNode } from "react";
 
 import {
+    buildDetailMetadata,
     defineSeoDetailPage,
+    getRequestSeoLocale,
+    getSeoAssetSource,
+    noIndexRobots,
     type CreateDynamicDetailMetadataOptions,
 } from "@/lib/seo-metadata";
-import { formatExchangeShopSuffix, formatJpAdvancePrefix, formatMysekaiFlavorSuffix } from "@/lib/seo-keywords";
-import { getSeoAssetSource } from "@/lib/seo-metadata";
+import {
+    formatDetailSeoDescription,
+    formatExchangeShopSuffix,
+    formatJpAdvancePrefix,
+    formatMysekaiFlavorSuffix,
+    getDetailFallbackDescription,
+    getDetailFallbackTitle,
+} from "@/lib/seo-keywords";
 import { CHARACTER_NAMES } from "@/types/types";
 import { LoadingIndicator } from "@/components/md3/Progress";
 
@@ -309,3 +319,68 @@ const mysekaiFixtureDetailPreset = defineDetailPreset<NonNullable<ReturnType<typ
 
 export const defineMysekaiFixtureDetailPage = detailPageFactory(mysekaiFixtureDetailPreset);
 export const defineMysekaiFixtureDetailClientPage = detailClientPageFactory(mysekaiFixtureDetailPreset);
+
+interface ServerCommunityPostPreview {
+    id?: number;
+    title?: string;
+    status?: string;
+    author?: { display_name?: string };
+}
+
+async function fetchPublicCommunityPostForSeo(id: string): Promise<ServerCommunityPostPreview | null> {
+    if (!/^\d{1,12}$/.test(id)) return null;
+    const base = (process.env.MOESEKAI_API_URL || process.env.INTERNAL_API_BASE_URL || "").trim().replace(/\/+$/, "");
+    if (!base) return null;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 1500);
+    try {
+        const res = await fetch(`${base}/api/community/posts/${encodeURIComponent(id)}`, {
+            headers: { Accept: "application/json" },
+            cache: "no-store",
+            signal: controller.signal,
+        });
+        if (!res.ok) return null;
+        const payload = (await res.json()) as { post?: ServerCommunityPostPreview };
+        return payload.post ?? null;
+    } catch {
+        return null;
+    } finally {
+        clearTimeout(timer);
+    }
+}
+
+export async function generateCommunityPostMetadata({
+    params,
+}: {
+    params: Promise<{ id: string }>;
+}) {
+    const { id } = await params;
+    const locale = await getRequestSeoLocale();
+    const path = `/community/post/${encodeURIComponent(id)}/`;
+    const post = await fetchPublicCommunityPostForSeo(id);
+
+    if (!post || post.status !== "published" || !post.title) {
+        return buildDetailMetadata({
+            locale,
+            title: getDetailFallbackTitle("communityPost", locale),
+            description: getDetailFallbackDescription("communityPost", locale),
+            path,
+            twitterCard: "summary",
+            robots: noIndexRobots(),
+        });
+    }
+
+    const authorName = post.author?.display_name?.trim() || "StarMoe";
+    return buildDetailMetadata({
+        locale,
+        title: post.title,
+        description: formatDetailSeoDescription(
+            "communityPost",
+            { title: post.title, author: authorName },
+            locale,
+        ),
+        path,
+        twitterCard: "summary",
+    });
+}
