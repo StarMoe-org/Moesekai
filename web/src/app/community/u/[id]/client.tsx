@@ -26,6 +26,7 @@ import {
 import PostCard from "@/components/community/PostCard";
 import CommunityAvatar from "@/components/community/CommunityAvatar";
 import CardAvatarPicker from "@/components/community/CardAvatarPicker";
+import UserGovernancePanel from "@/components/community/UserGovernancePanel";
 import {
     Banner,
     Button,
@@ -45,11 +46,13 @@ import {
     mdEdit,
     mdLink,
     mdShield,
+    mdStar,
     mdVerified,
 } from "@/components/md3/icons";
 import {
     POST_CATEGORY_OPTIONS,
-    TRUST_LEVEL_LABEL_KEYS,
+    getTrustLevelLabelKey,
+    isModeratorRole,
     type BlockedUserItem,
     type CommunityProfile,
     type PostCategory,
@@ -83,6 +86,8 @@ export default function CommunityUserProfileClient() {
     const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
     const isSelf = Boolean(session.authenticated && session.profile?.sub === userSub);
+    const isViewerMod = isModeratorRole(session.profile?.role);
+    const canManageMods = session.canManageMods;
 
     const loadProfile = useCallback(async () => {
         if (!userSub) {
@@ -298,17 +303,14 @@ export default function CommunityUserProfileClient() {
                                             <h1 className="type-headline-s text-on-surface break-words">
                                                 {profile.display_name}
                                             </h1>
-                                            <span className="rounded-md3-xs bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">
-                                                {t(TRUST_LEVEL_LABEL_KEYS[profile.trust_level])}
+                                            <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">
+                                                {profile.trust_level === 4 && <Icon path={mdStar} size={14} />}
+                                                <span>{t(getTrustLevelLabelKey(profile.trust_level))}</span>
                                             </span>
-                                            {(profile.role === "mod" || profile.role === "admin") && (
+                                            {isModeratorRole(profile.role) && (
                                                 <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
                                                     <Icon path={mdShield} size={14} />
-                                                    <span>
-                                                        {profile.role === "admin"
-                                                            ? t("page.community.roles.admin")
-                                                            : t("page.community.roles.mod")}
-                                                    </span>
+                                                    <span>{t("page.community.roles.mod")}</span>
                                                 </span>
                                             )}
                                         </div>
@@ -399,29 +401,50 @@ export default function CommunityUserProfileClient() {
                                     </div>
                                 </div>
                             </div>
+
+                            {typeof profile.health_score === "number" && (isSelf || isViewerMod) && (
+                                <div className="mt-3 flex items-center justify-between rounded-md3-md bg-surface-container px-4 py-3">
+                                    <div>
+                                        <div className="type-title-s text-on-surface">
+                                            {t("page.community.profile.healthScoreTitle")}
+                                        </div>
+                                        <div className="type-body-s text-on-surface-variant">
+                                            {t("page.community.profile.healthScoreDesc")}
+                                        </div>
+                                    </div>
+                                    <span className="shrink-0 type-headline-s text-primary">
+                                        {profile.health_score} / 100
+                                    </span>
+                                </div>
+                            )}
                         </SectionCard>
+
+                        {/* Moderator quick governance actions when viewing another member */}
+                        {isViewerMod && !isSelf && (
+                            <SectionCard title={t("page.community.mod.userGov.title")} icon={mdShield}>
+                                <UserGovernancePanel
+                                    target={profile}
+                                    canManageMods={canManageMods}
+                                    viewerSub={session.profile?.sub}
+                                    onUpdated={(updated, message) => {
+                                        if (updated) setProfile(updated);
+                                        setStatusError(null);
+                                        setStatusMessage(message);
+                                    }}
+                                    onError={(message) => {
+                                        setStatusMessage(null);
+                                        setStatusError(message);
+                                    }}
+                                />
+                            </SectionCard>
+                        )}
 
                         {/* Own preferences */}
                         {isSelf && (
                             <SectionCard title={t("page.community.profile.preferencesTitle")}>
                                 <div className="space-y-5">
-                                    {typeof profile.health_score === "number" && (
-                                        <div className="flex items-center justify-between rounded-md3-md bg-surface-container px-4 py-3">
-                                            <div>
-                                                <div className="type-title-s text-on-surface">
-                                                    {t("page.community.profile.healthScoreTitle")}
-                                                </div>
-                                                <div className="type-body-s text-on-surface-variant">
-                                                    {t("page.community.profile.healthScoreDesc")}
-                                                </div>
-                                            </div>
-                                            <span className="type-headline-s text-primary">
-                                                {profile.health_score} / 100
-                                            </span>
-                                        </div>
-                                    )}
-
-                                    {profile.muted_until && (
+                                    {profile.muted_until &&
+                                        new Date(profile.muted_until).getTime() > Date.now() && (
                                         <Banner tone="warning">
                                             {t("common.comments.errors.userMutedUntil", {
                                                 until: formatDate(profile.muted_until, {

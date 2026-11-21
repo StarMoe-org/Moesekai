@@ -7,6 +7,7 @@ import { Icon, cn } from "@/components/md3";
 import { mdShield, mdStar, mdVerified } from "@/components/md3/icons";
 import {
     TRUST_LEVEL_LABEL_KEYS,
+    isModeratorRole,
     type AuthorSummary,
     type CardOwnershipBadge,
 } from "@/types/community";
@@ -56,8 +57,8 @@ export function CommunityAuthorBadge({
           })
         : null;
 
-    const isMod = author.role === "mod" || author.role === "admin";
-    const isCreator = author.trust_level === 3;
+    const isMod = !author.is_deleted && isModeratorRole(author.role);
+    const isCreator = !author.is_deleted && author.trust_level === 4;
     const primaryServer = author.verified_badge?.primary_server?.toUpperCase();
 
     return (
@@ -90,18 +91,14 @@ export function CommunityAuthorBadge({
                     {isMod && (
                         <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                             <Icon path={mdShield} size={13} />
-                            <span>
-                                {author.role === "admin"
-                                    ? t("page.community.roles.admin")
-                                    : t("page.community.roles.mod")}
-                            </span>
+                            <span>{t("page.community.roles.mod")}</span>
                         </span>
                     )}
 
-                    {!isMod && isCreator && (
+                    {isCreator && (
                         <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
                             <Icon path={mdStar} size={13} />
-                            <span>{t(TRUST_LEVEL_LABEL_KEYS[3])}</span>
+                            <span>{t(TRUST_LEVEL_LABEL_KEYS[4])}</span>
                         </span>
                     )}
 

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import MainLayout from "@/components/MainLayout";
 import Link from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
 import { signIn } from "@/lib/moesekai-account";
 import {
     deleteModRule,
+    fetchCommunityUser,
     fetchModAudit,
     fetchModMode,
     fetchModQueue,
@@ -18,13 +19,16 @@ import {
 } from "@/lib/community-api";
 import { setCommunityModeLocal, useCommunitySession } from "@/lib/community-session";
 import CommunityAuthorBadge from "@/components/community/CommunityAuthorBadge";
+import CommunityAvatar from "@/components/community/CommunityAvatar";
 import CommunityMarkdown from "@/components/community/CommunityMarkdown";
+import UserGovernancePanel from "@/components/community/UserGovernancePanel";
 import {
     Banner,
     Button,
     Chip,
     EmptyState,
     ErrorState,
+    Icon,
     IconButton,
     LoadingState,
     PageContainer,
@@ -40,32 +44,37 @@ import {
     mdAdd,
     mdArrowBack,
     mdDelete,
+    mdLock,
     mdLogin,
+    mdPerson,
     mdRefresh,
+    mdSearch,
     mdShield,
+    mdStar,
     mdWarning,
 } from "@/components/md3/icons";
 import {
     COMMUNITY_MODE_OPTIONS,
     RULE_MATCH_TYPE_OPTIONS,
     RULE_TIER_OPTIONS,
+    getTrustLevelLabelKey,
     isModeratorRole,
     type CommunityMode,
+    type CommunityProfile,
     type CustomWordRule,
-    type ModActionType,
+    type ModActionRequest,
     type ModAppealItem,
     type ModAuditItem,
     type ModModeResponse,
     type ModPendingItem,
     type ModQueueCounts,
     type ModReportItem,
-    type ModTargetType,
     type ModerationEvent,
     type RuleMatchType,
     type RuleTier,
 } from "@/types/community";
 
-type DashboardTab = "pending" | "reports" | "appeals" | "events" | "rules" | "audit";
+type DashboardTab = "pending" | "reports" | "appeals" | "users" | "events" | "rules" | "audit";
 
 export default function CommunityModClient() {
     const { t, formatDate } = useI18n();
@@ -103,7 +112,45 @@ export default function CommunityModClient() {
     const [newRuleNote, setNewRuleNote] = useState("");
     const [savingRule, setSavingRule] = useState(false);
 
+    // User governance lookup state
+    const [lookupSub, setLookupSub] = useState("");
+    const [targetUser, setTargetUser] = useState<CommunityProfile | null>(null);
+    const [loadingUser, setLoadingUser] = useState(false);
+
     const isMod = isModeratorRole(session.profile?.role);
+    const canManageMods = session.canManageMods;
+
+    const availableRuleTiers = useMemo(
+        () =>
+            canManageMods
+                ? RULE_TIER_OPTIONS
+                : RULE_TIER_OPTIONS.filter((opt) => opt.id !== "p0_block"),
+        [canManageMods],
+    );
+
+    const effectiveNewRuleTier: RuleTier =
+        !canManageMods && newRuleTier === "p0_block" ? "p1_review" : newRuleTier;
+
+    const recentQueueUsers = useMemo(() => {
+        const seen = new Map<string, string>();
+        const add = (sub: string | undefined | null, label?: string) => {
+            if (!sub || seen.has(sub)) return;
+            seen.set(sub, label || sub);
+        };
+        pendingItems.forEach((item) => {
+            if (!item.author.is_deleted) add(item.author.sub, item.author.display_name);
+        });
+        reportItems.forEach((rep) => {
+            add(rep.target_author_sub);
+            if (!rep.reporter.is_deleted) add(rep.reporter.sub, rep.reporter.display_name);
+        });
+        appealItems.forEach((appeal) => {
+            if (!appeal.appellant.is_deleted) add(appeal.appellant.sub, appeal.appellant.display_name);
+        });
+        return Array.from(seen.entries())
+            .slice(0, 10)
+            .map(([sub, label]) => ({ sub, label }));
+    }, [appealItems, pendingItems, reportItems]);
 
     const loadMode = useCallback(async () => {
         try {
@@ -117,7 +164,7 @@ export default function CommunityModClient() {
     }, []);
 
     const loadActiveTab = useCallback(async () => {
-        if (!isMod) return;
+        if (!isMod || activeTab === "users") return;
         setLoading(true);
         setError(null);
         try {
@@ -152,6 +199,37 @@ export default function CommunityModClient() {
         }
     }, [activeTab, isMod, t]);
 
+    const handleLookupUser = useCallback(
+        async (overrideSub?: string) => {
+            const targetSub = (overrideSub ?? lookupSub).trim();
+            if (!targetSub) return;
+            if (overrideSub !== undefined) {
+                setLookupSub(targetSub);
+            }
+            setLoadingUser(true);
+            setError(null);
+            setNotice(null);
+            try {
+                const profile = await fetchCommunityUser(targetSub);
+                setTargetUser(profile);
+            } catch (err) {
+                setTargetUser(null);
+                setError(getCommunityErrorMessage(err, t));
+            } finally {
+                setLoadingUser(false);
+            }
+        },
+        [lookupSub, t],
+    );
+
+    const openUserGovernance = useCallback(
+        (sub: string) => {
+            setActiveTab("users");
+            void handleLookupUser(sub);
+        },
+        [handleLookupUser],
+    );
+
     useEffect(() => {
         if (isMod) {
             void loadMode();
@@ -182,16 +260,7 @@ export default function CommunityModClient() {
         }
     };
 
-    const runAction = async (
-        key: string,
-        input: {
-            action: ModActionType;
-            target_type: ModTargetType;
-            target_id: string;
-            reason?: string;
-            mute_hours?: number;
-        },
-    ) => {
+    const runAction = async (key: string, input: ModActionRequest) => {
         setBusyId(key);
         setError(null);
         setNotice(null);
@@ -213,7 +282,7 @@ export default function CommunityModClient() {
         setError(null);
         try {
             const res = await upsertModRule({
-                tier: newRuleTier,
+                tier: effectiveNewRuleTier,
                 match_type: newRuleMatch,
                 pattern,
                 note: newRuleNote.trim() || undefined,
@@ -284,7 +353,11 @@ export default function CommunityModClient() {
                                     icon={mdRefresh}
                                     onClick={() => {
                                         void loadMode();
-                                        void loadActiveTab();
+                                        if (activeTab === "users" && targetUser) {
+                                            void handleLookupUser(targetUser.sub);
+                                        } else {
+                                            void loadActiveTab();
+                                        }
                                     }}
                                 >
                                     {t("page.community.mod.refresh")}
@@ -325,34 +398,62 @@ export default function CommunityModClient() {
                                 <p className="type-body-s text-on-surface-variant">
                                     {t("page.community.mod.panicSwitchDesc")}
                                 </p>
-                                <SegmentedButton
-                                    options={COMMUNITY_MODE_OPTIONS.map((opt) => ({
-                                        value: opt.id,
-                                        label: t(opt.labelKey),
-                                    }))}
-                                    value={selectedMode}
-                                    onValueChange={setSelectedMode}
-                                    aria-label={t("page.community.mod.panicSwitchTitle")}
-                                />
-                                <div className="flex flex-wrap items-end gap-2">
-                                    <TextField
-                                        label={t("page.community.mod.modeReasonLabel")}
-                                        value={modeReason}
-                                        onValueChange={setModeReason}
-                                        placeholder={t("page.community.mod.modeReasonPlaceholder")}
-                                        containerClassName="min-w-[220px] flex-1"
-                                    />
-                                    <Button
-                                        variant="filled"
-                                        color={selectedMode === "read_only" ? "error" : "primary"}
-                                        disabled={savingMode}
-                                        onClick={() => void handleApplyMode()}
-                                    >
-                                        {savingMode
-                                            ? t("common.comments.submitting")
-                                            : t("page.community.mod.applyMode")}
-                                    </Button>
-                                </div>
+                                {canManageMods ? (
+                                    <>
+                                        <SegmentedButton
+                                            options={COMMUNITY_MODE_OPTIONS.map((opt) => ({
+                                                value: opt.id,
+                                                label: t(opt.labelKey),
+                                            }))}
+                                            value={selectedMode}
+                                            onValueChange={setSelectedMode}
+                                            aria-label={t("page.community.mod.panicSwitchTitle")}
+                                        />
+                                        <div className="flex flex-wrap items-end gap-2">
+                                            <TextField
+                                                label={t("page.community.mod.modeReasonLabel")}
+                                                value={modeReason}
+                                                onValueChange={setModeReason}
+                                                placeholder={t("page.community.mod.modeReasonPlaceholder")}
+                                                containerClassName="min-w-[220px] flex-1"
+                                            />
+                                            <Button
+                                                variant="filled"
+                                                color={selectedMode === "read_only" ? "error" : "primary"}
+                                                disabled={savingMode}
+                                                onClick={() => void handleApplyMode()}
+                                            >
+                                                {savingMode
+                                                    ? t("common.comments.submitting")
+                                                    : t("page.community.mod.applyMode")}
+                                            </Button>
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-md3-md bg-surface-container px-4 py-3">
+                                        <div className="space-y-0.5">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="type-label-l text-on-surface">
+                                                    {t("page.community.mod.panicSwitchCurrentMode")}
+                                                </span>
+                                                <span
+                                                    className={
+                                                        selectedMode === "read_only"
+                                                            ? "rounded-md3-xs bg-error-container px-2 py-0.5 type-label-s text-on-error-container"
+                                                            : selectedMode === "strict_review"
+                                                              ? "rounded-md3-xs bg-warning-container px-2 py-0.5 type-label-s text-on-warning-container"
+                                                              : "rounded-md3-xs bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container"
+                                                    }
+                                                >
+                                                    {t(`page.community.mod.modes.${selectedMode}`)}
+                                                </span>
+                                            </div>
+                                            <p className="type-body-s text-on-surface-variant">
+                                                {t("page.community.mod.panicSwitchReadOnly")}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
                                 {modeInfo?.updated_at && (
                                     <p className="type-label-s text-on-surface-variant">
                                         {t("page.community.mod.modeLastUpdated", {
@@ -385,6 +486,7 @@ export default function CommunityModClient() {
                                         value: "appeals",
                                         label: `${t("page.community.mod.tabs.appeals")} (${counts.open_appeals})`,
                                     },
+                                    { value: "users", label: t("page.community.mod.tabs.users") },
                                     { value: "events", label: t("page.community.mod.tabs.events") },
                                     { value: "rules", label: t("page.community.mod.tabs.rules") },
                                     { value: "audit", label: t("page.community.mod.tabs.audit") },
@@ -396,9 +498,9 @@ export default function CommunityModClient() {
                                 className="mb-4"
                             />
 
-                            {loading ? (
+                            {loading && activeTab !== "users" ? (
                                 <LoadingState label={t("common.state.loading")} />
-                            ) : error && activeTab !== "rules" ? (
+                            ) : error && activeTab !== "rules" && activeTab !== "users" ? (
                                 <ErrorState
                                     title={t("common.state.loadingFailed")}
                                     message={error}
@@ -553,22 +655,39 @@ export default function CommunityModClient() {
                                                         >
                                                             {t("page.community.mod.actions.remove")}
                                                         </Button>
-                                                        <Button
-                                                            variant="text"
-                                                            size="xs"
-                                                            color="error"
-                                                            disabled={isBusy}
-                                                            onClick={() =>
-                                                                void runAction(itemKey, {
-                                                                    action: "mute_user",
-                                                                    target_type: "user",
-                                                                    target_id: item.author.sub,
-                                                                    mute_hours: 24,
-                                                                })
-                                                            }
-                                                        >
-                                                            {t("page.community.mod.actions.mute24h")}
-                                                        </Button>
+                                                        {!item.author.is_deleted &&
+                                                            item.author.role !== "admin" &&
+                                                            (item.author.role === "user" || canManageMods) && (
+                                                                <Button
+                                                                    variant="text"
+                                                                    size="xs"
+                                                                    color="error"
+                                                                    disabled={isBusy}
+                                                                    onClick={() =>
+                                                                        void runAction(itemKey, {
+                                                                            action: "mute_user",
+                                                                            target_type: "user",
+                                                                            target_id: item.author.sub,
+                                                                            mute_hours: 24,
+                                                                        })
+                                                                    }
+                                                                >
+                                                                    {t("page.community.mod.actions.mute24h")}
+                                                                </Button>
+                                                            )}
+                                                        {!item.author.is_deleted && (
+                                                            <Button
+                                                                variant="text"
+                                                                size="xs"
+                                                                icon={mdPerson}
+                                                                disabled={isBusy}
+                                                                onClick={() =>
+                                                                    openUserGovernance(item.author.sub)
+                                                                }
+                                                            >
+                                                                {t("page.community.mod.actions.manageUser")}
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </Surface>
                                             );
@@ -658,6 +777,19 @@ export default function CommunityModClient() {
                                                         >
                                                             {t("page.community.mod.actions.removeTarget")}
                                                         </Button>
+                                                        {rep.target_author_sub && (
+                                                            <Button
+                                                                variant="text"
+                                                                size="xs"
+                                                                icon={mdPerson}
+                                                                disabled={isBusy}
+                                                                onClick={() =>
+                                                                    openUserGovernance(rep.target_author_sub)
+                                                                }
+                                                            >
+                                                                {t("page.community.mod.actions.manageUser")}
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </Surface>
                                             );
@@ -726,12 +858,165 @@ export default function CommunityModClient() {
                                                         >
                                                             {t("page.community.mod.actions.rejectAppeal")}
                                                         </Button>
+                                                        {!appeal.appellant.is_deleted && (
+                                                            <Button
+                                                                variant="text"
+                                                                size="xs"
+                                                                icon={mdPerson}
+                                                                disabled={isBusy}
+                                                                onClick={() =>
+                                                                    openUserGovernance(appeal.appellant.sub)
+                                                                }
+                                                            >
+                                                                {t("page.community.mod.actions.manageUser")}
+                                                            </Button>
+                                                        )}
                                                     </div>
                                                 </Surface>
                                             );
                                         })}
                                     </div>
                                 )
+                            ) : activeTab === "users" ? (
+                                <div className="space-y-5">
+                                    <Surface tone="default" radius="md" className="space-y-3 p-4">
+                                        <div className="space-y-1">
+                                            <h3 className="type-title-s text-on-surface">
+                                                {t("page.community.mod.userGov.title")}
+                                            </h3>
+                                            <p className="type-body-s text-on-surface-variant">
+                                                {t("page.community.mod.userGov.description")}
+                                            </p>
+                                        </div>
+
+                                        <div className="flex flex-wrap items-end gap-2">
+                                            <TextField
+                                                label={t("page.community.mod.userGov.lookupLabel")}
+                                                value={lookupSub}
+                                                onValueChange={setLookupSub}
+                                                placeholder={t("page.community.mod.userGov.lookupPlaceholder")}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter") {
+                                                        e.preventDefault();
+                                                        void handleLookupUser();
+                                                    }
+                                                }}
+                                                containerClassName="min-w-[220px] flex-1"
+                                            />
+                                            <Button
+                                                variant="filled"
+                                                size="s"
+                                                icon={mdSearch}
+                                                disabled={loadingUser || !lookupSub.trim()}
+                                                onClick={() => void handleLookupUser()}
+                                            >
+                                                {loadingUser
+                                                    ? t("common.state.loading")
+                                                    : t("page.community.mod.userGov.lookupButton")}
+                                            </Button>
+                                        </div>
+
+                                        {recentQueueUsers.length > 0 && (
+                                            <div className="space-y-1.5">
+                                                <p className="type-label-m text-on-surface-variant">
+                                                    {t("page.community.mod.userGov.recentFromQueue")}
+                                                </p>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    {recentQueueUsers.map((entry) => (
+                                                        <Chip
+                                                            key={entry.sub}
+                                                            variant="assist"
+                                                            selected={targetUser?.sub === entry.sub}
+                                                            onClick={() => void handleLookupUser(entry.sub)}
+                                                        >
+                                                            {entry.label !== entry.sub
+                                                                ? `${entry.label} (${entry.sub})`
+                                                                : entry.sub}
+                                                        </Chip>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </Surface>
+
+                                    {loadingUser ? (
+                                        <LoadingState label={t("common.state.loading")} />
+                                    ) : !targetUser ? (
+                                        <EmptyState
+                                            title={t("page.community.mod.userGov.emptyTitle")}
+                                            description={t("page.community.mod.userGov.emptyDesc")}
+                                        />
+                                    ) : (
+                                        <Surface tone="default" radius="md" className="space-y-4 p-4">
+                                            <div className="flex flex-wrap items-center justify-between gap-3">
+                                                <div className="flex min-w-0 items-center gap-3">
+                                                    <CommunityAvatar
+                                                        displayName={targetUser.display_name || targetUser.sub}
+                                                        avatarUrl={targetUser.avatar_url}
+                                                        avatarCardId={targetUser.avatar_card_id}
+                                                        avatarCardTrained={targetUser.avatar_card_trained}
+                                                        sizeClassName="h-12 w-12"
+                                                        textClassName="type-title-m"
+                                                    />
+                                                    <div className="min-w-0">
+                                                        <div className="flex flex-wrap items-center gap-1.5">
+                                                            <span className="truncate type-title-m text-on-surface">
+                                                                {targetUser.display_name || targetUser.sub}
+                                                            </span>
+                                                            <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-secondary-container px-2 py-0.5 type-label-s text-on-secondary-container">
+                                                                {targetUser.trust_level === 4 && (
+                                                                    <Icon path={mdStar} size={13} />
+                                                                )}
+                                                                <span>
+                                                                    {t(getTrustLevelLabelKey(targetUser.trust_level))}
+                                                                </span>
+                                                            </span>
+                                                            {isModeratorRole(targetUser.role) && (
+                                                                <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                                                                    <Icon path={mdShield} size={13} />
+                                                                    <span>{t("page.community.roles.mod")}</span>
+                                                                </span>
+                                                            )}
+                                                            {typeof targetUser.health_score === "number" && (
+                                                                <span className="rounded-md3-xs bg-surface-container-highest px-2 py-0.5 type-label-s text-on-surface">
+                                                                    {t("page.community.mod.healthBadge", {
+                                                                        score: targetUser.health_score,
+                                                                    })}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                        <code className="block truncate font-mono type-label-s text-on-surface-variant">
+                                                            {targetUser.sub}
+                                                        </code>
+                                                    </div>
+                                                </div>
+
+                                                <Button
+                                                    variant="outlined"
+                                                    size="xs"
+                                                    href={`/community/u/${encodeURIComponent(targetUser.sub)}`}
+                                                >
+                                                    {t("page.community.mod.userGov.viewProfile")}
+                                                </Button>
+                                            </div>
+
+                                            <UserGovernancePanel
+                                                target={targetUser}
+                                                canManageMods={canManageMods}
+                                                viewerSub={session.profile?.sub}
+                                                onUpdated={(updated, message) => {
+                                                    if (updated) setTargetUser(updated);
+                                                    setError(null);
+                                                    setNotice(message);
+                                                }}
+                                                onError={(message) => {
+                                                    setNotice(null);
+                                                    setError(message);
+                                                }}
+                                            />
+                                        </Surface>
+                                    )}
+                                </div>
                             ) : activeTab === "events" ? (
                                 eventItems.length === 0 ? (
                                     <EmptyState
@@ -783,17 +1068,22 @@ export default function CommunityModClient() {
                                             {t("page.community.mod.addRuleTitle")}
                                         </h3>
                                         <div className="flex flex-wrap gap-2">
-                                            {RULE_TIER_OPTIONS.map((opt) => (
+                                            {availableRuleTiers.map((opt) => (
                                                 <Chip
                                                     key={opt.id}
                                                     variant="filter"
-                                                    selected={newRuleTier === opt.id}
+                                                    selected={effectiveNewRuleTier === opt.id}
                                                     onClick={() => setNewRuleTier(opt.id)}
                                                 >
                                                     {t(opt.labelKey)}
                                                 </Chip>
                                             ))}
                                         </div>
+                                        {!canManageMods && (
+                                            <p className="type-body-s text-on-surface-variant">
+                                                {t("page.community.mod.p0RestrictedHint")}
+                                            </p>
+                                        )}
                                         <div className="flex flex-wrap gap-2">
                                             {RULE_MATCH_TYPE_OPTIONS.map((opt) => (
                                                 <Chip
@@ -839,49 +1129,59 @@ export default function CommunityModClient() {
                                         />
                                     ) : (
                                         <div className="space-y-2">
-                                            {ruleItems.map((rule) => (
-                                                <Surface
-                                                    key={rule.id}
-                                                    tone="default"
-                                                    radius="md"
-                                                    className="flex flex-wrap items-center justify-between gap-3 p-3"
-                                                >
-                                                    <div className="min-w-0 flex-1 space-y-1">
-                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                            <span className="rounded-md3-xs bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container">
-                                                                {t(`page.community.mod.ruleTiers.${rule.tier}`)}
-                                                            </span>
-                                                            <span className="rounded-md3-xs bg-surface-container-highest px-2 py-0.5 type-label-s text-on-surface-variant">
-                                                                {t(`page.community.mod.matchTypes.${rule.match_type}`)}
-                                                            </span>
-                                                            <code className="break-all font-mono type-body-m text-on-surface">
-                                                                {rule.pattern}
-                                                            </code>
+                                            {ruleItems.map((rule) => {
+                                                const canEditRule = canManageMods || rule.tier !== "p0_block";
+                                                return (
+                                                    <Surface
+                                                        key={rule.id}
+                                                        tone="default"
+                                                        radius="md"
+                                                        className="flex flex-wrap items-center justify-between gap-3 p-3"
+                                                    >
+                                                        <div className="min-w-0 flex-1 space-y-1">
+                                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                                <span className="rounded-md3-xs bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container">
+                                                                    {t(`page.community.mod.ruleTiers.${rule.tier}`)}
+                                                                </span>
+                                                                <span className="rounded-md3-xs bg-surface-container-highest px-2 py-0.5 type-label-s text-on-surface-variant">
+                                                                    {t(`page.community.mod.matchTypes.${rule.match_type}`)}
+                                                                </span>
+                                                                <code className="break-all font-mono type-body-m text-on-surface">
+                                                                    {rule.pattern}
+                                                                </code>
+                                                            </div>
+                                                            {rule.note && (
+                                                                <p className="type-body-s text-on-surface-variant">
+                                                                    {rule.note}
+                                                                </p>
+                                                            )}
                                                         </div>
-                                                        {rule.note && (
-                                                            <p className="type-body-s text-on-surface-variant">
-                                                                {rule.note}
-                                                            </p>
+                                                        {canEditRule ? (
+                                                            <div className="flex items-center gap-2">
+                                                                <Switch
+                                                                    checked={rule.enabled}
+                                                                    disabled={busyId === `rule-${rule.id}`}
+                                                                    onCheckedChange={(checked) =>
+                                                                        void handleToggleRule(rule, checked)
+                                                                    }
+                                                                    aria-label={t("page.community.mod.ruleEnabledLabel")}
+                                                                />
+                                                                <IconButton
+                                                                    icon={mdDelete}
+                                                                    label={t("common.comments.delete")}
+                                                                    disabled={busyId === `rule-${rule.id}`}
+                                                                    onClick={() => void handleDeleteRule(rule.id)}
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 rounded-md3-xs bg-surface-container-high px-2 py-1 type-label-s text-on-surface-variant">
+                                                                <Icon path={mdLock} size={14} />
+                                                                <span>{t("page.community.mod.ruleReadOnly")}</span>
+                                                            </span>
                                                         )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2">
-                                                        <Switch
-                                                            checked={rule.enabled}
-                                                            disabled={busyId === `rule-${rule.id}`}
-                                                            onCheckedChange={(checked) =>
-                                                                void handleToggleRule(rule, checked)
-                                                            }
-                                                            aria-label={t("page.community.mod.ruleEnabledLabel")}
-                                                        />
-                                                        <IconButton
-                                                            icon={mdDelete}
-                                                            label={t("common.comments.delete")}
-                                                            disabled={busyId === `rule-${rule.id}`}
-                                                            onClick={() => void handleDeleteRule(rule.id)}
-                                                        />
-                                                    </div>
-                                                </Surface>
-                                            ))}
+                                                    </Surface>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

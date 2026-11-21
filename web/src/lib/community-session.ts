@@ -26,6 +26,8 @@ export interface CommunitySessionState {
     unreadNotifications: number;
     communityMode: CommunityMode;
     turnstileSiteKey: string;
+    turnstileRequired: boolean;
+    canManageMods: boolean;
     blockedSubs: string[];
 }
 
@@ -36,6 +38,8 @@ const INITIAL_STATE: CommunitySessionState = {
     unreadNotifications: 0,
     communityMode: "normal",
     turnstileSiteKey: "",
+    turnstileRequired: false,
+    canManageMods: false,
     blockedSubs: [],
 };
 
@@ -74,13 +78,25 @@ export function refreshCommunitySession(force = false): Promise<CommunitySession
     inFlight = fetchCommunityMe()
         .then((res) => {
             lastLoadAt = Date.now();
+            const turnstileSiteKey =
+                typeof res.turnstile_site_key === "string" ? res.turnstile_site_key : "";
+            const turnstileRequired =
+                typeof res.turnstile_required === "boolean"
+                    ? res.turnstile_required
+                    : Boolean(turnstileSiteKey);
+            const canManageMods =
+                typeof res.can_manage_mods === "boolean"
+                    ? res.can_manage_mods
+                    : res.profile?.role === "admin";
             const next: CommunitySessionState = {
                 status: "ready",
                 authenticated: Boolean(res.authenticated && res.profile),
                 profile: res.profile ?? null,
                 unreadNotifications: typeof res.unread_notifications === "number" ? res.unread_notifications : 0,
                 communityMode: res.community_mode ?? "normal",
-                turnstileSiteKey: typeof res.turnstile_site_key === "string" ? res.turnstile_site_key : "",
+                turnstileSiteKey,
+                turnstileRequired,
+                canManageMods,
                 blockedSubs: Array.isArray(res.blocked_subs) ? res.blocked_subs : [],
             };
             emit(next);
@@ -95,6 +111,8 @@ export function refreshCommunitySession(force = false): Promise<CommunitySession
                     authenticated: false,
                     profile: null,
                     unreadNotifications: 0,
+                    turnstileRequired: false,
+                    canManageMods: false,
                 };
                 emit(next);
                 return next;

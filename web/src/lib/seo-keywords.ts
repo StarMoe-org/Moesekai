@@ -1204,10 +1204,10 @@ export const SEO_PAGE_METADATA = {
       "ko-KR": "Moesekai 커뮤니티 심사 대기열, 신고, 이의 제기, 규칙 및 긴급 모드 콘솔.",
     },
     {
-      "zh-CN": ["社区审核", "管理后台"],
-      "en-US": ["moderation", "community admin"],
-      "ja-JP": ["モデレーション", "管理"],
-      "ko-KR": ["모더레이션", "관리"],
+      "zh-CN": ["社区审核", "版主控制台"],
+      "en-US": ["moderation", "community moderator"],
+      "ja-JP": ["モデレーション", "モデレーター"],
+      "ko-KR": ["모더레이션", "모더레이터"],
     },
   ),
   community_user: definePage(

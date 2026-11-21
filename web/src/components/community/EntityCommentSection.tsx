@@ -128,6 +128,7 @@ export function EntityCommentSection({
 
     const isMod = isModeratorRole(session.profile?.role);
     const blockedSet = new Set(session.blockedSubs);
+    const needsTurnstile = Boolean(session.turnstileSiteKey) && session.turnstileRequired;
 
     // Countdown timer for 429 rate-limit cooldown
     useEffect(() => {
@@ -211,7 +212,7 @@ export function EntityCommentSection({
                 setPolicyOpen(true);
                 return;
             }
-            if (session.turnstileSiteKey && !turnstileToken) {
+            if (needsTurnstile && !turnstileToken) {
                 if (overrideBody) {
                     insertAtCursor(overrideBody);
                 }
@@ -227,7 +228,7 @@ export function EntityCommentSection({
                     body_md: body,
                     reply_to_id: replyTarget?.id,
                     is_spoiler: overrideBody ? false : isSpoiler,
-                    turnstile_token: turnstileToken || undefined,
+                    turnstile_token: needsTurnstile ? turnstileToken || undefined : undefined,
                 });
 
                 if (!overrideBody) {
@@ -313,7 +314,7 @@ export function EntityCommentSection({
             replyTarget,
             session.authenticated,
             session.profile,
-            session.turnstileSiteKey,
+            needsTurnstile,
             t,
             targetType,
             turnstileToken,
@@ -815,7 +816,7 @@ export function EntityCommentSection({
                                         submitting ||
                                         cooldownSec > 0 ||
                                         !draft.trim() ||
-                                        (Boolean(session.turnstileSiteKey) && !turnstileToken)
+                                        (needsTurnstile && !turnstileToken)
                                     }
                                     onClick={() => void performSubmit()}
                                 >
@@ -827,7 +828,7 @@ export function EntityCommentSection({
                                 </Button>
                             </div>
 
-                            {session.turnstileSiteKey && (
+                            {needsTurnstile && (
                                 <TurnstileWidget
                                     siteKey={session.turnstileSiteKey}
                                     onToken={setTurnstileToken}
