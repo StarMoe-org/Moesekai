@@ -9,14 +9,17 @@
 因此模型的样子和动作与游戏一致，也与 SSE 的剧情播放器、导出视频一致。
 
 这份说明随发布物（`sekai-live2d-viewer-<版本>.tar.gz`）一起提供，供站点嵌入。
+如果需要在同一张画布上同时编排多名角色（剧情舞台模式），见同发布物里的 `stage.js` 以及仓库文档 `docs/stage.md`。
 
 ## 发布物
 
 | 文件 | 作用 |
 |---|---|
-| `viewer.js` | 页面引入的 ES 模块，导出 `SekaiLive2DViewer` |
-| `viewer-worker.js` | Worker：取文件（动作和表情按需取）、缓存，在 OffscreenCanvas 上绘制 |
-| `pkg/sekai_live2d_viewer.js`、`pkg/sekai_live2d_viewer_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入） |
+| `viewer.js` | 页面引入的 ES 模块，导出 `SekaiLive2DViewer`（单模型查看器） |
+| `viewer-worker.js` | 查看器 Worker：取文件（动作和表情按需取）、缓存，在 OffscreenCanvas 上绘制 |
+| `stage.js` | 页面引入的 ES 模块，导出 `SekaiLive2DStage`（多角色舞台模式，见仓库内 `docs/stage.md`） |
+| `stage-worker.js` | 舞台 Worker：单设备单画布驱动最多 8 名角色，共享文件表与缓存 |
+| `pkg/sekai_live2d_viewer.js`、`pkg/sekai_live2d_viewer_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入，同时导出 `Viewer` 与 `Stage`） |
 | `manifest.json` | 这份发布物的来历，见下 |
 | `LICENSE`、`LICENSE-EXCEPTION`、`README.md` | 许可和这份说明 |
 

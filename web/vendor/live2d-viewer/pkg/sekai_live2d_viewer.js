@@ -5,6 +5,256 @@ let wasm_bindgen = (function(exports) {
     }
 
     /**
+     * Several models on one canvas, placed as a story places its characters (see `stage`).
+     */
+    class Stage {
+        static __wrap(ptr) {
+            const obj = Object.create(Stage.prototype);
+            obj.__wbg_ptr = ptr;
+            StageFinalization.register(obj, obj.__wbg_ptr, obj);
+            return obj;
+        }
+        __destroy_into_raw() {
+            const ptr = this.__wbg_ptr;
+            this.__wbg_ptr = 0;
+            StageFinalization.unregister(this);
+            return ptr;
+        }
+        free() {
+            const ptr = this.__destroy_into_raw();
+            wasm.__wbg_stage_free(ptr, 0);
+        }
+        /**
+         * The actors' ids in draw order (the first at the back).
+         * @returns {string[]}
+         */
+        actors() {
+            const ret = wasm.stage_actors(this.__wbg_ptr);
+            var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+            wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+            return v1;
+        }
+        /**
+         * Puts the model of bundle `model` (its files in the table), with the motions of bundle
+         * `motion` (empty: none), on stage as actor `id`, placed by the given values over the
+         * defaults; an actor of that id is replaced. `seed` picks the blink intervals and breath
+         * phase. Fails with `too many actors` past `stage::MAX_ACTORS`.
+         * @param {string} id
+         * @param {string} model
+         * @param {string} motion
+         * @param {number} seed
+         * @param {number | null} [x]
+         * @param {number | null} [y]
+         * @param {number | null} [scale]
+         * @param {number | null} [alpha]
+         * @param {boolean | null} [mirror]
+         * @param {number | null} [order]
+         */
+        addActor(id, model, motion, seed, x, y, scale, alpha, mirror, order) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(motion, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_addActor(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, seed, isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), isLikeNone(scale) ? Number.MAX_SAFE_INTEGER : Math.fround(scale), isLikeNone(alpha) ? Number.MAX_SAFE_INTEGER : Math.fround(alpha), isLikeNone(mirror) ? 0xFFFFFF : mirror ? 1 : 0, !isLikeNone(order), isLikeNone(order) ? 0 : order);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * An empty stage on `canvas`, `width` × `height` pixels. `library` is the library's root
+         * in the file table (see [`Viewer::create`]).
+         * @param {OffscreenCanvas} canvas
+         * @param {string} library
+         * @param {number} width
+         * @param {number} height
+         * @returns {Promise<Stage>}
+         */
+        static create(canvas, library, width, height) {
+            const ptr0 = passStringToWasm0(library, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_create(canvas, ptr0, len0, width, height);
+            return ret;
+        }
+        /**
+         * Draws the stage as it is (after a change while paused). The first visible actor, if
+         * fully opaque, is drawn straight onto the canvas; a faded actor or any subsequent actor is
+         * drawn alone into a target of the canvas' size and composited over the canvas at its
+         * opacity, avoiding both self-overlap artefacts and cross-actor multiply bleed.
+         */
+        draw() {
+            wasm.stage_draw(this.__wbg_ptr);
+        }
+        /**
+         * Every running tween at its end (their `tween` events completed).
+         */
+        finishTweens() {
+            wasm.stage_finishTweens(this.__wbg_ptr);
+        }
+        /**
+         * Advances the stage by `dt` seconds (tweens, mouths, every actor's runtime), draws it,
+         * and returns the events of the frame (see [`Stage::take_events`]).
+         * @param {number} dt
+         * @returns {Array<any> | undefined}
+         */
+        frame(dt) {
+            const ret = wasm.stage_frame(this.__wbg_ptr, dt);
+            return ret;
+        }
+        /**
+         * Whether actor `id` has a physics rig.
+         * @param {string} id
+         * @returns {boolean}
+         */
+        hasPhysics(id) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_hasPhysics(this.__wbg_ptr, ptr0, len0);
+            return ret !== 0;
+        }
+        /**
+         * Starts actor `id`'s body motion `name` (its clip must be in the file table); with
+         * `looping`, it starts again whenever it ends.
+         * @param {string} id
+         * @param {string} name
+         * @param {boolean} looping
+         */
+        playMotion(id, name, looping) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_playMotion(this.__wbg_ptr, ptr0, len0, ptr1, len1, looping);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * Takes actor `id` off the stage; returns whether it was on it.
+         * @param {string} id
+         * @returns {boolean}
+         */
+        removeActor(id) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_removeActor(this.__wbg_ptr, ptr0, len0);
+            return ret !== 0;
+        }
+        /**
+         * Draws at `width` × `height` pixels from now on.
+         * @param {number} width
+         * @param {number} height
+         */
+        resize(width, height) {
+            wasm.stage_resize(this.__wbg_ptr, width, height);
+        }
+        /**
+         * Request `token`: moves actor `id` to the given values (the others stay) over `duration`
+         * seconds with `easing` (`linear`, `in`, `out`, `in-out`); its end comes as a `tween`
+         * event. Returns whether there is such an actor.
+         * @param {string} id
+         * @param {number | null | undefined} x
+         * @param {number | null | undefined} y
+         * @param {number | null | undefined} scale
+         * @param {number | null | undefined} alpha
+         * @param {boolean | null | undefined} mirror
+         * @param {number | null | undefined} order
+         * @param {number} duration
+         * @param {string} easing
+         * @param {number} token
+         * @returns {boolean}
+         */
+        setActor(id, x, y, scale, alpha, mirror, order, duration, easing, token) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(easing, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setActor(this.__wbg_ptr, ptr0, len0, isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), isLikeNone(scale) ? Number.MAX_SAFE_INTEGER : Math.fround(scale), isLikeNone(alpha) ? Number.MAX_SAFE_INTEGER : Math.fround(alpha), isLikeNone(mirror) ? 0xFFFFFF : mirror ? 1 : 0, !isLikeNone(order), isLikeNone(order) ? 0 : order, duration, ptr1, len1, token);
+            return ret !== 0;
+        }
+        /**
+         * Breathing on or off for every actor (and those added later).
+         * @param {boolean} on
+         */
+        setBreath(on) {
+            wasm.stage_setBreath(this.__wbg_ptr, on);
+        }
+        /**
+         * Request `token`: moves the camera to the given zoom (≥ `stage::MIN_ZOOM`) and pan (NDC)
+         * over `duration` seconds with `easing`; its end comes as a `tween` event.
+         * @param {number | null | undefined} zoom
+         * @param {number | null | undefined} x
+         * @param {number | null | undefined} y
+         * @param {number} duration
+         * @param {string} easing
+         * @param {number} token
+         */
+        setCamera(zoom, x, y, duration, easing, token) {
+            const ptr0 = passStringToWasm0(easing, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.stage_setCamera(this.__wbg_ptr, isLikeNone(zoom) ? Number.MAX_SAFE_INTEGER : Math.fround(zoom), isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), duration, ptr0, len0, token);
+        }
+        /**
+         * Changes actor `id`'s facial to `name` (its clip must be in the file table).
+         * @param {string} id
+         * @param {string} name
+         */
+        setFacial(id, name) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setFacial(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * Actor `id`'s mouth open by `value` (0..1) over the flap and the motion, or back to them.
+         * @param {string} id
+         * @param {number | null} [value]
+         * @returns {boolean}
+         */
+        setMouth(id, value) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setMouth(this.__wbg_ptr, ptr0, len0, isLikeNone(value) ? Number.MAX_SAFE_INTEGER : Math.fround(value));
+            return ret !== 0;
+        }
+        /**
+         * Physics on or off for every actor (and those added later).
+         * @param {boolean} on
+         */
+        setPhysics(on) {
+            wasm.stage_setPhysics(this.__wbg_ptr, on);
+        }
+        /**
+         * Actor `id`'s lip flap on or off (see `stage::LipFlap`).
+         * @param {string} id
+         * @param {boolean} on
+         * @returns {boolean}
+         */
+        setTalking(id, on) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setTalking(this.__wbg_ptr, ptr0, len0, on);
+            return ret !== 0;
+        }
+        /**
+         * The events since the last call (`{type: "tween", token, completed}` and
+         * `{type: "motionend", actor, name}`), oldest first; `undefined` for none.
+         * @returns {Array<any> | undefined}
+         */
+        takeEvents() {
+            const ret = wasm.stage_takeEvents(this.__wbg_ptr);
+            return ret;
+        }
+    }
+    if (Symbol.dispose) Stage.prototype[Symbol.dispose] = Stage.prototype.free;
+    exports.Stage = Stage;
+
+    /**
      * One model on a canvas.
      */
     class Viewer {
@@ -355,6 +605,9 @@ let wasm_bindgen = (function(exports) {
             __wbg_drawIndexed_638959aae942557c: function(arg0, arg1, arg2, arg3, arg4, arg5) {
                 arg0.drawIndexed(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4, arg5 >>> 0);
             },
+            __wbg_draw_086a9578fc9898c2: function(arg0, arg1, arg2, arg3, arg4) {
+                arg0.draw(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4 >>> 0);
+            },
             __wbg_drawables_271ffa2cb7ae2b48: function(arg0) {
                 const ret = arg0.drawables;
                 return ret;
@@ -580,6 +833,10 @@ let wasm_bindgen = (function(exports) {
                 const ret = new Object();
                 return ret;
             },
+            __wbg_new_ffa92086ea89f79c: function() {
+                const ret = new Array();
+                return ret;
+            },
             __wbg_new_from_slice_4ee02165f9de919e: function(arg0, arg1) {
                 const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
                 return ret;
@@ -591,7 +848,7 @@ let wasm_bindgen = (function(exports) {
                         const a = state0.a;
                         state0.a = 0;
                         try {
-                            return wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(a, state0.b, arg0, arg1);
+                            return wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(a, state0.b, arg0, arg1);
                         } finally {
                             state0.a = a;
                         }
@@ -641,6 +898,10 @@ let wasm_bindgen = (function(exports) {
             },
             __wbg_prototypesetcall_e20f3c85f78376cf: function(arg0, arg1, arg2) {
                 Int32Array.prototype.set.call(getArrayI32FromWasm0(arg0, arg1), arg2);
+            },
+            __wbg_push_bfdf956ba476f65b: function(arg0, arg1) {
+                const ret = arg0.push(arg1);
+                return ret;
             },
             __wbg_querySelectorAll_fdbf93e11103921d: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.querySelectorAll(getStringFromWasm0(arg1, arg2));
@@ -1221,6 +1482,10 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_z_2e6820ef0f5821ed: function(arg0, arg1) {
                 arg0.z = arg1 >>> 0;
             },
+            __wbg_stage_new: function(arg0) {
+                const ret = Stage.__wrap(arg0);
+                return ret;
+            },
             __wbg_static_accessor_GLOBAL_8eb4cd83130a11a0: function() {
                 const ret = typeof global === 'undefined' ? null : global;
                 return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -1284,23 +1549,23 @@ let wasm_bindgen = (function(exports) {
                 arg0.writeTexture(arg1, getArrayU8FromWasm0(arg2, arg3), arg4, arg5);
             }, arguments); },
             __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 277, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 286, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__34);
                 return ret;
             },
             __wbindgen_generic_0000000000000004: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__35);
                 return ret;
             },
             __wbindgen_generic_0000000000000005: function(arg0) {
@@ -1334,36 +1599,36 @@ let wasm_bindgen = (function(exports) {
         };
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__34(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__34(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__35(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__35(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
-        wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
+        wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
     }
 
 
@@ -1446,6 +1711,9 @@ let wasm_bindgen = (function(exports) {
 
 
     const __wbindgen_enum_GpuVertexStepMode = ["vertex", "instance"];
+    const StageFinalization = (typeof FinalizationRegistry === 'undefined')
+        ? { register: () => {}, unregister: () => {} }
+        : new FinalizationRegistry(ptr => wasm.__wbg_stage_free(ptr, 1));
     const ViewerFinalization = (typeof FinalizationRegistry === 'undefined')
         ? { register: () => {}, unregister: () => {} }
         : new FinalizationRegistry(ptr => wasm.__wbg_viewer_free(ptr, 1));
@@ -1533,6 +1801,17 @@ let wasm_bindgen = (function(exports) {
     function getArrayI32FromWasm0(ptr, len) {
         ptr = ptr >>> 0;
         return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+    }
+
+    function getArrayJsValueFromWasm0(ptr, len) {
+        ptr = ptr >>> 0;
+        const mem = getDataViewMemory0();
+        const result = [];
+        for (let i = ptr; i < ptr + 4 * len; i += 4) {
+            result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+        }
+        wasm.__externref_drop_slice(ptr, len);
+        return result;
     }
 
     function getArrayJsValueViewFromWasm0(ptr, len) {
