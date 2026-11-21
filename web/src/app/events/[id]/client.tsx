@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -93,6 +94,11 @@ interface IVirtualLiveInfo {
 
 // API URL for event-virtual live mapping
 const EVENT_VIRTUAL_LIVE_MAP_URL = (process.env.NEXT_PUBLIC_API_URL || "") + "/api/event-virtuallive-map";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 
 
@@ -718,6 +724,11 @@ export default function EventDetailPage() {
                         <DetailPageAdCard hidden={isScreenshotMode} />
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts (hidden in screenshot mode) */}
+                {!isScreenshotMode && Number.isFinite(eventId) && (
+                    <EntityCommunitySection targetType="event" targetId={eventId} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">

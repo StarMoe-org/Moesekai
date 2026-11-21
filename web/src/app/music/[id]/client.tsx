@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useRef } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -43,6 +44,11 @@ import { mdArrowBack, mdBarChart, mdCalendarMonth, mdDownload, mdInfo, mdKeyboar
 
 // Difficulty order for tabs
 const DIFFICULTY_ORDER: MusicDifficultyType[] = ["easy", "normal", "hard", "expert", "master", "append"];
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 // External data URLs
 const RANKINGS_API = MOE_RANKINGS_URL;
@@ -823,6 +829,11 @@ export default function MusicDetailPage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts (hidden in screenshot mode) */}
+                {!isScreenshotMode && Number.isFinite(musicId) && (
+                    <EntityCommunitySection targetType="music" targetId={musicId} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">

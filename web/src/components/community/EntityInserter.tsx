@@ -6,7 +6,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "@/contexts/TranslationContext";
 import { getCharacterName } from "@/lib/i18n";
 import {
-    getCardThumbnailUrl,
     getCharacterIconUrl,
     getCostumeThumbnailUrl,
     getEventLogoUrl,
@@ -14,7 +13,10 @@ import {
     getMusicJacketUrl,
 } from "@/lib/assets";
 import { getCardDefaultTrainedStatus, getRarityNumber } from "@/types/types";
-import { useCommunityEntityLoader } from "@/lib/community-masterdata";
+import {
+    getCardAvatarImageUrls,
+    useCommunityEntityLoader,
+} from "@/lib/community-masterdata";
 import { Dialog, EmptyState, LoadingState, Tabs, TextField } from "@/components/md3";
 import { mdSearch } from "@/components/md3/icons";
 import { ENTITY_LINK_TYPE_OPTIONS, type EntityLinkType } from "@/types/community";
@@ -37,7 +39,7 @@ const MAX_RESULTS = 40;
 
 export function EntityInserter({ isOpen, onClose, onInsert }: EntityInserterProps) {
     const { t } = useI18n();
-    const { assetSource } = useTheme();
+    const { assetSource, serverSource } = useTheme();
     const { t: translateGameData } = useTranslation();
 
     const [activeType, setActiveType] = useState<EntityLinkType>("card");
@@ -76,12 +78,13 @@ export function EntityInserter({ isOpen, onClose, onInsert }: EntityInserterProp
                     id: card.id,
                     title: translated || card.prefix,
                     subtitle: `${charName} · ${rarity} · #${card.id}`,
-                    imageUrl: getCardThumbnailUrl(
-                        card.characterId,
-                        card.assetbundleName,
+                    imageUrl: getCardAvatarImageUrls(
+                        card,
                         getCardDefaultTrainedStatus(card),
                         assetSource,
-                    ),
+                        serverSource,
+                        catalog.cardsLocalIds ? catalog.cardsLocalIds.has(card.id) : undefined,
+                    ).primaryUrl,
                 });
                 if (result.length >= MAX_RESULTS) break;
             }
@@ -168,7 +171,7 @@ export function EntityInserter({ isOpen, onClose, onInsert }: EntityInserterProp
                 imageUrl: getCharacterIconUrl(charId),
             };
         }).filter((row) => matches(row.id, row.title));
-    }, [activeType, assetSource, catalog, query, t, translateGameData]);
+    }, [activeType, assetSource, catalog, query, serverSource, t, translateGameData]);
 
     const tabItems = useMemo(
         () =>
@@ -191,28 +194,33 @@ export function EntityInserter({ isOpen, onClose, onInsert }: EntityInserterProp
             title={t("common.comments.entityInserter.title")}
             size="lg"
             fullscreenOnMobile
-            bodyClassName="flex flex-col gap-3"
+            className="sm:h-[min(85vh,720px)]"
+            bodyClassName="flex flex-col gap-3 overflow-hidden"
         >
-            <Tabs
-                items={tabItems}
-                value={activeType}
-                onValueChange={(next) => {
-                    setActiveType(next);
-                    setQuery("");
-                }}
-                variant="secondary"
-                scrollable
-            />
+            <div className="shrink-0">
+                <Tabs
+                    items={tabItems}
+                    value={activeType}
+                    onValueChange={(next) => {
+                        setActiveType(next);
+                        setQuery("");
+                    }}
+                    variant="secondary"
+                    scrollable
+                />
+            </div>
 
-            <TextField
-                value={query}
-                onValueChange={setQuery}
-                icon={mdSearch}
-                clearable
-                placeholder={t("common.comments.entityInserter.searchPlaceholder")}
-            />
+            <div className="shrink-0">
+                <TextField
+                    value={query}
+                    onValueChange={setQuery}
+                    icon={mdSearch}
+                    clearable
+                    placeholder={t("common.comments.entityInserter.searchPlaceholder")}
+                />
+            </div>
 
-            <div className="min-h-[240px] max-h-[50vh] overflow-y-auto rounded-md3-md bg-surface-container p-2">
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md3-md bg-surface-container p-2">
                 {catalog.loading && rows.length === 0 ? (
                     <LoadingState label={t("common.state.loading")} />
                 ) : rows.length === 0 ? (

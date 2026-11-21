@@ -4,10 +4,16 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "@/contexts/TranslationContext";
 import { getCharacterName } from "@/lib/i18n";
-import { getCharacterIconUrl, getStampUrl } from "@/lib/assets";
+import { getCharacterIconUrl } from "@/lib/assets";
 import { UNIT_DATA, UNIT_DATA_LABEL_KEYS } from "@/types/types";
-import { useCommunityStamps, type ICommunityStamp } from "@/lib/community-masterdata";
+import {
+    getStampImageUrls,
+    stripStampPrefix,
+    useCommunityStamps,
+    type ICommunityStamp,
+} from "@/lib/community-masterdata";
 import { patchCommunitySessionPreferences, useCommunitySession } from "@/lib/community-session";
 import {
     Button,
@@ -21,6 +27,7 @@ import {
     cn,
 } from "@/components/md3";
 import {
+    mdBrokenImage,
     mdHistory,
     mdSearch,
     mdSentimentSatisfied,
@@ -80,6 +87,44 @@ function saveRecentStampId(id: number): number[] {
     return next;
 }
 
+function StampTileImg({
+    primaryUrl,
+    jpFallbackUrl,
+    alt,
+}: {
+    primaryUrl: string;
+    jpFallbackUrl: string;
+    alt: string;
+}) {
+    const [usedJpFallback, setUsedJpFallback] = useState(false);
+    const [failed, setFailed] = useState(false);
+
+    if (failed) {
+        return (
+            <span className="flex h-full w-full items-center justify-center rounded-md3-sm bg-surface-container text-on-surface-variant">
+                <Icon path={mdBrokenImage} size={22} />
+            </span>
+        );
+    }
+
+    const src = usedJpFallback ? jpFallbackUrl : primaryUrl;
+    return (
+        <img
+            src={src}
+            alt={alt}
+            loading="lazy"
+            className="h-full w-full object-contain"
+            onError={() => {
+                if (!usedJpFallback && jpFallbackUrl !== primaryUrl) {
+                    setUsedJpFallback(true);
+                } else {
+                    setFailed(true);
+                }
+            }}
+        />
+    );
+}
+
 type CategoryTab = "all" | "favorites" | "recent" | "other" | number;
 
 interface StickerPickerProps {
@@ -99,7 +144,8 @@ export function StickerPicker({
     defaultQuickSend = false,
 }: StickerPickerProps) {
     const { t } = useI18n();
-    const { assetSource, isShowSpoiler } = useTheme();
+    const { assetSource, serverSource, isShowSpoiler } = useTheme();
+    const { t: translateGameData } = useTranslation();
     const session = useCommunitySession({ eager: false });
     const { stamps, map: stampsMap, loading } = useCommunityStamps(isOpen);
 
@@ -138,6 +184,19 @@ export function StickerPicker({
     }, [localDirty, serverFavorites]);
 
     const favoriteSet = useMemo(() => new Set(favoriteIds), [favoriteIds]);
+
+    const resolveDisplayName = useCallback(
+        (stamp: ICommunityStamp): string => {
+            const jpKey = stamp.jpName || stamp.name;
+            // Use LLM translation overlay when on JP server or when viewing a JP-only newer stamp.
+            if (serverSource === "jp" || stamp.availableOnCurrentServer === false) {
+                const translated = translateGameData("sticker", "name", jpKey);
+                if (translated) return stripStampPrefix(translated);
+            }
+            return stripStampPrefix(stamp.name);
+        },
+        [serverSource, translateGameData],
+    );
 
     const toggleFavorite = useCallback(
         (stampId: number, e: React.MouseEvent) => {
@@ -195,11 +254,17 @@ export function StickerPicker({
         if (selectedTab === "favorites") {
             sourceList = favoriteIds
                 .map((id) => stampsMap?.get(id))
-                .filter((item): item is ICommunityStamp => Boolean(item));
+                .filter(
+                    (item): item is ICommunityStamp =>
+                        Boolean(item && item.isCanonical !== false),
+                );
         } else if (selectedTab === "recent") {
             sourceList = recentIds
                 .map((id) => stampsMap?.get(id))
-                .filter((item): item is ICommunityStamp => Boolean(item));
+                .filter(
+                    (item): item is ICommunityStamp =>
+                        Boolean(item && item.isCanonical !== false),
+                );
         } else {
             sourceList = stamps.filter((stamp) => {
                 if (!isShowSpoiler && stamp.archivePublishedAt && stamp.archivePublishedAt > nowTs) {
@@ -219,7 +284,8 @@ export function StickerPicker({
                 }
                 return true;
             });
-            sourceList = [...sourceList].sort((a, b) => b.id - a.id);
+            // ID ascending so classic stamps appear at the top across All / Unit / Character views.
+            sourceList = [...sourceList].sort((a, b) => a.id - b.id);
         }
 
         if (!normalizedQuery) return sourceList;
@@ -230,8 +296,15 @@ export function StickerPicker({
             const c2 = isKnownCharacter(stamp.characterId2)
                 ? getCharacterName(t, stamp.characterId2).toLowerCase()
                 : "";
+            const displayName = resolveDisplayName(stamp).toLowerCase();
+            const translated = stamp.jpName
+                ? (translateGameData("sticker", "name", stamp.jpName)?.toLowerCase() ?? "")
+                : "";
             return (
                 stamp.name.toLowerCase().includes(normalizedQuery) ||
+                (stamp.jpName?.toLowerCase().includes(normalizedQuery) ?? false) ||
+                displayName.includes(normalizedQuery) ||
+                translated.includes(normalizedQuery) ||
                 String(stamp.id).includes(normalizedQuery) ||
                 c1.includes(normalizedQuery) ||
                 c2.includes(normalizedQuery)
@@ -242,12 +315,14 @@ export function StickerPicker({
         isShowSpoiler,
         nowTs,
         recentIds,
+        resolveDisplayName,
         searchQuery,
         selectedTab,
         selectedUnit,
         stamps,
         stampsMap,
         t,
+        translateGameData,
     ]);
 
     const displayedStamps = useMemo(
@@ -283,6 +358,17 @@ export function StickerPicker({
         setVisibleLimit(PAGE_SIZE);
     };
 
+    const canonicalFavoriteCount = useMemo(
+        () =>
+            stampsMap
+                ? favoriteIds.filter((id) => {
+                      const entry = stampsMap.get(id);
+                      return Boolean(entry && entry.isCanonical !== false);
+                  }).length
+                : favoriteIds.length,
+        [favoriteIds, stampsMap],
+    );
+
     return (
         <Dialog
             isOpen={isOpen}
@@ -290,9 +376,11 @@ export function StickerPicker({
             title={t("common.comments.stickerPicker.title")}
             size="lg"
             fullscreenOnMobile
-            bodyClassName="flex flex-col gap-3"
+            className="sm:h-[min(85vh,760px)]"
+            bodyClassName="flex flex-col gap-3 overflow-hidden"
         >
-            <div className="flex flex-wrap items-center justify-between gap-2">
+            {/* Search & quick-send bar */}
+            <div className="flex shrink-0 flex-wrap items-center justify-between gap-2">
                 <TextField
                     value={searchQuery}
                     onValueChange={(value) => {
@@ -313,12 +401,13 @@ export function StickerPicker({
                 )}
             </div>
 
-            {/* Primary collections & unit categorization */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+            {/* Primary collections & unit categorization (never clipped) */}
+            <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto scrollbar-hide py-1 sm:flex-wrap sm:overflow-visible">
                 <Chip
                     variant="filter"
                     selected={selectedTab === "all" && selectedUnit === "all"}
                     icon={mdSentimentSatisfied}
+                    className="shrink-0"
                     onClick={() => {
                         setSelectedUnit("all");
                         handleTabChange("all");
@@ -330,16 +419,18 @@ export function StickerPicker({
                     variant="filter"
                     selected={selectedTab === "favorites"}
                     icon={mdStarFill}
+                    className="shrink-0"
                     onClick={() => handleTabChange("favorites")}
                 >
                     {t("common.comments.stickerPicker.favorites")}
-                    {favoriteIds.length > 0 ? ` (${favoriteIds.length})` : ""}
+                    {canonicalFavoriteCount > 0 ? ` (${canonicalFavoriteCount})` : ""}
                 </Chip>
                 {recentIds.length > 0 && (
                     <Chip
                         variant="filter"
                         selected={selectedTab === "recent"}
                         icon={mdHistory}
+                        className="shrink-0"
                         onClick={() => handleTabChange("recent")}
                     >
                         {t("common.comments.stickerPicker.recent")}
@@ -349,6 +440,7 @@ export function StickerPicker({
                     <Chip
                         key={unit.id}
                         variant="filter"
+                        className="shrink-0"
                         selected={
                             selectedUnit === unit.id &&
                             selectedTab !== "favorites" &&
@@ -363,6 +455,7 @@ export function StickerPicker({
                 {hasOtherStamps && (
                     <Chip
                         variant="filter"
+                        className="shrink-0"
                         selected={selectedTab === "other"}
                         onClick={() => handleTabChange(selectedTab === "other" ? "all" : "other")}
                     >
@@ -371,9 +464,9 @@ export function StickerPicker({
                 )}
             </div>
 
-            {/* Character avatar filter strip */}
+            {/* Character avatar filter strip (never clipped) */}
             {visibleCharacters.length > 0 && (
-                <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+                <div className="flex shrink-0 items-center gap-1.5 overflow-x-auto scrollbar-hide px-1 py-1.5 sm:flex-wrap sm:overflow-visible">
                     {visibleCharacters.map((charId) => {
                         const name = getCharacterName(t, charId);
                         const selected = selectedTab === charId;
@@ -405,15 +498,15 @@ export function StickerPicker({
                 </div>
             )}
 
-            <p className="type-label-s text-on-surface-variant">
+            <p className="shrink-0 type-label-s text-on-surface-variant">
                 {session.authenticated
                     ? t("common.comments.stickerPicker.favoritesSyncedHint")
                     : t("common.comments.stickerPicker.officialOnlyHint")}
             </p>
 
-            {/* Stamp grid */}
-            <div className="min-h-[240px] max-h-[50vh] overflow-y-auto rounded-md3-md bg-surface-container p-2">
-                {loading ? (
+            {/* Scrollable stamp grid */}
+            <div className="min-h-0 flex-1 overflow-y-auto rounded-md3-md bg-surface-container p-2.5">
+                {loading && stamps.length === 0 ? (
                     <LoadingState label={t("common.state.loading")} />
                 ) : displayedStamps.length === 0 ? (
                     <EmptyState
@@ -433,24 +526,26 @@ export function StickerPicker({
                         <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 md:grid-cols-6">
                             {displayedStamps.map((stamp) => {
                                 const isFav = favoriteSet.has(stamp.id);
+                                const displayName = resolveDisplayName(stamp);
+                                const urls = getStampImageUrls(stamp, assetSource, serverSource);
                                 return (
-                                    <div key={stamp.id} className="group relative">
+                                    <div key={stamp.id} className="relative">
                                         <button
                                             type="button"
                                             onClick={() => handlePick(stamp)}
-                                            title={stamp.name}
-                                            className="state-layer focus-ring flex w-full flex-col items-center gap-1 rounded-md3-md bg-surface-container-lowest p-2 text-center transition-colors hover:bg-surface-container-high"
+                                            title={displayName}
+                                            className="state-layer focus-ring flex w-full flex-col items-center gap-1 rounded-md3-md bg-surface-container-lowest p-2 pt-3 text-center transition-colors hover:bg-surface-container-high"
                                         >
                                             <span className="relative block aspect-square w-full max-w-[76px]">
-                                                <img
-                                                    src={getStampUrl(stamp.assetbundleName, assetSource)}
-                                                    alt={stamp.name}
-                                                    loading="lazy"
-                                                    className="h-full w-full object-contain"
+                                                <StampTileImg
+                                                    key={`${stamp.id}-${assetSource}-${serverSource}`}
+                                                    primaryUrl={urls.primaryUrl}
+                                                    jpFallbackUrl={urls.jpFallbackUrl}
+                                                    alt={displayName}
                                                 />
                                             </span>
                                             <span className="w-full truncate type-label-s text-on-surface-variant">
-                                                {stamp.name}
+                                                {displayName}
                                             </span>
                                         </button>
                                         <button
@@ -468,13 +563,13 @@ export function StickerPicker({
                                                     : t("common.comments.stickerPicker.addFavorite")
                                             }
                                             className={cn(
-                                                "focus-ring absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full transition-opacity",
+                                                "focus-ring absolute right-1 top-1 z-10 flex h-7 w-7 items-center justify-center rounded-full border transition-colors",
                                                 isFav
-                                                    ? "bg-primary-container text-primary opacity-100"
-                                                    : "bg-surface-container-high/90 text-on-surface-variant opacity-80 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100",
+                                                    ? "border-primary/30 bg-primary-container text-primary shadow-elev-1"
+                                                    : "border-outline-variant/60 bg-surface-container-lowest/90 text-on-surface-variant hover:border-primary/40 hover:bg-surface-container-high hover:text-primary",
                                             )}
                                         >
-                                            <Icon path={isFav ? mdStarFill : mdStar} size={15} />
+                                            <Icon path={isFav ? mdStarFill : mdStar} size={16} />
                                         </button>
                                     </div>
                                 );

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, Suspense } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import { localizePathForBrowser } from "@/lib/localized-path";
 import ReactMarkdown from "react-markdown";
@@ -19,6 +20,11 @@ import {
 } from "@/lib/guides";
 
 // Category tag tones (same as list page)
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
+
 const categoryTones: Record<string, string> = {
     gacha: "bg-tertiary-container text-on-tertiary-container",
     event: "bg-primary-container text-on-primary-container",
@@ -234,6 +240,15 @@ function GuideDetailContent() {
             <div className="mx-auto mt-8 max-w-xl">
                 <DetailPageAdCard />
             </div>
+
+            {/* Community Comments */}
+            {guide.id && (
+                <EntityCommunitySection
+                    targetType="guide"
+                    targetId={guide.id}
+                    showRelatedPosts={false}
+                />
+            )}
 
             {/* Bottom Back Button */}
             <div className="mt-8 text-center">
