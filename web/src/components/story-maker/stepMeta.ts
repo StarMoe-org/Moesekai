@@ -52,8 +52,15 @@ export function stepSummary(t: Translate, doc: StoryDocument, step: StoryStep): 
     switch (step.op) {
         case "background": return step.name ?? t("page.storyMaker.summary.noBackground");
         case "place": return step.text.trim() ? step.text : t("page.storyMaker.summary.clearPlace");
-        case "appear": return `${castName(doc, step.cast)} · ${t(`page.storyMaker.slot.${step.slot}`)}`;
-        case "move": return `${castName(doc, step.cast)} → ${t(`page.storyMaker.slot.${step.slot}`)}`;
+        case "appear": return [
+            castName(doc, step.cast),
+            t(`page.storyMaker.slot.${step.slot}`),
+            step.scale !== undefined && step.scale !== 1 ? `${step.scale.toFixed(2)}×` : null,
+        ].filter(Boolean).join(" · ");
+        case "move": return [
+            `${castName(doc, step.cast)} → ${t(`page.storyMaker.slot.${step.slot}`)}`,
+            step.scale !== undefined ? `${step.scale.toFixed(2)}×` : null,
+        ].filter(Boolean).join(" · ");
         case "hide": return castName(doc, step.cast);
         case "pose": return [castName(doc, step.cast), step.motion, step.facial].filter(Boolean).join(" · ");
         case "talk": return `${speakerName(doc, step) || "?"}: ${step.body}`;

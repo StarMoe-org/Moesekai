@@ -186,8 +186,13 @@ export function StoryStageView({
                 return (
                     <div
                         key={actor.cast}
-                        className="pointer-events-none absolute bottom-[27%] flex -translate-x-1/2 flex-col items-center gap-1.5 transition-[left,transform] duration-500 ease-md3-standard"
-                        style={{ left: `${50 + actor.x * 50}%`, zIndex: 2 + order }}
+                        className="pointer-events-none absolute bottom-[27%] flex flex-col items-center gap-1.5 transition-[left,transform] duration-500 ease-md3-standard"
+                        style={{
+                            left: `${50 + actor.x * 50}%`,
+                            zIndex: 2 + order,
+                            transformOrigin: "bottom center",
+                            transform: `translate(-50%, ${(-actor.y * 35).toFixed(2)}%) scale(${Math.min(1.5, Math.max(0.65, actor.scale)).toFixed(2)})`,
+                        }}
                     >
                         <div
                             className={cn(

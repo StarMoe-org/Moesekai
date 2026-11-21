@@ -7,7 +7,7 @@ import {
     STORY_FORMAT,
     type StoryCastMember, type StoryDocument, type StoryOpName, type StoryRegion, type StoryStep, type StoryStepOf,
 } from "../../types/storyMaker.ts";
-import { STORY_LIMITS } from "./limits.ts";
+import { DEFAULT_STORY_BACKGROUND, STORY_LIMITS } from "./limits.ts";
 
 /** A short random id (`[a-z0-9]`), unique among `taken`. */
 export function newStoryId(taken: Iterable<string> = [], length = 8): string {
@@ -33,7 +33,7 @@ export function createStep<T extends StoryOpName>(op: T, doc: StoryDocument, cas
     const label = doc.steps.find(step => step.op === "label")?.id ?? "";
     const make = (): StoryStep => {
         switch (op) {
-            case "background": return { id, op, name: null, transition: "fade" };
+            case "background": return { id, op, name: DEFAULT_STORY_BACKGROUND, transition: "fade" };
             case "place": return { id, op, text: "" };
             case "appear": return { id, op, cast: cast ?? "", slot: "center", fade: true };
             case "move": return { id, op, cast: cast ?? "", slot: "left", duration: 0.5 };

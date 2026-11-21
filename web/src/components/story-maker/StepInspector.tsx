@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-    Banner, Button, Dialog, Divider, Icon, IconButton, SegmentedButton, Select, Slider, Switch, TextField,
+    Banner, Button, Chip, Dialog, Divider, Icon, IconButton, SegmentedButton, Select, Slider, Switch, TextField,
     type SelectOption,
 } from "@/components/md3";
 import {
-    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdVolumeUp,
+    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdRestartAlt, mdVolumeUp,
 } from "@/components/md3/icons";
 import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
 import { useI18n } from "@/contexts/I18nContext";
@@ -14,6 +14,7 @@ import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
 import { storyBackgroundUrl, storyBgmUrl, storySeUrl, storyVoiceUrl } from "@/lib/storyMaker/assets";
 import { newStoryId, storyLabels } from "@/lib/storyMaker/document";
 import { STORY_LIMITS } from "@/lib/storyMaker/limits";
+import { stageStateAt } from "@/lib/storyMaker/state";
 import {
     BACKGROUND_TRANSITIONS, BGM_ACTIONS, EFFECT_COLORS, STORY_EFFECTS, STORY_SLOTS, VOICE_KINDS,
     type BackgroundTransition, type StoryBgmAction, type StoryDocument, type StoryEffectColor, type StoryEffectKind,
@@ -242,6 +243,29 @@ export function StepInspector({
                         onCheckedChange={mirror => patch(step, { mirror })}
                         label={t("page.storyMaker.inspector.mirror")}
                     />
+                    <ActorFramingControls
+                        mode="appear"
+                        scale={step.scale}
+                        y={step.y}
+                        onScaleChange={(scale) => {
+                            const next: StoryStepOf<"appear"> = { ...step };
+                            if (scale === undefined) delete next.scale;
+                            else next.scale = scale;
+                            onChange(next);
+                        }}
+                        onYChange={(y) => {
+                            const next: StoryStepOf<"appear"> = { ...step };
+                            if (y === undefined) delete next.y;
+                            else next.y = y;
+                            onChange(next);
+                        }}
+                        onReset={() => {
+                            const next: StoryStepOf<"appear"> = { ...step };
+                            delete next.scale;
+                            delete next.y;
+                            onChange(next);
+                        }}
+                    />
                     <ClipPickerField
                         kind="motion"
                         value={step.motion}
@@ -259,33 +283,63 @@ export function StepInspector({
                 </div>
             )}
 
-            {step.op === "move" && (
-                <div className="space-y-4">
-                    <Select<string>
-                        label={t("page.storyMaker.inspector.castMember")}
-                        value={step.cast || null}
-                        onValueChange={cast => patch(step, { cast })}
-                        options={castOptions}
-                        placeholder={t("page.storyMaker.inspector.selectCast")}
-                        noOptionsLabel={t("page.storyMaker.inspector.noCastOptions")}
-                    />
-                    <div className="space-y-1.5">
-                        <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.slot")}</span>
-                        <SegmentedButton<StorySlot>
-                            density={-1}
-                            value={step.slot}
-                            onValueChange={slot => patch(step, { slot })}
-                            options={slotOptions}
-                            aria-label={t("page.storyMaker.inspector.slot")}
+            {step.op === "move" && (() => {
+                const priorActor = step.cast
+                    ? stageStateAt(doc, stepIndex - 1).actors.find(actor => actor.cast === step.cast)
+                    : undefined;
+                return (
+                    <div className="space-y-4">
+                        <Select<string>
+                            label={t("page.storyMaker.inspector.castMember")}
+                            value={step.cast || null}
+                            onValueChange={cast => patch(step, { cast })}
+                            options={castOptions}
+                            placeholder={t("page.storyMaker.inspector.selectCast")}
+                            noOptionsLabel={t("page.storyMaker.inspector.noCastOptions")}
+                        />
+                        <div className="space-y-1.5">
+                            <span className="block type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.slot")}</span>
+                            <SegmentedButton<StorySlot>
+                                density={-1}
+                                value={step.slot}
+                                onValueChange={slot => patch(step, { slot })}
+                                options={slotOptions}
+                                aria-label={t("page.storyMaker.inspector.slot")}
+                            />
+                        </div>
+                        <DurationSlider
+                            label={t("page.storyMaker.inspector.duration")}
+                            value={step.duration}
+                            onChange={duration => patch(step, { duration })}
+                        />
+                        <ActorFramingControls
+                            mode="move"
+                            scale={step.scale}
+                            y={step.y}
+                            inheritedScale={priorActor?.scale ?? 1}
+                            inheritedY={priorActor?.y ?? 0}
+                            onScaleChange={(scale) => {
+                                const next: StoryStepOf<"move"> = { ...step };
+                                if (scale === undefined) delete next.scale;
+                                else next.scale = scale;
+                                onChange(next);
+                            }}
+                            onYChange={(y) => {
+                                const next: StoryStepOf<"move"> = { ...step };
+                                if (y === undefined) delete next.y;
+                                else next.y = y;
+                                onChange(next);
+                            }}
+                            onReset={() => {
+                                const next: StoryStepOf<"move"> = { ...step };
+                                delete next.scale;
+                                delete next.y;
+                                onChange(next);
+                            }}
                         />
                     </div>
-                    <DurationSlider
-                        label={t("page.storyMaker.inspector.duration")}
-                        value={step.duration}
-                        onChange={duration => patch(step, { duration })}
-                    />
-                </div>
-            )}
+                );
+            })()}
 
             {step.op === "hide" && (
                 <div className="space-y-4">
@@ -743,6 +797,108 @@ export function StepInspector({
                         if (assetPicker === "se" && step.op === "se") patch(step, { name });
                     }}
                 />
+            )}
+        </div>
+    );
+}
+
+const SCALE_PRESETS = [
+    { value: 0.85, labelKey: "page.storyMaker.inspector.scalePresetWide" },
+    { value: 1.0, labelKey: "page.storyMaker.inspector.scalePresetStandard" },
+    { value: 1.15, labelKey: "page.storyMaker.inspector.scalePresetNear" },
+    { value: 1.3, labelKey: "page.storyMaker.inspector.scalePresetCloseup" },
+] as const;
+
+interface ActorFramingControlsProps {
+    mode: "appear" | "move";
+    scale: number | undefined;
+    y: number | undefined;
+    inheritedScale?: number;
+    inheritedY?: number;
+    onScaleChange: (scale: number | undefined) => void;
+    onYChange: (y: number | undefined) => void;
+    onReset: () => void;
+}
+
+function ActorFramingControls({
+    mode, scale, y, inheritedScale = 1, inheritedY = 0, onScaleChange, onYChange, onReset,
+}: ActorFramingControlsProps) {
+    const { t } = useI18n();
+    const effectiveScale = scale ?? inheritedScale;
+    const effectiveY = y ?? inheritedY;
+    const hasCustom = mode === "appear"
+        ? (scale !== undefined && Math.abs(scale - 1) > 0.001) || (y !== undefined && Math.abs(y) > 0.001)
+        : scale !== undefined || y !== undefined;
+
+    return (
+        <div className="space-y-3 rounded-md3-md bg-surface-container p-3">
+            <div className="flex items-center justify-between gap-2">
+                <span className="type-label-l text-on-surface-variant">
+                    {t("page.storyMaker.inspector.actorFraming")}
+                </span>
+                <Button
+                    size="xs"
+                    variant="text"
+                    icon={mdRestartAlt}
+                    disabled={!hasCustom}
+                    onClick={onReset}
+                >
+                    {t("page.storyMaker.inspector.resetFraming")}
+                </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-1.5">
+                {SCALE_PRESETS.map(preset => (
+                    <Chip
+                        key={preset.value}
+                        variant="filter"
+                        showCheckmark={false}
+                        selected={Math.abs(effectiveScale - preset.value) < 0.01 && (mode === "appear" || scale !== undefined)}
+                        onClick={() => onScaleChange(preset.value)}
+                    >
+                        {t(preset.labelKey)}
+                    </Chip>
+                ))}
+            </div>
+
+            <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                    <span className="type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.scale")}</span>
+                    <span className="font-mono type-label-m text-on-surface">{effectiveScale.toFixed(2)}×</span>
+                </div>
+                <Slider
+                    min={STORY_LIMITS.scaleMin}
+                    max={STORY_LIMITS.scaleMax}
+                    step={0.05}
+                    value={effectiveScale}
+                    onValueChange={next => onScaleChange(Number(next.toFixed(2)))}
+                    aria-label={t("page.storyMaker.inspector.scale")}
+                    formatValue={val => `${val.toFixed(2)}×`}
+                />
+            </div>
+
+            <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                    <span className="type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.verticalOffset")}</span>
+                    <span className="font-mono type-label-m text-on-surface">
+                        {effectiveY > 0 ? `+${effectiveY.toFixed(2)}` : effectiveY.toFixed(2)}
+                    </span>
+                </div>
+                <Slider
+                    min={STORY_LIMITS.yMin}
+                    max={STORY_LIMITS.yMax}
+                    step={0.02}
+                    value={effectiveY}
+                    onValueChange={next => onYChange(Number(next.toFixed(2)))}
+                    aria-label={t("page.storyMaker.inspector.verticalOffset")}
+                    formatValue={val => (val > 0 ? `+${val.toFixed(2)}` : val.toFixed(2))}
+                />
+            </div>
+
+            {mode === "move" && scale === undefined && y === undefined && (
+                <p className="type-body-s text-on-surface-variant">
+                    {t("page.storyMaker.inspector.keepCurrentFraming")}
+                </p>
             )}
         </div>
     );

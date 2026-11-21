@@ -12,6 +12,10 @@ export interface StoryActorState {
     slot: StorySlot;
     /** Stage x (SLOT_X). */
     x: number;
+    /** Vertical offset in world units (0: game stand baseline). */
+    y: number;
+    /** Character scale multiplier (1: game stand height). */
+    scale: number;
     mirror: boolean;
     /** null: the model's default. */
     motion: string | null;
@@ -65,6 +69,8 @@ export function applyStep(state: StoryStageState, step: StoryStep, doc: StoryDoc
                 cast: step.cast,
                 slot: step.slot,
                 x: SLOT_X[step.slot],
+                y: step.y ?? 0,
+                scale: step.scale ?? 1,
                 mirror: step.mirror ?? false,
                 motion: step.motion ?? null,
                 facial: step.facial ?? null,
@@ -72,7 +78,16 @@ export function applyStep(state: StoryStageState, step: StoryStep, doc: StoryDoc
             return { ...next, actors: [...state.actors.filter(item => item.cast !== step.cast), actor] };
         }
         case "move":
-            return { ...next, actors: withActor(state, step.cast, actor => ({ ...actor, slot: step.slot, x: SLOT_X[step.slot] })) };
+            return {
+                ...next,
+                actors: withActor(state, step.cast, actor => ({
+                    ...actor,
+                    slot: step.slot,
+                    x: SLOT_X[step.slot],
+                    scale: step.scale ?? actor.scale,
+                    y: step.y ?? actor.y,
+                })),
+            };
         case "hide":
             return { ...next, actors: state.actors.filter(actor => actor.cast !== step.cast) };
         case "pose":

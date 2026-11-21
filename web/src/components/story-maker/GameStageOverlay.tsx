@@ -82,25 +82,52 @@ function telopFontSize(text: string): number {
     return Math.max(28, Math.round((GAME_LAYOUT.telop.fontSize * 18.5) / units));
 }
 
-function wordsTypography(text: string): { fontSize: number; lineHeight: number } {
-    const lines = text.split("\n");
+function estimateVisualLines(text: string, boxWidth: number, fontSize: number): number {
+    const unitsPerLine = Math.max(1, boxWidth / fontSize);
     let visualLines = 0;
-    for (const line of lines) {
-        visualLines += Math.max(1, Math.ceil(weightedUnits(line) / 37));
+    for (const line of text.split("\n")) {
+        visualLines += Math.max(1, Math.ceil(weightedUnits(line) / unitsPerLine));
     }
-    if (visualLines <= 3) return { fontSize: 34, lineHeight: 1.45 };
-    if (visualLines === 4) return { fontSize: 29, lineHeight: 1.36 };
-    return { fontSize: 24, lineHeight: 1.28 };
+    return visualLines;
 }
 
-function narrationTypography(text: string): { fontSize: number; lineHeight: number } {
-    const lines = text.split("\n");
-    let visualLines = 0;
-    for (const line of lines) {
-        visualLines += Math.max(1, Math.ceil(weightedUnits(line) / 34));
+/**
+ * Mirrors Unity TMP auto-sizing on `TalkWindow/Words` (`sse-render/src/lib.rs:1302-1311`):
+ * 44px with 52px line height for 1-3 lines, stepping down smoothly to 22px for longer dialogue.
+ */
+function wordsTypography(text: string): { fontSize: number; lineHeight: string } {
+    const boxWidth = GAME_LAYOUT.talk.words[2];
+    const candidates: readonly { fontSize: number; lineHeight: number; maxLines: number }[] = [
+        { fontSize: GAME_LAYOUT.talk.wordsFontSize, lineHeight: 52, maxLines: 3 },
+        { fontSize: 36, lineHeight: 42, maxLines: 4 },
+        { fontSize: 30, lineHeight: 35, maxLines: 5 },
+        { fontSize: 26, lineHeight: 30, maxLines: 6 },
+    ];
+    for (const candidate of candidates) {
+        if (estimateVisualLines(text, boxWidth, candidate.fontSize) <= candidate.maxLines) {
+            return { fontSize: candidate.fontSize, lineHeight: `${candidate.lineHeight}px` };
+        }
     }
-    if (visualLines <= 7) return { fontSize: 38, lineHeight: 1.55 };
-    return { fontSize: 30, lineHeight: 1.45 };
+    return { fontSize: GAME_LAYOUT.talk.wordsMinFontSize, lineHeight: "26px" };
+}
+
+/**
+ * Mirrors `ScenarioFullScreenTextDialog/Text` (`sse-render/src/lib.rs:1395-1415`):
+ * 56px default, stepping down to 40px if a very long narration would overflow the 600px frame.
+ */
+function narrationTypography(text: string): { fontSize: number; lineHeight: number } {
+    const boxWidth = GAME_LAYOUT.fullScreenText.centeredText[2];
+    const candidates: readonly { fontSize: number; lineHeight: number; maxLines: number }[] = [
+        { fontSize: GAME_LAYOUT.fullScreenText.fontSize, lineHeight: 1.55, maxLines: 6 },
+        { fontSize: 48, lineHeight: 1.48, maxLines: 8 },
+        { fontSize: 44, lineHeight: 1.45, maxLines: 9 },
+    ];
+    for (const candidate of candidates) {
+        if (estimateVisualLines(text, boxWidth, candidate.fontSize) <= candidate.maxLines) {
+            return { fontSize: candidate.fontSize, lineHeight: candidate.lineHeight };
+        }
+    }
+    return { fontSize: 40, lineHeight: 1.4 };
 }
 
 function choiceFontSize(text: string): number {
@@ -248,12 +275,16 @@ export function GameStageOverlay({
 
     const effectiveDialogueBody = dialogueText ?? state.dialogue?.body ?? "";
     const wordsStyle = wordsTypography(state.dialogue?.body ?? effectiveDialogueBody);
+    const narrationStyle = state.narration ? narrationTypography(state.narration.body) : null;
     const endSignRect: GameRect = [
         GAME_LAYOUT.talk.endSignPivot[0] - GAME_LAYOUT.talk.endSignSize[0] * 0.5,
         GAME_LAYOUT.talk.endSignPivot[1] - GAME_LAYOUT.talk.endSignSize[1],
         GAME_LAYOUT.talk.endSignSize[0],
         GAME_LAYOUT.talk.endSignSize[1],
     ];
+    const nameRect = GAME_LAYOUT.talk.name;
+    const wordsRect = GAME_LAYOUT.talk.words;
+    const placeTextRect = GAME_LAYOUT.placeInfo.text;
     const choiceRects = choice
         ? choiceButtonRects(choice.options.length, kit?.choiceLayout ?? DEFAULT_CHOICE_LAYOUT, 1)
         : [];
@@ -295,13 +326,19 @@ export function GameStageOverlay({
                         <div
                             className="sekai-game-ui-place-text"
                             style={{
-                                ...rectStyle(GAME_LAYOUT.placeInfo.text),
+                                position: "absolute",
+                                left: placeTextRect[0],
+                                top: placeTextRect[1] - 4,
+                                width: placeTextRect[2],
+                                height: placeTextRect[3] + 8,
+                                paddingBlock: 4,
+                                boxSizing: "border-box",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "flex-start",
-                                fontFamily: GAME_FONTS.name,
-                                fontWeight: GAME_FONTS.nameWeight,
-                                fontVariationSettings: `"wght" ${GAME_FONTS.nameWeight}`,
+                                fontFamily: GAME_FONTS.body,
+                                fontWeight: GAME_FONTS.bodyWeight,
+                                fontVariationSettings: `"wght" ${GAME_FONTS.bodyWeight}`,
                                 fontSize: placeFontSize(state.place),
                                 color: "#ffffff",
                                 overflow: "hidden",
@@ -338,10 +375,11 @@ export function GameStageOverlay({
                                 alignItems: "center",
                                 justifyContent: "center",
                                 paddingInline: 96,
+                                boxSizing: "border-box",
                                 textAlign: "center",
-                                fontFamily: GAME_FONTS.name,
-                                fontWeight: GAME_FONTS.nameWeight,
-                                fontVariationSettings: `"wght" ${GAME_FONTS.nameWeight}`,
+                                fontFamily: GAME_FONTS.body,
+                                fontWeight: GAME_FONTS.bodyWeight,
+                                fontVariationSettings: `"wght" ${GAME_FONTS.bodyWeight}`,
                                 fontSize: telopFontSize(state.telop.body),
                                 color: "#ffffff",
                             }}
@@ -375,6 +413,8 @@ export function GameStageOverlay({
                                 draggable={false}
                                 style={{
                                     ...rectStyle(GAME_LAYOUT.talk.window),
+                                    maxWidth: "none",
+                                    maxHeight: "none",
                                     objectFit: "fill",
                                     display: "block",
                                 }}
@@ -395,6 +435,8 @@ export function GameStageOverlay({
                                         draggable={false}
                                         style={{
                                             ...rectStyle(GAME_LAYOUT.talk.nameBar),
+                                            maxWidth: "none",
+                                            maxHeight: "none",
                                             objectFit: "fill",
                                             display: "block",
                                         }}
@@ -409,14 +451,15 @@ export function GameStageOverlay({
                                     className="sekai-game-ui-talk-name"
                                     style={{
                                         position: "absolute",
-                                        left: 230,
-                                        top: 786,
-                                        width: 593,
-                                        height: 44,
-                                        fontSize: 36,
-                                        lineHeight: "44px",
-                                        color: "#ffffff",
-                                        textShadow: "0 2px 4px rgba(0, 0, 20, 0.45), 0 0 2px rgba(68, 68, 102, 0.6)",
+                                        left: nameRect[0] - 6,
+                                        top: nameRect[1] - 8,
+                                        width: nameRect[2] + 12,
+                                        height: nameRect[3] + 16,
+                                        padding: "8px 6px",
+                                        boxSizing: "border-box",
+                                        fontSize: GAME_LAYOUT.talk.nameFontSize,
+                                        lineHeight: `${nameRect[3]}px`,
+                                        color: GAME_COLORS.talkName,
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
                                         whiteSpace: "nowrap",
@@ -431,13 +474,15 @@ export function GameStageOverlay({
                             className="sekai-game-ui-talk-words"
                             style={{
                                 position: "absolute",
-                                left: 250,
-                                top: 858,
-                                width: 1368,
-                                height: 160,
+                                left: wordsRect[0] - 6,
+                                top: wordsRect[1] - 6,
+                                width: wordsRect[2] + 12,
+                                height: 184,
+                                padding: "6px",
+                                boxSizing: "border-box",
                                 fontSize: wordsStyle.fontSize,
                                 lineHeight: wordsStyle.lineHeight,
-                                color: "#ffffff",
+                                color: GAME_COLORS.talkWords,
                                 overflow: "hidden",
                             }}
                         >
@@ -455,7 +500,7 @@ export function GameStageOverlay({
                                         src={kit.endSign}
                                         alt=""
                                         draggable={false}
-                                        style={{ width: "100%", height: "100%", display: "block" }}
+                                        style={{ width: "100%", height: "100%", maxWidth: "none", maxHeight: "none", display: "block" }}
                                     />
                                 ) : (
                                     <EndSignFallbackSvg />
@@ -484,6 +529,8 @@ export function GameStageOverlay({
                                             inset: 0,
                                             width: "100%",
                                             height: "100%",
+                                            maxWidth: "none",
+                                            maxHeight: "none",
                                             objectFit: "fill",
                                             display: "block",
                                         }}
@@ -513,6 +560,8 @@ export function GameStageOverlay({
                                                 style={{
                                                     width: GAME_LAYOUT.talk.autoIconSize[0],
                                                     height: GAME_LAYOUT.talk.autoIconSize[1],
+                                                    maxWidth: "none",
+                                                    maxHeight: "none",
                                                     display: "block",
                                                 }}
                                             />
@@ -533,7 +582,7 @@ export function GameStageOverlay({
                 )}
 
                 {/* 4. ScenarioFullScreenTextDialog: Cinemascope bars + dimmed narration */}
-                {state.narration && (
+                {state.narration && narrationStyle && (
                     <div
                         key={state.narration.stepId}
                         style={{ position: "absolute", inset: 0, pointerEvents: "none" }}
@@ -579,10 +628,10 @@ export function GameStageOverlay({
                                 ...rectStyle(GAME_LAYOUT.fullScreenText.centeredText),
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent: "center",
-                                textAlign: "center",
-                                fontSize: narrationTypography(state.narration.body).fontSize,
-                                lineHeight: narrationTypography(state.narration.body).lineHeight,
+                                justifyContent: "flex-start",
+                                textAlign: "left",
+                                fontSize: narrationStyle.fontSize,
+                                lineHeight: narrationStyle.lineHeight,
                                 color: "#ffffff",
                                 overflow: "hidden",
                             }}
@@ -657,6 +706,8 @@ export function GameStageOverlay({
                                                 zIndex: 0,
                                                 width: "100%",
                                                 height: "100%",
+                                                maxWidth: "none",
+                                                maxHeight: "none",
                                                 objectFit: "fill",
                                                 pointerEvents: "none",
                                                 opacity: isPressed ? 0.85 : 1,
@@ -682,6 +733,8 @@ export function GameStageOverlay({
                                                 zIndex: 1,
                                                 width: rect[2] + glowOutset * 2,
                                                 height: rect[3] + glowOutset * 2,
+                                                maxWidth: "none",
+                                                maxHeight: "none",
                                                 objectFit: "fill",
                                                 pointerEvents: "none",
                                                 opacity: isPressed ? 1 : isHighlighted ? 0.35 : 0,
@@ -763,7 +816,7 @@ export function GameStageOverlay({
                                     src={kit.menuBg}
                                     alt=""
                                     draggable={false}
-                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "none", maxHeight: "none", display: "block" }}
                                 />
                             ) : (
                                 <span className="sekai-game-ui-menu-bg-fallback" aria-hidden="true" />
@@ -774,7 +827,7 @@ export function GameStageOverlay({
                                         src={kit.menuIcon}
                                         alt=""
                                         draggable={false}
-                                        style={{ width: "100%", height: "100%", display: "block" }}
+                                        style={{ width: "100%", height: "100%", maxWidth: "none", maxHeight: "none", display: "block" }}
                                     />
                                 ) : (
                                     <MenuIconFallbackSvg />
@@ -795,7 +848,7 @@ export function GameStageOverlay({
                                     src={kit.menuBg}
                                     alt=""
                                     draggable={false}
-                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}
+                                    style={{ position: "absolute", inset: 0, width: "100%", height: "100%", maxWidth: "none", maxHeight: "none", display: "block" }}
                                 />
                             ) : (
                                 <span className="sekai-game-ui-menu-bg-fallback" aria-hidden="true" />
@@ -806,7 +859,7 @@ export function GameStageOverlay({
                                         src={kit.menuIcon}
                                         alt=""
                                         draggable={false}
-                                        style={{ width: "100%", height: "100%", display: "block" }}
+                                        style={{ width: "100%", height: "100%", maxWidth: "none", maxHeight: "none", display: "block" }}
                                     />
                                 ) : (
                                     <MenuIconFallbackSvg />

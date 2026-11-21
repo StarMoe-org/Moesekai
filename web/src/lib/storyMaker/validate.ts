@@ -198,18 +198,34 @@ function checkStep(checker: Checker, raw: Raw, path: string, id: string): StoryS
             const facial = checker.motion(raw, "facial", path);
             const fade = checker.boolean(raw, "fade", path, true);
             const mirror = checker.boolean(raw, "mirror", path, false);
+            const scale = raw.scale === undefined || raw.scale === null
+                ? undefined
+                : checker.number(raw, "scale", path, STORY_LIMITS.scaleMin, STORY_LIMITS.scaleMax);
+            const y = raw.y === undefined || raw.y === null
+                ? undefined
+                : checker.number(raw, "y", path, STORY_LIMITS.yMin, STORY_LIMITS.yMax);
             if (!cast || !slot) return undefined;
             return done({
                 id, op, cast, slot, fade,
                 ...(motion ? { motion } : {}), ...(facial ? { facial } : {}), ...(mirror ? { mirror } : {}),
+                ...(scale !== undefined ? { scale } : {}), ...(y !== undefined ? { y } : {}),
             });
         }
         case "move": {
             const cast = castKey();
             const slot = checker.oneOf(raw, "slot", path, STORY_SLOTS);
             const duration = checker.number(raw, "duration", path, STORY_LIMITS.duration.min, STORY_LIMITS.duration.max, 0.5);
+            const scale = raw.scale === undefined || raw.scale === null
+                ? undefined
+                : checker.number(raw, "scale", path, STORY_LIMITS.scaleMin, STORY_LIMITS.scaleMax);
+            const y = raw.y === undefined || raw.y === null
+                ? undefined
+                : checker.number(raw, "y", path, STORY_LIMITS.yMin, STORY_LIMITS.yMax);
             if (!cast || !slot || duration === undefined) return undefined;
-            return done({ id, op, cast, slot, duration });
+            return done({
+                id, op, cast, slot, duration,
+                ...(scale !== undefined ? { scale } : {}), ...(y !== undefined ? { y } : {}),
+            });
         }
         case "hide": {
             const cast = castKey();

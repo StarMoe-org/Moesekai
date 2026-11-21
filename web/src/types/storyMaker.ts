@@ -4,7 +4,7 @@
  * A story is a linear list of steps with game-scenario semantics (backgrounds, characters
  * appearing / moving / leaving, dialogue, narration, place captions, screen effects, BGM and SE),
  * plus labels, jumps and choices for branching. Assets are only ever referenced by their game
- * names (a background `bg_a000001`, a BGM `bgm00001`, a story voice) on the document's server:
+ * names (a background `bg_a000401`, a BGM `bgm00001`, a story voice) on the document's server:
  * users never upload files. The format is validated strictly on import (lib/storyMaker/validate.ts).
  */
 
@@ -76,6 +76,10 @@ export interface AppearStep {
     /** Fades in rather than popping in. */
     fade: boolean;
     mirror?: boolean;
+    /** Character scale multiplier (0.5..2.0, default 1.0). */
+    scale?: number;
+    /** Vertical offset in stage world units (-0.6..0.6, default 0). */
+    y?: number;
 }
 
 export interface MoveStep {
@@ -84,6 +88,10 @@ export interface MoveStep {
     slot: StorySlot;
     /** Seconds. */
     duration: number;
+    /** Optional character scale multiplier (0.5..2.0); preserves current scale when omitted. */
+    scale?: number;
+    /** Optional vertical offset in stage world units (-0.6..0.6); preserves current y when omitted. */
+    y?: number;
 }
 
 export interface HideStep {

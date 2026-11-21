@@ -241,8 +241,8 @@
     --sekai-ink-white: #ffffff;
     --sekai-glow-mint: #a1f4eb;
     --sekai-outline-shadow:
-        0 2px 4px rgba(68, 68, 102, 0.65),
-        0 0 2px rgba(68, 68, 102, 0.6);
+        0 0 4px rgba(68, 68, 102, 0.65),
+        0 2px 5px rgba(0, 0, 24, 0.45);
 
     position: absolute;
     top: 0;
@@ -257,6 +257,13 @@
     font-family: var(--sekai-font-body);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
+}
+
+/* Override Tailwind v4 preflight `img { max-width: 100%; height: auto; }` so oversized
+   virtual-canvas sprites (such as the 2800px-wide `bg_story_adv`) are never clamped. */
+.sekai-game-ui img {
+    max-width: none;
+    max-height: none;
 }
 
 .sekai-game-ui-font-body {
@@ -304,7 +311,11 @@
     font-weight: 820;
     font-variation-settings: "wght" 820;
     color: var(--sekai-ink-name);
-    text-shadow: var(--sekai-outline-shadow);
+    paint-order: stroke fill;
+    -webkit-text-stroke: 0.16em rgba(68, 68, 102, 0.72);
+    text-shadow:
+        0 0 4px rgba(68, 68, 102, 0.68),
+        0 2px 5px rgba(0, 0, 24, 0.45);
     line-height: 1;
 }
 
@@ -313,7 +324,11 @@
     font-weight: 460;
     font-variation-settings: "wght" 460;
     color: var(--sekai-ink-white);
-    text-shadow: var(--sekai-outline-shadow);
+    paint-order: stroke fill;
+    -webkit-text-stroke: 0.14em rgba(68, 68, 102, 0.68);
+    text-shadow:
+        0 0 3px rgba(68, 68, 102, 0.6),
+        0 2px 4px rgba(0, 0, 24, 0.45);
     white-space: pre-wrap;
     word-break: break-word;
 }
@@ -403,7 +418,9 @@
     font-size: 44px;
     line-height: 1.15;
     color: var(--sekai-ink-white);
-    text-shadow: 0 2px 6px rgba(0, 0, 24, 0.35);
+    paint-order: stroke fill;
+    -webkit-text-stroke: 0.09em rgba(68, 68, 102, 0.58);
+    text-shadow: 0 2px 6px rgba(0, 0, 24, 0.45);
 }
 
 /* ---- ScenarioFullScreenTextDialog (Cinemascope narration) ---- */
@@ -421,7 +438,9 @@
     font-weight: 460;
     font-variation-settings: "wght" 460;
     color: var(--sekai-ink-white);
-    text-shadow: 0 4px 6px rgba(0, 0, 0, 0.92);
+    text-shadow:
+        0 4px 2px rgba(0, 0, 0, 0.95),
+        0 6px 8px rgba(0, 0, 0, 0.7);
     white-space: pre-wrap;
     word-break: break-word;
 }

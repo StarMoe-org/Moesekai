@@ -13,7 +13,7 @@ const {
     createStoryDocument, createStep, insertStep, moveStep, duplicateStep, removeStep, addCastMember, removeCastMember,
     castUsage, storyFileName, serializeStory, newStoryId,
 } = await import("../src/lib/storyMaker/document.ts");
-const { SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
+const { DEFAULT_STORY_BACKGROUND, SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
 const { createStarterStoryDocument } = await import("../src/lib/storyMaker/starter.ts");
 
 function sample() {
@@ -28,7 +28,7 @@ function sample() {
             { key: "saki", modelId: "v2_02saki_casual", name: "咲希", characterId: 2 },
         ],
         steps: [
-            { id: "s1", op: "background", name: "bg_a000001", transition: "fade" },
+            { id: "s1", op: "background", name: DEFAULT_STORY_BACKGROUND, transition: "fade" },
             { id: "s2", op: "bgm", action: "play", name: "bgm00001", volume: 0.8 },
             { id: "s3", op: "appear", cast: "ichika", slot: "left", fade: true, motion: "w-cool-normal01", facial: "face_smile_01" },
             { id: "s4", op: "talk", cast: "ichika", body: "Hello", lipSync: true },
@@ -152,9 +152,9 @@ test("stageStateAt folds the steps in document order", () => {
     assert.deepEqual(stageStateAt(doc, -1), INITIAL_STAGE_STATE);
 
     const atTalk = stageStateAt(doc, 3);
-    assert.equal(atTalk.background, "bg_a000001");
+    assert.equal(atTalk.background, DEFAULT_STORY_BACKGROUND);
     assert.deepEqual(atTalk.bgm, { name: "bgm00001", volume: 0.8 });
-    assert.deepEqual(atTalk.actors, [{ cast: "ichika", slot: "left", x: SLOT_X.left, mirror: false, motion: "w-cool-normal01", facial: "face_smile_01" }]);
+    assert.deepEqual(atTalk.actors, [{ cast: "ichika", slot: "left", x: SLOT_X.left, y: 0, scale: 1, mirror: false, motion: "w-cool-normal01", facial: "face_smile_01" }]);
     assert.deepEqual(atTalk.dialogue, { stepId: "s4", cast: "ichika", speaker: "一歌", body: "Hello" });
     assert.equal(atTalk.speaking, "ichika");
 
@@ -391,4 +391,69 @@ test("starter demo document passes strict validation and branches cleanly", () =
 
     const endNarrationIndex = starter.steps.findIndex(step => step.op === "narration");
     assert.equal(stageStateAt(starter, endNarrationIndex).place, null);
+
+    // Starter uses a verified classroom scene background, not a CG (bg_a000001..0099 or bg_s*).
+    const bgStep = starter.steps.find(step => step.op === "background");
+    assert.equal(bgStep?.name, DEFAULT_STORY_BACKGROUND);
+    assert.equal(/^bg_a0000\d\d$/.test(bgStep?.name ?? ""), false);
+    assert.equal((bgStep?.name ?? "").startsWith("bg_s"), false);
+});
+
+test("SLOT_X uses authentic game stand positions and appear/move validate and persist scale & y", () => {
+    assert.deepEqual(SLOT_X, {
+        farLeft: -0.62,
+        left: -0.365,
+        center: 0,
+        right: 0.365,
+        farRight: 0.62,
+    });
+
+    const doc = createStoryDocument("jp", "Framing");
+    doc.cast.push({ key: "a", modelId: "v2_01ichika_casual", name: "Ichika", characterId: 1 });
+    doc.steps.push(
+        { id: "ap1", op: "appear", cast: "a", slot: "left", fade: true, scale: 1.15, y: 0.12 },
+        { id: "mv1", op: "move", cast: "a", slot: "right", duration: 0.5 },
+        { id: "mv2", op: "move", cast: "a", slot: "center", duration: 0.4, scale: 1.3, y: -0.1 },
+    );
+    const valid = validateStoryDocument(doc);
+    assert.equal(valid.ok, true, JSON.stringify(valid.ok ? [] : valid.issues));
+    assert.equal(valid.doc.steps[0].scale, 1.15);
+    assert.equal(valid.doc.steps[0].y, 0.12);
+    assert.equal("scale" in valid.doc.steps[1], false);
+    assert.equal("y" in valid.doc.steps[1], false);
+    assert.equal(valid.doc.steps[2].scale, 1.3);
+    assert.equal(valid.doc.steps[2].y, -0.1);
+
+    const s0 = stageStateAt(valid.doc, 0);
+    assert.deepEqual([s0.actors[0].x, s0.actors[0].scale, s0.actors[0].y], [-0.365, 1.15, 0.12]);
+    // Move without scale/y preserves current actor framing.
+    const s1 = stageStateAt(valid.doc, 1);
+    assert.deepEqual([s1.actors[0].x, s1.actors[0].scale, s1.actors[0].y], [0.365, 1.15, 0.12]);
+    // Move with scale/y updates actor framing.
+    const s2 = stageStateAt(valid.doc, 2);
+    assert.deepEqual([s2.actors[0].x, s2.actors[0].scale, s2.actors[0].y], [0, 1.3, -0.1]);
+
+    // Out-of-bounds scale/y are rejected by strict validation.
+    for (const bad of [
+        { scale: STORY_LIMITS.scaleMin - 0.01 },
+        { scale: STORY_LIMITS.scaleMax + 0.01 },
+        { y: STORY_LIMITS.yMin - 0.01 },
+        { y: STORY_LIMITS.yMax + 0.01 },
+    ]) {
+        const invalidAppear = structuredClone(doc);
+        Object.assign(invalidAppear.steps[0], bad);
+        assert.equal(validateStoryDocument(invalidAppear).issues[0].code, "numberRange");
+
+        const invalidMove = structuredClone(doc);
+        Object.assign(invalidMove.steps[1], bad);
+        assert.equal(validateStoryDocument(invalidMove).issues[0].code, "numberRange");
+    }
+
+    const badType = structuredClone(doc);
+    badType.steps[0].scale = "big";
+    assert.equal(validateStoryDocument(badType).issues[0].code, "fieldType");
+
+    // Default background step uses verified classroom scene background.
+    const defaultBg = createStep("background", doc);
+    assert.equal(defaultBg.name, DEFAULT_STORY_BACKGROUND);
 });

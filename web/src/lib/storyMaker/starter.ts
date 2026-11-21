@@ -4,6 +4,7 @@
  */
 import { STORY_FORMAT, type StoryDocument, type StoryRegion } from "../../types/storyMaker.ts";
 import { serializeStory, storyFileName } from "./document.ts";
+import { DEFAULT_STORY_BACKGROUND } from "./limits.ts";
 
 export interface StarterStoryStrings {
     title: string;
@@ -39,13 +40,13 @@ export function createStarterStoryDocument(region: StoryRegion, strings: Starter
             { key: "saki", modelId: "v2_02saki_casual", name: strings.sakiName, characterId: 2 },
         ],
         steps: [
-            { id: "bg01", op: "background", name: "bg_a000001", transition: "fade" },
+            { id: "bg01", op: "background", name: DEFAULT_STORY_BACKGROUND, transition: "fade" },
             { id: "bgm01", op: "bgm", action: "play", name: "bgm00001", volume: 0.7 },
             { id: "pl01", op: "place", text: strings.placeOpening },
             { id: "tl01", op: "telop", body: strings.telopOpening },
-            { id: "ap01", op: "appear", cast: "ichika", slot: "left", fade: true },
+            { id: "ap01", op: "appear", cast: "ichika", slot: "left", fade: true, scale: 1.05 },
             { id: "tk01", op: "talk", cast: "ichika", body: strings.lineIchikaGreeting, lipSync: true },
-            { id: "ap02", op: "appear", cast: "saki", slot: "right", fade: true },
+            { id: "ap02", op: "appear", cast: "saki", slot: "right", fade: true, scale: 1.05 },
             { id: "tk02", op: "talk", cast: "saki", body: strings.lineSakiReply, lipSync: true },
             {
                 id: "ch01",

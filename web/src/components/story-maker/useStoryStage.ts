@@ -34,6 +34,8 @@ export interface StoryStageApplyOptions {
 interface AppliedActor {
     modelId: string;
     x: number;
+    y: number;
+    scale: number;
     mirror: boolean;
     order: number;
     motion: string | null;
@@ -215,13 +217,28 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
         for (const [id, { actor, order, modelId }] of wanted) {
             const current = applied.get(id);
             if (current) {
-                // On stage: move, re-order, re-pose.
-                if (current.x !== actor.x || current.mirror !== actor.mirror || current.order !== order) {
-                    const moving = current.x !== actor.x && !options.instant;
-                    tasks.push(stage.setActor(id, { x: actor.x, mirror: actor.mirror, order, alpha: 1 }, {
+                // On stage: move, scale/offset, re-order, re-pose.
+                const transformChanged =
+                    current.x !== actor.x
+                    || current.y !== actor.y
+                    || current.scale !== actor.scale
+                    || current.mirror !== actor.mirror
+                    || current.order !== order;
+                if (transformChanged) {
+                    const moving = (current.x !== actor.x || current.y !== actor.y || current.scale !== actor.scale) && !options.instant;
+                    tasks.push(stage.setActor(id, {
+                        x: actor.x,
+                        y: actor.y,
+                        scale: actor.scale,
+                        mirror: actor.mirror,
+                        order,
+                        alpha: 1,
+                    }, {
                         duration: moving ? options.moveSeconds ?? STORY_FADE_SECONDS : 0, easing: "in-out",
                     }).catch(() => undefined));
                     current.x = actor.x;
+                    current.y = actor.y;
+                    current.scale = actor.scale;
                     current.mirror = actor.mirror;
                     current.order = order;
                 }
@@ -249,11 +266,21 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
             const motion = cached ? pick(actor.motion, cached.motions, null) : null;
             const facial = cached ? pick(actor.facial, cached.facials, null) : null;
             const fadeIn = !options.instant && !!options.fade;
-            const entry: AppliedActor = { modelId, x: actor.x, mirror: actor.mirror, order, motion, facial, info: cached ?? null };
+            const entry: AppliedActor = {
+                modelId,
+                x: actor.x,
+                y: actor.y,
+                scale: actor.scale,
+                mirror: actor.mirror,
+                order,
+                motion,
+                facial,
+                info: cached ?? null,
+            };
             applied.set(id, entry);
             setLoadingActors(count => count + 1);
             tasks.push(stage.addActor(id, { bundle: model.bundle, motion: model.motions[0] ?? null }, {
-                x: actor.x, mirror: actor.mirror, order, alpha: fadeIn ? 0 : 1,
+                x: actor.x, y: actor.y, scale: actor.scale, mirror: actor.mirror, order, alpha: fadeIn ? 0 : 1,
                 ...(motion ? { motion } : {}), ...(facial ? { facial } : {}),
             }).then(async (info) => {
                 infoCacheRef.current.set(modelId, info);
