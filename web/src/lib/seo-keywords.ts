@@ -1260,9 +1260,9 @@ export const SEO_PAGE_METADATA = {
     "/privacy",
     { "zh-CN": "隐私政策", "en-US": "Privacy Policy", "ja-JP": "プライバシーポリシー" },
     {
-      "zh-CN": "阅读 Moesekai 隐私政策，了解本地存储、Cookie、广告与第三方服务说明。",
-      "en-US": "Read the Moesekai privacy policy covering local storage, cookies, ads, and third-party services.",
-      "ja-JP": "Moesekai のローカルストレージ、Cookie、広告、外部サービスに関するプライバシーポリシーを確認できます。",
+      "zh-CN": "阅读 Moesekai 隐私政策，了解 StarMoe 通行证登录、本机与服务器上保存的数据、Cookie 和第三方服务。",
+      "en-US": "Read the Moesekai privacy policy covering StarMoe Passport sign-in, data kept on your device and our servers, cookies, and third-party services.",
+      "ja-JP": "StarMoe パスポートでのログイン、端末とサーバーに保存されるデータ、Cookie、外部サービスに関する Moesekai のプライバシーポリシーです。",
     },
     {
       "zh-CN": ["隐私政策", "Cookie", "广告"],

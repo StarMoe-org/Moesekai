@@ -262,7 +262,6 @@ export const jaJPMessages = {
     },
     form: {
       uid: 'UID',
-      gameUid: 'ゲームUID',
       server: 'サーバー'
     },
     server: {
@@ -299,48 +298,13 @@ export const jaJPMessages = {
       }
     },
     account: {
-      selectAccount: 'アカウントを選択',
-      savedAccounts: '保存済みアカウント',
-      quickFill: 'クリックして素早く入力',
-      addAccount: 'アカウントを追加',
-      addFirstAccount: '最初のアカウントを追加',
-      addNewAccount: '新しいアカウントを追加',
-      noAccounts: '連携済みアカウントはまだありません',
-      oauthBind: 'OAuth2 Connect',
       oauthBindSuccess: 'OAuth2 account connected successfully and set as the active account.',
       connectHaruki: 'Haruki Toolbox と連携',
       reconnectHaruki: 'Haruki と再連携',
       manageHarukiConnection: 'Haruki 連携を管理',
       signInToConnectHaruki: 'ログインして Haruki と連携',
-      starmoeAccountsFull: 'この端末には追加しましたが、StarMoe アカウントに手動で追加できるアカウントは 20 件までのため同期されていません。',
-      starmoeSaveFailed: 'この端末には追加しましたが、StarMoe アカウントに同期できませんでした。後でプロフィールから再度インポートしてください。',
-      harukiVerified: 'Haruki 認証済み',
-      savedToStarMoe: '同期済み',
-      localOnly: 'この端末のみ',
-      verifiedNotRemovable: 'このアカウントは Haruki Toolbox で認証されています。削除するには Haruki Toolbox で連携を解除してください',
-      publicApi: 'Public API',
-      current: '使用中',
-      reauthRequired: '再認証が必要',
-      setDefault: '既定に設定',
-      resync: '再同期',
-      deleteAccount: 'アカウントを削除',
-      verifying: '確認中',
-      verifyingWithDots: '確認中...',
-      add: '追加',
-      verifyAndAdd: '確認して追加',
-      inputGameUid: 'ゲームUIDを入力',
       goHaruki: 'Haruki Toolbox を開く →',
-      addHint: '追加時に Haruki API からプロフィールとキャラクターデータを取得してアバターに使用します',
-      createdAt: '{date} に追加',
       dataUpdatedAt: 'データ更新：{date}',
-      localOnlyNotice: 'すべてのデータはブラウザ内（localStorage）にのみ保存されます。Moesekai が個人情報をアップロードまたは保存することはありません。',
-      quickBindTitle: 'クイックアカウント連携',
-      quickBindDefaultDescription: 'ゲームUIDを入力して開始',
-      verifyAndBind: '確認して連携',
-      oauthAuthorizeBind: 'OAuth2で連携',
-      manualBindHintStart: '手動UID連携には、先に',
-      manualBindHintHaruki: 'Haruki Toolbox',
-      manualBindHintEnd: 'でデータをアップロードし Public API を有効にする必要があります。StarMoe にログインして Haruki Toolbox と連携すれば、Public API は不要です。'
     },
     accountDataErrors: {
       apiNotPublic: "This account's Public API is not enabled, and OAuth2 data access is unavailable. Please enable Public API in Haruki or authorize with OAuth2 again.",
@@ -353,16 +317,6 @@ export const jaJPMessages = {
       uploadTimeTitle: 'データアップロード時刻',
       dataTime: 'データ時刻：{time}',
       suiteUploadHint: 'Suite データが Haruki にアップロード済みか確認してください'
-    },
-    harukiErrors: {
-      apiNotPublic: `このユーザーの Public API が有効になっていません。先に Haruki Toolbox で「Public API Access」を有効にしてください。`,
-      userNotFound: 'ユーザーデータが見つかりません。UID/サーバーを確認し、Haruki にデータがアップロード済みか確認してください。',
-      networkError: 'ネットワークエラーです。しばらくしてからもう一度お試しください。',
-      oauthInitFailed: 'OAuth2 認証の初期化に失敗しました。',
-      oauthRefreshFailed: 'OAuth2 アカウントの更新に失敗しました。しばらくしてから再試行するか、コンソールログを確認してください。',
-      apiNotPublicShort: 'Public API 無効',
-      userNotFoundShort: 'ユーザーが見つかりません',
-      networkErrorShort: 'ネットワークエラー'
     },
     oauthMigration: {
       title: 'Haruki 連携方法の変更',
@@ -475,11 +429,7 @@ export const jaJPMessages = {
       signIn: 'StarMoe パスでログイン',
       signInShort: 'ログイン',
       accountMenu: 'StarMoe パスのアカウント：{name}',
-      signOut: 'ログアウト',
-      signOutFailed: 'ログアウトできませんでした。しばらくしてからもう一度お試しください。',
-      linkedGame: '紐付け済み：{name}',
       linkGame: 'ゲームアカウントを紐付け：{name}',
-      authorizeGame: 'Haruki でゲームアカウントを連携',
       unlinkGame: 'ゲームアカウントの紐付けを解除',
       linkSuccess: 'ゲームアカウント {name} を紐付けました。',
       unlinkSuccess: 'ゲームアカウントの紐付けを解除しました。',
@@ -1237,11 +1187,6 @@ export const jaJPMessages = {
     footer: {
       version: 'Moesekai · {version}'
     },
-    sidebar: {
-      notLoggedIn: '未ログイン',
-      manageAccount: 'アカウント管理',
-      bindAccount: 'アカウント連携'
-    }
   },
   shortcuts: {
     title: 'キーボードショートカット',
@@ -1800,55 +1745,86 @@ export const jaJPMessages = {
     },
     privacy: {
       title: 'プライバシーポリシー',
-      updated: '最終更新日：2026年8月12日',
+      updated: '最終更新日：2026年11月21日',
       overview: {
         title: '1. 概要',
-        body: 'Moesekai（pjsk.moe）は、非営利の PROJECT SEKAI ファン向けデータビューアーです。本ポリシーでは、端末に保存される情報、第三者サービスとの通信、および利用者が行える管理について説明します。'
+        body: 'Moesekai（pjsk.moe）は非営利の PROJECT SEKAI ファン向けデータビューアーです。閲覧機能はすべてログインなしで使えます。StarMoe パスポートでログインすると、ゲームアカウントを別の端末でも使えます。本ポリシーでは、本サイトが端末とサーバーに何を保存するか、いつ第三者サービスと通信するか、利用者がそのデータをどう管理できるかを説明します。',
+      },
+      account: {
+        title: '2. StarMoe パスポートとゲームアカウント',
+        intro: 'ログインは任意です。ログインすると：',
+        passport: 'ログインは StarMoe パスポート（passport.star.moe）で行います。Moesekai が受け取るのはパスポートのユーザー ID、表示名、ユーザー名、アイコンのみで、パスワードには触れません。',
+        games: '手動で追加したゲームアカウント（サーバー、UID、メモ）は Moesekai のサーバーに保存され、別の端末でログインしても使えます。',
+        haruki: 'Haruki ツールボックスを連携すると、認可は StarMoe Connect（connect.star.moe）が保管し、Moesekai は Haruki のトークンに触れません。Haruki で認証済みのゲームアカウントは自動で表示され、ゲームデータは Moesekai のサーバーが代わりに Haruki から読み込みます。',
+        guest: 'ログインしない場合（ゲストモード）、ゲームアカウントとゲームデータはこのブラウザーにのみ保存されます。',
       },
       local: {
-        title: '2. 端末に保存されるデータ',
-        intro: 'Moesekai のサーバーアカウントは不要ですが、一部機能はブラウザーの localStorage または sessionStorage に次の情報を保存します。',
+        title: '3. 端末に保存されるデータ',
+        intro: '本サイトはブラウザーの localStorage または sessionStorage に次のデータを保存します：',
         preferences: '言語、テーマ、サイドバー、フィルターなどの表示設定。',
-        account: '利用者が追加したゲームアカウントの識別子、サーバー、ニックネーム、アバターなどのプロフィール情報。',
-        tokens: 'OAuth2 接続時に取得したアクセストークン、リフレッシュトークン、権限範囲、有効期限。これらは機密性の高い認証情報です。',
+        account: 'ゲームアカウントの UID、サーバー、ニックネーム、アイコンなど。ゲストモードではここにのみ保存され、ログイン中はサーバー上のデータの端末内コピーです。',
+        tokens: '2026年12月20日までは、旧方式でブラウザーから直接 Haruki に紐付けたアカウントの OAuth2 アクセストークンとリフレッシュトークンが端末に残ります。それ以降は使用しません。トークンは機密性の高い認証情報です。',
         gameData: 'キャラクター、編成、素材、エリアアイテム、マイセカイ情報など、アカウント機能用に同期したゲームデータのスナップショット。',
-        note: 'これらのアカウント情報と OAuth2 トークンは、このブラウザー内に保存され、Moesekai のクラウドアカウントデータベースには送信されません。共有端末では、利用後にアカウントとサイトデータを削除してください。'
+        note: '共有端末では、離れる前にログアウトし、「マイアカウント」ページで端末のデータを消去してください。',
+      },
+      server: {
+        title: '4. サーバーに保存されるデータ',
+        intro: 'Moesekai のサーバーには次のデータが保存されます：',
+        accounts: 'ログイン中：パスポートのユーザー ID、表示名、アイコン、および保存したゲームアカウントの一覧。',
+        gameData: '表示を速くするため、Haruki から読み込んだゲームデータを短時間キャッシュします。公開されていないデータはメモリにのみ保持し、ディスクには書き込みません。',
+        guessMusic: '曲当てクイズ：デイリーチャレンジの成績とランキング（パスポートの表示名、アイコン、紐付けたゲームアカウントを表示）を約40日間保存します。不正防止のため、IP アドレスごとにリクエスト回数を制限します。',
+        community: 'コミュニティ：投稿、コメント、お気に入り、通報、受け取った通知、およびモデレーションの記録。投稿とコメントは公開されます。',
       },
       network: {
-        title: '3. 通信と第三者サービス',
-        intro: '対応する機能を利用すると、ブラウザーはコンテンツ、公開ゲーム API、または OAuth2 提供者へリクエストを送信します。',
-        oauth: 'OAuth2 提供者は、独自のポリシーに基づいてログイン、認可コード、トークン、連携ゲームアカウントを処理します。',
-        publicApi: '公開 API または認可 API は、選択したサーバーとゲーム UID を受け取り、サイト機能で使うゲームデータを返します。',
-        analytics: '本番サイトでは Google Analytics を読み込みます。Google はページ、端末、ブラウザー、IP アドレス、時刻などの技術情報を受け取ることがあります。'
+        title: '5. 通信と第三者サービス',
+        intro: '該当する機能を使うと、次のサービスと通信します：',
+        publicApi: 'Haruki ツールボックス：ゲームデータを提供します。ゲストモードではブラウザーが選択したサーバーとゲーム UID を送って公開 API を直接呼び出し、ログイン中は Moesekai のサーバーが代わりに呼び出します。',
+        analytics: '本番サイトでは Google Analytics を読み込みます。Google はページ、端末、ブラウザー、IP アドレス、時刻などの技術情報を受け取ることがあります。',
+        starmoe: 'StarMoe パスポートと StarMoe Connect：ログインと Haruki の認可を扱い、StarMoe のポリシーに従います。',
+        turnstile: 'Cloudflare Turnstile：ストーリー検索やコミュニティ投稿などで自動化による悪用を防ぐために使います。Cloudflare はブラウザーと端末の技術情報を受け取ります。',
       },
       cookies: {
-        title: '4. Cookie、アクセス解析、広告',
+        title: '6. Cookie、アクセス解析、広告',
         analytics: '本番サイトでは集計された利用状況を把握するため、Google Analytics を使用します。Google が解析 Cookie を設定することがあります。',
-        adsDisabled: '現在、広告機能は無効です。Google AdSense の広告スクリプトは読み込まず、広告収入にも依存していません。将来広告を有効にする前に、本ポリシーと同意画面を更新します。'
+        adsDisabled: '現在、広告機能は無効です。Google AdSense の広告スクリプトは読み込まず、広告収入にも依存していません。将来広告を有効にする前に、本ポリシーと同意画面を更新します。',
+        session: 'ログインすると、pjsk.moe はログイン状態を保つために必要なセッション Cookie を1つ設定します。解析や広告には使いません。',
       },
       use: {
-        title: '5. データの利用目的',
-        functionality: '設定を記憶し、アカウント、編成、計算ツールを提供するため。',
+        title: '7. データの利用目的',
+        functionality: '設定を保存し、ログイン、アカウント、編成、計算ツールを提供するため。',
         sync: '利用者の操作に応じて、選択した API からゲームデータを同期・表示するため。',
-        analytics: '同意がある場合に集計された利用状況を把握し、サイトを保守・改善するため。'
+        analytics: '同意がある場合に集計された利用状況を把握し、サイトを保守・改善するため。',
+        safety: '回数制限、ボット判定、コミュニティのモデレーションなどで悪用を防ぐため。',
       },
       sharing: {
-        title: '6. 共有と販売',
-        body: '端末に保存されたアカウント情報や OAuth2 トークンを販売しません。機能に必要なデータだけを、ブラウザーから対応する API、OAuth2、解析提供者へ送信し、各第三者は独自のポリシーで処理します。'
+        title: '8. 共有と販売',
+        body: '利用者のデータを販売することはありません。関連する機能を使ったときに限り、必要なデータを StarMoe パスポート、StarMoe Connect、Haruki、Cloudflare、Google に送信し、各サービスはそれぞれのポリシーに従って取り扱います。',
       },
       controls: {
-        title: '7. 利用者による管理',
-        delete: 'アカウント管理で保存済みアカウントを削除できます。ブラウザーで pjsk.moe のサイトデータを消去すると、設定、アカウントのスナップショット、トークンをすべて削除できます。',
-        browser: 'Cookie、ストレージ、Do Not Track、Global Privacy Control のブラウザー設定でも処理を制限できます。'
+        title: '9. 利用者による管理',
+        delete: '「マイアカウント」ページで、ゲームアカウントの削除、端末のみのアカウントのパスポートへの保存、端末のデータの消去ができます。ブラウザーから pjsk.moe のサイトデータを消去することもできます。',
+        browser: 'Cookie、ストレージ、Do Not Track、Global Privacy Control のブラウザー設定でも処理を制限できます。',
+        account: 'パスポートのアカウントセンターで StarMoe アカウントを削除できます。削除すると、Moesekai は保存したゲームアカウント、ログインセッション、曲当てクイズのゲームアカウント紐付けを削除し、過去のランキングから名前とアイコンが削除されます。',
       },
       links: {
-        title: '8. 第三者リンク',
+        title: '10. 第三者リンク',
         body: '外部リンクは離脱確認画面を経由します。第三者サイトには独自のコンテンツとプライバシーポリシーがあります。',
-        googlePrivacy: 'Google プライバシーポリシー'
+        googlePrivacy: 'Google プライバシーポリシー',
       },
-      children: { title: '9. 子どものプライバシー', body: '本サイトは13歳未満の子どもを対象としておらず、その個人情報を意図的に収集しません。' },
-      changes: { title: '10. ポリシーの変更', body: '変更は更新日とともに本ページで公開します。データ処理の重大な変更は、必要に応じて別途通知します。' },
-      contact: { title: '11. お問い合わせ', body: '本ポリシーまたはデータ処理に関するお問い合わせ先：', github: 'GitHub', qq: 'QQグループ' }
+      children: {
+        title: '11. 子どものプライバシー',
+        body: '本サイトは13歳未満の子どもを対象としておらず、その個人情報を意図的に収集しません。',
+      },
+      changes: {
+        title: '12. ポリシーの変更',
+        body: '変更は更新日とともに本ページで公開します。データ処理の重大な変更は、必要に応じて別途通知します。',
+      },
+      contact: {
+        title: '13. お問い合わせ',
+        body: '本ポリシーまたはデータ処理に関するお問い合わせ先：',
+        github: 'GitHub',
+        qq: 'QQグループ',
+      },
     },
     leave: {
       badge: 'リダイレクト通知',
@@ -4410,7 +4386,6 @@ export const jaJPMessages = {
       title: 'マイ',
       titleHighlight: 'プロフィール',
       description: 'ゲームアカウントを管理します。データはすべてこのブラウザ内にのみ保存されます。',
-      boundAccounts: '連携中のアカウント',
       toolQuickLinks: 'ツールへのショートカット',
       toolQuickLinksHint: '下のツールでは、連携済みのアカウントをすぐに選択できます',
       goTo: '開く →',
@@ -4428,28 +4403,6 @@ export const jaJPMessages = {
           description: 'カードの所持・育成状況を確認できます'
         }
       },
-      dangerZone: '危険な操作',
-      dangerDescription: 'すべてのアカウントを削除すると、ローカルに保存したデータもすべて消去されます。この操作は元に戻せません。',
-      clearAllData: 'すべてのデータを削除',
-      clearAllConfirm: 'すべてのアカウントを削除しますか？',
-      confirmClear: '削除する',
-      descriptionSignedIn: 'ゲームアカウントを管理します。アカウントは StarMoe アカウントに同期されます',
-      signInTitle: 'StarMoe アカウントにログイン',
-      signInDescription: 'ログインすると、アカウントは StarMoe アカウントに保存され、端末間で同期されます。Haruki Toolbox と連携すれば、Public API を有効にしなくても全データを読み込めます。',
-      signInAction: 'ログイン',
-      importTitle: 'この端末に StarMoe アカウントへ未同期のアカウントが {count} 件あります',
-      importDescription: 'インポートすると、ほかの端末でログインしてもそのまま使えます。',
-      importAction: 'すべてインポート',
-      importDone: 'StarMoe アカウントにインポートしました。',
-      importFailed: 'インポートに失敗しました。しばらくしてから再度お試しください。',
-      harukiReconnectTitle: 'Haruki の認可が切れています',
-      harukiReconnectDescription: '再連携すると非公開のゲームデータを引き続き読み込めます。それまでは公開データのみ読み込みます。',
-      legacyOAuthTitle: 'ブラウザ内の OAuth2 連携は終了予定です',
-      legacyOAuthDescription: 'StarMoe にログインし、StarMoe Connect で Haruki Toolbox と連携してください。終了後、これらのアカウントは Public API でのみ読み込めます。',
-      dangerDescriptionSignedIn: 'この端末のアカウントキャッシュのみを削除します。StarMoe アカウントに同期済みのアカウントは残り、再び同期されます。',
-      clearLocalData: 'この端末のキャッシュを削除',
-      clearLocalConfirm: 'この端末のアカウントキャッシュを削除しますか？',
-      syncedNotice: 'アカウントは StarMoe アカウントに同期されています。Haruki の認可は StarMoe Connect が保管し、ゲームデータは Moesekai サーバー経由で読み込みます。',
       hero: {
         rank: 'ランク',
         switchAccount: 'アカウント切替'
