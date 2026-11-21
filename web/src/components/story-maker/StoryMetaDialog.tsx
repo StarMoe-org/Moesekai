@@ -3,8 +3,9 @@ import { useState } from "react";
 import { Button, Dialog, Select, TextField } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { updateStoryMeta } from "@/lib/storyMaker/document";
 import { STORY_LIMITS } from "@/lib/storyMaker/limits";
-import { STORY_REGIONS, type StoryRegion } from "@/types/storyMaker";
+import { STORY_REGIONS, type StoryDocument, type StoryRegion } from "@/types/storyMaker";
 
 export interface StoryMetaValues {
     title: string;
@@ -13,7 +14,27 @@ export interface StoryMetaValues {
     region: StoryRegion;
 }
 
-interface StoryMetaDialogProps {
+/** Extracts editable metadata & region values from a `moesekai-story/2` document. */
+export function metaValuesFromDoc(doc: StoryDocument): StoryMetaValues {
+    return {
+        title: doc.meta.title,
+        author: doc.meta.author,
+        summary: doc.meta.summary,
+        region: doc.region,
+    };
+}
+
+/** Purely applies metadata & server region updates onto a `moesekai-story/2` document. */
+export function applyMetaValuesToDoc(doc: StoryDocument, values: StoryMetaValues): StoryDocument {
+    const withMeta = updateStoryMeta(doc, {
+        title: values.title,
+        author: values.author,
+        summary: values.summary,
+    });
+    return withMeta.region === values.region ? withMeta : { ...withMeta, region: values.region };
+}
+
+export interface StoryMetaDialogProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
@@ -23,12 +44,20 @@ interface StoryMetaDialogProps {
     onSubmit: (values: StoryMetaValues) => void;
 }
 
-/** Dialog for creating a new story draft or editing an existing story's metadata. */
+/** Dialog for creating a new v2 story draft or editing an existing story's `meta` & `region`. */
 export function StoryMetaDialog({
     isOpen, onClose, title, confirmLabel, initial, showRegionHint, onSubmit,
 }: StoryMetaDialogProps) {
     const { t } = useI18n();
     const [draft, setDraft] = useState<StoryMetaValues>(initial);
+    const [prevOpen, setPrevOpen] = useState(isOpen);
+
+    if (isOpen !== prevOpen) {
+        setPrevOpen(isOpen);
+        if (isOpen) {
+            setDraft(initial);
+        }
+    }
 
     const submit = () => {
         onSubmit({

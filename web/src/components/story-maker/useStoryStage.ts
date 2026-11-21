@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { live2dCoreUrl } from "@/lib/live2dViewer/config";
 import type { Live2DModel } from "@/lib/live2dViewer/models";
 import {
@@ -8,8 +8,7 @@ import {
 } from "@/lib/live2dViewer/stage";
 import { live2dViewerScriptBase } from "@/lib/live2dViewer/viewer";
 import { STORY_FADE_SECONDS } from "@/lib/storyMaker/limits";
-import type { StoryActorState, StoryStageState } from "@/lib/storyMaker/state";
-import type { StoryCastMember } from "@/types/storyMaker";
+import type { StoryActorState, StoryCastMember, StoryStageState } from "@/types/storyMaker";
 
 export type StoryStagePhase =
     | { kind: "idle" }
@@ -31,6 +30,28 @@ export interface StoryStageApplyOptions {
     fade?: boolean;
 }
 
+export interface StoryClipPreviewRequest {
+    motion?: string;
+    facial?: string;
+}
+
+export interface StoryStageHandle {
+    hostRef: RefObject<HTMLDivElement | null>;
+    phase: StoryStagePhase;
+    modelInfo: Record<string, Live2DActorInfo>;
+    problems: Record<string, StoryActorProblem>;
+    loadingActors: number;
+    apply: (target: StoryStageState, options: StoryStageApplyOptions) => Promise<void>;
+    previewClip: (cast: StoryCastMember, clip?: StoryClipPreviewRequest) => Promise<void>;
+    clearClipPreview: () => void;
+    isSoloPreview: boolean;
+    previewingCastKey: string | null;
+    setTalking: (speaker: string | null) => void;
+    shake: (seconds: number) => Promise<void>;
+    finish: () => void;
+    retry: () => void;
+}
+
 interface AppliedActor {
     modelId: string;
     x: number;
@@ -42,6 +63,14 @@ interface AppliedActor {
     facial: string | null;
     info: Live2DActorInfo | null;
 }
+
+interface SoloPreviewActor {
+    castKey: string;
+    modelId: string;
+    info: Live2DActorInfo | null;
+}
+
+const SOLO_PREVIEW_ACTOR_ID = "__story_clip_preview__";
 
 function failure(error: unknown): StoryStagePhase {
     if (error instanceof Error && error.message === LIVE2D_STAGE_UNAVAILABLE) return { kind: "unavailable" };
@@ -80,20 +109,23 @@ interface UseStoryStageOptions {
  * The story maker's Live2D stage: one SekaiLive2DStage on a canvas of its own in `hostRef`
  * (created for the story's library, destroyed when the page is left). `apply` brings the stage to
  * a StoryStageState by the difference with what it shows: actors added or removed (faded when
- * asked), moved, re-posed. Changes run one after another; a target superseded while queued is
- * skipped. Without a stage (none in the release, or a browser without WebGPU) every call is a
- * no-op and `phase` tells why: the editor and player work on without the live preview.
+ * asked), moved, re-posed. `previewClip` / `clearClipPreview` support live motion & facial
+ * auditioning both on mounted stage actors and via a temporary centered solo preview actor.
  */
-export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
+export function useStoryStage({ library, cast, models }: UseStoryStageOptions): StoryStageHandle {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const stageRef = useRef<Live2DStage | null>(null);
     const appliedRef = useRef(new Map<string, AppliedActor>());
     const infoCacheRef = useRef(new Map<string, Live2DActorInfo>());
+    const lastStateRef = useRef<StoryStageState | null>(null);
+    const soloPreviewRef = useRef<SoloPreviewActor | null>(null);
+    const hiddenForSoloRef = useRef(new Set<string>());
     const libraryRef = useRef(library);
     const castRef = useRef(cast);
     const modelsRef = useRef(models);
     const queueRef = useRef<Promise<void>>(Promise.resolve());
     const generationRef = useRef(0);
+    const previewGenRef = useRef(0);
     const [attempt, setAttempt] = useState(0);
     const key = library ? `${library}|${attempt}` : null;
     const [phaseOf, setPhaseOf] = useState<{ key: string; phase: StoryStagePhase } | null>(null);
@@ -107,9 +139,15 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
         problems: {},
     });
     const [loadingActors, setLoadingActors] = useState(0);
+    const [soloPreviewByKey, setSoloPreviewByKey] = useState<{ key: string | null; castKey: string | null }>({
+        key,
+        castKey: null,
+    });
     const phase: StoryStagePhase = !key ? { kind: "idle" } : phaseOf?.key === key ? phaseOf.phase : { kind: "loading" };
     const modelInfo: Record<string, Live2DActorInfo> = modelInfoByLib.library === library ? modelInfoByLib.info : {};
     const problems: Record<string, StoryActorProblem> = problemsByLib.library === library ? problemsByLib.problems : {};
+    const previewingCastKey = soloPreviewByKey.key === key ? soloPreviewByKey.castKey : null;
+    const isSoloPreview = previewingCastKey !== null;
 
     useEffect(() => {
         castRef.current = cast;
@@ -132,6 +170,7 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
         canvas.className = "absolute inset-0 size-full";
         host.replaceChildren(canvas);
         const applied = appliedRef.current;
+        const hiddenForSolo = hiddenForSoloRef.current;
 
         const measure = () => {
             const rect = host.getBoundingClientRect();
@@ -194,16 +233,45 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
             window.clearTimeout(settling);
             stageRef.current = null;
             applied.clear();
+            soloPreviewRef.current = null;
+            hiddenForSolo.clear();
             generationRef.current += 1;
+            previewGenRef.current += 1;
             stage?.destroy();
             host.replaceChildren();
         };
     }, [key, library]);
 
+    const teardownSoloPreview = useCallback((stage: Live2DStage, activeKey: string | null) => {
+        if (soloPreviewRef.current) {
+            soloPreviewRef.current = null;
+            try {
+                stage.removeActor(SOLO_PREVIEW_ACTOR_ID);
+            } catch {
+                // Solo preview actor may already be removed.
+            }
+        }
+        if (hiddenForSoloRef.current.size > 0) {
+            for (const id of hiddenForSoloRef.current) {
+                if (appliedRef.current.has(id)) {
+                    void stage.setActor(id, { alpha: 1 }, { duration: 0 }).catch(() => undefined);
+                }
+            }
+            hiddenForSoloRef.current.clear();
+        }
+        setSoloPreviewByKey({ key: activeKey, castKey: null });
+    }, []);
+
     const runApply = useCallback(async (target: StoryStageState, options: StoryStageApplyOptions, generation: number) => {
         const stage = stageRef.current;
         const activeLibrary = libraryRef.current;
         if (!stage || generation !== generationRef.current) return;
+
+        // Navigating or syncing stage state automatically exits any solo clip preview.
+        if (soloPreviewRef.current || hiddenForSoloRef.current.size > 0) {
+            teardownSoloPreview(stage, key);
+        }
+
         const applied = appliedRef.current;
         const castByKey = new Map(castRef.current.map(member => [member.key, member]));
         const modelList = modelsRef.current;
@@ -340,15 +408,167 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
             return;
         }
         await Promise.all(tasks);
-    }, []);
+    }, [key, teardownSoloPreview]);
 
     /** Brings the stage to `target` (see the hook's comment); settles when the changes have played. */
     const apply = useCallback((target: StoryStageState, options: StoryStageApplyOptions): Promise<void> => {
+        lastStateRef.current = target;
         const generation = ++generationRef.current;
         const next = queueRef.current.then(() => runApply(target, options, generation)).catch(() => undefined);
         queueRef.current = next;
         return next;
     }, [runApply]);
+
+    /**
+     * Live-auditions a motion and/or facial clip for `cast`:
+     * - When `cast` is already mounted on stage and `clip` specifies a motion/facial (not solo showcase),
+     *   forces immediate replay directly on the mounted stage actor.
+     * - Otherwise hides current stage actors and mounts `cast` centered (`x: 0, scale: 1.15`) as a solo
+     *   preview actor until `clearClipPreview()` or the next `apply()`.
+     */
+    const previewClip = useCallback((castMember: StoryCastMember, clip?: StoryClipPreviewRequest): Promise<void> => {
+        const stageGen = generationRef.current;
+        const previewGen = ++previewGenRef.current;
+        const next = queueRef.current.then(async () => {
+            const stage = stageRef.current;
+            const activeLibrary = libraryRef.current;
+            if (!stage || generationRef.current !== stageGen || previewGenRef.current !== previewGen) return;
+
+            const hasExplicitClip = Boolean(clip?.motion || clip?.facial);
+            const mounted = appliedRef.current.get(castMember.key);
+
+            // In-place force replay when the actor is already visible on stage and a specific clip is requested.
+            if (hasExplicitClip && mounted && mounted.modelId === castMember.modelId && !soloPreviewRef.current) {
+                const tasks: Promise<unknown>[] = [];
+                if (clip?.motion) {
+                    tasks.push(stage.playMotion(castMember.key, clip.motion, { loop: false }).catch(() => undefined));
+                    mounted.motion = clip.motion;
+                }
+                if (clip?.facial) {
+                    tasks.push(stage.setFacial(castMember.key, clip.facial).catch(() => undefined));
+                    mounted.facial = clip.facial;
+                }
+                await Promise.all(tasks);
+                return;
+            }
+
+            // Already mounted as the active solo preview actor: replay with zero reload latency.
+            const existingSolo = soloPreviewRef.current;
+            if (existingSolo && existingSolo.castKey === castMember.key && existingSolo.modelId === castMember.modelId) {
+                setSoloPreviewByKey({ key, castKey: castMember.key });
+                const tasks: Promise<unknown>[] = [];
+                if (clip?.motion) {
+                    tasks.push(stage.playMotion(SOLO_PREVIEW_ACTOR_ID, clip.motion, { loop: false }).catch(() => undefined));
+                }
+                if (clip?.facial) {
+                    tasks.push(stage.setFacial(SOLO_PREVIEW_ACTOR_ID, clip.facial).catch(() => undefined));
+                }
+                await Promise.all(tasks);
+                return;
+            }
+
+            // Mount a centered solo preview actor while keeping real stage actors loaded in memory at alpha 0.
+            const model = modelsRef.current?.find(item => item.id === castMember.modelId);
+            if (!model) return;
+
+            for (const id of appliedRef.current.keys()) {
+                if (!hiddenForSoloRef.current.has(id)) {
+                    hiddenForSoloRef.current.add(id);
+                    void stage.setActor(id, { alpha: 0 }, { duration: 0 }).catch(() => undefined);
+                }
+            }
+            if (soloPreviewRef.current) {
+                try {
+                    stage.removeActor(SOLO_PREVIEW_ACTOR_ID);
+                } catch {
+                    // Ignore removal error.
+                }
+                soloPreviewRef.current = null;
+            }
+
+            const cached = infoCacheRef.current.get(castMember.modelId);
+            const initialMotion = clip?.motion ?? (cached?.defaultMotion ?? undefined);
+            const initialFacial = clip?.facial ?? (cached?.defaultFacial ?? undefined);
+
+            setSoloPreviewByKey({ key, castKey: castMember.key });
+            setLoadingActors(count => count + 1);
+            try {
+                const info = await stage.addActor(
+                    SOLO_PREVIEW_ACTOR_ID,
+                    { bundle: model.bundle, motion: model.motions[0] ?? null },
+                    {
+                        x: 0,
+                        y: 0,
+                        scale: 1.15,
+                        alpha: 1,
+                        order: 100,
+                        ...(initialMotion ? { motion: initialMotion } : {}),
+                        ...(initialFacial ? { facial: initialFacial } : {}),
+                    },
+                );
+                if (
+                    libraryRef.current !== activeLibrary
+                    || stageRef.current !== stage
+                    || generationRef.current !== stageGen
+                ) {
+                    if (stageRef.current === stage) {
+                        try {
+                            stage.removeActor(SOLO_PREVIEW_ACTOR_ID);
+                        } catch {
+                            // Ignore removal error.
+                        }
+                    }
+                    return;
+                }
+                infoCacheRef.current.set(castMember.modelId, info);
+                soloPreviewRef.current = { castKey: castMember.key, modelId: castMember.modelId, info };
+                setModelInfoByLib(previous => ({
+                    library: activeLibrary,
+                    info: previous.library === activeLibrary
+                        ? { ...previous.info, [castMember.modelId]: info }
+                        : { [castMember.modelId]: info },
+                }));
+                if (previewGenRef.current !== previewGen) return;
+                const tasks: Promise<unknown>[] = [];
+                if (clip?.motion) {
+                    tasks.push(stage.playMotion(SOLO_PREVIEW_ACTOR_ID, clip.motion, { loop: false }).catch(() => undefined));
+                }
+                if (clip?.facial) {
+                    tasks.push(stage.setFacial(SOLO_PREVIEW_ACTOR_ID, clip.facial).catch(() => undefined));
+                }
+                if (tasks.length > 0) await Promise.all(tasks);
+            } catch {
+                if (stageRef.current === stage && previewGenRef.current === previewGen) {
+                    teardownSoloPreview(stage, key);
+                }
+            } finally {
+                setLoadingActors(count => Math.max(0, count - 1));
+            }
+        }).catch(() => undefined);
+        queueRef.current = next;
+        return next;
+    }, [key, teardownSoloPreview]);
+
+    /** Exits any active solo clip preview and immediately restores the current stage state. */
+    const clearClipPreview = useCallback(() => {
+        previewGenRef.current += 1;
+        const generation = generationRef.current;
+        const next = queueRef.current.then(async () => {
+            const stage = stageRef.current;
+            if (!stage) {
+                soloPreviewRef.current = null;
+                hiddenForSoloRef.current.clear();
+                setSoloPreviewByKey({ key, castKey: null });
+                return;
+            }
+            const hadSolo = Boolean(soloPreviewRef.current || hiddenForSoloRef.current.size > 0);
+            teardownSoloPreview(stage, key);
+            if (hadSolo && lastStateRef.current && generation === generationRef.current) {
+                await runApply(lastStateRef.current, { instant: true }, generation);
+            }
+        }).catch(() => undefined);
+        queueRef.current = next;
+    }, [key, runApply, teardownSoloPreview]);
 
     /** The cast member whose mouth flaps (null: nobody's). */
     const setTalking = useCallback((speaker: string | null) => {
@@ -381,5 +601,20 @@ export function useStoryStage({ library, cast, models }: UseStoryStageOptions) {
 
     const retry = useCallback(() => setAttempt(value => value + 1), []);
 
-    return { hostRef, phase, modelInfo, problems, loadingActors, apply, setTalking, shake, finish, retry };
+    return {
+        hostRef,
+        phase,
+        modelInfo,
+        problems,
+        loadingActors,
+        apply,
+        previewClip,
+        clearClipPreview,
+        isSoloPreview,
+        previewingCastKey,
+        setTalking,
+        shake,
+        finish,
+        retry,
+    };
 }

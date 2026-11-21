@@ -799,7 +799,7 @@ export const koKRMessages = {
                 guessMusic: "곡 맞히기",
                 chartPreview: "채보 미리보기",
                 storyPlayer: "스토리 플레이어",
-                storyMaker: "스토리 메이커",
+                storyMaker: "스토리 메이커 BETA",
                 storySearch: "스토리 검색기",
                 costume3d: "3D 의상",
                 live2dViewer: "Live2D 뷰어",

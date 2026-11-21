@@ -1,7 +1,7 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
-import { Button, Chip, Dialog, IconButton, TextField } from "@/components/md3";
-import { mdClose, mdTune } from "@/components/md3/icons";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Button, Chip, Dialog, Icon, IconButton, TextField, cn } from "@/components/md3";
+import { mdClose, mdPlayArrow, mdPlayArrowFill, mdTune } from "@/components/md3/icons";
 import { Live2DClipRows } from "@/components/live2d/Live2DClipRows";
 import { useI18n } from "@/contexts/I18nContext";
 import {
@@ -10,7 +10,7 @@ import {
 import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
 import { fetchMotionBundleClips, type StoryMotionBundleClips } from "@/lib/storyMaker/assets";
 
-interface ClipPickerFieldProps {
+export interface ClipPickerFieldProps {
     kind: "motion" | "facial";
     value: string | undefined;
     info: Live2DActorInfo | undefined;
@@ -19,20 +19,30 @@ interface ClipPickerFieldProps {
     motionBundle?: string | null;
     disabled?: boolean;
     onChange: (value: string | undefined) => void;
+    /** Optional live preview callback: plays/applies a clip on the Live2D Preview Monitor. */
+    onPreviewClip?: (clipName: string) => void;
 }
 
 type BundleLoadState =
     | { key: string; status: "ready"; clips: StoryMotionBundleClips }
     | { key: string; status: "error" };
 
+const MAX_INLINE_SUGGESTIONS = 80;
+
 /**
- * Choosing a Live2D body motion or facial expression for a step: offers a free-text field so
- * clips can always be entered offline, plus a visual picker dialog reusing the Live2D viewer's
- * grouped clip rows from either WebGPU ActorInfo or the lightweight `_ripper.json` manifest.
+ * Choosing a Live2D body motion or facial expression for a step: offers a free-text field with
+ * an inline searchable suggestion dropdown (supporting live ▶ auditioning without overwriting),
+ * a direct replay ▶ button beside the field, and a full grouped visual picker dialog.
  */
-export function ClipPickerField({ kind, value, info, library, motionBundle, disabled, onChange }: ClipPickerFieldProps) {
+export function ClipPickerField({
+    kind, value, info, library, motionBundle, disabled, onChange, onPreviewClip,
+}: ClipPickerFieldProps) {
     const { t } = useI18n();
-    const [open, setOpen] = useState(false);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [dialogOpen, setDialogOpen] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
+    const [typedFilter, setTypedFilter] = useState<string | null>(null);
+    const [auditioning, setAuditioning] = useState<string | null>(null);
     const [selectedStyle, setSelectedStyle] = useState<string | null>(null);
     const [loaded, setLoaded] = useState<BundleLoadState | null>(null);
 
@@ -49,6 +59,28 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
         );
         return () => controller.abort();
     }, [bundleKey, library, motionBundle]);
+
+    useEffect(() => {
+        if (!dropdownOpen) return;
+        const onPointerDown = (event: PointerEvent) => {
+            const target = event.target as Node | null;
+            if (target && containerRef.current?.contains(target)) return;
+            setDropdownOpen(false);
+            setTypedFilter(null);
+        };
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setDropdownOpen(false);
+                setTypedFilter(null);
+            }
+        };
+        window.addEventListener("pointerdown", onPointerDown, true);
+        window.addEventListener("keydown", onKeyDown);
+        return () => {
+            window.removeEventListener("pointerdown", onPointerDown, true);
+            window.removeEventListener("keydown", onKeyDown);
+        };
+    }, [dropdownOpen]);
 
     const manifestClips = bundleKey && loaded?.key === bundleKey && loaded.status === "ready" ? loaded.clips : null;
     const manifestLoading = Boolean(bundleKey && loaded?.key !== bundleKey);
@@ -72,6 +104,8 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
 
     const labelKey = kind === "motion" ? "page.storyMaker.inspector.motion" : "page.storyMaker.inspector.facial";
     const pickTitleKey = kind === "motion" ? "page.storyMaker.inspector.pickMotion" : "page.storyMaker.inspector.pickFacial";
+    const previewLabelKey = kind === "motion" ? "page.storyMaker.nle.previewMotion" : "page.storyMaker.nle.previewFacial";
+
     const rowLabel = (row: Live2DClipRow) => {
         const prefix = kind === "motion" ? "page.live2d.motionAction" : "page.live2d.emotion";
         return row.words.map(word => t(`${prefix}.${word}`)).join(" + ") || row.raw;
@@ -84,13 +118,39 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
                 : item.style
     );
 
-    const handlePick = (name: string) => {
+    const inlineSuggestions = useMemo(() => {
+        if (!dropdownOpen || clips.length === 0) return [];
+        const needle = (typedFilter ?? "").trim().toLowerCase();
+        const filtered = needle
+            ? clips.filter(name => name.toLowerCase().includes(needle))
+            : clips;
+        return filtered.slice(0, MAX_INLINE_SUGGESTIONS);
+    }, [dropdownOpen, clips, typedFilter]);
+
+    const handlePickFromDialog = (name: string) => {
         onChange(name);
-        setOpen(false);
+        setAuditioning(name);
+        onPreviewClip?.(name);
+        setDialogOpen(false);
     };
 
+    const handlePickFromDropdown = (name: string) => {
+        onChange(name);
+        setAuditioning(name);
+        onPreviewClip?.(name);
+        setDropdownOpen(false);
+        setTypedFilter(null);
+    };
+
+    const handleAudition = (name: string) => {
+        setAuditioning(name);
+        onPreviewClip?.(name);
+    };
+
+    const trimmedValue = value?.trim() ?? "";
+
     return (
-        <div className="min-w-0 space-y-1">
+        <div ref={containerRef} className="relative min-w-0 space-y-1">
             <div className="flex min-w-0 flex-wrap items-start gap-2">
                 <TextField
                     label={t(labelKey)}
@@ -98,20 +158,52 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
                     maxLength={64}
                     disabled={disabled}
                     placeholder={fallback ?? t("page.storyMaker.inspector.clipDefault")}
-                    onChange={event => onChange(event.target.value || undefined)}
-                    onBlur={event => {
+                    onFocus={() => {
+                        if (!disabled && clips.length > 0) {
+                            setDropdownOpen(true);
+                            setTypedFilter(null);
+                        }
+                    }}
+                    onChange={(event) => {
+                        const raw = event.target.value;
+                        onChange(raw || undefined);
+                        if (clips.length > 0) {
+                            setDropdownOpen(true);
+                            setTypedFilter(raw);
+                        }
+                    }}
+                    onBlur={(event) => {
                         const trimmed = event.target.value.trim();
                         if (trimmed !== (value ?? "")) onChange(trimmed || undefined);
                     }}
                     className="min-w-[9rem] flex-1 font-mono"
-                    trailing={value ? (
-                        <IconButton
-                            size="xs"
-                            icon={mdClose}
-                            label={t("page.storyMaker.inspector.useDefault")}
-                            disabled={disabled}
-                            onClick={() => onChange(undefined)}
-                        />
+                    trailing={trimmedValue ? (
+                        <div className="flex items-center">
+                            {onPreviewClip && (
+                                <IconButton
+                                    size="xs"
+                                    icon={mdPlayArrow}
+                                    label={t(previewLabelKey)}
+                                    title={t(previewLabelKey)}
+                                    disabled={disabled}
+                                    onMouseDown={event => event.preventDefault()}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        handleAudition(trimmedValue);
+                                    }}
+                                />
+                            )}
+                            <IconButton
+                                size="xs"
+                                icon={mdClose}
+                                label={t("page.storyMaker.inspector.useDefault")}
+                                disabled={disabled}
+                                onClick={() => {
+                                    onChange(undefined);
+                                    setTypedFilter(null);
+                                }}
+                            />
+                        </div>
                     ) : undefined}
                 />
                 <Button
@@ -119,12 +211,69 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
                     variant="tonal"
                     icon={mdTune}
                     disabled={disabled || clips.length === 0}
-                    onClick={() => setOpen(true)}
+                    onClick={() => {
+                        setDropdownOpen(false);
+                        setTypedFilter(null);
+                        setDialogOpen(true);
+                    }}
                     className="mt-1 shrink-0"
                 >
                     {t("page.storyMaker.inspector.browse")}
                 </Button>
             </div>
+
+            {dropdownOpen && !disabled && inlineSuggestions.length > 0 && (
+                <div className="z-30 min-w-0 overflow-hidden rounded-md3-md border border-outline-variant bg-surface-container-high shadow-elev-2">
+                    {onPreviewClip && (
+                        <p className="border-b border-outline-variant/60 px-2.5 py-1.5 type-label-s text-on-surface-variant">
+                            {t("page.storyMaker.nle.quickPreviewHint")}
+                        </p>
+                    )}
+                    <ul className="max-h-52 divide-y divide-outline-variant/40 overflow-y-auto p-1">
+                        {inlineSuggestions.map((clipName) => {
+                            const selected = clipName === value;
+                            const isAuditioning = clipName === auditioning && !selected;
+                            return (
+                                <li
+                                    key={clipName}
+                                    className={cn(
+                                        "flex min-w-0 items-center gap-1 rounded-md3-xs px-1 py-0.5 transition-colors",
+                                        selected
+                                            ? "bg-secondary-container text-on-secondary-container"
+                                            : isAuditioning
+                                                ? "bg-primary-container/40 text-on-surface"
+                                                : "text-on-surface",
+                                    )}
+                                >
+                                    <button
+                                        type="button"
+                                        onMouseDown={event => event.preventDefault()}
+                                        onClick={() => handlePickFromDropdown(clipName)}
+                                        className="state-layer focus-ring min-w-0 flex-1 truncate rounded-md3-xs px-2 py-1 text-left font-mono type-label-m"
+                                        title={clipName}
+                                    >
+                                        {clipName}
+                                    </button>
+                                    {onPreviewClip && (
+                                        <IconButton
+                                            size="xs"
+                                            icon={mdPlayArrow}
+                                            label={t(previewLabelKey)}
+                                            title={t(previewLabelKey)}
+                                            onMouseDown={event => event.preventDefault()}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                handleAudition(clipName);
+                                            }}
+                                        />
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+                </div>
+            )}
+
             {!disabled && clips.length === 0 && (
                 <p className={manifestFailed ? "type-label-s text-error" : "type-label-s text-on-surface-variant"}>
                     {t(
@@ -138,60 +287,188 @@ export function ClipPickerField({ kind, value, info, library, motionBundle, disa
             )}
 
             <Dialog
-                isOpen={open}
-                onClose={() => setOpen(false)}
+                isOpen={dialogOpen}
+                onClose={() => setDialogOpen(false)}
                 title={t(pickTitleKey)}
                 size="lg"
                 fullscreenOnMobile
                 headerActions={value ? (
-                    <Button size="xs" variant="text" onClick={() => { onChange(undefined); setOpen(false); }}>
+                    <Button size="xs" variant="text" onClick={() => { onChange(undefined); setDialogOpen(false); }}>
                         {t("page.storyMaker.inspector.useDefault")}
                     </Button>
                 ) : undefined}
             >
-                {kind === "motion" ? (
-                    <div className="space-y-3">
-                        {motionGroups.length > 1 && (
-                            <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label={t("page.live2d.motionStyleTitle")}>
-                                {motionGroups.map(item => (
-                                    <Chip
-                                        key={item.style}
-                                        variant="filter"
-                                        selected={item.style === shownGroup?.style}
-                                        showCheckmark={false}
-                                        className="shrink-0"
-                                        onClick={() => setSelectedStyle(item.style)}
-                                    >
-                                        {styleLabel(item)}
-                                        <span className="ml-1 type-label-s opacity-70">
-                                            {item.rows.reduce((sum, row) => sum + row.clips.length, 0)}
-                                        </span>
-                                    </Chip>
-                                ))}
-                            </div>
-                        )}
-                        {shownGroup && (
+                <div className="space-y-3">
+                    {onPreviewClip && (
+                        <p className="type-body-s text-on-surface-variant">
+                            {t("page.storyMaker.nle.quickPreviewHint")}
+                        </p>
+                    )}
+
+                    {kind === "motion" ? (
+                        <div className="space-y-3">
+                            {motionGroups.length > 1 && (
+                                <div className="flex gap-1.5 overflow-x-auto pb-1" role="group" aria-label={t("page.live2d.motionStyleTitle")}>
+                                    {motionGroups.map(item => (
+                                        <Chip
+                                            key={item.style}
+                                            variant="filter"
+                                            selected={item.style === shownGroup?.style}
+                                            showCheckmark={false}
+                                            className="shrink-0"
+                                            onClick={() => setSelectedStyle(item.style)}
+                                        >
+                                            {styleLabel(item)}
+                                            <span className="ml-1 type-label-s opacity-70">
+                                                {item.rows.reduce((sum, row) => sum + row.clips.length, 0)}
+                                            </span>
+                                        </Chip>
+                                    ))}
+                                </div>
+                            )}
+                            {shownGroup && (
+                                onPreviewClip ? (
+                                    <PreviewableClipRows
+                                        rows={shownGroup.rows}
+                                        label={rowLabel}
+                                        current={value ?? null}
+                                        auditioning={auditioning}
+                                        fallback={fallback}
+                                        previewLabel={t(previewLabelKey)}
+                                        onPick={handlePickFromDialog}
+                                        onPreview={handleAudition}
+                                    />
+                                ) : (
+                                    <Live2DClipRows
+                                        rows={shownGroup.rows}
+                                        label={rowLabel}
+                                        current={value ?? null}
+                                        pending={null}
+                                        fallback={fallback}
+                                        onPick={handlePickFromDialog}
+                                    />
+                                )
+                            )}
+                        </div>
+                    ) : (
+                        onPreviewClip ? (
+                            <PreviewableClipRows
+                                rows={facialRows}
+                                label={rowLabel}
+                                current={value ?? null}
+                                auditioning={auditioning}
+                                fallback={fallback}
+                                previewLabel={t(previewLabelKey)}
+                                onPick={handlePickFromDialog}
+                                onPreview={handleAudition}
+                            />
+                        ) : (
                             <Live2DClipRows
-                                rows={shownGroup.rows}
+                                rows={facialRows}
                                 label={rowLabel}
                                 current={value ?? null}
                                 pending={null}
                                 fallback={fallback}
-                                onPick={handlePick}
+                                onPick={handlePickFromDialog}
                             />
-                        )}
-                    </div>
-                ) : (
-                    <Live2DClipRows
-                        rows={facialRows}
-                        label={rowLabel}
-                        current={value ?? null}
-                        pending={null}
-                        fallback={fallback}
-                        onPick={handlePick}
-                    />
-                )}
+                        )
+                    )}
+                </div>
             </Dialog>
         </div>
+    );
+}
+
+interface PreviewableClipRowsProps {
+    rows: readonly Live2DClipRow[];
+    label: (row: Live2DClipRow) => string;
+    current: string | null;
+    auditioning: string | null;
+    fallback: string | null;
+    previewLabel: string;
+    onPick: (name: string) => void;
+    onPreview: (name: string) => void;
+}
+
+/**
+ * Grouped clip browser rows with dedicated ▶ live audition buttons alongside each clip option
+ * so users can preview motions/facials on the Live2D monitor without closing the picker.
+ */
+function PreviewableClipRows({
+    rows, label, current, auditioning, fallback, previewLabel, onPick, onPreview,
+}: PreviewableClipRowsProps) {
+    return (
+        <ul className="divide-y divide-outline-variant/60">
+            {rows.map(row => {
+                const name = label(row);
+                const active = row.clips.some(clip => clip.name === current);
+                return (
+                    <li key={row.key} className="flex items-start gap-3 py-2">
+                        <div className="w-24 shrink-0 pt-1.5">
+                            <p className={cn("truncate type-label-l", active ? "text-primary" : "text-on-surface")} title={name}>
+                                {name}
+                            </p>
+                            {row.tag && (
+                                <p className="truncate font-mono type-label-s text-on-surface-variant">{row.tag}</p>
+                            )}
+                        </div>
+                        <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">
+                            {row.clips.map(clip => {
+                                const selected = clip.name === current;
+                                const isAuditioning = clip.name === auditioning && !selected;
+                                return (
+                                    <div
+                                        key={clip.name}
+                                        className={cn(
+                                            "inline-flex items-center overflow-hidden rounded-md3-sm border transition-colors",
+                                            selected
+                                                ? "border-primary bg-primary text-on-primary"
+                                                : isAuditioning
+                                                    ? "border-primary bg-primary-container text-on-primary-container"
+                                                    : "border-outline-variant/60 bg-surface-container-high text-on-surface",
+                                        )}
+                                    >
+                                        <button
+                                            type="button"
+                                            title={clip.name}
+                                            aria-pressed={selected}
+                                            aria-label={clip.code ? `${name} ${clip.code}` : name}
+                                            onClick={() => onPick(clip.name)}
+                                            className="state-layer focus-ring relative inline-flex h-8 min-w-9 items-center justify-center gap-1 px-2 font-mono type-label-m"
+                                        >
+                                            {clip.code ? (
+                                                clip.code
+                                            ) : (
+                                                <Icon path={mdPlayArrowFill} size={16} />
+                                            )}
+                                            {clip.name === fallback && !selected && (
+                                                <span aria-hidden className="absolute right-1 top-1 size-1.5 rounded-full bg-primary" />
+                                            )}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            aria-label={`${previewLabel}: ${clip.name}`}
+                                            title={previewLabel}
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+                                                onPreview(clip.name);
+                                            }}
+                                            className={cn(
+                                                "state-layer focus-ring inline-flex h-8 w-7 items-center justify-center border-l",
+                                                selected
+                                                    ? "border-on-primary/25 text-on-primary"
+                                                    : "border-outline-variant/60 text-on-surface-variant hover:text-primary",
+                                            )}
+                                        >
+                                            <Icon path={mdPlayArrow} size={16} />
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </li>
+                );
+            })}
+        </ul>
     );
 }

@@ -127,13 +127,62 @@ export function storySeCandidateUrls(name: string, region: StoryRegion, line: As
 }
 
 export function storyVoiceUrl(voice: StoryVoiceRef, region: StoryRegion, line: AssetLine): string {
-    const at = source(region, line);
+    const effectiveRegion = voice.region ?? region;
+    const at = source(effectiveRegion, line);
     switch (voice.kind) {
         case "card": return getCardStoryVoiceUrl(voice.scenarioId, voice.voiceId, at);
         case "area": return getAreaTalkVoiceUrl(voice.scenarioId, voice.voiceId, at);
+        case "part": return `${getAssetBaseUrl(at)}/sound/scenario/part_voice/${voice.scenarioId}/${voice.voiceId}.mp3`;
         default: return getStoryVoiceUrl(voice.scenarioId, voice.voiceId, at);
     }
 }
+
+/**
+ * Candidate playable URLs for a story voice reference in priority order.
+ * Honors `voice.region` over the document's `region` when set (cross-server voice search),
+ * and includes safe `part_voice` <-> `voice/part_voice_*` fallbacks when `voice.kind === "part"`
+ * or `voice.voiceId` begins with `"partvoice"`.
+ */
+export function storyVoiceCandidateUrls(voice: StoryVoiceRef, region: StoryRegion, line: AssetLine): string[] {
+    const scenarioId = normalizeAssetPath(voice.scenarioId);
+    const voiceId = normalizeAssetPath(voice.voiceId);
+    if (!scenarioId || !voiceId) return [];
+
+    const effectiveRegion = voice.region ?? region;
+    const at = source(effectiveRegion, line);
+    const base = getAssetBaseUrl(at);
+    const primary = storyVoiceUrl({ ...voice, scenarioId, voiceId, region: effectiveRegion }, effectiveRegion, line);
+    const urls: string[] = [primary];
+    const add = (url: string) => {
+        if (url && !urls.includes(url)) urls.push(url);
+    };
+
+    const isPartVoice = voice.kind === "part" || voiceId.startsWith("partvoice");
+    if (isPartVoice) {
+        if (voice.kind === "part") {
+            const stripped = scenarioId.startsWith("part_voice_") ? scenarioId.slice("part_voice_".length) : scenarioId;
+            if (stripped !== scenarioId) {
+                add(`${base}/sound/scenario/part_voice/${stripped}/${voiceId}.mp3`);
+            }
+            const prefixed = scenarioId.startsWith("part_voice_") ? scenarioId : `part_voice_${scenarioId}`;
+            add(getStoryVoiceUrl(prefixed, voiceId, at));
+        } else if (scenarioId.startsWith("part_voice_")) {
+            const chara = scenarioId.slice("part_voice_".length);
+            if (chara) {
+                add(`${base}/sound/scenario/part_voice/${chara}/${voiceId}.mp3`);
+            }
+        } else {
+            // Legacy/mixed partvoice references may live under `sound/scenario/part_voice/<scenarioId>/`
+            // or `sound/scenario/voice/part_voice_<scenarioId>/`.
+            add(`${base}/sound/scenario/part_voice/${scenarioId}/${voiceId}.mp3`);
+            add(getStoryVoiceUrl(`part_voice_${scenarioId}`, voiceId, at));
+        }
+    }
+
+    return urls;
+}
+
+export { storyVoiceCandidateUrls as getStoryVoiceCandidateUrls };
 
 // ==================== Directory Listing Helpers ====================
 
@@ -150,6 +199,7 @@ export const STORY_VOICE_DIRECTORIES: Record<StoryVoiceKind, string> = {
     story: "sound/scenario/voice/",
     card: "sound/card_scenario/voice/",
     area: "sound/actionset/voice/",
+    part: "sound/scenario/part_voice/",
 };
 
 interface DirectoryListing {

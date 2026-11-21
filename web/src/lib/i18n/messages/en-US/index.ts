@@ -802,7 +802,7 @@ export const enUSMessages = {
                 guessMusic: "Guess the Song",
                 chartPreview: "Chart Preview",
                 storyPlayer: "Story Player",
-                storyMaker: "Story Maker",
+                storyMaker: "Story Maker BETA",
                 storySearch: "Story Search",
                 costume3d: "3D Costumes",
                 live2dViewer: "Live2D Viewer",

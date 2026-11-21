@@ -3,7 +3,6 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { cn } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
-import type { StoryStageState } from "@/lib/storyMaker/state";
 import {
     choiceButtonRects,
     DEFAULT_CHOICE_LAYOUT,
@@ -15,7 +14,32 @@ import {
     type StoryUiKit,
 } from "@/lib/storyMaker/uiKit";
 import "@/styles/story-game-ui.css";
-import type { StoryStepOf } from "@/types/storyMaker";
+import type { StoryStageState } from "@/types/storyMaker";
+
+export interface GameStageChoiceOption {
+    id: string;
+    text: string;
+    available?: boolean;
+}
+
+export type GameStageChoiceProp =
+    | { id: string; options: readonly GameStageChoiceOption[] }
+    | { nodeId: string; options: readonly GameStageChoiceOption[] }
+    | readonly GameStageChoiceOption[];
+
+function normalizeChoice(
+    choice: GameStageChoiceProp | null | undefined,
+): { id: string; options: readonly GameStageChoiceOption[] } | null {
+    if (!choice) return null;
+    if (Array.isArray(choice)) {
+        return { id: "choice", options: choice as readonly GameStageChoiceOption[] };
+    }
+    const group = choice as { id?: string; nodeId?: string; options: readonly GameStageChoiceOption[] };
+    return {
+        id: group.id ?? group.nodeId ?? "choice",
+        options: group.options,
+    };
+}
 
 export interface GameStageOverlayProps {
     state: StoryStageState;
@@ -26,8 +50,8 @@ export interface GameStageOverlayProps {
     autoPlay?: boolean;
     /** Manual mode page-forward indicator (`EndSign`) visible when waiting for tap. */
     showEndSign?: boolean;
-    /** Active choice step to render via `AnswerChoiceDialog` (interactive in player, preview in editor). */
-    choice?: StoryStepOf<"choice"> | null;
+    /** Active choice options rendered via `AnswerChoiceDialog` (interactive in player, preview in editor). */
+    choice?: GameStageChoiceProp | null;
     /** Whether choice buttons can be clicked (true in player, false in editor preview). */
     choiceInteractive?: boolean;
     /** Called after brief tap feedback when the player chooses an option. */
@@ -227,7 +251,8 @@ export function GameStageOverlay({
     const [hoveredKey, setHoveredKey] = useState<string | null>(null);
     const [focusedKey, setFocusedKey] = useState<string | null>(null);
     const pressTimerRef = useRef<number | null>(null);
-    const activeChoiceId = choice?.id ?? null;
+    const normalizedChoice = normalizeChoice(choice);
+    const activeChoiceId = normalizedChoice?.id ?? null;
 
     useEffect(() => {
         const el = wrapRef.current;
@@ -255,8 +280,8 @@ export function GameStageOverlay({
     const activePressedPrefix = activeChoiceId ? `${activeChoiceId}:` : null;
     const isAnyChoicePressed = Boolean(activePressedPrefix && pressedKey?.startsWith(activePressedPrefix));
 
-    const handleChoicePress = (choiceId: string, optionId: string, label: string) => {
-        if (!choiceInteractive || !onChoose || isAnyChoicePressed) return;
+    const handleChoicePress = (choiceId: string, optionId: string, label: string, unavailable: boolean) => {
+        if (unavailable || !choiceInteractive || !onChoose || isAnyChoicePressed) return;
         if (kit?.decideSoundUrl) {
             onChoiceSound?.(kit.decideSoundUrl);
         }
@@ -285,8 +310,8 @@ export function GameStageOverlay({
     const nameRect = GAME_LAYOUT.talk.name;
     const wordsRect = GAME_LAYOUT.talk.words;
     const placeTextRect = GAME_LAYOUT.placeInfo.text;
-    const choiceRects = choice
-        ? choiceButtonRects(choice.options.length, kit?.choiceLayout ?? DEFAULT_CHOICE_LAYOUT, 1)
+    const choiceRects = normalizedChoice
+        ? choiceButtonRects(normalizedChoice.options.length, kit?.choiceLayout ?? DEFAULT_CHOICE_LAYOUT, 1)
         : [];
     const autoSignalLabel = t("page.storyMaker.player.autoSignal");
 
@@ -645,9 +670,9 @@ export function GameStageOverlay({
                 )}
 
                 {/* 5. AnswerChoiceDialog: in-game rounded pill choices (interactive or editor preview) */}
-                {choice && choice.options.length > 0 && (
+                {normalizedChoice && normalizedChoice.options.length > 0 && (
                     <div
-                        key={choice.id}
+                        key={normalizedChoice.id}
                         className={cn(!reduced && "sekai-game-ui-choice-enter")}
                         style={{
                             position: "absolute",
@@ -679,18 +704,25 @@ export function GameStageOverlay({
                                 {t("page.storyMaker.player.choicePreview")}
                             </div>
                         )}
-                        {choice.options.map((option, idx) => {
+                        {normalizedChoice.options.map((option, idx) => {
                             const rect = choiceRects[idx];
                             if (!rect) return null;
                             const label = option.text || t("page.storyMaker.player.emptyOption");
-                            const optionKey = `${choice.id}:${option.id}`;
-                            const isPressed = pressedKey === optionKey;
-                            const isHighlighted = hoveredKey === optionKey || focusedKey === optionKey;
+                            const isUnavailable = option.available === false;
+                            const optionKey = `${normalizedChoice.id}:${option.id}`;
+                            const isPressed = !isUnavailable && pressedKey === optionKey;
+                            const isHighlighted = !isUnavailable && (hoveredKey === optionKey || focusedKey === optionKey);
                             const fontSize = choiceFontSize(label);
                             const glowOutset = GAME_LAYOUT.choice.glowOutset;
                             const buttonBoxStyle: CSSProperties = {
                                 ...rectStyle(rect),
                                 pointerEvents: choiceInteractive ? "auto" : "none",
+                                ...(isUnavailable ? {
+                                    opacity: 0.48,
+                                    filter: "grayscale(0.65)",
+                                    cursor: "not-allowed",
+                                    transform: "none",
+                                } : {}),
                             };
 
                             const inner = (
@@ -745,7 +777,7 @@ export function GameStageOverlay({
                                         <span
                                             className="sekai-game-ui-choice-glow-fallback"
                                             aria-hidden="true"
-                                            style={{ zIndex: 1 }}
+                                            style={{ zIndex: 1, ...(isUnavailable ? { opacity: 0 } : {}) }}
                                         />
                                     )}
                                     <span
@@ -780,14 +812,16 @@ export function GameStageOverlay({
                                     className="sekai-game-ui-choice-button"
                                     style={buttonBoxStyle}
                                     data-pressed={isPressed ? "true" : undefined}
-                                    disabled={isAnyChoicePressed}
-                                    onMouseEnter={() => setHoveredKey(optionKey)}
+                                    disabled={isAnyChoicePressed || isUnavailable}
+                                    aria-disabled={isUnavailable ? "true" : undefined}
+                                    title={isUnavailable ? t("page.storyMaker.v2.variables.lockedOptionHint") : undefined}
+                                    onMouseEnter={() => { if (!isUnavailable) setHoveredKey(optionKey); }}
                                     onMouseLeave={() => setHoveredKey(curr => (curr === optionKey ? null : curr))}
-                                    onFocus={() => setFocusedKey(optionKey)}
+                                    onFocus={() => { if (!isUnavailable) setFocusedKey(optionKey); }}
                                     onBlur={() => setFocusedKey(curr => (curr === optionKey ? null : curr))}
                                     onClick={(event) => {
                                         event.stopPropagation();
-                                        handleChoicePress(choice.id, option.id, label);
+                                        handleChoicePress(normalizedChoice.id, option.id, label, isUnavailable);
                                     }}
                                 >
                                     {inner}

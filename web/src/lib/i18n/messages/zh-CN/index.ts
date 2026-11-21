@@ -801,7 +801,7 @@ export const zhCNMessages = {
                 guessMusic: "猜歌曲",
                 chartPreview: "谱面预览器",
                 storyPlayer: "剧情浏览器",
-                storyMaker: "剧情制作器",
+                storyMaker: "剧情制作器 BETA",
                 storySearch: "剧情检索器",
                 costume3d: "3D 服装",
                 live2dViewer: "Live2D 预览",

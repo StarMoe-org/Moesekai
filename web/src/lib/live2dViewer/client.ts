@@ -4,13 +4,26 @@ import { parseLive2DModelIndex, type Live2DModel } from "./models";
 
 /** The network side of the Live2D viewer page: a server's model index, and the story backgrounds to stand a model on. */
 
-/** A server's models; none when its index is not published yet (404). */
-export async function fetchLive2DModels(region: Live2DRegion, signal: AbortSignal): Promise<Live2DModel[]> {
+const modelIndexCache = new Map<string, Promise<Live2DModel[]>>();
+
+/** A server's models; none when its index is not published yet (404). Cached per `${region}|${url}` (retries on rejection). */
+export function fetchLive2DModels(region: Live2DRegion, signal?: AbortSignal): Promise<Live2DModel[]> {
+    if (signal?.aborted) return Promise.reject(createAbortError());
     const url = live2dSources(region).index;
-    const response = await fetch(url, { signal, credentials: "omit", headers: { Accept: "application/json" } });
-    if (response.status === 404) return [];
-    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-    return parseLive2DModelIndex(await response.json());
+    const key = `${region}|${url}`;
+    let cached = modelIndexCache.get(key);
+    if (!cached) {
+        const loading = (async (): Promise<Live2DModel[]> => {
+            const response = await fetch(url, { credentials: "omit", headers: { Accept: "application/json" } });
+            if (response.status === 404) return [];
+            if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+            return parseLive2DModelIndex(await response.json());
+        })();
+        modelIndexCache.set(key, loading);
+        loading.catch(() => modelIndexCache.delete(key));
+        cached = loading;
+    }
+    return withAbortSignal(cached, signal);
 }
 
 const BACKGROUND_DIRECTORY = "scenario/background/";

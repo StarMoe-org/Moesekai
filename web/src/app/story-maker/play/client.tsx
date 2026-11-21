@@ -1,22 +1,24 @@
 "use client";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
+import { useShellImmersiveMode } from "@/components/AppShell";
 import MainLayout from "@/components/MainLayout";
 import {
-    Banner, Button, Card, Dialog, EmptyState, LoadingState, PageContainer, PageHeader, Snackbar,
+    Banner, Button, Card, Dialog, EmptyState, Icon, LoadingState, PageContainer, PageHeader,
+    SegmentedButton, Snackbar, cn,
 } from "@/components/md3";
 import {
-    mdArrowBack, mdBookmarkAdd, mdDownload, mdEdit, mdPlayArrowFill, mdUploadFile,
+    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdDownload, mdEdit,
+    mdErrorFill, mdOpenInFull, mdPlayArrowFill, mdTheaters, mdUploadFile, mdWarning,
 } from "@/components/md3/icons";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
-import { StoryIssueList } from "@/components/story-maker/StoryIssueList";
-import { StoryPlayerView } from "@/components/story-maker/StoryPlayerView";
+import { StoryPlayerView, type PlayerLayoutMode } from "@/components/story-maker/StoryPlayerView";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { compileStoryGraph } from "@/lib/storyMaker/compiler";
 import { StoryDraftsUnavailableError, createDraft, getDraft } from "@/lib/storyMaker/drafts";
-import { downloadStoryJson } from "@/lib/storyMaker/starter";
-import { validateStoryDocument } from "@/lib/storyMaker/validate";
+import { downloadStoryJson, downloadStoryScript } from "@/lib/storyMaker/starter";
 import type { StoryDocument } from "@/types/storyMaker";
 
 type PlaySource =
@@ -31,7 +33,35 @@ function StoryMakerPlayContent() {
     const line = assetSource.startsWith("backup") ? "backup" : "main";
 
     const draftId = searchParams.get("id");
+    const startNodeParam = searchParams.get("node");
+    const [layoutMode, setLayoutMode] = useState<PlayerLayoutMode>(() => (
+        searchParams.get("layout") === "theater" ? "theater" : "workspace"
+    ));
+    const [immersive, setImmersive] = useState<boolean>(() => (
+        searchParams.get("immersive") === "1"
+    ));
     const [loading, setLoading] = useState(Boolean(draftId));
+
+    const handleLayoutModeChange = useCallback((next: PlayerLayoutMode) => {
+        setLayoutMode(next);
+        if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (next === "theater") url.searchParams.set("layout", "theater");
+            else url.searchParams.delete("layout");
+            window.history.replaceState({}, "", url.toString());
+        }
+    }, []);
+
+    const handleImmersiveChange = useCallback((next: boolean) => {
+        setImmersive(next);
+        if (typeof window !== "undefined") {
+            const url = new URL(window.location.href);
+            if (next) url.searchParams.set("immersive", "1");
+            else url.searchParams.delete("immersive");
+            window.history.replaceState({}, "", url.toString());
+        }
+    }, []);
+
     const [loadError, setLoadError] = useState<"missing" | "unavailable" | "failed" | null>(null);
     const [source, setSource] = useState<PlaySource>({ kind: "empty" });
     const [importOpen, setImportOpen] = useState(false);
@@ -70,8 +100,10 @@ function StoryMakerPlayContent() {
     }, [draftId]);
 
     const activeDoc = source.kind === "empty" ? null : source.doc;
-    const validation = useMemo(() => (activeDoc ? validateStoryDocument(activeDoc) : null), [activeDoc]);
-    const issues = useMemo(() => (validation && !validation.ok ? validation.issues : []), [validation]);
+    const program = useMemo(() => (activeDoc ? compileStoryGraph(activeDoc) : null), [activeDoc]);
+    const diagnostics = useMemo(() => program?.diagnostics ?? [], [program]);
+    const warnings = useMemo(() => program?.warnings ?? [], [program]);
+    const hasBlockingErrors = Boolean(program && program.errors.length > 0);
 
     const handleImportForPlay = (doc: StoryDocument) => {
         const nextKey = importCounter + 1;
@@ -82,6 +114,7 @@ function StoryMakerPlayContent() {
         if (typeof window !== "undefined") {
             const url = new URL(window.location.href);
             url.searchParams.delete("id");
+            url.searchParams.delete("node");
             window.history.replaceState({}, "", url.toString());
         }
     };
@@ -108,16 +141,74 @@ function StoryMakerPlayContent() {
             ? `imported:${source.key}`
             : "empty";
 
+    const isWorkspaceActive = Boolean(activeDoc) && layoutMode === "workspace";
+    const isImmersiveActive = Boolean(activeDoc) && immersive;
+
+    // Suppress AppShell chrome in the same paint so the persistent wrapper owns 100vw x 100dvh
+    // without ever unmounting <StoryPlayerView> / <StoryStageView>.
+    useShellImmersiveMode(isImmersiveActive);
+
+    useEffect(() => {
+        if (!isImmersiveActive || typeof document === "undefined") return;
+        const prevOverflow = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        return () => {
+            document.body.style.overflow = prevOverflow;
+        };
+    }, [isImmersiveActive]);
+
+    useEffect(() => {
+        if (!isImmersiveActive) return;
+        const onKeyDown = (event: KeyboardEvent) => {
+            if (event.key !== "Escape" || event.defaultPrevented) return;
+            if (document.fullscreenElement) return;
+            if (document.querySelector('[role="dialog"][aria-modal="true"]')) return;
+            const target = event.target as HTMLElement | null;
+            if (
+                target
+                && (
+                    target.tagName === "INPUT"
+                    || target.tagName === "TEXTAREA"
+                    || target.tagName === "SELECT"
+                    || target.isContentEditable
+                )
+            ) {
+                return;
+            }
+            event.preventDefault();
+            handleImmersiveChange(false);
+        };
+        window.addEventListener("keydown", onKeyDown);
+        return () => window.removeEventListener("keydown", onKeyDown);
+    }, [handleImmersiveChange, isImmersiveActive]);
+
+    const headerButtonSize = isImmersiveActive ? "s" : undefined;
+
     return (
-        <PageContainer className="min-w-0">
+        <PageContainer
+            className={cn(
+                "min-w-0 max-w-full overflow-x-clip",
+                isWorkspaceActive && !isImmersiveActive && "xl:max-w-[1680px] xl:py-3",
+                isImmersiveActive && "fixed inset-0 z-[150] flex h-dvh w-screen max-w-none flex-col overflow-x-hidden bg-surface p-2 sm:p-3",
+                isImmersiveActive && (layoutMode === "workspace" ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto"),
+            )}
+        >
             <PageHeader
-                eyebrow={activeDoc ? (
-                    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 break-words">
+                className={cn(
+                    isImmersiveActive ? "mb-2 shrink-0" : isWorkspaceActive && "xl:mb-2.5",
+                )}
+                eyebrow={activeDoc && !isImmersiveActive ? (
+                    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 break-words">
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                            {t("page.storyMaker.betaBadge")}
+                        </span>
                         <span>{t(SERVER_LABEL_KEYS[activeDoc.region])}</span>
-                        {activeDoc.author && (
+                        {activeDoc.meta.author && (
                             <>
                                 <span>·</span>
-                                <span className="min-w-0 break-words">{t("page.storyMaker.meta.authorBy", { author: activeDoc.author })}</span>
+                                <span className="min-w-0 break-words">
+                                    {t("page.storyMaker.meta.authorBy", { author: activeDoc.meta.author })}
+                                </span>
                             </>
                         )}
                         {source.kind === "imported" && (
@@ -128,37 +219,103 @@ function StoryMakerPlayContent() {
                         )}
                     </span>
                 ) : undefined}
-                title={activeDoc ? (activeDoc.title || t("page.storyMaker.untitled")) : t("page.storyMaker.player.pageTitle")}
-                description={activeDoc ? (activeDoc.summary || undefined) : t("page.storyMaker.player.pageDescription")}
+                title={activeDoc ? (
+                    isImmersiveActive ? (
+                        <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words">
+                                {activeDoc.meta.title || t("page.storyMaker.untitled")}
+                            </span>
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                                {t("page.storyMaker.betaBadge")}
+                            </span>
+                        </span>
+                    ) : (
+                        activeDoc.meta.title || t("page.storyMaker.untitled")
+                    )
+                ) : (
+                    <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                        <span className="min-w-0 break-words">{t("page.storyMaker.player.pageTitle")}</span>
+                        <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                            {t("page.storyMaker.betaBadge")}
+                        </span>
+                    </span>
+                )}
+                description={isImmersiveActive
+                    ? undefined
+                    : activeDoc
+                        ? (activeDoc.meta.summary
+                            ? <span className={cn(isWorkspaceActive && "xl:line-clamp-1")}>{activeDoc.meta.summary}</span>
+                            : undefined)
+                        : t("page.storyMaker.player.pageDescription")}
                 actions={(
                     <>
-                        <Button variant="text" icon={mdArrowBack} href="/story-maker" className="px-3 sm:px-4">
+                        {activeDoc && (
+                            <SegmentedButton<PlayerLayoutMode>
+                                density={isImmersiveActive ? -2 : -1}
+                                value={layoutMode}
+                                onValueChange={handleLayoutModeChange}
+                                aria-label={t("page.storyMaker.nle.layoutWorkspace")}
+                                className="w-auto max-w-full"
+                                options={[
+                                    { value: "workspace", label: t("page.storyMaker.nle.layoutWorkspace"), icon: mdDashboard },
+                                    { value: "theater", label: t("page.storyMaker.nle.layoutTheater"), icon: mdTheaters },
+                                ]}
+                            />
+                        )}
+                        {activeDoc && (
+                            <Button
+                                size={headerButtonSize}
+                                variant={isImmersiveActive ? "filled" : "tonal"}
+                                selected={isImmersiveActive}
+                                icon={isImmersiveActive ? mdCloseFullscreen : mdOpenInFull}
+                                onClick={() => handleImmersiveChange(!isImmersiveActive)}
+                                className="max-w-full px-3 sm:px-3.5"
+                            >
+                                {t(isImmersiveActive ? "page.storyMaker.nle.exitImmersive" : "page.storyMaker.nle.enterImmersive")}
+                            </Button>
+                        )}
+                        <Button size={headerButtonSize} variant="text" icon={mdArrowBack} href="/story-maker" className="max-w-full px-3 sm:px-4">
                             {t("page.storyMaker.action.backToDrafts")}
                         </Button>
                         {source.kind === "draft" && (
-                            <Button variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`} className="px-3 sm:px-4">
+                            <Button size={headerButtonSize} variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`} className="max-w-full px-3 sm:px-4">
                                 {t("page.storyMaker.action.edit")}
                             </Button>
                         )}
                         {source.kind === "imported" && (
-                            <Button variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()} className="px-3 sm:px-4">
+                            <Button size={headerButtonSize} variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()} className="max-w-full px-3 sm:px-4">
                                 {t("page.storyMaker.player.saveAsDraft")}
                             </Button>
                         )}
                         {activeDoc && (
-                            <Button
-                                variant="outlined"
-                                icon={mdDownload}
-                                className="px-3 sm:px-4"
-                                onClick={() => {
-                                    downloadStoryJson(activeDoc);
-                                    setSnack(t("page.storyMaker.exportedToast"));
-                                }}
-                            >
-                                {t("page.storyMaker.action.exportJson")}
-                            </Button>
+                            <>
+                                <Button
+                                    size={headerButtonSize}
+                                    variant="outlined"
+                                    icon={mdDownload}
+                                    className="max-w-full px-3 sm:px-4"
+                                    onClick={() => {
+                                        downloadStoryJson(activeDoc);
+                                        setSnack(t("page.storyMaker.exportedToast"));
+                                    }}
+                                >
+                                    {t("page.storyMaker.v2.script.downloadJson")}
+                                </Button>
+                                <Button
+                                    size={headerButtonSize}
+                                    variant="outlined"
+                                    icon={mdCode}
+                                    className="max-w-full px-3 sm:px-4"
+                                    onClick={() => {
+                                        downloadStoryScript(activeDoc);
+                                        setSnack(t("page.storyMaker.v2.script.downloadScript"));
+                                    }}
+                                >
+                                    {t("page.storyMaker.v2.script.downloadScript")}
+                                </Button>
+                            </>
                         )}
-                        <Button variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="px-3 sm:px-4">
+                        <Button size={headerButtonSize} variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="max-w-full px-3 sm:px-4">
                             {t("page.storyMaker.player.openJson")}
                         </Button>
                     </>
@@ -203,18 +360,18 @@ function StoryMakerPlayContent() {
                     />
                 </Card>
             ) : (
-                <div className="min-w-0 space-y-3">
-                    {issues.length > 0 && (
+                <div className={cn("min-w-0", isImmersiveActive ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-3")}>
+                    {!hasBlockingErrors && warnings.length > 0 && (
                         <Banner
                             tone="warning"
-                            title={t("page.storyMaker.player.draftHasIssuesTitle", { count: issues.length })}
+                            title={t("page.storyMaker.v2.compiler.statusWarnings", { count: warnings.length })}
                             action={(
                                 <Button size="xs" variant="text" onClick={() => setIssuesOpen(true)}>
                                     {t("page.storyMaker.player.viewIssues")}
                                 </Button>
                             )}
                         >
-                            {t("page.storyMaker.player.draftHasIssuesDescription")}
+                            {t("page.storyMaker.v2.compiler.warningsTitle")}
                         </Banner>
                     )}
 
@@ -222,6 +379,11 @@ function StoryMakerPlayContent() {
                         key={playerKey}
                         doc={activeDoc}
                         line={line}
+                        assetSource={assetSource}
+                        startNodeId={source.kind === "draft" ? startNodeParam : null}
+                        layoutMode={layoutMode}
+                        onLayoutModeChange={handleLayoutModeChange}
+                        immersive={isImmersiveActive}
                         endAction={source.kind === "draft" ? (
                             <Button variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`}>
                                 {t("page.storyMaker.action.edit")}
@@ -238,18 +400,43 @@ function StoryMakerPlayContent() {
             <StoryImportDialog
                 isOpen={importOpen}
                 onClose={() => setImportOpen(false)}
-                title={t("page.storyMaker.player.openJson")}
-                confirmLabel={t("page.storyMaker.action.play")}
                 onImport={handleImportForPlay}
             />
 
             <Dialog
                 isOpen={issuesOpen}
                 onClose={() => setIssuesOpen(false)}
-                title={t("page.storyMaker.editor.issuesDialogTitle", { count: issues.length })}
+                title={t("page.storyMaker.editor.issuesDialogTitle", { count: diagnostics.length })}
                 size="md"
             >
-                <StoryIssueList issues={issues} />
+                {diagnostics.length === 0 ? (
+                    <p className="type-body-m text-on-surface-variant">
+                        {t("page.storyMaker.v2.compiler.noIssues")}
+                    </p>
+                ) : (
+                    <ul className="max-h-96 min-w-0 space-y-1.5 overflow-y-auto">
+                        {diagnostics.map((diag, index) => (
+                            <li
+                                key={`${diag.path}-${diag.code}-${index}`}
+                                className="flex min-w-0 items-start gap-2 rounded-md3-md bg-surface-container px-2.5 py-2"
+                            >
+                                <Icon
+                                    path={diag.severity === "error" ? mdErrorFill : mdWarning}
+                                    size={18}
+                                    className={cn("mt-0.5 shrink-0", diag.severity === "error" ? "text-error" : "text-tertiary")}
+                                />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block break-words type-body-m text-on-surface">
+                                        {t(`page.storyMaker.issue.${diag.code}`, diag.params ?? {})}
+                                    </span>
+                                    <span className="block break-all font-mono type-label-s text-on-surface-variant">
+                                        {diag.path}
+                                    </span>
+                                </span>
+                            </li>
+                        ))}
+                    </ul>
+                )}
             </Dialog>
 
             <Snackbar open={snack !== null} message={snack ?? ""} onClose={() => setSnack(null)} />

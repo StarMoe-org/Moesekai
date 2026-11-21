@@ -7,10 +7,9 @@ import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl, type AssetLine } from "@/lib/assets";
 import { md3EasingStandard } from "@/lib/motion";
 import { storyBackgroundUrl } from "@/lib/storyMaker/assets";
-import type { StoryStageState } from "@/lib/storyMaker/state";
 import type { StoryUiKit } from "@/lib/storyMaker/uiKit";
-import type { StoryDocument, StoryEffectColor, StoryStepOf } from "@/types/storyMaker";
-import { GameStageOverlay } from "./GameStageOverlay";
+import type { StoryDocument, StoryEffectColor, StoryStageState } from "@/types/storyMaker";
+import { GameStageOverlay, type GameStageChoiceProp } from "./GameStageOverlay";
 import type { StoryActorProblem, StoryStagePhase } from "./useStoryStage";
 
 /** Screen colours of fades and flashes: the game's, not theme roles. */
@@ -38,8 +37,8 @@ interface StoryStageViewProps extends StoryStageStatusProps {
     autoPlay?: boolean;
     /** Shows the manual mode bouncing `EndSign` indicator in `TalkWindow`. */
     showEndSign?: boolean;
-    /** Choice step rendered via `AnswerChoiceDialog` (interactive in player, preview in editor). */
-    choice?: StoryStepOf<"choice"> | null;
+    /** Choice options rendered via `AnswerChoiceDialog` (interactive in player, preview in editor). */
+    choice?: GameStageChoiceProp | null;
     /** Whether `AnswerChoiceDialog` buttons are clickable. */
     choiceInteractive?: boolean;
     onChoose?: (optionId: string, optionText: string) => void;
@@ -166,6 +165,7 @@ export function StoryStageView({
                     <motion.img
                         key={background}
                         src={background}
+                        crossOrigin="anonymous"
                         alt=""
                         draggable={false}
                         onError={() => setFailedBackground(background)}

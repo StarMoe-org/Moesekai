@@ -1,14 +1,15 @@
 /**
- * The story maker's drafts, kept in the browser (IndexedDB `moesekai-story-maker`, store
- * `drafts`). Nothing leaves the device: sharing is by exporting a document's JSON file.
- * Every draft read back is validated again, so a store edited by hand cannot feed the editor
- * anything the import would refuse.
+ * The story maker's v2 drafts, kept in browser IndexedDB (`moesekai-story-maker-v2`, store
+ * `drafts`). Nothing leaves the device: sharing is by exporting `.moesekai-story.json` or `.msk`.
+ * Every draft read back is checked against the `moesekai-story/2` schema, rejecting corrupted or
+ * legacy v1 records while preserving mid-edit v2 drafts.
  */
 import type { StoryDocument, StoryDraft } from "@/types/storyMaker";
-import { createStoryDocument, newStoryId } from "./document";
-import { validateStoryDocument } from "./validate";
+import { createStoryDocument, newStoryId, updateStoryMeta } from "./document";
+import { STORY_LIMITS } from "./limits";
+import { parseStoryDocumentDraft, validateStoryDocument } from "./validate";
 
-const DB_NAME = "moesekai-story-maker";
+const DB_NAME = "moesekai-story-maker-v2";
 const DB_VERSION = 1;
 const STORE = "drafts";
 
@@ -63,18 +64,20 @@ async function store(mode: IDBTransactionMode): Promise<IDBObjectStore> {
     return db.transaction(STORE, mode).objectStore(STORE);
 }
 
-/** A stored record as a draft, or null when it does not hold a valid document. */
+/** A stored record as a v2 draft, or null when it does not hold a valid v2 document. */
 function readDraft(value: unknown): StoryDraft | null {
     if (typeof value !== "object" || value === null) return null;
     const record = value as Partial<StoryDraft>;
     if (typeof record.id !== "string" || typeof record.createdAt !== "number" || typeof record.updatedAt !== "number") return null;
     const result = validateStoryDocument(record.doc);
-    // A draft mid-edit may be incomplete (an empty speaker, a dangling jump): it is still the
-    // reader's work, so a record whose document fails only on such points is kept as stored.
-    if (result.ok) return { id: record.id, doc: result.doc, createdAt: record.createdAt, updatedAt: record.updatedAt };
-    const doc = record.doc as StoryDocument | undefined;
-    if (doc && typeof doc === "object" && Array.isArray(doc.steps) && Array.isArray(doc.cast) && typeof doc.title === "string") {
-        return { id: record.id, doc, createdAt: record.createdAt, updatedAt: record.updatedAt };
+    if (result.ok) {
+        return { id: record.id, doc: result.doc, createdAt: record.createdAt, updatedAt: record.updatedAt };
+    }
+    // Mid-edit v2 drafts (e.g. a brand-new draft with unwired `start` or an empty choice text)
+    // remain editable until the author wires them up.
+    const draftDoc = parseStoryDocumentDraft(record.doc);
+    if (draftDoc) {
+        return { id: record.id, doc: draftDoc, createdAt: record.createdAt, updatedAt: record.updatedAt };
     }
     return null;
 }
@@ -94,7 +97,7 @@ async function put(draft: StoryDraft): Promise<StoryDraft> {
     return draft;
 }
 
-/** A new draft holding `doc` (or an empty document on `region`). */
+/** A new draft holding `doc`. */
 export async function createDraft(doc: StoryDocument): Promise<StoryDraft> {
     const now = Date.now();
     const taken = (await listDrafts()).map(draft => draft.id);
@@ -115,14 +118,17 @@ export async function saveDraft(id: string, doc: StoryDocument): Promise<StoryDr
 export async function renameDraft(id: string, title: string): Promise<StoryDraft | null> {
     const draft = await getDraft(id);
     if (!draft) return null;
-    return saveDraft(id, { ...draft.doc, title });
+    return saveDraft(id, updateStoryMeta(draft.doc, { title }));
 }
 
 export async function duplicateDraft(id: string, titleSuffix: string): Promise<StoryDraft | null> {
     const draft = await getDraft(id);
     if (!draft) return null;
-    const title = `${draft.doc.title}${titleSuffix}`.slice(0, 80);
-    return createDraft({ ...structuredClone(draft.doc), title });
+    const title = `${draft.doc.meta.title}${titleSuffix}`.slice(0, STORY_LIMITS.title);
+    const cloned = structuredClone(draft.doc);
+    cloned.id = newStoryId([draft.doc.id], 10);
+    cloned.meta = { ...cloned.meta, title };
+    return createDraft(cloned);
 }
 
 export async function deleteDraft(id: string): Promise<void> {

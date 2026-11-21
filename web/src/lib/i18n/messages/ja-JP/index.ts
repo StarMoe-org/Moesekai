@@ -801,7 +801,7 @@ export const jaJPMessages = {
         guessMusic: '曲当てクイズ',
         chartPreview: '譜面プレビュー',
         storyPlayer: 'ストーリープレイヤー',
-        storyMaker: 'ストーリーメーカー',
+        storyMaker: 'ストーリーメーカー BETA',
         storySearch: 'ストーリー検索',
         costume3d: '3D衣装',
         live2dViewer: 'Live2D ビューア',

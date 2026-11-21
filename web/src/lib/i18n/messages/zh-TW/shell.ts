@@ -60,7 +60,7 @@ export const zhTWLayout = {
             guessMusic: "猜歌曲",
             chartPreview: "譜面預覽器",
             storyPlayer: "劇情瀏覽器",
-            storyMaker: "劇情製作器",
+            storyMaker: "劇情製作器 BETA",
             storySearch: "劇情檢索器",
             costume3d: "3D 服裝",
             live2dViewer: "Live2D 預覽",
