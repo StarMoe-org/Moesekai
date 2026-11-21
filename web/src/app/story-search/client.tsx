@@ -6,6 +6,7 @@ import MainLayout from "@/components/MainLayout";
 import BaseFilters, { FilterButton, FilterSection, FilterToggle } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
+import { SERVER_SHORT_LABEL_KEYS, normalizeServer } from "@/lib/account-servers";
 import {
     Banner,
     Button,
@@ -42,8 +43,10 @@ import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import { StorySearchWorkerClient } from "@/lib/story-search/client";
 import { loadStoryLinkLookup, type StoryLinkLookup } from "@/lib/story-search/links";
 import {
+    SEMANTIC_SEARCH_SERVERS,
     STORY_CHUNK_TYPES,
     STORY_SEARCH_SERVERS,
+    isSemanticSearchServer,
     type CorpusLoadProgress,
     type CorpusStatusInfo,
     type SemanticSearchApiResponse,
@@ -62,8 +65,7 @@ const TOP_K_OPTIONS = [10, 20, 40, 60] as const;
 const LOCAL_RESULT_LIMIT = 5000;
 
 function parseServerParam(raw: string | null): StorySearchServer | null {
-    if (raw === "cn" || raw === "jp") return raw;
-    return null;
+    return normalizeServer(raw);
 }
 
 function parseModeParam(raw: string | null): StorySearchMode | null {
@@ -173,15 +175,15 @@ export default function StorySearchClient() {
         const urlChars = parseCharsParam(searchParams.get("chars"));
         const urlView = parseViewParam(searchParams.get("view"));
 
+        const resolvedMode: StorySearchMode = urlMode ?? "local";
         if (urlMode) setMode(urlMode);
         setResultView(urlView);
-        if (urlServer) {
-            setServer(urlServer);
-        } else if (serverSource === "jp") {
-            setServer("jp");
-        } else {
-            setServer("cn");
-        }
+        const preferredServer = urlServer ?? serverSource;
+        setServer(
+            resolvedMode === "semantic" && !isSemanticSearchServer(preferredServer)
+                ? "cn"
+                : preferredServer,
+        );
         if (urlQ !== null) setQuery(urlQ);
         if (urlRegex === "1" || urlRegex === "true") setIsRegex(true);
         if (urlCase === "1" || urlCase === "true") setCaseSensitive(true);
@@ -395,6 +397,7 @@ export default function StorySearchClient() {
         resetDisplayCount();
 
         try {
+            const semanticServer = isSemanticSearchServer(server) ? server : "cn";
             const headers: Record<string, string> = {
                 "Content-Type": "application/json",
             };
@@ -408,7 +411,7 @@ export default function StorySearchClient() {
                 headers,
                 body: JSON.stringify({
                     query: trimmed,
-                    server,
+                    server: semanticServer,
                     type: storyType === "all" ? undefined : storyType,
                     charIds: selectedCharacters.length > 0 ? selectedCharacters : undefined,
                     topK,
@@ -443,9 +446,9 @@ export default function StorySearchClient() {
 
             const rawResults = Array.isArray(data.results) ? data.results : [];
             let chunkMap: Record<number, StoryChunk> = {};
-            if (workerRef.current && corpusByServer[server] && rawResults.length > 0) {
+            if (workerRef.current && corpusByServer[semanticServer] && rawResults.length > 0) {
                 chunkMap = await workerRef.current
-                    .lookupChunks(server, rawResults.map((r) => r.id))
+                    .lookupChunks(semanticServer, rawResults.map((r) => r.id))
                     .catch(() => ({}));
             }
 
@@ -453,7 +456,7 @@ export default function StorySearchClient() {
                 const localChunk = chunkMap[r.id];
                 const chunk: StoryChunk = {
                     id: r.id,
-                    server: r.server ?? server,
+                    server: r.server ?? semanticServer,
                     type: r.type,
                     story_id: r.story_id,
                     story: r.story,
@@ -671,6 +674,9 @@ export default function StorySearchClient() {
                         value={mode}
                         onValueChange={(nextMode) => {
                             setMode(nextMode);
+                            if (nextMode === "semantic" && !isSemanticSearchServer(server)) {
+                                setServer("cn");
+                            }
                             resetDisplayCount();
                         }}
                         options={[
@@ -688,7 +694,7 @@ export default function StorySearchClient() {
                     />
 
                     <div className="flex flex-wrap items-center gap-2">
-                        {STORY_SEARCH_SERVERS.map((srv) => (
+                        {(mode === "semantic" ? SEMANTIC_SEARCH_SERVERS : STORY_SEARCH_SERVERS).map((srv) => (
                             <Chip
                                 key={srv}
                                 selected={server === srv}
@@ -697,7 +703,11 @@ export default function StorySearchClient() {
                                     resetDisplayCount();
                                 }}
                             >
-                                <ServerRegionLabel server={srv} size={16} />
+                                <ServerRegionLabel
+                                    server={srv}
+                                    size={16}
+                                    label={t(SERVER_SHORT_LABEL_KEYS[srv])}
+                                />
                             </Chip>
                         ))}
                         {!activeCorpus && !isCorpusBusy && mode === "semantic" && (

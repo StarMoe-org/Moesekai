@@ -1,9 +1,17 @@
+import { SERVER_IDS, type ServerType } from "@/lib/account-servers";
+
 export type StorySearchMode = "local" | "semantic";
 export type StoryResultView = "detailed" | "brief";
-export type StorySearchServer = "cn" | "jp";
+export type StorySearchServer = ServerType;
 export type StoryChunkType = "unit" | "event" | "card" | "talk" | "self" | "special";
 
-export const STORY_SEARCH_SERVERS: readonly StorySearchServer[] = ["cn", "jp"];
+export const STORY_SEARCH_SERVERS: readonly StorySearchServer[] = SERVER_IDS;
+export const SEMANTIC_SEARCH_SERVERS: readonly StorySearchServer[] = ["cn", "jp"];
+
+export function isSemanticSearchServer(server: StorySearchServer): server is "cn" | "jp" {
+    return server === "cn" || server === "jp";
+}
+
 export const STORY_CHUNK_TYPES: readonly StoryChunkType[] = [
     "unit",
     "event",
@@ -40,6 +48,7 @@ export interface ManifestArtifactRef {
 export interface ManifestServerEntry {
     version?: string | number;
     generated_at?: string;
+    semantic?: boolean;
     chunk_count?: number;
     corpus?: ManifestArtifactRef;
     chunks?: ManifestArtifactRef;
@@ -56,6 +65,9 @@ export interface StorySearchManifest {
     servers?: Partial<Record<StorySearchServer, ManifestServerEntry>>;
     cn?: ManifestServerEntry;
     jp?: ManifestServerEntry;
+    tw?: ManifestServerEntry;
+    kr?: ManifestServerEntry;
+    en?: ManifestServerEntry;
     corpus?: ManifestArtifactRef;
     chunk_count?: number;
 }

@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import LocalizedLink from "@/components/LocalizedLink";
+import { getServerDisplayCode } from "@/components/common/ServerRegion";
 import { Button, Card } from "@/components/md3";
 import { mdCheck, mdContentCopy, mdMenuBook, mdPlayArrow } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
@@ -175,7 +176,7 @@ export default function ResultCard({
                             {t(`page.storySearch.filters.types.${chunk.type}`)}
                         </span>
                         <span className="inline-flex items-center rounded-md3-xs bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                            {chunk.server.toUpperCase()}
+                            {getServerDisplayCode(chunk.server)}
                         </span>
                         {chunk.ep && (
                             <span className="inline-flex items-center rounded-md3-xs bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">

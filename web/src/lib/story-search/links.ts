@@ -120,7 +120,9 @@ export function resolveChunkLinks(chunk: StoryChunk, lookup?: StoryLinkLookup | 
                 chunk.ep === "former"
                 || chunk.ep === "first"
                 || chunk.ep === "1"
-                || chunk.ep === "\u524d\u7bc7";
+                || chunk.ep === "Part 1"
+                || chunk.ep === "\u524d\u7bc7"
+                || chunk.ep === "\uc804\ud3b8";
             const part = isFormer ? "former" : "latter";
             const partIndex = isFormer ? 1 : 2;
             return {
