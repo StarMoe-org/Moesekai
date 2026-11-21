@@ -43,6 +43,7 @@ const ALLOWLIST = new Map([
     ["src/types/types.ts", "Project SEKAI official unit and character names plus legacy type constants"],
     ["src/lib/storyLoader.ts", "Masterdata and story translation fallback map"],
     ["src/lib/team-links.ts", "Team members and official organization links"],
+    ["src/lib/virtualLiveMc.ts", "MC timeline track name suffixes (_Talk/_入場/_退場) are Unity asset data format strings, not UI text"],
     ["src/vendor/sekai-sus2img/renderer.ts", "Vendored upstream chart renderer (GPL-3); Japanese 譜面確認 label matches the in-game chart-check convention"],
     ["src/components/seo/DetailSemanticSeoShell.tsx", "Project SEKAI crawler semantic shell fact taxonomy and stat tables"],
 ]);
@@ -61,6 +62,7 @@ const COMMENT_ONLY_ALLOWLIST = new Map([
     ["src/lib/score-control/score-control-calculator.ts", "Comments describing the score control rounding contract"],
     ["src/lib/assets.ts", "Comments describing public CDN attribution and asset line endpoints"],
     ["src/lib/fetch.ts", "Comments describing public masterdata CDN attribution"],
+    ["src/lib/lyrics.ts", "Comments describing kana ruby reading behavior over kanji bases"],
 ]);
 
 function isCommentOnlyLine(line) {

@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Image from "next/image";
@@ -13,6 +13,7 @@ import {
     IResourceBoxInfo,
     IVirtualLiveInfo,
     IVirtualLiveReward,
+    IVirtualLiveSetlist,
     VIRTUAL_LIVE_TYPE_COLORS,
     getVirtualLiveStatus,
     getVirtualLiveTypeLabel,
@@ -20,30 +21,40 @@ import {
     VirtualLiveType
 } from "@/types/virtualLive";
 import {
+    getCharacterIconUrl,
     getCommonMaterialThumbnailUrl,
     getEventBannerUrl,
     getMaterialThumbnailUrl,
     getMusicJacketUrl,
     getStampUrl,
     getVirtualLiveBannerUrl,
+    getVirtualLiveMcUrl,
 } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { fetchMasterData } from "@/lib/fetch";
+import { getSetlistMcKind, parseMcScenarioAsset, parseMcTimelineDump, type IMcCharacterInfo, type IMcScriptLine, type McCharacterResolver } from "@/lib/virtualLiveMc";
+import { getCharacterName } from "@/lib/i18n/characters";
+import { UNIT_FIELD_TO_ID, UNIT_ICON_FILES } from "@/types/types";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import ImagePreviewModal from "@/components/common/ImagePreviewModal";
 import { useI18n } from "@/contexts/I18nContext";
 import type { IMaterialInfo } from "@/types/material";
 import type { IHonorGroup, IHonorInfo } from "@/types/honor";
 import DegreeImage from "@/components/honor/DegreeImage";
-import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, cn } from "@/components/md3";
+import { Button, EmptyState, Icon, LoadingIndicator, LoadingState, PageContainer, SectionCard, cn } from "@/components/md3";
 import {
     mdArrowBack,
     mdEvent,
     mdEventBusy,
     mdInfo,
     mdKeyboardArrowDown,
+    mdKeyboardArrowUp,
+    mdLogin,
+    mdLogout,
+    mdMic,
     mdQueueMusic,
     mdRedeem,
+    mdRefresh,
     mdSchedule,
     mdZoomIn,
 } from "@/components/md3/icons";
@@ -125,6 +136,17 @@ const EntityCommunitySection = dynamic(
     () => import("@/components/community/EntityCommunitySection"),
     { ssr: false },
 );
+
+interface ICharacter3dRow {
+    id: number;
+    characterId: number;
+    unit: string;
+}
+
+interface IMcScriptState {
+    status: "loading" | "ok" | "error";
+    lines?: IMcScriptLine[];
+}
 
 // API URL for virtual live-event mapping
 const VIRTUAL_LIVE_EVENT_MAP_URL = (process.env.NEXT_PUBLIC_API_URL || "") + "/api/virtuallive-event-map";
@@ -457,6 +479,10 @@ export default function VirtualLiveDetailClient() {
     const [mounted, setMounted] = useState(false);
     const [relatedEvent, setRelatedEvent] = useState<IEventInfo | null>(null);
     const [imageViewerOpen, setImageViewerOpen] = useState(false);
+    const [mcScripts, setMcScripts] = useState<Record<number, IMcScriptState>>({});
+    const [expandedSetlistIds, setExpandedSetlistIds] = useState<Set<number>>(new Set());
+    const character3dMapRef = useRef<Map<number, ICharacter3dRow> | null>(null);
+    const character3dMapPromiseRef = useRef<Promise<Map<number, ICharacter3dRow>> | null>(null);
 
     const rewardLookupMaps = useMemo<IRewardLookupMaps>(() => ({
         materialMap: buildMapById(rewardLookups.materials),
@@ -472,10 +498,107 @@ export default function VirtualLiveDetailClient() {
         [virtualLive, rewardResourceBoxes, rewardLookupMaps, assetSource, t]
     );
 
+    // Lazily load character3ds once per live; maps character3dId → characterId/unit for MC scripts.
+    const ensureCharacter3dMap = useCallback((): Promise<Map<number, ICharacter3dRow>> => {
+        if (character3dMapRef.current) return Promise.resolve(character3dMapRef.current);
+        if (!character3dMapPromiseRef.current) {
+            character3dMapPromiseRef.current = fetchMasterData<ICharacter3dRow[]>("character3ds.json")
+                .then((rows) => {
+                    const map = new Map(rows.map((row) => [row.id, { id: row.id, characterId: row.characterId, unit: row.unit ?? "none" }]));
+                    character3dMapRef.current = map;
+                    return map;
+                })
+                .catch((error) => {
+                    console.warn("[VirtualLiveMc] Failed to fetch character3ds.json", error);
+                    const map = new Map<number, ICharacter3dRow>();
+                    character3dMapRef.current = map;
+                    return map;
+                });
+        }
+        return character3dMapPromiseRef.current;
+    }, []);
+
+    // Localized character resolution for MC script lines; VS singers carry their actual unit as badge field.
+    const buildMcCharacterResolver = useCallback((): McCharacterResolver => {
+        return (character3dId, fallbackName) => {
+            if (!character3dId) {
+                return fallbackName ? { characterId: 0, name: fallbackName } : null;
+            }
+            const row = character3dMapRef.current?.get(character3dId);
+            if (!row) {
+                return fallbackName ? { characterId: 0, name: fallbackName } : { characterId: 0, name: "???" };
+            }
+            const isVirtualSinger = row.characterId >= 21 && row.characterId <= 26;
+            const unitField = isVirtualSinger && row.unit && row.unit !== "piapro" && row.unit !== "none" ? row.unit : undefined;
+            return {
+                characterId: row.characterId,
+                unitField,
+                name: getCharacterName(t, row.characterId, "short"),
+            };
+        };
+    }, [t]);
+
+    const loadMcScript = useCallback(async (setlist: IVirtualLiveSetlist) => {
+        const mcKind = getSetlistMcKind(setlist.virtualLiveSetlistType);
+        if (!mcKind) return;
+        setMcScripts((prev) => ({ ...prev, [setlist.id]: { status: "loading" } }));
+        try {
+            await ensureCharacter3dMap();
+            const resolve = buildMcCharacterResolver();
+            const response = await fetch(getVirtualLiveMcUrl(mcKind, setlist.assetbundleName, assetSource));
+            if (!response.ok) {
+                throw new Error(`Failed to fetch virtual live MC asset: ${response.status}`);
+            }
+            const data = await response.json();
+            const lines = mcKind === "scenario"
+                ? parseMcScenarioAsset(data, resolve)
+                : parseMcTimelineDump(data, resolve);
+            setMcScripts((prev) => ({ ...prev, [setlist.id]: { status: "ok", lines } }));
+        } catch (err) {
+            console.error("[VirtualLiveMc] Failed to load MC script", err);
+            setMcScripts((prev) => ({ ...prev, [setlist.id]: { status: "error" } }));
+        }
+    }, [assetSource, buildMcCharacterResolver, ensureCharacter3dMap]);
+
+    const toggleMcScript = useCallback((setlist: IVirtualLiveSetlist) => {
+        if (!getSetlistMcKind(setlist.virtualLiveSetlistType)) return;
+        const willExpand = !expandedSetlistIds.has(setlist.id);
+        setExpandedSetlistIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(setlist.id)) {
+                next.delete(setlist.id);
+            } else {
+                next.add(setlist.id);
+            }
+            return next;
+        });
+        if (willExpand && !mcScripts[setlist.id]) {
+            void loadMcScript(setlist);
+        }
+    }, [expandedSetlistIds, mcScripts, loadMcScript]);
+
+    const getSetlistTypeLabel = useCallback((type: string) => {
+        switch (type) {
+            case "music": return t("page.live.setlistTypeMusic");
+            case "mc": return t("page.live.setlistTypeMc");
+            case "mc_timeline": return t("page.live.setlistTypeMcTimeline");
+            case "virtual_message": return t("page.live.setlistTypeVirtualMessage");
+            default: return type;
+        }
+    }, [t]);
+
     // Set mounted state
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    // Reset per-live MC script state when navigating between virtual lives
+    useEffect(() => {
+        setMcScripts({});
+        setExpandedSetlistIds(new Set());
+        character3dMapRef.current = null;
+        character3dMapPromiseRef.current = null;
+    }, [virtualLiveId]);
 
     // Set breadcrumb detail name
     useEffect(() => {
@@ -808,62 +931,84 @@ export default function VirtualLiveDetailClient() {
                         {setlistWithMusic.length > 0 && (
                             <SectionCard icon={mdQueueMusic} title={t("page.live.setlistTitle", { count: setlistWithMusic.length })} bodyClassName="p-0 pb-2">
                                 <div className="divide-y divide-outline-variant">
-                                    {setlistWithMusic.map((item, index) => (
-                                        <div key={item.id} className="px-4 py-3">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 shrink-0 rounded-full bg-surface-container-high flex items-center justify-center type-label-l text-on-surface-variant">
-                                                    {index + 1}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    {item.virtualLiveSetlistType === "music" && item.music ? (
-                                                        <Link
-                                                            href={`/music/${item.music.id}`}
-                                                            className="flex items-center gap-3 group rounded-md3-sm focus-ring"
-                                                        >
-                                                            <div className="w-10 h-10 rounded-md3-sm overflow-hidden bg-surface-container-high shrink-0">
-                                                                <Image
-                                                                    src={getMusicJacketUrl(item.music.assetbundleName, assetSource)}
-                                                                    alt={item.music.title}
-                                                                    width={40}
-                                                                    height={40}
-                                                                    className="w-full h-full object-cover"
-                                                                    unoptimized
-                                                                />
-                                                            </div>
-                                                            <div className="min-w-0">
-                                                                <p className="type-title-s text-on-surface group-hover:text-primary transition-colors">
-                                                                    <TranslatedText
-                                                                        original={item.music.title}
-                                                                        category="music"
-                                                                        field="title"
-                                                                        originalClassName="truncate block"
-                                                                        translationClassName="type-body-s text-on-surface-variant truncate block"
+                                    {setlistWithMusic.map((item, index) => {
+                                        const mcKind = getSetlistMcKind(item.virtualLiveSetlistType);
+                                        const scriptExpanded = mcKind !== null && expandedSetlistIds.has(item.id);
+                                        const scriptState = mcScripts[item.id];
+                                        return (
+                                            <div key={item.id} className="px-4 py-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 shrink-0 rounded-full bg-surface-container-high flex items-center justify-center type-label-l text-on-surface-variant">
+                                                        {index + 1}
+                                                    </div>
+                                                    <div className="flex-1 min-w-0">
+                                                        {item.virtualLiveSetlistType === "music" && item.music ? (
+                                                            <Link
+                                                                href={`/music/${item.music.id}`}
+                                                                className="flex items-center gap-3 group rounded-md3-sm focus-ring"
+                                                            >
+                                                                <div className="w-10 h-10 rounded-md3-sm overflow-hidden bg-surface-container-high shrink-0">
+                                                                    <Image
+                                                                        src={getMusicJacketUrl(item.music.assetbundleName, assetSource)}
+                                                                        alt={item.music.title}
+                                                                        width={40}
+                                                                        height={40}
+                                                                        className="w-full h-full object-cover"
+                                                                        unoptimized
                                                                     />
-                                                                </p>
-                                                                <p className="type-body-s text-on-surface-variant">{t("page.live.setlistMusicLabel")}</p>
+                                                                </div>
+                                                                <div className="min-w-0">
+                                                                    <p className="type-title-s text-on-surface group-hover:text-primary transition-colors">
+                                                                        <TranslatedText
+                                                                            original={item.music.title}
+                                                                            category="music"
+                                                                            field="title"
+                                                                            originalClassName="truncate block"
+                                                                            translationClassName="type-body-s text-on-surface-variant truncate block"
+                                                                        />
+                                                                    </p>
+                                                                    <p className="type-body-s text-on-surface-variant">{t("page.live.setlistMusicLabel")}</p>
+                                                                </div>
+                                                            </Link>
+                                                        ) : item.virtualLiveSetlistType === "mc" ? (
+                                                            <div className="min-w-0">
+                                                                <p className="type-body-m text-on-surface">{t("page.live.setlistMcLabel")}</p>
+                                                                <p className="type-label-s text-on-surface-variant font-mono truncate">{item.assetbundleName}</p>
                                                             </div>
-                                                        </Link>
-                                                    ) : item.virtualLiveSetlistType === "mc" ? (
-                                                        <div>
-                                                            <p className="type-body-m text-on-surface">{t("page.live.setlistMcLabel")}</p>
-                                                            <p className="type-label-s text-on-surface-variant font-mono">{item.assetbundleName}</p>
-                                                        </div>
-                                                    ) : (
-                                                        <div>
-                                                            <p className="type-body-m text-on-surface">{item.virtualLiveSetlistType}</p>
-                                                            <p className="type-label-s text-on-surface-variant font-mono">{item.assetbundleName}</p>
-                                                        </div>
+                                                        ) : (
+                                                            <div className="min-w-0">
+                                                                <p className="type-body-m text-on-surface">{getSetlistTypeLabel(item.virtualLiveSetlistType)}</p>
+                                                                <p className="type-label-s text-on-surface-variant font-mono truncate">{item.assetbundleName}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <span className={`shrink-0 px-2 py-0.5 rounded-md3-sm type-label-m ${item.virtualLiveSetlistType === "music"
+                                                        ? "bg-primary-container text-on-primary-container"
+                                                        : "bg-surface-container-high text-on-surface-variant"
+                                                        }`}>
+                                                        {getSetlistTypeLabel(item.virtualLiveSetlistType)}
+                                                    </span>
+                                                    {mcKind && (
+                                                        <Button
+                                                            variant="tonal"
+                                                            size="s"
+                                                            icon={scriptExpanded ? mdKeyboardArrowUp : mdMic}
+                                                            onClick={() => toggleMcScript(item)}
+                                                            className="shrink-0"
+                                                        >
+                                                            {scriptExpanded ? t("page.live.setlistHideScript") : t("page.live.setlistViewScript")}
+                                                        </Button>
                                                     )}
                                                 </div>
-                                                <span className={`px-2 py-0.5 rounded-md3-sm type-label-m ${item.virtualLiveSetlistType === "music"
-                                                    ? "bg-primary-container text-on-primary-container"
-                                                    : "bg-surface-container-high text-on-surface-variant"
-                                                    }`}>
-                                                    {item.virtualLiveSetlistType === "music" ? t("page.live.setlistTypeMusic") : t("page.live.setlistTypeMc")}
-                                                </span>
+                                                {mcKind && scriptExpanded && (
+                                                    <McScriptPanel
+                                                        state={scriptState}
+                                                        onRetry={() => loadMcScript(item)}
+                                                    />
+                                                )}
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </SectionCard>
                         )}
@@ -1123,5 +1268,116 @@ function SchedulesCard({ schedules, formatShortDate }: { schedules: ISchedule[],
                 </div>
             )}
         </SectionCard>
+    );
+}
+
+// MC script panel (inline expanded under a setlist entry)
+function McScriptPanel({ state, onRetry }: { state?: IMcScriptState; onRetry: () => void }) {
+    const { t } = useI18n();
+
+    if (!state || state.status === "loading") {
+        return (
+            <div className="mt-3 ml-11 flex items-center justify-center rounded-md3-lg bg-surface-container px-3 py-6">
+                <LoadingIndicator size={28} />
+            </div>
+        );
+    }
+
+    if (state.status === "error") {
+        return (
+            <div className="mt-3 ml-11 rounded-md3-lg bg-error-container px-3 py-4 text-center">
+                <p className="type-body-m text-on-error-container">{t("page.live.setlistScriptLoadError")}</p>
+                <Button variant="tonal" size="s" icon={mdRefresh} onClick={onRetry} className="mt-2">
+                    {t("common.action.retry")}
+                </Button>
+            </div>
+        );
+    }
+
+    const lines = state.lines ?? [];
+    if (lines.length === 0) {
+        return (
+            <div className="mt-3 ml-11 rounded-md3-lg bg-surface-container px-3 py-4 text-center">
+                <p className="type-body-m text-on-surface-variant">{t("page.live.setlistScriptEmpty")}</p>
+            </div>
+        );
+    }
+
+    return (
+        <div className="mt-3 ml-11 max-h-[480px] space-y-3 overflow-y-auto rounded-md3-lg bg-surface-container px-3 py-3">
+            {lines.map((line, lineIndex) => (
+                <McScriptLineRow key={lineIndex} line={line} />
+            ))}
+        </div>
+    );
+}
+
+function McScriptAvatar({ character, compact = false }: { character?: IMcCharacterInfo | null; compact?: boolean }) {
+    const dimension = compact ? "h-6 w-6" : "h-9 w-9";
+    const characterId = character?.characterId ?? 0;
+    const iconUrl = characterId > 0 && characterId <= 26 ? getCharacterIconUrl(characterId) : null;
+    const badgeFile = character?.unitField ? UNIT_ICON_FILES[UNIT_FIELD_TO_ID[character.unitField]] : undefined;
+
+    return (
+        <div className="relative shrink-0">
+            {iconUrl ? (
+                <img
+                    src={iconUrl}
+                    alt={character?.name ?? ""}
+                    className={cn(dimension, "rounded-full bg-surface-container-high object-cover")}
+                />
+            ) : (
+                <div className={cn(dimension, "flex items-center justify-center rounded-full bg-surface-container-highest")}>
+                    <span className={compact ? "type-label-s text-on-surface-variant" : "type-title-s text-on-surface-variant"}>
+                        {(character?.name ?? "?").charAt(0)}
+                    </span>
+                </div>
+            )}
+            {iconUrl && badgeFile && (
+                <div
+                    className={cn(
+                        "absolute -bottom-0.5 -right-0.5 flex items-center justify-center rounded-full bg-surface-container-highest shadow-elev-1",
+                        compact ? "h-3.5 w-3.5" : "h-4 w-4"
+                    )}
+                >
+                    <Image
+                        src={`/data/icon/${badgeFile}`}
+                        alt=""
+                        width={compact ? 10 : 12}
+                        height={compact ? 10 : 12}
+                        className="object-contain"
+                        unoptimized
+                    />
+                </div>
+            )}
+        </div>
+    );
+}
+
+function McScriptLineRow({ line }: { line: IMcScriptLine }) {
+    const { t } = useI18n();
+
+    if (line.kind !== "talk") {
+        const name = line.character?.name ?? "???";
+        const label = line.kind === "spawn"
+            ? t("page.live.setlistScriptSpawn", { name })
+            : t("page.live.setlistScriptUnspawn", { name });
+        return (
+            <div className="flex items-center gap-2 py-0.5">
+                <McScriptAvatar character={line.character} compact />
+                <Icon path={line.kind === "spawn" ? mdLogin : mdLogout} size={14} className="shrink-0 text-on-surface-variant" />
+                <span className="type-label-m text-on-surface-variant">{label}</span>
+            </div>
+        );
+    }
+
+    return (
+        <div className="flex items-start gap-2.5">
+            <McScriptAvatar character={line.character} />
+            <div className="min-w-0 flex-1">
+                <p className="type-label-m text-on-surface-variant">{line.character?.name ?? "???"}</p>
+                <p className="whitespace-pre-wrap type-body-m text-on-surface">{line.text}</p>
+            </div>
+        </div>
     );
 }

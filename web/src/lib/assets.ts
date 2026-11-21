@@ -410,6 +410,11 @@ export function getScenarioJsonUrl(scenarioPath: string, source: AssetSourceType
     return buildJsonAssetUrl(source, scenarioPath);
 }
 
+/** Virtual live MC script dump (`mc` → scenario asset, `mc_timeline`/`virtual_message` → timeline dump). */
+export function getVirtualLiveMcUrl(mcType: "scenario" | "timeline", assetbundleName: string, source: AssetSourceType = "main-jp"): string {
+    return buildRawAssetUrl(source, `virtual_live/mc/${mcType}/${assetbundleName}/${assetbundleName}.json`);
+}
+
 export function getBackgroundImageUrl(bgName: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `scenario/background/${bgName}/${bgName}`);
 }
