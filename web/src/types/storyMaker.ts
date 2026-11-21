@@ -61,6 +61,12 @@ export interface BackgroundStep {
     transition: BackgroundTransition;
 }
 
+/** Persistent top-left location banner (`PlaceInfo`). Empty string clears it. */
+export interface PlaceStep {
+    op: "place";
+    text: string;
+}
+
 export interface AppearStep {
     op: "appear";
     cast: string;
@@ -114,7 +120,7 @@ export interface NarrationStep {
     body: string;
 }
 
-/** A place / time caption. */
+/** Centered scene caption / time jump (`ScenarioTelop`, waits for tap). */
 export interface TelopStep {
     op: "telop";
     body: string;
@@ -169,13 +175,13 @@ export interface JumpStep {
 }
 
 export type StoryOp =
-    | BackgroundStep | AppearStep | MoveStep | HideStep | PoseStep | TalkStep | NarrationStep | TelopStep
+    | BackgroundStep | PlaceStep | AppearStep | MoveStep | HideStep | PoseStep | TalkStep | NarrationStep | TelopStep
     | EffectStep | BgmStep | SeStep | ChoiceStep | LabelStep | JumpStep;
 
 export type StoryOpName = StoryOp["op"];
 
 export const STORY_OPS = [
-    "background", "appear", "move", "hide", "pose", "talk", "narration", "telop",
+    "background", "place", "appear", "move", "hide", "pose", "talk", "narration", "telop",
     "effect", "bgm", "se", "choice", "label", "jump",
 ] as const satisfies readonly StoryOpName[];
 
@@ -183,6 +189,9 @@ export const STORY_OPS = [
 export type StoryStep = StoryOp & { id: string };
 
 export type StoryStepOf<T extends StoryOpName> = Extract<StoryStep, { op: T }>;
+
+/** A `place` step with its stable id (`{ id: string; op: "place"; text: string }`). */
+export type StoryPlaceStep = StoryStepOf<"place">;
 
 export interface StoryDocument {
     format: typeof STORY_FORMAT;

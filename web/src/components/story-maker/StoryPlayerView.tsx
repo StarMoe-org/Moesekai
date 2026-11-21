@@ -1,16 +1,17 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
-    Banner, Button, IconButton, SideSheet, Slider, Surface, cn,
+    Banner, Button, IconButton, LoadingIndicator, SideSheet, Slider, Surface, cn,
 } from "@/components/md3";
 import {
-    mdAutoplay, mdFullscreen, mdFullscreenExit, mdHistory, mdPlayArrowFill, mdReplay, mdSkipNext, mdSkipPrevious,
+    mdAutoplay, mdClose, mdFullscreen, mdFullscreenExit, mdHistory, mdPlayArrowFill, mdReplay, mdSkipNext, mdSkipPrevious,
     mdVisibility, mdVisibilityOff, mdVolumeOff, mdVolumeUp,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { AssetLine } from "@/lib/assets";
 import { live2dSources } from "@/lib/live2dViewer/config";
+import { md3EffectsFast, reducedMotionFade } from "@/lib/motion";
 import { storyBgmUrl, storySeUrl, storyVoiceUrl } from "@/lib/storyMaker/assets";
 import { speakerName } from "@/lib/storyMaker/document";
 import { STORY_FADE_SECONDS } from "@/lib/storyMaker/limits";
@@ -21,6 +22,7 @@ import { StoryStageView } from "./StoryStageView";
 import { useStoryAudio } from "./useStoryAudio";
 import { useStoryModels } from "./useStoryModels";
 import { useStoryStage } from "./useStoryStage";
+import { useStoryUiKit } from "./useStoryUiKit";
 
 interface PlaybackBeat {
     path: number[];
@@ -49,8 +51,9 @@ const CHAR_INTERVAL_MS = 28;
 
 /**
  * Interactive visual-novel player for a `moesekai-story/1` document: runs step sequences with
- * Live2D stage sync, typewriter text, lip-flap, choices, BGM/SE/voice audio, AUTO mode, seek,
- * previous/next navigation, backlog drawer, and graceful fallback without WebGPU/`stage.js`.
+ * Live2D stage sync, authentic 1920x1080 in-game scenario UI overlay, typewriter text, lip-flap,
+ * choices, BGM/SE/voice audio, AUTO mode, seek, previous/next navigation, in-game quick menu,
+ * backlog drawer, and graceful fallback without WebGPU/`stage.js`.
  */
 export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) {
     const { t } = useI18n();
@@ -58,6 +61,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
     const containerRef = useRef<HTMLDivElement>(null);
 
     const { models } = useStoryModels(doc.region);
+    const { kit: uiKit, status: uiKitStatus } = useStoryUiKit(doc.region);
     const library = useMemo(() => live2dSources(doc.region).library, [doc.region]);
     const {
         hostRef: stageHostRef,
@@ -82,6 +86,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
     const [running, setRunning] = useState(false);
     const [autoPlay, setAutoPlay] = useState(false);
     const [uiHidden, setUiHidden] = useState(false);
+    const [menuOpen, setMenuOpen] = useState(false);
     const [backlogOpen, setBacklogOpen] = useState(false);
     const [fullscreen, setFullscreen] = useState(false);
     const [fadeSeconds, setFadeSeconds] = useState<number>(STORY_FADE_SECONDS);
@@ -242,6 +247,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                 case "choice":
                     void applyStage(state, { instant: false });
                     break;
+                case "place":
                 case "label":
                 case "jump":
                     break;
@@ -259,6 +265,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
         setStageTalking(null);
         setAutoPlay(false);
         setUiHidden(false);
+        setMenuOpen(false);
         if (doc.steps.length === 0) {
             playGenRef.current += 1;
             setHistory([]);
@@ -323,6 +330,10 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
 
     /** Advance one beat (or complete typing / skip running transition first). */
     const handleAdvance = useCallback(() => {
+        if (menuOpen) {
+            setMenuOpen(false);
+            return;
+        }
         if (uiHidden) {
             setUiHidden(false);
             return;
@@ -343,7 +354,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
         if (step?.op === "choice") return;
         const nextRun = advance(doc, beat.at, undefined, labels);
         void executeRun(current, stageStateRef.current, nextRun);
-    }, [doc, executeRun, fullDialogueBody.length, isTyping, labels, running, snapCurrentRun, uiHidden]);
+    }, [doc, executeRun, fullDialogueBody.length, isTyping, labels, menuOpen, running, snapCurrentRun, uiHidden]);
 
     /** Pick an option on a choice step. */
     const handleChoose = useCallback((optionId: string, optionText: string) => {
@@ -402,7 +413,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
 
     /** AUTO-advance timer. */
     useEffect(() => {
-        if (!autoPlay || running || isTyping || voicePending || backlogOpen || currentChoice) return;
+        if (!autoPlay || running || isTyping || voicePending || backlogOpen || menuOpen || currentChoice) return;
         if (!latestBeat || latestBeat.stop !== "block") return;
         const bodyLen = stageState.dialogue?.body.length ?? stageState.narration?.body.length ?? stageState.telop?.body.length ?? 0;
         const delay = Math.max(1200, Math.min(4500, bodyLen * 60 + 800));
@@ -410,9 +421,9 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
             handleAdvance();
         }, delay);
         return () => window.clearTimeout(timer);
-    }, [autoPlay, backlogOpen, currentChoice, handleAdvance, isTyping, latestBeat, running, stageState, voicePending]);
+    }, [autoPlay, backlogOpen, currentChoice, handleAdvance, isTyping, latestBeat, menuOpen, running, stageState, voicePending]);
 
-    /** Keyboard shortcuts: Space/Enter advance, arrows prev/next, 1-4 choices, Escape closes UI hide. */
+    /** Keyboard shortcuts: Space/Enter advance, arrows prev/next, 1-4 choices, Escape closes menu/UI hide. */
     useEffect(() => {
         const onKeyDown = (event: KeyboardEvent) => {
             if (backlogOpen) return;
@@ -420,6 +431,19 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
             if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.tagName === "SELECT" || target.isContentEditable)) {
                 return;
             }
+            if (event.key === "Escape") {
+                if (menuOpen) {
+                    event.preventDefault();
+                    setMenuOpen(false);
+                    return;
+                }
+                if (uiHidden) {
+                    event.preventDefault();
+                    setUiHidden(false);
+                    return;
+                }
+            }
+            if (menuOpen) return;
             if (event.key === " " || event.key === "Enter") {
                 if (target?.tagName === "BUTTON") return;
                 event.preventDefault();
@@ -430,19 +454,18 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
             } else if (event.key === "ArrowLeft") {
                 event.preventDefault();
                 handlePrevious();
-            } else if (event.key === "Escape" && uiHidden) {
-                setUiHidden(false);
             } else if (currentChoice && /^[1-4]$/.test(event.key)) {
                 const option = currentChoice.options[Number(event.key) - 1];
                 if (option) {
                     event.preventDefault();
-                    handleChoose(option.id, option.text);
+                    if (uiKit?.decideSoundUrl) playSe(uiKit.decideSoundUrl);
+                    handleChoose(option.id, option.text || t("page.storyMaker.player.emptyOption"));
                 }
             }
         };
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
-    }, [backlogOpen, currentChoice, handleAdvance, handleChoose, handlePrevious, uiHidden]);
+    }, [backlogOpen, currentChoice, handleAdvance, handleChoose, handlePrevious, menuOpen, playSe, t, uiHidden, uiKit?.decideSoundUrl]);
 
     /** Track fullscreen state. */
     useEffect(() => {
@@ -497,12 +520,19 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
             : 0;
 
     const displayState: StoryStageState = uiHidden
-        ? { ...stageState, dialogue: null, narration: null, telop: null }
+        ? { ...stageState, place: null, dialogue: null, narration: null, telop: null }
         : stageState;
 
     const ended = !running && latestBeat?.stop === "end";
     const looped = !running && latestBeat?.stop === "loop";
     const emptyStory = doc.steps.length === 0;
+    const showEndSign = !uiHidden && !running && !isTyping && !autoPlay && !currentChoice && Boolean(stageState.dialogue);
+    const uiKitLabel = uiKitStatus === "ready"
+        ? t("page.storyMaker.player.uiKitGame")
+        : uiKitStatus === "loading"
+            ? t("page.storyMaker.player.uiKitLoading")
+            : t("page.storyMaker.player.uiKitFallback");
+    const quickMenuTransition = reduced ? reducedMotionFade : md3EffectsFast;
 
     return (
         <div className="space-y-3">
@@ -539,37 +569,171 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                         problems={stageProblems}
                         loadingActors={loadingActors}
                         onRetry={retryStage}
+                        uiKit={uiKit}
+                        uiHidden={uiHidden}
                         dialogueText={uiHidden ? undefined : displayedDialogue}
+                        autoPlay={autoPlay}
+                        showEndSign={showEndSign}
+                        choice={uiHidden ? null : currentChoice}
+                        choiceInteractive={!uiHidden && Boolean(currentChoice)}
+                        onChoose={handleChoose}
+                        onChoiceSound={playSe}
+                        showMenuButton={!uiHidden && !emptyStory}
+                        menuOpen={menuOpen}
+                        onMenuClick={() => setMenuOpen(open => !open)}
+                        animateCinemascope
                         flash={flash}
                         fadeSeconds={fadeSeconds}
                         compactStatus
-                        onClick={currentChoice || ended || emptyStory ? undefined : handleAdvance}
-                        className={cn(!currentChoice && !ended && !emptyStory && "cursor-pointer")}
+                        onClick={currentChoice || ended || emptyStory || menuOpen ? undefined : handleAdvance}
+                        className={cn(!currentChoice && !ended && !emptyStory && !menuOpen && "cursor-pointer")}
                     >
-                        {!uiHidden && currentChoice && (
-                            <div
-                                className="absolute inset-0 z-[25] flex flex-col items-center justify-center gap-2.5 bg-scrim/32 p-[5%]"
-                                onClick={event => event.stopPropagation()}
-                            >
-                                <div className="flex w-full max-w-md flex-col gap-2">
-                                    {currentChoice.options.map((option, idx) => (
-                                        <button
-                                            key={option.id}
-                                            type="button"
-                                            onClick={() => handleChoose(option.id, option.text || t("page.storyMaker.player.emptyOption"))}
-                                            className="glass-thick state-layer focus-ring flex items-center gap-3 rounded-md3-lg px-4 py-3 text-left text-on-surface"
-                                        >
-                                            <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary text-on-primary type-label-m">
-                                                {idx + 1}
+                        <AnimatePresence>
+                            {!uiHidden && menuOpen && (
+                                <motion.div
+                                    key="game-quick-menu"
+                                    role="dialog"
+                                    aria-modal="true"
+                                    aria-label={t("page.storyMaker.player.menuTitle")}
+                                    className="absolute inset-0 z-[28] flex items-center justify-center bg-scrim/45 p-3 sm:p-5"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    transition={quickMenuTransition}
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setMenuOpen(false);
+                                    }}
+                                >
+                                    <div
+                                        className="glass-thick max-h-full w-full max-w-md overflow-y-auto rounded-md3-xl p-4 text-on-surface"
+                                        onClick={event => event.stopPropagation()}
+                                    >
+                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                            <div className="min-w-0">
+                                                <p className="truncate type-title-m text-on-surface">
+                                                    {t("page.storyMaker.player.menuTitle")}
+                                                </p>
+                                                {uiKitStatus !== "idle" && (
+                                                    <span className="mt-0.5 inline-flex items-center gap-1.5 type-label-s text-on-surface-variant">
+                                                        {uiKitStatus === "loading" ? (
+                                                            <LoadingIndicator size={12} />
+                                                        ) : (
+                                                            <span
+                                                                aria-hidden
+                                                                className={cn(
+                                                                    "inline-block size-2 rounded-full",
+                                                                    uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
+                                                                )}
+                                                            />
+                                                        )}
+                                                        <span>{uiKitLabel}</span>
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <IconButton
+                                                size="s"
+                                                icon={mdClose}
+                                                label={t("page.storyMaker.player.menuClose")}
+                                                onClick={() => setMenuOpen(false)}
+                                            />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                            <Button
+                                                size="s"
+                                                variant={autoPlay ? "filled" : "tonal"}
+                                                selected={autoPlay}
+                                                disabled={emptyStory || ended}
+                                                icon={mdAutoplay}
+                                                onClick={() => setAutoPlay(on => !on)}
+                                            >
+                                                {t("page.storyMaker.player.auto")}
+                                            </Button>
+                                            <Button
+                                                size="s"
+                                                variant="tonal"
+                                                icon={mdHistory}
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    setBacklogOpen(true);
+                                                }}
+                                            >
+                                                {t("page.storyMaker.player.backlog")}
+                                            </Button>
+                                            <Button
+                                                size="s"
+                                                variant="tonal"
+                                                icon={mdVisibilityOff}
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    setUiHidden(true);
+                                                }}
+                                            >
+                                                {t("page.storyMaker.player.hideUi")}
+                                            </Button>
+                                            <Button
+                                                size="s"
+                                                variant="tonal"
+                                                icon={mdReplay}
+                                                disabled={emptyStory}
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    restart();
+                                                }}
+                                            >
+                                                {t("page.storyMaker.player.replay")}
+                                            </Button>
+                                            <Button
+                                                size="s"
+                                                variant={muted || volume === 0 ? "filled" : "tonal"}
+                                                selected={muted || volume === 0}
+                                                icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
+                                                onClick={() => setMuted(on => !on)}
+                                            >
+                                                {t(muted || volume === 0 ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
+                                            </Button>
+                                            <Button
+                                                size="s"
+                                                variant="tonal"
+                                                icon={fullscreen ? mdFullscreenExit : mdFullscreen}
+                                                onClick={() => {
+                                                    setMenuOpen(false);
+                                                    toggleFullscreen();
+                                                }}
+                                            >
+                                                {t(fullscreen ? "page.storyMaker.player.exitFullscreen" : "page.storyMaker.player.fullscreen")}
+                                            </Button>
+                                        </div>
+
+                                        <div className="mt-3 flex items-center gap-2 rounded-md3-md bg-surface-container/60 px-3 py-1.5">
+                                            <IconButton
+                                                size="xs"
+                                                icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
+                                                label={t(muted ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
+                                                onClick={() => setMuted(on => !on)}
+                                            />
+                                            <Slider
+                                                min={0}
+                                                max={1}
+                                                step={0.05}
+                                                value={muted ? 0 : volume}
+                                                onValueChange={(next) => {
+                                                    setMuted(false);
+                                                    setVolume(next);
+                                                }}
+                                                aria-label={t("page.storyMaker.player.volume")}
+                                                formatValue={val => `${Math.round(val * 100)}%`}
+                                                className="h-8 flex-1"
+                                            />
+                                            <span className="w-10 shrink-0 text-right font-mono type-label-s tabular-nums text-on-surface-variant">
+                                                {Math.round((muted ? 0 : volume) * 100)}%
                                             </span>
-                                            <span className="min-w-0 flex-1 type-title-s">
-                                                {option.text || t("page.storyMaker.player.emptyOption")}
-                                            </span>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {!uiHidden && (ended || emptyStory) && (
                             <div
@@ -680,7 +844,10 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                 size="s"
                                 icon={uiHidden ? mdVisibility : mdVisibilityOff}
                                 label={t(uiHidden ? "page.storyMaker.player.showUi" : "page.storyMaker.player.hideUi")}
-                                onClick={() => setUiHidden(hidden => !hidden)}
+                                onClick={() => {
+                                    setMenuOpen(false);
+                                    setUiHidden(hidden => !hidden);
+                                }}
                             />
                             <div className="flex items-center gap-1">
                                 <IconButton

@@ -13,6 +13,7 @@ export const STORY_LIMITS = {
     castName: 40,
     body: 500,
     telop: 120,
+    place: 80,
     labelName: 40,
     speakerName: 40,
     choiceOptions: { min: 2, max: 4 },

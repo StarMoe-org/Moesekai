@@ -5,7 +5,7 @@ import {
     type SelectOption,
 } from "@/components/md3";
 import {
-    mdAdd, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdVolumeUp,
+    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdVolumeUp,
 } from "@/components/md3/icons";
 import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
 import { useI18n } from "@/contexts/I18nContext";
@@ -187,6 +187,28 @@ export function StepInspector({
                             }}
                         />
                     </Dialog>
+                </div>
+            )}
+
+            {step.op === "place" && (
+                <div className="space-y-3">
+                    <TextField
+                        label={t("page.storyMaker.inspector.placeText")}
+                        value={step.text}
+                        maxLength={STORY_LIMITS.place}
+                        placeholder={t("page.storyMaker.inspector.placePlaceholder")}
+                        supportingText={`${step.text.length}/${STORY_LIMITS.place} · ${t("page.storyMaker.inspector.placeHint")}`}
+                        onChange={event => patch(step, { text: event.target.value })}
+                    />
+                    <Button
+                        size="s"
+                        variant="tonal"
+                        icon={mdClose}
+                        disabled={step.text === ""}
+                        onClick={() => patch(step, { text: "" })}
+                    >
+                        {t("page.storyMaker.inspector.placeClear")}
+                    </Button>
                 </div>
             )}
 
@@ -459,7 +481,7 @@ export function StepInspector({
                     value={step.body}
                     maxLength={STORY_LIMITS.telop}
                     placeholder={t("page.storyMaker.inspector.telopPlaceholder")}
-                    supportingText={`${step.body.length}/${STORY_LIMITS.telop}`}
+                    supportingText={`${step.body.length}/${STORY_LIMITS.telop} · ${t("page.storyMaker.inspector.telopHint")}`}
                     onChange={event => patch(step, { body: event.target.value })}
                 />
             )}

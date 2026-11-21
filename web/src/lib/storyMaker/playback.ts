@@ -1,8 +1,8 @@
 /**
  * The playback planner: which steps run between two taps. A run starts at a step and goes on
- * through the steps that need no reader (backgrounds, actors, effects, sound, labels), following
- * jumps, until it reaches one that waits for the reader (a line, a narration, a caption, a choice)
- * or the end. A story that loops without ever waiting is cut off.
+ * through the steps that need no reader (backgrounds, place banners, actors, effects, sound,
+ * labels), following jumps, until it reaches one that waits for the reader (a line, a narration,
+ * a center telop caption, a choice) or the end. A story that loops without ever waiting is cut off.
  */
 import type { StoryDocument, StoryOpName } from "../../types/storyMaker.ts";
 

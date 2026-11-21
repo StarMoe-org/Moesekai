@@ -187,6 +187,10 @@ function checkStep(checker: Checker, raw: Raw, path: string, id: string): StoryS
             const transition = checker.oneOf(raw, "transition", path, BACKGROUND_TRANSITIONS, "fade");
             return transition ? done({ id, op, name, transition }) : undefined;
         }
+        case "place": {
+            const text = checker.string(raw, "text", path, STORY_LIMITS.place);
+            return text === undefined ? undefined : done({ id, op, text });
+        }
         case "appear": {
             const cast = castKey();
             const slot = checker.oneOf(raw, "slot", path, STORY_SLOTS, "center");

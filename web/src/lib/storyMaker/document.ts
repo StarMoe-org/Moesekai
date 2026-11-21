@@ -34,6 +34,7 @@ export function createStep<T extends StoryOpName>(op: T, doc: StoryDocument, cas
     const make = (): StoryStep => {
         switch (op) {
             case "background": return { id, op, name: null, transition: "fade" };
+            case "place": return { id, op, text: "" };
             case "appear": return { id, op, cast: cast ?? "", slot: "center", fade: true };
             case "move": return { id, op, cast: cast ?? "", slot: "left", duration: 0.5 };
             case "hide": return { id, op, cast: cast ?? "", fade: true };

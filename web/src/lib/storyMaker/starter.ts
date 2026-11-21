@@ -11,6 +11,7 @@ export interface StarterStoryStrings {
     author: string;
     ichikaName: string;
     sakiName: string;
+    placeOpening: string;
     telopOpening: string;
     lineIchikaGreeting: string;
     lineSakiReply: string;
@@ -25,7 +26,7 @@ export interface StarterStoryStrings {
     telopEnding: string;
 }
 
-/** A compact, valid demo story exercising backgrounds, cast, BGM, dialogue, choices, labels and effects. */
+/** A compact, valid demo story exercising backgrounds, place banner, telop, cast, BGM, dialogue, choices, labels, narration and effects. */
 export function createStarterStoryDocument(region: StoryRegion, strings: StarterStoryStrings): StoryDocument {
     return {
         format: STORY_FORMAT,
@@ -40,6 +41,7 @@ export function createStarterStoryDocument(region: StoryRegion, strings: Starter
         steps: [
             { id: "bg01", op: "background", name: "bg_a000001", transition: "fade" },
             { id: "bgm01", op: "bgm", action: "play", name: "bgm00001", volume: 0.7 },
+            { id: "pl01", op: "place", text: strings.placeOpening },
             { id: "tl01", op: "telop", body: strings.telopOpening },
             { id: "ap01", op: "appear", cast: "ichika", slot: "left", fade: true },
             { id: "tk01", op: "talk", cast: "ichika", body: strings.lineIchikaGreeting, lipSync: true },
@@ -61,6 +63,7 @@ export function createStarterStoryDocument(region: StoryRegion, strings: Starter
             { id: "mv02", op: "move", cast: "saki", slot: "center", duration: 0.5 },
             { id: "tk04", op: "talk", cast: "saki", body: strings.lineTea, lipSync: true },
             { id: "lb_end", op: "label", name: strings.labelEnding },
+            { id: "pl02", op: "place", text: "" },
             { id: "nr01", op: "narration", body: strings.narrationEnding },
             { id: "fx01", op: "effect", effect: "fadeOut", color: "white", duration: 0.8 },
             { id: "tl02", op: "telop", body: strings.telopEnding },

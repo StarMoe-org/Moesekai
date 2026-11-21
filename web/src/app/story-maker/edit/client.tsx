@@ -3,7 +3,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { useRouter, useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import {
-    Banner, Button, Dialog, EmptyState, IconButton, LoadingState, PageContainer, Snackbar, Surface, Tabs,
+    Banner, Button, Dialog, EmptyState, IconButton, LoadingIndicator, LoadingState, PageContainer, Snackbar, Surface, Tabs, cn,
 } from "@/components/md3";
 import {
     mdAdd, mdArrowBack, mdChat, mdChevronLeft, mdChevronRight, mdDownload, mdErrorFill,
@@ -18,6 +18,7 @@ import { StoryStageView } from "@/components/story-maker/StoryStageView";
 import { useStarterStory } from "@/components/story-maker/useStarterStory";
 import { useStoryModels } from "@/components/story-maker/useStoryModels";
 import { useStoryStage } from "@/components/story-maker/useStoryStage";
+import { useStoryUiKit } from "@/components/story-maker/useStoryUiKit";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
@@ -217,6 +218,7 @@ function StoryMakerEditContent() {
     );
 
     const { list: modelList, models, retry: retryModels } = useStoryModels(doc?.region ?? null);
+    const { kit: uiKit, status: uiKitStatus } = useStoryUiKit(doc?.region ?? null);
     const library = useMemo(() => (doc ? live2dSources(doc.region).library : null), [doc]);
     const {
         hostRef: stageHostRef,
@@ -344,6 +346,12 @@ function StoryMakerEditContent() {
     }
 
     const saveStatusLabel = t(`page.storyMaker.editor.saveStatus.${saveStatus}`);
+    const previewChoice = selectedStep?.op === "choice" ? selectedStep : null;
+    const uiKitBadgeLabel = uiKitStatus === "ready"
+        ? t("page.storyMaker.player.uiKitGame")
+        : uiKitStatus === "loading"
+            ? t("page.storyMaker.player.uiKitLoading")
+            : t("page.storyMaker.player.uiKitFallback");
 
     return (
         <PageContainer wide className="space-y-3 py-4 sm:py-5">
@@ -478,10 +486,15 @@ function StoryMakerEditContent() {
                         problems={stageProblems}
                         loadingActors={loadingActors}
                         onRetry={retryStage}
+                        uiKit={uiKit}
+                        showEndSign={Boolean(stageState.dialogue) && !previewChoice}
+                        choice={previewChoice}
+                        choiceInteractive={false}
+                        showMenuButton
                         flash={flash}
                     />
                     <Surface tone="low" radius="lg" className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                        <div className="flex items-center gap-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
                             <IconButton
                                 size="s"
                                 icon={mdChevronLeft}
@@ -499,6 +512,25 @@ function StoryMakerEditContent() {
                                 disabled={clampedSelected < 0 || clampedSelected >= doc.steps.length - 1}
                                 onClick={() => setSelectedIndex(idx => Math.min(doc.steps.length - 1, idx + 1))}
                             />
+                            {uiKitStatus !== "idle" && (
+                                <span
+                                    className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-1 type-label-s text-on-surface-variant"
+                                    title={uiKitBadgeLabel}
+                                >
+                                    {uiKitStatus === "loading" ? (
+                                        <LoadingIndicator size={12} />
+                                    ) : (
+                                        <span
+                                            aria-hidden
+                                            className={cn(
+                                                "inline-block size-2 rounded-full",
+                                                uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
+                                            )}
+                                        />
+                                    )}
+                                    <span>{uiKitBadgeLabel}</span>
+                                </span>
+                            )}
                         </div>
                         <div className="flex flex-wrap items-center gap-1.5">
                             <Button

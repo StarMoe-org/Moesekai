@@ -1,0 +1,572 @@
+/*
+ * Scoped Project SEKAI in-game scenario UI styles, bundled open story fonts,
+ * CSS fallbacks, and frame-accurate keyframes derived from `sse-render/src/native_ui.rs`.
+ *
+ * Fixed game colors (#000022, #444466, #ffffff, #a1f4eb) are intentionally hard-coded
+ * game asset colors rather than MD3 theme roles.
+ */
+
+@font-face {
+    font-family: "SekaiStoryBody";
+    src: url("/story-fonts/MPLUS1%5Bwght%5D.ttf") format("truetype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SekaiStoryBodyFill";
+    src: url("/story-fonts/SourceHanSansJP-Medium.otf") format("opentype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SekaiStoryName";
+    src: url("/story-fonts/MPLUS1%5Bwght%5D.ttf") format("truetype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+@font-face {
+    font-family: "SekaiStoryNameFill";
+    src: url("/story-fonts/SourceHanSansJP-Heavy.otf") format("opentype");
+    font-weight: 100 900;
+    font-style: normal;
+    font-display: swap;
+}
+
+/* ---- Keyframes derived from native_ui.rs & consts.rs ---- */
+
+/* `PageForward` clip (1.0833333 s looping bounce about bottom-centre pivot). */
+@keyframes sekai-page-forward {
+    0% {
+        transform: translateY(0px) scaleY(1);
+    }
+    10% {
+        transform: translateY(0.432px) scaleY(0.975);
+    }
+    20% {
+        transform: translateY(0px) scaleY(0.95);
+    }
+    30% {
+        transform: translateY(-0.48px) scaleY(1.025);
+    }
+    40% {
+        transform: translateY(-1px) scaleY(1.1);
+    }
+    50% {
+        transform: translateY(-2.95px) scaleY(1.0926);
+    }
+    60% {
+        transform: translateY(-5px) scaleY(1.0741);
+    }
+    70% {
+        transform: translateY(-5.549px) scaleY(1.05);
+    }
+    80% {
+        transform: translateY(-5.056px) scaleY(1.0259);
+    }
+    90% {
+        transform: translateY(-3.539px) scaleY(1.0074);
+    }
+    100% {
+        transform: translateY(0px) scaleY(1);
+    }
+}
+
+/* `AutoSignal` icon `TweenAlpha` (visible for 0.50276244 s of each 1 s loop). */
+@keyframes sekai-auto-blink {
+    0%, 50.27% {
+        opacity: 1;
+    }
+    50.28%, 100% {
+        opacity: 0;
+    }
+}
+
+/* `ac_scenario_telop_v2_01` base band scaleX (about 2% left pivot) & alpha (0.3333 s). */
+@keyframes sekai-telop-band-show {
+    0% {
+        opacity: 0;
+        transform: scaleX(0);
+    }
+    10% {
+        opacity: 0.05516;
+        transform: scaleX(0.25391);
+    }
+    20% {
+        opacity: 0.21668;
+        transform: scaleX(0.48991);
+    }
+    30% {
+        opacity: 0.4419;
+        transform: scaleX(0.67495);
+    }
+    40% {
+        opacity: 0.66336;
+        transform: scaleX(0.8125);
+    }
+    50% {
+        opacity: 0.83532;
+        transform: scaleX(0.90873);
+    }
+    60% {
+        opacity: 0.94396;
+        transform: scaleX(0.9685);
+    }
+    75% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+    100% {
+        opacity: 1;
+        transform: scaleX(1);
+    }
+}
+
+/* `ac_scenario_telop_v2_01` text alpha & slide from -30px -> 0 (0.3333 s). */
+@keyframes sekai-telop-text-show {
+    0%, 15% {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    20% {
+        opacity: 0.01159;
+        transform: translateX(-29.7px);
+    }
+    30% {
+        opacity: 0.1365;
+        transform: translateX(-27.527px);
+    }
+    40% {
+        opacity: 0.54934;
+        transform: translateX(-23.745px);
+    }
+    50% {
+        opacity: 0.90005;
+        transform: translateX(-18.924px);
+    }
+    60% {
+        opacity: 0.94093;
+        transform: translateX(-13.678px);
+    }
+    75% {
+        opacity: 0.97981;
+        transform: translateX(-6.259px);
+    }
+    90% {
+        opacity: 0.99723;
+        transform: translateX(-1.148px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0px);
+    }
+}
+
+/* `ac_scenario_telop_v2_02` shared hide alpha curve (0.3333 s). */
+@keyframes sekai-telop-hide {
+    0% {
+        opacity: 1;
+    }
+    20% {
+        opacity: 0.96224;
+    }
+    40% {
+        opacity: 0.8045;
+    }
+    50% {
+        opacity: 0.6446;
+    }
+    60% {
+        opacity: 0.42369;
+    }
+    75% {
+        opacity: 0.1352;
+    }
+    90% {
+        opacity: 0.01686;
+    }
+    100% {
+        opacity: 0;
+    }
+}
+
+/* `PlaceInfo` slide-in (`DOAnchorPos(0, 0.2)` OutQuart from hiddenX -578.22px). */
+@keyframes sekai-place-slide-in {
+    0% {
+        opacity: 0;
+        transform: translateX(-578.22px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0px);
+    }
+}
+
+/* `TalkWindow.Open` linear fade-in (0.2 s). */
+@keyframes sekai-talk-open {
+    0% {
+        opacity: 0;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* `AnswerChoiceDialog` open scale animation (0.125 s linear). */
+@keyframes sekai-choice-open {
+    0% {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* ---- Scoped `.sekai-game-ui` virtual 1920x1080 stage layer ---- */
+
+.sekai-game-ui {
+    --sekai-font-body: "SekaiStoryBody", "SekaiStoryBodyFill", "Noto Sans JP", "Hiragino Sans", sans-serif;
+    --sekai-font-name: "SekaiStoryName", "SekaiStoryNameFill", "Noto Sans JP", "Hiragino Sans", sans-serif;
+    --sekai-window-rgb: 0, 0, 34;
+    --sekai-band-rgba: rgba(68, 68, 102, 0.8);
+    --sekai-ink-dark: #444466;
+    --sekai-ink-name: #ebebf2;
+    --sekai-ink-white: #ffffff;
+    --sekai-glow-mint: #a1f4eb;
+    --sekai-outline-shadow:
+        0 2px 4px rgba(68, 68, 102, 0.65),
+        0 0 2px rgba(68, 68, 102, 0.6);
+
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 1920px;
+    height: 1080px;
+    transform-origin: top left;
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+    color: var(--sekai-ink-white);
+    font-family: var(--sekai-font-body);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+.sekai-game-ui-font-body {
+    font-family: var(--sekai-font-body);
+    font-weight: 460;
+    font-variation-settings: "wght" 460;
+}
+
+.sekai-game-ui-font-name {
+    font-family: var(--sekai-font-name);
+    font-weight: 820;
+    font-variation-settings: "wght" 820;
+}
+
+/* ---- TalkWindow ---- */
+
+.sekai-game-ui-talk-enter {
+    animation: sekai-talk-open 0.2s linear forwards;
+}
+
+/* Authentic CSS fallback matching `bg_story_adv.png` tinted #000022. */
+.sekai-game-ui-talk-window-fallback {
+    background: linear-gradient(
+        180deg,
+        rgba(var(--sekai-window-rgb), 0) 0%,
+        rgba(var(--sekai-window-rgb), 0.72) 10%,
+        rgba(var(--sekai-window-rgb), 0.86) 24%,
+        rgba(var(--sekai-window-rgb), 0.92) 100%
+    );
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* Authentic CSS fallback matching `bg_base_half_r8_wh` rotated +90 deg, alpha 0.6 -> 0. */
+.sekai-game-ui-name-bar-fallback {
+    border-radius: 8px 0 0 8px;
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.6) 0%,
+        rgba(255, 255, 255, 0) 100%
+    );
+}
+
+.sekai-game-ui-talk-name {
+    font-family: var(--sekai-font-name);
+    font-weight: 820;
+    font-variation-settings: "wght" 820;
+    color: var(--sekai-ink-name);
+    text-shadow: var(--sekai-outline-shadow);
+    line-height: 1;
+}
+
+.sekai-game-ui-talk-words {
+    font-family: var(--sekai-font-body);
+    font-weight: 460;
+    font-variation-settings: "wght" 460;
+    color: var(--sekai-ink-white);
+    text-shadow: var(--sekai-outline-shadow);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.sekai-game-ui-end-sign {
+    transform-origin: center bottom;
+    animation: sekai-page-forward 1.0833333s linear infinite;
+    filter: drop-shadow(0 2px 6px rgba(51, 221, 187, 0.45));
+}
+
+.sekai-game-ui-auto-bg-fallback {
+    border-radius: 9999px;
+    background: var(--sekai-band-rgba);
+}
+
+.sekai-game-ui-auto-icon {
+    animation: sekai-auto-blink 1s steps(1, end) infinite;
+}
+
+.sekai-game-ui-auto-text {
+    font-family: var(--sekai-font-name);
+    font-weight: 820;
+    font-variation-settings: "wght" 820;
+    font-size: 32px;
+    line-height: 1;
+    letter-spacing: -4px;
+    color: var(--sekai-ink-white);
+}
+
+/* ---- PlaceInfo (top-left location band) ---- */
+
+/* 152px left ramp / 580px solid / 152px right ramp across 884px total span. */
+.sekai-game-ui-place-band {
+    background: linear-gradient(
+        90deg,
+        rgba(68, 68, 102, 0) 0%,
+        rgba(68, 68, 102, 0.8) 17.1946%,
+        rgba(68, 68, 102, 0.8) 82.8054%,
+        rgba(68, 68, 102, 0) 100%
+    );
+}
+
+.sekai-game-ui-place-enter {
+    animation: sekai-place-slide-in 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.sekai-game-ui-place-text {
+    font-family: var(--sekai-font-body);
+    font-weight: 460;
+    font-variation-settings: "wght" 460;
+    font-size: 40px;
+    line-height: 1;
+    color: var(--sekai-ink-white);
+    text-shadow: 0 2px 4px rgba(0, 0, 24, 0.35);
+}
+
+/* ---- ScenarioTelop (center scene caption band) ---- */
+
+/* 260px left ramp / 520px solid / 260px right ramp across 1040px total span. */
+.sekai-game-ui-telop-band {
+    background: linear-gradient(
+        90deg,
+        rgba(68, 68, 102, 0) 0%,
+        rgba(68, 68, 102, 0.8) 25%,
+        rgba(68, 68, 102, 0.8) 75%,
+        rgba(68, 68, 102, 0) 100%
+    );
+    transform-origin: 2% 50%;
+}
+
+.sekai-game-ui-telop-band-show {
+    animation: sekai-telop-band-show 0.33333334s linear forwards;
+}
+
+.sekai-game-ui-telop-text-show {
+    animation: sekai-telop-text-show 0.33333334s linear forwards;
+}
+
+.sekai-game-ui-telop-hide {
+    animation: sekai-telop-hide 0.33333334s linear forwards;
+}
+
+.sekai-game-ui-telop-text {
+    font-family: var(--sekai-font-body);
+    font-weight: 460;
+    font-variation-settings: "wght" 460;
+    font-size: 44px;
+    line-height: 1.15;
+    color: var(--sekai-ink-white);
+    text-shadow: 0 2px 6px rgba(0, 0, 24, 0.35);
+}
+
+/* ---- ScenarioFullScreenTextDialog (Cinemascope narration) ---- */
+
+.sekai-game-ui-fst-veil {
+    background-color: rgba(0, 0, 0, 0.5);
+}
+
+.sekai-game-ui-fst-bar {
+    background-color: #000000;
+}
+
+.sekai-game-ui-fst-text {
+    font-family: var(--sekai-font-body);
+    font-weight: 460;
+    font-variation-settings: "wght" 460;
+    color: var(--sekai-ink-white);
+    text-shadow: 0 4px 6px rgba(0, 0, 0, 0.92);
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+/* ---- AnswerChoiceDialog ---- */
+
+.sekai-game-ui-choice-enter {
+    animation: sekai-choice-open 0.125s linear forwards;
+}
+
+.sekai-game-ui-choice-button {
+    position: absolute;
+    pointer-events: auto;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    outline: none;
+    transition: transform 0.1s ease;
+}
+
+.sekai-game-ui-choice-button:hover {
+    transform: scale(1.02);
+}
+
+.sekai-game-ui-choice-button:active,
+.sekai-game-ui-choice-button[data-pressed="true"] {
+    transform: scale(0.985);
+}
+
+.sekai-game-ui-choice-button:focus-visible {
+    outline: 4px solid var(--sekai-glow-mint);
+    outline-offset: 4px;
+    border-radius: 9999px;
+}
+
+.sekai-game-ui-choice-bg-fallback {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f5fa 100%);
+    border: 3px solid rgba(255, 255, 255, 0.95);
+    box-shadow:
+        0 6px 18px rgba(0, 0, 34, 0.28),
+        inset 0 -3px 0 rgba(68, 68, 102, 0.14);
+    transition: opacity 0.1s ease;
+}
+
+.sekai-game-ui-choice-glow-fallback {
+    position: absolute;
+    inset: -4px;
+    border-radius: 9999px;
+    background: radial-gradient(
+        ellipse at center,
+        rgba(161, 244, 235, 0.85) 0%,
+        rgba(161, 244, 235, 0.55) 70%,
+        rgba(161, 244, 235, 0) 100%
+    );
+    box-shadow: 0 0 24px rgba(161, 244, 235, 0.85);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+.sekai-game-ui-choice-button:hover .sekai-game-ui-choice-glow-fallback,
+.sekai-game-ui-choice-button:focus-visible .sekai-game-ui-choice-glow-fallback {
+    opacity: 0.45;
+}
+
+.sekai-game-ui-choice-button:active .sekai-game-ui-choice-glow-fallback,
+.sekai-game-ui-choice-button[data-pressed="true"] .sekai-game-ui-choice-glow-fallback {
+    opacity: 1;
+}
+
+.sekai-game-ui-choice-label {
+    position: relative;
+    z-index: 2;
+    font-family: var(--sekai-font-name);
+    font-weight: 820;
+    font-variation-settings: "wght" 820;
+    font-size: 32px;
+    line-height: 1.2;
+    color: var(--sekai-ink-dark);
+    padding: 0 24px;
+    text-align: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+    transition: color 0.1s ease;
+}
+
+.sekai-game-ui-choice-button[data-pressed="true"] .sekai-game-ui-choice-label {
+    color: var(--sekai-ink-white);
+    text-shadow: 0 1px 4px rgba(68, 68, 102, 0.55);
+}
+
+/* ---- UIPartsMenuButton (top-right circular menu button) ---- */
+
+.sekai-game-ui-menu-button {
+    position: absolute;
+    pointer-events: auto;
+    cursor: pointer;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    border-radius: 9999px;
+    transition: transform 0.1s ease, opacity 0.1s ease;
+}
+
+.sekai-game-ui-menu-button:hover {
+    transform: scale(1.04);
+}
+
+.sekai-game-ui-menu-button:active {
+    transform: scale(0.95);
+}
+
+.sekai-game-ui-menu-button:focus-visible {
+    outline: 4px solid var(--sekai-glow-mint);
+    outline-offset: 4px;
+}
+
+.sekai-game-ui-menu-bg-fallback {
+    position: absolute;
+    inset: 0;
+    border-radius: 9999px;
+    background: linear-gradient(180deg, #ffffff 0%, #f1f2f8 100%);
+    box-shadow:
+        0 4px 14px rgba(0, 0, 34, 0.25),
+        inset 0 -2px 0 rgba(68, 68, 102, 0.14);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sekai-game-ui-end-sign,
+    .sekai-game-ui-auto-icon,
+    .sekai-game-ui-telop-band-show,
+    .sekai-game-ui-telop-text-show,
+    .sekai-game-ui-telop-hide,
+    .sekai-game-ui-place-enter,
+    .sekai-game-ui-talk-enter,
+    .sekai-game-ui-choice-enter {
+        animation: none !important;
+    }
+}

@@ -1,6 +1,6 @@
 import {
-    mdAltRoute, mdAnimation, mdChat, mdImage, mdLabel, mdMood, mdMusicNote, mdNotes, mdPersonAdd, mdPersonRemove,
-    mdRedo, mdSwapHoriz, mdTitle, mdVolumeUp,
+    mdAltRoute, mdAnimation, mdChat, mdImage, mdLabel, mdMood, mdMusicNote, mdMyLocation, mdNotes, mdPersonAdd,
+    mdPersonRemove, mdRedo, mdSwapHoriz, mdTitle, mdVolumeUp,
 } from "@/components/md3/icons";
 import { speakerName } from "@/lib/storyMaker/document";
 import type { StoryDocument, StoryOpName, StoryStep } from "@/types/storyMaker";
@@ -10,6 +10,7 @@ type Translate = (key: string, values?: Record<string, string | number>) => stri
 /** The icon of each op. */
 export const STEP_ICONS: Record<StoryOpName, string> = {
     background: mdImage,
+    place: mdMyLocation,
     appear: mdPersonAdd,
     move: mdSwapHoriz,
     hide: mdPersonRemove,
@@ -28,7 +29,7 @@ export const STEP_ICONS: Record<StoryOpName, string> = {
 /** The ops in the "add step" menu, grouped as the menu shows them. */
 export const STEP_MENU: readonly (readonly StoryOpName[])[] = [
     ["talk", "narration", "telop", "choice"],
-    ["background", "appear", "move", "pose", "hide"],
+    ["background", "place", "appear", "move", "pose", "hide"],
     ["effect", "bgm", "se"],
     ["label", "jump"],
 ];
@@ -50,6 +51,7 @@ function labelName(doc: StoryDocument, id: string): string {
 export function stepSummary(t: Translate, doc: StoryDocument, step: StoryStep): string {
     switch (step.op) {
         case "background": return step.name ?? t("page.storyMaker.summary.noBackground");
+        case "place": return step.text.trim() ? step.text : t("page.storyMaker.summary.clearPlace");
         case "appear": return `${castName(doc, step.cast)} · ${t(`page.storyMaker.slot.${step.slot}`)}`;
         case "move": return `${castName(doc, step.cast)} → ${t(`page.storyMaker.slot.${step.slot}`)}`;
         case "hide": return castName(doc, step.cast);

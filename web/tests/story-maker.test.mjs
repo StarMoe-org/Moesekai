@@ -259,6 +259,100 @@ test("export file names are safe", () => {
     assert.equal(storyFileName(createStoryDocument("jp", ' a/b:c*?"<>| d ')), "abc-d.moesekai-story.json");
 });
 
+test("place step validates non-empty, empty clear, missing, and max length", () => {
+    const valid = createStoryDocument("jp", "Place test");
+    valid.steps.push(
+        { id: "p1", op: "place", text: "Miyamasuzaka Girls Academy" },
+        { id: "p2", op: "place", text: "" },
+    );
+    const okResult = validateStoryDocument(valid);
+    assert.equal(okResult.ok, true, JSON.stringify(okResult.ok ? [] : okResult.issues));
+    assert.equal(okResult.doc.steps[0].text, "Miyamasuzaka Girls Academy");
+    assert.equal(okResult.doc.steps[1].text, "");
+
+    const tooLong = createStoryDocument("jp", "Long place");
+    tooLong.steps.push({ id: "p1", op: "place", text: "x".repeat(STORY_LIMITS.place + 1) });
+    assert.deepEqual(validateStoryDocument(tooLong).issues[0], {
+        code: "tooLong",
+        path: "steps[0].text",
+        params: { max: STORY_LIMITS.place },
+    });
+
+    const missing = createStoryDocument("jp", "Missing place text");
+    missing.steps.push({ id: "p1", op: "place" });
+    assert.equal(validateStoryDocument(missing).issues[0].code, "fieldMissing");
+    assert.equal(validateStoryDocument(missing).issues[0].path, "steps[0].text");
+
+    const badType = createStoryDocument("jp", "Bad place type");
+    badType.steps.push({ id: "p1", op: "place", text: 123 });
+    assert.equal(validateStoryDocument(badType).issues[0].code, "fieldType");
+});
+
+test("place persists across talks and backgrounds, clears on empty text, and does not block playback", () => {
+    assert.equal(INITIAL_STAGE_STATE.place, null);
+    let doc = createStoryDocument("jp", "Place state");
+    doc = addCastMember(doc, { modelId: "v2_01ichika_casual", name: "Ichika", characterId: 1 });
+    const key = doc.cast[0].key;
+    const blankPlace = createStep("place", doc);
+    assert.equal(blankPlace.op, "place");
+    assert.equal(blankPlace.text, "");
+
+    doc.steps.push(
+        { id: "bg1", op: "background", name: "bg_a000001", transition: "fade" },
+        { id: "pl1", op: "place", text: "Classroom" },
+        { id: "ap1", op: "appear", cast: key, slot: "left", fade: true },
+        { id: "tk1", op: "talk", cast: key, body: "Hi!", lipSync: true },
+        { id: "bg2", op: "background", name: "bg_a000002", transition: "cut" },
+        { id: "mv1", op: "move", cast: key, slot: "center", duration: 0.5 },
+        { id: "tl1", op: "telop", body: "Later" },
+        { id: "tk2", op: "talk", cast: key, body: "Still here.", lipSync: true },
+        { id: "pl2", op: "place", text: "   " },
+        { id: "pl3", op: "place", text: "Rooftop" },
+        { id: "pl4", op: "place", text: "" },
+        { id: "nr1", op: "narration", body: "Sunset." },
+    );
+
+    // Playback runs right through background + place + appear into talk without stopping at place.
+    const first = runFrom(doc, 0);
+    assert.deepEqual(first, { path: [0, 1, 2, 3], stop: "block", at: 3 });
+
+    const atTalk1 = stageStateAt(doc, 3);
+    assert.equal(atTalk1.place, "Classroom");
+    assert.equal(atTalk1.dialogue?.body, "Hi!");
+
+    // Background, move, and telop preserve place; telop clears dialogue and is cleared by next talk.
+    assert.equal(stageStateAt(doc, 4).place, "Classroom");
+    assert.equal(stageStateAt(doc, 5).place, "Classroom");
+    const atTelop = stageStateAt(doc, 6);
+    assert.equal(atTelop.place, "Classroom");
+    assert.deepEqual(atTelop.telop, { stepId: "tl1", body: "Later" });
+    assert.equal(atTelop.dialogue, null);
+
+    const atTalk2 = stageStateAt(doc, 7);
+    assert.equal(atTalk2.place, "Classroom");
+    assert.equal(atTalk2.telop, null);
+    assert.equal(atTalk2.dialogue?.body, "Still here.");
+
+    // Whitespace-only place clears place without clearing dialogue or actors.
+    const clearedWs = stageStateAt(doc, 8);
+    assert.equal(clearedWs.place, null);
+    assert.equal(clearedWs.dialogue?.body, "Still here.");
+    assert.equal(clearedWs.actors.length, 1);
+
+    // Updating place sets new text without clearing dialogue or actors.
+    const updated = stageStateAt(doc, 9);
+    assert.equal(updated.place, "Rooftop");
+    assert.equal(updated.dialogue?.body, "Still here.");
+    assert.equal(updated.actors.length, 1);
+
+    // Playback runs through pl2 + pl3 + pl4 directly into narration.
+    const toNarration = advance(doc, 7);
+    assert.deepEqual(toNarration, { path: [8, 9, 10, 11], stop: "block", at: 11 });
+    const atNarration = stageStateAlong(doc, [...first.path, 4, 5, 6, 7, ...toNarration.path]);
+    assert.equal(atNarration.place, null);
+    assert.deepEqual(atNarration.narration, { stepId: "nr1", body: "Sunset." });
+});
+
 test("starter demo document passes strict validation and branches cleanly", () => {
     const starter = createStarterStoryDocument("jp", {
         title: "Demo",
@@ -266,7 +360,8 @@ test("starter demo document passes strict validation and branches cleanly", () =
         author: "Author",
         ichikaName: "Ichika",
         sakiName: "Saki",
-        telopOpening: "After school",
+        placeOpening: "Miyamasuzaka Girls Academy · Classroom",
+        telopOpening: "After-School Practice",
         lineIchikaGreeting: "Hi",
         lineSakiReply: "Hello",
         choicePractice: "Practice",
@@ -284,4 +379,16 @@ test("starter demo document passes strict validation and branches cleanly", () =
     const first = runFrom(starter, 0);
     assert.equal(first.stop, "block");
     assert.equal(starter.steps[first.at].op, "telop");
+    const firstState = stageStateAlong(starter, first.path);
+    assert.equal(firstState.place, "Miyamasuzaka Girls Academy · Classroom");
+    assert.equal(firstState.telop?.body, "After-School Practice");
+
+    const second = advance(starter, first.at);
+    const secondState = stageStateAlong(starter, [...first.path, ...second.path]);
+    assert.equal(secondState.place, "Miyamasuzaka Girls Academy · Classroom");
+    assert.equal(secondState.dialogue?.body, "Hi");
+    assert.equal(secondState.telop, null);
+
+    const endNarrationIndex = starter.steps.findIndex(step => step.op === "narration");
+    assert.equal(stageStateAt(starter, endNarrationIndex).place, null);
 });

@@ -20,6 +20,8 @@ export interface StoryActorState {
 
 export interface StoryStageState {
     background: string | null;
+    /** Persistent top-left location banner (`PlaceInfo`), or null when hidden. */
+    place: string | null;
     /** On stage, in the order they appeared (later on top). */
     actors: StoryActorState[];
     bgm: { name: string | null; volume: number };
@@ -34,6 +36,7 @@ export interface StoryStageState {
 
 export const INITIAL_STAGE_STATE: StoryStageState = {
     background: null,
+    place: null,
     actors: [],
     bgm: { name: null, volume: 1 },
     dialogue: null,
@@ -55,6 +58,8 @@ export function applyStep(state: StoryStageState, step: StoryStep, doc: StoryDoc
     switch (step.op) {
         case "background":
             return { ...next, background: step.name, dialogue: null, narration: null };
+        case "place":
+            return { ...next, place: step.text.trim() ? step.text : null };
         case "appear": {
             const actor: StoryActorState = {
                 cast: step.cast,

@@ -14,6 +14,7 @@ export function useStarterStory() {
         author: t("page.storyMaker.starter.author"),
         ichikaName: getCharacterName(t, 1),
         sakiName: getCharacterName(t, 2),
+        placeOpening: t("page.storyMaker.starter.placeOpening"),
         telopOpening: t("page.storyMaker.starter.telopOpening"),
         lineIchikaGreeting: t("page.storyMaker.starter.lineIchikaGreeting"),
         lineSakiReply: t("page.storyMaker.starter.lineSakiReply"),
