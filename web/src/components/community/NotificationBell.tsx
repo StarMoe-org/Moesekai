@@ -26,9 +26,27 @@ import type { CommunityNotification } from "@/types/community";
 
 function notificationHref(item: CommunityNotification): string {
     if (item.post_id) return `/community/post/${item.post_id}`;
-    if (item.target_type === "card" && item.target_id) return `/cards/${item.target_id}`;
-    if (item.target_type === "post" && item.target_id) return `/community/post/${item.target_id}`;
-    return "/community";
+    if (!item.target_id) return "/community";
+    switch (item.target_type) {
+        case "card":
+            return `/cards/${item.target_id}`;
+        case "music":
+            return `/music/${item.target_id}`;
+        case "event":
+            return `/events/${item.target_id}`;
+        case "gacha":
+            return `/gacha/${item.target_id}`;
+        case "costume":
+            return `/costumes/${item.target_id}`;
+        case "character":
+            return `/character/${item.target_id}`;
+        case "guide":
+            return `/guides/${encodeURIComponent(item.target_id)}`;
+        case "post":
+            return `/community/post/${item.target_id}`;
+        default:
+            return "/community";
+    }
 }
 
 export function NotificationBell() {

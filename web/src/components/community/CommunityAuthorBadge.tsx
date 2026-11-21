@@ -10,6 +10,9 @@ import {
     type AuthorSummary,
     type CardOwnershipBadge,
 } from "@/types/community";
+import CommunityAvatar, { safeAvatarUrl } from "./CommunityAvatar";
+
+export { safeAvatarUrl };
 
 interface CommunityAuthorBadgeProps {
     author: AuthorSummary;
@@ -17,30 +20,6 @@ interface CommunityAuthorBadgeProps {
     timestamp?: string;
     compact?: boolean;
     className?: string;
-}
-
-function getInitials(name: string): string {
-    const trimmed = name.trim();
-    if (!trimmed) return "?";
-    return Array.from(trimmed)[0]?.toUpperCase() ?? "?";
-}
-
-export function safeAvatarUrl(url: string | null | undefined): string | null {
-    if (!url) return null;
-    const trimmed = url.trim();
-    if (!trimmed) return null;
-    if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
-        return trimmed;
-    }
-    try {
-        const parsed = new URL(trimmed);
-        if (parsed.protocol === "https:" || parsed.protocol === "http:") {
-            return parsed.toString();
-        }
-    } catch {
-        // Reject malformed or non-http(s) URLs
-    }
-    return null;
 }
 
 export function CommunityAuthorBadge({
@@ -51,30 +30,20 @@ export function CommunityAuthorBadge({
     className,
 }: CommunityAuthorBadgeProps) {
     const { t, formatDate } = useI18n();
-    const avatarSrc = author.is_deleted ? null : safeAvatarUrl(author.avatar_url);
     const displayName = author.is_deleted
         ? t("common.comments.deletedUser")
         : author.display_name || t("common.comments.anonymousUser");
 
     const avatarNode = (
-        <span
-            className={cn(
-                "relative inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container text-on-primary-container type-label-m",
-                compact ? "h-7 w-7" : "h-9 w-9",
-            )}
-        >
-            {avatarSrc ? (
-                <img
-                    src={avatarSrc}
-                    alt={displayName}
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                />
-            ) : (
-                <span>{getInitials(displayName)}</span>
-            )}
-        </span>
+        <CommunityAvatar
+            displayName={displayName}
+            avatarUrl={author.avatar_url}
+            avatarCardId={author.avatar_card_id}
+            avatarCardTrained={author.avatar_card_trained}
+            isDeleted={author.is_deleted}
+            sizeClassName={compact ? "h-7 w-7" : "h-9 w-9"}
+            textClassName="type-label-m"
+        />
     );
 
     const formattedTime = timestamp

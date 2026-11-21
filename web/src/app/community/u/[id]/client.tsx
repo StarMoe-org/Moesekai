@@ -24,7 +24,8 @@ import {
     useCommunitySession,
 } from "@/lib/community-session";
 import PostCard from "@/components/community/PostCard";
-import { safeAvatarUrl } from "@/components/community/CommunityAuthorBadge";
+import CommunityAvatar from "@/components/community/CommunityAvatar";
+import CardAvatarPicker from "@/components/community/CardAvatarPicker";
 import {
     Banner,
     Button,
@@ -41,6 +42,7 @@ import {
 import {
     mdArrowBack,
     mdBlock,
+    mdEdit,
     mdLink,
     mdShield,
     mdVerified,
@@ -78,6 +80,7 @@ export default function CommunityUserProfileClient() {
     // Preferences state (own profile only)
     const [bioDraft, setBioDraft] = useState("");
     const [savingPrefs, setSavingPrefs] = useState(false);
+    const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
 
     const isSelf = Boolean(session.authenticated && session.profile?.sub === userSub);
 
@@ -259,18 +262,36 @@ export default function CommunityUserProfileClient() {
                         <SectionCard>
                             <div className="flex flex-wrap items-start justify-between gap-4">
                                 <div className="flex items-center gap-4">
-                                    <span className="inline-flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container type-headline-s text-on-primary-container">
-                                        {safeAvatarUrl(profile.avatar_url) ? (
-                                            <img
-                                                src={safeAvatarUrl(profile.avatar_url)!}
-                                                alt={profile.display_name}
-                                                className="h-full w-full object-cover"
-                                                referrerPolicy="no-referrer"
+                                    {isSelf ? (
+                                        <button
+                                            type="button"
+                                            onClick={() => setAvatarPickerOpen(true)}
+                                            aria-label={t("page.community.profile.changeAvatar")}
+                                            title={t("page.community.profile.changeAvatar")}
+                                            className="focus-ring group relative shrink-0 rounded-full"
+                                        >
+                                            <CommunityAvatar
+                                                displayName={profile.display_name}
+                                                avatarUrl={profile.avatar_url}
+                                                avatarCardId={profile.avatar_card_id}
+                                                avatarCardTrained={profile.avatar_card_trained}
+                                                sizeClassName="h-16 w-16 ring-2 ring-outline-variant/60 transition-shadow group-hover:ring-primary"
+                                                textClassName="type-headline-s"
                                             />
-                                        ) : (
-                                            <span>{Array.from(profile.display_name || "?")[0]}</span>
-                                        )}
-                                    </span>
+                                            <span className="absolute -bottom-0.5 -right-0.5 flex h-6 w-6 items-center justify-center rounded-full border border-outline-variant/70 bg-surface-container-high text-on-surface shadow-elev-1 transition-colors group-hover:bg-primary group-hover:text-on-primary">
+                                                <Icon path={mdEdit} size={14} />
+                                            </span>
+                                        </button>
+                                    ) : (
+                                        <CommunityAvatar
+                                            displayName={profile.display_name}
+                                            avatarUrl={profile.avatar_url}
+                                            avatarCardId={profile.avatar_card_id}
+                                            avatarCardTrained={profile.avatar_card_trained}
+                                            sizeClassName="h-16 w-16"
+                                            textClassName="type-headline-s"
+                                        />
+                                    )}
 
                                     <div className="min-w-0">
                                         <div className="flex flex-wrap items-center gap-2">
@@ -317,6 +338,17 @@ export default function CommunityUserProfileClient() {
                                         </p>
                                     </div>
                                 </div>
+
+                                {isSelf && (
+                                    <Button
+                                        variant="tonal"
+                                        size="s"
+                                        icon={mdEdit}
+                                        onClick={() => setAvatarPickerOpen(true)}
+                                    >
+                                        {t("page.community.profile.changeAvatar")}
+                                    </Button>
+                                )}
 
                                 {session.authenticated && !isSelf && (
                                     <Button
@@ -477,11 +509,21 @@ export default function CommunityUserProfileClient() {
                                                 {blockedList.map((item) => (
                                                     <div
                                                         key={item.blocked_sub}
-                                                        className="flex items-center justify-between rounded-md3-md bg-surface-container px-3 py-2"
+                                                        className="flex items-center justify-between gap-2 rounded-md3-md bg-surface-container px-3 py-2"
                                                     >
-                                                        <span className="type-body-m text-on-surface">
-                                                            {item.display_name || item.blocked_sub}
-                                                        </span>
+                                                        <div className="flex min-w-0 items-center gap-2.5">
+                                                            <CommunityAvatar
+                                                                displayName={item.display_name || item.blocked_sub}
+                                                                avatarUrl={item.avatar_url}
+                                                                avatarCardId={item.avatar_card_id}
+                                                                avatarCardTrained={item.avatar_card_trained}
+                                                                sizeClassName="h-7 w-7"
+                                                                textClassName="type-label-s"
+                                                            />
+                                                            <span className="truncate type-body-m text-on-surface">
+                                                                {item.display_name || item.blocked_sub}
+                                                            </span>
+                                                        </div>
                                                         <Button
                                                             variant="text"
                                                             size="xs"
@@ -530,6 +572,39 @@ export default function CommunityUserProfileClient() {
                                 </div>
                             )}
                         </SectionCard>
+
+                        {isSelf && (
+                            <CardAvatarPicker
+                                isOpen={avatarPickerOpen}
+                                onClose={() => setAvatarPickerOpen(false)}
+                                profile={profile}
+                                onSaved={(updated, wasReset) => {
+                                    setProfile(updated);
+                                    setPosts((prev) =>
+                                        prev.map((post) =>
+                                            post.author.sub === updated.sub
+                                                ? {
+                                                      ...post,
+                                                      author: {
+                                                          ...post.author,
+                                                          avatar_card_id: updated.avatar_card_id ?? null,
+                                                          avatar_card_trained: Boolean(
+                                                              updated.avatar_card_trained,
+                                                          ),
+                                                      },
+                                                  }
+                                                : post,
+                                        ),
+                                    );
+                                    setStatusError(null);
+                                    setStatusMessage(
+                                        wasReset
+                                            ? t("page.community.profile.avatarReset")
+                                            : t("page.community.profile.avatarSaved"),
+                                    );
+                                }}
+                            />
+                        )}
                     </div>
                 )}
             </PageContainer>

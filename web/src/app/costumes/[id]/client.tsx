@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -27,6 +28,11 @@ import { mdArrowBack, mdCheckroom, mdGroup, mdInfo, mdLayers, mdPlayingCards, md
 import { costume3dHref } from "@/lib/costume3d/look";
 
 // Helper to extract base name (remove _XX color suffix)
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
+
 function getVariantBaseName(assetName: string): string {
     return assetName.replace(/_\d+$/, "");
 }
@@ -537,6 +543,11 @@ export default function CostumeDetailClient() {
                         <DetailPageAdCard />
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts */}
+                {Number.isFinite(costumeNumber) && (
+                    <EntityCommunitySection targetType="costume" targetId={costumeNumber} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 flex justify-center">
