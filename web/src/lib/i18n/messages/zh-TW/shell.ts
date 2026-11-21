@@ -325,11 +325,6 @@ export const zhTWSettings = {
     footer: {
         version: "Moesekai · {version}",
     },
-    sidebar: {
-        notLoggedIn: "尚未登入",
-        manageAccount: "點選以管理帳號",
-        bindAccount: "點選以綁定帳號",
-    },
 } as const satisfies MessageTree;
 
 export const zhTWShortcuts = {

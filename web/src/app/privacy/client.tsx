@@ -7,10 +7,12 @@ import { PageContainer, PageHeader, Surface } from "@/components/md3";
 import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 const bulletGroups = [
+    ["account.passport", "account.games", "account.haruki", "account.guest"],
     ["local.preferences", "local.account", "local.tokens", "local.gameData"],
-    ["network.oauth", "network.publicApi", "network.analytics"],
-    ["use.functionality", "use.sync", "use.analytics"],
-    ["controls.delete", "controls.browser"],
+    ["server.accounts", "server.gameData", "server.guessMusic", "server.community"],
+    ["network.starmoe", "network.publicApi", "network.turnstile", "network.analytics"],
+    ["use.functionality", "use.sync", "use.safety", "use.analytics"],
+    ["controls.delete", "controls.account", "controls.browser"],
 ] as const;
 
 export default function PrivacyPolicyClient() {
@@ -30,27 +32,36 @@ export default function PrivacyPolicyClient() {
                     <Section title={t("page.privacy.overview.title")}>
                         <p>{t("page.privacy.overview.body")}</p>
                     </Section>
+                    <Section title={t("page.privacy.account.title")}>
+                        <p>{t("page.privacy.account.intro")}</p>
+                        {bullets(0)}
+                    </Section>
                     <Section title={t("page.privacy.local.title")}>
                         <p>{t("page.privacy.local.intro")}</p>
-                        {bullets(0)}
+                        {bullets(1)}
                         <p className="mt-3">{t("page.privacy.local.note")}</p>
+                    </Section>
+                    <Section title={t("page.privacy.server.title")}>
+                        <p>{t("page.privacy.server.intro")}</p>
+                        {bullets(2)}
                     </Section>
                     <Section title={t("page.privacy.network.title")}>
                         <p>{t("page.privacy.network.intro")}</p>
-                        {bullets(1)}
+                        {bullets(3)}
                     </Section>
                     <Section title={t("page.privacy.cookies.title")}>
-                        <p>{t("page.privacy.cookies.analytics")}</p>
+                        <p>{t("page.privacy.cookies.session")}</p>
+                        <p className="mt-3">{t("page.privacy.cookies.analytics")}</p>
                         <p className="mt-3 type-emphasized text-on-surface">{t("page.privacy.cookies.adsDisabled")}</p>
                     </Section>
                     <Section title={t("page.privacy.use.title")}>
-                        {bullets(2)}
+                        {bullets(4)}
                     </Section>
                     <Section title={t("page.privacy.sharing.title")}>
                         <p>{t("page.privacy.sharing.body")}</p>
                     </Section>
                     <Section title={t("page.privacy.controls.title")}>
-                        {bullets(3)}
+                        {bullets(5)}
                     </Section>
                     <Section title={t("page.privacy.links.title")}>
                         <p>{t("page.privacy.links.body")}</p>
