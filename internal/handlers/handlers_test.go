@@ -15,19 +15,25 @@ import (
 func gachaHandlerForTest(t *testing.T) *Handler {
 	t.Helper()
 	dir := t.TempDir()
-	for _, filename := range []string{"events.json", "eventCards.json", "eventMusics.json", "virtualLives.json", "gachas.json"} {
+	for _, filename := range []string{"events.json", "eventCards.json", "eventMusics.json", "virtualLives.json"} {
 		if err := os.WriteFile(filepath.Join(dir, filename), []byte("[]"), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
-	store := masterdata.NewStore(dir)
-	if err := store.Fetch(); err != nil {
-		t.Fatal(err)
-	}
-	store.GachaList = []models.Gacha{
+	gachaJSON, err := json.Marshal([]models.Gacha{
 		{ID: 1, Name: "First", StartAt: 1},
 		{ID: 2, Name: "Second", StartAt: 2},
 		{ID: 3, Name: "Third", StartAt: 3},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "gachas.json"), gachaJSON, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	store := masterdata.NewStore(dir)
+	if err := store.Fetch(); err != nil {
+		t.Fatal(err)
 	}
 	return New(store)
 }
@@ -180,5 +186,49 @@ func TestMasterDataEndpointsReturnRetryableServiceUnavailableBeforeStartupLoad(t
 	}
 	if recorder.Header().Get("Cache-Control") != "no-store" {
 		t.Fatalf("Cache-Control = %q, want no-store", recorder.Header().Get("Cache-Control"))
+	}
+}
+
+func TestMapEndpointsSupportCacheControlETag304AndMethodGuards(t *testing.T) {
+	h := gachaHandlerForTest(t)
+
+	// POST rejected with 405
+	postRec := httptest.NewRecorder()
+	h.handleCardEventMap(postRec, httptest.NewRequest(http.MethodPost, "/api/card-event-map", nil))
+	if postRec.Code != http.StatusMethodNotAllowed {
+		t.Fatalf("POST status = %d, want 405", postRec.Code)
+	}
+	if postRec.Header().Get("Allow") != "GET, HEAD" {
+		t.Fatalf("Allow = %q, want GET, HEAD", postRec.Header().Get("Allow"))
+	}
+
+	// GET returns Cache-Control and ETag
+	getRec := httptest.NewRecorder()
+	h.handleCardEventMap(getRec, httptest.NewRequest(http.MethodGet, "/api/card-event-map", nil))
+	if getRec.Code != http.StatusOK {
+		t.Fatalf("GET status = %d, want 200", getRec.Code)
+	}
+	etag := getRec.Header().Get("ETag")
+	if etag == "" {
+		t.Fatal("missing ETag header")
+	}
+	if getRec.Header().Get("Cache-Control") != masterDataCacheControl {
+		t.Fatalf("Cache-Control = %q, want %q", getRec.Header().Get("Cache-Control"), masterDataCacheControl)
+	}
+
+	// Matching If-None-Match returns 304 with empty body
+	condReq := httptest.NewRequest(http.MethodGet, "/api/card-event-map", nil)
+	condReq.Header.Set("If-None-Match", etag)
+	condRec := httptest.NewRecorder()
+	h.handleCardEventMap(condRec, condReq)
+	if condRec.Code != http.StatusNotModified || condRec.Body.Len() != 0 {
+		t.Fatalf("conditional GET = %d len=%d, want 304 empty", condRec.Code, condRec.Body.Len())
+	}
+
+	// HEAD returns 200 with empty body
+	headRec := httptest.NewRecorder()
+	h.handleCardEventMap(headRec, httptest.NewRequest(http.MethodHead, "/api/card-event-map", nil))
+	if headRec.Code != http.StatusOK || headRec.Body.Len() != 0 {
+		t.Fatalf("HEAD = %d len=%d, want 200 empty", headRec.Code, headRec.Body.Len())
 	}
 }

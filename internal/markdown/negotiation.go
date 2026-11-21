@@ -4,18 +4,28 @@ import (
 	"bytes"
 	"fmt"
 	"html"
-	"io"
 	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
+	"unicode/utf8"
+
+	"snowy_viewer/internal/middleware"
+)
+
+const (
+	defaultMaxMarkdownHTMLBytes = 4 << 20 // 4 MiB
+	defaultMaxMarkdownWorkers   = 12
+	defaultMarkdownQPM          = 60
+	defaultMarkdownBurst        = 20
+	markdownAcquireTimeout      = 250 * time.Millisecond
 )
 
 var (
 	titleRegex       = regexp.MustCompile(`(?i)<title[^>]*>(.*?)</title>`)
 	metaDescRegex    = regexp.MustCompile(`(?i)<meta\s+name=["']description["']\s+content=["'](.*?)["']`)
 	articleRegex     = regexp.MustCompile(`(?is)<article[^>]*class=["'][^"']*sr-only[^"']*["'][^>]*>(.*?)</article>`)
-	h1Regex          = regexp.MustCompile(`(?is)<h1[^>]*>(.*?)</h1>`)
 	h2Regex          = regexp.MustCompile(`(?is)<h2[^>]*>(.*?)</h2>`)
 	h3Regex          = regexp.MustCompile(`(?is)<h3[^>]*>(.*?)</h3>`)
 	pRegex           = regexp.MustCompile(`(?is)<p[^>]*>(.*?)</p>`)
@@ -28,7 +38,6 @@ var (
 	trRegex          = regexp.MustCompile(`(?is)<tr[^>]*>(.*?)</tr>`)
 	thRegex          = regexp.MustCompile(`(?is)<th[^>]*>(.*?)</th>`)
 	tdRegex          = regexp.MustCompile(`(?is)<td[^>]*>(.*?)</td>`)
-	aRegex           = regexp.MustCompile(`(?is)<a\s+[^>]*href=["']([^"']*)["'][^>]*>(.*?)</a>`)
 	stripTagsRegex   = regexp.MustCompile(`<[^>]+>`)
 	multiSpacesRegex = regexp.MustCompile(`[ \t]+`)
 	multiNewlines    = regexp.MustCompile(`\n{3,}`)
@@ -53,6 +62,12 @@ func cleanText(s string) string {
 // ConvertHTMLToMarkdown parses the HTML from Next.js SSR and produces clean, semantic Markdown.
 func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 	var sb strings.Builder
+	seen := make(map[string]struct{})
+	markSeen := func(s string) {
+		if s != "" {
+			seen[s] = struct{}{}
+		}
+	}
 
 	// 1. Title
 	pageTitle := "Moesekai - Project SEKAI Viewer"
@@ -62,12 +77,14 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 			pageTitle = t
 		}
 	}
+	markSeen(pageTitle)
 	sb.WriteString("# " + pageTitle + "\n\n")
 
 	// 2. Meta description
 	if m := metaDescRegex.FindStringSubmatch(htmlStr); len(m) > 1 {
 		desc := cleanText(m[1])
 		if desc != "" {
+			markSeen(desc)
 			sb.WriteString("> " + desc + "\n\n")
 		}
 	}
@@ -84,6 +101,7 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 			if capMatch := captionRegex.FindStringSubmatch(tableInner); len(capMatch) > 1 {
 				capText := cleanText(capMatch[1])
 				if capText != "" {
+					markSeen(capText)
 					sb.WriteString("### " + capText + "\n\n")
 				}
 			}
@@ -97,7 +115,9 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 				ths := thRegex.FindAllStringSubmatch(trContent, -1)
 				if len(ths) > 0 && len(headerCols) == 0 {
 					for _, th := range ths {
-						headerCols = append(headerCols, cleanText(th[1]))
+						txt := cleanText(th[1])
+						markSeen(txt)
+						headerCols = append(headerCols, txt)
 					}
 					continue
 				}
@@ -105,7 +125,9 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 				if len(tds) > 0 {
 					var row []string
 					for _, td := range tds {
-						row = append(row, cleanText(td[1]))
+						txt := cleanText(td[1])
+						markSeen(txt)
+						row = append(row, txt)
 					}
 					dataRows = append(dataRows, row)
 				}
@@ -113,13 +135,12 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 
 			if len(headerCols) > 0 {
 				sb.WriteString("| " + strings.Join(headerCols, " | ") + " |\n")
-				var seps []string
-				for range headerCols {
-					seps = append(seps, "---")
+				seps := make([]string, len(headerCols))
+				for i := range headerCols {
+					seps[i] = "---"
 				}
 				sb.WriteString("| " + strings.Join(seps, " | ") + " |\n")
 				for _, row := range dataRows {
-					// Pad row to match headers count
 					for len(row) < len(headerCols) {
 						row = append(row, "-")
 					}
@@ -137,6 +158,8 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 				k := cleanText(p[1])
 				v := cleanText(p[2])
 				if k != "" && v != "" {
+					markSeen(k)
+					markSeen(v)
 					sb.WriteString(fmt.Sprintf("- **%s**: %s\n", k, v))
 				}
 			}
@@ -150,6 +173,7 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 		for _, h2 := range h2s {
 			txt := cleanText(h2[1])
 			if txt != "" {
+				markSeen(txt)
 				sb.WriteString("## " + txt + "\n\n")
 			}
 		}
@@ -158,16 +182,20 @@ func ConvertHTMLToMarkdown(htmlStr, requestPath string) string {
 		for _, h3 := range h3s {
 			txt := cleanText(h3[1])
 			if txt != "" {
+				markSeen(txt)
 				sb.WriteString("### " + txt + "\n\n")
 			}
 		}
 
-		// Paragraphs
+		// Paragraphs (O(1) dedup via seen map instead of O(P*M) substring scans)
 		ps := pRegex.FindAllStringSubmatch(articleHTML, -1)
 		for _, p := range ps {
 			txt := cleanText(p[1])
-			if txt != "" && !strings.Contains(sb.String(), txt) {
-				sb.WriteString(txt + "\n\n")
+			if txt != "" {
+				if _, dup := seen[txt]; !dup {
+					seen[txt] = struct{}{}
+					sb.WriteString(txt + "\n\n")
+				}
 			}
 		}
 
@@ -264,59 +292,135 @@ func renderSiteNavigation(sb *strings.Builder, locale string) {
 
 // NewNegotiationMiddleware wraps an http.Handler to serve text/markdown when requested by clients.
 func NewNegotiationMiddleware(next http.Handler) http.Handler {
+	return NewNegotiationMiddlewareWithLimits(
+		next,
+		defaultMaxMarkdownWorkers,
+		defaultMaxMarkdownHTMLBytes,
+		middleware.NewIPRateLimiter(defaultMarkdownQPM, defaultMarkdownBurst, 10_000),
+	)
+}
+
+// NewNegotiationMiddlewareWithLimits creates a markdown negotiation middleware with explicit limits.
+func NewNegotiationMiddlewareWithLimits(next http.Handler, maxWorkers int, maxHTMLBytes int64, limiter *middleware.IPRateLimiter) http.Handler {
+	if maxWorkers <= 0 {
+		maxWorkers = defaultMaxMarkdownWorkers
+	}
+	if maxHTMLBytes <= 0 {
+		maxHTMLBytes = defaultMaxMarkdownHTMLBytes
+	}
+	sem := make(chan struct{}, maxWorkers)
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !IsMarkdownRequest(r) {
 			next.ServeHTTP(w, r)
 			return
 		}
 
+		if limiter != nil {
+			if ok, wait := limiter.Allow(middleware.ClientIP(r)); !ok {
+				secs := int(wait.Seconds())
+				if secs < 1 {
+					secs = 1
+				}
+				w.Header().Set("Cache-Control", "no-store")
+				w.Header().Set("Retry-After", strconv.Itoa(secs))
+				http.Error(w, "rate limit exceeded", http.StatusTooManyRequests)
+				return
+			}
+		}
+
+		timer := time.NewTimer(markdownAcquireTimeout)
+		select {
+		case sem <- struct{}{}:
+			timer.Stop()
+		case <-r.Context().Done():
+			timer.Stop()
+			return
+		case <-timer.C:
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Retry-After", "1")
+			http.Error(w, "markdown converter busy", http.StatusServiceUnavailable)
+			return
+		}
+		defer func() { <-sem }()
+
 		// Client wants markdown. Request HTML upstream (from cache or Next.js).
+		// Always fetch with GET upstream so HEAD requests still get accurate
+		// token headers while suppressing the response body below.
 		clonedReq := r.Clone(r.Context())
+		clonedReq.Method = http.MethodGet
 		clonedReq.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-		// The recorder buffers the body in-process and the converter reads it as
-		// text, so a compressed upstream response would parse as garbage. The
-		// htmlcache layer does the same before its own upstream fetch.
+		// The recorder buffers the HTML body in-process and the converter reads it
+		// as text, so a compressed upstream response would parse as garbage.
 		clonedReq.Header.Del("Accept-Encoding")
 
-		rec := &responseRecorder{
-			header: make(http.Header),
-			body:   &bytes.Buffer{},
-			status: http.StatusOK,
+		rec := &boundedHTMLRecorder{
+			w:        w,
+			header:   make(http.Header),
+			status:   http.StatusOK,
+			maxBytes: maxHTMLBytes,
+			isHead:   r.Method == http.MethodHead,
 		}
 
 		next.ServeHTTP(rec, clonedReq)
 
-		ct := strings.ToLower(rec.header.Get("Content-Type"))
-		if rec.status != http.StatusOK || !strings.Contains(ct, "text/html") {
-			// Upstream was error or non-HTML: forward as is
-			for k, vv := range rec.header {
-				for _, v := range vv {
-					w.Header().Add(k, v)
-				}
-			}
-			w.WriteHeader(rec.status)
-			_, _ = io.Copy(w, rec.body)
+		if rec.passthrough {
+			// Already streamed directly to w (non-200, non-HTML, or > maxHTMLBytes).
 			return
 		}
 
-		markdownText := ConvertHTMLToMarkdown(rec.body.String(), r.URL.Path)
+		// Edge case: upstream returned without calling WriteHeader/Write.
+		if !rec.wroteHeader {
+			rec.WriteHeader(http.StatusOK)
+			if rec.passthrough {
+				return
+			}
+		}
 
+		htmlStr := rec.body.String()
+		rec.body = nil
+
+		markdownText := ConvertHTMLToMarkdown(htmlStr, r.URL.Path)
 		mdTokens := estimateTokens(markdownText)
-		origTokens := estimateTokens(rec.body.String())
+		origTokens := estimateTokens(htmlStr)
 
 		w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-		w.Header().Set("Cache-Control", "public, max-age=60, s-maxage=3600")
-		w.Header().Set("Vary", "Accept")
+		if isPublicCacheableHTML(rec.header) {
+			w.Header().Set("Cache-Control", "public, max-age=60, s-maxage=3600")
+		} else {
+			for _, cookie := range rec.header.Values("Set-Cookie") {
+				w.Header().Add("Set-Cookie", cookie)
+			}
+			cc := rec.header.Get("Cache-Control")
+			if cc == "" || len(rec.header.Values("Set-Cookie")) > 0 {
+				cc = "private, no-store"
+			}
+			w.Header().Set("Cache-Control", cc)
+		}
+		middleware.AppendVary(w.Header(), "Accept")
 		w.Header().Set("x-markdown-tokens", strconv.Itoa(mdTokens))
 		w.Header().Set("x-original-tokens", strconv.Itoa(origTokens))
 		w.Header().Set("Content-Signal", "ai-train=no, search=yes, ai-input=yes")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(markdownText))
+		if r.Method != http.MethodHead {
+			_, _ = w.Write([]byte(markdownText))
+		}
 	})
 }
 
+func isPublicCacheableHTML(header http.Header) bool {
+	if len(header.Values("Set-Cookie")) > 0 {
+		return false
+	}
+	cc := strings.ToLower(header.Get("Cache-Control"))
+	if strings.Contains(cc, "private") || strings.Contains(cc, "no-store") {
+		return false
+	}
+	return true
+}
+
 func estimateTokens(s string) int {
-	runes := len([]rune(s))
+	runes := utf8.RuneCountInString(s)
 	tokens := runes / 3
 	if tokens < 1 && len(s) > 0 {
 		return 1
@@ -324,23 +428,74 @@ func estimateTokens(s string) int {
 	return tokens
 }
 
-type responseRecorder struct {
+// boundedHTMLRecorder buffers 200 OK text/html bodies up to maxBytes, and
+// immediately stream-passes non-HTML, non-200, or oversized bodies straight to w.
+type boundedHTMLRecorder struct {
+	w           http.ResponseWriter
 	header      http.Header
 	body        *bytes.Buffer
 	status      int
+	maxBytes    int64
+	isHead      bool
 	wroteHeader bool
+	passthrough bool
 }
 
-func (r *responseRecorder) Header() http.Header { return r.header }
-func (r *responseRecorder) WriteHeader(code int) {
-	if !r.wroteHeader {
-		r.status = code
-		r.wroteHeader = true
+func (r *boundedHTMLRecorder) Header() http.Header { return r.header }
+
+func (r *boundedHTMLRecorder) WriteHeader(code int) {
+	if r.wroteHeader {
+		return
+	}
+	r.status = code
+	r.wroteHeader = true
+
+	ct := strings.ToLower(r.header.Get("Content-Type"))
+	if code != http.StatusOK || !strings.Contains(ct, "text/html") {
+		r.enterPassthrough()
+		return
+	}
+	r.body = &bytes.Buffer{}
+}
+
+func (r *boundedHTMLRecorder) enterPassthrough() {
+	if r.passthrough {
+		return
+	}
+	r.passthrough = true
+	for k, vv := range r.header {
+		for _, v := range vv {
+			r.w.Header().Add(k, v)
+		}
+	}
+	r.w.WriteHeader(r.status)
+	if r.body != nil && r.body.Len() > 0 {
+		if !r.isHead {
+			_, _ = r.w.Write(r.body.Bytes())
+		}
+		r.body = nil
 	}
 }
-func (r *responseRecorder) Write(b []byte) (int, error) {
+
+func (r *boundedHTMLRecorder) Write(b []byte) (int, error) {
 	if !r.wroteHeader {
+		if r.header.Get("Content-Type") == "" {
+			r.header.Set("Content-Type", http.DetectContentType(b))
+		}
 		r.WriteHeader(http.StatusOK)
+	}
+	if r.passthrough {
+		if r.isHead {
+			return len(b), nil
+		}
+		return r.w.Write(b)
+	}
+	if int64(r.body.Len())+int64(len(b)) > r.maxBytes {
+		r.enterPassthrough()
+		if r.isHead {
+			return len(b), nil
+		}
+		return r.w.Write(b)
 	}
 	return r.body.Write(b)
 }

@@ -1,12 +1,16 @@
 package mcp
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"math"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -16,7 +20,43 @@ import (
 	"time"
 
 	"snowy_viewer/internal/masterdata"
+	"snowy_viewer/internal/middleware"
 	"snowy_viewer/internal/models"
+)
+
+const (
+	maxMCPRequestBytes       int64 = 64 << 10 // 64 KiB JSON-RPC body cap
+	maxUpstreamResponseBytes int64 = 4 << 20  // 4 MiB upstream response cap
+	maxAPICacheEntries             = 128
+	maxMCPConcurrent               = 32
+	maxMCPUpstreamConcurrent       = 16
+	defaultMCPQPM                  = 60
+	defaultMCPBurst                = 20
+	maxValidEventID                = 100_000
+	mcpAcquireTimeout              = 250 * time.Millisecond
+	mcpDrainLimitBytes       int64 = 16 << 10
+	canonicalSiteOrigin            = "https://pjsk.moe"
+)
+
+var (
+	allowedRankingRegions = map[string]bool{
+		"jp": true,
+		"cn": true,
+		"en": true,
+		"tw": true,
+		"kr": true,
+	}
+	allowedPredictionRegions = map[string]bool{
+		"jp": true,
+		"cn": true,
+	}
+	allowedCardHosts = map[string]bool{
+		"pjsk.moe":                  true,
+		"www.pjsk.moe":              true,
+		"snowyviewer.exmeaning.com": true,
+		"localhost":                 true,
+		"127.0.0.1":                 true,
+	}
 )
 
 var characterNames = map[int]string{
@@ -100,26 +140,66 @@ type cachedResponse struct {
 	expiresAt time.Time
 }
 
+type fetchFlight struct {
+	done chan struct{}
+	body []byte
+	err  error
+}
+
 type Server struct {
-	mu         sync.RWMutex
-	cards      map[int]*CardItem
-	musics     map[int]*MusicItem
-	events     map[int]*EventItem
-	gachas     map[int]*GachaItem
-	store      *masterdata.Store
-	httpClient *http.Client
-	cacheMu    sync.RWMutex
-	apiCache   map[string]cachedResponse
+	mu                   sync.RWMutex
+	cards                map[int]*CardItem
+	musics               map[int]*MusicItem
+	events               map[int]*EventItem
+	gachas               map[int]*GachaItem
+	store                *masterdata.Store
+	httpClient           *http.Client
+	cacheMu              sync.RWMutex
+	apiCache             map[string]cachedResponse
+	flightMu             sync.Mutex
+	flights              map[string]*fetchFlight
+	upstreamSem          chan struct{}
+	requestSem           chan struct{}
+	rateLimiter          *middleware.IPRateLimiter
+	baseCtxMu            sync.RWMutex
+	baseCtx              context.Context
+	rankingV2BaseURL     string
+	rankingLegacyBaseURL string
+}
+
+func newMCPHTTPClient() *http.Client {
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.DialContext = (&net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 30 * time.Second,
+	}).DialContext
+	transport.TLSHandshakeTimeout = 5 * time.Second
+	transport.ResponseHeaderTimeout = 8 * time.Second
+	transport.MaxIdleConns = 32
+	transport.MaxIdleConnsPerHost = 16
+	transport.MaxConnsPerHost = 32
+	transport.IdleConnTimeout = 90 * time.Second
+	return &http.Client{
+		Timeout:   8 * time.Second,
+		Transport: transport,
+	}
 }
 
 func New(stores ...*masterdata.Store) *Server {
 	s := &Server{
-		cards:      make(map[int]*CardItem),
-		musics:     make(map[int]*MusicItem),
-		events:     make(map[int]*EventItem),
-		gachas:     make(map[int]*GachaItem),
-		httpClient: &http.Client{Timeout: 8 * time.Second},
-		apiCache:   make(map[string]cachedResponse),
+		cards:                make(map[int]*CardItem),
+		musics:               make(map[int]*MusicItem),
+		events:               make(map[int]*EventItem),
+		gachas:               make(map[int]*GachaItem),
+		httpClient:           newMCPHTTPClient(),
+		apiCache:             make(map[string]cachedResponse),
+		flights:              make(map[string]*fetchFlight),
+		upstreamSem:          make(chan struct{}, maxMCPUpstreamConcurrent),
+		requestSem:           make(chan struct{}, maxMCPConcurrent),
+		rateLimiter:          middleware.NewIPRateLimiter(defaultMCPQPM, defaultMCPBurst, 10_000),
+		baseCtx:              context.Background(),
+		rankingV2BaseURL:     "https://rks-n.exmeaning.com",
+		rankingLegacyBaseURL: "https://rk.exmeaning.com",
 	}
 	if len(stores) > 0 {
 		s.store = stores[0]
@@ -128,43 +208,185 @@ func New(stores ...*masterdata.Store) *Server {
 	return s
 }
 
-func (s *Server) cachedFetch(url string, ttl time.Duration) ([]byte, error) {
+// SetBaseContext binds background/shared outbound MCP fetches to a process lifecycle context.
+func (s *Server) SetBaseContext(ctx context.Context) {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	s.baseCtxMu.Lock()
+	s.baseCtx = ctx
+	s.baseCtxMu.Unlock()
+}
+
+func (s *Server) baseContext() context.Context {
+	s.baseCtxMu.RLock()
+	ctx := s.baseCtx
+	s.baseCtxMu.RUnlock()
+	if ctx == nil {
+		return context.Background()
+	}
+	return ctx
+}
+
+// WarmupIDs returns sorted catalog IDs loaded from static metadata maps.
+func (s *Server) WarmupIDs() (cards, musics, events, gachas []int) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	cards = make([]int, 0, len(s.cards))
+	for id := range s.cards {
+		if id > 0 {
+			cards = append(cards, id)
+		}
+	}
+	musics = make([]int, 0, len(s.musics))
+	for id := range s.musics {
+		if id > 0 {
+			musics = append(musics, id)
+		}
+	}
+	events = make([]int, 0, len(s.events))
+	for id := range s.events {
+		if id > 0 {
+			events = append(events, id)
+		}
+	}
+	gachas = make([]int, 0, len(s.gachas))
+	for id := range s.gachas {
+		if id > 0 {
+			gachas = append(gachas, id)
+		}
+	}
+	sort.Ints(cards)
+	sort.Ints(musics)
+	sort.Ints(events)
+	sort.Ints(gachas)
+	return cards, musics, events, gachas
+}
+
+func (s *Server) cachedFetch(ctx context.Context, targetURL string, ttl time.Duration) ([]byte, error) {
+	now := time.Now()
 	s.cacheMu.RLock()
-	if item, ok := s.apiCache[url]; ok && time.Now().Before(item.expiresAt) {
+	if item, ok := s.apiCache[targetURL]; ok && now.Before(item.expiresAt) {
 		s.cacheMu.RUnlock()
 		return item.body, nil
 	}
 	s.cacheMu.RUnlock()
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
-	if err != nil {
-		return nil, err
+	// Singleflight per URL so concurrent requests coalesce into one upstream call.
+	s.flightMu.Lock()
+	if f, ok := s.flights[targetURL]; ok {
+		s.flightMu.Unlock()
+		select {
+		case <-f.done:
+			return f.body, f.err
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
 	}
-	req.Header.Set("User-Agent", "Moesekai-MCP/1.0 (+https://pjsk.moe)")
+	f := &fetchFlight{done: make(chan struct{})}
+	s.flights[targetURL] = f
+	s.flightMu.Unlock()
 
-	resp, err := s.httpClient.Do(req)
-	if err != nil {
-		return nil, err
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				f.err = fmt.Errorf("upstream fetch panic: %v", r)
+			}
+			s.flightMu.Lock()
+			if s.flights[targetURL] == f {
+				delete(s.flights, targetURL)
+			}
+			close(f.done)
+			s.flightMu.Unlock()
+		}()
+
+		fetchCtx, cancel := context.WithTimeout(s.baseContext(), 8*time.Second)
+		defer cancel()
+
+		select {
+		case s.upstreamSem <- struct{}{}:
+			defer func() { <-s.upstreamSem }()
+		case <-fetchCtx.Done():
+			f.err = fetchCtx.Err()
+			return
+		}
+
+		req, err := http.NewRequestWithContext(fetchCtx, http.MethodGet, targetURL, nil)
+		if err != nil {
+			f.err = err
+			return
+		}
+		req.Header.Set("User-Agent", "Moesekai-MCP/1.0 (+https://pjsk.moe)")
+
+		resp, err := s.httpClient.Do(req)
+		if err != nil {
+			f.err = err
+			return
+		}
+		defer func() {
+			_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, mcpDrainLimitBytes))
+			_ = resp.Body.Close()
+		}()
+
+		if resp.StatusCode != http.StatusOK {
+			f.err = fmt.Errorf("upstream returned status %d", resp.StatusCode)
+			return
+		}
+		if resp.ContentLength > maxUpstreamResponseBytes {
+			f.err = fmt.Errorf("upstream response exceeds %d bytes", maxUpstreamResponseBytes)
+			return
+		}
+
+		body, err := io.ReadAll(io.LimitReader(resp.Body, maxUpstreamResponseBytes+1))
+		if err != nil {
+			f.err = err
+			return
+		}
+		if int64(len(body)) > maxUpstreamResponseBytes {
+			f.err = fmt.Errorf("upstream response exceeds %d bytes", maxUpstreamResponseBytes)
+			return
+		}
+
+		storeTime := time.Now()
+		s.cacheMu.Lock()
+		for k, v := range s.apiCache {
+			if !storeTime.Before(v.expiresAt) {
+				delete(s.apiCache, k)
+			}
+		}
+		for len(s.apiCache) >= maxAPICacheEntries {
+			var oldestKey string
+			var oldestExp time.Time
+			first := true
+			for k, v := range s.apiCache {
+				if first || v.expiresAt.Before(oldestExp) {
+					oldestKey = k
+					oldestExp = v.expiresAt
+					first = false
+				}
+			}
+			if !first {
+				delete(s.apiCache, oldestKey)
+			} else {
+				break
+			}
+		}
+		s.apiCache[targetURL] = cachedResponse{
+			body:      body,
+			expiresAt: storeTime.Add(ttl),
+		}
+		s.cacheMu.Unlock()
+
+		f.body = body
+	}()
+
+	select {
+	case <-f.done:
+		return f.body, f.err
+	case <-ctx.Done():
+		return nil, ctx.Err()
 	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("upstream returned status %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	s.cacheMu.Lock()
-	s.apiCache[url] = cachedResponse{
-		body:      body,
-		expiresAt: time.Now().Add(ttl),
-	}
-	s.cacheMu.Unlock()
-
-	return body, nil
 }
 
 func (s *Server) loadMetadata() {
@@ -256,11 +478,27 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/.well-known/mcp/server-cards.json", s.serveServerCardsList)
 }
 
-func (s *Server) getServerCard(r *http.Request) map[string]interface{} {
-	origin := "https://" + r.Host
-	if proto := r.Header.Get("X-Forwarded-Proto"); proto != "" {
-		origin = proto + "://" + r.Host
+func canonicalOrigin(r *http.Request) string {
+	host := strings.TrimSpace(r.Host)
+	if host == "" {
+		return canonicalSiteOrigin
 	}
+	hostname := strings.ToLower(host)
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		hostname = strings.ToLower(h)
+	}
+	if !allowedCardHosts[hostname] {
+		return canonicalSiteOrigin
+	}
+	proto := "https"
+	if p := strings.ToLower(strings.TrimSpace(r.Header.Get("X-Forwarded-Proto"))); p == "http" || p == "https" {
+		proto = p
+	}
+	return proto + "://" + host
+}
+
+func (s *Server) getServerCard(r *http.Request) map[string]interface{} {
+	origin := canonicalOrigin(r)
 	return map[string]interface{}{
 		"name": "Moesekai - Project SEKAI Data Engine",
 		"serverInfo": map[string]interface{}{
@@ -341,16 +579,66 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if s.rateLimiter != nil {
+		if ok, wait := s.rateLimiter.Allow(middleware.ClientIP(r)); !ok {
+			secs := int(wait.Seconds())
+			if secs < 1 {
+				secs = 1
+			}
+			w.Header().Set("Cache-Control", "no-store")
+			w.Header().Set("Retry-After", strconv.Itoa(secs))
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusTooManyRequests)
+			_ = json.NewEncoder(w).Encode(Response{
+				JSONRPC: "2.0",
+				Error:   &RPCError{Code: -32000, Message: "Rate limit exceeded"},
+			})
+			return
+		}
+	}
+
+	timer := time.NewTimer(mcpAcquireTimeout)
+	select {
+	case s.requestSem <- struct{}{}:
+		timer.Stop()
+	case <-r.Context().Done():
+		timer.Stop()
+		return
+	case <-timer.C:
+		w.Header().Set("Cache-Control", "no-store")
+		w.Header().Set("Retry-After", "1")
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(http.StatusServiceUnavailable)
+		_ = json.NewEncoder(w).Encode(Response{
+			JSONRPC: "2.0",
+			Error:   &RPCError{Code: -32000, Message: "MCP server busy"},
+		})
+		return
+	}
+	defer func() { <-s.requestSem }()
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxMCPRequestBytes)
+
 	var req Request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		var maxErr *http.MaxBytesError
+		if errors.As(err, &maxErr) {
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+			w.WriteHeader(http.StatusRequestEntityTooLarge)
+			_ = json.NewEncoder(w).Encode(Response{
+				JSONRPC: "2.0",
+				Error:   &RPCError{Code: -32600, Message: "Request body too large"},
+			})
+			return
+		}
 		s.writeRPCError(w, nil, -32700, "Parse error", nil)
 		return
 	}
 
-	s.handleRPC(w, &req)
+	s.handleRPC(r.Context(), w, &req)
 }
 
-func (s *Server) handleRPC(w http.ResponseWriter, req *Request) {
+func (s *Server) handleRPC(ctx context.Context, w http.ResponseWriter, req *Request) {
 	switch req.Method {
 	case "initialize":
 		res := InitializeResult{
@@ -381,7 +669,7 @@ func (s *Server) handleRPC(w http.ResponseWriter, req *Request) {
 		if len(req.Params) > 0 {
 			_ = json.Unmarshal(req.Params, &params)
 		}
-		result := s.executeTool(params.Name, params.Arguments)
+		result := s.executeToolContext(ctx, params.Name, params.Arguments)
 		s.writeRPCResult(w, req.ID, result)
 
 	case "resources/list":
@@ -648,29 +936,46 @@ func (s *Server) getToolsList() []Tool {
 }
 
 func (s *Server) executeTool(name string, args map[string]interface{}) ToolCallResult {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+	return s.executeToolContext(s.baseContext(), name, args)
+}
 
+func (s *Server) executeToolContext(ctx context.Context, name string, args map[string]interface{}) ToolCallResult {
 	switch name {
 	case "search_cards":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolSearchCards(args)
 	case "get_card_detail":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolGetCardDetail(args)
 	case "search_musics":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolSearchMusics(args)
 	case "get_music_detail":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolGetMusicDetail(args)
 	case "get_event_info":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolGetEventInfo(args)
 	case "get_character_profile":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolGetCharacterProfile(args)
 	case "get_realtime_ranking":
-		return s.toolGetRealtimeRanking(args)
+		// Never hold s.mu.RLock across outbound network calls.
+		return s.toolGetRealtimeRanking(ctx, args)
 	case "get_event_prediction":
-		return s.toolGetEventPrediction(args)
+		// Never hold s.mu.RLock across outbound network calls.
+		return s.toolGetEventPrediction(ctx, args)
 	case "plan_event_strategy":
 		return s.toolPlanEventStrategy(args)
 	case "search_gachas":
+		s.mu.RLock()
+		defer s.mu.RUnlock()
 		return s.toolSearchGachas(args)
 	default:
 		return ToolCallResult{
@@ -981,10 +1286,12 @@ func (s *Server) readResource(uri string) []ResourceContent {
 		}}
 
 	case "pjsk://events/latest":
+		s.mu.RLock()
 		var list []*EventItem
 		for _, e := range s.events {
 			list = append(list, e)
 		}
+		s.mu.RUnlock()
 		sort.Slice(list, func(i, j int) bool {
 			return list[i].ID > list[j].ID
 		})
@@ -1020,23 +1327,53 @@ func formatNumber(n int64) string {
 	return string(out)
 }
 
-func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallResult {
+func parseOptionalEventID(args map[string]interface{}) (int, error) {
+	raw, exists := args["event_id"]
+	if !exists || raw == nil {
+		return 0, nil
+	}
+	eid, ok := raw.(float64)
+	if !ok || math.IsNaN(eid) || math.IsInf(eid, 0) || eid != math.Trunc(eid) || eid < 0 || eid > maxValidEventID {
+		return 0, fmt.Errorf("invalid event_id: must be an integer between 1 and %d", maxValidEventID)
+	}
+	return int(eid), nil
+}
+
+func (s *Server) lookupEventName(eventID int) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if ev, ok := s.events[eventID]; ok && ev.Name != "" {
+		return ev.Name
+	}
+	return fmt.Sprintf("Event %d", eventID)
+}
+
+func (s *Server) toolGetRealtimeRanking(ctx context.Context, args map[string]interface{}) ToolCallResult {
 	region := "jp"
-	if r, ok := args["region"].(string); ok && r != "" {
-		region = strings.ToLower(strings.TrimSpace(r))
+	if raw, exists := args["region"]; exists && raw != nil {
+		r, ok := raw.(string)
+		if !ok {
+			return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: "Invalid region: must be one of jp, cn, en, tw, kr"}}}
+		}
+		if trimmed := strings.ToLower(strings.TrimSpace(r)); trimmed != "" {
+			region = trimmed
+		}
+	}
+	if !allowedRankingRegions[region] {
+		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: "Invalid region: must be one of jp, cn, en, tw, kr"}}}
 	}
 
-	var eventID int
-	if eid, ok := args["event_id"].(float64); ok {
-		eventID = int(eid)
+	eventID, err := parseOptionalEventID(args)
+	if err != nil {
+		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: err.Error()}}}
 	}
 
 	var sb strings.Builder
 
 	// Query unified v2 API for the live/latest board across all 5 regions when no historical event_id is requested.
 	if eventID <= 0 {
-		url := fmt.Sprintf("https://rks-n.exmeaning.com/api/public/v2/%s/latest", region)
-		data, err := s.cachedFetch(url, 30*time.Second)
+		targetURL := fmt.Sprintf("%s/api/public/v2/%s/latest", s.rankingV2BaseURL, url.PathEscape(region))
+		data, err := s.cachedFetch(ctx, targetURL, 30*time.Second)
 		if err == nil {
 			var v2Resp V2LatestResponse
 			if err := json.Unmarshal(data, &v2Resp); err == nil && len(v2Resp.Rankings) > 0 {
@@ -1071,8 +1408,8 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 
 	// Historical event_id lookup or fallback via rk.exmeaning.com (JP / CN)
 	if eventID <= 0 {
-		eventsURL := fmt.Sprintf("https://rk.exmeaning.com/public/events?region=%s", region)
-		data, err := s.cachedFetch(eventsURL, 60*time.Second)
+		eventsURL := fmt.Sprintf("%s/public/events?region=%s", s.rankingLegacyBaseURL, url.QueryEscape(region))
+		data, err := s.cachedFetch(ctx, eventsURL, 60*time.Second)
 		if err != nil {
 			return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: fmt.Sprintf("Failed to fetch events for region %s: %v", region, err)}}}
 		}
@@ -1083,8 +1420,8 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 		eventID = events[0].EventID
 	}
 
-	latestURL := fmt.Sprintf("https://rk.exmeaning.com/public/event/%d/latest?region=%s", eventID, region)
-	data, err := s.cachedFetch(latestURL, 30*time.Second)
+	latestURL := fmt.Sprintf("%s/public/event/%d/latest?region=%s", s.rankingLegacyBaseURL, eventID, url.QueryEscape(region))
+	data, err := s.cachedFetch(ctx, latestURL, 30*time.Second)
 	if err != nil {
 		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: fmt.Sprintf("Failed to fetch latest ranking for event %d (%s): %v", eventID, region, err)}}}
 	}
@@ -1094,10 +1431,7 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: fmt.Sprintf("Failed to parse latest ranking for event %d", eventID)}}}
 	}
 
-	eventName := fmt.Sprintf("Event %d", latest.EventID)
-	if ev, ok := s.events[latest.EventID]; ok && ev.Name != "" {
-		eventName = ev.Name
-	}
+	eventName := s.lookupEventName(latest.EventID)
 
 	statusDesc := "🟢 进行中 (Active)"
 	if latest.Status == "finished" {
@@ -1128,20 +1462,29 @@ func (s *Server) toolGetRealtimeRanking(args map[string]interface{}) ToolCallRes
 	return ToolCallResult{Content: []TextContent{{Type: "text", Text: sb.String()}}}
 }
 
-func (s *Server) toolGetEventPrediction(args map[string]interface{}) ToolCallResult {
+func (s *Server) toolGetEventPrediction(ctx context.Context, args map[string]interface{}) ToolCallResult {
 	region := "jp"
-	if r, ok := args["region"].(string); ok && r != "" {
-		region = strings.ToLower(strings.TrimSpace(r))
+	if raw, exists := args["region"]; exists && raw != nil {
+		r, ok := raw.(string)
+		if !ok {
+			return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: "Invalid region: must be jp or cn"}}}
+		}
+		if trimmed := strings.ToLower(strings.TrimSpace(r)); trimmed != "" {
+			region = trimmed
+		}
+	}
+	if !allowedPredictionRegions[region] {
+		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: "Invalid region: must be jp or cn"}}}
 	}
 
-	var eventID int
-	if eid, ok := args["event_id"].(float64); ok {
-		eventID = int(eid)
+	eventID, err := parseOptionalEventID(args)
+	if err != nil {
+		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: err.Error()}}}
 	}
 
 	if eventID <= 0 {
-		eventsURL := fmt.Sprintf("https://rk.exmeaning.com/public/events?region=%s", region)
-		data, err := s.cachedFetch(eventsURL, 60*time.Second)
+		eventsURL := fmt.Sprintf("%s/public/events?region=%s", s.rankingLegacyBaseURL, url.QueryEscape(region))
+		data, err := s.cachedFetch(ctx, eventsURL, 60*time.Second)
 		if err != nil {
 			return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: fmt.Sprintf("Failed to fetch events: %v", err)}}}
 		}
@@ -1152,8 +1495,8 @@ func (s *Server) toolGetEventPrediction(args map[string]interface{}) ToolCallRes
 		eventID = events[0].EventID
 	}
 
-	latestURL := fmt.Sprintf("https://rk.exmeaning.com/public/event/%d/latest?region=%s", eventID, region)
-	data, err := s.cachedFetch(latestURL, 30*time.Second)
+	latestURL := fmt.Sprintf("%s/public/event/%d/latest?region=%s", s.rankingLegacyBaseURL, eventID, url.QueryEscape(region))
+	data, err := s.cachedFetch(ctx, latestURL, 30*time.Second)
 	if err != nil {
 		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: fmt.Sprintf("Failed to fetch ranking: %v", err)}}}
 	}
@@ -1163,10 +1506,7 @@ func (s *Server) toolGetEventPrediction(args map[string]interface{}) ToolCallRes
 		return ToolCallResult{IsError: true, Content: []TextContent{{Type: "text", Text: "Failed to parse prediction data"}}}
 	}
 
-	eventName := fmt.Sprintf("Event %d", latest.EventID)
-	if ev, ok := s.events[latest.EventID]; ok && ev.Name != "" {
-		eventName = ev.Name
-	}
+	eventName := s.lookupEventName(latest.EventID)
 
 	var sb strings.Builder
 	sb.WriteString(fmt.Sprintf("# Project SEKAI 终榜预测报告 (%s 服) - [%d] %s\n\n", strings.ToUpper(region), latest.EventID, eventName))
@@ -1372,72 +1712,74 @@ func (s *Server) toolSearchGachas(args map[string]interface{}) ToolCallResult {
 	var sb strings.Builder
 
 	if s.store != nil {
-		gachaList := s.store.GetGachaList()
-		pickups := s.store.GetGachaPickups()
+		if snap := s.store.GetSnapshot(); snap != nil {
+			gachaList := snap.GachaList
+			pickups := snap.GachaPickups
 
-		var matched []models.Gacha
-		for _, g := range gachaList {
-			if gachaType != "" && !strings.EqualFold(g.GachaType, gachaType) {
-				continue
-			}
-			if query != "" {
-				nameLower := strings.ToLower(g.Name)
-				if !strings.Contains(nameLower, query) {
-					charaMatch := false
-					for _, cid := range pickups[g.ID] {
-						if card, ok := s.cards[cid]; ok {
-							cName := strings.ToLower(characterNames[card.CharacterID])
-							if strings.Contains(cName, query) {
-								charaMatch = true
-								break
+			var matched []models.Gacha
+			for _, g := range gachaList {
+				if gachaType != "" && !strings.EqualFold(g.GachaType, gachaType) {
+					continue
+				}
+				if query != "" {
+					nameLower := strings.ToLower(g.Name)
+					if !strings.Contains(nameLower, query) {
+						charaMatch := false
+						for _, cid := range pickups[g.ID] {
+							if card, ok := s.cards[cid]; ok {
+								cName := strings.ToLower(characterNames[card.CharacterID])
+								if strings.Contains(cName, query) {
+									charaMatch = true
+									break
+								}
 							}
 						}
-					}
-					if !charaMatch {
-						continue
-					}
-				}
-			}
-			matched = append(matched, g)
-		}
-
-		sort.Slice(matched, func(i, j int) bool {
-			return matched[i].StartAt > matched[j].StartAt
-		})
-
-		if len(matched) == 0 {
-			return ToolCallResult{Content: []TextContent{{Type: "text", Text: "No gacha banners found matching criteria."}}}
-		}
-
-		count := len(matched)
-		if count > limit {
-			matched = matched[:limit]
-		}
-
-		sb.WriteString(fmt.Sprintf("Found %d gacha banners (showing top %d):\n\n", count, len(matched)))
-		for _, g := range matched {
-			startDate := time.UnixMilli(g.StartAt).UTC().Format("2006-01-02 15:04")
-			endDate := time.UnixMilli(g.EndAt).UTC().Format("2006-01-02 15:04")
-
-			sb.WriteString(fmt.Sprintf("### [%d] %s\n", g.ID, g.Name))
-			sb.WriteString(fmt.Sprintf("- **卡池类型**: %s\n", g.GachaType))
-			sb.WriteString(fmt.Sprintf("- **起止时间**: %s ~ %s (UTC)\n", startDate, endDate))
-
-			cardIDs := pickups[g.ID]
-			if len(cardIDs) > 0 {
-				sb.WriteString("- **UP 成员卡牌**:\n")
-				for _, cid := range cardIDs {
-					if card, ok := s.cards[cid]; ok {
-						cName := characterNames[card.CharacterID]
-						sb.WriteString(fmt.Sprintf("  - [%d] %s - %s (%s | %s)\n", card.ID, cName, card.Prefix, card.Rarity, card.Attr))
-					} else {
-						sb.WriteString(fmt.Sprintf("  - Card ID: %d\n", cid))
+						if !charaMatch {
+							continue
+						}
 					}
 				}
+				matched = append(matched, g)
 			}
-			sb.WriteString(fmt.Sprintf("- **在线卡池详情**: https://pjsk.moe/gacha/%d/\n\n", g.ID))
+
+			sort.Slice(matched, func(i, j int) bool {
+				return matched[i].StartAt > matched[j].StartAt
+			})
+
+			if len(matched) == 0 {
+				return ToolCallResult{Content: []TextContent{{Type: "text", Text: "No gacha banners found matching criteria."}}}
+			}
+
+			count := len(matched)
+			if count > limit {
+				matched = matched[:limit]
+			}
+
+			sb.WriteString(fmt.Sprintf("Found %d gacha banners (showing top %d):\n\n", count, len(matched)))
+			for _, g := range matched {
+				startDate := time.UnixMilli(g.StartAt).UTC().Format("2006-01-02 15:04")
+				endDate := time.UnixMilli(g.EndAt).UTC().Format("2006-01-02 15:04")
+
+				sb.WriteString(fmt.Sprintf("### [%d] %s\n", g.ID, g.Name))
+				sb.WriteString(fmt.Sprintf("- **卡池类型**: %s\n", g.GachaType))
+				sb.WriteString(fmt.Sprintf("- **起止时间**: %s ~ %s (UTC)\n", startDate, endDate))
+
+				cardIDs := pickups[g.ID]
+				if len(cardIDs) > 0 {
+					sb.WriteString("- **UP 成员卡牌**:\n")
+					for _, cid := range cardIDs {
+						if card, ok := s.cards[cid]; ok {
+							cName := characterNames[card.CharacterID]
+							sb.WriteString(fmt.Sprintf("  - [%d] %s - %s (%s | %s)\n", card.ID, cName, card.Prefix, card.Rarity, card.Attr))
+						} else {
+							sb.WriteString(fmt.Sprintf("  - Card ID: %d\n", cid))
+						}
+					}
+				}
+				sb.WriteString(fmt.Sprintf("- **在线卡池详情**: https://pjsk.moe/gacha/%d/\n\n", g.ID))
+			}
+			return ToolCallResult{Content: []TextContent{{Type: "text", Text: sb.String()}}}
 		}
-		return ToolCallResult{Content: []TextContent{{Type: "text", Text: sb.String()}}}
 	}
 
 	var matched []*GachaItem

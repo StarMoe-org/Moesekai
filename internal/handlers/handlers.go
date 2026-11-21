@@ -13,38 +13,47 @@ import (
 )
 
 const (
-	defaultGachaPage     = 1
-	defaultGachaLimit    = 24
-	maxGachaPage         = 1_000_000
-	maxGachaLimit        = 100
-	masterDataRetryAfter = "30"
+	defaultGachaPage       = 1
+	defaultGachaLimit      = 24
+	maxGachaPage           = 1_000_000
+	maxGachaLimit          = 100
+	masterDataRetryAfter   = "30"
+	masterDataCacheControl = "public, max-age=300, s-maxage=3600"
 )
 
-// Handler holds dependencies for HTTP handlers
+// Handler holds dependencies for HTTP handlers.
 type Handler struct {
 	store *masterdata.Store
 }
 
-func (h *Handler) requireMasterData(w http.ResponseWriter) bool {
-	if h.store.IsReady() {
-		return true
+func (h *Handler) requireSnapshot(w http.ResponseWriter, r *http.Request) *masterdata.Snapshot {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return nil
+	}
+	snap := h.store.GetSnapshot()
+	if snap != nil {
+		return snap
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Header().Set("Retry-After", masterDataRetryAfter)
 	w.WriteHeader(http.StatusServiceUnavailable)
-	_ = json.NewEncoder(w).Encode(map[string]string{"error": "masterdata unavailable"})
-	return false
+	if r.Method != http.MethodHead {
+		_ = json.NewEncoder(w).Encode(map[string]string{"error": "masterdata unavailable"})
+	}
+	return nil
 }
 
-// New creates a new Handler instance
+// New creates a new Handler instance.
 func New(store *masterdata.Store) *Handler {
 	return &Handler{
 		store: store,
 	}
 }
 
-// RegisterRoutes registers all API routes
+// RegisterRoutes registers all API routes.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/card-event-map", h.handleCardEventMap)
 	mux.HandleFunc("/api/music-event-map", h.handleMusicEventMap)
@@ -55,48 +64,78 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/gachas/", h.handleGachaDetail)
 }
 
+func serveEncodedMap(w http.ResponseWriter, r *http.Request, encoded masterdata.EncodedMap) {
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", masterDataCacheControl)
+	if encoded.ETag != "" {
+		w.Header().Set("ETag", encoded.ETag)
+		if etagMatches(r.Header.Get("If-None-Match"), encoded.ETag) {
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+	}
+	w.WriteHeader(http.StatusOK)
+	if r.Method != http.MethodHead {
+		_, _ = w.Write(encoded.Data)
+	}
+}
+
+func etagMatches(ifNoneMatch, etag string) bool {
+	if ifNoneMatch == "" || etag == "" {
+		return false
+	}
+	for _, raw := range strings.Split(ifNoneMatch, ",") {
+		candidate := strings.TrimSpace(raw)
+		if candidate == "*" || candidate == etag || strings.TrimPrefix(candidate, "W/") == etag {
+			return true
+		}
+	}
+	return false
+}
+
 func (h *Handler) handleCardEventMap(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.store.GetCardEventMap())
+	serveEncodedMap(w, r, snap.CardEventMapJSON)
 }
 
 func (h *Handler) handleMusicEventMap(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.store.GetMusicEventMap())
+	serveEncodedMap(w, r, snap.MusicEventMapJSON)
 }
 
 func (h *Handler) handleCardGachaMap(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.store.GetCardGachaMap())
+	serveEncodedMap(w, r, snap.CardGachaMapJSON)
 }
 
 func (h *Handler) handleEventVirtualLiveMap(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.store.GetEventVirtualLiveMap())
+	serveEncodedMap(w, r, snap.EventVirtualLiveMapJSON)
 }
 
 func (h *Handler) handleVirtualLiveEventMap(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(h.store.GetVirtualLiveEventMap())
+	serveEncodedMap(w, r, snap.VirtualLiveEventMapJSON)
 }
 
 func (h *Handler) handleGachaList(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
 	// Parse Params
@@ -115,60 +154,64 @@ func (h *Handler) handleGachaList(w http.ResponseWriter, r *http.Request) {
 	sortBy := query.Get("sortBy")
 	sortOrder := query.Get("sortOrder")
 
-	gachaList := h.store.GetGachaList()
-	gachaPickups := h.store.GetGachaPickups()
+	gachaPickups := snap.GachaPickups
 
-	// Filter
+	// Fast path: default sort (startAt desc) with no search filter uses pre-sorted slice directly.
 	var filtered []models.Gacha
-	if search == "" {
-		filtered = make([]models.Gacha, len(gachaList))
-		copy(filtered, gachaList)
+	if search == "" && (sortBy == "" || sortBy == "startAt") && sortOrder != "asc" {
+		filtered = snap.GachaByStartDesc
 	} else {
-		searchId, searchIdErr := strconv.Atoi(search)
-		for _, g := range gachaList {
-			if (searchIdErr == nil && g.ID == searchId) || strings.Contains(strings.ToLower(g.Name), search) {
-				filtered = append(filtered, g)
+		gachaList := snap.GachaList
+		if search == "" {
+			filtered = make([]models.Gacha, len(gachaList))
+			copy(filtered, gachaList)
+		} else {
+			searchID, searchIDErr := strconv.Atoi(search)
+			for _, g := range gachaList {
+				if (searchIDErr == nil && g.ID == searchID) || strings.Contains(strings.ToLower(g.Name), search) {
+					filtered = append(filtered, g)
+				}
 			}
 		}
-	}
 
-	// Sort
-	sort.Slice(filtered, func(i, j int) bool {
+		// Sort
 		asc := sortOrder == "asc"
-		left := filtered[i]
-		right := filtered[j]
+		sort.Slice(filtered, func(i, j int) bool {
+			left := filtered[i]
+			right := filtered[j]
 
-		if sortBy == "id" {
-			if left.ID == right.ID {
-				if left.StartAt == right.StartAt {
+			if sortBy == "id" {
+				if left.ID == right.ID {
+					if left.StartAt == right.StartAt {
+						return false
+					}
+					if asc {
+						return left.StartAt < right.StartAt
+					}
+					return left.StartAt > right.StartAt
+				}
+				if asc {
+					return left.ID < right.ID
+				}
+				return left.ID > right.ID
+			}
+
+			// Default sort by startAt.
+			if left.StartAt == right.StartAt {
+				if left.ID == right.ID {
 					return false
 				}
 				if asc {
-					return left.StartAt < right.StartAt
+					return left.ID < right.ID
 				}
-				return left.StartAt > right.StartAt
+				return left.ID > right.ID
 			}
 			if asc {
-				return left.ID < right.ID
+				return left.StartAt < right.StartAt
 			}
-			return left.ID > right.ID
-		}
-
-		// Default sort by startAt.
-		if left.StartAt == right.StartAt {
-			if left.ID == right.ID {
-				return false
-			}
-			if asc {
-				return left.ID < right.ID
-			}
-			return left.ID > right.ID
-		}
-		if asc {
-			return left.StartAt < right.StartAt
-		}
-		return left.StartAt > right.StartAt
-	})
+			return left.StartAt > right.StartAt
+		})
+	}
 
 	// Paginate
 	total := len(filtered)
@@ -210,7 +253,12 @@ func (h *Handler) handleGachaList(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	w.Header().Set("Cache-Control", masterDataCacheControl)
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(resp)
 }
 
 func parseBoundedPositiveInt(raw string, fallback, maximum int) (int, error) {
@@ -227,11 +275,12 @@ func parseBoundedPositiveInt(raw string, fallback, maximum int) (int, error) {
 func writePaginationError(w http.ResponseWriter, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
-	json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
+	_ = json.NewEncoder(w).Encode(map[string]string{"error": err.Error()})
 }
 
 func (h *Handler) handleGachaDetail(w http.ResponseWriter, r *http.Request) {
-	if !h.requireMasterData(w) {
+	snap := h.requireSnapshot(w, r)
+	if snap == nil {
 		return
 	}
 	// Registered as a subtree pattern, so reject anything past /api/gachas/{id}.
@@ -247,34 +296,32 @@ func (h *Handler) handleGachaDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	gachaList := h.store.GetGachaList()
-	gachaPickups := h.store.GetGachaPickups()
-
-	var found *models.Gacha
-	for i := range gachaList {
-		if gachaList[i].ID == id {
-			found = &gachaList[i]
-			break
-		}
-	}
-
-	if found == nil {
+	found, ok := snap.GachaByID[id]
+	if !ok {
 		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set("Cache-Control", "no-store")
 		w.WriteHeader(http.StatusNotFound)
-		json.NewEncoder(w).Encode(map[string]string{"error": "Gacha not found"})
+		if r.Method != http.MethodHead {
+			_ = json.NewEncoder(w).Encode(map[string]string{"error": "Gacha not found"})
+		}
 		return
 	}
 
-	pickups := gachaPickups[found.ID]
+	pickups := snap.GachaPickups[found.ID]
 	if pickups == nil {
 		pickups = []int{}
 	}
 
 	resp := models.GachaDetailResponse{
-		Gacha:         *found,
+		Gacha:         found,
 		PickupCardIds: pickups,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(resp)
+	w.Header().Set("Cache-Control", masterDataCacheControl)
+	if r.Method == http.MethodHead {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+	_ = json.NewEncoder(w).Encode(resp)
 }
