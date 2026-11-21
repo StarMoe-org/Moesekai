@@ -26,13 +26,14 @@ import {
     verifyHarukiApi,
     getTopCharacterId,
     getLeaderCardId,
-    refreshOAuthAccountData,
-    disconnectOAuthAccount,
     rememberAccount,
+    refreshGameAccount,
+    refreshGameAccounts,
     ACCOUNTS_CHANGED_EVENT,
     type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
+import { disconnectOAuthAccount } from "@/lib/legacy-oauth";
 import HarukiConnectButton from "@/components/HarukiConnectButton";
 import { useStarMoeAccountSync } from "@/hooks/useStarMoeAccountSync";
 import { signIn, useMoesekaiAccount } from "@/lib/moesekai-account";
@@ -130,18 +131,9 @@ export default function ProfileClient() {
         if (syncing) refreshAccounts(true);
     }, [syncing, saved.accounts]); // eslint-disable-line react-hooks/exhaustive-deps
 
-    /** Automatically refresh account data (uploadTime, name, avatar, etc.); `onlyMissing` skips accounts that have some. */
+    /** Refreshes account data (uploadTime, name, avatar, etc.); `onlyMissing` skips accounts that have some. Reads of an account already in progress are shared. */
     function refreshAccounts(onlyMissing: boolean) {
-        const refreshAllAccounts = async () => {
-            const accs = getAccounts().filter((acc) => !onlyMissing || (!acc.uploadTime && !acc.userGamedata));
-            for (const acc of accs) {
-                await refreshAccount(acc);
-            }
-            // Reload after all refreshes finish.
-            reload();
-        };
-
-        void refreshAllAccounts();
+        void refreshGameAccounts({ onlyMissing }).then(reload);
     }
 
     /** The "resync" button: re-reads one account and says so when that fails (the old data stays). */
@@ -149,7 +141,7 @@ export default function ProfileClient() {
         if (resyncingIds.has(acc.id)) return;
         setResyncingIds((ids) => new Set(ids).add(acc.id));
         setResyncError(null);
-        const error = await refreshAccount(acc);
+        const error = await refreshGameAccount(acc.id);
         setResyncingIds((ids) => {
             const next = new Set(ids);
             next.delete(acc.id);
@@ -167,52 +159,6 @@ export default function ProfileClient() {
                         : t("common.harukiErrors.networkError");
             setResyncError(`${label}: ${message}`);
         }
-    }
-
-    /** Re-reads one account's data. Returns why it failed (keeping the old data), or null. */
-    async function refreshAccount(acc: MoesekaiAccount): Promise<"OAUTH" | "API_NOT_PUBLIC" | "NOT_FOUND" | "NETWORK_ERROR" | null> {
-        console.log(`Refreshing account data: ${acc.gameId} (${acc.server})`);
-
-        if (acc.authSource === "oauth2") {
-            try {
-                await refreshOAuthAccountData(acc.id);
-                return null;
-            } catch (error) {
-                console.warn(`OAuth2 account ${acc.gameId} refresh failed; keeping existing data`, error);
-                return "OAUTH";
-            }
-        }
-
-        const result = await verifyHarukiApi(acc.server, acc.gameId);
-        if (!result.success) {
-            console.warn(`Account ${acc.gameId} refresh failed; keeping existing data`);
-            return result.error === "API_NOT_PUBLIC" || result.error === "NOT_FOUND" ? result.error : "NETWORK_ERROR";
-        }
-
-        const userGamedata = result.userGamedata || null;
-        const userDecks = result.userDecks || null;
-        const userCharacters = result.userCharacters || null;
-        updateAccount(acc.id, {
-            userCharacters,
-            userChallengeLiveSoloStages: result.userChallengeLiveSoloStages || null,
-            userChallengeLiveSoloResults: result.userChallengeLiveSoloResults || null,
-            userChallengeLiveSoloHighScoreRewards: result.userChallengeLiveSoloHighScoreRewards || null,
-            userBonds: result.userBonds || null,
-            userMaterials: result.userMaterials || null,
-            userAreas: result.userAreas || null,
-            userMysekaiFixtureGameCharacterPerformanceBonuses: result.userMysekaiFixtureGameCharacterPerformanceBonuses || null,
-            userMysekaiGates: result.userMysekaiGates || null,
-            userGamedata,
-            userDecks,
-            uploadTime: result.uploadTime || null,
-            avatarCardId: getLeaderCardId(userGamedata, userDecks),
-            avatarCharacterId: userCharacters && userCharacters.length > 0
-                ? getTopCharacterId(userCharacters)
-                : acc.avatarCharacterId,
-            nickname: userGamedata?.name || acc.nickname,
-            lastSyncAt: Date.now(),
-        });
-        return null;
     }
 
     const handleAddAccount = useCallback(async () => {

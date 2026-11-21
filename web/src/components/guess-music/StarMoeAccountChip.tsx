@@ -18,7 +18,7 @@ import { mdAccountCircle, mdKeyboardArrowDown, mdLink, mdLinkOff, mdLogin, mdLog
 import { useI18n } from "@/contexts/I18nContext";
 import { ACCOUNTS_CHANGED_EVENT, getAccounts, isValidServer, updateAccount, type MoesekaiAccount } from "@/lib/account";
 import { stripRouteLocale } from "@/lib/localized-path";
-import { refreshOAuthToken } from "@/lib/oauth";
+import { refreshOAuthToken } from "@/lib/legacy-oauth";
 import { DailyApiError, createDailyApi, type DailyGameAccount } from "@/lib/guess-music/daily-api";
 import { markSignedOut, signIn, signOut, useMoesekaiAccount, type MoesekaiUser } from "@/lib/moesekai-account";
 

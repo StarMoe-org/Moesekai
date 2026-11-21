@@ -1,16 +1,15 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import {
-    getAccounts,
     setActiveAccount,
     getCharacterIconUrl,
     getTopCharacterId,
     getCachedAvatarUrl,
-    type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
+import { useGameAccounts } from "@/lib/account/hooks";
 import { ServerRegionLabel } from "@/components/common/ServerRegion";
 import { useI18n } from "@/contexts/I18nContext";
 import { cn } from "@/components/md3";
@@ -27,19 +26,11 @@ interface AccountSelectorProps {
 
 export default function AccountSelector({ onSelect, currentUserId, currentServer, allowedServers }: AccountSelectorProps) {
     const { t } = useI18n();
-    const [accounts, setAccounts] = useState<MoesekaiAccount[]>([]);
-
-    useEffect(() => {
-        const syncAccounts = () => {
-            const allAccounts = getAccounts();
-            setAccounts(allowedServers?.length
-                ? allAccounts.filter((account) => allowedServers.includes(account.server))
-                : allAccounts);
-        };
-        syncAccounts();
-        window.addEventListener("storage", syncAccounts);
-        return () => window.removeEventListener("storage", syncAccounts);
-    }, [allowedServers]);
+    const { accounts: allAccounts } = useGameAccounts();
+    const accounts = useMemo(
+        () => (allowedServers?.length ? allAccounts.filter((account) => allowedServers.includes(account.server)) : allAccounts),
+        [allAccounts, allowedServers],
+    );
 
     if (accounts.length === 0) return null;
 

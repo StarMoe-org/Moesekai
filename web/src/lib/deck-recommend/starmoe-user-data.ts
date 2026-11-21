@@ -1,5 +1,5 @@
 /**
- * Reads a deck engine's user data through moesekai-api (/api/sekai) with the visitor's StarMoe session: the
+ * Reads a deck engine's user data through moesekai-api (/api/v1/me/sekai) with the visitor's StarMoe session: the
  * route the account library uses once the visitor is signed in, which reads Haruki through their StarMoe Connect
  * link where it can and Haruki's public API otherwise.
  *
@@ -21,7 +21,7 @@ export async function fetchStarMoeUserData(
     keys: string,
     origin: string = MOESEKAI_API_ORIGIN,
 ): Promise<unknown | null> {
-    const url = `${origin}/api/sekai/${encodeURIComponent(server)}/suite/${encodeURIComponent(userId)}?key=${encodeURIComponent(keys)}`;
+    const url = `${origin}/api/v1/me/sekai/${encodeURIComponent(server)}/suite/${encodeURIComponent(userId)}?key=${encodeURIComponent(keys)}`;
     const response = await fetch(uncachedUrl(url), {
         headers: { Accept: "application/json" },
         credentials: apiCredentials(origin),

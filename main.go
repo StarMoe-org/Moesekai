@@ -36,9 +36,11 @@ const (
 // moesekai-api (sign-in, guess-music, the accounts saved with a StarMoe
 // account and game data read for them) runs as its own service on the private
 // network. Forwarding its paths keeps the browser on one origin, so the
-// session cookie stays first-party and no CORS is involved. "/api/accounts"
-// is listed on its own because a subtree pattern does not match its root.
-var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/accounts", "/api/accounts/", "/api/sekai/", "/api/community", "/api/community/"}
+// session cookie stays first-party and no CORS is involved. The site uses the
+// versioned /api/v1/me/ routes; "/api/accounts" (listed on its own because a
+// subtree pattern does not match its root) and "/api/sekai/" stay for pages
+// cached before the move, until moesekai-api drops them.
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/v1/me/", "/api/accounts", "/api/accounts/", "/api/sekai/", "/api/community", "/api/community/"}
 
 // sekai-story-search runs as its own service on the private network.
 // Forwarding /api/story-search keeps Turnstile cookies first-party on the

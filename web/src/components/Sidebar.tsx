@@ -5,13 +5,11 @@ import Link from "@/components/LocalizedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
 import {
-    ACCOUNTS_CHANGED_EVENT,
-    getActiveAccount,
     getCharacterIconUrl,
     getTopCharacterId,
     getCachedAvatarUrl,
-    type MoesekaiAccount,
 } from "@/lib/account";
+import { useGameAccounts } from "@/lib/account/hooks";
 import { useCardThumbnail } from "@/hooks/useCardThumbnail";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -394,7 +392,7 @@ export default function Sidebar({
         () => navigationGroups.map((group) => group.id).filter((id) => groupPreferences[id] ?? id === activeGroupId),
         [groupPreferences, activeGroupId]
     );
-    const [activeAccount, setActiveAccountState] = useState<MoesekaiAccount | null>(null);
+    const { active: activeAccount } = useGameAccounts();
     const activeAccountCardThumbnail = useCardThumbnail(activeAccount?.avatarCardId ?? null, assetSource);
     const navRef = useRef<HTMLElement>(null);
 
@@ -413,22 +411,6 @@ export default function Sidebar({
         }
         return items;
     }, [expandedGroups]);
-
-    // Load and sync the active account.
-    useEffect(() => {
-        const syncActiveAccount = () => {
-            const account = getActiveAccount();
-            setActiveAccountState(account);
-        };
-
-        syncActiveAccount();
-        window.addEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-        window.addEventListener("storage", syncActiveAccount);
-        return () => {
-            window.removeEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-            window.removeEventListener("storage", syncActiveAccount);
-        };
-    }, []);
 
     // Restore the sidebar scroll position once the groups have their final
     // layout. After a route change the saved offset was measured on the
