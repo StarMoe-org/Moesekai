@@ -14,6 +14,7 @@ const {
     castUsage, storyFileName, serializeStory, newStoryId,
 } = await import("../src/lib/storyMaker/document.ts");
 const { SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
+const { createStarterStoryDocument } = await import("../src/lib/storyMaker/starter.ts");
 
 function sample() {
     return {
@@ -256,4 +257,31 @@ test("document edits keep ids unique and return new documents", () => {
 test("export file names are safe", () => {
     assert.equal(storyFileName(createStoryDocument("jp", "")), "story.moesekai-story.json");
     assert.equal(storyFileName(createStoryDocument("jp", ' a/b:c*?"<>| d ')), "abc-d.moesekai-story.json");
+});
+
+test("starter demo document passes strict validation and branches cleanly", () => {
+    const starter = createStarterStoryDocument("jp", {
+        title: "Demo",
+        summary: "Summary",
+        author: "Author",
+        ichikaName: "Ichika",
+        sakiName: "Saki",
+        telopOpening: "After school",
+        lineIchikaGreeting: "Hi",
+        lineSakiReply: "Hello",
+        choicePractice: "Practice",
+        choiceTea: "Tea",
+        labelPractice: "practice",
+        linePractice: "Let's play",
+        labelTea: "tea",
+        lineTea: "Let's eat",
+        labelEnding: "end",
+        narrationEnding: "Sunset",
+        telopEnding: "Fin",
+    });
+    const result = validateStoryDocument(starter);
+    assert.equal(result.ok, true, JSON.stringify(result.ok ? [] : result.issues));
+    const first = runFrom(starter, 0);
+    assert.equal(first.stop, "block");
+    assert.equal(starter.steps[first.at].op, "telop");
 });
