@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -37,6 +38,11 @@ import { mdApparel, mdArrowBack, mdBarChart, mdBolt, mdCalendarMonth, mdChevronR
 
 // Max levels by rarity
 const MAX_LEVELS = CARD_RARITY_MAX_LEVELS;
+
+const CardCommunitySection = dynamic(
+    () => import("@/components/community/CardCommunitySection"),
+    { ssr: false },
+);
 
 interface CardSupplyInfo {
     id: number;
@@ -938,6 +944,11 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts (hidden in screenshot mode) */}
+                {!isScreenshotMode && Number.isFinite(cardId) && (
+                    <CardCommunitySection cardId={cardId} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">

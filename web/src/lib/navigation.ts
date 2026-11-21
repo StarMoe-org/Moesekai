@@ -60,6 +60,7 @@ const allNavigationGroups: NavGroupData[] = [
     {
         href: "/breadcrumb-community",
         items: [
+            { href: "/community" },
             { href: "/guides" },
         ],
     },
@@ -164,7 +165,7 @@ export function findGroupMatch(pathname: string): NavGroupData | null {
     return null;
 }
 
-export type SearchableNavGroup = "navigation" | "database" | "activity" | "story" | "games" | "tools" | "personal";
+export type SearchableNavGroup = "navigation" | "database" | "activity" | "story" | "community" | "games" | "tools" | "personal";
 
 export interface SearchableNavItem {
     href: string;
@@ -201,6 +202,9 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/mysekai-preview", group: "activity", keywords: ["baijing", "housing competition", "mysekai", "top"] },
 
     { href: "/mysekai/interactions", group: "story", keywords: ["mysekai story", "mysekai stories", "conversation", "interaction", "furniture story", "character activity", "scene", "moly", "weather"] },
+
+    // "\u793e\u533a" / "\u5e7f\u573a" / "\u8ba8\u8bba": community, square, discussion (escaped to keep UI source free of Han text).
+    { href: "/community", group: "community", keywords: ["community", "forum", "square", "posts", "discussion", "comments", "\u793e\u533a", "\u5e7f\u573a", "\u8ba8\u8bba"] },
 
     { href: "/goods-gacha", group: "games", keywords: ["goods gacha", "goods", "blind box"] },
     { href: "/guess-who", group: "games", keywords: ["guess who", "quiz", "game"] },
@@ -259,6 +263,7 @@ export const SEARCH_STATIC_GROUP_LABEL_KEYS: Record<SearchableNavGroup, string> 
     database: "layout.nav.groups.database",
     activity: "layout.nav.groups.activity",
     story: "layout.nav.groups.story",
+    community: "layout.nav.groups.community",
     games: "layout.nav.groups.games",
     tools: "layout.nav.groups.tools",
     personal: "layout.nav.groups.personal",
@@ -307,6 +312,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/story/area": "layout.nav.items.areaTalk",
     "/story/self": "layout.nav.items.selfIntro",
     "/story/special": "layout.nav.items.specialStory",
+    "/community": "layout.nav.items.community",
     "/guides": "layout.nav.items.guides",
     "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/deck-recommend": "layout.nav.items.deckRecommend",
@@ -360,6 +366,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/story/self": "layout.groupPages.storySelf",
     "/story/special": "layout.groupPages.storySpecial",
     "/prediction": "layout.groupPages.prediction",
+    "/community": "layout.groupPages.community",
     "/guides": "layout.groupPages.guides",
     "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/deck-recommend": "layout.groupPages.deckRecommend",

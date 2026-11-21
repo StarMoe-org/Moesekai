@@ -38,7 +38,7 @@ const (
 // network. Forwarding its paths keeps the browser on one origin, so the
 // session cookie stays first-party and no CORS is involved. "/api/accounts"
 // is listed on its own because a subtree pattern does not match its root.
-var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/accounts", "/api/accounts/", "/api/sekai/"}
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/accounts", "/api/accounts/", "/api/sekai/", "/api/community", "/api/community/"}
 
 // sekai-story-search runs as its own service on the private network.
 // Forwarding /api/story-search keeps Turnstile cookies first-party on the
