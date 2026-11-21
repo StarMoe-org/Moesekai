@@ -51,9 +51,9 @@ export function StepList({ doc, selected, onSelect, onAdd, onMove, onDuplicate, 
     const full = doc.steps.length >= STORY_LIMITS.steps;
 
     return (
-        <div className={cn("flex min-h-0 flex-col", className)}>
-            <div className="flex items-center justify-between gap-2 px-3 py-2">
-                <p className="type-title-s text-on-surface">
+        <div className={cn("flex min-h-0 min-w-0 flex-col", className)}>
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-3 py-2">
+                <p className="min-w-0 type-title-s text-on-surface">
                     {t("page.storyMaker.editor.steps")}
                     <span className="ml-2 type-label-m text-on-surface-variant">{doc.steps.length}/{STORY_LIMITS.steps}</span>
                 </p>
@@ -100,19 +100,19 @@ export function StepList({ doc, selected, onSelect, onAdd, onMove, onDuplicate, 
                                     type="button"
                                     aria-current={active || undefined}
                                     onClick={() => onSelect(index)}
-                                    className="state-layer focus-ring flex w-full items-center gap-2 rounded-md3-md py-1.5 pl-1 pr-2 text-left"
+                                    className="state-layer focus-ring flex w-full min-w-0 items-center gap-2 rounded-md3-md py-1.5 pl-1 pr-2 text-left"
                                 >
                                     <Icon path={mdDragIndicator} size={18} className="shrink-0 cursor-grab opacity-50" />
                                     <span className="w-8 shrink-0 text-right font-mono type-label-s opacity-70">{index + 1}</span>
                                     <Icon path={STEP_ICONS[step.op]} size={20} className="shrink-0" />
                                     <span className="min-w-0 flex-1">
-                                        <span className="block type-label-m opacity-80">{stepLabel(t, step.op)}</span>
+                                        <span className="block truncate type-label-m opacity-80">{stepLabel(t, step.op)}</span>
                                         <span className="block truncate type-body-s">{stepSummary(t, doc, step) || "—"}</span>
                                     </span>
                                     {flagged.has(index) && <Icon path={mdErrorFill} size={18} className="shrink-0 text-error" label={t("page.storyMaker.editor.stepHasIssues")} />}
                                 </button>
                                 {active && (
-                                    <div className="flex justify-end gap-0.5 px-1 pb-1">
+                                    <div className="flex flex-wrap justify-end gap-0.5 px-1 pb-1">
                                         <IconButton size="xs" icon={mdArrowUpward} label={t("page.storyMaker.editor.moveUp")} disabled={index === 0} onClick={() => onMove(index, index - 1)} />
                                         <IconButton size="xs" icon={mdArrowDownward} label={t("page.storyMaker.editor.moveDown")} disabled={index === doc.steps.length - 1} onClick={() => onMove(index, index + 1)} />
                                         <IconButton size="xs" icon={mdContentCopy} label={t("page.storyMaker.editor.duplicateStep")} disabled={full} onClick={() => onDuplicate(index)} />

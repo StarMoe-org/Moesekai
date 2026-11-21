@@ -287,6 +287,7 @@ export const storyMakerMessages = {
         showUi: "UI 표시",
         mute: "음소거",
         unmute: "음소거 해제",
+        tapToEnableAudio: "탭하여 BGM 켜기",
         volume: "음량",
         fullscreen: "전체 화면",
         exitFullscreen: "전체 화면 종료",

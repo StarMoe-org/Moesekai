@@ -13,7 +13,7 @@ const {
     createStoryDocument, createStep, insertStep, moveStep, duplicateStep, removeStep, addCastMember, removeCastMember,
     castUsage, storyFileName, serializeStory, newStoryId,
 } = await import("../src/lib/storyMaker/document.ts");
-const { DEFAULT_STORY_BACKGROUND, SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
+const { DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, SLOT_X, STORY_LIMITS } = await import("../src/lib/storyMaker/limits.ts");
 const { createStarterStoryDocument } = await import("../src/lib/storyMaker/starter.ts");
 
 function sample() {
@@ -397,6 +397,13 @@ test("starter demo document passes strict validation and branches cleanly", () =
     assert.equal(bgStep?.name, DEFAULT_STORY_BACKGROUND);
     assert.equal(/^bg_a0000\d\d$/.test(bgStep?.name ?? ""), false);
     assert.equal((bgStep?.name ?? "").startsWith("bg_s"), false);
+
+    // Starter uses a verified everyday classroom BGM (not the non-existent bgm00001) at an audible volume.
+    const bgmStep = starter.steps.find(step => step.op === "bgm" && step.action === "play");
+    assert.equal(bgmStep?.name, DEFAULT_STORY_BGM);
+    assert.notEqual(bgmStep?.name, "bgm00001");
+    assert.ok((bgmStep?.volume ?? 0) >= 0.7 && (bgmStep?.volume ?? 0) <= 1);
+    assert.equal(firstState.bgm.name, DEFAULT_STORY_BGM);
 });
 
 test("SLOT_X uses authentic game stand positions and appear/move validate and persist scale & y", () => {
@@ -453,7 +460,176 @@ test("SLOT_X uses authentic game stand positions and appear/move validate and pe
     badType.steps[0].scale = "big";
     assert.equal(validateStoryDocument(badType).issues[0].code, "fieldType");
 
-    // Default background step uses verified classroom scene background.
+    // Default background and BGM steps use verified assets that pass strict validation immediately.
     const defaultBg = createStep("background", doc);
     assert.equal(defaultBg.name, DEFAULT_STORY_BACKGROUND);
+    const defaultBgm = createStep("bgm", doc);
+    assert.equal(defaultBgm.action, "play");
+    assert.equal(defaultBgm.name, DEFAULT_STORY_BGM);
+    assert.equal(defaultBgm.volume, 0.75);
+});
+
+test("useStoryAudio unlocks autoplay-blocked BGM on first user gesture without leaks or restarting", async () => {
+    const { JSDOM } = await import("jsdom");
+    const React = (await import("react")).default;
+    const { act } = React;
+    const { createRoot } = await import("react-dom/client");
+    const { useStoryAudio } = await import("../src/components/story-maker/useStoryAudio.ts");
+
+    const dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>");
+    const prevWindow = globalThis.window;
+    const prevDocument = globalThis.document;
+    const prevAudio = globalThis.Audio;
+    const prevActEnv = globalThis.IS_REACT_ACT_ENVIRONMENT;
+
+    let playPolicy = "block"; // "block" | "allow" | "unsupported"
+    const instances = [];
+
+    class FakeAudio {
+        constructor(src) {
+            this.src = src;
+            this.loop = false;
+            this.volume = 1;
+            this.paused = true;
+            this.error = null;
+            this.playCalls = 0;
+            this.pauseCalls = 0;
+            this.listeners = new Map();
+            instances.push(this);
+        }
+        addEventListener(type, fn) {
+            if (!this.listeners.has(type)) this.listeners.set(type, new Set());
+            this.listeners.get(type).add(fn);
+        }
+        removeEventListener(type, fn) {
+            this.listeners.get(type)?.delete(fn);
+        }
+        removeAttribute(name) {
+            if (name === "src") this.src = "";
+        }
+        pause() {
+            this.paused = true;
+            this.pauseCalls += 1;
+        }
+        play() {
+            this.playCalls += 1;
+            if (playPolicy === "block") {
+                const err = new Error("Autoplay blocked");
+                err.name = "NotAllowedError";
+                return Promise.reject(err);
+            }
+            if (playPolicy === "unsupported") {
+                this.error = { code: 4 };
+                const err = new Error("Not supported");
+                err.name = "NotSupportedError";
+                return Promise.reject(err);
+            }
+            this.paused = false;
+            return Promise.resolve();
+        }
+    }
+
+    globalThis.window = dom.window;
+    globalThis.document = dom.window.document;
+    globalThis.Audio = FakeAudio;
+    globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+    let added = 0;
+    let removed = 0;
+    const origAdd = dom.window.addEventListener.bind(dom.window);
+    const origRemove = dom.window.removeEventListener.bind(dom.window);
+    dom.window.addEventListener = (type, fn, opts) => {
+        if (type === "pointerdown" || type === "click" || type === "keydown") added += 1;
+        return origAdd(type, fn, opts);
+    };
+    dom.window.removeEventListener = (type, fn, opts) => {
+        if (type === "pointerdown" || type === "click" || type === "keydown") removed += 1;
+        return origRemove(type, fn, opts);
+    };
+
+    try {
+        let controls = null;
+        function Harness({ volume, muted }) {
+            controls = useStoryAudio(volume, muted);
+            return null;
+        }
+        const host = dom.window.document.getElementById("root");
+        const root = createRoot(host);
+
+        await act(async () => {
+            root.render(React.createElement(Harness, { volume: 0.8, muted: false }));
+        });
+
+        // 1. Initial load blocked by autoplay policy -> audioBlocked=true & unlock listeners armed.
+        await act(async () => {
+            controls.syncBgm("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00020/bgm00020.mp3", 0.75);
+            await Promise.resolve();
+        });
+        assert.equal(instances.length, 1);
+        assert.equal(instances[0].playCalls, 1);
+        assert.equal(controls.audioBlocked, true);
+        assert.equal(added, 3);
+        assert.equal(removed, 0);
+
+        // 2. First user gesture unlocks BGM, clears audioBlocked, and removes all unlock listeners.
+        playPolicy = "allow";
+        await act(async () => {
+            dom.window.dispatchEvent(new dom.window.Event("pointerdown", { bubbles: true }));
+            await Promise.resolve();
+        });
+        assert.equal(instances[0].playCalls, 2);
+        assert.equal(instances[0].paused, false);
+        assert.equal(controls.audioBlocked, false);
+        assert.equal(removed, added, "all unlock listeners must be removed after unlock");
+
+        // 3. Re-syncing the same BGM updates volume without restarting or creating a new Audio.
+        await act(async () => {
+            controls.syncBgm("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00020/bgm00020.mp3", 0.5);
+            await Promise.resolve();
+        });
+        assert.equal(instances.length, 1);
+        assert.equal(instances[0].playCalls, 2);
+        assert.ok(Math.abs(instances[0].volume - 0.4) < 1e-6);
+
+        // 4. Muting pauses BGM; unmuting resumes it cleanly.
+        await act(async () => {
+            root.render(React.createElement(Harness, { volume: 0.8, muted: true }));
+        });
+        assert.equal(instances[0].paused, true);
+        assert.equal(instances[0].volume, 0);
+        await act(async () => {
+            root.render(React.createElement(Harness, { volume: 0.8, muted: false }));
+            await Promise.resolve();
+        });
+        assert.equal(instances[0].paused, false);
+        assert.equal(instances[0].playCalls, 3);
+
+        // 5. Media load failure (404 / NotSupportedError) must NOT trap audioBlocked or leak listeners.
+        playPolicy = "unsupported";
+        await act(async () => {
+            controls.syncBgm("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/missing/missing.mp3", 0.75);
+            await Promise.resolve();
+        });
+        assert.equal(controls.audioBlocked, false);
+        assert.equal(removed, added);
+
+        // 6. Autoplay block + unmount cleans up listeners with zero leaks.
+        playPolicy = "block";
+        await act(async () => {
+            controls.syncBgm("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00020/bgm00020.mp3", 0.75);
+            await Promise.resolve();
+        });
+        assert.equal(controls.audioBlocked, true);
+        assert.ok(added > removed);
+
+        await act(async () => {
+            root.unmount();
+        });
+        assert.equal(removed, added, "unmount must remove any armed unlock listeners");
+    } finally {
+        globalThis.window = prevWindow;
+        globalThis.document = prevDocument;
+        globalThis.Audio = prevAudio;
+        globalThis.IS_REACT_ACT_ENVIRONMENT = prevActEnv;
+    }
 });

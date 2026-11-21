@@ -67,9 +67,9 @@ export function CastPanel({ doc, list, onRetryList, onAdd, onUpdate, onRemove }:
     };
 
     return (
-        <div className="space-y-3">
-            <div className="flex items-center justify-between gap-2">
-                <p className="type-title-s text-on-surface">
+        <div className="min-w-0 space-y-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <p className="min-w-0 type-title-s text-on-surface">
                     {t("page.storyMaker.cast.title")}
                     <span className="ml-2 type-label-m text-on-surface-variant">{doc.cast.length}/{STORY_LIMITS.cast}</span>
                 </p>
@@ -82,7 +82,7 @@ export function CastPanel({ doc, list, onRetryList, onAdd, onUpdate, onRemove }:
                 {doc.cast.map(member => {
                     const model = modelOf(member);
                     return (
-                        <li key={member.key} className="flex items-start gap-3 rounded-md3-md bg-surface-container px-3 py-2">
+                        <li key={member.key} className="flex min-w-0 items-start gap-2.5 rounded-md3-md bg-surface-container px-2.5 py-2 sm:gap-3 sm:px-3">
                             {member.characterId ? (
                                 <img src={getCharacterIconUrl(member.characterId)} alt="" className="mt-1 size-10 shrink-0 rounded-full bg-surface-container-highest object-cover" />
                             ) : (
@@ -149,7 +149,7 @@ export function CastPanel({ doc, list, onRetryList, onAdd, onUpdate, onRemove }:
                     </>
                 )}
             >
-                <p className="type-body-m text-on-surface-variant">
+                <p className="break-words type-body-m text-on-surface-variant">
                     {removing && t("page.storyMaker.cast.removeDescription", { name: removing.name || removing.modelId, count: castUsage(doc, removing.key) })}
                 </p>
             </Dialog>

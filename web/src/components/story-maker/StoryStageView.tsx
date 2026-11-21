@@ -69,20 +69,20 @@ function StageStatus({
 }: StoryStageStatusProps & { doc: StoryDocument; compact?: boolean; offsetForMenu?: boolean }) {
     const { t } = useI18n();
     const problems = Object.entries(actorProblems);
-    const chip = "pointer-events-auto flex max-w-full items-center gap-2 rounded-md3-md glass px-3 py-1.5 type-label-m text-on-surface";
+    const chip = "pointer-events-auto flex min-w-0 max-w-full items-center gap-2 rounded-md3-md glass px-3 py-1.5 type-label-m text-on-surface";
     const notes: ReactNode[] = [];
     if (phase.kind === "loading" || loadingActors > 0) {
         notes.push(
             <div key="loading" className={chip}>
                 <LoadingIndicator size={20} />
-                <span>{t(phase.kind === "loading" ? "page.storyMaker.engine.starting" : "page.storyMaker.engine.loadingModels")}</span>
+                <span className="min-w-0 truncate">{t(phase.kind === "loading" ? "page.storyMaker.engine.starting" : "page.storyMaker.engine.loadingModels")}</span>
             </div>,
         );
     } else if (phase.kind === "unavailable") {
         notes.push(
             <div key="unavailable" className={chip} title={t("page.storyMaker.engine.unavailableDescription")}>
                 <Icon path={mdInfo} size={18} className="shrink-0 text-on-surface-variant" />
-                <span className="truncate">{t("page.storyMaker.engine.unavailable")}</span>
+                <span className="min-w-0 truncate">{t("page.storyMaker.engine.unavailable")}</span>
             </div>,
         );
     } else if (phase.kind === "unsupported") {
@@ -91,9 +91,9 @@ function StageStatus({
             <div key="unsupported" className={chip}>
                 <Icon path={mdWarningFill} size={18} className="shrink-0 text-error" />
                 <span className="min-w-0">
-                    <span className="block">{t("page.storyMaker.engine.unsupported")}</span>
+                    <span className="block truncate">{t("page.storyMaker.engine.unsupported")}</span>
                     {!compact && missing.map(item => (
-                        <span key={item} className="block type-label-s text-on-surface-variant">{t(`page.storyMaker.engine.missing.${item}`)}</span>
+                        <span key={item} className="block truncate type-label-s text-on-surface-variant">{t(`page.storyMaker.engine.missing.${item}`)}</span>
                     ))}
                 </span>
             </div>,

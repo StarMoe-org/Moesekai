@@ -287,6 +287,7 @@ export const storyMakerMessages = {
         showUi: "Show UI",
         mute: "Mute",
         unmute: "Unmute",
+        tapToEnableAudio: "Tap to enable BGM",
         volume: "Volume",
         fullscreen: "Fullscreen",
         exitFullscreen: "Exit fullscreen",

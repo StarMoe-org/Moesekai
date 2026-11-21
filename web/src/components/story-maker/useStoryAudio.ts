@@ -1,51 +1,237 @@
 "use client";
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+interface BgmEntry {
+    url: string;
+    audio: HTMLAudioElement;
+    level: number;
+    failed: boolean;
+    starting: boolean;
+    detachError: () => void;
+}
+
+export interface StoryAudioControls {
+    syncBgm: (url: string | null, level: number) => void;
+    playSe: (url: string) => void;
+    playVoice: (url: string) => Promise<void>;
+    stopVoice: () => void;
+    stopAll: () => void;
+    /** Retries starting an autoplay-blocked BGM inside a user gesture. */
+    unlock: (overrideMaster?: number) => void;
+    /** True while BGM should be playing but is waiting on browser autoplay unlock. */
+    audioBlocked: boolean;
+}
+
+function clamp01(value: number): number {
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(1, Math.max(0, value));
+}
+
+function errorName(error: unknown): string | undefined {
+    if (error instanceof Error) return error.name;
+    if (typeof error === "object" && error !== null && "name" in error) {
+        const name = (error as { name?: unknown }).name;
+        return typeof name === "string" ? name : undefined;
+    }
+    return undefined;
+}
 
 /**
  * The story player's sound: one looping BGM, one-shot SEs and one voice at a time, all through
  * HTMLAudioElement at the reader's volume. Sounds that fail to load are skipped silently (a
- * missing asset must not stop the story).
+ * missing asset must not stop the story), while browser autoplay rejections arm a one-shot
+ * user-gesture unlock so BGM starts cleanly on the reader's first tap or keypress.
  */
-export function useStoryAudio(volume: number, muted: boolean) {
-    const bgmRef = useRef<{ url: string; audio: HTMLAudioElement; level: number } | null>(null);
+export function useStoryAudio(volume: number, muted: boolean): StoryAudioControls {
+    const bgmRef = useRef<BgmEntry | null>(null);
     const voiceRef = useRef<HTMLAudioElement | null>(null);
     const effectsRef = useRef(new Set<HTMLAudioElement>());
-    const masterRef = useRef(muted ? 0 : volume);
+    const masterRef = useRef(muted ? 0 : clamp01(volume));
+    const unlockCleanupRef = useRef<(() => void) | null>(null);
+    const attemptPlayRef = useRef<(entry: BgmEntry) => void>(() => undefined);
+    const [rawBlocked, setRawBlocked] = useState(false);
+
+    const detachUnlockListeners = useCallback(() => {
+        unlockCleanupRef.current?.();
+        unlockCleanupRef.current = null;
+    }, []);
+
+    const armUnlockListeners = useCallback(() => {
+        setRawBlocked(true);
+        if (typeof window === "undefined" || unlockCleanupRef.current) return;
+        const onUserGesture = () => {
+            const current = bgmRef.current;
+            if (!current || current.failed) {
+                detachUnlockListeners();
+                setRawBlocked(false);
+                return;
+            }
+            if (clamp01(current.level * masterRef.current) <= 0) {
+                detachUnlockListeners();
+                return;
+            }
+            if (!current.audio.paused) {
+                detachUnlockListeners();
+                setRawBlocked(false);
+                return;
+            }
+            attemptPlayRef.current(current);
+        };
+        const options: AddEventListenerOptions = { capture: true, passive: true };
+        window.addEventListener("pointerdown", onUserGesture, options);
+        window.addEventListener("click", onUserGesture, options);
+        window.addEventListener("keydown", onUserGesture, options);
+        unlockCleanupRef.current = () => {
+            window.removeEventListener("pointerdown", onUserGesture, options);
+            window.removeEventListener("click", onUserGesture, options);
+            window.removeEventListener("keydown", onUserGesture, options);
+        };
+    }, [detachUnlockListeners]);
+
+    const attemptPlayBgm = useCallback((entry: BgmEntry) => {
+        if (bgmRef.current !== entry || entry.failed || entry.starting) return;
+        const effective = clamp01(entry.level * masterRef.current);
+        entry.audio.volume = effective;
+        if (effective <= 0) {
+            detachUnlockListeners();
+            return;
+        }
+        if (!entry.audio.paused) {
+            detachUnlockListeners();
+            setRawBlocked(false);
+            return;
+        }
+        entry.starting = true;
+        let pending: Promise<void> | undefined;
+        try {
+            pending = entry.audio.play();
+        } catch (error) {
+            entry.starting = false;
+            const name = errorName(error);
+            if (name === "NotSupportedError" || entry.audio.error) {
+                entry.failed = true;
+                detachUnlockListeners();
+                setRawBlocked(false);
+            } else if (name !== "AbortError" && clamp01(entry.level * masterRef.current) > 0) {
+                armUnlockListeners();
+            }
+            return;
+        }
+        if (!pending || typeof pending.then !== "function") {
+            entry.starting = false;
+            detachUnlockListeners();
+            setRawBlocked(false);
+            return;
+        }
+        pending.then(
+            () => {
+                entry.starting = false;
+                if (bgmRef.current !== entry) return;
+                detachUnlockListeners();
+                setRawBlocked(false);
+            },
+            (error: unknown) => {
+                entry.starting = false;
+                if (bgmRef.current !== entry) return;
+                const name = errorName(error);
+                if (name === "AbortError") return;
+                if (name === "NotSupportedError" || entry.audio.error) {
+                    entry.failed = true;
+                    detachUnlockListeners();
+                    setRawBlocked(false);
+                    return;
+                }
+                if (clamp01(entry.level * masterRef.current) > 0) {
+                    armUnlockListeners();
+                }
+            },
+        );
+    }, [armUnlockListeners, detachUnlockListeners]);
 
     useEffect(() => {
-        masterRef.current = muted ? 0 : volume;
-        const bgm = bgmRef.current;
-        if (bgm) bgm.audio.volume = bgm.level * masterRef.current;
-        if (voiceRef.current) voiceRef.current.volume = masterRef.current;
-    }, [volume, muted]);
+        attemptPlayRef.current = attemptPlayBgm;
+    }, [attemptPlayBgm]);
 
-    const stopBgm = useCallback(() => {
+    useEffect(() => {
+        const master = muted ? 0 : clamp01(volume);
+        masterRef.current = master;
+        if (voiceRef.current) voiceRef.current.volume = master;
+        for (const se of effectsRef.current) se.volume = master;
         const bgm = bgmRef.current;
         if (!bgm) return;
+        const effective = clamp01(bgm.level * master);
+        bgm.audio.volume = effective;
+        if (effective <= 0) {
+            detachUnlockListeners();
+            if (!bgm.audio.paused) bgm.audio.pause();
+        } else if (!bgm.failed && bgm.audio.paused) {
+            attemptPlayBgm(bgm);
+        }
+    }, [volume, muted, attemptPlayBgm, detachUnlockListeners]);
+
+    const teardownBgm = useCallback(() => {
+        detachUnlockListeners();
+        const bgm = bgmRef.current;
+        if (!bgm) return;
+        bgmRef.current = null;
+        bgm.detachError();
         bgm.audio.pause();
         bgm.audio.removeAttribute("src");
-        bgmRef.current = null;
-    }, []);
+    }, [detachUnlockListeners]);
+
+    const stopBgm = useCallback(() => {
+        teardownBgm();
+        setRawBlocked(false);
+    }, [teardownBgm]);
 
     /** Plays `url` as the BGM at `level` (the same BGM keeps playing; null stops it). */
     const syncBgm = useCallback((url: string | null, level: number) => {
         const current = bgmRef.current;
+        const normalizedLevel = clamp01(level);
         if (!url) {
             stopBgm();
             return;
         }
         if (current?.url === url) {
-            current.level = level;
-            current.audio.volume = level * masterRef.current;
+            current.level = normalizedLevel;
+            const effective = clamp01(normalizedLevel * masterRef.current);
+            current.audio.volume = effective;
+            if (effective <= 0) {
+                detachUnlockListeners();
+                setRawBlocked(false);
+                if (!current.audio.paused) current.audio.pause();
+            } else if (!current.failed && current.audio.paused) {
+                attemptPlayBgm(current);
+            }
             return;
         }
-        stopBgm();
+        teardownBgm();
+        setRawBlocked(false);
         const audio = new Audio(url);
         audio.loop = true;
-        audio.volume = level * masterRef.current;
-        bgmRef.current = { url, audio, level };
-        audio.play().catch(() => undefined);
-    }, [stopBgm]);
+        audio.volume = clamp01(normalizedLevel * masterRef.current);
+        const entry: BgmEntry = {
+            url,
+            audio,
+            level: normalizedLevel,
+            failed: false,
+            starting: false,
+            detachError: () => undefined,
+        };
+        const onError = () => {
+            entry.failed = true;
+            if (bgmRef.current === entry) {
+                detachUnlockListeners();
+                setRawBlocked(false);
+            }
+        };
+        audio.addEventListener("error", onError, { once: true });
+        entry.detachError = () => audio.removeEventListener("error", onError);
+        bgmRef.current = entry;
+        if (clamp01(normalizedLevel * masterRef.current) > 0) {
+            attemptPlayBgm(entry);
+        }
+    }, [attemptPlayBgm, detachUnlockListeners, stopBgm, teardownBgm]);
 
     const playSe = useCallback((url: string) => {
         const audio = new Audio(url);
@@ -83,17 +269,71 @@ export function useStoryAudio(volume: number, muted: boolean) {
         effectsRef.current.clear();
     }, [stopBgm, stopVoice]);
 
-    useEffect(() => stopAll, [stopAll]);
+    const unlock = useCallback((overrideMaster?: number) => {
+        const master = overrideMaster === undefined ? masterRef.current : clamp01(overrideMaster);
+        if (overrideMaster !== undefined) masterRef.current = master;
+        const bgm = bgmRef.current;
+        if (!bgm || bgm.failed) {
+            detachUnlockListeners();
+            setRawBlocked(false);
+            return;
+        }
+        if (clamp01(bgm.level * master) > 0 && bgm.audio.paused) {
+            attemptPlayBgm(bgm);
+        }
+    }, [attemptPlayBgm, detachUnlockListeners]);
 
-    return { syncBgm, playSe, playVoice, stopVoice, stopAll };
+    useEffect(() => () => {
+        teardownBgm();
+        stopVoice();
+        for (const audio of effectsRef.current) audio.pause();
+        effectsRef.current.clear();
+    }, [stopVoice, teardownBgm]);
+
+    return {
+        syncBgm,
+        playSe,
+        playVoice,
+        stopVoice,
+        stopAll,
+        unlock,
+        audioBlocked: rawBlocked && !muted && volume > 0,
+    };
+}
+
+export interface PreviewSoundOptions {
+    volume?: number;
+    onEnd?: () => void;
 }
 
 /** A one-shot preview of an asset (the pickers' play button). */
 let previewAudio: HTMLAudioElement | null = null;
-export function previewStorySound(url: string | null): void {
-    previewAudio?.pause();
-    previewAudio = null;
+let previewCleanup: (() => void) | null = null;
+
+export function previewStorySound(url: string | null, options?: PreviewSoundOptions): void {
+    previewCleanup?.();
+    previewCleanup = null;
+    if (previewAudio) {
+        previewAudio.pause();
+        previewAudio.removeAttribute("src");
+        previewAudio = null;
+    }
     if (!url) return;
-    previewAudio = new Audio(url);
-    previewAudio.play().catch(() => undefined);
+    const audio = new Audio(url);
+    audio.volume = clamp01(options?.volume ?? 0.85);
+    const finish = () => {
+        if (previewAudio === audio) {
+            previewAudio = null;
+            previewCleanup = null;
+        }
+        options?.onEnd?.();
+    };
+    audio.addEventListener("ended", finish, { once: true });
+    audio.addEventListener("error", finish, { once: true });
+    previewCleanup = () => {
+        audio.removeEventListener("ended", finish);
+        audio.removeEventListener("error", finish);
+    };
+    previewAudio = audio;
+    audio.play().catch(finish);
 }

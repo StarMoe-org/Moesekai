@@ -77,7 +77,21 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
 
     const [volume, setVolume] = useState(0.8);
     const [muted, setMuted] = useState(false);
-    const { syncBgm, playSe, playVoice, stopVoice, stopAll } = useStoryAudio(volume, muted);
+    const {
+        syncBgm, playSe, playVoice, stopVoice, stopAll, unlock: unlockAudio, audioBlocked,
+    } = useStoryAudio(volume, muted);
+
+    const toggleMute = useCallback(() => {
+        const nextMuted = !muted;
+        setMuted(nextMuted);
+        if (!nextMuted && volume > 0) unlockAudio(volume);
+    }, [muted, unlockAudio, volume]);
+
+    const handleVolumeChange = useCallback((next: number) => {
+        setMuted(false);
+        setVolume(next);
+        if (next > 0) unlockAudio(next);
+    }, [unlockAudio]);
 
     const labels = useMemo(() => labelIndices(doc), [doc]);
 
@@ -330,6 +344,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
 
     /** Advance one beat (or complete typing / skip running transition first). */
     const handleAdvance = useCallback(() => {
+        unlockAudio();
         if (menuOpen) {
             setMenuOpen(false);
             return;
@@ -354,17 +369,18 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
         if (step?.op === "choice") return;
         const nextRun = advance(doc, beat.at, undefined, labels);
         void executeRun(current, stageStateRef.current, nextRun);
-    }, [doc, executeRun, fullDialogueBody.length, isTyping, labels, menuOpen, running, snapCurrentRun, uiHidden]);
+    }, [doc, executeRun, fullDialogueBody.length, isTyping, labels, menuOpen, running, snapCurrentRun, uiHidden, unlockAudio]);
 
     /** Pick an option on a choice step. */
     const handleChoose = useCallback((optionId: string, optionText: string) => {
+        unlockAudio();
         const current = historyRef.current;
         const beat = current[current.length - 1];
         if (!beat || beat.stop !== "block") return;
         const annotated = current.map((item, idx) => (idx === current.length - 1 ? { ...item, chosenText: optionText } : item));
         const nextRun = advance(doc, beat.at, optionId, labels);
         void executeRun(annotated, stageStateRef.current, nextRun);
-    }, [doc, executeRun, labels]);
+    }, [doc, executeRun, labels, unlockAudio]);
 
     /** Step back to the previous beat. */
     const handlePrevious = useCallback(() => {
@@ -535,7 +551,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
     const quickMenuTransition = reduced ? reducedMotionFade : md3EffectsFast;
 
     return (
-        <div className="space-y-3">
+        <div className="min-w-0 space-y-3">
             {stagePhase.kind === "unavailable" && (
                 <Banner tone="info" title={t("page.storyMaker.engine.unavailable")}>
                     {t("page.storyMaker.engine.unavailableBanner")}
@@ -555,8 +571,8 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
             <div
                 ref={containerRef}
                 className={cn(
-                    "space-y-2",
-                    fullscreen && "flex h-dvh w-screen flex-col justify-center bg-surface p-4",
+                    "min-w-0 space-y-2",
+                    fullscreen && "flex h-dvh w-full max-w-full flex-col justify-center overflow-x-hidden bg-surface p-4",
                 )}
             >
                 <div className={cn("relative", fullscreen && "mx-auto w-full max-w-[min(100%,calc((100dvh-7rem)*16/9))]")}>
@@ -595,7 +611,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                     role="dialog"
                                     aria-modal="true"
                                     aria-label={t("page.storyMaker.player.menuTitle")}
-                                    className="absolute inset-0 z-[28] flex items-center justify-center bg-scrim/45 p-3 sm:p-5"
+                                    className="absolute inset-0 z-[28] flex items-center justify-center bg-scrim/45 p-2 sm:p-5"
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     exit={{ opacity: 0 }}
@@ -606,28 +622,28 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                     }}
                                 >
                                     <div
-                                        className="glass-thick max-h-full w-full max-w-md overflow-y-auto rounded-md3-xl p-4 text-on-surface"
+                                        className="glass-thick max-h-full w-full max-w-md overflow-x-hidden overflow-y-auto rounded-md3-xl p-3 text-on-surface sm:p-4"
                                         onClick={event => event.stopPropagation()}
                                     >
-                                        <div className="mb-3 flex items-center justify-between gap-2">
+                                        <div className="mb-3 flex min-w-0 items-center justify-between gap-2">
                                             <div className="min-w-0">
                                                 <p className="truncate type-title-m text-on-surface">
                                                     {t("page.storyMaker.player.menuTitle")}
                                                 </p>
                                                 {uiKitStatus !== "idle" && (
-                                                    <span className="mt-0.5 inline-flex items-center gap-1.5 type-label-s text-on-surface-variant">
+                                                    <span className="mt-0.5 inline-flex max-w-full items-center gap-1.5 type-label-s text-on-surface-variant">
                                                         {uiKitStatus === "loading" ? (
                                                             <LoadingIndicator size={12} />
                                                         ) : (
                                                             <span
                                                                 aria-hidden
                                                                 className={cn(
-                                                                    "inline-block size-2 rounded-full",
+                                                                    "inline-block size-2 shrink-0 rounded-full",
                                                                     uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
                                                                 )}
                                                             />
                                                         )}
-                                                        <span>{uiKitLabel}</span>
+                                                        <span className="truncate">{uiKitLabel}</span>
                                                     </span>
                                                 )}
                                             </div>
@@ -639,92 +655,95 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                             />
                                         </div>
 
-                                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                                        <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 sm:gap-2">
                                             <Button
                                                 size="s"
                                                 variant={autoPlay ? "filled" : "tonal"}
                                                 selected={autoPlay}
                                                 disabled={emptyStory || ended}
                                                 icon={mdAutoplay}
+                                                className="min-w-0 px-2.5 sm:px-3"
                                                 onClick={() => setAutoPlay(on => !on)}
                                             >
-                                                {t("page.storyMaker.player.auto")}
+                                                <span className="truncate">{t("page.storyMaker.player.auto")}</span>
                                             </Button>
                                             <Button
                                                 size="s"
                                                 variant="tonal"
                                                 icon={mdHistory}
+                                                className="min-w-0 px-2.5 sm:px-3"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     setBacklogOpen(true);
                                                 }}
                                             >
-                                                {t("page.storyMaker.player.backlog")}
+                                                <span className="truncate">{t("page.storyMaker.player.backlog")}</span>
                                             </Button>
                                             <Button
                                                 size="s"
                                                 variant="tonal"
                                                 icon={mdVisibilityOff}
+                                                className="min-w-0 px-2.5 sm:px-3"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     setUiHidden(true);
                                                 }}
                                             >
-                                                {t("page.storyMaker.player.hideUi")}
+                                                <span className="truncate">{t("page.storyMaker.player.hideUi")}</span>
                                             </Button>
                                             <Button
                                                 size="s"
                                                 variant="tonal"
                                                 icon={mdReplay}
                                                 disabled={emptyStory}
+                                                className="min-w-0 px-2.5 sm:px-3"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     restart();
                                                 }}
                                             >
-                                                {t("page.storyMaker.player.replay")}
+                                                <span className="truncate">{t("page.storyMaker.player.replay")}</span>
                                             </Button>
                                             <Button
                                                 size="s"
                                                 variant={muted || volume === 0 ? "filled" : "tonal"}
                                                 selected={muted || volume === 0}
                                                 icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
-                                                onClick={() => setMuted(on => !on)}
+                                                className="min-w-0 px-2.5 sm:px-3"
+                                                onClick={toggleMute}
                                             >
-                                                {t(muted || volume === 0 ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
+                                                <span className="truncate">{t(muted || volume === 0 ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}</span>
                                             </Button>
                                             <Button
                                                 size="s"
                                                 variant="tonal"
                                                 icon={fullscreen ? mdFullscreenExit : mdFullscreen}
+                                                className="min-w-0 px-2.5 sm:px-3"
                                                 onClick={() => {
                                                     setMenuOpen(false);
                                                     toggleFullscreen();
                                                 }}
                                             >
-                                                {t(fullscreen ? "page.storyMaker.player.exitFullscreen" : "page.storyMaker.player.fullscreen")}
+                                                <span className="truncate">{t(fullscreen ? "page.storyMaker.player.exitFullscreen" : "page.storyMaker.player.fullscreen")}</span>
                                             </Button>
                                         </div>
 
-                                        <div className="mt-3 flex items-center gap-2 rounded-md3-md bg-surface-container/60 px-3 py-1.5">
+                                        <div className="mt-3 flex min-w-0 items-center gap-2 rounded-md3-md bg-surface-container/60 px-2.5 py-1.5 sm:px-3">
                                             <IconButton
                                                 size="xs"
                                                 icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
                                                 label={t(muted ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
-                                                onClick={() => setMuted(on => !on)}
+                                                onClick={toggleMute}
                                             />
                                             <Slider
                                                 min={0}
                                                 max={1}
                                                 step={0.05}
                                                 value={muted ? 0 : volume}
-                                                onValueChange={(next) => {
-                                                    setMuted(false);
-                                                    setVolume(next);
-                                                }}
+                                                onValueChange={handleVolumeChange}
                                                 aria-label={t("page.storyMaker.player.volume")}
                                                 formatValue={val => `${Math.round(val * 100)}%`}
-                                                className="h-8 flex-1"
+                                                className="h-8 min-w-0 flex-1"
                                             />
                                             <span className="w-10 shrink-0 text-right font-mono type-label-s tabular-nums text-on-surface-variant">
                                                 {Math.round((muted ? 0 : volume) * 100)}%
@@ -737,10 +756,10 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
 
                         {!uiHidden && (ended || emptyStory) && (
                             <div
-                                className="absolute inset-0 z-[25] flex items-center justify-center bg-scrim/45 p-4"
+                                className="absolute inset-0 z-[25] flex items-center justify-center bg-scrim/45 p-2 sm:p-4"
                                 onClick={event => event.stopPropagation()}
                             >
-                                <Surface tone="high" radius="xl" elevation={2} className="flex max-w-sm flex-col items-center gap-3 p-6 text-center">
+                                <Surface tone="high" radius="xl" elevation={2} className="flex max-h-full w-full max-w-sm flex-col items-center gap-2 overflow-y-auto p-4 text-center sm:gap-3 sm:p-6">
                                     <p className="type-title-l text-on-surface">
                                         {t(emptyStory ? "page.storyMaker.player.emptyTitle" : "page.storyMaker.player.endTitle")}
                                     </p>
@@ -775,9 +794,9 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                     </StoryStageView>
                 </div>
 
-                <Surface tone="low" radius="lg" className="space-y-2 p-3">
+                <Surface tone="low" radius="lg" className="min-w-0 space-y-2 p-2.5 sm:p-3">
                     {doc.steps.length > 1 && (
-                        <div className="flex items-center gap-3 px-1">
+                        <div className="flex min-w-0 items-center gap-2 px-1 sm:gap-3">
                             <Slider
                                 min={0}
                                 max={doc.steps.length - 1}
@@ -786,16 +805,16 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                 onValueChange={handleSeek}
                                 aria-label={t("page.storyMaker.player.seek")}
                                 formatValue={val => `${val + 1} / ${doc.steps.length}`}
-                                className="h-8 flex-1"
+                                className="h-8 min-w-0 flex-1"
                             />
-                            <span className="shrink-0 font-mono type-label-m text-on-surface-variant">
+                            <span className="shrink-0 font-mono type-label-m tabular-nums text-on-surface-variant">
                                 {currentStepNumber + 1} / {doc.steps.length}
                             </span>
                         </div>
                     )}
 
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex flex-wrap items-center gap-1">
+                    <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
                             <IconButton
                                 size="s"
                                 icon={mdSkipPrevious}
@@ -808,6 +827,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                 variant="filled"
                                 icon={mdSkipNext}
                                 disabled={Boolean(currentChoice) || ended || emptyStory}
+                                className="px-3 sm:px-4"
                                 onClick={handleAdvance}
                             >
                                 {t("page.storyMaker.player.next")}
@@ -825,17 +845,30 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                 icon={mdAutoplay}
                                 disabled={emptyStory || ended}
                                 selected={autoPlay}
+                                className="px-3 sm:px-4"
                                 onClick={() => setAutoPlay(on => !on)}
                             >
                                 {t("page.storyMaker.player.auto")}
                             </Button>
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-1">
+                        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                            {audioBlocked && !emptyStory && !ended && (
+                                <Button
+                                    size="xs"
+                                    variant="tonal"
+                                    icon={mdVolumeUp}
+                                    onClick={() => unlockAudio()}
+                                    className="max-w-full"
+                                >
+                                    <span className="truncate">{t("page.storyMaker.player.tapToEnableAudio")}</span>
+                                </Button>
+                            )}
                             <Button
                                 size="s"
                                 variant="text"
                                 icon={mdHistory}
+                                className="px-3 sm:px-4"
                                 onClick={() => setBacklogOpen(true)}
                             >
                                 {t("page.storyMaker.player.backlog")}
@@ -854,17 +887,14 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                     size="s"
                                     icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
                                     label={t(muted ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
-                                    onClick={() => setMuted(on => !on)}
+                                    onClick={toggleMute}
                                 />
                                 <Slider
                                     min={0}
                                     max={1}
                                     step={0.05}
                                     value={muted ? 0 : volume}
-                                    onValueChange={(next) => {
-                                        setMuted(false);
-                                        setVolume(next);
-                                    }}
+                                    onValueChange={handleVolumeChange}
                                     aria-label={t("page.storyMaker.player.volume")}
                                     formatValue={val => `${Math.round(val * 100)}%`}
                                     className="hidden h-8 w-24 sm:flex"
@@ -893,9 +923,9 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                 ) : (
                     <ol className="space-y-3">
                         {backlogEntries.map(entry => (
-                            <li key={entry.key} className="rounded-md3-md bg-surface-container p-3">
-                                <div className="mb-1 flex items-center justify-between gap-2">
-                                    <span className="type-label-l text-primary">
+                            <li key={entry.key} className="min-w-0 rounded-md3-md bg-surface-container p-3">
+                                <div className="mb-1 flex min-w-0 items-center justify-between gap-2">
+                                    <span className="min-w-0 truncate type-label-l text-primary">
                                         {entry.kind === "talk"
                                             ? entry.speaker || "?"
                                             : entry.kind === "narration"
@@ -913,7 +943,7 @@ export function StoryPlayerView({ doc, line, endAction }: StoryPlayerViewProps) 
                                         />
                                     )}
                                 </div>
-                                <p className="whitespace-pre-wrap type-body-m text-on-surface">{entry.body}</p>
+                                <p className="whitespace-pre-wrap break-words type-body-m text-on-surface">{entry.body}</p>
                             </li>
                         ))}
                     </ol>

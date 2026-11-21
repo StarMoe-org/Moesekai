@@ -354,9 +354,9 @@ function StoryMakerEditContent() {
             : t("page.storyMaker.player.uiKitFallback");
 
     return (
-        <PageContainer wide className="space-y-3 py-4 sm:py-5">
-            <Surface tone="low" radius="lg" className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                <div className="flex min-w-0 flex-1 items-center gap-2">
+        <PageContainer wide className="min-w-0 space-y-3 py-4 sm:py-5">
+            <Surface tone="low" radius="lg" className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-3 py-2">
+                <div className="flex min-w-[min(12rem,100%)] flex-1 items-center gap-1.5 sm:gap-2">
                     <IconButton
                         size="s"
                         icon={mdArrowBack}
@@ -366,25 +366,25 @@ function StoryMakerEditContent() {
                     <button
                         type="button"
                         onClick={() => setMetaOpen(true)}
-                        className="state-layer focus-ring min-w-0 rounded-md3-md px-2 py-1 text-left"
+                        className="state-layer focus-ring min-w-0 flex-1 rounded-md3-md px-2 py-1 text-left"
                     >
                         <span className="block truncate type-title-m text-on-surface">
                             {doc.title || t("page.storyMaker.untitled")}
                         </span>
-                        <span className="flex items-center gap-2 type-label-s text-on-surface-variant">
-                            <span>{t(SERVER_LABEL_KEYS[doc.region])}</span>
+                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 type-label-s text-on-surface-variant">
+                            <span className="truncate">{t(SERVER_LABEL_KEYS[doc.region])}</span>
                             <span>·</span>
-                            <span className={saveStatus === "error" ? "text-error" : undefined}>{saveStatusLabel}</span>
+                            <span className={cn("truncate", saveStatus === "error" && "text-error")}>{saveStatusLabel}</span>
                         </span>
                     </button>
                     {saveStatus === "error" && (
-                        <Button size="xs" variant="text" color="error" onClick={() => void flushSave(draftId, doc)}>
+                        <Button size="xs" variant="text" color="error" className="shrink-0" onClick={() => void flushSave(draftId, doc)}>
                             {t("common.action.retry")}
                         </Button>
                     )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-1">
+                <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
                     <IconButton
                         size="s"
                         icon={mdUndo}
@@ -411,15 +411,16 @@ function StoryMakerEditContent() {
                             variant="tonal"
                             color="error"
                             icon={mdErrorFill}
+                            className="px-3 sm:px-4"
                             onClick={() => setIssuesOpen(true)}
                         >
                             {t("page.storyMaker.editor.issuesCount", { count: issues.length })}
                         </Button>
                     )}
-                    <Button size="s" variant="tonal" icon={mdDownload} onClick={handleExport}>
+                    <Button size="s" variant="tonal" icon={mdDownload} className="px-3 sm:px-4" onClick={handleExport}>
                         {t("page.storyMaker.action.exportJson")}
                     </Button>
-                    <Button size="s" variant="filled" icon={mdPlayArrowFill} onClick={() => void handleOpenPlayer()}>
+                    <Button size="s" variant="filled" icon={mdPlayArrowFill} className="px-3 sm:px-4" onClick={() => void handleOpenPlayer()}>
                         {t("page.storyMaker.action.previewPlay")}
                     </Button>
                 </div>
@@ -436,7 +437,7 @@ function StoryMakerEditContent() {
                 </Banner>
             )}
 
-            <div className="grid grid-cols-1 gap-3 xl:h-[clamp(36rem,calc(100svh-12rem),62rem)] xl:grid-cols-[19rem_minmax(0,1fr)_23rem]">
+            <div className="grid min-w-0 grid-cols-1 gap-3 xl:h-[clamp(36rem,calc(100svh-12rem),62rem)] xl:grid-cols-[19rem_minmax(0,1fr)_23rem]">
                 {/* Desktop left pane: Steps + Cast */}
                 <Surface tone="low" radius="xl" className="hidden flex-col overflow-hidden xl:flex xl:min-h-0">
                     <Tabs
@@ -493,8 +494,8 @@ function StoryMakerEditContent() {
                         showMenuButton
                         flash={flash}
                     />
-                    <Surface tone="low" radius="lg" className="flex flex-wrap items-center justify-between gap-2 px-3 py-2">
-                        <div className="flex flex-wrap items-center gap-1.5">
+                    <Surface tone="low" radius="lg" className="flex min-w-0 flex-wrap items-center justify-between gap-2 px-3 py-2">
+                        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
                             <IconButton
                                 size="s"
                                 icon={mdChevronLeft}
@@ -514,7 +515,7 @@ function StoryMakerEditContent() {
                             />
                             {uiKitStatus !== "idle" && (
                                 <span
-                                    className="inline-flex items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-1 type-label-s text-on-surface-variant"
+                                    className="inline-flex max-w-full items-center gap-1.5 rounded-full bg-surface-container px-2.5 py-1 type-label-s text-on-surface-variant"
                                     title={uiKitBadgeLabel}
                                 >
                                     {uiKitStatus === "loading" ? (
@@ -523,16 +524,16 @@ function StoryMakerEditContent() {
                                         <span
                                             aria-hidden
                                             className={cn(
-                                                "inline-block size-2 rounded-full",
+                                                "inline-block size-2 shrink-0 rounded-full",
                                                 uiKitStatus === "ready" ? "bg-primary" : "bg-outline",
                                             )}
                                         />
                                     )}
-                                    <span>{uiKitBadgeLabel}</span>
+                                    <span className="truncate">{uiKitBadgeLabel}</span>
                                 </span>
                             )}
                         </div>
-                        <div className="flex flex-wrap items-center gap-1.5">
+                        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
                             <Button
                                 size="xs"
                                 variant="tonal"
@@ -570,11 +571,12 @@ function StoryMakerEditContent() {
                 </Surface>
 
                 {/* Mobile & tablet tabbed workspace */}
-                <Surface tone="low" radius="xl" className="flex flex-col overflow-hidden xl:hidden">
+                <Surface tone="low" radius="xl" className="flex min-w-0 flex-col overflow-hidden xl:hidden">
                     <Tabs
                         value={mobileTab}
                         onValueChange={setMobileTab}
                         aria-label={t("page.storyMaker.editor.workspaceTabs")}
+                        className="[&_[role=tablist]]:scrollbar-hide [&_[role=tablist]]:overflow-x-auto [&_[role=tab]]:px-3"
                         items={[
                             { value: "steps", label: t("page.storyMaker.editor.steps") },
                             { value: "inspector", label: t("page.storyMaker.editor.inspectorTab") },
@@ -598,7 +600,7 @@ function StoryMakerEditContent() {
                         />
                     )}
                     {mobileTab === "inspector" && (
-                        <div className="p-4">
+                        <div className="min-w-0 p-3 sm:p-4">
                             <StepInspector
                                 doc={doc}
                                 step={selectedStep}
@@ -612,7 +614,7 @@ function StoryMakerEditContent() {
                         </div>
                     )}
                     {mobileTab === "cast" && (
-                        <div className="p-4">
+                        <div className="min-w-0 p-3 sm:p-4">
                             <CastPanel
                                 doc={doc}
                                 list={modelList}

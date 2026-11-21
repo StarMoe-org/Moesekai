@@ -49,11 +49,11 @@ export function PageHeader({
     const centered = align === "center";
     return (
         <header className={withOverrides("mb-4 sm:mb-6", centered && "text-center", className)}>
-            <div className={cn("flex flex-wrap items-end gap-x-4 gap-y-2", centered ? "justify-center" : "justify-between")}>
-                <div className={cn("min-w-0", centered && "mx-auto")}>
+            <div className={cn("flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2", centered ? "justify-center" : "justify-between")}>
+                <div className={cn("min-w-0 max-w-full", centered && "mx-auto")}>
                     {/* Neutral: the highlight below is the header's one accent, in the true character color. */}
                     {eyebrow && <div className="mb-1 type-label-m text-on-surface-variant">{eyebrow}</div>}
-                    <h1 className="type-headline-s text-on-surface sm:type-headline-m">
+                    <h1 className="break-words type-headline-s text-on-surface sm:type-headline-m">
                         {title}
                         {highlight && (
                             <>
@@ -63,10 +63,10 @@ export function PageHeader({
                         )}
                     </h1>
                     {description && (
-                        <p className={cn("mt-1 max-w-3xl type-body-m text-on-surface-variant", centered && "mx-auto")}>{description}</p>
+                        <p className={cn("mt-1 max-w-3xl break-words type-body-m text-on-surface-variant", centered && "mx-auto")}>{description}</p>
                     )}
                 </div>
-                {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+                {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>}
             </div>
         </header>
     );

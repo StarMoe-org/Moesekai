@@ -54,3 +54,6 @@ export const STORY_FADE_SECONDS = 0.4;
 
 /** Verified Miyamasuzaka Girls Academy daytime classroom scene background (available on all 5 servers). */
 export const DEFAULT_STORY_BACKGROUND = "bg_a000401";
+
+/** Verified everyday classroom BGM (paired with bg_a000401 in Leo/need unit story Ep. 9; HTTP 200 on all 5 servers). */
+export const DEFAULT_STORY_BGM = "bgm00020";

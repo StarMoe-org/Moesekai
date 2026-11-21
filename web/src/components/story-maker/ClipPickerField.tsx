@@ -58,8 +58,8 @@ export function ClipPickerField({ kind, value, info, disabled, onChange }: ClipP
     };
 
     return (
-        <div className="space-y-1">
-            <div className="flex items-start gap-2">
+        <div className="min-w-0 space-y-1">
+            <div className="flex min-w-0 flex-wrap items-start gap-2">
                 <TextField
                     label={t(labelKey)}
                     value={value ?? ""}
@@ -67,8 +67,7 @@ export function ClipPickerField({ kind, value, info, disabled, onChange }: ClipP
                     disabled={disabled}
                     placeholder={fallback ?? t("page.storyMaker.inspector.clipDefault")}
                     onChange={event => onChange(event.target.value.trim() || undefined)}
-                    className="font-mono"
-                    containerClassName="min-w-0 flex-1"
+                    className="min-w-[9rem] flex-1 font-mono"
                     trailing={value ? (
                         <IconButton
                             size="xs"

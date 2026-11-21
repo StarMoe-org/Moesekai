@@ -221,19 +221,19 @@ function StoryMakerContent() {
     ];
 
     return (
-        <PageContainer>
+        <PageContainer className="min-w-0">
             <PageHeader
                 title={t("page.storyMaker.title")}
                 description={t("page.storyMaker.description")}
                 actions={(
                     <>
-                        <Button variant="outlined" icon={mdPlayArrowFill} href="/story-maker/play">
+                        <Button variant="outlined" icon={mdPlayArrowFill} href="/story-maker/play" className="px-3 sm:px-4">
                             {t("page.storyMaker.landing.playFile")}
                         </Button>
-                        <Button variant="tonal" icon={mdUploadFile} disabled={storageError !== null} onClick={() => setImportOpen(true)}>
+                        <Button variant="tonal" icon={mdUploadFile} disabled={storageError !== null} onClick={() => setImportOpen(true)} className="px-3 sm:px-4">
                             {t("page.storyMaker.landing.importJson")}
                         </Button>
-                        <Button variant="filled" icon={mdAdd} disabled={storageError !== null} onClick={() => setCreatingOpen(true)}>
+                        <Button variant="filled" icon={mdAdd} disabled={storageError !== null} onClick={() => setCreatingOpen(true)} className="px-3 sm:px-4">
                             {t("page.storyMaker.landing.newStory")}
                         </Button>
                     </>
@@ -255,14 +255,14 @@ function StoryMakerContent() {
                 </Banner>
             )}
 
-            <section className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <h2 className="type-title-l text-on-surface">
+            <section className="min-w-0 space-y-4">
+                <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+                    <h2 className="min-w-0 type-title-l text-on-surface">
                         {t("page.storyMaker.landing.myDrafts")}
                         {!loading && <span className="ml-2 type-label-l text-on-surface-variant">{filtered.length}</span>}
                     </h2>
                     {drafts.length > 0 && (
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 sm:w-auto">
                             <Button size="s" variant="text" icon={mdStar} onClick={() => void handleCreateStarter()}>
                                 {t("page.storyMaker.landing.tryStarter")}
                             </Button>
@@ -273,7 +273,7 @@ function StoryMakerContent() {
                                 icon={mdSearch}
                                 clearable
                                 aria-label={t("page.storyMaker.landing.searchPlaceholder")}
-                                containerClassName="w-56"
+                                className="min-w-0 flex-1 basis-44 sm:w-56 sm:flex-none"
                             />
                             <Select<SortKey>
                                 value={sortBy}
@@ -284,7 +284,7 @@ function StoryMakerContent() {
                                     { value: "title", label: t("page.storyMaker.landing.sortTitle") },
                                 ]}
                                 aria-label={t("page.storyMaker.landing.sortBy")}
-                                className="w-40"
+                                className="min-w-0 flex-1 basis-36 sm:w-40 sm:flex-none"
                             />
                         </div>
                     )}
@@ -322,20 +322,20 @@ function StoryMakerContent() {
                     </Card>
                 ) : (
                     <>
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+                        <div className="grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
                             {visibleDrafts.map(draft => (
-                                <Card key={draft.id} variant="filled" radius="lg" className="flex flex-col justify-between p-4">
-                                    <div className="space-y-3">
+                                <Card key={draft.id} variant="filled" radius="lg" className="flex min-w-0 flex-col justify-between p-4">
+                                    <div className="min-w-0 space-y-3">
                                         <div className="flex items-start justify-between gap-2">
                                             <div className="min-w-0 flex-1">
                                                 <h3 className="truncate type-title-m text-on-surface">
                                                     {draft.doc.title || t("page.storyMaker.untitled")}
                                                 </h3>
-                                                <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 type-label-m text-on-surface-variant">
-                                                    <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
+                                                <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5 type-label-m text-on-surface-variant">
+                                                    <span className="shrink-0 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
                                                         {t(SERVER_LABEL_KEYS[draft.doc.region])}
                                                     </span>
-                                                    {draft.doc.author && <span className="truncate">{draft.doc.author}</span>}
+                                                    {draft.doc.author && <span className="min-w-0 truncate">{draft.doc.author}</span>}
                                                 </div>
                                             </div>
                                             <Menu
@@ -386,10 +386,10 @@ function StoryMakerContent() {
                                         </div>
 
                                         {draft.doc.summary && (
-                                            <p className="line-clamp-2 type-body-s text-on-surface-variant">{draft.doc.summary}</p>
+                                            <p className="line-clamp-2 break-words type-body-s text-on-surface-variant">{draft.doc.summary}</p>
                                         )}
 
-                                        <div className="flex items-center justify-between gap-2">
+                                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
                                             <div className="flex items-center -space-x-1.5">
                                                 {draft.doc.cast.slice(0, 4).map(member => (
                                                     member.characterId ? (
@@ -422,11 +422,11 @@ function StoryMakerContent() {
                                         </div>
                                     </div>
 
-                                    <div className="mt-4 flex items-center justify-between gap-2 border-t border-outline-variant/60 pt-3">
-                                        <span className="truncate type-label-s text-on-surface-variant">
+                                    <div className="mt-4 flex min-w-0 flex-wrap items-center justify-between gap-2 border-t border-outline-variant/60 pt-3">
+                                        <span className="min-w-0 flex-1 truncate type-label-s text-on-surface-variant">
                                             {t("page.storyMaker.landing.updatedAt", { time: dateFormatter.format(new Date(draft.updatedAt)) })}
                                         </span>
-                                        <div className="flex shrink-0 items-center gap-1">
+                                        <div className="flex shrink-0 flex-wrap items-center gap-1">
                                             <Button
                                                 size="xs"
                                                 variant="text"

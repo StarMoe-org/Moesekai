@@ -287,6 +287,7 @@ export const storyMakerMessages = {
         showUi: "顯示對話框",
         mute: "靜音",
         unmute: "取消靜音",
+        tapToEnableAudio: "點擊開啟背景音樂",
         volume: "音量",
         fullscreen: "全螢幕",
         exitFullscreen: "退出全螢幕",

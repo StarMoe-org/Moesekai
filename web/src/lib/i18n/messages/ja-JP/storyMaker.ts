@@ -287,6 +287,7 @@ export const storyMakerMessages = {
         showUi: "UI を表示",
         mute: "ミュート",
         unmute: "ミュート解除",
+        tapToEnableAudio: "タップして BGM を再生",
         volume: "音量",
         fullscreen: "全画面",
         exitFullscreen: "全画面を終了",

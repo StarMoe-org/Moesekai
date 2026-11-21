@@ -109,15 +109,15 @@ function StoryMakerPlayContent() {
             : "empty";
 
     return (
-        <PageContainer>
+        <PageContainer className="min-w-0">
             <PageHeader
                 eyebrow={activeDoc ? (
-                    <span className="inline-flex flex-wrap items-center gap-2">
+                    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-0.5 break-words">
                         <span>{t(SERVER_LABEL_KEYS[activeDoc.region])}</span>
                         {activeDoc.author && (
                             <>
                                 <span>·</span>
-                                <span>{t("page.storyMaker.meta.authorBy", { author: activeDoc.author })}</span>
+                                <span className="min-w-0 break-words">{t("page.storyMaker.meta.authorBy", { author: activeDoc.author })}</span>
                             </>
                         )}
                         {source.kind === "imported" && (
@@ -132,16 +132,16 @@ function StoryMakerPlayContent() {
                 description={activeDoc ? (activeDoc.summary || undefined) : t("page.storyMaker.player.pageDescription")}
                 actions={(
                     <>
-                        <Button variant="text" icon={mdArrowBack} href="/story-maker">
+                        <Button variant="text" icon={mdArrowBack} href="/story-maker" className="px-3 sm:px-4">
                             {t("page.storyMaker.action.backToDrafts")}
                         </Button>
                         {source.kind === "draft" && (
-                            <Button variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`}>
+                            <Button variant="tonal" icon={mdEdit} href={`/story-maker/edit?id=${encodeURIComponent(source.id)}`} className="px-3 sm:px-4">
                                 {t("page.storyMaker.action.edit")}
                             </Button>
                         )}
                         {source.kind === "imported" && (
-                            <Button variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()}>
+                            <Button variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()} className="px-3 sm:px-4">
                                 {t("page.storyMaker.player.saveAsDraft")}
                             </Button>
                         )}
@@ -149,6 +149,7 @@ function StoryMakerPlayContent() {
                             <Button
                                 variant="outlined"
                                 icon={mdDownload}
+                                className="px-3 sm:px-4"
                                 onClick={() => {
                                     downloadStoryJson(activeDoc);
                                     setSnack(t("page.storyMaker.exportedToast"));
@@ -157,7 +158,7 @@ function StoryMakerPlayContent() {
                                 {t("page.storyMaker.action.exportJson")}
                             </Button>
                         )}
-                        <Button variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)}>
+                        <Button variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="px-3 sm:px-4">
                             {t("page.storyMaker.player.openJson")}
                         </Button>
                     </>
@@ -202,7 +203,7 @@ function StoryMakerPlayContent() {
                     />
                 </Card>
             ) : (
-                <div className="space-y-3">
+                <div className="min-w-0 space-y-3">
                     {issues.length > 0 && (
                         <Banner
                             tone="warning"

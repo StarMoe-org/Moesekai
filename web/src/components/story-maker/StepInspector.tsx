@@ -5,7 +5,7 @@ import {
     type SelectOption,
 } from "@/components/md3";
 import {
-    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdRestartAlt, mdVolumeUp,
+    mdAdd, mdClose, mdDelete, mdImage, mdMusicNote, mdPlayArrowFill, mdRestartAlt, mdStopFill, mdVolumeUp,
 } from "@/components/md3/icons";
 import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
 import { useI18n } from "@/contexts/I18nContext";
@@ -13,7 +13,7 @@ import { getCharacterIconUrl, type AssetLine } from "@/lib/assets";
 import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
 import { storyBackgroundUrl, storyBgmUrl, storySeUrl, storyVoiceUrl } from "@/lib/storyMaker/assets";
 import { newStoryId, storyLabels } from "@/lib/storyMaker/document";
-import { STORY_LIMITS } from "@/lib/storyMaker/limits";
+import { DEFAULT_STORY_BGM, STORY_LIMITS } from "@/lib/storyMaker/limits";
 import { stageStateAt } from "@/lib/storyMaker/state";
 import {
     BACKGROUND_TRANSITIONS, BGM_ACTIONS, EFFECT_COLORS, STORY_EFFECTS, STORY_SLOTS, VOICE_KINDS,
@@ -48,8 +48,24 @@ export function StepInspector({
     const { t } = useI18n();
     const [bgPickerOpen, setBgPickerOpen] = useState(false);
     const [assetPicker, setAssetPicker] = useState<"bgm" | "se" | null>(null);
+    const [previewing, setPreviewing] = useState<{ stepId: string; url: string } | null>(null);
 
-    useEffect(() => () => previewStorySound(null), []);
+    useEffect(() => () => previewStorySound(null), [step?.id]);
+
+    const togglePreview = (url: string, volume?: number) => {
+        if (!step) return;
+        if (previewing?.stepId === step.id && previewing.url === url) {
+            previewStorySound(null);
+            setPreviewing(null);
+            return;
+        }
+        const token = { stepId: step.id, url };
+        setPreviewing(token);
+        previewStorySound(url, {
+            volume,
+            onEnd: () => setPreviewing(curr => (curr === token ? null : curr)),
+        });
+    };
 
     if (!step) {
         return (
@@ -96,14 +112,14 @@ export function StepInspector({
     };
 
     return (
-        <div className="space-y-4">
-            <div className="flex items-center gap-2">
+        <div className="min-w-0 space-y-4">
+            <div className="flex min-w-0 items-center gap-2">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-md3-sm bg-secondary-container text-on-secondary-container">
                     <Icon path={STEP_ICONS[step.op]} size={18} />
                 </span>
                 <div className="min-w-0 flex-1">
                     <p className="truncate type-title-s text-on-surface">{stepLabel(t, step.op)}</p>
-                    <p className="font-mono type-label-s text-on-surface-variant">
+                    <p className="truncate font-mono type-label-s text-on-surface-variant">
                         #{stepIndex + 1} · {step.id}
                     </p>
                 </div>
@@ -134,15 +150,14 @@ export function StepInspector({
                                 </div>
                             )}
                         </div>
-                        <div className="flex items-start gap-2">
+                        <div className="flex min-w-0 flex-wrap items-start gap-2">
                             <TextField
                                 label={t("page.storyMaker.inspector.assetName")}
                                 value={step.name ?? ""}
                                 maxLength={64}
                                 placeholder={t("page.storyMaker.summary.noBackground")}
                                 onChange={event => patch(step, { name: event.target.value.trim() || null })}
-                                className="font-mono"
-                                containerClassName="min-w-0 flex-1"
+                                className="min-w-[9rem] flex-1 font-mono"
                             />
                             <Button
                                 size="s"
@@ -231,6 +246,7 @@ export function StepInspector({
                             onValueChange={slot => patch(step, { slot })}
                             options={slotOptions}
                             aria-label={t("page.storyMaker.inspector.slot")}
+                            className="[&>button]:px-1.5 sm:[&>button]:px-3"
                         />
                     </div>
                     <Switch
@@ -305,6 +321,7 @@ export function StepInspector({
                                 onValueChange={slot => patch(step, { slot })}
                                 options={slotOptions}
                                 aria-label={t("page.storyMaker.inspector.slot")}
+                                className="[&>button]:px-1.5 sm:[&>button]:px-3"
                             />
                         </div>
                         <DurationSlider
@@ -492,15 +509,23 @@ export function StepInspector({
                                     className="font-mono"
                                     onChange={event => patch(step, { voice: { ...step.voice!, voiceId: event.target.value.trim() } })}
                                 />
-                                <Button
-                                    size="xs"
-                                    variant="tonal"
-                                    icon={mdPlayArrowFill}
-                                    disabled={!step.voice.scenarioId || !step.voice.voiceId}
-                                    onClick={() => step.voice && previewStorySound(storyVoiceUrl(step.voice, doc.region, line))}
-                                >
-                                    {t("page.storyMaker.inspector.previewAudio")}
-                                </Button>
+                                {(() => {
+                                    const voiceUrl = step.voice.scenarioId && step.voice.voiceId
+                                        ? storyVoiceUrl(step.voice, doc.region, line)
+                                        : "";
+                                    const playingVoice = Boolean(voiceUrl) && previewing?.stepId === step.id && previewing.url === voiceUrl;
+                                    return (
+                                        <Button
+                                            size="xs"
+                                            variant="tonal"
+                                            icon={playingVoice ? mdStopFill : mdPlayArrowFill}
+                                            disabled={!voiceUrl}
+                                            onClick={() => voiceUrl && togglePreview(voiceUrl)}
+                                        >
+                                            {t(playingVoice ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                        </Button>
+                                    );
+                                })()}
                             </div>
                         )}
                     </div>
@@ -598,8 +623,8 @@ export function StepInspector({
                             onValueChange={(action) => {
                                 const next: StoryStepOf<"bgm"> = { id: step.id, op: "bgm", action };
                                 if (action === "play") {
-                                    next.name = step.name ?? "";
-                                    next.volume = step.volume ?? 1;
+                                    next.name = step.name || DEFAULT_STORY_BGM;
+                                    next.volume = step.volume ?? 0.75;
                                 } else if (action === "volume") {
                                     next.volume = step.volume ?? 0.5;
                                 }
@@ -612,41 +637,44 @@ export function StepInspector({
                             aria-label={t("page.storyMaker.inspector.bgmAction")}
                         />
                     </div>
-                    {step.action === "play" && (
-                        <div className="flex items-start gap-2">
-                            <TextField
-                                label={t("page.storyMaker.inspector.bgmName")}
-                                value={step.name ?? ""}
-                                maxLength={64}
-                                placeholder="bgm00001"
-                                onChange={event => patch(step, { name: event.target.value.trim() })}
-                                className="font-mono"
-                                containerClassName="min-w-0 flex-1"
-                            />
-                            <Button
-                                size="s"
-                                variant="tonal"
-                                icon={mdMusicNote}
-                                onClick={() => setAssetPicker("bgm")}
-                                className="mt-1 shrink-0"
-                            >
-                                {t("page.storyMaker.inspector.browse")}
-                            </Button>
-                            <IconButton
-                                size="s"
-                                icon={mdPlayArrowFill}
-                                label={t("page.storyMaker.inspector.previewAudio")}
-                                disabled={!step.name}
-                                onClick={() => step.name && previewStorySound(storyBgmUrl(step.name, doc.region, line))}
-                                className="mt-1 shrink-0"
-                            />
-                        </div>
-                    )}
+                    {step.action === "play" && (() => {
+                        const bgmUrl = step.name ? storyBgmUrl(step.name, doc.region, line) : "";
+                        const playingBgm = Boolean(bgmUrl) && previewing?.stepId === step.id && previewing.url === bgmUrl;
+                        return (
+                            <div className="flex min-w-0 flex-wrap items-start gap-2">
+                                <TextField
+                                    label={t("page.storyMaker.inspector.bgmName")}
+                                    value={step.name ?? ""}
+                                    maxLength={64}
+                                    placeholder={DEFAULT_STORY_BGM}
+                                    onChange={event => patch(step, { name: event.target.value.trim() })}
+                                    className="min-w-[9rem] flex-1 font-mono"
+                                />
+                                <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                                    <Button
+                                        size="s"
+                                        variant="tonal"
+                                        icon={mdMusicNote}
+                                        onClick={() => setAssetPicker("bgm")}
+                                    >
+                                        {t("page.storyMaker.inspector.browse")}
+                                    </Button>
+                                    <IconButton
+                                        size="s"
+                                        icon={playingBgm ? mdStopFill : mdPlayArrowFill}
+                                        label={t(playingBgm ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                        disabled={!bgmUrl}
+                                        onClick={() => bgmUrl && togglePreview(bgmUrl, step.volume ?? 0.75)}
+                                    />
+                                </div>
+                            </div>
+                        );
+                    })()}
                     {(step.action === "play" || step.action === "volume") && (
                         <div className="space-y-1">
-                            <div className="flex items-center justify-between">
-                                <span className="type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.volume")}</span>
-                                <span className="font-mono type-label-m text-on-surface">{Math.round((step.volume ?? 1) * 100)}%</span>
+                            <div className="flex min-w-0 items-center justify-between gap-2">
+                                <span className="min-w-0 truncate type-label-l text-on-surface-variant">{t("page.storyMaker.inspector.volume")}</span>
+                                <span className="shrink-0 font-mono type-label-m text-on-surface">{Math.round((step.volume ?? 1) * 100)}%</span>
                             </div>
                             <Slider
                                 min={0}
@@ -662,36 +690,39 @@ export function StepInspector({
                 </div>
             )}
 
-            {step.op === "se" && (
-                <div className="flex items-start gap-2">
-                    <TextField
-                        label={t("page.storyMaker.inspector.seName")}
-                        value={step.name}
-                        maxLength={64}
-                        placeholder="se00001_b"
-                        onChange={event => patch(step, { name: event.target.value.trim() })}
-                        className="font-mono"
-                        containerClassName="min-w-0 flex-1"
-                    />
-                    <Button
-                        size="s"
-                        variant="tonal"
-                        icon={mdVolumeUp}
-                        onClick={() => setAssetPicker("se")}
-                        className="mt-1 shrink-0"
-                    >
-                        {t("page.storyMaker.inspector.browse")}
-                    </Button>
-                    <IconButton
-                        size="s"
-                        icon={mdPlayArrowFill}
-                        label={t("page.storyMaker.inspector.previewAudio")}
-                        disabled={!step.name}
-                        onClick={() => step.name && previewStorySound(storySeUrl(step.name, doc.region, line))}
-                        className="mt-1 shrink-0"
-                    />
-                </div>
-            )}
+            {step.op === "se" && (() => {
+                const seUrl = step.name ? storySeUrl(step.name, doc.region, line) : "";
+                const playingSe = Boolean(seUrl) && previewing?.stepId === step.id && previewing.url === seUrl;
+                return (
+                    <div className="flex min-w-0 flex-wrap items-start gap-2">
+                        <TextField
+                            label={t("page.storyMaker.inspector.seName")}
+                            value={step.name}
+                            maxLength={64}
+                            placeholder="se00001_b"
+                            onChange={event => patch(step, { name: event.target.value.trim() })}
+                            className="min-w-[9rem] flex-1 font-mono"
+                        />
+                        <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                            <Button
+                                size="s"
+                                variant="tonal"
+                                icon={mdVolumeUp}
+                                onClick={() => setAssetPicker("se")}
+                            >
+                                {t("page.storyMaker.inspector.browse")}
+                            </Button>
+                            <IconButton
+                                size="s"
+                                icon={playingSe ? mdStopFill : mdPlayArrowFill}
+                                label={t(playingSe ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                disabled={!seUrl}
+                                onClick={() => seUrl && togglePreview(seUrl)}
+                            />
+                        </div>
+                    </div>
+                );
+            })()}
 
             {step.op === "choice" && (
                 <div className="space-y-3">
@@ -831,9 +862,9 @@ function ActorFramingControls({
         : scale !== undefined || y !== undefined;
 
     return (
-        <div className="space-y-3 rounded-md3-md bg-surface-container p-3">
-            <div className="flex items-center justify-between gap-2">
-                <span className="type-label-l text-on-surface-variant">
+        <div className="min-w-0 space-y-3 rounded-md3-md bg-surface-container p-3">
+            <div className="flex min-w-0 flex-wrap items-center justify-between gap-2">
+                <span className="min-w-0 type-label-l text-on-surface-variant">
                     {t("page.storyMaker.inspector.actorFraming")}
                 </span>
                 <Button
@@ -862,9 +893,9 @@ function ActorFramingControls({
             </div>
 
             <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                    <span className="type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.scale")}</span>
-                    <span className="font-mono type-label-m text-on-surface">{effectiveScale.toFixed(2)}×</span>
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="min-w-0 truncate type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.scale")}</span>
+                    <span className="shrink-0 font-mono type-label-m text-on-surface">{effectiveScale.toFixed(2)}×</span>
                 </div>
                 <Slider
                     min={STORY_LIMITS.scaleMin}
@@ -878,9 +909,9 @@ function ActorFramingControls({
             </div>
 
             <div className="space-y-1">
-                <div className="flex items-center justify-between">
-                    <span className="type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.verticalOffset")}</span>
-                    <span className="font-mono type-label-m text-on-surface">
+                <div className="flex min-w-0 items-center justify-between gap-2">
+                    <span className="min-w-0 truncate type-label-m text-on-surface-variant">{t("page.storyMaker.inspector.verticalOffset")}</span>
+                    <span className="shrink-0 font-mono type-label-m text-on-surface">
                         {effectiveY > 0 ? `+${effectiveY.toFixed(2)}` : effectiveY.toFixed(2)}
                     </span>
                 </div>
@@ -907,9 +938,9 @@ function ActorFramingControls({
 function DurationSlider({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
     return (
         <div className="space-y-1">
-            <div className="flex items-center justify-between">
-                <span className="type-label-l text-on-surface-variant">{label}</span>
-                <span className="font-mono type-label-m text-on-surface">{value.toFixed(1)}s</span>
+            <div className="flex min-w-0 items-center justify-between gap-2">
+                <span className="min-w-0 truncate type-label-l text-on-surface-variant">{label}</span>
+                <span className="shrink-0 font-mono type-label-m text-on-surface">{value.toFixed(1)}s</span>
             </div>
             <Slider
                 min={STORY_LIMITS.duration.min}

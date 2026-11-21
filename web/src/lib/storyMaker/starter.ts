@@ -4,7 +4,7 @@
  */
 import { STORY_FORMAT, type StoryDocument, type StoryRegion } from "../../types/storyMaker.ts";
 import { serializeStory, storyFileName } from "./document.ts";
-import { DEFAULT_STORY_BACKGROUND } from "./limits.ts";
+import { DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM } from "./limits.ts";
 
 export interface StarterStoryStrings {
     title: string;
@@ -41,7 +41,7 @@ export function createStarterStoryDocument(region: StoryRegion, strings: Starter
         ],
         steps: [
             { id: "bg01", op: "background", name: DEFAULT_STORY_BACKGROUND, transition: "fade" },
-            { id: "bgm01", op: "bgm", action: "play", name: "bgm00001", volume: 0.7 },
+            { id: "bgm01", op: "bgm", action: "play", name: DEFAULT_STORY_BGM, volume: 0.75 },
             { id: "pl01", op: "place", text: strings.placeOpening },
             { id: "tl01", op: "telop", body: strings.telopOpening },
             { id: "ap01", op: "appear", cast: "ichika", slot: "left", fade: true, scale: 1.05 },
