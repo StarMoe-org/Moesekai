@@ -461,6 +461,11 @@ function checkStageCastSlot(checker: Checker, raw: unknown, path: string): Stage
             : checker.number(item, "y", aPath, STORY_LIMITS.yMin, STORY_LIMITS.yMax);
         const motion = checker.motion(item, "motion", aPath);
         const facial = checker.motion(item, "facial", aPath);
+        const allowOverlap = item.allowOverlap === undefined || item.allowOverlap === null
+            ? undefined
+            : typeof item.allowOverlap === "boolean"
+                ? item.allowOverlap
+                : (checker.add("fieldType", `${aPath}.allowOverlap`, { expected: "boolean" }), undefined);
         if (!castKey || !slot) return;
         actors.push({
             castKey,
@@ -469,6 +474,7 @@ function checkStageCastSlot(checker: Checker, raw: unknown, path: string): Stage
             ...(y !== undefined ? { y } : {}),
             ...(motion ? { motion } : {}),
             ...(facial ? { facial } : {}),
+            ...(allowOverlap ? { allowOverlap: true } : {}),
         });
     });
     return { mode: "set", actors };
@@ -587,6 +593,11 @@ function checkBeat(checker: Checker, raw: unknown, path: string): SceneBeat | un
             const duration = raw.duration === undefined || raw.duration === null
                 ? undefined
                 : checker.number(raw, "duration", path, STORY_LIMITS.duration.min, STORY_LIMITS.duration.max);
+            const allowOverlap = raw.allowOverlap === undefined || raw.allowOverlap === null
+                ? undefined
+                : typeof raw.allowOverlap === "boolean"
+                    ? raw.allowOverlap
+                    : (checker.add("fieldType", `${path}.allowOverlap`, { expected: "boolean" }), undefined);
             if (!action || !castKey) return undefined;
             return done({
                 id,
@@ -599,6 +610,7 @@ function checkBeat(checker: Checker, raw: unknown, path: string): SceneBeat | un
                 ...(motion ? { motion } : {}),
                 ...(facial ? { facial } : {}),
                 ...(duration !== undefined ? { duration } : {}),
+                ...(allowOverlap ? { allowOverlap: true } : {}),
             });
         }
         case "cue": {

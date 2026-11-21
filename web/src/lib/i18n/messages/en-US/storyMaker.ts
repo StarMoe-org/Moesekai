@@ -384,8 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "Choice option text cannot be empty.",
         cycleDetected: "Non-blocking cycle detected; playback may halt to prevent an infinite loop.",
         mergeNodeInheritAmbiguous: "This node merges {count} branches while stage slots ({slots}) use Inherit, which may be ambiguous. Declare them explicitly.",
-        stageSlotDuplicate: "Multiple actors ({actors}) share the same slot \"{slot}\". Assign distinct slots to avoid overlap.",
-        stageActorOverlap: "Actors ({actors}) spacing ({gap}) is tighter than the safe width ({minGap}) at their current scale; reduce scale or on-stage count.",
+        stageSlotDuplicate: "Multiple actors ({actors}) share slot \"{slot}\" without declaring overlap. Use distinct slots or explicitly enable Allow overlap (`overlap`).",
+        stageActorOverlap: "Actors ({actors}) spacing ({gap}) is tighter than safe width ({minGap}); reduce scale/cast or explicitly enable Allow overlap (`overlap`).",
     },
     flow: {
         viewModeStudio: "Studio",
@@ -651,6 +651,8 @@ export const storyMakerMessages = {
             emptyCastSlot: "Drag a cast card here or add a character",
             replaceHint: "Replaces current",
             newSceneToChangeHint: "Cut to a new Scene to switch BG or BGM",
+            allowOverlap: "Allow overlap (huddle)",
+            overlapBadge: "Huddle",
         },
         beats: {
             sectionTitle: "Performance Track",

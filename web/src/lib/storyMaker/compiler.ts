@@ -494,7 +494,7 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                 });
             }
             const emitStageOverlapWarnings = (
-                actors: ReadonlyArray<{ cast: string; slot: StorySlot; x: number; scale: number }>,
+                actors: ReadonlyArray<{ cast: string; slot: StorySlot; x: number; scale: number; allowOverlap?: boolean }>,
                 path: string,
                 beatId?: string,
             ) => {
@@ -519,7 +519,7 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                 }
             };
 
-            let trackedStage: Array<{ cast: string; slot: StorySlot; x: number; scale: number }> = [];
+            let trackedStage: Array<{ cast: string; slot: StorySlot; x: number; scale: number; allowOverlap?: boolean }> = [];
 
             if (node.stageCast.mode === "set") {
                 if (node.stageCast.actors.length > STORY_LIMITS.stageActors) {
@@ -544,6 +544,7 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                                 slot: actor.slot,
                                 x: SLOT_X[actor.slot],
                                 scale: typeof actor.scale === "number" && Number.isFinite(actor.scale) ? actor.scale : 1,
+                                ...(actor.allowOverlap ? { allowOverlap: true } : {}),
                             });
                         }
                     }
@@ -683,7 +684,13 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                                 const scale = typeof beat.scale === "number" && Number.isFinite(beat.scale) ? beat.scale : 1;
                                 trackedStage = layoutStageActors([
                                     ...trackedStage.filter(a => a.cast !== beat.castKey),
-                                    { cast: beat.castKey, slot, x: SLOT_X[slot], scale },
+                                    {
+                                        cast: beat.castKey,
+                                        slot,
+                                        x: SLOT_X[slot],
+                                        scale,
+                                        ...(beat.allowOverlap ? { allowOverlap: true } : {}),
+                                    },
                                 ]);
                                 emitStageOverlapWarnings(trackedStage, beatPath, beat.id);
                             } else if (beat.action === "exit") {
@@ -698,8 +705,17 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
                                     const nextScale = typeof beat.scale === "number" && Number.isFinite(beat.scale)
                                         ? beat.scale
                                         : actor.scale;
-                                    if (nextSlot !== actor.slot || nextScale !== actor.scale) changed = true;
-                                    return { ...actor, slot: nextSlot, x: SLOT_X[nextSlot], scale: nextScale };
+                                    const nextOverlap = beat.allowOverlap ?? actor.allowOverlap;
+                                    if (nextSlot !== actor.slot || nextScale !== actor.scale || nextOverlap !== actor.allowOverlap) {
+                                        changed = true;
+                                    }
+                                    return {
+                                        ...actor,
+                                        slot: nextSlot,
+                                        x: SLOT_X[nextSlot],
+                                        scale: nextScale,
+                                        ...(nextOverlap ? { allowOverlap: true } : { allowOverlap: undefined }),
+                                    };
                                 }));
                                 if (changed) {
                                     emitStageOverlapWarnings(trackedStage, beatPath, beat.id);

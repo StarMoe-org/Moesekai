@@ -1041,6 +1041,17 @@ export function NodeInspector({
                                             />
                                         </div>
 
+                                        <Switch
+                                            checked={Boolean(beat.allowOverlap)}
+                                            onCheckedChange={(checked) => {
+                                                const next: StageActionBeat = { ...beat };
+                                                if (checked) next.allowOverlap = true;
+                                                else delete next.allowOverlap;
+                                                updateSelectedBeat(next);
+                                            }}
+                                            label={t("page.storyMaker.v2.slots.allowOverlap")}
+                                        />
+
                                         {beat.action === "move" && (
                                             <DurationSlider
                                                 label={t("page.storyMaker.inspector.duration")}
@@ -1758,6 +1769,11 @@ export function NodeInspector({
                                                                         <span className="shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant">
                                                                             {t(`page.storyMaker.slot.${actor.slot}`)}
                                                                         </span>
+                                                                        {actor.allowOverlap && (
+                                                                            <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                                                {t("page.storyMaker.v2.slots.overlapBadge")}
+                                                                            </span>
+                                                                        )}
                                                                         <Icon
                                                                             path={expanded ? mdKeyboardArrowUp : mdKeyboardArrowDown}
                                                                             size={18}
@@ -1787,6 +1803,12 @@ export function NodeInspector({
                                                                                 className="[&>button]:px-1"
                                                                             />
                                                                         </div>
+
+                                                                        <Switch
+                                                                            checked={Boolean(actor.allowOverlap)}
+                                                                            onCheckedChange={checked => onDocChange(prev => updateActorInSceneCast(prev, scene.id, actor.castKey, { allowOverlap: checked || undefined }))}
+                                                                            label={t("page.storyMaker.v2.slots.allowOverlap")}
+                                                                        />
 
                                                                         <ActorFramingControls
                                                                             mode="enter"

@@ -1131,6 +1131,48 @@ end e1 "Fin"
     assert.equal(compiledWarn.ok, true);
     assert.ok(compiledWarn.warnings.some(w => w.code === "stageActorOverlap"), "expected stageActorOverlap warning");
     assert.ok(compiledWarn.warnings.some(w => w.code === "stageSlotDuplicate"), "expected stageSlotDuplicate warning");
+
+    // Explicit `overlap` ("贴贴") allows snug cheek-to-cheek huddle with 0 warnings and lossless .msk round-trip
+    const huddleScript = `@story "Huddle Test" region=jp id="huddle_test"
+@cast ichika "Ichika" model="v2_01ichika_casual"
+@cast saki "Saki" model="v2_02saki_casual"
+@cast shiho "Shiho" model="v2_04shiho_casual"
+start -> s1
+scene s1 "Huddle" {
+  cast set [
+    ichika at center scale=1 overlap facial="face_smile_01"
+    saki at center scale=1 overlap facial="face_sparkling_01"
+  ]
+  talk ichika "Close together!"
+  stage enter shiho at right scale=1
+  stage move ichika to left dur=0.3 overlap
+  stage move saki to left dur=0.3 overlap
+  talk saki "Huddling on the left while Shiho watches!"
+} -> e1
+end e1 "Fin"
+`;
+    const parsedHuddle = parseStoryScript(huddleScript);
+    assert.equal(parsedHuddle.ok, true);
+    const compiledHuddle = compileStoryGraph(parsedHuddle.doc);
+    assert.equal(compiledHuddle.ok, true);
+    assert.equal(compiledHuddle.warnings.length, 0, `expected 0 warnings with explicit overlap, got ${JSON.stringify(compiledHuddle.warnings)}`);
+
+    // Check actual cheek-to-cheek coordinates: [-0.11, +0.11] on center, then left huddle + separated right bystander
+    const f1 = createInitialRuntime(compiledHuddle);
+    assert.deepEqual(f1.stage.actors.map(a => a.x), [-0.11, 0.11]);
+    const f2 = advanceRuntime(compiledHuddle, f1);
+    const leftPairGap = Math.round((f2.stage.actors[1].x - f2.stage.actors[0].x) * 1000) / 1000;
+    const bystanderGap = Math.round((f2.stage.actors[2].x - f2.stage.actors[1].x) * 1000) / 1000;
+    assert.equal(leftPairGap, 0.22);
+    assert.ok(bystanderGap >= 0.48, `expected bystander gap >= 0.48, got ${bystanderGap}`);
+
+    // Lossless .msk round-trip of `overlap` keyword
+    const serializedHuddle = serializeStoryScript(parsedHuddle.doc);
+    assert.ok(serializedHuddle.includes("ichika at center scale=1 overlap"));
+    assert.ok(serializedHuddle.includes("stage move saki to left dur=0.3 overlap"));
+    const reparsedHuddle = parseStoryScript(serializedHuddle);
+    assert.equal(reparsedHuddle.ok, true);
+    assert.equal(serializeStoryScript(reparsedHuddle.doc), serializedHuddle);
 });
 
 test("extractWaveformPeaks normalizes stereo buffers and decodeStoryAudio caches LRU hits with fallback", async () => {

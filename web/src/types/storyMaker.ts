@@ -86,6 +86,8 @@ export interface StoryStageActorState {
     motion: string | null;
     /** `null`: model's default facial. */
     facial: string | null;
+    /** Explicitly declared intentional overlap / close huddle. */
+    allowOverlap?: boolean;
 }
 
 /** Backwards-friendly alias retained for `useStoryStage.ts`. */
@@ -187,6 +189,8 @@ export interface SceneActorSlot {
     y?: number;
     motion?: string;
     facial?: string;
+    /** Explicitly opt in to intentional overlap / close huddle. */
+    allowOverlap?: boolean;
 }
 
 export type StageCastSlot =
@@ -251,6 +255,8 @@ export interface StageActionBeat {
     motion?: string;
     facial?: string;
     duration?: number;
+    /** Explicitly opt in to intentional overlap / close huddle for `enter` / `move`. */
+    allowOverlap?: boolean;
 }
 
 export interface CueBeat {

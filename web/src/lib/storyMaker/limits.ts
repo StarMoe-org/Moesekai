@@ -92,6 +92,8 @@ export const SLOT_X: Record<StorySlot, number> = {
 export const STAGE_SAFE_BOUNDS = {
     /** Approximate head/shoulder safe half-width of one Live2D character at `scale = 1.0`. */
     actorHalfWidth: 0.195,
+    /** Snug cheek-to-cheek / shoulder-touching gap when `allowOverlap` (huddle) is explicitly declared. */
+    huddleGap: 0.22,
     /** Outer horizontal center bound by actor count (`n <= 3`, `n === 4`, `n >= 5`). */
     maxEdge3: 0.75,
     maxEdge4: 0.75,
@@ -117,17 +119,16 @@ function roundStageX(value: number): number {
 }
 
 /**
- * Computes balanced, non-overlapping stage X coordinates for mounted actors while preserving
- * left-to-right semantic slot order, array draw order, and authentic Project SEKAI framing:
+ * Computes balanced stage X coordinates for mounted actors while preserving left-to-right semantic
+ * slot order, array draw order, authentic Project SEKAI framing, and explicit `allowOverlap`
+ * (close huddle) declarations:
  * - 1 actor: exact `SLOT_X[slot]`
- * - 2 actors at `left` + `right`: authentic `±0.365` (`gap = 0.73`)
- * - 3 actors at `left` + `center` + `right`: authentic `±0.573` & `0` (`SIDE_X_THREE`)
- * - 4 actors at `farLeft` + `left` + `right` + `farRight`: uniform `-0.75, -0.25, +0.25, +0.75` (`gap = 0.50`)
- * - 5 actors across all 5 slots: uniform `-0.80, -0.40, 0, +0.40, +0.80` (`gap = 0.40`)
- * - Any other multi-actor or duplicate-slot formation: L2-optimal 1D PAV projection enforcing
- *   safe center-to-center spacing within `[-maxEdge, +maxEdge]`.
+ * - Standard non-overlapping 2/3/4/5-actor formations: authentic `±0.365`, `±0.573/0`, `±0.75/±0.25`, `±0.80/±0.40/0`
+ * - Pairs where either actor declares `allowOverlap: true`: relaxed to `STAGE_SAFE_BOUNDS.huddleGap`
+ *   (`0.22`), allowing snug cheek-to-cheek huddles (e.g. `[-0.11, +0.11]` on shared `center`) while
+ *   keeping non-overlapping bystanders safely separated via generalized variable-gap 1D PAV projection.
  */
-export function layoutStageActors<T extends { slot: StorySlot; x: number; scale?: number }>(
+export function layoutStageActors<T extends { slot: StorySlot; x: number; scale?: number; allowOverlap?: boolean }>(
     actors: readonly T[],
 ): T[] {
     const n = actors.length;
@@ -142,15 +143,18 @@ export function layoutStageActors<T extends { slot: StorySlot; x: number; scale?
         .map((actor, index) => ({ actor, index, slotRank: SLOT_ORDER[actor.slot] }))
         .sort((a, b) => a.slotRank - b.slotRank || a.index - b.index);
 
+    const hasExplicitOverlap = ordered.some(item => Boolean(item.actor.allowOverlap));
     const slotsKey = ordered.map(item => item.actor.slot).join(",");
     let xs: number[] | null = null;
 
-    if (slotsKey === "left,center,right") {
-        xs = [...STAGE_SAFE_BOUNDS.trioX];
-    } else if (slotsKey === "farLeft,left,right,farRight") {
-        xs = [...STAGE_SAFE_BOUNDS.quartetX];
-    } else if (slotsKey === "farLeft,left,center,right,farRight") {
-        xs = [...STAGE_SAFE_BOUNDS.quintetX];
+    if (!hasExplicitOverlap) {
+        if (slotsKey === "left,center,right") {
+            xs = [...STAGE_SAFE_BOUNDS.trioX];
+        } else if (slotsKey === "farLeft,left,right,farRight") {
+            xs = [...STAGE_SAFE_BOUNDS.quartetX];
+        } else if (slotsKey === "farLeft,left,center,right,farRight") {
+            xs = [...STAGE_SAFE_BOUNDS.quintetX];
+        }
     }
 
     if (!xs) {
@@ -160,14 +164,27 @@ export function layoutStageActors<T extends { slot: StorySlot; x: number; scale?
                 ? STAGE_SAFE_BOUNDS.maxEdge4
                 : STAGE_SAFE_BOUNDS.maxEdge3;
         const avgScale = ordered.reduce((sum, item) => sum + (item.actor.scale ?? 1), 0) / n;
-        const desiredGap = (n >= 5 ? 0.4 : 0.48) * Math.min(1.15, Math.max(0.85, avgScale));
-        const gap = Math.min(desiredGap, (2 * maxEdge) / (n - 1));
+        const baseNormalGap = (n >= 5 ? 0.4 : 0.48) * Math.min(1.15, Math.max(0.85, avgScale));
+        const baseHuddleGap = STAGE_SAFE_BOUNDS.huddleGap * Math.min(1.15, Math.max(0.85, avgScale));
+
+        const rawPairGaps: number[] = [];
+        for (let i = 0; i < n - 1; i += 1) {
+            const pairHuddle = Boolean(ordered[i].actor.allowOverlap || ordered[i + 1].actor.allowOverlap);
+            rawPairGaps.push(pairHuddle ? baseHuddleGap : baseNormalGap);
+        }
+        const totalGap = rawPairGaps.reduce((sum, g) => sum + g, 0);
+        const gapScale = totalGap > 2 * maxEdge ? (2 * maxEdge) / totalGap : 1;
+        const prefixGap: number[] = [0];
+        for (let i = 0; i < rawPairGaps.length; i += 1) {
+            prefixGap.push(prefixGap[i] + rawPairGaps[i] * gapScale);
+        }
+
         const uMin = -maxEdge;
-        const uMax = maxEdge - (n - 1) * gap;
+        const uMax = maxEdge - prefixGap[n - 1];
 
         const blocks: Array<{ start: number; count: number; sum: number }> = [];
         for (let i = 0; i < n; i += 1) {
-            const z = SLOT_X[ordered[i].actor.slot] - i * gap;
+            const z = SLOT_X[ordered[i].actor.slot] - prefixGap[i];
             blocks.push({ start: i, count: 1, sum: z });
             while (blocks.length >= 2) {
                 const last = blocks[blocks.length - 1];
@@ -183,7 +200,7 @@ export function layoutStageActors<T extends { slot: StorySlot; x: number; scale?
             const u = Math.min(uMax, Math.max(uMin, block.sum / block.count));
             for (let k = 0; k < block.count; k += 1) {
                 const idx = block.start + k;
-                xs[idx] = roundStageX(u + idx * gap);
+                xs[idx] = roundStageX(u + prefixGap[idx]);
             }
         }
     }
@@ -216,28 +233,30 @@ export interface StageOverlapAudit {
 }
 
 /**
- * Checks a set of mounted actors for:
- * 1. `duplicateSlots`: two or more actors explicitly assigned to the same semantic `slot`.
- * 2. `overlaps`: adjacent actors whose resolved center-to-center distance `|x_b - x_a|` is smaller
- *    than their combined safe visual envelope (`actorHalfWidth * (scale_a + scale_b)`), e.g., when
- *    too many characters are scaled up on screen simultaneously.
+ * Checks a set of mounted actors for undeclared overlaps:
+ * 1. `duplicateSlots`: two or more actors sharing the same semantic `slot` unless all sharing
+ *    actors explicitly declared `allowOverlap: true`.
+ * 2. `overlaps`: adjacent actors whose resolved distance `|x_b - x_a|` is smaller than their
+ *    combined safe visual envelope (`actorHalfWidth * (scale_a + scale_b)`) when neither actor
+ *    explicitly declared `allowOverlap: true`.
  */
 export function detectStageActorOverlaps(
-    actors: readonly { cast: string; slot: StorySlot; x: number; scale?: number }[],
+    actors: readonly { cast: string; slot: StorySlot; x: number; scale?: number; allowOverlap?: boolean }[],
 ): StageOverlapAudit {
     const duplicateSlots: StageSlotCollision[] = [];
     const overlaps: StageOverlapWarning[] = [];
     if (actors.length < 2) return { duplicateSlots, overlaps };
 
-    const bySlot = new Map<StorySlot, string[]>();
+    const bySlot = new Map<StorySlot, Array<{ cast: string; allowOverlap: boolean }>>();
     for (const actor of actors) {
+        const entry = { cast: actor.cast, allowOverlap: Boolean(actor.allowOverlap) };
         const list = bySlot.get(actor.slot);
-        if (list) list.push(actor.cast);
-        else bySlot.set(actor.slot, [actor.cast]);
+        if (list) list.push(entry);
+        else bySlot.set(actor.slot, [entry]);
     }
     for (const [slot, list] of bySlot) {
-        if (list.length >= 2) {
-            duplicateSlots.push({ slot, actors: list });
+        if (list.length >= 2 && !list.every(item => item.allowOverlap)) {
+            duplicateSlots.push({ slot, actors: list.map(item => item.cast) });
         }
     }
 
@@ -246,6 +265,7 @@ export function detectStageActorOverlaps(
     for (let i = 0; i < byX.length - 1; i += 1) {
         const left = byX[i];
         const right = byX[i + 1];
+        if (left.allowOverlap || right.allowOverlap) continue;
         const leftScale = left.scale ?? 1;
         const rightScale = right.scale ?? 1;
         const gap = roundStageX(right.x - left.x);

@@ -384,8 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "선택지 문구는 비워 둘 수 없습니다.",
         cycleDetected: "정지 없는 순환이 감지되었습니다. 재생 시 무한 루프 방지로 중단될 수 있습니다.",
         mergeNodeInheritAmbiguous: "이 노드는 {count}개 분기가 합류하지만 스테이지 슬롯({slots})이 '이전 막 유지'로 되어 있어 상태가 모호할 수 있습니다. 명시적 지정을 권장합니다.",
-        stageSlotDuplicate: "여러 캐릭터({actors})가 같은 위치 \"{slot}\"에 배치되어 겹칠 수 있습니다. 서로 다른 위치를 지정해 주세요.",
-        stageActorOverlap: "캐릭터({actors}) 간격({gap})이 현재 스케일의 안전 간격({minGap})보다 좁아 겹칠 수 있습니다. 스케일을 줄이거나 동시 출연 인원을 조정해 주세요.",
+        stageSlotDuplicate: "여러 캐릭터({actors})가 같은 위치 \"{slot}\"을 공유하지만 겹침 선언이 없습니다. 위치를 나누거나 밀착 연출이라면 「겹침 허용(overlap)」을 명시하세요.",
+        stageActorOverlap: "캐릭터({actors}) 간격({gap})이 안전 간격({minGap})보다 좁습니다. 스케일/인원을 조정하거나 「겹침 허용(overlap)」을 명시하세요.",
     },
     flow: {
         viewModeStudio: "스튜디오",
@@ -651,6 +651,8 @@ export const storyMakerMessages = {
             emptyCastSlot: "캐릭터 카드를 끌어오거나 추가하세요",
             replaceHint: "놓으면 교체",
             newSceneToChangeHint: "배경·BGM 변경은 새 장면으로 전환",
+            allowOverlap: "겹침 허용(밀착)",
+            overlapBadge: "밀착",
         },
         beats: {
             sectionTitle: "연출 트랙",

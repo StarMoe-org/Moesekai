@@ -145,6 +145,7 @@ function serializeActorSlot(actor: SceneActorSlot): string {
     const parts = [`${actor.castKey} at ${actor.slot}`];
     if (actor.scale !== undefined) parts.push(`scale=${fmtNum(actor.scale)}`);
     if (actor.y !== undefined) parts.push(`y=${fmtNum(actor.y)}`);
+    if (actor.allowOverlap) parts.push("overlap");
     if (actor.motion) parts.push(`motion=${escapeStr(actor.motion)}`);
     if (actor.facial) parts.push(`facial=${escapeStr(actor.facial)}`);
     return parts.join(" ");
@@ -190,6 +191,7 @@ function serializeBeat(beat: SceneBeat): string {
             if (beat.duration !== undefined) parts.push(`dur=${fmtNum(beat.duration)}`);
             if (beat.scale !== undefined) parts.push(`scale=${fmtNum(beat.scale)}`);
             if (beat.y !== undefined) parts.push(`y=${fmtNum(beat.y)}`);
+            if (beat.allowOverlap) parts.push("overlap");
             if (beat.motion) parts.push(`motion=${escapeStr(beat.motion)}`);
             if (beat.facial) parts.push(`facial=${escapeStr(beat.facial)}`);
             return parts.join(" ");
@@ -835,10 +837,24 @@ class ScriptParser {
         let y: number | undefined;
         let motion: string | undefined;
         let facial: string | undefined;
+        let allowOverlap = false;
 
         while (this.sameLineAs(entryLine) && !this.at("COMMA") && !this.at("RBRACKET")) {
             const k = this.peek();
-            if (k.kind === "IDENT" && (k.value === "scale" || k.value === "y" || k.value === "motion" || k.value === "facial")) {
+            if (k.kind === "IDENT" && k.value === "overlap") {
+                this.next();
+                if (this.at("EQ")) {
+                    this.next();
+                    const bTok = this.expect("IDENT", "boolean (true/false)");
+                    if (bTok) {
+                        if (bTok.value === "true") allowOverlap = true;
+                        else if (bTok.value === "false") allowOverlap = false;
+                        else this.error(bTok, `Expected true or false for overlap, got '${bTok.value}'`);
+                    }
+                } else {
+                    allowOverlap = true;
+                }
+            } else if (k.kind === "IDENT" && (k.value === "scale" || k.value === "y" || k.value === "motion" || k.value === "facial")) {
                 this.next();
                 this.expect("EQ", "'='");
                 if (k.value === "scale") {
@@ -866,6 +882,7 @@ class ScriptParser {
             ...(y !== undefined ? { y } : {}),
             ...(motion ? { motion } : {}),
             ...(facial ? { facial } : {}),
+            ...(allowOverlap ? { allowOverlap: true } : {}),
         };
     }
 
@@ -1289,10 +1306,24 @@ class ScriptParser {
                             let motion: string | undefined;
                             let facial: string | undefined;
                             let duration: number | undefined;
+                            let allowOverlap = false;
 
                             while (this.sameLineAs(stmtLine)) {
                                 const mod = this.peek();
-                                if (mod.kind === "IDENT" && (mod.value === "at" || mod.value === "to")) {
+                                if (mod.kind === "IDENT" && mod.value === "overlap") {
+                                    this.next();
+                                    if (this.at("EQ")) {
+                                        this.next();
+                                        const bTok = this.expect("IDENT", "boolean (true/false)");
+                                        if (bTok) {
+                                            if (bTok.value === "true") allowOverlap = true;
+                                            else if (bTok.value === "false") allowOverlap = false;
+                                            else this.error(bTok, `Expected true or false for overlap, got '${bTok.value}'`);
+                                        }
+                                    } else {
+                                        allowOverlap = true;
+                                    }
+                                } else if (mod.kind === "IDENT" && (mod.value === "at" || mod.value === "to")) {
                                     this.next();
                                     const sTok = this.expect("IDENT", "slot");
                                     if (sTok) {
@@ -1337,6 +1368,7 @@ class ScriptParser {
                                 ...(motion ? { motion } : {}),
                                 ...(facial ? { facial } : {}),
                                 ...(duration !== undefined ? { duration } : {}),
+                                ...(allowOverlap ? { allowOverlap: true } : {}),
                             };
                             beats.push(beat);
                             break;

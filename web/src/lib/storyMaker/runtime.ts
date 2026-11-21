@@ -210,6 +210,7 @@ function applySceneSlots(
                 mirror: false,
                 motion: actor.motion ?? null,
                 facial: actor.facial ?? null,
+                ...(actor.allowOverlap ? { allowOverlap: true } : {}),
             })));
 
     const screenColor = slots.transition.kind === "fadeWhite" ? "white" : "black";
@@ -323,6 +324,7 @@ function applySceneBeat(
                     mirror: false,
                     motion: beat.motion ?? null,
                     facial: beat.facial ?? null,
+                    ...(beat.allowOverlap ? { allowOverlap: true } : {}),
                 };
                 return {
                     stage: {
@@ -348,6 +350,7 @@ function applySceneBeat(
                         actors: layoutStageActors(stage.actors.map((actor) => {
                             if (actor.cast !== beat.castKey) return actor;
                             const nextSlot = beat.slot ?? actor.slot;
+                            const nextOverlap = beat.allowOverlap ?? actor.allowOverlap;
                             return {
                                 ...actor,
                                 slot: nextSlot,
@@ -356,6 +359,7 @@ function applySceneBeat(
                                 y: beat.y ?? actor.y,
                                 motion: beat.motion ?? actor.motion,
                                 facial: beat.facial ?? actor.facial,
+                                ...(nextOverlap ? { allowOverlap: true } : { allowOverlap: undefined }),
                             };
                         })),
                     },

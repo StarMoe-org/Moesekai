@@ -384,8 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "選択肢のテキストが空です。",
         cycleDetected: "停止を伴わないループが検出されました。再生時に無限ループ保護で停止する可能性があります。",
         mergeNodeInheritAmbiguous: "このノードは {count} 本の分岐が合流していますが、ステージスロット（{slots}）が「前幕を引き継ぐ」設定のため曖昧になる可能性があります。明示的な指定を推奨します。",
-        stageSlotDuplicate: "複数のキャラ（{actors}）が同じ立ち位置「{slot}」に配置されています。重なりを防ぐため別の立ち位置に分けてください。",
-        stageActorOverlap: "キャラ（{actors}）の間隔（{gap}）が現在のスケールでの安全間隔（{minGap}）を下回り重なる可能性があります。スケールを下げるか同時登場人数を調整してください。",
+        stageSlotDuplicate: "複数のキャラ（{actors}）が同じ立ち位置「{slot}」に配置されています。別の立ち位置に分けるか、密着演出の場合は「重なりを許可（overlap）」を明示してください。",
+        stageActorOverlap: "キャラ（{actors}）の間隔（{gap}）が安全間隔（{minGap}）を下回っています。スケールや人数を調整するか、「重なりを許可（overlap）」を明示してください。",
     },
     flow: {
         viewModeStudio: "スタジオ",
@@ -651,6 +651,8 @@ export const storyMakerMessages = {
             emptyCastSlot: "キャストカードをドロップするか追加してください",
             replaceHint: "ドロップで置換",
             newSceneToChangeHint: "背景・BGM 変更は新規シーンに切替",
+            allowOverlap: "重なりを許可（密着）",
+            overlapBadge: "密着",
         },
         beats: {
             sectionTitle: "演出トラック",

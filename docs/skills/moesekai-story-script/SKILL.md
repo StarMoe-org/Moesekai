@@ -142,18 +142,21 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 - **Stage `cast set [...]` actor slot syntax** (newlines or commas separate entries; `cast set []` clears to empty set):
   ```msk
   cast set [
-    ichika at left scale=1.05 y=0 motion="w-normal01-nod" facial="face_smile_01"
-    saki at right scale=1.05
+    ichika at left scale=1 y=0 motion="w-normal01-nod" facial="face_smile_01"
+    saki at right scale=1
+    # Optional intentional close huddle ("贴贴"):
+    # ichika at center overlap facial="face_smile_01"
+    # saki at center overlap facial="face_sparkling_01"
   ]
   ```
-  Standing slots and their exact world X positions (`SLOT_X`):
-  | Slot | `SLOT_X` | Typical Usage |
+  Standing slots and their base world X positions (`SLOT_X`, automatically balanced by `layoutStageActors`):
+  | Slot | Base `SLOT_X` | Typical Usage |
   | --- | --- | --- |
-  | `farLeft` | `-0.62` | 3–5 character wide staging (outer left) |
+  | `farLeft` | `-0.75` | 4–5 character wide staging (outer left) |
   | `left` | `-0.365` | Standard 2-character dialogue (left) |
   | `center` | `0` | Solo focus or 3-character center |
   | `right` | `0.365` | Standard 2-character dialogue (right) |
-  | `farRight` | `0.62` | 3–5 character wide staging (outer right) |
+  | `farRight` | `0.75` | 4–5 character wide staging (outer right) |
 
 #### All 6 Scene Performance Beats
 
@@ -162,7 +165,7 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 | **Dialogue (`talk`)** | Yes (waits for click/auto) | `talk <speakerKey> [as "<name>"] "<body>" [motion="..."] [facial="..."] [react(<castKey> [motion="..."] [facial="..."]) ...] [voice(...)] [se="..."] [seVol=0.8]`<br>or off-cast free name:<br>`talk "<speakerName>" "<body>" [...]` | Supports `{{var}}` in `body` and speaker name. Up to 4 `react(...)` clauses fire synchronously on co-stars! |
 | **Narration (`narration`)** | Yes | `narration "<body>" [se="<path>"] [seVol=<0..1>]` | Full-width narration box; supports `{{var}}`. |
 | **Telop (`telop`)** | Yes | `telop "<text>"` | Chapter/time-skip banner card; supports `{{var}}`. |
-| **Stage Action (`stage`)** | No (runs immediately) | `stage enter <castKey> [at <slot>] [scale=...] [y=...] [motion="..."] [facial="..."]`<br>`stage move <castKey> to <slot> [dur=0.5] [scale=...] [y=...] [motion="..."] [facial="..."]`<br>`stage pose <castKey> [motion="..."] [facial="..."]`<br>`stage exit <castKey>` | `at` and `to` are accepted interchangeably in the parser; serializer uses `at` for `enter` and `to` for `move`. |
+| **Stage Action (`stage`)** | No (runs immediately) | `stage enter <castKey> [at <slot>] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`<br>`stage move <castKey> to <slot> [dur=0.5] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`<br>`stage pose <castKey> [motion="..."] [facial="..."]`<br>`stage exit <castKey>` | `at` and `to` are accepted interchangeably in the parser; serializer uses `at` for `enter` and `to` for `move`. Add `overlap` to intentionally huddle / lean close ("贴贴"). |
 | **Cue (`cue`)** | No (runs immediately) | `cue se "<path>" [vol=<0..1>]`<br>`cue flash <black|white> [<dur>]`<br>`cue shake [<dur>]`<br>`cue wait [<dur>]` | Plays sound effect, screen flash, camera shake, or timed pause. |
 | **Variable Op (`set`)** | No (runs immediately) | `set <var> += 1, <var> -= 2, <var> = 5, <flag> = true, <flag> toggle` | Comma-separated mutations (`set` or `set []` is valid empty op). |
 
@@ -233,8 +236,8 @@ end <nodeId> ["<title>"] [subtitle="<subtitle>"] [@pos(x, y)]
 | Code | Cause | How to Resolve |
 | --- | --- | --- |
 | **`mergeNodeInheritAmbiguous`** | A `scene` node has **2 or more incoming edges (`inDegree >= 2`)** AND uses `inherit` on any of `background`, `bgm`, `place`, or `stageCast`. Depending on which branch the player took, the inherited stage state could differ ambiguously (and static single-node preview in the editor picks the shortest BFS path by edge order). | **Explicitly declare all 4 stage slots on merge scenes**: `bg set "..."` (or `clear`), `bgm play "..."` (or `stop`), `place set "..."` (or `hide`), and `cast set [...]` (or `clear`). Or merge into a `condition` / `choice` / `end` node instead of an `inherit` scene. |
-| **`stageSlotDuplicate`** | Two or more actors occupy the **same semantic slot** (e.g., both on `center`, or `stage enter`/`stage move` lands on a slot already held by another character). | Assign distinct slots (`farLeft`, `left`, `center`, `right`, `farRight`), or move/exit the occupying actor first. |
-| **`stageActorOverlap`** | Adjacent actors' resolved horizontal spacing (`gap`) is narrower than their combined safe visual envelope (`0.195 × (scale_a + scale_b)`) — typically caused by scaling up too many simultaneous actors (e.g. 4 actors at `scale >= 1.3` or 5 actors at `scale > 1.0`). | Keep `scale` at `1` (true 1:1 in-game size) for multi-actor scenes, reduce `scale`, or stage fewer simultaneous actors. |
+| **`stageSlotDuplicate`** | Two or more actors occupy the **same semantic slot** without all declaring `overlap`. | Assign distinct slots (`farLeft`, `left`, `center`, `right`, `farRight`), OR explicitly add `overlap` on the huddling actors for intentional "贴贴" / close leaning! |
+| **`stageActorOverlap`** | Adjacent actors' resolved horizontal spacing (`gap`) is narrower than their combined safe visual envelope (`0.195 × (scale_a + scale_b)`) without declaring `overlap`. | Keep `scale` at `1` (true 1:1 in-game size) for multi-actor scenes, reduce `scale`/cast count, OR explicitly add `overlap` if close overlap is intentional. |
 | `nodeUnreachable` | Node cannot be reached from `start` | Wire it into the flow or delete unused draft nodes |
 | `portUnwired` | A `scene`, `choice` option, or `condition` rule/`else` has no `-> target` | Wire every port to a scene, choice, condition, or `end` |
 | `sceneEmptyBeats` | A `scene` has 0 beats | Add at least one beat (or merge setup into the next scene) |
@@ -253,7 +256,10 @@ The stage engine (`layoutStageActors` in `limits.ts`) automatically computes aut
 | **5 actors** | all 5 slots | `-0.80, -0.40, 0, +0.40, +0.80` | `0.40` | `0.85 – 1.00` (**prefer `<= 1`**) |
 
 - **Default `scale = 1` is exact 1:1 in-game PJSK height/scale.** Omit `scale` (or use `scale=1`) for normal multi-character framing; reserve `scale=1.1–1.25` for dramatic 1–2 character close-ups!
-- **Never share a slot**: `stage enter` / `stage move` onto an occupied slot triggers `stageSlotDuplicate` (and `--simulate` catches inherited-cast overlaps across scene boundaries too). When shifting a lineup (e.g. 3 actors → 4 actors), move existing actors off the target slot *or* enter into an unoccupied slot first.
+- **Intentional Overlap / "贴贴" (Close Huddle) via `overlap`**:
+  - Accidental overlaps are blocked by `--strict` warnings (`stageSlotDuplicate` / `stageActorOverlap`) and separated by safe spacing (`~0.48`).
+  - When a scene intentionally calls for two characters to lean in, hug, or huddle cheek-to-cheek ("贴贴"), **explicitly add `overlap`** on their `cast set` entries or `stage enter`/`stage move` beats (e.g., `ichika at center overlap` + `saki at center overlap`, or `stage move saki to left dur=0.4 overlap`).
+  - Declared `overlap` pairs smoothly relax to a snug **`0.22` cheek-to-cheek huddle gap** (e.g. `[-0.11, +0.11]` at center — shoulders touching while keeping both faces clearly visible!) and suppress `stageSlotDuplicate` / `stageActorOverlap` warnings while bystanders remain cleanly separated!
 
 ### Off-Stage Speaker Check
 In `--simulate`, the validator reports any `talk <castKey>` beat where `<castKey>` is **not** mounted on stage (`stage.speaking === null`). Verify each reported line is intentional (e.g. phone call / intercom); otherwise add the actor to `cast set [...]` or emit `stage enter <castKey> at <slot>` before the line.

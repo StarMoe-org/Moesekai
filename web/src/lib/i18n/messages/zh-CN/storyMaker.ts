@@ -384,8 +384,8 @@ export const storyMakerMessages = {
         choiceOptionEmpty: "选项文案不能为空。",
         cycleDetected: "检测到无停顿循环，播放时可能会触发死循环保护。",
         mergeNodeInheritAmbiguous: "该节点有 {count} 条分支汇合，但舞台槽位（{slots}）设为「沿用上一幕」，可能产生状态歧义，建议显式声明。",
-        stageSlotDuplicate: "多名角色（{actors}）被安排在同一站位「{slot}」，请错开站位以避免重叠。",
-        stageActorOverlap: "角色（{actors}）站位间距（{gap}）小于当前缩放下的安全间距（{minGap}），可能重叠，建议调小缩放或减少同屏人数。",
+        stageSlotDuplicate: "多名角色（{actors}）共用站位「{slot}」但未声明重叠；请错开站位，或在需要贴贴时显式开启「允许重叠（overlap）」。",
+        stageActorOverlap: "角色（{actors}）间距（{gap}）小于安全间距（{minGap}）；请调小缩放、减少同屏人数，或显式开启「允许重叠（overlap）」。",
     },
     flow: {
         viewModeStudio: "工作台",
@@ -651,6 +651,8 @@ export const storyMakerMessages = {
             emptyCastSlot: "拖入角色卡或点击添加出场人物",
             replaceHint: "放入即替换",
             newSceneToChangeHint: "切换背景或 BGM 请切幕",
+            allowOverlap: "允许重叠（贴贴）",
+            overlapBadge: "贴贴",
         },
         beats: {
             sectionTitle: "演出剧本轨",

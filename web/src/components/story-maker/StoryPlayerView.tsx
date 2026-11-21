@@ -182,6 +182,7 @@ export function applyInstructionToStage(
                         mirror: false,
                         motion: actor.motion ?? null,
                         facial: actor.facial ?? null,
+                        ...(actor.allowOverlap ? { allowOverlap: true } : {}),
                     })));
             const screenColor: StoryEffectColor = inst.transition.kind === "fadeWhite" ? "white" : "black";
             return {
@@ -293,6 +294,7 @@ export function applyInstructionToStage(
                     mirror: false,
                     motion: beat.motion ?? null,
                     facial: beat.facial ?? null,
+                    ...(beat.allowOverlap ? { allowOverlap: true } : {}),
                 };
                 return {
                     stage: { ...base, actors: layoutStageActors([...stage.actors.filter(a => a.cast !== beat.castKey), actor]) },
@@ -312,6 +314,7 @@ export function applyInstructionToStage(
                         actors: layoutStageActors(stage.actors.map((actor) => {
                             if (actor.cast !== beat.castKey) return actor;
                             const nextSlot = beat.slot ?? actor.slot;
+                            const nextOverlap = beat.allowOverlap ?? actor.allowOverlap;
                             return {
                                 ...actor,
                                 slot: nextSlot,
@@ -320,6 +323,7 @@ export function applyInstructionToStage(
                                 y: beat.y ?? actor.y,
                                 motion: beat.motion ?? actor.motion,
                                 facial: beat.facial ?? actor.facial,
+                                ...(nextOverlap ? { allowOverlap: true } : { allowOverlap: undefined }),
                             };
                         })),
                     },
