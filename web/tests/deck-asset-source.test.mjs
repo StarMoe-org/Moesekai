@@ -47,9 +47,13 @@ test("SekaiCardThumbnail uses explicit assetSource region instead of global serv
 
         const { default: SekaiCardThumbnail } = compileWebModule("src/components/cards/SekaiCardThumbnail.tsx", (id) => {
             if (id === "react") return React;
-            if (id === "@/types/types") return { getRarityNumber: () => 4 };
+            if (id === "@/types/types") {
+                return { getRarityNumber: () => 4, isTrainableCard: () => true, getCardDefaultTrainedStatus: () => false };
+            }
             if (id === "@/lib/assets") return assets;
             if (id === "@/contexts/ThemeContext") return { useTheme: () => ({ assetSource: "main" }) };
+            if (id === "./cardTouchFocus") return { registerTouchEndCleanup: () => {} };
+            if (id === "./SekaiCardThumbnail.module.css") return { __esModule: true, default: {} };
             return require(id);
         });
 
@@ -81,9 +85,10 @@ test("SekaiCardThumbnail uses explicit assetSource region instead of global serv
 
 test("SekaiCardThumbnail resets image error state when the resolved URL changes", () => {
     const source = readWeb("src/components/cards/SekaiCardThumbnail.tsx");
-    assert.match(source, /const \[failedUrl, setFailedUrl\] = React\.useState<string \| null>\(null\)/);
-    assert.match(source, /const imageError = failedUrl === cardImageUrl/);
-    assert.match(source, /onError=\{\(\) => setFailedUrl\(cardImageUrl\)\}/);
+    // Failures are remembered per URL (the hover art has its own), so a new URL starts without an error.
+    assert.match(source, /const \[failedUrls, setFailedUrls\] = React\.useState<Record<string, true>>\(\{\}\)/);
+    assert.match(source, /const imageError = Boolean\(failedUrls\[cardImageUrl\]\)/);
+    assert.match(source, /onError=\{\(\) => markFailed\(cardImageUrl\)\}/);
 });
 
 test("deck builders, selectors, and account card views bind assetSource to their masterdata server", () => {
