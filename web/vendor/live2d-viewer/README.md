@@ -15,7 +15,7 @@
 | 文件 | 作用 |
 |---|---|
 | `viewer.js` | 页面引入的 ES 模块，导出 `SekaiLive2DViewer` |
-| `viewer-worker.js` | Worker：取文件（动作和表情按需取）、缓存，在 OffscreenCanvas 上绘制 |
+| `viewer-worker.js` | Worker：从站点的发布版本取文件（动作和表情按需取）、缓存，在 OffscreenCanvas 上绘制 |
 | `pkg/sekai_live2d_viewer.js`、`pkg/sekai_live2d_viewer_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入） |
 | `manifest.json` | 这份发布物的来历，见下 |
 | `LICENSE`、`LICENSE-EXCEPTION`、`README.md` | 许可和这份说明 |
@@ -58,8 +58,8 @@ import { SekaiLive2DViewer } from "/live2d-viewer/<版本>/viewer.js";
 const dpr = devicePixelRatio;
 const viewer = await SekaiLive2DViewer.create({
   canvas,                                      // 一个新的 <canvas>，交给查看器后就归它所有
-  library: "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/", // 剧情库根目录（可以是代理）
-  model: { bundle: "live2d/model/01ichika_normal", motion: "live2d/motion/01ichika_motion_base" },
+  sources: { site: "https://storage.pjsk.moe", region: "jp" },  // 发布数据的站点和区服；可加 version 固定版本
+  model: { asset: "live2d/model/01ichika_normal", motion: "live2d/motion/01ichika_motion_base" },
   width: canvas.clientWidth * dpr,             // 绘制尺寸（像素）= CSS 尺寸 × devicePixelRatio
   height: canvas.clientHeight * dpr,
   // core: "https://<站点>/live2dcubismcore.min.js",  // 可选：自己托管的 Cubism Core
@@ -81,8 +81,16 @@ viewer.resize(w * dpr, h * dpr);
 viewer.destroy();         // 释放 Worker 及其中的文件和 GPU 资源；离开或换模型时调用
 ```
 
-`model.bundle` 和 `model.motion` 取自 `models.json` 里同名的两个字段，见 [models-json.md](models-json.md)。
-`motion` 可以为 `null`，这时模型没有动作也没有表情，只有呼吸和物理。
+模型从站点上这个区服的发布版本 `<site>/<region>@<版本>/` 读取；不给 `version` 时，先读 `<site>/<region>/`，用其中的 `published_version`。
+
+`model.asset` 是模型的 `live2d-model` 资产，`model.motion` 是它的动作集（`live2d-motions` 资产）。两者都可以：
+
+- 写完整的资产名，例如 `live2d/model/01ichika_normal/live2d/model/v1/main/01_ichika/01ichika_normal/buildmodeldata`；
+- 或者只写包含它的目录，例如 `live2d/model/01ichika_normal`、`live2d/motion/01ichika_motion_base`。查看器沿目录列表往下找第一个形式相符的资产，多花几次请求。
+
+打开后，`viewer.model` 和 `viewer.motionSet` 是实际打开的两个资产名，站点可以记下来，下次直接用。
+
+`motion` 可以为 `null`，这时模型没有动作也没有表情，只有呼吸和物理。发布版本里找不到这个动作集时也一样：模型照样打开，`motionSet` 为 `null`，不算出错。
 
 ### 透明背景
 
@@ -142,11 +150,11 @@ const y2 = p.y - (p.y - y1) * z2 / z1;
 
 打开模型时只取这些文件：
 
-- 两份 `_ripper.json`；
-- 模型包里除动作文件以外的文件，也就是 moc、贴图、物理和 model3 等；
+- 模型和动作集的资产文档（只给目录时，还有沿途的目录列表）；
+- 模型的 moc、物理和贴图；
 - 默认动作和默认表情各 1 个文件。
 
-一般是 9 个文件左右，最多 14 个。`motions` 和 `facials` 两个名字列表直接从清单里读，不用先下载文件。
+`motions` 和 `facials` 两个名字列表直接取自动作集资产文档里的 `motion/<名字>` 和 `facial/<名字>` 成员，不用先下载动作文件。
 
 其他动作和表情，第一次用到时才取那 1 个文件（压缩后约 1 KB），之后从缓存读。因此 `playMotion` 和 `setFacial` 都返回 Promise：
 
@@ -173,7 +181,7 @@ const y2 = p.y - (p.y - y1) * z2 / z1;
 | `kind` | 含义 | 建议的提示 |
 |---|---|---|
 | `unsupported` | 浏览器缺少必需的能力，`missing` 列出缺了什么 | 说明不支持，不提供重试 |
-| `not-found` | 剧情库里没有这个模型包或动作包，`url` 是它的 `_ripper.json` | 说明没有这个模型，不提供重试 |
+| `not-found` | 发布版本里没有这个模型，`url` 是查找的位置 | 说明没有这个模型，不提供重试 |
 | `network` | 某个文件取不到，`url` 是它的地址 | 提示检查网络，提供重试 |
 | `internal` | 其他错误 | 显示 `message`，提供重试 |
 
@@ -182,18 +190,16 @@ const y2 = p.y - (p.y - y1) * z2 / z1;
 
 ## 缓存
 
-- 文件存在 Cache API 的 `sekai-live2d-v1` 里。缓存键是文件地址加上它所在包的 `crc`。
-- 每次打开都重新取模型包和动作包的 `_ripper.json`（两个小文件），其余文件只要缓存里有就直接读。
-- 剧情库重新导出了某个包时，`crc` 会变，那个包的文件会重新下载，旧的缓存条目会被删掉。
+- 文件按地址存在 Cache API 的 `sekai-live2d-v2` 里。发布版本里的文件不再改变，所以缓存里有就直接读；区服根目录的列表（当前的版本）每次都重新请求。
+- 站点发布了新版本后，地址里的版本号不同，文件按新地址重新下载。
+- 页面开着期间，它读的版本可能被站点回收，那之后取不到的文件报 `network` 错误；可以提示用户刷新页面。
 
-下载量参考：首次打开 01ichika_normal 要取 9 个文件，共 2.6 MB，绝大部分是贴图和 moc。
-`models.json` 里每个模型的 `bytes` 和 `files` 就是首次打开要取的量；之后每用一个新的动作或表情，再多取约 1 KB。
+下载量参考：首次打开 01ichika_normal 约 2.6 MB，绝大部分是贴图和 moc；之后每用一个新的动作或表情，再多取约 1 KB。
 
 ## 本地开发
 
-剧情库的主机只对 `https://pjsk.moe` 放行跨域，在本地开发时要经代理访问。
-仓库里的 `dev/serve.py` 提供代理：把 `/remote/assets.pjsk.moe/…` 转发到真实地址，
-页面里把 `library` 设成 `http://127.0.0.1:8788/remote/assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/` 即可。
+站点要对页面的来源放行跨域读取。不放行时（例如本地开发），经代理访问：`sources.proxy` 替换每个地址开头的 `https://`。
+仓库里的 `dev/serve.py` 提供代理，把 `/remote/<主机>/…` 转发到真实地址，页面里设 `proxy: "http://127.0.0.1:8788/remote/"` 即可。
 
 ## 许可
 
