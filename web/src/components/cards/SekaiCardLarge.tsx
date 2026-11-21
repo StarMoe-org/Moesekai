@@ -1,13 +1,14 @@
 "use client";
-import React, { useState } from "react";
+import React, { memo, useState } from "react";
 import {
     ICardInfo,
     getRarityNumber,
     isTrainableCard,
     getCardDefaultTrainedStatus,
 } from "@/types/types";
-import { getCardFullUrl } from "@/lib/assets";
+import { getCardFullUrl, getCardSmallUrl } from "@/lib/assets";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
+import styles from "./SekaiCardLarge.module.css";
 
 const ASSET_BASE = "/data/sekai_cards_assets";
 
@@ -36,21 +37,23 @@ interface SekaiCardLargeProps {
     trained?: boolean;
     /** Override split behavior for trainable cards. */
     split?: boolean;
+    /** Card artwork resolution tier. Grid lists use "small" (member_small) for fast decode & compositing. */
+    imageSize?: "small" | "full";
     className?: string;
     assetSource?: AssetSourceType;
 }
 
-export default function SekaiCardLarge({
+function SekaiCardLarge({
     card,
     trained,
     split,
+    imageSize = "small",
     className = "",
     assetSource: customAssetSource,
 }: SekaiCardLargeProps) {
     const { assetSource: themeAssetSource } = useTheme();
     const assetSource = customAssetSource ?? themeAssetSource;
     const [failedUrls, setFailedUrls] = useState<Record<string, true>>({});
-    const [focusedSide, setFocusedSide] = useState<"normal" | "trained" | null>(null);
 
     const rarityNumber = getRarityNumber(card.cardRarityType);
     const isBirthday = card.cardRarityType === "rarity_birthday";
@@ -59,85 +62,106 @@ export default function SekaiCardLarge({
 
     const isSplit = (split ?? (trained === undefined && hasBothArts)) && hasBothArts;
     const singleTrained = trained ?? defaultTrainedOnly;
-    const showTrainedStar = isSplit ? focusedSide !== "normal" : singleTrained;
 
     const raritySuffix = isBirthday ? "birthday" : rarityNumber.toString();
     const frameUrl = `${ASSET_BASE}/cardFrame_L_rarity_${raritySuffix}.png`;
     const attrUrl = `${ASSET_BASE}/icon_attribute_${card.attr}_88.png`;
-    const starUrl = isBirthday
+    const normalStarUrl = isBirthday
         ? `${ASSET_BASE}/rare_birthday.png`
-        : showTrainedStar
-            ? `${ASSET_BASE}/rare_star_after_training.png`
-            : `${ASSET_BASE}/rare_star_normal.png`;
+        : `${ASSET_BASE}/rare_star_normal.png`;
+    const trainedStarUrl = isBirthday
+        ? `${ASSET_BASE}/rare_birthday.png`
+        : `${ASSET_BASE}/rare_star_after_training.png`;
     const starCount = isBirthday ? 1 : rarityNumber;
 
-    const normalUrl = getCardFullUrl(card.characterId, card.assetbundleName, false, assetSource);
-    const trainedUrl = getCardFullUrl(card.characterId, card.assetbundleName, true, assetSource);
-    const singleUrl = singleTrained ? trainedUrl : normalUrl;
+    const getPrimaryUrl = (isTrainedArt: boolean) =>
+        imageSize === "small"
+            ? getCardSmallUrl(card.characterId, card.assetbundleName, isTrainedArt, assetSource)
+            : getCardFullUrl(card.characterId, card.assetbundleName, isTrainedArt, assetSource);
+
+    const resolveArtworkUrl = (isTrainedArt: boolean): string | null => {
+        const primary = getPrimaryUrl(isTrainedArt);
+        if (!failedUrls[primary]) return primary;
+        if (imageSize === "small") {
+            const fallback = getCardFullUrl(card.characterId, card.assetbundleName, isTrainedArt, assetSource);
+            if (!failedUrls[fallback]) return fallback;
+        }
+        return null;
+    };
 
     const markFailed = (url: string) => {
         setFailedUrls((prev) => (prev[url] ? prev : { ...prev, [url]: true }));
     };
 
-    const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-        if (!isSplit || e.pointerType !== "mouse") return;
-        const rect = e.currentTarget.getBoundingClientRect();
-        if (rect.width <= 0) return;
-        const side = e.clientX - rect.left < rect.width / 2 ? "normal" : "trained";
-        if (side !== focusedSide) setFocusedSide(side);
-    };
+    const normalUrl = resolveArtworkUrl(false);
+    const trainedUrl = resolveArtworkUrl(true);
+    const singleUrl = singleTrained ? trainedUrl : normalUrl;
 
-    const handlePointerLeave = () => {
-        if (focusedSide !== null) setFocusedSide(null);
-    };
-
-    const normalWidth =
-        focusedSide === "normal" ? "100%" : focusedSide === "trained" ? "0%" : "50%";
-    const trainedWidth =
-        focusedSide === "trained" ? "100%" : focusedSide === "normal" ? "0%" : "50%";
+    const renderStars = (starUrl: string) =>
+        Array.from({ length: starCount }).map((_, index) => (
+            <img
+                key={index}
+                src={starUrl}
+                alt=""
+                aria-hidden="true"
+                decoding="async"
+                className="pointer-events-none absolute"
+                style={{
+                    left: STAR_X_PCT,
+                    bottom: `${((STAR_BOTTOM_PX + index * STAR_STEP_PX) / FRAME_HEIGHT) * 100}%`,
+                    width: STAR_W_PCT,
+                    height: STAR_H_PCT,
+                    zIndex: starCount - index,
+                }}
+            />
+        ));
 
     return (
         <div
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
-            className={`relative aspect-[940/530] w-full overflow-hidden select-none bg-surface-container-high ${className}`}
+            className={`${styles.cardFrame} relative aspect-[940/530] w-full overflow-hidden select-none bg-surface-container-high ${className}`}
         >
+            {/* Pure CSS hover hit-zones (must precede .splitRoot and .starLayer siblings) */}
+            {isSplit && (
+                <>
+                    <div className={`${styles.hoverZone} ${styles.hoverZoneLeft}`} aria-hidden="true" />
+                    <div className={`${styles.hoverZone} ${styles.hoverZoneRight}`} aria-hidden="true" />
+                </>
+            )}
+
             {/* Card Artwork Layer */}
             {isSplit ? (
-                <div className="absolute inset-0 flex">
-                    <div
-                        className="relative h-full overflow-hidden bg-surface-container-high transition-[width] duration-300 ease-md3-standard"
-                        style={{ width: normalWidth }}
-                    >
-                        {!failedUrls[normalUrl] && (
-                            <img
-                                src={normalUrl}
-                                alt={card.prefix}
-                                loading="lazy"
-                                decoding="async"
-                                className="h-full w-full object-cover object-center"
-                                onError={() => markFailed(normalUrl)}
-                            />
+                <div className={styles.splitRoot}>
+                    <div className="absolute inset-0 bg-surface-container-high">
+                        {trainedUrl && (
+                            <div className={`${styles.splitArtwork} ${styles.trainedArtwork}`}>
+                                <img
+                                    src={trainedUrl}
+                                    alt={card.prefix}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-full w-full object-cover object-center"
+                                    onError={() => markFailed(trainedUrl)}
+                                />
+                            </div>
                         )}
                     </div>
-                    <div
-                        className="relative h-full overflow-hidden bg-surface-container-high transition-[width] duration-300 ease-md3-standard"
-                        style={{ width: trainedWidth }}
-                    >
-                        {!failedUrls[trainedUrl] && (
-                            <img
-                                src={trainedUrl}
-                                alt={card.prefix}
-                                loading="lazy"
-                                decoding="async"
-                                className="h-full w-full object-cover object-center"
-                                onError={() => markFailed(trainedUrl)}
-                            />
+                    <div className={`${styles.normalLayer} bg-surface-container-high`}>
+                        {normalUrl && (
+                            <div className={`${styles.splitArtwork} ${styles.normalArtwork}`}>
+                                <img
+                                    src={normalUrl}
+                                    alt={card.prefix}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="h-full w-full object-cover object-center"
+                                    onError={() => markFailed(normalUrl)}
+                                />
+                            </div>
                         )}
                     </div>
                 </div>
             ) : (
-                !failedUrls[singleUrl] && (
+                singleUrl && (
                     <img
                         src={singleUrl}
                         alt={card.prefix}
@@ -154,7 +178,8 @@ export default function SekaiCardLarge({
                 src={frameUrl}
                 alt=""
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 h-full w-full object-fill"
+                decoding="async"
+                className="pointer-events-none absolute inset-0 z-[3] h-full w-full object-fill"
             />
 
             {/* Attribute Badge (over the top-right frame tab, flush with top edge) */}
@@ -162,27 +187,28 @@ export default function SekaiCardLarge({
                 src={attrUrl}
                 alt={card.attr}
                 aria-hidden="true"
-                className="pointer-events-none absolute"
+                decoding="async"
+                className="pointer-events-none absolute z-[3]"
                 style={ATTR_STYLE}
             />
 
             {/* Vertical Rarity Stars (bottom-left, lower star overlaps upper star) */}
-            {Array.from({ length: starCount }).map((_, index) => (
-                <img
-                    key={index}
-                    src={starUrl}
-                    alt=""
-                    aria-hidden="true"
-                    className="pointer-events-none absolute"
-                    style={{
-                        left: STAR_X_PCT,
-                        bottom: `${((STAR_BOTTOM_PX + index * STAR_STEP_PX) / FRAME_HEIGHT) * 100}%`,
-                        width: STAR_W_PCT,
-                        height: STAR_H_PCT,
-                        zIndex: starCount - index,
-                    }}
-                />
-            ))}
+            {isSplit ? (
+                <>
+                    <div className={`pointer-events-none absolute inset-0 z-[3] ${styles.starLayer} ${styles.starTrained}`}>
+                        {renderStars(trainedStarUrl)}
+                    </div>
+                    <div className={`pointer-events-none absolute inset-0 z-[3] ${styles.starLayer} ${styles.starNormal}`}>
+                        {renderStars(normalStarUrl)}
+                    </div>
+                </>
+            ) : (
+                <div className="pointer-events-none absolute inset-0 z-[3]">
+                    {renderStars(singleTrained ? trainedStarUrl : normalStarUrl)}
+                </div>
+            )}
         </div>
     );
 }
+
+export default memo(SekaiCardLarge);

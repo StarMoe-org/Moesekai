@@ -195,6 +195,16 @@ export function getCardFullUrl(
     return buildImageAssetUrl(source, `character/member/${assetbundleName}/card_${status}`);
 }
 
+export function getCardSmallUrl(
+    _characterId: number,
+    assetbundleName: string,
+    trained: boolean = false,
+    source: AssetSourceType = "main-jp"
+): string {
+    const status = trained ? "after_training" : "normal";
+    return buildImageAssetUrl(source, `character/member_small/${assetbundleName}/card_${status}`);
+}
+
 export function getEventBannerUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `event/${assetbundleName}/screen/bg`);
 }

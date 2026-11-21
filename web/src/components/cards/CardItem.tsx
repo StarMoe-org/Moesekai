@@ -55,7 +55,7 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards", varia
         const skillTooltip = maxSkillMultiplier !== null ? `${supplyLabel} · ${maxSkillMultiplier}%` : supplyLabel;
 
         return (
-            <Link href={`${hrefPrefix}/${card.id}`} title={tooltip} className="group state-layer focus-ring flex h-full rounded-t-none rounded-b-md3-md" data-shortcut-item="true">
+            <Link href={`${hrefPrefix}/${card.id}`} title={tooltip} className="group state-layer focus-ring flex h-full rounded-t-none rounded-b-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_220px]" data-shortcut-item="true">
                 <div className="relative flex w-full cursor-pointer flex-col rounded-t-none rounded-b-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                     <div className="w-full relative">
                         <SekaiCardLarge card={card} />
@@ -111,7 +111,7 @@ export default function CardItem({ card, isSpoiler, hrefPrefix = "/cards", varia
     }
 
     return (
-        <Link href={`${hrefPrefix}/${card.id}`} title={tooltip} className="group state-layer focus-ring flex h-full rounded-md3-md" data-shortcut-item="true">
+        <Link href={`${hrefPrefix}/${card.id}`} title={tooltip} className="group state-layer focus-ring flex h-full rounded-md3-md [content-visibility:auto] [contain-intrinsic-size:auto_185px]" data-shortcut-item="true">
             {/* Fills the grid row, so cards with and without a translated title line up. */}
             <div className="relative flex w-full cursor-pointer flex-col rounded-md3-md overflow-hidden bg-surface-card text-on-surface shadow-elev-1 transition-shadow duration-200 ease-md3-standard group-hover:shadow-elev-2">
                 {/* Card Image Container */}
