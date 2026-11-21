@@ -1,7 +1,7 @@
 /**
  * What a role wears: the costumes of its `costume-role` document, its hairs and heads, and the
  * look of one `costume` document worn as it is or with a picked hair and head. Pure functions, no
- * fetching, so the rules can be tested on their own (scripts/test-costume3d.mjs).
+ * fetching.
  *
  * The document's looks are the game's combinations, worked out by the exporter: a look's models
  * are worn as they are. A picked hair or head is the role's own part, a part of another role (the
