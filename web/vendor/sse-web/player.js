@@ -1,7 +1,7 @@
 // The web player (ADR-0030, ADR-0031): what a page embeds. Pass 1 and the mix run in one
 // worker, Pass 2 on an OffscreenCanvas in another; the page keeps the clock (the audio worklet)
-// and the input. A third worker derives the UI kit while the episode loads and is gone before
-// playback (kit-worker.js).
+// and the input. The files come from a site that publishes the story data: the page finds the
+// version to play once, and both workers read that version.
 //
 //   const player = await SsePlayer.create({ canvas, ... });   see create()
 //   player.play(); player.pause(); player.setAuto(false); player.click(x, y); player.setVolume(0.5);
@@ -24,6 +24,47 @@ const PER_FRAME = RATE / 60;
 // and serves whichever Core Live2D last put there.
 const CORE = "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js";
 
+/** The region of the client whose interface a region's story is played with. */
+const clientRegion = (region) => (region === "jp" ? "jp" : "cn");
+
+/** The version a view of the site publishes now: its root listing says. */
+async function publishedVersion(url) {
+  const failed = (e) => Object.assign(new Error(String(e?.message ?? e)), { kind: "network", url });
+  let listing;
+  try {
+    const r = await fetch(url, { cache: "no-cache" });
+    if (!r.ok) throw new Error(`${url}: ${r.status}`);
+    listing = await r.json();
+  } catch (e) {
+    throw failed(e);
+  }
+  if (typeof listing.published_version !== "string") throw failed(new Error(`${url}: no published version`));
+  return listing.published_version;
+}
+
+/**
+ * The base URLs of the two views of the published version of `region` on `site`, each ending in
+ * `/`: the canonical view `<site>/<region>@<version>/` and the client view
+ * `<site>/client/<client region>@<client version>/`. Without `version`, the canonical view is the
+ * one the site publishes now; the client view always is. `proxy`, when set, replaces `https://`
+ * in front of every URL (`<proxy><host>/…`), for a development server that relays them.
+ * @param {{site: string, region: string, version?: string, proxy?: string}} sources
+ * @returns {Promise<{canonical: string, client: string}>}
+ */
+export async function resolveViews({ site, region, version, proxy }) {
+  const through = (url) => (proxy ? url.replace(/^https:\/\//, proxy) : url);
+  const root = site.replace(/\/+$/, "");
+  const client = `${root}/client/${clientRegion(region)}`;
+  const [canonicalVersion, clientVersion] = await Promise.all([
+    version ?? publishedVersion(through(`${root}/${region}/`)),
+    publishedVersion(through(`${client}/`)),
+  ]);
+  return {
+    canonical: through(`${root}/${region}@${encodeURIComponent(canonicalVersion)}/`),
+    client: through(`${client}@${encodeURIComponent(clientVersion)}/`),
+  };
+}
+
 /**
  * Events (`addEventListener`), each a `CustomEvent`:
  *   node    `detail.node`: playback moved into another node (playing on, or a seek)
@@ -35,7 +76,7 @@ const CORE = "https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.
  * Errors, from `create` (an Error with these as properties) and in the `error` event, have a
  * `kind` a page can word its message by:
  *   unsupported  the browser lacks something (`missing`, see `supported`)
- *   not-found    the library has no such episode
+ *   not-found    the publication has no such episode
  *   network      a file could not be fetched, after several tries (`url`)
  *   internal     anything else
  */
@@ -46,11 +87,13 @@ function antialiasing(aa) {
 
 export class SsePlayer extends EventTarget {
   /**
-   * What the browser lacks for playing, checked without loading anything: `{ok, missing}`,
-   * `missing` naming each of `webgpu` (no `navigator.gpu`), `webgpu-adapter` (WebGPU is there
-   * but gives no adapter: turned off, or the GPU is blocked), `offscreen-canvas`,
+   * What the browser lacks for playing, checked without loading anything: `{ok, missing,
+   * movies}`, `missing` naming each of `webgpu` (no `navigator.gpu`), `webgpu-adapter` (WebGPU
+   * is there but gives no adapter: turned off, or the GPU is blocked), `offscreen-canvas`,
    * `audio-worklet` (also missing outside a secure context) and `worker`. `create` checks it
    * first and fails with an Error carrying `missing`; a site can ask before offering playback.
+   * `movies` is false where the browser has no WebCodecs: the episode plays all the same, its
+   * movies with their sound over a black picture.
    */
   static async supported() {
     const missing = [];
@@ -65,7 +108,7 @@ export class SsePlayer extends EventTarget {
     }
     if (typeof AudioWorkletNode === "undefined") missing.push("audio-worklet");
     if (typeof Worker === "undefined") missing.push("worker");
-    return { ok: missing.length === 0, missing };
+    return { ok: missing.length === 0, missing, movies: typeof VideoDecoder !== "undefined" };
   }
 
   /**
@@ -75,30 +118,36 @@ export class SsePlayer extends EventTarget {
    * @param {string} o.pkg      URL of the wasm-bindgen `no-modules` build of sse-web
    * @param {string} [o.core]   URL of live2dcubismcore.min.js (Cubism Core for Web), for a page
    *   that serves a copy of its own; left out, Core comes from Live2D's address (ADR-0032)
-   * @param {{library: string, inapp: string, proxy?: string}} o.sources
-   *   URLs of the Ripper library (holding `ripper.lock.json`) and of the client unpack; the
-   *   asset source comes from the library's lock. `proxy`: see SseLoader (common.js)
+   * @param {{site: string, region: string, version?: string, proxy?: string}} o.sources
+   *   the site that publishes the story data (e.g. `https://example.org`), the region to play
+   *   (jp, en, tw, kr or cn) and, to pin it, the published version (default: the one the site
+   *   publishes now); the interface comes from the site's client view. `proxy`: see
+   *   `resolveViews`
    * @param {string} o.selector e.g. `event:101/8`
    * @param {number} o.width
    * @param {number} o.height
    * @param {{body?: {url: string, weight?: number}[], name?: {url: string, weight?: number}[]}} [o.fonts]
    *   fonts to draw the text with in place of the client's: `body` for the words, `name` for
    *   the names, each a font (TTF or OTF; `weight` sets a variable font's weight) followed by
-   *   the fonts that fill in the characters it lacks. With both given, the client's own font
-   *   files are not fetched at all. Text in other fonts is not what the game shows
+   *   the fonts that fill in the characters it lacks. A list left out keeps the client's font;
+   *   with both given, the client's own font files are not fetched at all. Text in other fonts
+   *   is not what the game shows
    * @param {{method: "none" | "msaa" | "ssaa", msaaSamples?: number, ssaaFactor?: number}} [o.experimentalAntialiasing]
    *   experimental anti-aliasing of the Live2D models, see setExperimentalAntialiasing; none
    *   by default
    * @param {string} [o.playerName]
+   * @param {string} [o.areaDate]  `MMDDHH`: when an area conversation plays, its characters
+   *   wear the area costumes of that date (default: the costumes of its scene data)
    * @param {boolean} [o.auto]
    * @param {boolean} [o.highFps]  experimental: on a display above 60 Hz, draw every refresh,
    *   with the motion, fades and Live2D parameters interpolated between the story's 60 fps
    *   frames (text, effect particles and the transition keep their 60 fps steps); takes up to
    *   that many more draws
-   * @param {(p: object) => void} [o.onProgress]  while loading: `{sim, render, kit}`, each that
-   *   worker's last `{phase, done, total, bytes}` (`kit`: the UI kit being derived from the
-   *   client unpack; absent when it was kept from an earlier visit). `create` resolves once
-   *   everything is loaded.
+   * @param {(p: object) => void} [o.onProgress]  while loading: `{sim, render}`, each that
+   *   worker's last `{phase, done, total, bytes}` (`total` is 0 while the files of a phase are
+   *   not known beforehand). `create` resolves once the episode is open and the renderer is
+   *   made; the files playback shows are fetched ahead of it, and playback waits (`stall`) for
+   *   any that are not in yet.
    *
    * The canvas' drawing goes to a worker for good: a player made after this one failed or was
    * destroyed needs a canvas of its own.
@@ -125,9 +174,9 @@ export class SsePlayer extends EventTarget {
   /** The rest of `create`: the audio, the workers, and everything the episode needs. */
   async load(o) {
     const options = {
-      js: o.js, pkg: o.pkg, core: o.core ?? CORE, sources: o.sources, selector: o.selector,
-      width: o.width, height: o.height, playerName: o.playerName ?? "「世界」的居民", auto: o.auto ?? true,
-      fonts: o.fonts, antialiasing: antialiasing(o.experimentalAntialiasing),
+      js: o.js, pkg: o.pkg, core: o.core ?? CORE, views: await resolveViews(o.sources), selector: o.selector,
+      width: o.width, height: o.height, playerName: o.playerName ?? "「世界」的居民", areaDate: o.areaDate,
+      auto: o.auto ?? true, fonts: o.fonts, antialiasing: antialiasing(o.experimentalAntialiasing),
     };
     const p = this;
     p.width = o.width;
@@ -165,7 +214,7 @@ export class SsePlayer extends EventTarget {
       w.addEventListener("error", (e) => reject(Object.assign(new Error(`${name}: ${e.message ?? "the worker failed to start"}`),
         { kind: e.message ? "internal" : "network" })));
     });
-    const progress = { sim: undefined, render: undefined, kit: undefined };
+    const progress = { sim: undefined, render: undefined };
     for (const [w, key] of [[p.sim, "sim"], [p.render, "render"]]) {
       w.addEventListener("message", (e) => {
         if (e.data.type !== "progress") return;
@@ -175,27 +224,6 @@ export class SsePlayer extends EventTarget {
     }
     const simReady = ready(p.sim, "simulation");
     const renderReady = ready(p.render, "render");
-    // the UI kit: derived in a worker that is terminated with what the derivation took, then
-    // handed to the two that use it (the simulation plays its sounds, the renderer draws the rest)
-    p.kit = new Worker(`${o.js}kit-worker.js`);
-    const kitReady = new Promise((resolve, reject) => {
-      p.kit.onmessage = (e) => {
-        const m = e.data;
-        if (m.type === "progress") {
-          progress.kit = m;
-          o.onProgress?.({ ...progress });
-        } else if (m.type === "error") {
-          reject(Object.assign(new Error(`UI kit: ${m.message}`), { kind: m.kind, url: m.url }));
-        } else if (m.type === "kit") resolve(m);
-      };
-      p.kit.onerror = (e) => reject(Object.assign(new Error(`UI kit: ${e.message ?? "the worker failed to start"}`),
-        { kind: e.message ? "internal" : "network" }));
-    }).then((kit) => {
-      p.kit.terminate();
-      p.kit = undefined;
-      p.sim.postMessage({ type: "kit", dir: kit.dir, files: kit.files.filter(([name]) => name.endsWith(".wav")) });
-      p.render.postMessage({ type: "kit", dir: kit.dir, files: kit.files }, kit.files.map(([, bytes]) => bytes.buffer));
-    });
     p.sim.onmessage = (e) => {
       if (e.data.type === "seeked") {
         const at = e.data.frame * PER_FRAME;
@@ -244,8 +272,7 @@ export class SsePlayer extends EventTarget {
     };
     p.sim.postMessage({ type: "init", options, framesPort: frames.port1, audioPort: audio.port1 }, [frames.port1, audio.port1]);
     p.render.postMessage({ type: "init", options, canvas: offscreen, framesPort: frames.port2 }, [offscreen, frames.port2]);
-    p.kit.postMessage({ type: "init", options });
-    const [simInfo, renderInfo] = await Promise.all([simReady, renderReady, kitReady]);
+    const [simInfo, renderInfo] = await Promise.all([simReady, renderReady]);
     p.nodes = simInfo.nodes;
     p.msaaSampleCounts = renderInfo.msaaSampleCounts;
     p.unsupported = simInfo.unsupported;
@@ -322,7 +349,6 @@ export class SsePlayer extends EventTarget {
     if (this.frameRequest !== undefined) cancelAnimationFrame(this.frameRequest);
     this.sim?.terminate();
     this.render?.terminate();
-    this.kit?.terminate();
     this.stream?.port.close();
     this.stream?.disconnect();
     this.gain?.disconnect();
@@ -352,10 +378,14 @@ export class SsePlayer extends EventTarget {
   tick() {
     if (this.destroyed) return;
     const now = this.hearing();
-    if (this.highFps) {
-      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME), w: (now % PER_FRAME) / PER_FRAME });
+    // the sound runs to the end of the last frame: past it (a page in the background while the
+    // episode ended) the last frame is what shows
+    const last = (this.state.endFrame ?? Infinity) - 1;
+    const frame = Math.min(Math.floor(now / PER_FRAME), last);
+    if (this.highFps && frame < last) {
+      this.render.postMessage({ type: "show", frame, w: (now % PER_FRAME) / PER_FRAME });
     } else {
-      this.render.postMessage({ type: "show", frame: Math.floor(now / PER_FRAME) });
+      this.render.postMessage({ type: "show", frame });
     }
     this.frameRequest = requestAnimationFrame(this.tick);
   }

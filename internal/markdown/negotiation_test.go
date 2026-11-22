@@ -5,7 +5,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
+
+	"snowy_viewer/internal/middleware"
 )
 
 func TestIsMarkdownRequest(t *testing.T) {
@@ -187,5 +190,160 @@ func TestNegotiationMiddlewareStripsAcceptEncoding(t *testing.T) {
 
 	if got := rec.Body.String(); !strings.Contains(got, "# Test Page") {
 		t.Errorf("compressed upstream body parsed as HTML; markdown degraded to the generic stub:\n%s", got)
+	}
+}
+
+func TestNegotiationStreamsNonHTMLAndOversizedHTMLWithoutBuffering(t *testing.T) {
+	t.Run("non-HTML streams directly", func(t *testing.T) {
+		backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			_, _ = w.Write([]byte("BINARY-DATA"))
+		})
+		req := httptest.NewRequest(http.MethodGet, "http://localhost/asset.bin", nil)
+		req.Header.Set("Accept", "text/markdown")
+		rec := httptest.NewRecorder()
+		NewNegotiationMiddlewareWithLimits(backend, 4, 16, nil).ServeHTTP(rec, req)
+		if rec.Header().Get("Content-Type") != "application/octet-stream" || rec.Body.String() != "BINARY-DATA" {
+			t.Fatalf("non-HTML altered: ct=%q body=%q", rec.Header().Get("Content-Type"), rec.Body.String())
+		}
+	})
+
+	t.Run("oversized HTML falls back to streaming passthrough", func(t *testing.T) {
+		big := "<html><head><title>Big</title></head><body>" + strings.Repeat("x", 1024) + "</body></html>"
+		backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			_, _ = w.Write([]byte(big))
+		})
+		req := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/", nil)
+		req.Header.Set("Accept", "text/markdown")
+		rec := httptest.NewRecorder()
+		NewNegotiationMiddlewareWithLimits(backend, 4, 128, nil).ServeHTTP(rec, req)
+		if !strings.Contains(rec.Header().Get("Content-Type"), "text/html") {
+			t.Fatalf("oversized HTML ct = %q, want text/html passthrough", rec.Header().Get("Content-Type"))
+		}
+		if rec.Body.String() != big {
+			t.Fatalf("oversized HTML body length = %d, want %d", rec.Body.Len(), len(big))
+		}
+	})
+}
+
+func TestNegotiationDoesNotMarkPrivateOrSetCookiePublicAndPreservesVary(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		setCookie string
+		cc        string
+	}{
+		{"set-cookie", "session=abc; HttpOnly", "public, max-age=60"},
+		{"private", "", "private, no-store"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.Header().Set("Content-Type", "text/html; charset=utf-8")
+				if tc.setCookie != "" {
+					w.Header().Set("Set-Cookie", tc.setCookie)
+				}
+				if tc.cc != "" {
+					w.Header().Set("Cache-Control", tc.cc)
+				}
+				_, _ = w.Write([]byte(`<html><head><title>Private</title></head><body></body></html>`))
+			})
+			req := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/account/", nil)
+			req.Header.Set("Accept", "text/markdown")
+			rec := httptest.NewRecorder()
+			rec.Header().Set("Vary", "Origin")
+			NewNegotiationMiddlewareWithLimits(backend, 4, 1<<20, nil).ServeHTTP(rec, req)
+			if strings.Contains(strings.ToLower(rec.Header().Get("Cache-Control")), "public") {
+				t.Fatalf("private/cookie response marked public: Cache-Control=%q", rec.Header().Get("Cache-Control"))
+			}
+			vary := strings.Join(rec.Header().Values("Vary"), ", ")
+			if !strings.Contains(vary, "Origin") || !strings.Contains(vary, "Accept") {
+				t.Fatalf("Vary clobbered: %q", vary)
+			}
+		})
+	}
+}
+
+func TestNegotiationHeadRequestReturnsHeadersWithoutBody(t *testing.T) {
+	backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Errorf("expected upstream GET for markdown HEAD, got %s", r.Method)
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		_, _ = w.Write([]byte(`<html><head><title>Head Test</title></head><body><article class="sr-only"><p>Hello</p></article></body></html>`))
+	})
+	req := httptest.NewRequest(http.MethodHead, "http://localhost/zh-cn/cards/1/", nil)
+	req.Header.Set("Accept", "text/markdown")
+	rec := httptest.NewRecorder()
+	NewNegotiationMiddlewareWithLimits(backend, 4, 1<<20, nil).ServeHTTP(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200", rec.Code)
+	}
+	if !strings.Contains(rec.Header().Get("Content-Type"), "text/markdown") {
+		t.Fatalf("Content-Type = %q", rec.Header().Get("Content-Type"))
+	}
+	if rec.Header().Get("x-markdown-tokens") == "" || rec.Header().Get("x-original-tokens") == "0" {
+		t.Fatalf("unexpected token headers: md=%q orig=%q", rec.Header().Get("x-markdown-tokens"), rec.Header().Get("x-original-tokens"))
+	}
+	if rec.Body.Len() != 0 {
+		t.Fatalf("HEAD response wrote %d bytes, want 0", rec.Body.Len())
+	}
+}
+
+func TestNegotiationConcurrencyAndRateLimits(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	backend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case started <- struct{}{}:
+		default:
+		}
+		<-release
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<html><head><title>Slow</title></head></html>`))
+	})
+
+	h := NewNegotiationMiddlewareWithLimits(backend, 1, 1<<20, nil)
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		req := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/", nil)
+		req.Header.Set("Accept", "text/markdown")
+		h.ServeHTTP(httptest.NewRecorder(), req)
+	}()
+	<-started
+
+	req2 := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/", nil)
+	req2.Header.Set("Accept", "text/markdown")
+	rec2 := httptest.NewRecorder()
+	h.ServeHTTP(rec2, req2)
+	close(release)
+	wg.Wait()
+	if rec2.Code != http.StatusServiceUnavailable {
+		t.Fatalf("saturated status = %d, want 503", rec2.Code)
+	}
+
+	// Rate limit test
+	fastBackend := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(`<html><head><title>Fast</title></head></html>`))
+	})
+	limited := NewNegotiationMiddlewareWithLimits(fastBackend, 4, 1<<20, middleware.NewIPRateLimiter(60, 1, 16))
+	reqA := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/", nil)
+	reqA.Header.Set("Accept", "text/markdown")
+	reqA.RemoteAddr = "203.0.113.5:1234"
+	recA := httptest.NewRecorder()
+	limited.ServeHTTP(recA, reqA)
+	if recA.Code != http.StatusOK {
+		t.Fatalf("first status = %d, want 200", recA.Code)
+	}
+
+	reqB := httptest.NewRequest(http.MethodGet, "http://localhost/zh-cn/", nil)
+	reqB.Header.Set("Accept", "text/markdown")
+	reqB.RemoteAddr = "203.0.113.5:1234"
+	recB := httptest.NewRecorder()
+	limited.ServeHTTP(recB, reqB)
+	if recB.Code != http.StatusTooManyRequests {
+		t.Fatalf("second status = %d, want 429", recB.Code)
 	}
 }

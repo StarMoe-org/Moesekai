@@ -1,4 +1,5 @@
 import { assetGuideMessages } from "./assetGuide";
+import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
 import { storyMakerMessages } from "./storyMaker";
@@ -24,6 +25,7 @@ export const zhTWMessages = {
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
         storyMaker: storyMakerMessages,
+        account: accountMessages,
         assetGuide: assetGuideMessages,
         ...zhTWPagePrimary,
         ...zhTWPageSecondaryA,

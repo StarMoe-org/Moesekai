@@ -29,7 +29,6 @@ export const NON_INDEXABLE_SEO_ROUTES = SEO_ROUTES.filter((route) => !route.inde
 const BASE_ROBOTS_DISALLOW_PATHS = ["/api/"] as const;
 
 const DYNAMIC_SEO_PAGE_KEYS = new Set<SeoPageKey>([
-    "guides_detail",
     "story_area_category",
     "story_area_reader",
     "story_card_reader",

@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { useI18n } from "@/contexts/I18nContext";
 import { Banner, CircularProgress, PageContainer, PageHeader, Surface } from "@/components/md3";
-import { formatOAuthErrorMessage, sanitizeOAuthReturnTo, startOAuthConnect } from "@/lib/oauth";
+import { formatOAuthErrorMessage, sanitizeOAuthReturnTo, startOAuthConnect } from "@/lib/legacy-oauth";
 
 export default function ConnectClient() {
     const { t } = useI18n();

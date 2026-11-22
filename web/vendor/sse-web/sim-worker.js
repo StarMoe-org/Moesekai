@@ -1,19 +1,16 @@
 // The simulation worker (ADR-0031): Pass 1 and the mix, ahead of what is heard. Frames go to the
 // render worker and samples to the audio worklet, each over a port of its own.
 //
-// Before playback it fetches every file the episode index lists that Pass 1 and the mix read: the
-// scenario, the motions, the models' files other than textures, the voices, BGM (with an
-// interactive BGM's ACB), sound effects, movie sound, the sounds of effect prefabs and the object
-// graphs of the backgrounds the library unpacked (whether one is a prefab, and the movie it
-// plays, is read from it); playback then reads nothing more. (Should
-// a file still be missing, the worker fetches it and waits: it does not step into an instruction
-// whose audio has not arrived, and Session.step holds a frame whose models are not in.)
+// The files Pass 1 and the mix read are fetched as they are needed. While the episode opens,
+// every call that finds a file missing names it and is made again once it is in (the scenario,
+// the UI's sounds); the audio of the first instructions is fetched before playback. From then on
+// the audio of the instructions ahead (Session.audioPlan) and the model files of the layouts
+// ahead (Session.modelPlan) are fetched in the background, and the worker does not step into an
+// instruction whose audio has not arrived. Should a step still find a file missing, the worker
+// fetches it and steps again.
 //
 // From the page:
 //   { type: "init", options, framesPort, audioPort }   see SsePlayer.create
-//   { type: "kit", dir, files }                         the UI kit's sound effects (the choice
-//                                                       dialog's), derived by the kit worker:
-//                                                       [name, bytes] for `<dir>/<name>`
 // From the audio worklet (on the audio port):
 //   { type: "position", position, gen }                 the next sample it plays (after `gen` seeks):
 //                                                       what the simulation keeps ahead of, also
@@ -34,6 +31,12 @@
 
 const RATE = 48000;
 const PER_FRAME = RATE / 60;
+/**
+ * The mix sample at which frame `frame` starts, as the mix computes it (`sse_mix::sample_at`,
+ * the same f64 operations): for some frames one sample before `frame * PER_FRAME`, so a cue that
+ * starts there changes that sample too.
+ */
+const sampleAt = (frame) => Math.floor(frame / 60 * RATE);
 /**
  * Frames are baked this far ahead of what is heard: enough for the render worker to have the
  * next frame when it is due, and no more, because a click applies to the next frame baked (the
@@ -62,8 +65,12 @@ let loader;
 let session;
 let plan = [];
 let modelPlan = [];
-const modelsDropped = new Set();
+/** The nodes of playback (Session.nodes): `snippet` is the position of a node's instruction. */
+let nodes = [];
+/** The model assets fetched ahead so far. */
 const modelsAsked = new Set();
+/** The files of each of them that Pass 1 reads (not its textures), once known, until dropped. */
+const modelFiles = new Map();
 let framesPort;
 let audioPort;
 let mixedUntil = 0;
@@ -84,9 +91,6 @@ let gen = 0;
 let seeking = false;
 /** An error was reported to the page: nothing more is stepped. */
 let dead = false;
-/** The UI kit's sounds, once the page hands them over (see the top). */
-let kitArrived;
-const kit = new Promise((resolve) => { kitArrived = resolve; });
 
 /** Reports `e` to the page (once) and stops. */
 function fatal(e) {
@@ -112,17 +116,24 @@ function audioMissing(next) {
   return needed;
 }
 
+/** Whether `path` is a model's texture, which Pass 1 does not read. */
+const isTexture = (path) => path.endsWith(".png");
+
 /** Fetches the models of the instructions before `next + AUDIO_PREFETCH` ahead of time. */
 function prefetchModels(next) {
-  const bundles = [];
+  const assets = [];
   for (const [pos, list] of modelPlan) {
     if (pos >= next + AUDIO_PREFETCH) break;
-    for (const b of list) if (!modelsAsked.has(b)) { modelsAsked.add(b); bundles.push(b); }
+    for (const name of list) if (!modelsAsked.has(name)) { modelsAsked.add(name); assets.push(name); }
   }
-  if (!bundles.length) return;
-  framesPort?.postMessage({ type: "prefetch", bundles });
-  for (const b of bundles) {
-    loader.bundleFiles(b, (f) => f.kind !== "png").then((files) => loader.prefetch(files), (e) => console.warn(`${b}: ${e?.message ?? e}`));
+  if (!assets.length) return;
+  framesPort?.postMessage({ type: "prefetch", assets });
+  for (const name of assets) {
+    loader.assetFiles(name).then((files) => {
+      const read = files.filter((path) => !isTexture(path));
+      modelFiles.set(name, read);
+      loader.prefetch(read);
+    }, (e) => console.warn(`${name}: ${e?.message ?? e}`));
   }
 }
 
@@ -131,24 +142,28 @@ function fetchReported(e) {
   const paths = sseMissingPaths(e);
   if (!paths.length) return false;
   waitingFor = paths[0];
-  for (const p of paths) loader.fetchMissing(p).catch(fatal);
+  for (const p of paths) loader.get(p).catch(fatal);
   return true;
 }
 
+/** Drops the files of the model asset `name`, once they are known. */
+function dropModel(name) {
+  const files = modelFiles.get(name);
+  if (files === undefined) return;
+  modelFiles.delete(name);
+  for (const path of files) loader.drop(path);
+}
+
 /**
- * Drops the files of models Pass 1 has loaded (it keeps what it read). Audio stays: the mix may
- * decode a waveform again after dropping its samples, and playback is not to fetch.
+ * Drops the files of the models Pass 1 has loaded (it keeps what it read), and of those fetched
+ * ahead for a costume the episode did not put on after all. Audio stays: the mix may decode a
+ * waveform again after dropping its samples, and playback is not to fetch.
  */
 function dropUsed(next) {
-  for (const b of session.models) {
-    if (!modelsDropped.has(b)) { modelsDropped.add(b); loader.dropUnder(`/lib/library/${b}`); }
-  }
-  // models fetched ahead for a costume the episode did not put on after all
+  session.models.forEach(dropModel);
   for (const [pos, list] of modelPlan) {
     if (pos >= next - 32) break;
-    for (const b of list) {
-      if (!modelsDropped.has(b) && !session.models.includes(b)) { modelsDropped.add(b); loader.dropUnder(`/lib/library/${b}`); }
-    }
+    list.forEach(dropModel);
   }
 }
 
@@ -187,10 +202,10 @@ function stepAhead(now) {
     frames.push([n, f]);
   }
   const changed = session.takeAudioChange();
-  if (changed !== undefined && changed * PER_FRAME < mixedUntil) {
+  if (changed !== undefined && sampleAt(changed) < mixedUntil) {
     // the samples mixed for that frame and after are stale: mix them again (the worklet
     // replaces what it has queued from there when they come)
-    mixedUntil = changed * PER_FRAME;
+    mixedUntil = sampleAt(changed);
   }
   const models = session.models;
   if (frames.length) {
@@ -227,6 +242,7 @@ function stepAhead(now) {
 async function seek(node) {
   seeking = true;
   try {
+    await fetchUpTo(node);
     const frame = await loader.retryMissing(() => session.seek(node));
     gen++;
     clicks = 0;
@@ -249,6 +265,26 @@ async function seek(node) {
 }
 
 /**
+ * Fetches, all at once, what stepping to the start of node `node` reads: the audio of the
+ * instructions before it (a talk's voice drives its lip sync) and the files of the models they
+ * may put on. A seek that met them one at a time would start over from its last checkpoint for
+ * each.
+ */
+async function fetchUpTo(node) {
+  const until = nodes[node]?.snippet ?? Infinity;
+  const audio = plan.filter(([pos]) => pos <= until).flatMap(([, files]) => files);
+  const models = modelPlan.filter(([pos]) => pos <= until).flatMap(([, names]) => names);
+  const report = sseReporter(loader, "seek");
+  const read = await Promise.all(models.map(async (name) => {
+    const files = (await loader.assetFiles(name)).filter((path) => !isTexture(path));
+    // dropped once Pass 1 has loaded the model, as those fetched ahead of playback
+    modelFiles.set(name, files);
+    return files;
+  }));
+  await loader.getAll([...audio, ...read.flat()], report);
+}
+
+/**
  * The render size changed: when its aspect ratio lays the UI out anew, the simulation starts
  * over at that size and playback goes on from the start of the node it was in.
  */
@@ -264,6 +300,21 @@ async function resize(width, height) {
   if (again) await seek(node);
 }
 
+/** Opens the episode; a publication without it fails with `kind: "not-found"`. */
+async function openSession(o) {
+  const { Session } = wasm_bindgen;
+  try {
+    // each round names every file the parse found missing: the documents of the episode's
+    // assets, then what they name (a movie's file gives its length)
+    return await sseWhenCoreReady(() => loader.retryMissing(
+      () => Session.create(o.selector, o.width, o.height, o.playerName, o.areaDate),
+      sseReporter(loader, "episode")));
+  } catch (e) {
+    if (!loader.isMissingEpisode(e)) throw e;
+    throw Object.assign(new Error(`${o.selector}: the publication has no such episode`), { kind: "not-found", url: e.url });
+  }
+}
+
 async function init(o, frames, audio) {
   // paths relative to this worker: Core and the package come from the options
   for (const url of [o.core, `${o.pkg}sse_web.js`, "common.js"]) {
@@ -276,66 +327,25 @@ async function init(o, frames, audio) {
   const wasm = await wasm_bindgen({ module_or_path: `${o.pkg}sse_web_bg.wasm` });
   // the size of the wasm memory: it holds the file table and only ever grows
   self.wasmBytes = () => wasm.memory.buffer.byteLength;
-  const { Session, putFile, removeFile, setCoreHeapSize } = wasm_bindgen;
   // Pass 1 holds no Core model: the smallest Core heap instead of the renderer's 64 MiB, which
   // took about 130 MB here
-  setCoreHeapSize(16 * 1024 * 1024);
+  wasm_bindgen.setCoreHeapSize(16 * 1024 * 1024);
   self.fileTableSize = wasm_bindgen.fileTableSize;
-  loader = new SseLoader(putFile, o.sources);
-  loader.removeFile = removeFile;
-  const lock = await loader.json("/lib/ripper.lock.json");
-  if (lock.assets) loader.setRoot("/assets/", lock.assets.base);
-  const index = await sseEpisodeIndex(loader, o.selector);
-  // everything Pass 1 and the mix read, as the episode index lists it
-  const files = [SseLoader.resolve(index, index.scenario.path)];
-  const models = new Set();
-  for (const c of Object.values(index.characters)) {
-    for (const costume of c.costumes) {
-      // a costume whose model the library does not have (the index warns of it) is not drawn
-      if (costume.modelBundle) models.add(costume.modelBundle);
-      for (const m of Object.values(costume.motions)) files.push(SseLoader.resolve(index, m.path));
-    }
-  }
-  for (const group of [index.voices, index.bgm, index.se]) {
-    for (const cue of Object.values(group ?? {})) for (const f of cue.files) files.push(SseLoader.resolve(index, f));
-  }
-  // Pass 1 reads a BGM's ACB (an interactive BGM's block structure); sound effects play without it
-  for (const cue of Object.values(index.bgm ?? {})) if (cue.acb) files.push(SseLoader.resolve(index, cue.acb));
-  for (const movie of Object.values(index.movies ?? {})) {
-    // a movie's sound; of one without sound, the video stream, whose headers give its length
-    const sound = movie.files.filter((f) => f.endsWith(".wav"));
-    for (const f of sound.length ? sound : movie.files.filter((f) => f.endsWith(".m2v"))) files.push(SseLoader.resolve(index, f));
-  }
-  const report = (phase) => (done, total) => postMessage({ type: "progress", phase, done, total, bytes: loader.bytes });
-  let listed = 0;
-  report("listing")(0, models.size);
-  const modelFiles = await Promise.all([...models].map((b) => loader.bundleFiles(b, (f) => f.kind !== "png")
-    .then((list) => { report("listing")(++listed, models.size); return list; })));
-  // effect prefabs' sounds: Pass 1 reads their animator and cue sheets, and the mix their
-  // waveforms (the raw ACB is not read)
-  const effects = new Set(Object.values(index.effects ?? {}));
-  const effectFiles = await Promise.all([...effects].map((b) => loader.bundleFiles(b, (f) => f.kind !== "png" && !f.path.endsWith(".acb"))));
-  // a background the library lacks (its download failed) is drawn from its texture, if at all
-  const backgroundFiles = await Promise.all(sseBackgroundBundles(index).map((b) => loader.bundleFiles(b, (f) => f.kind === "object-graph")
-    .catch((e) => { console.warn(`${b}: ${e?.message ?? e}`); return []; })));
-  await loader.getAll([...files, ...modelFiles.flat(), ...effectFiles.flat(), ...backgroundFiles.flat()], report("files"));
-  // the UI's sound effects (the choice dialog's): the kit has them when the client unpack does
-  const ui = await kit;
-  for (const [name, bytes] of ui.files) putFile(`${ui.dir}/${name}`, bytes);
-  session = await sseWhenCoreReady(() => loader.retryMissing(() =>
-    Session.create("/lib", "/assets", o.selector, o.width, o.height, o.playerName, ui.dir)));
+  loader = new SseLoader(wasm_bindgen, o.views);
+  session = await openSession(o);
   session.setAuto(o.auto);
   // choice dialogs wait for the player, in AUTO too, as in the game
   session.setInteractive(true);
   plan = JSON.parse(session.audioPlan());
   modelPlan = JSON.parse(session.modelPlan());
+  nodes = JSON.parse(session.nodes());
   framesPort = frames;
   framesPort.onmessage = (e) => {
     if (e.data.type === "click") clicks = Math.min(clicks + 1, MAX_CLICKS);
     else if (e.data.type === "answer") session.answer(e.data.index);
   };
   prefetchModels(0);
-  await loader.getAll(audioMissing(0));
+  await loader.getAll(audioMissing(0), sseReporter(loader, "audio"));
   audioPort = audio;
   audioPort.onmessage = (e) => {
     // reports from before the last seek are stale
@@ -348,7 +358,7 @@ async function init(o, frames, audio) {
     }
   };
   stepAhead(0);
-  postMessage({ type: "ready", loadedBytes: loader.bytes, nodes: JSON.parse(session.nodes()), unsupported: JSON.parse(session.unsupported()) });
+  postMessage({ type: "ready", loadedBytes: loader.bytes, nodes, unsupported: JSON.parse(session.unsupported()) });
 }
 
 onmessage = (e) => {
@@ -364,9 +374,6 @@ onmessage = (e) => {
         break;
       case "resize":
         if (session && framesPort && !seeking) resize(m.width, m.height).catch(fatal);
-        break;
-      case "kit":
-        kitArrived(m);
         break;
       case "auto":
         session?.setAuto(m.auto);

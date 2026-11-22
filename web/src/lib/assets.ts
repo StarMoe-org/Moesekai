@@ -373,8 +373,11 @@ export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = f
 }
 
 // Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
-export function getBondsHonorWordUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
-    const name = `${assetbundleName}_01`;
+// The word has one bundle per rarity: the game loads `{word}_{rarity + 1:00}` (low → _01 … highest → _04).
+const BONDS_HONOR_WORD_RARITY_SUFFIX: Record<string, string> = { low: "01", middle: "02", high: "03", highest: "04" };
+
+export function getBondsHonorWordUrl(assetbundleName: string, rarity: string = "low", source: AssetSourceType = "main-jp"): string {
+    const name = `${assetbundleName}_${BONDS_HONOR_WORD_RARITY_SUFFIX[rarity] ?? "01"}`;
     return buildImageAssetUrl(source, `bonds_honor/word/${name}/${name}`);
 }
 
@@ -400,6 +403,11 @@ export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: A
     return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
 }
 
+/** The white inner ring and shapes the game lays over a bonds honor's two colours. */
+export function getBondsHonorPatternUrl(sub: boolean = false, source: AssetSourceType = "main-jp"): string {
+    return getInappSpriteUrl(`degree_bgTexture_${sub ? "sub" : "main"}`, source);
+}
+
 export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string {
     return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
@@ -408,6 +416,11 @@ export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourc
 
 export function getScenarioJsonUrl(scenarioPath: string, source: AssetSourceType = "main-jp"): string {
     return buildJsonAssetUrl(source, scenarioPath);
+}
+
+/** Virtual live MC script dump (`mc` → scenario asset, `mc_timeline`/`virtual_message` → timeline dump). */
+export function getVirtualLiveMcUrl(mcType: "scenario" | "timeline", assetbundleName: string, source: AssetSourceType = "main-jp"): string {
+    return buildRawAssetUrl(source, `virtual_live/mc/${mcType}/${assetbundleName}/${assetbundleName}.json`);
 }
 
 export function getBackgroundImageUrl(bgName: string, source: AssetSourceType = "main-jp"): string {

@@ -79,10 +79,10 @@ function MigrationDialog({ count, onDone }: { count: number; onDone: () => void 
     const migrate = () => {
         writeAnswer("migrate");
         if (signedIn) {
-            window.location.assign(connectHref(localizePathForBrowser("/profile")));
+            window.location.assign(connectHref(localizePathForBrowser("/account")));
         } else {
-            // Back on the profile page, the "connect Haruki" button and banner pick up from here.
-            signIn(localizePathForBrowser("/profile"));
+            // Back on My account, the "connect Haruki" button and banner pick up from here.
+            signIn(localizePathForBrowser("/account"));
         }
     };
 

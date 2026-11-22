@@ -924,14 +924,28 @@ export const SEO_PAGE_METADATA = {
     "/profile",
     { "zh-CN": "个人主页", "en-US": "My Profile", "ja-JP": "マイプロフィール" },
     {
-      "zh-CN": "管理 Moesekai 个人主页、绑定账号、公开 API 与 OAuth2 授权数据。",
-      "en-US": "Manage your Moesekai profile, connected accounts, Public API data, and OAuth2 bindings.",
-      "ja-JP": "Moesekai のプロフィール、連携アカウント、Public API データ、OAuth2 連携を管理できます。",
+      "zh-CN": "查看当前游戏账号的卡组、乐曲通关、角色等级、挑战与羁绊。",
+      "en-US": "See your game account's deck, song clears, character ranks, challenge stages and bonds.",
+      "ja-JP": "表示中のゲームアカウントのデッキ、楽曲クリア状況、キャラクターランク、チャレンジ、絆を確認できます。",
     },
     {
-      "zh-CN": ["个人主页", "账号管理", "OAuth2"],
-      "en-US": ["profile", "account management", "OAuth2"],
-      "ja-JP": ["プロフィール", "アカウント管理", "OAuth2"],
+      "zh-CN": ["个人主页", "游戏账号", "卡组"],
+      "en-US": ["profile", "game account", "deck"],
+      "ja-JP": ["プロフィール", "ゲームアカウント", "デッキ"],
+    },
+  ),
+  account: definePage(
+    "/account",
+    { "zh-CN": "我的账号", "en-US": "My Account", "ja-JP": "マイアカウント" },
+    {
+      "zh-CN": "管理 StarMoe 通行证、Haruki 连接和你关注的游戏账号。",
+      "en-US": "Manage your StarMoe Passport, your Haruki connection and the game accounts you follow.",
+      "ja-JP": "StarMoe パスポート、Haruki 連携、フォローしているゲームアカウントを管理できます。",
+    },
+    {
+      "zh-CN": ["我的账号", "StarMoe 通行证", "游戏账号"],
+      "en-US": ["my account", "StarMoe Passport", "game accounts"],
+      "ja-JP": ["マイアカウント", "StarMoe パスポート", "ゲームアカウント"],
     },
   ),
   score_control: definePage(
@@ -1202,20 +1216,68 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["スペシャルストーリー", "周年ストーリー", "限定ストーリー"],
     },
   ),
-  guides: definePage(
-    "/guides",
-    { "zh-CN": "社区攻略", "en-US": "Guides", "ja-JP": "コミュニティガイド", "ko-KR": "커뮤니티 가이드" },
+  community: definePage(
+    "/community",
+    { "zh-CN": "社区广场", "en-US": "Community", "ja-JP": "コミュニティ広場", "ko-KR": "커뮤니티 광장" },
     {
-      "zh-CN": "浏览 PROJECT SEKAI 社区攻略与教程，查找玩法机制、活动规划、养成建议和实用工具的专题指南。",
-      "en-US": "Browse PROJECT SEKAI community guides covering game mechanics, event planning, progression advice, practical tools, and other reference topics.",
-      "ja-JP": "PROJECT SEKAI のゲームシステム、イベント計画、育成、便利ツールを扱うコミュニティ攻略やチュートリアルを閲覧できます。",
-      "ko-KR": "PROJECT SEKAI의 게임 시스템, 이벤트 계획, 성장 조언, 실용 도구를 다루는 커뮤니티 공략과 튜토리얼을 찾아볼 수 있습니다.",
+      "zh-CN": "在 Moesekai 社区广场与 Project SEKAI（世界计划 / PJSK）玩家分享抽卡晒卡、卡面评测、剧情讨论、萌新求助与冲榜协力，支持官方原版贴纸与站内图鉴卡片嵌入。",
+      "en-US": "Join the Moesekai community square for Project SEKAI (PJSK) showcase posts, card reviews, story discussions, beginner Q&A, and tiering rooms with official stamps and interactive wiki embeds.",
+      "ja-JP": "Moesekai コミュニティ広場でプロセカ（Project SEKAI / PJSK）のガチャ報告、カード評価、ストーリー考察、質問、イベラン募集を公式スタンプや図鑑カード埋め込み付きで楽しめます。",
+      "ko-KR": "Moesekai 커뮤니티 광장에서 프로젝트 세카이(프로세카 / PJSK) 가샤 자랑, 카드 리뷰, 스토리 토론, 질문, 런 모집을 공식 스탬프 및 도감 임베드와 함께 나눠 보세요.",
     },
     {
-      "zh-CN": ["攻略", "社区攻略", "Guide"],
-      "en-US": ["guides", "community guides", "tutorials"],
-      "ja-JP": ["攻略", "コミュニティガイド", "チュートリアル"],
-      "ko-KR": ["가이드", "커뮤니티 가이드", "튜토리얼"],
+      "zh-CN": ["社区广场", "PJSK社区", "世界计划讨论", "卡牌评论", "玩家社区"],
+      "en-US": ["community", "PJSK community", "Project SEKAI forum", "card comments", "discussion"],
+      "ja-JP": ["コミュニティ", "プロセカ コミュニティ", "掲示板", "カードコメント", "雑談"],
+      "ko-KR": ["커뮤니티", "프로세카 커뮤니티", "게시판", "카드 댓글", "토론"],
+    },
+  ),
+  community_new: definePage(
+    "/community/new",
+    { "zh-CN": "发布新帖", "en-US": "New Community Post", "ja-JP": "新規投稿", "ko-KR": "새 글 작성" },
+    {
+      "zh-CN": "在 Moesekai 社区广场发布新的 Project SEKAI 讨论帖子。",
+      "en-US": "Create a new Project SEKAI community post on Moesekai.",
+      "ja-JP": "Moesekai コミュニティ広場に新しいプロセカ投稿を作成します。",
+      "ko-KR": "Moesekai 커뮤니티 광장에 새로운 프로젝트 세카이 게시글을 작성합니다.",
+    },
+    {
+      "zh-CN": ["发布帖子", "社区广场"],
+      "en-US": ["new post", "community"],
+      "ja-JP": ["新規投稿", "コミュニティ"],
+      "ko-KR": ["새 글 작성", "커뮤니티"],
+    },
+  ),
+  community_mod: definePage(
+    "/community/mod",
+    { "zh-CN": "社区审核台", "en-US": "Moderation Console", "ja-JP": "モデレーション管理", "ko-KR": "커뮤니티 관리" },
+    {
+      "zh-CN": "Moesekai 社区审核队列、举报处理、申诉与紧急模式控制台。",
+      "en-US": "Moesekai community moderation queue, reports, appeals, custom rules, and emergency mode controls.",
+      "ja-JP": "Moesekai コミュニティの審査キュー、通報、異議申し立て、ルールと緊急モード管理画面。",
+      "ko-KR": "Moesekai 커뮤니티 심사 대기열, 신고, 이의 제기, 규칙 및 긴급 모드 콘솔.",
+    },
+    {
+      "zh-CN": ["社区审核", "版主控制台"],
+      "en-US": ["moderation", "community moderator"],
+      "ja-JP": ["モデレーション", "モデレーター"],
+      "ko-KR": ["모더레이션", "모더레이터"],
+    },
+  ),
+  community_user: definePage(
+    "/community/u",
+    { "zh-CN": "社区主页", "en-US": "Community Profile", "ja-JP": "コミュニティプロフィール", "ko-KR": "커뮤니티 프로필" },
+    {
+      "zh-CN": "查看 Moesekai 社区用户的发帖记录与认证徽章。",
+      "en-US": "View a Moesekai community member's posts, badges, and profile.",
+      "ja-JP": "Moesekai コミュニティメンバーの投稿履歴とバッジを確認できます。",
+      "ko-KR": "Moesekai 커뮤니티 회원의 게시글과 배지를 확인할 수 있습니다.",
+    },
+    {
+      "zh-CN": ["社区主页", "玩家资料"],
+      "en-US": ["community profile", "member"],
+      "ja-JP": ["プロフィール", "コミュニティ"],
+      "ko-KR": ["커뮤니티 프로필", "회원"],
     },
   ),
   patreon: definePage(
@@ -1236,9 +1298,9 @@ export const SEO_PAGE_METADATA = {
     "/privacy",
     { "zh-CN": "隐私政策", "en-US": "Privacy Policy", "ja-JP": "プライバシーポリシー" },
     {
-      "zh-CN": "阅读 Moesekai 隐私政策，了解本地存储、Cookie、广告与第三方服务说明。",
-      "en-US": "Read the Moesekai privacy policy covering local storage, cookies, ads, and third-party services.",
-      "ja-JP": "Moesekai のローカルストレージ、Cookie、広告、外部サービスに関するプライバシーポリシーを確認できます。",
+      "zh-CN": "阅读 Moesekai 隐私政策，了解 StarMoe 通行证登录、本机与服务器上保存的数据、Cookie 和第三方服务。",
+      "en-US": "Read the Moesekai privacy policy covering StarMoe Passport sign-in, data kept on your device and our servers, cookies, and third-party services.",
+      "ja-JP": "StarMoe パスポートでのログイン、端末とサーバーに保存されるデータ、Cookie、外部サービスに関する Moesekai のプライバシーポリシーです。",
     },
     {
       "zh-CN": ["隐私政策", "Cookie", "广告"],
@@ -1398,20 +1460,6 @@ export const SEO_PAGE_METADATA = {
       "zh-CN": ["空白页", "素材页"],
       "en-US": ["blank page", "asset page"],
       "ja-JP": ["空白ページ", "アセットページ"],
-    },
-  ),
-  guides_detail: definePage(
-    "/guides",
-    { "zh-CN": "攻略详情", "en-US": "Guide Details", "ja-JP": "ガイド詳細" },
-    {
-      "zh-CN": "阅读 PROJECT SEKAI 社区攻略详情。",
-      "en-US": "Read detailed PROJECT SEKAI community guide content.",
-      "ja-JP": "PROJECT SEKAI コミュニティガイドの詳細を閲覧できます。",
-    },
-    {
-      "zh-CN": ["攻略详情", "社区攻略"],
-      "en-US": ["guide details", "community guides"],
-      "ja-JP": ["ガイド詳細", "コミュニティガイド"],
     },
   ),
   oauth2_connect: definePage(
@@ -1889,6 +1937,7 @@ export const DETAIL_FALLBACK_TITLES = {
   music: { "zh-CN": "歌曲详情", "en-US": "Music Details", "ja-JP": "楽曲詳細" },
   lyrics: { "zh-CN": "歌词详情", "en-US": "Lyrics Details", "ja-JP": "歌詞詳細" },
   mysekai: { "zh-CN": "家具详情", "en-US": "Furniture Details", "ja-JP": "家具詳細" },
+  communityPost: { "zh-CN": "社区帖子", "en-US": "Community Post", "ja-JP": "コミュニティ投稿", "ko-KR": "커뮤니티 게시글" },
 } as const satisfies Record<string, LocalizedText>;
 
 export const DETAIL_FALLBACK_DESCRIPTIONS = {
@@ -1946,6 +1995,12 @@ export const DETAIL_FALLBACK_DESCRIPTIONS = {
     "zh-CN": "查看 Project SEKAI（世界计划 / PJSK）MySekai 家具详情、素材与风味文本",
     "en-US": "View Project SEKAI (PJSK) MySEKAI furniture details, materials, and flavor text",
     "ja-JP": "プロセカ（Project SEKAI / PJSK）MySekai の家具詳細、素材、フレーバーテキストを確認できます",
+  },
+  communityPost: {
+    "zh-CN": "查看 Moesekai Project SEKAI（世界计划 / PJSK）社区广场讨论帖与玩家回复",
+    "en-US": "Read Project SEKAI (PJSK) community posts and player replies on Moesekai",
+    "ja-JP": "Moesekai プロセカ（Project SEKAI / PJSK）コミュニティ広場の投稿と返信を閲覧できます",
+    "ko-KR": "Moesekai 프로젝트 세카이(프로세카 / PJSK) 커뮤니티 게시글과 댓글을 확인할 수 있습니다",
   },
 } as const satisfies Record<DetailFallbackKind, LocalizedText>;
 
@@ -2019,6 +2074,12 @@ export const DETAIL_SEO_TEMPLATES = {
     "en-US": "View the appearance, crafting materials, and item description for the Project SEKAI (PJSK) MySEKAI furniture \"{name}\".{flavorSuffix}",
     "ja-JP": "プロセカ（Project SEKAI / PJSK）MySekai 家具「{name}」の外観、製作素材、アイテム説明を確認できます。{flavorSuffix}",
     "ko-KR": "프로젝트 세카이(프로세카 / PJSK) MySEKAI 가구 ‘{name}’의 외형, 제작 재료와 아이템 설명을 확인할 수 있습니다.{flavorSuffix}",
+  },
+  communityPost: {
+    "zh-CN": "阅读由 {author} 发布在 Moesekai Project SEKAI 社区广场的帖子「{title}」，参与评论与官方贴纸互动。",
+    "en-US": "Read \"{title}\" by {author} in the Moesekai Project SEKAI community square and join the discussion.",
+    "ja-JP": "Moesekai プロセカ コミュニティ広場で {author} が投稿した「{title}」を閲覧し、コメントやスタンプで交流できます。",
+    "ko-KR": "Moesekai 프로젝트 세카이 커뮤니티 광장에 {author} 님이 올린 ‘{title}’ 게시글을 읽고 토론에 참여해 보세요.",
   },
 } as const satisfies Record<string, LocalizedText>;
 

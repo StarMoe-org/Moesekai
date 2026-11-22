@@ -51,7 +51,7 @@ export interface DeckBuilderInput {
     userId: string;
     server: string;
     oauthAccessToken?: string;
-    /** Signed in to StarMoe: read user data through moesekai-api (/api/sekai). */
+    /** Signed in to StarMoe: read user data through moesekai-api (/api/v1/me/sekai). */
     viaStarMoe?: boolean;
     eventId: number;
     /** Bonus tiers derived from the page's route planning; only these tiers are built (takes precedence over the range mode). */

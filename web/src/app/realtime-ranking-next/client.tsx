@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { replaceCurrentUrlSearchParams } from "@/lib/localized-path";
 import MainLayout from "@/components/MainLayout";
@@ -26,6 +27,11 @@ import {
     setRealtimeRankingLine,
     useRealtimeRankingLine,
 } from "@/lib/realtime-ranking-line";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 const DEFAULT_REGION: RealtimeRankingRegion = "cn";
 const SHOW_CHURN_STORAGE_KEY = "rr-next:showChurn";
@@ -149,6 +155,7 @@ function RealtimeRankingNextContent() {
 
     // Load tracked user from localStorage per region+event.
     const eventId = board.snapshot?.eventId;
+    const isScreenshotMode = searchParams.get("mode") === "screenshot";
     useEffect(() => {
         if (typeof window === "undefined") return;
         if (!eventId) { setTrackedUserId(null); return; }
@@ -265,6 +272,14 @@ function RealtimeRankingNextContent() {
                     churnEntry={selectedParkingChurnEntry}
                     onClose={() => setParkingModalUserId(null)}
                 />
+
+                {!isScreenshotMode && regionReady && region && eventId && (
+                    <EntityCommunitySection
+                        targetType="ranking"
+                        targetId={`${region}_${eventId}`}
+                        showRelatedPosts={false}
+                    />
+                )}
             </PageContainer>
         </MainLayout>
     );

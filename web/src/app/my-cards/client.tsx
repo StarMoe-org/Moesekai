@@ -23,18 +23,15 @@ import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCardSkillTypes } from "@/lib/skill";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import {
-    getAccounts,
-    getActiveAccount,
-    setActiveAccount,
     fetchAccountGameData,
     normalizeAccountDataError,
     type AccountDataErrorCode,
-    type MoesekaiAccount,
 } from "@/lib/account";
 
 
-import AccountSelectorBar from "@/components/AccountSelectorBar";
-import QuickBindForm from "@/components/QuickBindForm";
+import GameAccountBar from "@/components/account/GameAccountBar";
+import NoGameAccount from "@/components/account/NoGameAccount";
+import { useGameAccounts, useViewedGameAccount } from "@/lib/account/hooks";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -113,8 +110,9 @@ function MyCardsContent() {
     const searchParams = useSearchParams();
 
     // Account state
-    const [accounts, setAccountsList] = useState<MoesekaiAccount[]>([]);
-    const [activeAccount, setActiveAcc] = useState<MoesekaiAccount | null>(null);
+    // The page follows the account the whole site is viewing; switching it anywhere switches it here.
+    const { accounts, active: displayedAccount } = useGameAccounts();
+    const activeAccount = useViewedGameAccount();
     const accountAssetSource = useMemo(
         () => (activeAccount ? replaceAssetSourceRegion(assetSource, activeAccount.server) : assetSource),
         [assetSource, activeAccount],
@@ -249,14 +247,6 @@ function MyCardsContent() {
         if (ownershipFilter !== "all") params.set("ownership", ownershipFilter);
         replaceCurrentUrlSearchParams(params);
     }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, ownershipFilter, filtersInitialized]);
-
-    // Load accounts
-    useEffect(() => {
-        const accs = getAccounts();
-        setAccountsList(accs);
-        const active = getActiveAccount();
-        setActiveAcc(active);
-    }, []);
 
     // Fetch masterdata when account changes
     useEffect(() => {
@@ -538,26 +528,12 @@ function MyCardsContent() {
         userCards.size,
     ]);
 
-    const handleAccountSelect = useCallback((acc: MoesekaiAccount) => {
-        setActiveAccount(acc.id);
-        setActiveAcc(acc);
-    }, []);
-
     // No account state — show inline quick bind form
     if (accounts.length === 0) {
         return (
             <PageContainer className="max-w-3xl">
                 <MyCardsHeader />
-                <QuickBindForm
-                    onAccountAdded={() => {
-                        setAccountsList(getAccounts());
-                        const active = getActiveAccount();
-                        setActiveAcc(active);
-                    }}
-                    description={t("page.myCards.quickBindDescription")}
-                    returnTo="/my-cards"
-                />
-
+                <NoGameAccount description={t("page.myCards.quickBindDescription")} />
             </PageContainer>
         );
     }
@@ -565,19 +541,7 @@ function MyCardsContent() {
     return (
         <PageContainer>
             <MyCardsHeader />
-
-            {/* Account Selector with Quick Add */}
-            <AccountSelectorBar
-                accounts={accounts}
-                activeAccount={activeAccount}
-                onSelect={handleAccountSelect}
-                onAccountAdded={() => {
-                    setAccountsList(getAccounts());
-                    const active = getActiveAccount();
-                    setActiveAcc(active);
-                }}
-                returnTo="/my-cards"
-            />
+            {displayedAccount && <GameAccountBar account={displayedAccount} />}
 
 
             {/* User Error */}

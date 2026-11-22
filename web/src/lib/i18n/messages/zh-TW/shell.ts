@@ -48,7 +48,7 @@ export const zhTWLayout = {
             areaTalk: "區域對話",
             selfIntro: "自我介紹",
             specialStory: "特殊劇情",
-            guides: "攻略",
+            community: "社群廣場",
             gachaSimulator: "轉蛋模擬器",
             deckRecommend: "組隊推薦",
             deckComparator: "隊伍比較",
@@ -127,7 +127,7 @@ export const zhTWLayout = {
         storySelf: "閱讀角色自我介紹",
         storySpecial: "閱讀特殊場合劇情",
         prediction: "查看活動排名預測",
-        guides: "查看社群攻略",
+        community: "交流日常、分享轉蛋與卡牌點評",
         gachaSimulator: "自訂機率、UP 與卡池進行模擬抽卡",
         deckRecommend: "依照條件推薦最佳隊伍",
         deckComparator: "比較不同隊伍的綜合力",
@@ -324,11 +324,6 @@ export const zhTWSettings = {
     },
     footer: {
         version: "Moesekai · {version}",
-    },
-    sidebar: {
-        notLoggedIn: "尚未登入",
-        manageAccount: "點選以管理帳號",
-        bindAccount: "點選以綁定帳號",
     },
 } as const satisfies MessageTree;
 

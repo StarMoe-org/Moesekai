@@ -1017,8 +1017,8 @@ function runKitWorker(
             options: {
                 pkg: "pkg/",
                 sources: {
-                    library: sources.library,
-                    inapp: sources.inapp,
+                    site: sources.site,
+                    region: sources.region,
                     ...(sources.proxy ? { proxy: sources.proxy } : {}),
                 },
                 ...(fontsOption ? { fonts: fontsOption } : {}),
@@ -1098,7 +1098,8 @@ export async function loadStoryUiKit(
         ownFonts = false;
     }
 
-    const cacheKey = `${sources.inapp}|${ownFonts ? "own" : "client"}`;
+    const clientRegion = sources.region === "jp" ? "jp" : "cn";
+    const cacheKey = `${sources.site}|${clientRegion}|${ownFonts ? "own" : "client"}`;
 
     const existing = kitCache.get(cacheKey);
     if (existing) {

@@ -5,13 +5,9 @@ import MainLayout from "@/components/MainLayout";
 import ExternalLink from "@/components/ExternalLink";
 import BaseFilters, { FilterSection, FilterToggle } from "@/components/common/BaseFilters";
 import {
-    getAccounts,
-    getActiveAccount,
-    setActiveAccount,
     fetchAccountGameData,
     normalizeAccountDataError,
     type AccountDataErrorCode,
-    type MoesekaiAccount,
     type ServerType,
 } from "@/lib/account";
 
@@ -20,8 +16,9 @@ import { getMaterialThumbnailUrl, getMysekaiMaterialThumbnailUrl } from "@/lib/a
 import { replaceAssetSourceRegion, useTheme } from "@/contexts/ThemeContext";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 import type { IMysekaiMaterial } from "@/types/mysekai";
-import AccountSelectorBar from "@/components/AccountSelectorBar";
-import QuickBindForm from "@/components/QuickBindForm";
+import GameAccountBar from "@/components/account/GameAccountBar";
+import NoGameAccount from "@/components/account/NoGameAccount";
+import { useGameAccounts, useViewedGameAccount } from "@/lib/account/hooks";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -105,8 +102,9 @@ function MyMaterialsContent() {
     const { assetSource } = useTheme();
 
     // Account state
-    const [accounts, setAccountsList] = useState<MoesekaiAccount[]>([]);
-    const [activeAccount, setActiveAcc] = useState<MoesekaiAccount | null>(null);
+    // The page follows the account the whole site is viewing; switching it anywhere switches it here.
+    const { accounts, active: displayedAccount } = useGameAccounts();
+    const activeAccount = useViewedGameAccount();
 
     // Data state
     const [materialsMaster, setMaterialsMaster] = useState<Map<number, MaterialMaster>>(new Map());
@@ -132,14 +130,6 @@ function MyMaterialsContent() {
         increment: 60,
         isReady: !isLoading && !isFetchingUser,
     });
-
-    // Load accounts
-    useEffect(() => {
-        const accs = getAccounts();
-        setAccountsList(accs);
-        const active = getActiveAccount();
-        setActiveAcc(active);
-    }, []);
 
     // Fetch masterdata when account changes
     useEffect(() => {
@@ -296,11 +286,6 @@ function MyMaterialsContent() {
     const currentItems = activeTab === "materials" ? displayMaterials : displayMysekaiMaterials;
     const displayedItems = useMemo(() => currentItems.slice(0, displayCount), [currentItems, displayCount]);
 
-    const handleAccountSelect = useCallback((acc: MoesekaiAccount) => {
-        setActiveAccount(acc.id);
-        setActiveAcc(acc);
-    }, []);
-
     const handleTabChange = useCallback((tab: TabType) => {
         setActiveTab(tab);
         resetDisplayCount();
@@ -371,16 +356,7 @@ function MyMaterialsContent() {
         return (
             <PageContainer className="max-w-3xl">
                 <MyMaterialsHeader />
-                <QuickBindForm
-                    onAccountAdded={() => {
-                        setAccountsList(getAccounts());
-                        const active = getActiveAccount();
-                        setActiveAcc(active);
-                    }}
-                    description={t("page.myMaterials.quickBindDescription")}
-                    returnTo="/my-materials"
-                />
-
+                <NoGameAccount description={t("page.myMaterials.quickBindDescription")} />
             </PageContainer>
         );
     }
@@ -388,18 +364,7 @@ function MyMaterialsContent() {
     return (
         <PageContainer>
             <MyMaterialsHeader />
-
-            <AccountSelectorBar
-                accounts={accounts}
-                activeAccount={activeAccount}
-                onSelect={handleAccountSelect}
-                onAccountAdded={() => {
-                    setAccountsList(getAccounts());
-                    const active = getActiveAccount();
-                    setActiveAcc(active);
-                }}
-                returnTo="/my-materials"
-            />
+            {displayedAccount && <GameAccountBar account={displayedAccount} />}
 
 
             {/* User Error */}

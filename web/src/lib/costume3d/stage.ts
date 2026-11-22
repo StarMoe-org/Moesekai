@@ -131,10 +131,7 @@ function disposeGroup(group: THREE.Object3D): void {
         if (!mesh.isMesh) return;
         if (!mesh.userData.isOutline) mesh.geometry.dispose();
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
-        for (const material of materials) {
-            if (material.userData.ownsMap) (material as THREE.MeshBasicMaterial).map?.dispose();
-            material.dispose();
-        }
+        for (const material of materials) material.dispose();
     });
 }
 

@@ -90,7 +90,7 @@ function fetchEpisodeBundleMap(region: SseWebRegion, selector: string, signal?: 
     const cacheKey = `${region}|${relPath}`;
     let cached = episodeBundlesCache.get(cacheKey);
     if (!cached) {
-        const rawUrl = `${sources.library}${relPath}`;
+        const rawUrl = `${sources.site}${sources.region}/${relPath}`;
         const url = sources.proxy ? rawUrl.replace(/^https:\/\//, sources.proxy) : rawUrl;
         const loading = (async (): Promise<Map<string, number[]>> => {
             const response = await fetch(url, { credentials: "omit", headers: { Accept: "application/json" } });

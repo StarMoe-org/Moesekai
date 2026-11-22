@@ -1,12 +1,14 @@
 package masterdata
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -92,5 +94,92 @@ func TestStartupRetryLoadsImmediately(t *testing.T) {
 	}
 	if !store.IsReady() {
 		t.Fatal("startup loader did not attempt an immediate fetch")
+	}
+}
+
+func TestFetchUsesETag304ToSkipUnchangedRebuildAndCachesStartupPartialSuccess(t *testing.T) {
+	var gachasFail atomic.Bool
+	gachasFail.Store(true)
+	var eventsHits, gachasHits, notModifiedHits atomic.Int32
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		etag := `"v1-` + r.URL.Path + `"`
+		if r.Header.Get("If-None-Match") == etag {
+			notModifiedHits.Add(1)
+			w.WriteHeader(http.StatusNotModified)
+			return
+		}
+		w.Header().Set("ETag", etag)
+		switch r.URL.Path {
+		case "/events.json":
+			eventsHits.Add(1)
+			_, _ = w.Write([]byte(`[{"id":10,"name":"Ev10","assetbundleName":"ev10"}]`))
+		case "/gachas.json":
+			gachasHits.Add(1)
+			if gachasFail.Load() {
+				w.WriteHeader(http.StatusTooManyRequests)
+				return
+			}
+			_, _ = w.Write([]byte(`[{"id":20,"name":"G20","startAt":100,"gachaPickups":[{"gachaId":20,"cardId":77}]}]`))
+		default:
+			_, _ = w.Write([]byte(`[]`))
+		}
+	}))
+	defer server.Close()
+
+	store := NewStore(t.TempDir())
+	store.eventsURL = server.URL + "/events.json"
+	store.eventCardsURL = server.URL + "/eventCards.json"
+	store.eventMusicsURL = server.URL + "/eventMusics.json"
+	store.virtualLivesURL = server.URL + "/virtualLives.json"
+	store.gachasURL = server.URL + "/gachas.json"
+
+	// First startup attempt fails on gachas.json after events.json succeeded.
+	if err := store.FetchContext(context.Background()); err == nil {
+		t.Fatal("expected initial fetch error when gachas returns 429")
+	}
+	if store.IsReady() {
+		t.Fatal("store must not be ready on partial failure")
+	}
+
+	// Second attempt succeeds and MUST NOT re-download events.json.
+	gachasFail.Store(false)
+	if err := store.FetchContext(context.Background()); err != nil {
+		t.Fatalf("second fetch failed: %v", err)
+	}
+	if eventsHits.Load() != 1 {
+		t.Fatalf("events.json fetched %d times across startup retry, want 1", eventsHits.Load())
+	}
+	if gachasHits.Load() != 2 {
+		t.Fatalf("gachas.json fetched %d times, want 2", gachasHits.Load())
+	}
+	snap := store.GetSnapshot()
+	if snap == nil || len(snap.EventIDs) != 1 || snap.EventIDs[0] != 10 || len(snap.GachaIDs) != 1 || snap.GachaIDs[0] != 20 || len(snap.CardIDs) != 1 || snap.CardIDs[0] != 77 {
+		t.Fatalf("unexpected snapshot IDs: %+v", snap)
+	}
+
+	// Third attempt (periodic refresh) sees 304 for all 5 files and skips full fetch/rebuild.
+	if err := store.FetchContext(context.Background()); err != nil {
+		t.Fatalf("conditional refresh failed: %v", err)
+	}
+	if notModifiedHits.Load() != 5 {
+		t.Fatalf("304 hits = %d, want 5", notModifiedHits.Load())
+	}
+	if eventsHits.Load() != 1 || gachasHits.Load() != 2 {
+		t.Fatalf("unchanged refresh re-downloaded payloads: events=%d gachas=%d", eventsHits.Load(), gachasHits.Load())
+	}
+}
+
+func TestBackgroundLoopsRespectContextCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	store := NewStore(t.TempDir())
+	store.eventsURL = "http://127.0.0.1:1/unreachable"
+
+	cancel()
+	store.StartRetryUntilReadyContext(ctx, time.Millisecond)
+	store.StartPeriodicUpdateContext(ctx, time.Millisecond)
+	time.Sleep(20 * time.Millisecond)
+	if store.IsReady() {
+		t.Fatal("cancelled store unexpectedly became ready")
 	}
 }

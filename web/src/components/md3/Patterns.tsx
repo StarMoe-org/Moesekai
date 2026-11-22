@@ -143,19 +143,22 @@ export function Banner({
         <div
             role={tone === "error" ? "alert" : "status"}
             className={withOverrides(
-                "flex gap-3 rounded-md3-lg border px-4 py-3 text-on-surface",
-                twoPart ? "items-start" : "items-center",
+                "@container flex gap-3 rounded-md3-lg border px-4 py-3 text-on-surface",
+                // Narrow, the action drops below the text, so the icon stays with the first line.
+                twoPart ? "items-start" : action ? "items-start @md:items-center" : "items-center",
                 toneCls,
                 className,
             )}
         >
             <Icon path={icon} size={20} className={cn("shrink-0", iconCls)} />
-            <div className="min-w-0 flex-1">
-                {title && <div className="type-title-s">{title}</div>}
-                {children && <div className={cn("type-body-m", title ? "mt-0.5 text-on-surface-variant" : undefined)}>{children}</div>}
+            <div className="flex min-w-0 flex-1 flex-col gap-2 @md:flex-row @md:items-center @md:gap-3">
+                <div className="min-w-0 flex-1">
+                    {title && <div className="type-title-s">{title}</div>}
+                    {children && <div className={cn("type-body-m", title ? "mt-0.5 text-on-surface-variant" : undefined)}>{children}</div>}
+                </div>
+                {/* Wide, negative margins keep a button from making the banner taller than its text. */}
+                {action && <div className="shrink-0 self-start @md:-my-1.5 @md:self-center">{action}</div>}
             </div>
-            {/* Negative margins keep a button from making the banner taller than its text. */}
-            {action && <div className="-my-1.5 shrink-0 self-center">{action}</div>}
         </div>
     );
 }

@@ -90,6 +90,7 @@ test("every contract route uses the right method, path and body", async () => {
     await api.leaderboard({ tier: "easy" });
     await api.me();
     await api.linkGame("tok");
+    await api.linkVerifiedGame("jp", "1001");
     await api.unlinkGame();
 
     assert.equal(await blob.text(), "ID3?");
@@ -111,6 +112,7 @@ test("every contract route uses the right method, path and body", async () => {
             "GET https://api.example/api/guess-music/daily/leaderboard/?tier=easy",
             "GET https://api.example/api/guess-music/me/",
             "POST https://api.example/api/guess-music/me/game-link/",
+            "POST https://api.example/api/guess-music/me/game-link/",
             "DELETE https://api.example/api/guess-music/me/game-link/",
         ],
     );
@@ -119,6 +121,8 @@ test("every contract route uses the right method, path and body", async () => {
     assert.deepEqual(calls[5].body, { musicId: 42 });
     assert.deepEqual(calls[6].body, { musicId: null });
     assert.deepEqual(calls[11].body, { harukiAccessToken: "tok" });
+    // A verified account is named; the server checks it against StarMoe Connect.
+    assert.deepEqual(calls[12].body, { server: "jp", userId: "1001" });
     // Every tier, hell included, serves mp3 clips.
     assert.match(calls[4].headers.Accept, /^audio\/mpeg/);
     assert.doesNotMatch(calls[4].headers.Accept, /wav/);

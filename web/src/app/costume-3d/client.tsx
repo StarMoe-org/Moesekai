@@ -195,7 +195,7 @@ function Costume3dContent() {
     const variant = worn?.variant ?? null;
     const look = variant && catalog ? resolveLook(variant, catalog, { hair, hairUnit, head }, pool ?? null) : null;
     const loadKey = look && variant
-        ? [variant.models.body?.asset, look.face, look.hairFrom, look.accessory?.model.asset, look.accessory?.attach, ...Object.values(catalog?.role.motions ?? {})].join("|")
+        ? [look.body.asset, look.body.colors?.color, look.face, look.hairFrom, look.accessory?.model.asset, look.accessory?.model.colors?.color, look.accessory?.attach, ...Object.values(catalog?.role.motions ?? {})].join("|")
         : null;
 
     const stageLoad = useMemo<StageLoad | null>(() => {

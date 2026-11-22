@@ -2,6 +2,7 @@
 import { LoadingState, PageContainer } from "@/components/md3";
 import { ServerSourceBadge, StoryBackButton, StoryBadge, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
@@ -11,6 +12,12 @@ import { useI18n } from "@/contexts/I18nContext";
 import { fetchStoryAssetFromMirror, StoryAssetMissingError } from "@/lib/storyAsset";
 import { processScenarioForDisplay } from "@/lib/storyLoader";
 import { IProcessedScenarioData } from "@/types/story";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 interface ISpecialStoryEpisode {
     id: number; specialStoryId: number; episodeNo: number;
@@ -115,6 +122,16 @@ export default function StorySpecialReaderClient() {
                                 </div>
                             );
                         })}
+                    </div>
+                )}
+
+                {Number.isFinite(spId) && (
+                    <div className="mx-auto max-w-4xl">
+                        <EntityCommunitySection
+                            targetType="story"
+                            targetId={sanitizeCommunityTargetId(`special_${spId}`)}
+                            showRelatedPosts={false}
+                        />
                     </div>
                 )}
             </PageContainer>
