@@ -597,6 +597,41 @@ export function disconnectPort(doc: StoryDocument, fromNodeId: string, fromPortI
     return nextEdges.length === doc.edges.length ? doc : { ...doc, edges: nextEdges };
 }
 
+/**
+ * Atomically moves the source (tail) end of `edgeId` to `(newFromNodeId, newFromPortId)` while
+ * keeping its target node intact. Replaces any edge previously attached to the destination port.
+ */
+export function rewireEdgeSource(
+    doc: StoryDocument,
+    edgeId: string,
+    newFromNodeId: string,
+    newFromPortId: string,
+): StoryDocument {
+    const existing = doc.edges.find(edge => edge.id === edgeId);
+    if (!existing) return doc;
+    if (existing.fromNodeId === newFromNodeId && existing.fromPortId === newFromPortId) {
+        return doc;
+    }
+    if (!canConnectNodes(doc, newFromNodeId, newFromPortId, existing.toNodeId).ok) {
+        return doc;
+    }
+    const filtered = doc.edges.filter(
+        edge => edge.id !== edgeId && !(edge.fromNodeId === newFromNodeId && edge.fromPortId === newFromPortId),
+    );
+    return {
+        ...doc,
+        edges: [
+            ...filtered,
+            {
+                id: existing.id,
+                fromNodeId: newFromNodeId,
+                fromPortId: newFromPortId,
+                toNodeId: existing.toNodeId,
+            },
+        ],
+    };
+}
+
 // ==================== Scene Stage Slot Mutations ====================
 
 function updateSceneNode(doc: StoryDocument, nodeId: string, updater: (scene: SceneNode) => SceneNode): StoryDocument {

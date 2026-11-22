@@ -13,7 +13,7 @@ import {
     mdAccountTree, mdAltRoute, mdArrowBack, mdAutoplay, mdBottomPanelClose, mdBottomPanelOpen,
     mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCode,
     mdContentCopy, mdDownload, mdEdit, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen,
-    mdFullscreenExit, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
+    mdFullscreenExit, mdHistory, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
     mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRedo, mdReplay,
     mdRestartAlt, mdRightPanelClose, mdRightPanelOpen, mdSettings, mdSkipNext, mdSkipPrevious,
     mdStar, mdTag, mdUndo, mdUploadFile, mdViewQuilt, mdVisibility, mdVisibilityOff, mdVolumeOff,
@@ -55,6 +55,7 @@ import {
     GRAPH_COL_GAP, GRAPH_ORIGIN_X, GRAPH_ORIGIN_Y, acceptsTarget, applyDragPayloadToTarget,
     autoLayoutGraph, connectEdge, continueAndCutScene, createNode, disconnectEdge, disconnectPort,
     duplicateBeat, duplicateNode, getOutgoingEdge, moveBeat, moveNode, removeBeat, removeNode,
+    rewireEdgeSource,
     type ContinueSceneOptions, type StoryDragPayload, type StoryDropTarget,
 } from "@/lib/storyMaker/document";
 import { StoryDraftsUnavailableError, createDraft, getDraft, saveDraft } from "@/lib/storyMaker/drafts";
@@ -416,6 +417,27 @@ function StoryMakerEditContent() {
         }, AUTOSAVE_MS);
         return () => window.clearTimeout(timer);
     }, [doc, draftId, flushSave, saveStatus]);
+
+    // Flush any pending unsaved changes immediately when hiding tab, closing page, or unmounting.
+    useEffect(() => {
+        if (!draftId) return;
+        const flushPending = () => {
+            const pending = dirtyDocRef.current;
+            if (!pending) return;
+            dirtyDocRef.current = null;
+            void saveDraft(draftId, pending).catch(() => undefined);
+        };
+        const onVisibilityChange = () => {
+            if (document.visibilityState === "hidden") flushPending();
+        };
+        window.addEventListener("pagehide", flushPending);
+        document.addEventListener("visibilitychange", onVisibilityChange);
+        return () => {
+            window.removeEventListener("pagehide", flushPending);
+            document.removeEventListener("visibilitychange", onVisibilityChange);
+            flushPending();
+        };
+    }, [draftId]);
 
     useEffect(() => {
         if (saveStatus !== "dirty" && saveStatus !== "saving") return;
@@ -1414,6 +1436,17 @@ function StoryMakerEditContent() {
                 return;
             }
 
+            // Save shortcut (Ctrl+S / Cmd+S) in Edit or Code mode
+            if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
+                event.preventDefault();
+                if (draftId && doc) {
+                    dirtyDocRef.current = doc;
+                    void flushSave(draftId, doc);
+                    setSnack(t("page.storyMaker.editor.saveStatus.saved"));
+                }
+                return;
+            }
+
             if (workspaceMode === "code") {
                 if (
                     event.key === "Escape"
@@ -1466,7 +1499,7 @@ function StoryMakerEditContent() {
         playCurrentChoice, uiKit?.decideSoundUrl, playSe, handlePlayChoose, t,
         undo, redo, immersive, handleImmersiveChange,
         metaOpen, issuesOpen, importOpen, preloadOpen,
-        activeScene, activeBeatId, activeNode, doc,
+        activeScene, activeBeatId, activeNode, doc, draftId, flushSave,
         handleDeleteBeat, handleDeleteNode,
     ]);
 
@@ -1698,7 +1731,7 @@ function StoryMakerEditContent() {
             return;
         }
 
-        const rightReserved = workspaceMode === "edit" && layout.showRightPane ? layout.rightWidthPx : 0;
+        const rightReserved = workspaceMode !== "code" && layout.showRightPane ? layout.rightWidthPx : 0;
         const leftReserved = layout.showLeftPane ? layout.leftWidthPx : 0;
 
         if (active.axis === "left") {
@@ -1758,7 +1791,7 @@ function StoryMakerEditContent() {
     const modelArray = models ?? [];
 
     const showLeftPane = isCodeMode || layout.showLeftPane;
-    const showRightPane = isEditMode && layout.showRightPane;
+    const showRightPane = !isCodeMode && layout.showRightPane;
     const showBottomPane = !isCodeMode && layout.showBottomPane;
 
     // Derived Playtest presentation state
@@ -1917,7 +1950,7 @@ function StoryMakerEditContent() {
             key: "toggle-right",
             label: t("page.storyMaker.v2.ide.toggleRightPane"),
             selected: layout.showRightPane,
-            disabled: !isEditMode,
+            disabled: isCodeMode,
             onSelect: () => updateEditorLayout(prev => ({ ...prev, showRightPane: !prev.showRightPane })),
         },
         {
@@ -2113,15 +2146,13 @@ function StoryMakerEditContent() {
                                 selected={layout.showBottomPane}
                                 onClick={() => updateEditorLayout(prev => ({ ...prev, showBottomPane: !prev.showBottomPane }))}
                             />
-                            {isEditMode && (
-                                <IconButton
-                                    size="xs"
-                                    icon={layout.showRightPane ? mdRightPanelClose : mdRightPanelOpen}
-                                    label={t("page.storyMaker.v2.ide.toggleRightPane")}
-                                    selected={layout.showRightPane}
-                                    onClick={() => updateEditorLayout(prev => ({ ...prev, showRightPane: !prev.showRightPane }))}
-                                />
-                            )}
+                            <IconButton
+                                size="xs"
+                                icon={layout.showRightPane ? mdRightPanelClose : mdRightPanelOpen}
+                                label={t("page.storyMaker.v2.ide.toggleRightPane")}
+                                selected={layout.showRightPane}
+                                onClick={() => updateEditorLayout(prev => ({ ...prev, showRightPane: !prev.showRightPane }))}
+                            />
                         </>
                     )}
 
@@ -2214,8 +2245,6 @@ function StoryMakerEditContent() {
                                     stageState={playStageState}
                                     liveVariables={playLiveVariables}
                                     activeVoiceProgress={playVoiceProgress}
-                                    backlog={playtestBacklogEntries}
-                                    onReplayVoice={handlePlayReplayBacklogVoice}
                                     onSelectNode={jumpPlaytestToNode}
                                     onSelectBeat={jumpPlaytestToBeat}
                                     docked
@@ -2785,33 +2814,102 @@ function StoryMakerEditContent() {
                         </div>
                     )}
 
-                    {/* Top-Right Pane: NodeInspector (Edit mode only; Playtest gives this width to the Stage) */}
+                    {/* Top-Right Pane: NodeInspector (Edit) OR Dialogue Backlog & Edit Handoff (Playtest, keeps 3-pane widths rock-steady) */}
                     {showRightPane && (
                         <Surface
                             key="desktop-inspector"
                             tone="low"
                             radius="xl"
                             style={{ width: `${layout.rightWidthPx}px` }}
-                            className="flex min-h-0 max-w-[46%] shrink-0 flex-col overflow-hidden border border-outline-variant/50"
+                            className={cn(
+                                "flex min-h-0 max-w-[46%] shrink-0 flex-col overflow-hidden border",
+                                isPlaytest ? "border-primary/35" : "border-outline-variant/50",
+                            )}
                         >
-                            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-                                <NodeInspector
-                                    doc={doc}
-                                    selectedNodeId={activeNodeId}
-                                    selectedBeatId={activeBeatId}
-                                    assetSource={assetSource}
-                                    models={modelArray}
-                                    modelInfo={modelInfo}
-                                    diagnostics={diagnostics}
-                                    onDocChange={commit}
-                                    onSelectNode={handleSelectNode}
-                                    onSelectBeat={handleSelectBeat}
-                                    onPreviewClip={handlePreviewClip}
-                                    onPlayFromScene={nodeId => enterPlaytest(nodeId)}
-                                    onContinueScene={handleContinueScene}
-                                    onPreviewEffect={handlePreviewEffect}
-                                />
-                            </div>
+                            {isPlaytest ? (
+                                <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                                    <div className="flex shrink-0 items-center justify-between gap-2 border-b border-outline-variant/50 px-3 py-2">
+                                        <span className="flex min-w-0 items-center gap-1.5 type-label-l text-on-surface">
+                                            <Icon path={mdHistory} size={17} className="shrink-0 text-primary" />
+                                            <span className="truncate">{t("page.storyMaker.player.backlog")}</span>
+                                            <span className="shrink-0 font-mono type-label-s tabular-nums text-on-surface-variant">
+                                                {playtestBacklogEntries.length}
+                                            </span>
+                                        </span>
+                                        <Button
+                                            size="xs"
+                                            variant="tonal"
+                                            icon={mdEdit}
+                                            onClick={() => exitPlaytest(true)}
+                                        >
+                                            {t("page.storyMaker.v2.mode.returnToEdit")}
+                                        </Button>
+                                    </div>
+                                    <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                                        {playtestBacklogEntries.length === 0 ? (
+                                            <p className="rounded-md3-md bg-surface-container px-3 py-3 text-center type-body-s text-on-surface-variant">
+                                                {t("page.storyMaker.player.backlogEmpty")}
+                                            </p>
+                                        ) : (
+                                            <ol className="min-w-0 space-y-2">
+                                                {playtestBacklogEntries.map(entry => (
+                                                    <li
+                                                        key={entry.key}
+                                                        className={cn(
+                                                            "min-w-0 space-y-1 rounded-md3-md border p-2.5",
+                                                            entry.kind === "choice"
+                                                                ? "border-tertiary/45 bg-tertiary-container/30"
+                                                                : "border-outline-variant/40 bg-surface-container",
+                                                        )}
+                                                    >
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <span className="min-w-0 truncate type-label-m text-primary">
+                                                                {entry.kind === "choice"
+                                                                    ? t("page.storyMaker.player.chosenOption")
+                                                                    : entry.kind === "narration"
+                                                                        ? t("page.storyMaker.op.narration")
+                                                                        : entry.kind === "telop"
+                                                                            ? t("page.storyMaker.op.telop")
+                                                                            : (entry.speaker || t("page.storyMaker.v2.beats.speakerNone"))}
+                                                            </span>
+                                                            {entry.voiceUrls && entry.voiceUrls.length > 0 && (
+                                                                <IconButton
+                                                                    size="xs"
+                                                                    icon={mdPlayArrowFill}
+                                                                    label={t("page.storyMaker.player.replayVoice")}
+                                                                    onClick={() => handlePlayReplayBacklogVoice(entry)}
+                                                                />
+                                                            )}
+                                                        </div>
+                                                        <p className="whitespace-pre-wrap break-words type-body-s text-on-surface">
+                                                            {entry.body}
+                                                        </p>
+                                                    </li>
+                                                ))}
+                                            </ol>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="min-h-0 flex-1 overflow-y-auto p-3">
+                                    <NodeInspector
+                                        doc={doc}
+                                        selectedNodeId={activeNodeId}
+                                        selectedBeatId={activeBeatId}
+                                        assetSource={assetSource}
+                                        models={modelArray}
+                                        modelInfo={modelInfo}
+                                        diagnostics={diagnostics}
+                                        onDocChange={commit}
+                                        onSelectNode={handleSelectNode}
+                                        onSelectBeat={handleSelectBeat}
+                                        onPreviewClip={handlePreviewClip}
+                                        onPlayFromScene={nodeId => enterPlaytest(nodeId)}
+                                        onContinueScene={handleContinueScene}
+                                        onPreviewEffect={handlePreviewEffect}
+                                    />
+                                </div>
+                            )}
                         </Surface>
                     )}
                 </div>
@@ -2872,6 +2970,10 @@ function StoryMakerEditContent() {
                         commit(current => connectEdge(current, fromNodeId, fromPortId, toNodeId));
                         setSnack(t("page.storyMaker.flow.connected"));
                     })}
+                    onRewireEdgeSource={isPlaytest ? undefined : ((edgeId, newFromNodeId, newFromPortId) => {
+                        commit(current => rewireEdgeSource(current, edgeId, newFromNodeId, newFromPortId));
+                        setSnack(t("page.storyMaker.flow.connected"));
+                    })}
                     onDisconnectEdge={isPlaytest ? undefined : (edgeId => commit(current => disconnectEdge(current, edgeId)))}
                     onDisconnectPort={isPlaytest ? undefined : ((fromNodeId, fromPortId) => commit(current => disconnectPort(current, fromNodeId, fromPortId)))}
                     onDropPayload={isPlaytest ? undefined : handleDropPayload}
@@ -2888,6 +2990,15 @@ function StoryMakerEditContent() {
                     onContinueScene={isPlaytest ? undefined : handleContinueScene}
                     onPlayFromNode={isPlaytest ? undefined : (nodeId => enterPlaytest(nodeId))}
                     onAutoLayout={isPlaytest ? undefined : (() => commit(current => autoLayoutGraph(current)))}
+                    canUndo={past.length > 0}
+                    canRedo={future.length > 0}
+                    undoCount={past.length}
+                    redoCount={future.length}
+                    onUndo={isPlaytest ? undefined : undo}
+                    onRedo={isPlaytest ? undefined : redo}
+                    saveStatus={saveStatus}
+                    saveStatusLabel={saveStatusLabel}
+                    onRetrySave={() => void flushSave(draftId, doc)}
                     className={cn("min-h-0 flex-1", showBottomPane ? "flex" : "hidden")}
                 />
             </div>

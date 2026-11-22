@@ -1,18 +1,21 @@
 "use client";
-import React, { useMemo, useState } from "react";
-import { Icon, IconButton, Tabs, cn } from "@/components/md3";
+import React, { useEffect, useMemo, useState } from "react";
+import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
+import { Banner, Button, Dialog, Icon, IconButton, Tabs, cn } from "@/components/md3";
 import {
-    mdAccessibilityNew, mdAltRoute, mdAnimation, mdArticle, mdBlock, mdBolt, mdCalculate,
-    mdChat, mdDarkMode, mdDragIndicator, mdFlag, mdGroups, mdImage, mdLabel, mdLayers,
-    mdLightMode, mdMovie, mdMusicNote, mdMusicOff, mdMyLocation, mdPersonRemove,
-    mdQueueMusic, mdRecordVoiceOver, mdTitle, mdVisibilityOff, mdVolumeUp,
+    mdAccessibilityNew, mdAdd, mdAltRoute, mdAnimation, mdArticle, mdBlock, mdBolt, mdCalculate,
+    mdChat, mdClose, mdDarkMode, mdDragIndicator, mdFlag, mdGroups, mdImage, mdLabel, mdLayers,
+    mdLightMode, mdMovie, mdMusicNote, mdMusicOff, mdMyLocation, mdPersonRemove, mdPlayArrowFill,
+    mdQueueMusic, mdRecordVoiceOver, mdStopFill, mdTitle, mdVisibilityOff, mdVolumeUp,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 import { getAssetLine, getCharacterIconUrl } from "@/lib/assets";
 import type { Live2DModel } from "@/lib/live2dViewer/models";
 import type { Live2DActorInfo } from "@/lib/live2dViewer/stage";
-import { storyBackgroundUrl } from "@/lib/storyMaker/assets";
+import {
+    storyBackgroundUrl, storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls,
+} from "@/lib/storyMaker/assets";
 import {
     STORY_DRAG_MIME, addCastMember, removeCastMember, speakerName, updateCastMember,
     type StoryDragPayload,
@@ -21,7 +24,9 @@ import {
     DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, STORY_FADE_SECONDS,
 } from "@/lib/storyMaker/limits";
 import type { StoryCastMember, StoryDocument, StoryVoiceRef } from "@/types/storyMaker";
+import { AssetNamePickerDialog } from "./AssetNamePickerDialog";
 import { CastPanel } from "./CastPanel";
+import { previewStorySound } from "./useStoryAudio";
 import type { StoryModelList } from "./useStoryModels";
 import { VariableManagerPanel } from "./VariableManagerPanel";
 
@@ -67,9 +72,41 @@ interface BinAudioEntry {
     label: string;
     subtitle?: string;
     hint: string;
-    firstNodeId: string;
+    firstNodeId: string | null;
+    pinnedOnly?: boolean;
     payload: StoryDragPayload;
     voice?: StoryVoiceRef;
+}
+
+interface PinnedBinAssets {
+    backgrounds: string[];
+    bgms: string[];
+    ses: string[];
+}
+
+const EMPTY_PINNED: PinnedBinAssets = { backgrounds: [], bgms: [], ses: [] };
+const BIN_STORAGE_KEY = "moesekai.storyMaker.pinnedAssets.v1";
+
+function readAllPinnedAssets(): Record<string, PinnedBinAssets> {
+    if (typeof window === "undefined") return {};
+    try {
+        const raw = window.sessionStorage.getItem(BIN_STORAGE_KEY);
+        if (!raw) return {};
+        const parsed = JSON.parse(raw) as unknown;
+        if (!parsed || typeof parsed !== "object") return {};
+        return parsed as Record<string, PinnedBinAssets>;
+    } catch {
+        return {};
+    }
+}
+
+function writeAllPinnedAssets(map: Record<string, PinnedBinAssets>): void {
+    if (typeof window === "undefined") return;
+    try {
+        window.sessionStorage.setItem(BIN_STORAGE_KEY, JSON.stringify(map));
+    } catch {
+        // Ignore quota/private-mode storage errors.
+    }
 }
 
 const NOOP = () => {};
@@ -136,9 +173,73 @@ export function StoryEditorBin({
     const [internalTab, setInternalTab] = useState<EditorBinTab>("components");
     const activeTab = controlledTab ?? internalTab;
 
+    const [pinnedMap, setPinnedMap] = useState<Record<string, PinnedBinAssets>>(() => readAllPinnedAssets());
+    const [bgPickerOpen, setBgPickerOpen] = useState(false);
+    const [audioPickerKind, setAudioPickerKind] = useState<"bgm" | "se" | null>(null);
+    const [playingAudioKey, setPlayingAudioKey] = useState<string | null>(null);
+    const [audioPreviewError, setAudioPreviewError] = useState<string | null>(null);
+
+    const stopBinAudioPreview = () => {
+        previewStorySound(null);
+        setPlayingAudioKey(null);
+    };
+
+    useEffect(() => () => {
+        previewStorySound(null);
+    }, []);
+
     const handleTabChange = (next: EditorBinTab) => {
+        if (next !== "assets" && playingAudioKey !== null) {
+            stopBinAudioPreview();
+        }
         if (controlledTab === undefined) setInternalTab(next);
         onTabChange?.(next);
+    };
+
+    const pinnedForStory = pinnedMap[doc.id] ?? EMPTY_PINNED;
+
+    const mutatePinned = (updater: (current: PinnedBinAssets) => PinnedBinAssets) => {
+        setPinnedMap((prev) => {
+            const cur = prev[doc.id] ?? EMPTY_PINNED;
+            const nextForStory = updater(cur);
+            const nextAll = { ...prev, [doc.id]: nextForStory };
+            writeAllPinnedAssets(nextAll);
+            return nextAll;
+        });
+    };
+
+    const addPinnedBackground = (asset: string) => {
+        if (!asset) return;
+        mutatePinned(cur => (
+            cur.backgrounds.includes(asset)
+                ? cur
+                : { ...cur, backgrounds: [asset, ...cur.backgrounds] }
+        ));
+    };
+
+    const removePinnedBackground = (asset: string) => {
+        mutatePinned(cur => ({
+            ...cur,
+            backgrounds: cur.backgrounds.filter(item => item !== asset),
+        }));
+    };
+
+    const addPinnedAudio = (kind: "bgm" | "se", name: string) => {
+        if (!name) return;
+        mutatePinned((cur) => {
+            if (kind === "bgm") {
+                return cur.bgms.includes(name) ? cur : { ...cur, bgms: [name, ...cur.bgms] };
+            }
+            return cur.ses.includes(name) ? cur : { ...cur, ses: [name, ...cur.ses] };
+        });
+    };
+
+    const removePinnedAudio = (kind: "bgm" | "se", name: string) => {
+        mutatePinned(cur => (
+            kind === "bgm"
+                ? { ...cur, bgms: cur.bgms.filter(item => item !== name) }
+                : { ...cur, ses: cur.ses.filter(item => item !== name) }
+        ));
     };
 
     const line = useMemo(() => getAssetLine(assetSource), [assetSource]);
@@ -182,15 +283,26 @@ export function StoryEditorBin({
     }, [doc.nodes]);
 
     const usedBackgrounds = useMemo(() => {
-        const map = new Map<string, string>();
+        const map = new Map<string, string | null>();
         for (const node of Object.values(doc.nodes)) {
             if (node.type !== "scene") continue;
             if (node.background.mode === "set" && node.background.asset && !map.has(node.background.asset)) {
                 map.set(node.background.asset, node.id);
             }
         }
-        return Array.from(map.entries()).map(([asset, firstNodeId]) => ({ asset, firstNodeId }));
-    }, [doc.nodes]);
+        const pinnedSet = new Set<string>();
+        for (const asset of pinnedForStory.backgrounds) {
+            if (!map.has(asset)) {
+                map.set(asset, null);
+                pinnedSet.add(asset);
+            }
+        }
+        return Array.from(map.entries()).map(([asset, firstNodeId]) => ({
+            asset,
+            firstNodeId,
+            pinnedOnly: pinnedSet.has(asset),
+        }));
+    }, [doc.nodes, pinnedForStory.backgrounds]);
 
     const usedAudio = useMemo(() => {
         const list: BinAudioEntry[] = [];
@@ -260,8 +372,77 @@ export function StoryEditorBin({
                 }
             }
         }
+
+        for (const name of pinnedForStory.bgms) {
+            if (!seenBgm.has(name)) {
+                seenBgm.add(name);
+                list.push({
+                    key: `bgm:${name}`,
+                    kind: "bgm",
+                    label: name,
+                    hint: bgmHint,
+                    firstNodeId: null,
+                    pinnedOnly: true,
+                    payload: {
+                        kind: "slot-bgm",
+                        slot: { mode: "play", name, volume: 0.75 },
+                    },
+                });
+            }
+        }
+
+        for (const name of pinnedForStory.ses) {
+            if (!seenSe.has(name)) {
+                seenSe.add(name);
+                list.push({
+                    key: `se:${name}`,
+                    kind: "se",
+                    label: name,
+                    hint: beatHint,
+                    firstNodeId: null,
+                    pinnedOnly: true,
+                    payload: { kind: "asset-se", name },
+                });
+            }
+        }
+
         return list;
-    }, [doc, t]);
+    }, [doc, pinnedForStory.bgms, pinnedForStory.ses, t]);
+
+    const toggleAudioPreview = (entry: BinAudioEntry) => {
+        setAudioPreviewError(null);
+        if (playingAudioKey === entry.key) {
+            stopBinAudioPreview();
+            return;
+        }
+        let urls: string | string[];
+        let start: number | undefined;
+        let end: number | undefined;
+        if (entry.kind === "bgm") {
+            urls = storyBgmUrl(entry.label, doc.region, line);
+        } else if (entry.kind === "se") {
+            urls = storySeCandidateUrls(entry.label, doc.region, line);
+        } else if (entry.voice) {
+            urls = storyVoiceCandidateUrls(entry.voice, doc.region, line);
+            start = entry.voice.start;
+            end = entry.voice.end;
+        } else {
+            return;
+        }
+        setPlayingAudioKey(entry.key);
+        previewStorySound(urls, {
+            volume: entry.kind === "bgm" ? 0.65 : 0.85,
+            start,
+            end,
+            onEnd: () => {
+                setPlayingAudioKey(current => (current === entry.key ? null : current));
+            },
+            onError: () => {
+                setPlayingAudioKey(current => (current === entry.key ? null : current));
+                setAudioPreviewError(t("page.storyMaker.inspector.audioPreviewFailed"));
+            },
+        });
+    };
 
     const nodeItems: PaletteItemDef[] = useMemo(() => {
         const hint = t("page.storyMaker.v2.palette.dropTargetCanvas");
@@ -555,7 +736,17 @@ export function StoryEditorBin({
                 <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-3">
                     {/* Cast Characters */}
                     <section className="space-y-1.5">
-                        <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binCastGroup")}</h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binCastGroup")}</h3>
+                            <Button
+                                size="xs"
+                                variant="text"
+                                icon={mdAdd}
+                                onClick={() => handleTabChange("cast")}
+                            >
+                                {t("page.storyMaker.cast.add")}
+                            </Button>
+                        </div>
                         {doc.cast.length === 0 ? (
                             <p className="rounded-md3-md bg-surface-container px-3 py-2 type-body-s text-on-surface-variant">
                                 {t("page.storyMaker.nle.binEmpty")}
@@ -628,16 +819,26 @@ export function StoryEditorBin({
                         )}
                     </section>
 
-                    {/* Backgrounds used in Story */}
+                    {/* Backgrounds (used in Story + user-added to bin) */}
                     <section className="space-y-1.5">
-                        <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binBgGroup")}</h3>
+                        <div className="flex items-center justify-between gap-2">
+                            <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binBgGroup")}</h3>
+                            <Button
+                                size="xs"
+                                variant="text"
+                                icon={mdAdd}
+                                onClick={() => setBgPickerOpen(true)}
+                            >
+                                {t("page.storyMaker.v2.bin.addBackground")}
+                            </Button>
+                        </div>
                         {usedBackgrounds.length === 0 ? (
                             <p className="rounded-md3-md bg-surface-container px-3 py-2 type-body-s text-on-surface-variant">
                                 {t("page.storyMaker.nle.binEmpty")}
                             </p>
                         ) : (
                             <div className="grid grid-cols-2 gap-1.5">
-                                {usedBackgrounds.map(({ asset, firstNodeId }) => {
+                                {usedBackgrounds.map(({ asset, firstNodeId, pinnedOnly }) => {
                                     const inUse = activeScene?.background.mode === "set" && activeScene.background.asset === asset;
                                     const payload: StoryDragPayload = { kind: "slot-bg", slot: { mode: "set", asset } };
                                     return (
@@ -676,15 +877,27 @@ export function StoryEditorBin({
                                                     <span className="min-w-0 flex-1 truncate font-mono">{asset}</span>
                                                 </span>
                                             </button>
-                                            <button
-                                                type="button"
-                                                aria-label={t("page.storyMaker.nle.jumpToUse")}
-                                                title={t("page.storyMaker.nle.jumpToUse")}
-                                                onClick={() => onSelectNode(firstNodeId)}
-                                                className="focus-ring absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-surface-container-high/90 text-on-surface opacity-0 shadow-elev-1 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
-                                            >
-                                                <Icon path={mdMyLocation} size={14} />
-                                            </button>
+                                            {firstNodeId ? (
+                                                <button
+                                                    type="button"
+                                                    aria-label={t("page.storyMaker.nle.jumpToUse")}
+                                                    title={t("page.storyMaker.nle.jumpToUse")}
+                                                    onClick={() => onSelectNode(firstNodeId)}
+                                                    className="focus-ring absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-surface-container-high/90 text-on-surface opacity-0 shadow-elev-1 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                                >
+                                                    <Icon path={mdMyLocation} size={14} />
+                                                </button>
+                                            ) : pinnedOnly ? (
+                                                <button
+                                                    type="button"
+                                                    aria-label={t("page.storyMaker.v2.bin.removeFromBin")}
+                                                    title={t("page.storyMaker.v2.bin.removeFromBin")}
+                                                    onClick={() => removePinnedBackground(asset)}
+                                                    className="focus-ring absolute right-1 top-1 flex size-6 items-center justify-center rounded-full bg-surface-container-high/90 text-on-surface opacity-0 shadow-elev-1 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                                >
+                                                    <Icon path={mdClose} size={14} />
+                                                </button>
+                                            ) : null}
                                         </div>
                                     );
                                 })}
@@ -692,9 +905,38 @@ export function StoryEditorBin({
                         )}
                     </section>
 
-                    {/* Audio used in Story (BGM / SE / Voice) */}
+                    {/* Audio (BGM / SE / Voice with inline audition + Add BGM / Add SE) */}
                     <section className="space-y-1.5">
-                        <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binAudioGroup")}</h3>
+                        <div className="flex flex-wrap items-center justify-between gap-1">
+                            <h3 className="type-label-m text-on-surface-variant">{t("page.storyMaker.nle.binAudioGroup")}</h3>
+                            <div className="flex items-center gap-0.5">
+                                <Button
+                                    size="xs"
+                                    variant="text"
+                                    icon={mdAdd}
+                                    onClick={() => {
+                                        stopBinAudioPreview();
+                                        setAudioPickerKind("bgm");
+                                    }}
+                                >
+                                    {t("page.storyMaker.v2.bin.addBgm")}
+                                </Button>
+                                <Button
+                                    size="xs"
+                                    variant="text"
+                                    icon={mdAdd}
+                                    onClick={() => {
+                                        stopBinAudioPreview();
+                                        setAudioPickerKind("se");
+                                    }}
+                                >
+                                    {t("page.storyMaker.v2.bin.addSe")}
+                                </Button>
+                            </div>
+                        </div>
+                        {audioPreviewError && (
+                            <Banner tone="error">{audioPreviewError}</Banner>
+                        )}
                         {usedAudio.length === 0 ? (
                             <p className="rounded-md3-md bg-surface-container px-3 py-2 type-body-s text-on-surface-variant">
                                 {t("page.storyMaker.nle.binEmpty")}
@@ -705,6 +947,7 @@ export function StoryEditorBin({
                                     const inUse = entry.kind === "bgm"
                                         && activeScene?.bgm.mode === "play"
                                         && activeScene.bgm.name === entry.label;
+                                    const isPlaying = playingAudioKey === entry.key;
                                     const icon = entry.kind === "bgm"
                                         ? mdMusicNote
                                         : entry.kind === "se"
@@ -718,18 +961,29 @@ export function StoryEditorBin({
                                             onDragStart={event => startPayloadDrag(entry.payload, event, onDragPayloadStart)}
                                             onDragEnd={() => onDragPayloadStart?.(null)}
                                             className={cn(
-                                                "flex min-w-0 cursor-grab items-center gap-1.5 rounded-md3-md border px-2 py-1.5 active:cursor-grabbing",
+                                                "flex min-w-0 cursor-grab items-center gap-1 rounded-md3-md border px-1.5 py-1 active:cursor-grabbing",
                                                 inUse
                                                     ? "border-primary/45 bg-primary-container/25"
                                                     : "border-outline-variant/60 bg-surface-container",
                                             )}
                                         >
+                                            <IconButton
+                                                size="xs"
+                                                variant={isPlaying ? "filled" : "tonal"}
+                                                icon={isPlaying ? mdStopFill : mdPlayArrowFill}
+                                                label={t(isPlaying ? "page.storyMaker.inspector.stopPreview" : "page.storyMaker.inspector.previewAudio")}
+                                                onPointerDown={event => event.stopPropagation()}
+                                                onClick={(event) => {
+                                                    event.stopPropagation();
+                                                    toggleAudioPreview(entry);
+                                                }}
+                                            />
                                             <button
                                                 type="button"
                                                 onClick={() => onQuickDrop(entry.payload)}
-                                                className="state-layer focus-ring flex min-w-0 flex-1 items-center gap-2 rounded-md3-sm p-0.5 text-left"
+                                                className="state-layer focus-ring flex min-w-0 flex-1 items-center gap-1.5 rounded-md3-sm p-0.5 text-left"
                                             >
-                                                <Icon path={icon} size={16} className="shrink-0 text-primary" />
+                                                <Icon path={icon} size={15} className="shrink-0 text-primary" />
                                                 <span className="min-w-0 flex-1">
                                                     <span className="flex items-center gap-1.5">
                                                         <span className="truncate font-mono type-label-m text-on-surface">{entry.label}</span>
@@ -744,12 +998,23 @@ export function StoryEditorBin({
                                                     )}
                                                 </span>
                                             </button>
-                                            <IconButton
-                                                size="xs"
-                                                icon={mdMyLocation}
-                                                label={t("page.storyMaker.nle.jumpToUse")}
-                                                onClick={() => onSelectNode(entry.firstNodeId)}
-                                            />
+                                            {entry.firstNodeId ? (
+                                                <IconButton
+                                                    size="xs"
+                                                    icon={mdMyLocation}
+                                                    label={t("page.storyMaker.nle.jumpToUse")}
+                                                    onPointerDown={event => event.stopPropagation()}
+                                                    onClick={() => onSelectNode(entry.firstNodeId!)}
+                                                />
+                                            ) : entry.pinnedOnly && (entry.kind === "bgm" || entry.kind === "se") ? (
+                                                <IconButton
+                                                    size="xs"
+                                                    icon={mdClose}
+                                                    label={t("page.storyMaker.v2.bin.removeFromBin")}
+                                                    onPointerDown={event => event.stopPropagation()}
+                                                    onClick={() => removePinnedAudio(entry.kind as "bgm" | "se", entry.label)}
+                                                />
+                                            ) : null}
                                         </div>
                                     );
                                 })}
@@ -757,6 +1022,45 @@ export function StoryEditorBin({
                         )}
                     </section>
                 </div>
+            )}
+
+            {/* Add Background Picker Dialog */}
+            {bgPickerOpen && (
+                <Dialog
+                    isOpen
+                    onClose={() => setBgPickerOpen(false)}
+                    title={t("page.storyMaker.inspector.pickBackground")}
+                    size="lg"
+                    fullscreenOnMobile
+                >
+                    <Live2DBackgroundGrid
+                        key={`${doc.region}|${line}`}
+                        region={doc.region}
+                        line={line}
+                        current={null}
+                        defaultCategory="scene"
+                        onSelect={(name) => {
+                            if (name) addPinnedBackground(name);
+                            setBgPickerOpen(false);
+                        }}
+                    />
+                </Dialog>
+            )}
+
+            {/* Add BGM / SE Picker Dialog */}
+            {audioPickerKind && (
+                <AssetNamePickerDialog
+                    isOpen
+                    onClose={() => setAudioPickerKind(null)}
+                    kind={audioPickerKind}
+                    region={doc.region}
+                    line={line}
+                    current=""
+                    onSelect={(name) => {
+                        addPinnedAudio(audioPickerKind, name);
+                        setAudioPickerKind(null);
+                    }}
+                />
             )}
 
             {activeTab === "variables" && (

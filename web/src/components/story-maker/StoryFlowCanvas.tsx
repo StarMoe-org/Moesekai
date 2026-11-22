@@ -3,16 +3,17 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { Button, Icon, IconButton, cn } from "@/components/md3";
 import {
     mdAccessibilityNew, mdAccountTree, mdAdd, mdAltRoute, mdAnimation, mdArticle, mdBlock,
-    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdContentCopy, mdContentCut, mdDelete,
-    mdDragIndicator, mdErrorFill, mdFlag, mdGroups, mdHourglassTop, mdImage, mdKeyboardArrowDown,
-    mdKeyboardArrowUp, mdLabel, mdLink, mdLinkOff, mdLock, mdMood, mdMovie, mdMusicNote, mdMusicOff,
-    mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdTitle, mdUnfoldLess, mdUnfoldMore,
-    mdVolumeUp, mdWandStars, mdWarning, mdWarningFill, mdZoomIn, mdZoomOut,
+    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdCloudDone, mdContentCopy, mdContentCut,
+    mdDelete, mdDragIndicator, mdErrorFill, mdFlag, mdGroups, mdHourglassTop, mdImage,
+    mdKeyboardArrowDown, mdKeyboardArrowUp, mdLabel, mdLink, mdLinkOff, mdLock, mdMood, mdMovie,
+    mdMusicNote, mdMusicOff, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdTitle,
+    mdUndo, mdUnfoldLess, mdUnfoldMore, mdVolumeUp, mdWandStars, mdWarning, mdWarningFill,
+    mdZoomIn, mdZoomOut,
 } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     STORY_BEAT_DRAG_MIME, STORY_DRAG_MIME, canConnectNodes, canDropOnTarget, clampCoord,
-    getNodeOutPorts, getOutgoingEdge, speakerName,
+    getIncomingEdges, getNodeOutPorts, getOutgoingEdge, speakerName,
     type StoryBeatDragPayload, type StoryDragPayload, type StoryDropTarget, type StoryDropZone,
 } from "@/lib/storyMaker/document";
 import { STORY_LIMITS } from "@/lib/storyMaker/limits";
@@ -33,6 +34,7 @@ export interface StoryFlowCanvasProps {
     onSelectBeat?: (nodeId: string, beatId: string) => void;
     onMoveNode?: (nodeId: string, pos: StoryNodePos) => void;
     onConnect?: (fromNodeId: string, fromPortId: string, toNodeId: string) => void;
+    onRewireEdgeSource?: (edgeId: string, newFromNodeId: string, newFromPortId: string) => void;
     onDisconnectEdge?: (edgeId: string) => void;
     onDisconnectPort?: (fromNodeId: string, fromPortId: string) => void;
     onDropPayload?: (payload: StoryDragPayload, target: StoryDropTarget) => void;
@@ -51,6 +53,15 @@ export interface StoryFlowCanvasProps {
         },
     ) => void;
     onAutoLayout?: () => void;
+    canUndo?: boolean;
+    canRedo?: boolean;
+    undoCount?: number;
+    redoCount?: number;
+    onUndo?: () => void;
+    onRedo?: () => void;
+    saveStatus?: "saved" | "dirty" | "saving" | "error";
+    saveStatusLabel?: string;
+    onRetrySave?: () => void;
     activeDragPayload?: StoryDragPayload | null;
     className?: string;
 }
@@ -114,16 +125,30 @@ interface WireSource {
     hasExistingEdge: boolean;
 }
 
-interface WireDragState {
-    source: WireSource;
-    pointerId: number;
-    startClientX: number;
-    startClientY: number;
-    worldX: number;
-    worldY: number;
-    dragged: boolean;
-    hoveredTargetNodeId: string | null;
-}
+type WireDragState =
+    | {
+        kind: "target";
+        source: WireSource;
+        rewiringEdgeId?: string;
+        pointerId: number;
+        startClientX: number;
+        startClientY: number;
+        worldX: number;
+        worldY: number;
+        dragged: boolean;
+        hoveredTargetNodeId: string | null;
+    }
+    | {
+        kind: "source";
+        edge: StoryEdge;
+        pointerId: number;
+        startClientX: number;
+        startClientY: number;
+        worldX: number;
+        worldY: number;
+        dragged: boolean;
+        hoveredSourcePort: { nodeId: string; portId: string; portKey: string } | null;
+    };
 
 type SceneSlotZone = Exclude<StoryDropZone, "canvas" | "beat-track">;
 
@@ -246,6 +271,17 @@ function cubicPoint(p0: Point, p1: Point, p2: Point, p3: Point, t: number): Poin
         x: mt2 * mt * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t2 * t * p3.x,
         y: mt2 * mt * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t2 * t * p3.y,
     };
+}
+
+/** Picks a point along a cubic Bezier roughly `offsetPx` inward from either endpoint for endpoint drag handles. */
+function edgeEndpointHandlePoint(
+    curve: { p0: Point; p1: Point; p2: Point; p3: Point },
+    end: "start" | "end",
+    offsetPx: number,
+): Point {
+    const chord = Math.hypot(curve.p3.x - curve.p0.x, curve.p3.y - curve.p0.y);
+    const t = chord < 48 ? 0.22 : clamp(offsetPx / Math.max(chord, 1), 0.04, 0.22);
+    return cubicPoint(curve.p0, curve.p1, curve.p2, curve.p3, end === "start" ? t : 1 - t);
 }
 
 function geometryChanged(prev: MeasuredGeometry, next: MeasuredGeometry): boolean {
@@ -484,6 +520,7 @@ export function StoryFlowCanvas({
     onSelectBeat,
     onMoveNode,
     onConnect,
+    onRewireEdgeSource,
     onDisconnectEdge,
     onDisconnectPort,
     onDropPayload,
@@ -496,6 +533,15 @@ export function StoryFlowCanvas({
     onPlayFromNode,
     onContinueScene,
     onAutoLayout,
+    canUndo = false,
+    canRedo = false,
+    undoCount = 0,
+    redoCount = 0,
+    onUndo,
+    onRedo,
+    saveStatus,
+    saveStatusLabel,
+    onRetrySave,
     activeDragPayload = null,
     className,
 }: StoryFlowCanvasProps): React.JSX.Element {
@@ -545,7 +591,10 @@ export function StoryFlowCanvas({
     const [contextMenu, setContextMenu] = useState<FlowContextMenuState | null>(null);
     const [expandedNodeIds, setExpandedNodeIds] = useState<ReadonlySet<string>>(() => new Set());
 
-    const activeWireSource = wireDrag?.dragged ? wireDrag.source : clickConnectSource;
+    const activeWireSource = wireDrag?.dragged && wireDrag.kind === "target"
+        ? wireDrag.source
+        : clickConnectSource;
+    const activeRewireSourceDrag = wireDrag?.dragged && wireDrag.kind === "source" ? wireDrag : null;
 
     const visitedNodeSet = useMemo(() => new Set(visitedNodeIds ?? []), [visitedNodeIds]);
     const visitedEdgeSet = useMemo(() => new Set(visitedEdgeIds ?? []), [visitedEdgeIds]);
@@ -862,6 +911,28 @@ export function StoryFlowCanvas({
         }
         return null;
     }, [doc, nodesList, getNodePos, getNodeSize]);
+
+    const hitTestSourcePort = useCallback((
+        worldX: number,
+        worldY: number,
+        targetNodeId: string,
+    ): { nodeId: string; portId: string; portKey: string } | null => {
+        let best: { nodeId: string; portId: string; portKey: string; dist: number } | null = null;
+        const maxRadius = 36;
+        for (const node of nodesList) {
+            const outPorts = getNodeOutPorts(node);
+            for (const portId of outPorts) {
+                if (!canConnectNodes(doc, node.id, portId, targetNodeId).ok) continue;
+                const pKey = portKeyOut(node.id, portId);
+                const pt = getPortWorldPoint(node, pKey);
+                const dist = Math.hypot(worldX - pt.x, worldY - pt.y);
+                if (dist <= maxRadius && (!best || dist < best.dist)) {
+                    best = { nodeId: node.id, portId, portKey: pKey, dist };
+                }
+            }
+        }
+        return best ? { nodeId: best.nodeId, portId: best.portId, portKey: best.portKey } : null;
+    }, [doc, nodesList, getPortWorldPoint]);
 
     const completeConnection = useCallback((source: WireSource, targetNodeId: string) => {
         if (!canConnectNodes(doc, source.fromNodeId, source.fromPortId, targetNodeId).ok) return;
@@ -1198,8 +1269,11 @@ export function StoryFlowCanvas({
         if (event.button !== 0 && event.pointerType === "mouse") return;
         event.currentTarget.setPointerCapture(event.pointerId);
         const world = clientToWorld(event.clientX, event.clientY);
+        const existingEdge = getOutgoingEdge(doc, source.fromNodeId, source.fromPortId);
         setWireDrag({
+            kind: "target",
             source,
+            rewiringEdgeId: existingEdge?.id,
             pointerId: event.pointerId,
             startClientX: event.clientX,
             startClientY: event.clientY,
@@ -1211,7 +1285,7 @@ export function StoryFlowCanvas({
     };
 
     const handlePortPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
-        if (!wireDrag || wireDrag.pointerId !== event.pointerId) return;
+        if (!wireDrag || wireDrag.kind !== "target" || wireDrag.pointerId !== event.pointerId) return;
         event.stopPropagation();
         const dist = Math.hypot(event.clientX - wireDrag.startClientX, event.clientY - wireDrag.startClientY);
         const dragged = wireDrag.dragged || dist > 6;
@@ -1222,7 +1296,7 @@ export function StoryFlowCanvas({
         if (dragged && clickConnectSource) {
             setClickConnectSource(null);
         }
-        setWireDrag(prev => (prev ? {
+        setWireDrag(prev => (prev && prev.kind === "target" ? {
             ...prev,
             dragged,
             worldX: world.x,
@@ -1232,13 +1306,15 @@ export function StoryFlowCanvas({
     };
 
     const handlePortPointerUp = (event: React.PointerEvent<HTMLButtonElement>) => {
-        if (!wireDrag || wireDrag.pointerId !== event.pointerId) return;
+        if (!wireDrag || wireDrag.kind !== "target" || wireDrag.pointerId !== event.pointerId) return;
         event.stopPropagation();
         const finished = wireDrag;
         setWireDrag(null);
         if (finished.dragged) {
             if (finished.hoveredTargetNodeId) {
                 completeConnection(finished.source, finished.hoveredTargetNodeId);
+            } else if (finished.rewiringEdgeId && onDisconnectEdge) {
+                onDisconnectEdge(finished.rewiringEdgeId);
             } else {
                 // Releasing on blank canvas instantly unwires this port!
                 onDisconnectPort?.(finished.source.fromNodeId, finished.source.fromPortId);
@@ -1246,6 +1322,145 @@ export function StoryFlowCanvas({
             return;
         }
         setClickConnectSource(prev => (prev?.portKey === finished.source.portKey ? null : finished.source));
+    };
+
+    const handleEdgeHeadPointerDown = (edge: StoryEdge, event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!isEdit) return;
+        event.stopPropagation();
+        setContextMenu(null);
+        if (event.button !== 0 && event.pointerType === "mouse") return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const world = clientToWorld(event.clientX, event.clientY);
+        const fromNode = doc.nodes[edge.fromNodeId];
+        const source: WireSource = {
+            fromNodeId: edge.fromNodeId,
+            fromPortId: edge.fromPortId,
+            portKey: portKeyOut(edge.fromNodeId, edge.fromPortId),
+            label: fromNode ? nodeDisplayTitle(fromNode, t) : edge.fromNodeId,
+            hasExistingEdge: true,
+        };
+        setWireDrag({
+            kind: "target",
+            source,
+            rewiringEdgeId: edge.id,
+            pointerId: event.pointerId,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            worldX: world.x,
+            worldY: world.y,
+            dragged: false,
+            hoveredTargetNodeId: edge.toNodeId,
+        });
+    };
+
+    const handleEdgeHeadPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!wireDrag || wireDrag.kind !== "target" || wireDrag.pointerId !== event.pointerId) return;
+        event.stopPropagation();
+        const dist = Math.hypot(event.clientX - wireDrag.startClientX, event.clientY - wireDrag.startClientY);
+        const dragged = wireDrag.dragged || dist > 5;
+        const world = clientToWorld(event.clientX, event.clientY);
+        const hoveredTargetNodeId = dragged
+            ? hitTestTargetNode(world.x, world.y, wireDrag.source.fromNodeId, wireDrag.source.fromPortId)
+            : null;
+        if (dragged && clickConnectSource) {
+            setClickConnectSource(null);
+        }
+        setWireDrag(prev => (prev && prev.kind === "target" ? {
+            ...prev,
+            dragged,
+            worldX: world.x,
+            worldY: world.y,
+            hoveredTargetNodeId,
+        } : null));
+    };
+
+    const handleEdgeHeadPointerUp = (edge: StoryEdge, event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!wireDrag || wireDrag.kind !== "target" || wireDrag.pointerId !== event.pointerId) return;
+        event.stopPropagation();
+        const finished = wireDrag;
+        setWireDrag(null);
+        if (finished.dragged) {
+            if (finished.hoveredTargetNodeId) {
+                if (finished.hoveredTargetNodeId !== edge.toNodeId) {
+                    completeConnection(finished.source, finished.hoveredTargetNodeId);
+                }
+            } else {
+                onDisconnectEdge?.(edge.id);
+                setSelectedEdgeId(null);
+            }
+            return;
+        }
+        setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id));
+    };
+
+    const handleEdgeTailPointerDown = (edge: StoryEdge, event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!isEdit) return;
+        event.stopPropagation();
+        setContextMenu(null);
+        if (event.button !== 0 && event.pointerType === "mouse") return;
+        event.currentTarget.setPointerCapture(event.pointerId);
+        const world = clientToWorld(event.clientX, event.clientY);
+        setWireDrag({
+            kind: "source",
+            edge,
+            pointerId: event.pointerId,
+            startClientX: event.clientX,
+            startClientY: event.clientY,
+            worldX: world.x,
+            worldY: world.y,
+            dragged: false,
+            hoveredSourcePort: {
+                nodeId: edge.fromNodeId,
+                portId: edge.fromPortId,
+                portKey: portKeyOut(edge.fromNodeId, edge.fromPortId),
+            },
+        });
+    };
+
+    const handleEdgeTailPointerMove = (event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!wireDrag || wireDrag.kind !== "source" || wireDrag.pointerId !== event.pointerId) return;
+        event.stopPropagation();
+        const dist = Math.hypot(event.clientX - wireDrag.startClientX, event.clientY - wireDrag.startClientY);
+        const dragged = wireDrag.dragged || dist > 5;
+        const world = clientToWorld(event.clientX, event.clientY);
+        const hoveredSourcePort = dragged
+            ? hitTestSourcePort(world.x, world.y, wireDrag.edge.toNodeId)
+            : null;
+        if (dragged && clickConnectSource) {
+            setClickConnectSource(null);
+        }
+        setWireDrag(prev => (prev && prev.kind === "source" ? {
+            ...prev,
+            dragged,
+            worldX: world.x,
+            worldY: world.y,
+            hoveredSourcePort,
+        } : null));
+    };
+
+    const handleEdgeTailPointerUp = (edge: StoryEdge, event: React.PointerEvent<HTMLButtonElement>) => {
+        if (!wireDrag || wireDrag.kind !== "source" || wireDrag.pointerId !== event.pointerId) return;
+        event.stopPropagation();
+        const finished = wireDrag;
+        setWireDrag(null);
+        if (finished.dragged) {
+            if (finished.hoveredSourcePort) {
+                const { nodeId, portId } = finished.hoveredSourcePort;
+                if (nodeId !== edge.fromNodeId || portId !== edge.fromPortId) {
+                    if (onRewireEdgeSource) {
+                        onRewireEdgeSource(edge.id, nodeId, portId);
+                    } else {
+                        onDisconnectEdge?.(edge.id);
+                        onConnect?.(nodeId, portId, edge.toNodeId);
+                    }
+                }
+            } else {
+                onDisconnectEdge?.(edge.id);
+                setSelectedEdgeId(null);
+            }
+            return;
+        }
+        setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id));
     };
 
     const handlePortKeyDown = (source: WireSource, event: React.KeyboardEvent<HTMLButtonElement>) => {
@@ -1453,6 +1668,8 @@ export function StoryFlowCanvas({
             edge: StoryEdge;
             d: string;
             labelPos: Point;
+            tailHandlePos: Point;
+            headHandlePos: Point;
             label: string | null;
             tone: "primary" | "tertiary" | "secondary";
             dashed: boolean;
@@ -1469,6 +1686,8 @@ export function StoryFlowCanvas({
             const end = getPortWorldPoint(toNode, portKeyIn(toNode.id));
             const curve = buildCubicBezier(start, end, edge.fromNodeId === edge.toNodeId);
             const labelPos = cubicPoint(curve.p0, curve.p1, curve.p2, curve.p3, 0.5);
+            const tailHandlePos = edgeEndpointHandlePoint(curve, "start", 20);
+            const headHandlePos = edgeEndpointHandlePoint(curve, "end", 18);
 
             let label: string | null = null;
             let tone: "primary" | "tertiary" | "secondary" = "primary";
@@ -1493,6 +1712,8 @@ export function StoryFlowCanvas({
                 edge,
                 d: curve.d,
                 labelPos,
+                tailHandlePos,
+                headHandlePos,
                 label,
                 tone,
                 dashed,
@@ -1506,12 +1727,22 @@ export function StoryFlowCanvas({
 
     const rubberBandPath = useMemo(() => {
         if (!wireDrag || !wireDrag.dragged) return null;
-        const sourceNode = doc.nodes[wireDrag.source.fromNodeId];
-        if (!sourceNode) return null;
-        const start = getPortWorldPoint(sourceNode, wireDrag.source.portKey);
-        const hoveredNode = wireDrag.hoveredTargetNodeId ? doc.nodes[wireDrag.hoveredTargetNodeId] : undefined;
-        const end = hoveredNode
-            ? getPortWorldPoint(hoveredNode, portKeyIn(hoveredNode.id))
+        if (wireDrag.kind === "target") {
+            const sourceNode = doc.nodes[wireDrag.source.fromNodeId];
+            if (!sourceNode) return null;
+            const start = getPortWorldPoint(sourceNode, wireDrag.source.portKey);
+            const hoveredNode = wireDrag.hoveredTargetNodeId ? doc.nodes[wireDrag.hoveredTargetNodeId] : undefined;
+            const end = hoveredNode
+                ? getPortWorldPoint(hoveredNode, portKeyIn(hoveredNode.id))
+                : { x: wireDrag.worldX, y: wireDrag.worldY };
+            return buildCubicBezier(start, end, false).d;
+        }
+        const targetNode = doc.nodes[wireDrag.edge.toNodeId];
+        if (!targetNode) return null;
+        const end = getPortWorldPoint(targetNode, portKeyIn(targetNode.id));
+        const hoveredSrcNode = wireDrag.hoveredSourcePort ? doc.nodes[wireDrag.hoveredSourcePort.nodeId] : undefined;
+        const start = hoveredSrcNode && wireDrag.hoveredSourcePort
+            ? getPortWorldPoint(hoveredSrcNode, wireDrag.hoveredSourcePort.portKey)
             : { x: wireDrag.worldX, y: wireDrag.worldY };
         return buildCubicBezier(start, end, false).d;
     }, [wireDrag, doc.nodes, getPortWorldPoint]);
@@ -1556,6 +1787,11 @@ export function StoryFlowCanvas({
         const outgoing = getOutgoingEdge(doc, nodeId, portId);
         const isConnected = Boolean(outgoing);
         const isSourceActive = activeWireSource?.portKey === pKey;
+        const isRewireSourceValid = Boolean(
+            activeRewireSourceDrag
+            && canConnectNodes(doc, nodeId, portId, activeRewireSourceDrag.edge.toNodeId).ok,
+        );
+        const isRewireSourceHovered = activeRewireSourceDrag?.hoveredSourcePort?.portKey === pKey;
         const wireSource: WireSource = {
             fromNodeId: nodeId,
             fromPortId: portId,
@@ -1599,12 +1835,65 @@ export function StoryFlowCanvas({
                 onClick={event => event.stopPropagation()}
                 className={cn(
                     "focus-ring absolute -right-2.5 top-1/2 z-10 flex size-5 -translate-y-1/2 items-center justify-center rounded-full border-2 shadow-elev-1 transition-transform",
-                    isSourceActive ? toneActive : toneIdle,
+                    isSourceActive || isRewireSourceHovered
+                        ? toneActive
+                        : isRewireSourceValid
+                            ? `${toneIdle} scale-115 ring-2 ring-primary/50`
+                            : toneIdle,
                     isEdit && "cursor-crosshair hover:scale-115",
                 )}
             >
                 <Icon path={mdLink} size={11} />
             </button>
+        );
+    };
+
+    const renderInPortDot = (
+        nodeId: string,
+        tone: "primary" | "tertiary" | "secondary",
+        isValidConnectTarget: boolean,
+    ) => {
+        const incoming = isEdit ? getIncomingEdges(doc, nodeId) : [];
+        const detachableEdge = incoming.length > 0 ? incoming[incoming.length - 1] : null;
+        const borderTone = tone === "tertiary"
+            ? "border-tertiary"
+            : tone === "secondary"
+                ? "border-secondary"
+                : "border-primary";
+
+        if (!isEdit || !detachableEdge) {
+            return (
+                <span
+                    data-port-key={portKeyIn(nodeId)}
+                    aria-hidden
+                    className={cn(
+                        "absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 rounded-full border-2 transition-transform",
+                        isValidConnectTarget
+                            ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
+                            : `${borderTone} bg-surface-container-lowest`,
+                    )}
+                />
+            );
+        }
+
+        return (
+            <button
+                type="button"
+                data-port-key={portKeyIn(nodeId)}
+                aria-label={t("page.storyMaker.v2.ports.dragEdgeTarget")}
+                title={t("page.storyMaker.v2.ports.dragEdgeTarget")}
+                onPointerDown={event => handleEdgeHeadPointerDown(detachableEdge, event)}
+                onPointerMove={handleEdgeHeadPointerMove}
+                onPointerUp={event => handleEdgeHeadPointerUp(detachableEdge, event)}
+                onPointerCancel={() => setWireDrag(null)}
+                onClick={event => event.stopPropagation()}
+                className={cn(
+                    "focus-ring absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 cursor-grab rounded-full border-2 transition-transform hover:scale-125 active:cursor-grabbing",
+                    isValidConnectTarget
+                        ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
+                        : `${borderTone} bg-surface-container-lowest`,
+                )}
+            />
         );
     };
 
@@ -2089,6 +2378,43 @@ export function StoryFlowCanvas({
             <div className="z-10 flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 bg-surface-container-low px-2.5 py-1.5">
                 {isEdit ? (
                     <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
+                        {(onUndo || onRedo) && (
+                            <>
+                                <div className="inline-flex items-center gap-1">
+                                    {onUndo && (
+                                        <Button
+                                            size="xs"
+                                            variant="outlined"
+                                            icon={mdUndo}
+                                            disabled={!canUndo}
+                                            title={`${t("page.storyMaker.editor.undo")} (Ctrl+Z)`}
+                                            onClick={onUndo}
+                                        >
+                                            {t("page.storyMaker.editor.undo")}
+                                            {undoCount > 0 && (
+                                                <span className="ml-0.5 font-mono opacity-75">({undoCount})</span>
+                                            )}
+                                        </Button>
+                                    )}
+                                    {onRedo && (
+                                        <Button
+                                            size="xs"
+                                            variant="outlined"
+                                            icon={mdRedo}
+                                            disabled={!canRedo}
+                                            title={`${t("page.storyMaker.editor.redo")} (Ctrl+Y)`}
+                                            onClick={onRedo}
+                                        >
+                                            {t("page.storyMaker.editor.redo")}
+                                            {redoCount > 0 && (
+                                                <span className="ml-0.5 font-mono opacity-75">({redoCount})</span>
+                                            )}
+                                        </Button>
+                                    )}
+                                </div>
+                                <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-outline-variant/60" />
+                            </>
+                        )}
                         {onAddNode && (
                             <>
                                 <Button
@@ -2161,6 +2487,32 @@ export function StoryFlowCanvas({
                 )}
 
                 <div className="flex shrink-0 flex-wrap items-center gap-0.5">
+                    {isEdit && saveStatusLabel && (
+                        <span
+                            className={cn(
+                                "mr-1.5 inline-flex items-center gap-1 rounded-md3-full px-2 py-0.5 type-label-s",
+                                saveStatus === "error"
+                                    ? "bg-error-container text-on-error-container"
+                                    : "bg-surface-container text-on-surface-variant",
+                            )}
+                        >
+                            <Icon
+                                path={saveStatus === "error" ? mdErrorFill : mdCloudDone}
+                                size={13}
+                                className={cn("shrink-0", saveStatus === "saved" && "text-primary")}
+                            />
+                            <span>{saveStatusLabel}</span>
+                            {saveStatus === "error" && onRetrySave && (
+                                <button
+                                    type="button"
+                                    onClick={onRetrySave}
+                                    className="ml-1 cursor-pointer underline"
+                                >
+                                    {t("common.action.retry")}
+                                </button>
+                            )}
+                        </span>
+                    )}
                     {expandableNodeIds.length > 0 && (
                         <Button
                             size="xs"
@@ -2266,11 +2618,17 @@ export function StoryFlowCanvas({
                     </div>
                 )}
 
-                {/* Rubber-band Unwire Hint Banner */}
-                {isEdit && wireDrag?.dragged && !wireDrag.hoveredTargetNodeId && wireDrag.source.hasExistingEdge && (
+                {/* Rubber-band Unwire / Rewire Hint Banner */}
+                {isEdit && wireDrag?.dragged && wireDrag.kind === "target" && !wireDrag.hoveredTargetNodeId && wireDrag.source.hasExistingEdge && (
                     <div className="glass pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-md3-full px-3 py-1 type-label-m text-error">
                         <Icon path={mdLinkOff} size={16} className="shrink-0" />
                         <span>{t("page.storyMaker.v2.ports.dropCanvasToUnwire")}</span>
+                    </div>
+                )}
+                {isEdit && wireDrag?.dragged && wireDrag.kind === "source" && !wireDrag.hoveredSourcePort && (
+                    <div className="glass pointer-events-none absolute left-1/2 top-3 z-30 flex -translate-x-1/2 items-center gap-1.5 rounded-md3-full px-3 py-1 type-label-m text-error">
+                        <Icon path={mdLinkOff} size={16} className="shrink-0" />
+                        <span>{t("page.storyMaker.v2.ports.dropPortToRewire")}</span>
                     </div>
                 )}
 
@@ -2334,7 +2692,14 @@ export function StoryFlowCanvas({
                         </defs>
 
                         {renderedEdges.map(({ edge, d, tone, dashed, visited }) => {
-                            const isHot = hoveredEdgeId === edge.id || selectedEdgeId === edge.id;
+                            const isRewiringThis = Boolean(
+                                wireDrag?.dragged
+                                && (
+                                    (wireDrag.kind === "target" && wireDrag.rewiringEdgeId === edge.id)
+                                    || (wireDrag.kind === "source" && wireDrag.edge.id === edge.id)
+                                ),
+                            );
+                            const isHot = !isRewiringThis && (hoveredEdgeId === edge.id || selectedEdgeId === edge.id);
                             const stroke = visited
                                 ? "var(--md-sys-color-primary)"
                                 : tone === "tertiary"
@@ -2346,7 +2711,7 @@ export function StoryFlowCanvas({
                                 ? `${markerPrefix}-arrow-primary`
                                 : `${markerPrefix}-arrow-${tone}`;
                             const strokeWidth = visited ? 3.4 : isHot ? 3.2 : 2.3;
-                            const strokeOpacity = isReadonly && !visited ? 0.45 : isHot ? 1 : 0.9;
+                            const strokeOpacity = isRewiringThis ? 0.2 : isReadonly && !visited ? 0.45 : isHot ? 1 : 0.9;
 
                             return (
                                 <g key={edge.id}>
@@ -2356,11 +2721,11 @@ export function StoryFlowCanvas({
                                         stroke={stroke}
                                         strokeWidth={strokeWidth}
                                         strokeOpacity={strokeOpacity}
-                                        strokeDasharray={dashed ? "6 4" : undefined}
+                                        strokeDasharray={isRewiringThis || dashed ? "6 4" : undefined}
                                         strokeLinecap="round"
                                         markerEnd={`url(#${markerId})`}
                                     />
-                                    {isEdit && (
+                                    {isEdit && !isRewiringThis && (
                                         <path
                                             d={d}
                                             fill="none"
@@ -2387,7 +2752,8 @@ export function StoryFlowCanvas({
                                 d={rubberBandPath}
                                 fill="none"
                                 stroke={
-                                    wireDrag?.hoveredTargetNodeId
+                                    (wireDrag?.kind === "target" && wireDrag.hoveredTargetNodeId)
+                                    || (wireDrag?.kind === "source" && wireDrag.hoveredSourcePort)
                                         ? "var(--md-sys-color-primary)"
                                         : "var(--md-sys-color-outline)"
                                 }
@@ -2398,6 +2764,74 @@ export function StoryFlowCanvas({
                             />
                         )}
                     </svg>
+
+                    {/* Draggable Edge Endpoint Handles (Tail / Source & Head / Target) */}
+                    {isEdit && renderedEdges.map(({ edge, tailHandlePos, headHandlePos, tone }) => {
+                        const isRewiringThis = Boolean(
+                            wireDrag?.dragged
+                            && (
+                                (wireDrag.kind === "target" && wireDrag.rewiringEdgeId === edge.id)
+                                || (wireDrag.kind === "source" && wireDrag.edge.id === edge.id)
+                            ),
+                        );
+                        if (isRewiringThis) return null;
+                        const isHot = hoveredEdgeId === edge.id || selectedEdgeId === edge.id;
+                        const dotTone = tone === "tertiary"
+                            ? "border-tertiary bg-tertiary-container"
+                            : tone === "secondary"
+                                ? "border-secondary bg-secondary-container"
+                                : "border-primary bg-primary-container";
+                        return (
+                            <React.Fragment key={`edge-handles:${edge.id}`}>
+                                {/* Tail / Source End Handle */}
+                                <button
+                                    type="button"
+                                    aria-label={t("page.storyMaker.v2.ports.dragEdgeSource")}
+                                    title={t("page.storyMaker.v2.ports.dragEdgeSource")}
+                                    style={{ left: tailHandlePos.x, top: tailHandlePos.y }}
+                                    onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                                    onMouseLeave={() => setHoveredEdgeId(prev => (prev === edge.id ? null : prev))}
+                                    onPointerDown={event => handleEdgeTailPointerDown(edge, event)}
+                                    onPointerMove={handleEdgeTailPointerMove}
+                                    onPointerUp={event => handleEdgeTailPointerUp(edge, event)}
+                                    onPointerCancel={() => setWireDrag(null)}
+                                    onClick={event => event.stopPropagation()}
+                                    className="focus-ring pointer-events-auto absolute z-[7] flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing"
+                                >
+                                    <span
+                                        className={cn(
+                                            "size-2.5 rounded-full border-2 shadow-elev-1 transition-all",
+                                            dotTone,
+                                            isHot ? "scale-110 opacity-100 ring-2 ring-primary/35" : "scale-75 opacity-0 hover:scale-110 hover:opacity-100",
+                                        )}
+                                    />
+                                </button>
+                                {/* Head / Target (Arrow) End Handle */}
+                                <button
+                                    type="button"
+                                    aria-label={t("page.storyMaker.v2.ports.dragEdgeTarget")}
+                                    title={t("page.storyMaker.v2.ports.dragEdgeTarget")}
+                                    style={{ left: headHandlePos.x, top: headHandlePos.y }}
+                                    onMouseEnter={() => setHoveredEdgeId(edge.id)}
+                                    onMouseLeave={() => setHoveredEdgeId(prev => (prev === edge.id ? null : prev))}
+                                    onPointerDown={event => handleEdgeHeadPointerDown(edge, event)}
+                                    onPointerMove={handleEdgeHeadPointerMove}
+                                    onPointerUp={event => handleEdgeHeadPointerUp(edge, event)}
+                                    onPointerCancel={() => setWireDrag(null)}
+                                    onClick={event => event.stopPropagation()}
+                                    className="focus-ring pointer-events-auto absolute z-[7] flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing"
+                                >
+                                    <span
+                                        className={cn(
+                                            "size-2.5 rounded-full border-2 shadow-elev-1 transition-all",
+                                            dotTone,
+                                            isHot ? "scale-110 opacity-100 ring-2 ring-primary/35" : "scale-75 opacity-0 hover:scale-110 hover:opacity-100",
+                                        )}
+                                    />
+                                </button>
+                            </React.Fragment>
+                        );
+                    })}
 
                     {/* Edge Midpoint Labels & Hover/Selected Quick-Disconnect Controls */}
                     {renderedEdges.map(({ edge, labelPos, label, tone, visited }) => {
@@ -2468,7 +2902,7 @@ export function StoryFlowCanvas({
                         const isValidConnectTarget = isEdit
                             && activeWireSource !== null
                             && canConnectNodes(doc, activeWireSource.fromNodeId, activeWireSource.fromPortId, node.id).ok;
-                        const isHoveredConnectTarget = isValidConnectTarget && wireDrag?.hoveredTargetNodeId === node.id;
+                        const isHoveredConnectTarget = isValidConnectTarget && wireDrag?.kind === "target" && wireDrag.hoveredTargetNodeId === node.id;
                         const title = nodeDisplayTitle(node, t);
 
                         const tryCompleteClickConnect = (event: React.MouseEvent): boolean => {
@@ -2554,16 +2988,7 @@ export function StoryFlowCanvas({
                                     )}
                                 >
                                     {/* Left IN port ONLY */}
-                                    <span
-                                        data-port-key={portKeyIn(node.id)}
-                                        aria-hidden
-                                        className={cn(
-                                            "absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 rounded-full border-2 transition-transform",
-                                            isValidConnectTarget
-                                                ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
-                                                : "border-primary bg-surface-container-lowest",
-                                        )}
-                                    />
+                                    {renderInPortDot(node.id, "primary", isValidConnectTarget)}
 
                                     <div
                                         role="button"
@@ -2668,16 +3093,7 @@ export function StoryFlowCanvas({
                                                     : "cursor-pointer",
                                         )}
                                     >
-                                        <span
-                                            data-port-key={portKeyIn(node.id)}
-                                            aria-hidden
-                                            className={cn(
-                                                "absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 rounded-full border-2 transition-transform",
-                                                isValidConnectTarget
-                                                    ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
-                                                    : "border-tertiary bg-surface-container-lowest",
-                                            )}
-                                        />
+                                        {renderInPortDot(node.id, "tertiary", isValidConnectTarget)}
                                         {isEdit && <Icon path={mdDragIndicator} size={15} className="shrink-0 opacity-65" />}
                                         <Icon path={mdAltRoute} size={17} className="shrink-0" />
                                         <span className="min-w-0 flex-1 truncate type-title-s">{title}</span>
@@ -2813,16 +3229,7 @@ export function StoryFlowCanvas({
                                                     : "cursor-pointer",
                                         )}
                                     >
-                                        <span
-                                            data-port-key={portKeyIn(node.id)}
-                                            aria-hidden
-                                            className={cn(
-                                                "absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 rounded-full border-2 transition-transform",
-                                                isValidConnectTarget
-                                                    ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
-                                                    : "border-secondary bg-surface-container-lowest",
-                                            )}
-                                        />
+                                        {renderInPortDot(node.id, "secondary", isValidConnectTarget)}
                                         {isEdit && <Icon path={mdDragIndicator} size={15} className="shrink-0 opacity-65" />}
                                         <Icon path={mdCalculate} size={17} className="shrink-0" />
                                         <span className="min-w-0 flex-1 truncate type-title-s">{title}</span>
@@ -2982,16 +3389,7 @@ export function StoryFlowCanvas({
                                     )}
                                 >
                                     {/* Left IN port */}
-                                    <span
-                                        data-port-key={portKeyIn(node.id)}
-                                        aria-hidden
-                                        className={cn(
-                                            "absolute -left-2 top-1/2 z-10 size-4 -translate-y-1/2 rounded-full border-2 transition-transform",
-                                            isValidConnectTarget
-                                                ? "scale-125 border-primary bg-primary-container ring-4 ring-primary/30"
-                                                : "border-primary bg-surface-container-lowest",
-                                        )}
-                                    />
+                                    {renderInPortDot(node.id, "primary", isValidConnectTarget)}
 
                                     {isEdit && <Icon path={mdDragIndicator} size={15} className="shrink-0 opacity-60" />}
                                     <Icon path={mdMovie} size={17} className="shrink-0 text-primary" />

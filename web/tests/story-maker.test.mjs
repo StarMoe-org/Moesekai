@@ -23,7 +23,7 @@ const {
     STORY_DRAG_MIME, STORY_BEAT_DRAG_MIME, GRAPH_COL_GAP, GRAPH_ROW_GAP,
     newStoryId, createStoryDocument, createNode, moveNode, removeNode, duplicateNode,
     continueAndCutScene,
-    connectEdge, disconnectEdge, disconnectPort, getNodeOutPorts, canConnectNodes,
+    connectEdge, disconnectEdge, disconnectPort, rewireEdgeSource, getNodeOutPorts, canConnectNodes,
     setSceneBackground, setSceneBgm, setScenePlace, setSceneTransition, setSceneStageCast,
     addActorToSceneCast, addCastKeyToScene, updateActorInSceneCast, removeActorFromSceneCast,
     createSceneBeat, insertBeat, updateBeat, removeBeat, duplicateBeat, moveBeat,
@@ -2109,4 +2109,29 @@ test("createStarterStoryFromScript parses zh/en/ja .msk templates with 0 errors 
             assert.ok(reachedEndings.has(endId), `${locale}: declared ending '${endId}' was not reached by BFS (reached: ${[...reachedEndings].join(", ")})`);
         }
     }
+});
+
+test("rewireEdgeSource atomically moves an edge's source port while preserving its target and replacing port conflicts", () => {
+    let doc = createStoryDocument("jp", "Rewire Test");
+    doc = createNode(doc, "scene", { x: 200, y: 0 }, { id: "s1", title: "S1" }).doc;
+    doc = createNode(doc, "scene", { x: 200, y: 200 }, { id: "s2", title: "S2" }).doc;
+    doc = createNode(doc, "end", { x: 520, y: 100 }, { id: "e1", title: "E1" }).doc;
+    doc = createNode(doc, "end", { x: 520, y: 260 }, { id: "e2", title: "E2" }).doc;
+    doc = connectEdge(doc, "start", "out", "s1");
+    doc = connectEdge(doc, "s1", "out", "e1");
+    doc = connectEdge(doc, "s2", "out", "e2");
+
+    const s1Edge = doc.edges.find(e => e.fromNodeId === "s1" && e.toNodeId === "e1");
+    assert.ok(s1Edge);
+
+    // Rewire s1 -> e1 so its tail now comes from s2.out (should replace s2 -> e2 cleanly).
+    const rewired = rewireEdgeSource(doc, s1Edge.id, "s2", "out");
+    assert.equal(rewired.edges.some(e => e.fromNodeId === "s1"), false);
+    assert.equal(rewired.edges.some(e => e.fromNodeId === "s2" && e.toNodeId === "e2"), false);
+    const moved = rewired.edges.find(e => e.id === s1Edge.id);
+    assert.deepEqual(moved, { id: s1Edge.id, fromNodeId: "s2", fromPortId: "out", toNodeId: "e1" });
+
+    // No-op when rewiring to an invalid source port (e.g. end node or unknown port) or same port.
+    assert.equal(rewireEdgeSource(rewired, s1Edge.id, "e2", "out"), rewired);
+    assert.equal(rewireEdgeSource(rewired, s1Edge.id, "s2", "out"), rewired);
 });
