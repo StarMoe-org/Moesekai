@@ -37,6 +37,80 @@ Always verify assets via `scripts/official-story.mjs` or `scripts/validate-msk.m
 
 > **Virtual Singer unit suffixes**: `_band` = Leo/need, `_idol` = MMJ, `_street` = VBS, `_wonder` = WxS, `_night` = 25ji, `_normal` = original VS.
 > Prefer **`v2_`** models (3rd Anniversary+ high-detail Live2D rigs) unless intentionally staging a flashback or older outfit (gen-1 models omit `v2_`, e.g., `01ichika_cloth001`, and use gen-1 motion bundles `live2d/motion/01ichika_motion_base`).
+> Special main-character story variants (`v2_03honami_april2025_school`, `v2_14emu_igs_princess`, `v2_15nene_april2026_transform`, plus `sub_*child` / `v2_sub_child_*`) belong to their respective main characters (`char=1..26`).
+
+### Supporting & Collaboration Characters (`--kind sub` / `--kind collab`)
+
+Supporting and collaboration characters omit `char=<1..26>` in `@cast` (e.g., `@cast ken "谦" model="sub_anfather"`). Discover any supporting or collab model on demand by **CN / JP / EN / TW / KR name, alias, or `ownerKey`**:
+
+```bash
+node scripts/official-story.mjs catalog models --kind sub --search 谦
+node scripts/official-story.mjs catalog models --kind sub --search nenerobo
+node scripts/official-story.mjs catalog models --kind collab --region jp
+node scripts/official-story.mjs catalog clips v2_sub_nenedayo --region jp
+```
+
+#### Iconic Supporting Characters (`kind="sub"`, verified across 5-region story libraries)
+
+| Story Group | Character (CN / JP / EN) | `ownerKey` | Verified `modelId`s |
+| --- | --- | --- | --- |
+| **VBS** | 白石谦 (杏的父亲) / 謙 / Ken | `anfather` | `sub_anfather`, `sub_anfather_rw`, `sub_anfather_live`, `sub_anfatheryoung`, `sub_anfather_black` |
+| **VBS** | 凪 / 凪 / Nagi | `nagi` | `sub_nagi`, `sub_nagi_live`, `sub_nagi_patient`, `sub_nagiyoung`, `sub_nagi_black` |
+| **VBS** | 大河 / 大河 / Taiga | `partner` | `sub_partner`, `sub_partner_rw`, `sub_partner_live`, `sub_partner_sunset`, `sub_partneryoung`, `sub_partner_black` |
+| **VBS** | 远野新 / 新 / Arata | `arata` | `sub_arata`, `sub_aratablack`, `sub_aratablack02` |
+| **VBS** | 洸太郎 / 洸太郎 / Kotaro | `cordnukio` | `sub_cordnukio`, `sub_cordnukio_black` |
+| **VBS** | 达也 / 達也 / Tatsuya | `tatsuya` | `sub_tatsuya`, `sub_tatsuya_black` |
+| **VBS** | 莱利 / ライリー / Riley | `rilley` | `sub_rilley`, `sub_rilleyyoung` |
+| **VBS** | 道格拉斯 / ダグラス / Douglas | `rival_douglas` | `sub_rival_douglas`, `sub_rival_douglas_black` |
+| **VBS** | 冬弥的父亲 / 冬弥の父 / Toya's Father | `touyafather` | `sub_touyafather` |
+| **WxS** | 宁宁机器人 / ネネロボ / Robo-Nene | `nenedayo` | `v2_sub_nenedayo`, `v2_sub_nenedayo_zoom`, `v2_sub_nenedayo_black_zoom`, `sub_nenedayo` |
+| **WxS / April** | 初音机器人 (邪不胜正) / アクハサカエヌー / Evil's Bane | `mikurobo` | `v2_sub_mikurobo`, `v2_sub_mikurobo_zoom`, `v2_sub_mikurobo_black_zoom` |
+| **WxS** | 舞狮机器人 / 獅子舞ロボ / Lion Dance Robot | `liondancerobot` | `sub_liondancerobot`, `sub_liondancerobot02` |
+| **WxS** | 凤庆介 / 慶介 / Keisuke | `otoribrother1` | `sub_otoribrother1` |
+| **WxS** | 凤晶介 / 晶介 / Shosuke | `otoribrother2` | `sub_otoribrother2`, `sub_otoribrother2_black` |
+| **WxS** | 凤阳诗 / ひなた / Hinata | `otorisister` | `sub_otorisister` |
+| **WxS** | 笑梦的父亲 / えむの父 / Emu's Father | `otorifather` | `sub_otorifather` |
+| **WxS** | 樱子 / 櫻子 / Sakurako | `diva` | `sub_diva`, `sub_divablack` |
+| **WxS** | 旭 / 旭 / Asahi | `asahi` | `sub_asahi` |
+| **WxS** | 斋藤 / 斎藤 / Saito | `saito` | `sub_saito`, `sub_saito02` |
+| **WxS** | 塞德里克 & 斯雷德 / セドリック & スレイド / Cedric & Slade | `rivaltwins_cedric`, `rivaltwins_slade` | `sub_rivaltwins_cedric`, `sub_rivaltwins_cedric02`, `sub_rivaltwins_slade` |
+| **WxS / VS** | 大有老师 & 初音玩偶装 / ダヨー先生 & ミクの着ぐるみ | `mikudayoteacher`, `mikudayo` | `sub_mikudayoteacher`, `sub_mikudayoteacher_black`, `sub_mikudayo` |
+| **25ji** | 真冬的母亲 / まふゆの母 / Mafuyu's Mother | `mafuyumother` | `sub_mafuyumother` |
+| **25ji** | 真冬的父亲 / まふゆの父 / Mafuyu's Father | `mafuyufather` | `sub_mafuyufather` |
+| **25ji** | 奏的父亲 / 奏の父 / Kanade's Father | `kanadefather` | `sub_kanadefather`, `sub_kanadefather02` |
+| **25ji** | 奏的母亲 / 奏の母 / Kanade's Mother | `kanademother` | `sub_kanademother` |
+| **25ji** | 瑞希的姐姐 / 瑞希の姉 / Mizuki's Sister | `mizukisister` | `sub_mizukisister`, `sub_mizukisister_jc` |
+| **25ji / VBS** | 东云的父亲 / 父親 / Father | `shinonomefather` | `sub_shinonomefather` |
+| **25ji** | 夕夏 / 夕夏 / Yuka | `yuuka` | `sub_yuuka`, `sub_yuukablack` |
+| **MMJ** | 亚里纱 (爱莉莎) / アリサ / Arisa | `arisa` | `sub_arisa`, `sub_arisa_lesson`, `sub_arisa_live01`, `sub_arisa_live02`, `sub_arisa02`, `sub_arisa02_lesson`, `sub_arisa02_live01`, `sub_arisablack` |
+| **MMJ** | 结雨 · 千晴 · 灯 / 結雨 · 千晴 · あかり / Yu · Chiharu · Akari | `rivalidol_yu`, `rivalidol_chiharu`, `rivalidol_akari` | `v2_sub_rivalidol_yu` (`_lesson`, `_zoom`), `v2_sub_rivalidol_chiharu` (`_lesson`), `v2_sub_rivalidol_akari` (`_lesson`) |
+| **MMJ** | 柊 / 柊 / Hiiragi | `asrunp` | `sub_asrunp` |
+| **MMJ** | 有泽 / 有澤 / Arisawa | `mrmrhouse_landlord` | `sub_mrmrhouse_landlord` |
+| **MMJ** | 艾琳娜 & 瑞贝卡 / エレナ & レベッカ / Elena & Rebecca | `rivalsisters_elena`, `rivalsisters_rebecca` | `sub_rivalsisters_elena`, `sub_rivalsisters_rebecca` |
+| **Leo/need** | 伊织 & 美绪 / イオリ & ミオ / Iori & Mio | `iori`, `mio` | `sub_iori`, `sub_mio` |
+| **Leo/need** | 真堂 / 真堂 / Shindo | `yoshiki` | `sub_yoshiki` |
+| **Leo/need** | 榊 & 朔 & 历 / 榊 & 朔 & 歴 / Sakaki & Saku & Reki | `sakaki`, `saku`, `bakunoreki` | `sub_sakaki` (`02`, `_black`), `sub_saku`, `sub_bakunoreki` (`_black`) |
+
+#### Collaboration Characters (`kind="collab"`, 25 verified `v2_` models)
+
+| Collab Series | Character (CN / JP / EN) | `ownerKey` | Verified `modelId`s |
+| --- | --- | --- | --- |
+| **Sanrio** | 凯蒂猫 / キティ / Hello Kitty | `sanrio_kitty` | `v2_sub_sanrio_kitty`, `v2_sub_sanrio_kitty_black` |
+| **Sanrio** | 大耳狗 / シナモン / Cinnamoroll | `sanrio_cinnamoroll` | `v2_sub_sanrio_cinnamoroll`, `v2_sub_sanrio_cinnamoroll_black` |
+| **Sanrio** | 酷洛米 / クロミ / KUROMI | `sanrio_kuromi` | `v2_sub_sanrio_kuromi`, `v2_sub_sanrio_kuromi_black` |
+| **Sanrio** | 美乐蒂 / メロディ / My Melody | `sanrio_mymelody` | `v2_sub_sanrio_mymelody` |
+| **Sanrio** | 帕恰狗 / ポチャッコ / Pochacco | `sanrio_pochacco` | `v2_sub_sanrio_pochacco`, `v2_sub_sanrio_pochacco_black` |
+| **Sanrio** | 布丁狗 / プリン / Pompompurin | `sanrio_pompompurin` | `v2_sub_sanrio_pompompurin` |
+| **Ensemble Stars!!** | 濑名泉 / 泉 / Izumi | `enst_01izumi` | `v2_sub_enst_01izumi_casual`, `v2_sub_enst_01izumi_stage` |
+| **Ensemble Stars!!** | 守泽千秋 / 千秋 / Chiaki | `enst_02chiaki` | `v2_sub_enst_02chiaki_casual`, `v2_sub_enst_02chiaki_stage` |
+| **Ensemble Stars!!** | 逆先夏目 / 夏目 / Natsume | `enst_03natsume` | `v2_sub_enst_03natsume_casual`, `v2_sub_enst_03natsume_stage` |
+| **Ensemble Stars!!** | 涟纯 / ジュン / Jun | `enst_04jun` | `v2_sub_enst_04jun_casual`, `v2_sub_enst_04jun_stage` |
+| **Tamagotchi** | 豆丁吉 / まめっち / Mametchi | `egg_01_mametchi` | `v2_sub_egg_01_mametchi` |
+| **Tamagotchi** | 大嘴吉 / くちぱっち / Kuchipatchi | `egg_02_kuchipatchi` | `v2_sub_egg_02_kuchipatchi`, `v2_sub_egg_02_kuchipatchi_side`, `v2_sub_egg_02_kuchipatchi_black` |
+| **Tamagotchi** | 大耳吉 / みみっち / Mimitchi | `egg_03_mimitchi` | `v2_sub_egg_03_mimitchi`, `v2_sub_egg_03_mimitchi_black` |
+| **Tamagotchi** | 玫玫吉 / めめっち / Memetchi | `egg_04_memetchi` | `v2_sub_egg_04_memetchi` |
+
+> **Supporting & collab variant suffixes**: `_black` / `black` = dark silhouette; `_live` / `_live01` / `_live02` = live performance outfit; `_stage` / `_casual` / `_lesson` = stage, casual, or rehearsal wear; `_rw` = RAD WEEKEND flashback outfit; `young` = younger flashback; `_zoom` = close-up rig; `_patient` = hospital wear; `_jc` = junior high; `_sunset` / `_side` / `_cloth` = alternate scene/angle variants. Most supporting/collab rigs have smaller custom motion/facial palettes — always check `node scripts/official-story.mjs catalog clips <modelId>` before assigning clips!
 
 ---
 

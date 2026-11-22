@@ -37,8 +37,9 @@ node scripts/official-story.mjs search-text "雨" --region jp --char 17,18 --lim
 #    to study official blocking, transitions, SE timing, and expression phrasing:
 node scripts/official-story.mjs inspect event:203/1 --region jp --translate zh-CN --lines 1..20
 
-# D. Browse additional verified assets on demand:
+# D. Browse additional verified assets on demand (main characters, supporting/collab cast by CN/JP/EN name, clips, BGM):
 node scripts/official-story.mjs catalog models --char 17 --v2-only --region jp
+node scripts/official-story.mjs catalog models --kind sub --search 谦 --region jp   # also --kind collab
 node scripts/official-story.mjs catalog clips v2_18mafuyu_casual --filter dark --region jp
 node scripts/official-story.mjs catalog bgm --query "星" --region jp
 ```
@@ -168,7 +169,7 @@ end end_cafe "Sweet Ending" subtitle="Recharged for tomorrow! (Harmony: {{harmon
 - **Header**:
   - `@story "<title>" region=<jp|cn|tw|kr|en> [id="<id>"] [author="<author>"] [summary="<summary>"]`
   - `@var <id>: number = <n> ["<name>"]` | `@var <id>: boolean = <true|false> ["<name>"]` (interpolate via `{{id}}` or `{{name}}`)
-  - `@cast <key> "<name>" model="<modelId>" [char=<1..26>]`
+  - `@cast <key> "<name>" model="<modelId>" [char=<1..26>]` (omit `char=...` for supporting/collab models found via `catalog models --kind sub|collab --search <name>`)
 - **Nodes** (all accept optional `@pos(x, y)`):
   - `start [id=<id>] -> <target>`
   - `scene <id> ["<title>"] { <slots> <beats...> } -> <target>`

@@ -1,6 +1,7 @@
 "use client";
 import React, { useEffect, useMemo, useState } from "react";
 import { Live2DBackgroundGrid } from "@/components/live2d/Live2DBackgroundGrid";
+import { live2dCostumeLabel } from "@/components/live2d/labels";
 import { Banner, Button, Dialog, Icon, IconButton, Tabs, cn } from "@/components/md3";
 import {
     mdAccessibilityNew, mdAdd, mdAltRoute, mdAnimation, mdArticle, mdBlock, mdBolt, mdCalculate,
@@ -246,6 +247,10 @@ export function StoryEditorBin({
     const resolvedModelList = useMemo<StoryModelList>(
         () => modelList ?? { status: "ready", models },
         [modelList, models],
+    );
+    const modelById = useMemo(
+        () => new Map((resolvedModelList.status === "ready" ? resolvedModelList.models : models).map(m => [m.id, m])),
+        [resolvedModelList, models],
     );
 
     const activeScene = useMemo(() => {
@@ -756,6 +761,7 @@ export function StoryEditorBin({
                                 {doc.cast.map((member) => {
                                     const inUse = activeSceneCastKeys.has(member.key);
                                     const firstNodeId = castFirstNode.get(member.key);
+                                    const castModel = modelById.get(member.modelId);
                                     const payload: StoryDragPayload = { kind: "asset-cast", castKey: member.key };
                                     return (
                                         <div
@@ -799,8 +805,9 @@ export function StoryEditorBin({
                                                             </span>
                                                         )}
                                                     </span>
-                                                    <span className="block truncate font-mono type-label-s text-on-surface-variant">
-                                                        {member.modelId}
+                                                    <span className="block truncate type-label-s text-on-surface-variant">
+                                                        {castModel ? `${live2dCostumeLabel(t, castModel)} \u00b7 ` : ""}
+                                                        <span className="font-mono">{member.modelId}</span>
                                                     </span>
                                                 </span>
                                             </button>

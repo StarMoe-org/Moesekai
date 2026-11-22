@@ -68,9 +68,10 @@ assert.deepEqual(parseLive2DModelId("02saki_sports02").costume, [{ token: "sport
 assert.deepEqual(parseLive2DModelId("06haruka_cloth002").costume, [{ cloth: 2 }]);
 assert.deepEqual(parseLive2DModelId("v2_21miku_band").costume, [{ unit: "ln" }]);
 assert.deepEqual(parseLive2DModelId("25meiko_night").costume, [{ unit: "25ji" }]);
-// a word the message packs do not name is shown as the id spells it
-assert.deepEqual(parseLive2DModelId("13tsukasa_liondance").costume, [{ text: "liondance" }]);
-assert.deepEqual(parseLive2DModelId("18mafuyu_darkcloth001").costume, [{ text: "darkcloth001" }]);
+// known tokens and compounds are decomposed; words the message packs do not name stay as spelled
+assert.deepEqual(parseLive2DModelId("13tsukasa_liondance").costume, [{ token: "liondance" }]);
+assert.deepEqual(parseLive2DModelId("18mafuyu_darkcloth001").costume, [{ token: "dark" }, { cloth: 1 }]);
+assert.deepEqual(parseLive2DModelId("v2_14emu_igs_princess").costume, [{ text: "igs" }, { token: "princess" }]);
 assert.deepEqual(parseLive2DModelId("clb01_24luka01"), { generation: 1, collab: true, characterId: 24, subName: null, costume: [] });
 assert.deepEqual(parseLive2DModelId("v2_clb01_21miku"), { generation: 2, collab: true, characterId: 21, subName: null, costume: [] });
 assert.deepEqual(parseLive2DModelId("sub_arisa02_lesson"), { generation: 1, collab: false, characterId: null, subName: "arisa02_lesson", costume: [] });
@@ -105,7 +106,8 @@ assert.equal(models[2].bundle, "live2d/model/01ichika_normal");
 assert.equal(models[3].kind, "sub");
 assert.equal(models[3].subName, "airichild");
 assert.equal(models[5].characterId, null);
-assert.throws(() => parseLive2DModelIndex({ format: 2, models: [] }), /live2d_index_invalid/);
+assert.deepEqual(parseLive2DModelIndex({ format: 2, models: [] }), []);
+assert.throws(() => parseLive2DModelIndex({ format: 3, models: [] }), /live2d_index_invalid/);
 assert.throws(() => parseLive2DModelIndex(null), /live2d_index_invalid/);
 
 // --- the address ---

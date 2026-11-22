@@ -120,6 +120,115 @@ export const CHARACTERS = [
 ];
 
 const CHAR_BY_ID = new Map(CHARACTERS.map(c => [c.id, c]));
+const CHAR_BY_KEY = new Map([
+    ...CHARACTERS.map(c => [c.key, c]),
+    ["touya", CHAR_BY_ID.get(12)],
+]);
+
+export const MODEL_KINDS = ["character", "sub", "collab", "mob"];
+const KIND_ORDER = { character: 0, sub: 1, collab: 2, mob: 3 };
+const MAIN_CHAR_MODEL_RE = /^(?:v2_)?(?:clb\d+_)?(0[1-9]|1[0-9]|2[0-6])[a-z]+/;
+const MAIN_CHAR_CHILD_RE = /^(?:v2_)?sub_(?:child\d*_([a-z]+)|([a-z]+)child|([a-z]+)_princess)/;
+const COLLAB_MODEL_RE = /^(?:v2_)?sub_(?:sanrio|enst|egg)_/;
+const SUB_VARIANT_SEGMENTS = new Set([
+    "black", "zoom", "side", "stage", "casual", "lesson",
+    "rw", "patient", "sunset", "cloth", "jc", "school", "transform",
+]);
+
+// Compact 5-region story-derived supporting & collab character name table (verified against
+// sekai-live2d-index models.json format 2 across jp/cn/tw/en/kr). Used to enrich format 1
+// indexes and 404 storage directory fallbacks, and to supply canonical full-name search aliases.
+export const SUB_CHARACTER_NAMES = {
+    "anfather": { kind: "sub", names: { jp: "謙", cn: "谦", tw: "謙", en: "Ken", kr: "켄" }, aliases: ["白石谦", "白石謙", "杏的父亲", "杏的父親", "杏の父", "An's Father", "Shiraishi Ken"] },
+    "arata": { kind: "sub", names: { cn: "新", en: "Arata", jp: "新", kr: "아라타", tw: "新" }, aliases: ["远野新", "遠野新", "Tono Arata"] },
+    "arisa": { kind: "sub", names: { cn: "亚里纱", en: "Arisa", jp: "アリサ", kr: "아리사", tw: "亞梨沙" }, aliases: ["爱莉莎", "愛莉莎"] },
+    "asahi": { kind: "sub", names: { cn: "旭", en: "Asahi", jp: "旭", kr: "아사히", tw: "旭" }, aliases: ["アルフレッド"] },
+    "asrunp": { kind: "sub", names: { cn: "柊", en: "Hiiragi", jp: "柊", kr: "히이라기", tw: "柊" }, aliases: ["ASRUNのプロデューサー"] },
+    "bakunoreki": { kind: "sub", names: { cn: "历", en: "Reki", jp: "歴", kr: "레키", tw: "歷" }, aliases: ["克幸", "日野"] },
+    "byakkomachi": { kind: "sub", names: { cn: "白虎町", en: "Byakkomachi", jp: "白虎町", kr: "뱟코마치", tw: "白虎町" } },
+    "chairman": { kind: "sub", names: { cn: "鬼岛", en: "Kijima", jp: "鬼島", kr: "키지마", tw: "鬼島" }, aliases: ["六郎"] },
+    "cordnukio": { kind: "sub", names: { cn: "洸太郎", en: "Kotaro", jp: "洸太郎", kr: "코타로", tw: "洸太郎" }, aliases: ["ミュージシャン"] },
+    "diva": { kind: "sub", names: { cn: "樱子", en: "Sakurako", jp: "櫻子", kr: "사쿠라코", tw: "櫻子" }, aliases: ["令嬢", "村長の娘"] },
+    "egg_01_mametchi": { kind: "collab", names: { cn: "豆丁吉", en: "Mametchi", jp: "まめっち", kr: "마메치", tw: "豆丁吉" } },
+    "egg_02_kuchipatchi": { kind: "collab", names: { cn: "大嘴吉", en: "Kuchipatchi", jp: "くちぱっち", kr: "구치파치", tw: "大嘴吉" } },
+    "egg_03_mimitchi": { kind: "collab", names: { cn: "大耳吉", en: "Mimitchi", jp: "みみっち", kr: "미미치", tw: "大耳吉" } },
+    "egg_04_memetchi": { kind: "collab", names: { cn: "玫玫吉", en: "Memetchi", jp: "めめっち", kr: "메메치", tw: "玫玫吉" } },
+    "enst_01izumi": { kind: "collab", names: { cn: "泉", en: "Izumi", jp: "泉", kr: "이즈미", tw: "泉" }, aliases: ["濑名泉", "瀨名泉", "瀬名泉", "Sena Izumi"] },
+    "enst_02chiaki": { kind: "collab", names: { cn: "千秋", en: "Chiaki", jp: "千秋", kr: "치아키", tw: "千秋" }, aliases: ["守泽千秋", "守澤千秋", "守沢千秋", "Morisawa Chiaki"] },
+    "enst_03natsume": { kind: "collab", names: { cn: "夏目", en: "Natsume", jp: "夏目", kr: "나츠메", tw: "夏目" }, aliases: ["逆先夏目", "Sakasaki Natsume"] },
+    "enst_04jun": { kind: "collab", names: { cn: "纯", en: "Jun", jp: "ジュン", kr: "쥰", tw: "純" }, aliases: ["涟纯", "漣純", "漣ジュン", "Sazanami Jun"] },
+    "futaba": { kind: "sub", names: { cn: "二叶", en: "Futaba", jp: "二葉", kr: "후타바", tw: "二葉" } },
+    "hanano": { kind: "sub", names: { cn: "花乃", en: "Hanano", jp: "花乃", kr: "하나노", tw: "花乃" } },
+    "harukafan": { kind: "sub", names: { cn: "真依", en: "Mai", jp: "真依", kr: "마이", tw: "真依" } },
+    "hikarin": { kind: "sub", names: { cn: "光光", en: "Hikarin", jp: "ひかりん", kr: "히카링", tw: "小光" } },
+    "igs_princess": { kind: "sub", names: { jp: "エル", cn: "艾尔", tw: "艾爾", en: "Elle", kr: "엘" }, aliases: ["少女"] },
+    "iori": { kind: "sub", names: { cn: "伊织", en: "Iori", jp: "イオリ", kr: "이오리", tw: "伊織" } },
+    "kanadefather": { kind: "sub", names: { cn: "奏的父亲", en: "Kanade's Father", jp: "奏の父", kr: "카나데의 아빠", tw: "奏的父親" } },
+    "kanademother": { kind: "sub", names: { cn: "奏的母亲", en: "Kanade's Mother", jp: "奏の母", kr: "카나데의 엄마", tw: "奏的母親" } },
+    "liondancerobot": { kind: "sub", names: { cn: "舞狮机器人", en: "Lion Dance Robot", jp: "獅子舞ロボ", kr: "사자춤 로봇", tw: "舞獅機器人" }, aliases: ["獅子舞の神", "獅子舞"] },
+    "mafuyufather": { kind: "sub", names: { cn: "真冬的父亲", en: "Mafuyu's Father", jp: "まふゆの父", kr: "마후유의 아빠", tw: "真冬的父親" } },
+    "mafuyumother": { kind: "sub", names: { cn: "真冬的母亲", en: "Mafuyu's Mother", jp: "まふゆの母", kr: "마후유의 엄마", tw: "真冬的母親" } },
+    "mikudayo": { kind: "sub", names: { cn: "初音未来的玩偶装", en: "Mikudayo Mascot", jp: "ミクの着ぐるみ", kr: "미쿠 인형 탈", tw: "初音未來玩偶" }, aliases: ["妖精"] },
+    "mikudayoteacher": { kind: "sub", names: { cn: "大有老师", en: "Principal Mikudayo", jp: "ダヨー先生", kr: "에오 선생님", tw: "DAYO校長" }, aliases: ["ミクダヨー村長"] },
+    "mikurobo": { kind: "sub", names: { cn: "邪不胜正", en: "Evil's Bane", jp: "アクハサカエヌー", kr: "악은망해오", tw: "邪不勝正" }, aliases: ["初音机器人", "初音機器人", "Robo-Miku", "Miku Robo", "ミクロボ"] },
+    "mio": { kind: "sub", names: { cn: "美绪", en: "Mio", jp: "ミオ", kr: "미오", tw: "澪" } },
+    "miu": { kind: "sub", names: { cn: "未羽", en: "Miu", jp: "未羽", kr: "미우", tw: "未羽" } },
+    "mizukisister": { kind: "sub", names: { cn: "瑞希的姐姐", en: "Mizuki's Sister", jp: "瑞希の姉", kr: "미즈키의 언니", tw: "瑞希的姊姊" } },
+    "mrmrhouse_landlord": { kind: "sub", names: { cn: "有泽", en: "Arisawa", jp: "有澤", kr: "아리사와", tw: "有澤" }, aliases: ["おばあさん", "大家"] },
+    "nagi": { kind: "sub", names: { cn: "凪", en: "Nagi", jp: "凪", kr: "나기", tw: "凪" } },
+    "nanamin": { kind: "sub", names: { cn: "七七", en: "Nanamin", jp: "ななみん", kr: "나나밍", tw: "七海海" } },
+    "nenedayo": { kind: "sub", names: { cn: "宁宁机器人", en: "Robo-Nene", jp: "ネネロボ", kr: "네네 로봇", tw: "寧寧機器人" }, aliases: ["Nenerobo", "ネ・ネー", "ロボット", "ハカイスンゼー", "悪いロボボンボン"] },
+    "otoribrother1": { kind: "sub", names: { cn: "庆介", en: "Keisuke", jp: "慶介", kr: "케이스케", tw: "慶介" }, aliases: ["慶介司令官"] },
+    "otoribrother2": { kind: "sub", names: { cn: "晶介", en: "Shosuke", jp: "晶介", kr: "쇼스케", tw: "晶介" } },
+    "otorifather": { kind: "sub", names: { cn: "笑梦的父亲", en: "Emu's Father", jp: "えむの父", kr: "에무의 아빠", tw: "笑夢的父親" } },
+    "otorirakunosuke": { kind: "sub", names: { cn: "乐之介", en: "Rakunosuke", jp: "楽之介", kr: "라쿠노스케", tw: "樂之介" } },
+    "otorisister": { kind: "sub", names: { cn: "阳诗", en: "Hinata", jp: "ひなた", kr: "히나타", tw: "日向" } },
+    "partner": { kind: "sub", names: { cn: "大河", en: "Taiga", jp: "大河", kr: "타이가", tw: "大河" }, aliases: ["謎の男"] },
+    "riho": { kind: "sub", names: { cn: "长谷川", en: "Hasegawa", jp: "長谷川", kr: "하세가와", tw: "長谷川" } },
+    "rilley": { kind: "sub", names: { cn: "莱利", en: "Riley", jp: "ライリー", kr: "라일리", tw: "萊利" } },
+    "rival_douglas": { kind: "sub", names: { jp: "ダグラス", cn: "道格拉斯", tw: "道格拉斯", en: "Douglas", kr: "더글러스" } },
+    "rivalidol_akari": { kind: "sub", names: { cn: "灯", en: "Akari", jp: "あかり", kr: "아카리", tw: "燈" } },
+    "rivalidol_chiharu": { kind: "sub", names: { cn: "千晴", en: "Chiharu", jp: "千晴", kr: "치하루", tw: "千晴" } },
+    "rivalidol_yu": { kind: "sub", names: { cn: "结雨", en: "Yu", jp: "結雨", kr: "유우", tw: "結雨" } },
+    "rivalsisters_elena": { kind: "sub", names: { cn: "艾琳娜", en: "Elena", jp: "エレナ", kr: "엘레나", tw: "艾琳娜" } },
+    "rivalsisters_rebecca": { kind: "sub", names: { cn: "瑞贝卡", en: "Rebecca", jp: "レベッカ", kr: "레베카", tw: "蕾貝卡" } },
+    "rivaltwins_cedric": { kind: "sub", names: { cn: "塞德里克", en: "Cedric", jp: "セドリック", kr: "세드릭", tw: "賽德利克" } },
+    "rivaltwins_slade": { kind: "sub", names: { cn: "斯雷德", en: "Slade", jp: "スレイド", kr: "슬레이드", tw: "史雷德" } },
+    "saito": { kind: "sub", names: { cn: "斋藤", en: "Saito", jp: "斎藤", kr: "사이토", tw: "齋藤" } },
+    "sakaki": { kind: "sub", names: { cn: "榊", en: "Sakaki", jp: "榊", kr: "사카키", tw: "榊" } },
+    "saku": { kind: "sub", names: { cn: "朔", en: "Saku", jp: "朔", kr: "사쿠", tw: "朔" } },
+    "sanrio_cinnamoroll": { kind: "collab", names: { cn: "大耳狗", en: "Cinnamoroll", jp: "シナモン", kr: "시나몬", tw: "大耳狗喜拿" }, aliases: ["シナモロール", "玉桂狗"] },
+    "sanrio_kitty": { kind: "collab", names: { cn: "凯蒂猫", en: "Hello Kitty", jp: "キティ", kr: "키티", tw: "Hello Kitty" }, aliases: ["ハローキティ"] },
+    "sanrio_kuromi": { kind: "collab", names: { cn: "酷洛米", en: "KUROMI", jp: "クロミ", kr: "쿠로미", tw: "酷洛米" }, aliases: ["库洛米"] },
+    "sanrio_mymelody": { kind: "collab", names: { cn: "美乐蒂", en: "My Melody", jp: "メロディ", kr: "멜로디", tw: "美樂蒂" }, aliases: ["マイメロディ"] },
+    "sanrio_pochacco": { kind: "collab", names: { cn: "帕恰狗", en: "Pochacco", jp: "ポチャッコ", kr: "포차코", tw: "帕恰狗" } },
+    "sanrio_pompompurin": { kind: "collab", names: { cn: "布丁狗", en: "Pompompurin", jp: "プリン", kr: "푸린", tw: "布丁狗" }, aliases: ["ポムポムプリン"] },
+    "shinonomefather": { kind: "sub", names: { cn: "父亲", en: "Father", jp: "父親", kr: "아빠", tw: "父親" }, aliases: ["东云的父亲", "绘名的父亲", "彰人的父亲", "東雲の父", "Shinonome Father", "Ena's Father", "Akito's Father"] },
+    "souma": { kind: "sub", names: { cn: "飒真", en: "Soma", jp: "颯真", kr: "소우마", tw: "颯真" } },
+    "tatsuya": { kind: "sub", names: { cn: "达也", en: "Tatsuya", jp: "達也", kr: "타츠야", tw: "達也" }, aliases: ["EVERリーダー"] },
+    "touyafather": { kind: "sub", names: { cn: "冬弥的父亲", en: "Toya's Father", jp: "冬弥の父", kr: "토우야의 아버지", tw: "冬彌的爸爸" } },
+    "tsukasadoll": { kind: "sub", names: { cn: "兔兔玩偶", en: "Bunny Plushie", jp: "うさぎのぬいぐるみ", kr: "토끼 인형", tw: "兔子玩偶" } },
+    "wl3_extra01": { kind: "sub", names: { jp: "少女", cn: "少女", tw: "少女", en: "Girl", kr: "소녀" } },
+    "wl3_extra02": { kind: "sub", names: { jp: "ライセ", cn: "来濑", tw: "來瀨", en: "Raise", kr: "라이세" }, aliases: ["青年", "高校生の青年"] },
+    "wl3_extra03": { kind: "sub", names: { jp: "ミナト", cn: "凑", tw: "湊", en: "Minato", kr: "미나토" } },
+    "wl3_extra04": { kind: "sub", names: { jp: "少女", cn: "少女", tw: "少女", en: "Girl", kr: "소녀" } },
+    "wl3_extra05": { kind: "sub", names: { jp: "守屋", cn: "守屋", tw: "守屋", en: "Moriya", kr: "모리야" }, aliases: ["誰かの想い"] },
+    "wl3_extra06": { kind: "sub", names: { jp: "間島", cn: "间岛", tw: "間島", en: "Majima", kr: "마지마" }, aliases: ["誰かの想い"] },
+    "wl3_extra07": { kind: "sub", names: { jp: "俊輝", cn: "俊辉", tw: "俊輝", en: "Toshiki", kr: "토시키" } },
+    "wl3_extra08": { kind: "sub", names: { jp: "大輝", cn: "大辉", tw: "大輝", en: "Daiki", kr: "다이키" } },
+    "wondermascot": { kind: "sub", names: { cn: "穿玩偶装的人", en: "Mascot", jp: "着ぐるみ", kr: "인형 탈", tw: "玩偶裝" } },
+    "yoshiki": { kind: "sub", names: { cn: "真堂", en: "Shindo", jp: "真堂", kr: "신도", tw: "真堂" } },
+    "youta": { kind: "sub", names: { cn: "叶太", en: "Yota", jp: "葉太", kr: "요우타", tw: "葉太" } },
+    "yuina": { kind: "sub", names: { cn: "唯奈", en: "Yuina", jp: "唯奈", kr: "유이나", tw: "唯奈" }, aliases: ["みのりのファン"] },
+    "yukihira": { kind: "sub", names: { cn: "雪平", en: "Yukihira", jp: "雪平", kr: "유키히라", tw: "雪平" } },
+    "yuuka": { kind: "sub", names: { cn: "夕夏", en: "Yuka", jp: "夕夏", kr: "유우카", tw: "夕夏" }, aliases: ["人魚姫"] },
+};
+
+const SPECIAL_MODEL_NAMES = {
+    "v2_03honami_april2025_school": { names: { cn: "多吃点儿", en: "Mealmonger", jp: "タントオタベ", kr: "마니머거", tw: "「哆吃典」" }, aliases: ["穂波"] },
+    "v2_14emu_igs_princess": { names: { jp: "エル", cn: "艾尔", tw: "艾爾", en: "Elle", kr: "엘" } },
+    "v2_15nene_april2026_transform": { names: { jp: "咲希が化けた寧々" } },
+};
 
 const SPECIAL_EFFECT_NAMES = {
     0: "None",
@@ -228,6 +337,101 @@ export function resolveCharacterIds(raw) {
     return [...ids].sort((a, b) => a - b);
 }
 
+export function cleanSpeakerName(raw) {
+    return String(raw ?? "")
+        .replace(/[\r\n\u3000]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+export function stripSubMasterdataAnnotation(raw) {
+    return cleanSpeakerName(
+        String(raw ?? "").replace(/\s*[（(][^）)]*(?:エイプリルフール|コラボ|april|愚人节|愚人節|仮)[^）)]*[）)]\s*$/iu, ""),
+    );
+}
+
+export function isPlaceholderSpeakerName(raw) {
+    const s = cleanSpeakerName(raw);
+    if (!s) return true;
+    if (/^[\s?？.。・…—\-_~!！]+$/u.test(s)) return true;
+    return s === "声" || s === "Voice" || s === "声音" || s === "聲音" || s === "목소리";
+}
+
+export function parseMainCharacterIdFromModel(idOrAsset) {
+    const raw = String(idOrAsset ?? "").trim();
+    if (!raw) return null;
+    const direct = MAIN_CHAR_MODEL_RE.exec(raw);
+    if (direct) {
+        const cid = Number.parseInt(direct[1], 10);
+        return CHAR_BY_ID.has(cid) ? cid : null;
+    }
+    const child = MAIN_CHAR_CHILD_RE.exec(raw);
+    if (child) {
+        const key = (child[1] || child[2] || child[3] || "").toLowerCase();
+        return CHAR_BY_KEY.get(key)?.id ?? null;
+    }
+    return null;
+}
+
+export function deriveOwnerKey(idOrAsset) {
+    let s = String(idOrAsset ?? "").trim();
+    if (!s) return null;
+    if (s.startsWith("v2_")) s = s.slice(3);
+    if (s.startsWith("sub_")) s = s.slice(4);
+    if (!s) return null;
+    const parts = s.split("_").filter(Boolean);
+    while (parts.length > 1) {
+        const last = parts[parts.length - 1];
+        if (SUB_VARIANT_SEGMENTS.has(last) || /^live\d*$/.test(last)) {
+            parts.pop();
+        } else {
+            break;
+        }
+    }
+    if (parts.length > 0) {
+        const last = parts[parts.length - 1];
+        const m = /^(.+?)(?:black\d*|young)$/.exec(last);
+        if (m && m[1].length >= 3) {
+            parts[parts.length - 1] = m[1];
+        }
+    }
+    return parts.join("_") || null;
+}
+
+function normalizeOwnerKeyWithKnown(rawKey, keySet) {
+    if (!rawKey) return null;
+    if (rawKey.endsWith("02")) {
+        const stem = rawKey.slice(0, -2);
+        if (stem && (keySet.has(stem) || Object.prototype.hasOwnProperty.call(SUB_CHARACTER_NAMES, stem))) {
+            return stem;
+        }
+    }
+    return rawKey;
+}
+
+const SHARED_MOTION_SUFFIXES = new Set(["black", "zoom", "stage", "casual", "lesson", "rw", "sunset", "cloth"]);
+
+function deriveSubMotionStem(modelId) {
+    let s = String(modelId ?? "").trim();
+    const prefix = s.startsWith("v2_") ? "v2_" : "";
+    if (prefix) s = s.slice(3);
+    if (!s.startsWith("sub_")) return null;
+    const parts = s.slice(4).split("_").filter(Boolean);
+    while (parts.length > 1) {
+        const last = parts[parts.length - 1];
+        if (SHARED_MOTION_SUFFIXES.has(last) || /^live\d*$/.test(last)) {
+            parts.pop();
+        } else {
+            break;
+        }
+    }
+    if (parts.length > 0) {
+        const m = /^(.+?)black\d*$/.exec(parts[parts.length - 1]);
+        if (m && m[1].length >= 3) parts[parts.length - 1] = m[1];
+    }
+    return parts.length > 0 ? `${prefix}sub_${parts.join("_")}` : null;
+}
+
 export function inferMotionBundleCandidates(modelId) {
     if (!modelId) return [];
     const out = [];
@@ -249,7 +453,13 @@ export function inferMotionBundleCandidates(modelId) {
     }
     const sub = /^(v2_)?(sub_[a-z0-9]+)/.exec(modelId);
     if (sub) {
+        const stem = deriveSubMotionStem(modelId);
+        if (stem) add(`${stem}_motion_base`);
         add(`${modelId}_motion_base`);
+        const ownerKey = deriveOwnerKey(modelId);
+        const normOwner = normalizeOwnerKeyWithKnown(ownerKey, new Set());
+        if (ownerKey) add(`${sub[1] ?? ""}sub_${ownerKey}_motion_base`);
+        if (normOwner && normOwner !== ownerKey) add(`${sub[1] ?? ""}sub_${normOwner}_motion_base`);
         const base = `${sub[1] ?? ""}${sub[2]}`;
         add(`${base}_motion_base`);
         const stripped = base.replace(/(?:black|white|zoom|young|child)?\d*$/, "");
@@ -260,6 +470,379 @@ export function inferMotionBundleCandidates(modelId) {
     }
     add(`${modelId}_motion_base`);
     return out;
+}
+
+function pickLocalizedName(names, region) {
+    if (!names || typeof names !== "object") return null;
+    if (names[region]) return names[region];
+    if (region === "tw" && names.cn) return names.cn;
+    if (region === "cn" && names.tw) return names.tw;
+    return names.jp || names.cn || names.en || names.tw || names.kr || null;
+}
+
+function buildCharacter2dLookups(chara2ds) {
+    const byAsset = new Map();
+    const byOwner = new Map();
+    const byId = new Map();
+    for (const c of chara2ds ?? []) {
+        if (typeof c?.id === "number") byId.set(c.id, c);
+        const asset = String(c?.assetName ?? "").trim();
+        if (!asset) continue;
+        if (!byAsset.has(asset)) byAsset.set(asset, c);
+        const ok = deriveOwnerKey(asset);
+        if (ok && !byOwner.has(ok)) byOwner.set(ok, c);
+    }
+    return { byAsset, byOwner, byId };
+}
+
+function findMatchingChara2d(modelId, assetName, rawC2dIds, lookups) {
+    if (Array.isArray(rawC2dIds)) {
+        for (const cid of rawC2dIds) {
+            const hit = lookups.byId.get(cid);
+            if (hit) return hit;
+        }
+    }
+    if (assetName && lookups.byAsset.has(assetName)) return lookups.byAsset.get(assetName);
+    if (lookups.byAsset.has(modelId)) return lookups.byAsset.get(modelId);
+    const ok = deriveOwnerKey(assetName || modelId);
+    if (ok && lookups.byOwner.has(ok)) return lookups.byOwner.get(ok);
+    return null;
+}
+
+/**
+ * Pure model catalog normalizer supporting:
+ * 1. `models.json` format 2 (`format: 2, models: [...]`)
+ * 2. `models.json` format 1 (`format: 1, models: [...]`, enriched with masterdata + built-in names)
+ * 3. Storage directory fallback (`directories: [...]` + `character2ds.json` + `subGameCharacters.json` + built-in names)
+ */
+function isUntranslatedRegionName(regionKey, raw) {
+    const s = cleanSpeakerName(raw);
+    if (!s || regionKey === "jp") return false;
+    if (/[\u3040-\u30FF]/.test(s)) return true;
+    if (regionKey === "en" && /[\u4E00-\u9FFF]/.test(s)) return true;
+    return false;
+}
+
+function overlayCleanRegionNames(target, source) {
+    if (!source || typeof source !== "object") return;
+    for (const [r, val] of Object.entries(source)) {
+        const clean = cleanSpeakerName(val);
+        if (clean && !isUntranslatedRegionName(r, clean)) target[r] = clean;
+    }
+}
+
+export function normalizeCatalogModels(rawInput, ctx = {}) {
+    const region = ctx.region ?? "jp";
+    const chara2ds = rawInput?.chara2ds ?? ctx.chara2ds ?? [];
+    const subGameChars = rawInput?.subGameChars ?? ctx.subGameChars ?? [];
+    const lookups = buildCharacter2dLookups(chara2ds);
+    const subCharById = new Map();
+    for (const s of subGameChars ?? []) {
+        if (typeof s?.id === "number" && typeof s?.name === "string") {
+            const clean = stripSubMasterdataAnnotation(s.name);
+            if (clean) subCharById.set(s.id, clean);
+        }
+    }
+
+    const rawModels = Array.isArray(rawInput?.models)
+        ? rawInput.models
+        : Array.isArray(rawInput?.directories)
+            ? rawInput.directories.map(id => ({ id }))
+            : Array.isArray(rawInput)
+                ? rawInput
+                : [];
+
+    // Pass 1: classify and extract raw ownerKeys so pass 2 can merge `foo02 -> foo`
+    const staged = [];
+    const ownerKeySet = new Set();
+    for (const raw of rawModels) {
+        const id = String(typeof raw === "string" ? raw : (raw?.id ?? "")).trim();
+        if (!id) continue;
+        const entry = typeof raw === "string" ? { id } : raw;
+        const matchedC2d = findMatchingChara2d(id, entry.assetName, entry.character2dIds, lookups);
+        const assetName = String(entry.assetName || matchedC2d?.assetName || "").trim() || null;
+        const iconBundle = String(entry.iconBundle || matchedC2d?.characterIconAssetbundleName || "").trim() || null;
+
+        let characterId = Number.isInteger(entry.characterId) ? entry.characterId : null;
+        if (characterId == null && matchedC2d?.characterType === "game_character" && Number.isInteger(matchedC2d.characterId)) {
+            characterId = matchedC2d.characterId;
+        }
+        if (characterId == null) {
+            characterId = parseMainCharacterIdFromModel(id) ?? parseMainCharacterIdFromModel(assetName);
+        }
+
+        let subCharacterId = Number.isInteger(entry.subCharacterId) ? entry.subCharacterId : null;
+        if (subCharacterId == null && matchedC2d?.characterType === "sub_game_character" && Number.isInteger(matchedC2d.characterId)) {
+            subCharacterId = matchedC2d.characterId;
+        }
+
+        let kind;
+        if (characterId != null) {
+            kind = "character";
+        } else if (
+            entry.kind === "collab"
+            || (iconBundle && iconBundle.endsWith("_collabo"))
+            || COLLAB_MODEL_RE.test(id)
+            || (assetName && COLLAB_MODEL_RE.test(assetName))
+        ) {
+            kind = "collab";
+        } else {
+            const probeOwner = String(entry.ownerKey || deriveOwnerKey(id) || deriveOwnerKey(assetName) || "").trim() || null;
+            const hasKnownSub = Boolean(
+                probeOwner && (
+                    Object.prototype.hasOwnProperty.call(SUB_CHARACTER_NAMES, probeOwner)
+                    || (probeOwner.endsWith("02") && Object.prototype.hasOwnProperty.call(SUB_CHARACTER_NAMES, probeOwner.slice(0, -2)))
+                ),
+            );
+            const hasNonPlaceholderName = Boolean(entry.name && !isPlaceholderSpeakerName(entry.name));
+            if (
+                entry.kind === "sub"
+                || matchedC2d?.characterType === "sub_game_character"
+                || /^(?:v2_)?sub_/.test(id)
+                || (assetName && /^(?:v2_)?sub_/.test(assetName))
+                || hasKnownSub
+                || hasNonPlaceholderName
+            ) {
+                kind = "sub";
+            } else {
+                kind = "mob";
+            }
+        }
+
+        const rawOwnerKey = kind === "character"
+            ? null
+            : (String(entry.ownerKey ?? "").trim() || deriveOwnerKey(id) || deriveOwnerKey(assetName));
+        if (rawOwnerKey) ownerKeySet.add(rawOwnerKey);
+
+        staged.push({
+            id,
+            entry,
+            matchedC2d,
+            assetName,
+            iconBundle,
+            characterId,
+            subCharacterId,
+            kind,
+            rawOwnerKey,
+        });
+    }
+
+    // Pass 2: finalize ownerKey (`foo02 -> foo`), merge names/aliases, and build clean output objects
+    return staged.map((item) => {
+        const { id, entry, matchedC2d, assetName, iconBundle, characterId, subCharacterId, kind, rawOwnerKey } = item;
+        const ownerKey = kind === "character" ? null : normalizeOwnerKeyWithKnown(rawOwnerKey, ownerKeySet);
+        const motion = entry.motion ?? inferMotionBundleCandidates(id)[0] ?? null;
+        const unit = entry.unit || matchedC2d?.unit || (characterId ? CHAR_BY_ID.get(characterId)?.unit : null) || null;
+        const episodeCount = Number.isFinite(entry.episodeCount) ? entry.episodeCount : 0;
+        const episodes = Array.isArray(entry.episodes) ? entry.episodes.filter(x => typeof x === "string") : [];
+
+        if (kind === "character") {
+            const baseChar = characterId ? CHAR_BY_ID.get(characterId) : null;
+            const specialBuiltin = SPECIAL_MODEL_NAMES[id] ?? null;
+            const rawNames = entry.names && typeof entry.names === "object" ? entry.names : {};
+            const subMasterName = subCharacterId != null ? (subCharById.get(subCharacterId) ?? null) : null;
+            const hasSpecialName = Boolean(entry.name || Object.keys(rawNames).length > 0 || specialBuiltin || subMasterName);
+
+            const names = {};
+            if (hasSpecialName) {
+                Object.assign(names, specialBuiltin?.names ?? {});
+                overlayCleanRegionNames(names, rawNames);
+                if (subMasterName && !names[region] && !isUntranslatedRegionName(region, subMasterName)) {
+                    names[region] = subMasterName;
+                }
+                const cleanEntryName = cleanSpeakerName(entry.name);
+                if (cleanEntryName && !names[region] && !isUntranslatedRegionName(region, cleanEntryName)) {
+                    names[region] = cleanEntryName;
+                }
+            } else if (baseChar) {
+                names.jp = baseChar.jp;
+                names.cn = baseChar.zh;
+                names.en = baseChar.en;
+            }
+            const cleanEntryName = cleanSpeakerName(entry.name);
+            const name = hasSpecialName
+                ? ((!isUntranslatedRegionName(region, cleanEntryName) && cleanEntryName)
+                    || pickLocalizedName(names, region)
+                    || cleanEntryName
+                    || (baseChar ? (region === "cn" ? baseChar.zh : region === "en" ? baseChar.en : baseChar.jp) : id))
+                : (baseChar ? (region === "cn" ? baseChar.zh : region === "en" ? baseChar.en : baseChar.jp) : id);
+
+            const aliasSet = new Set();
+            const seenValues = new Set([name, ...Object.values(names)].filter(Boolean));
+            for (const a of [...(Array.isArray(entry.aliases) ? entry.aliases : []), ...(specialBuiltin?.aliases ?? [])]) {
+                const clean = cleanSpeakerName(a);
+                if (clean && !seenValues.has(clean)) aliasSet.add(clean);
+            }
+
+            return {
+                id,
+                motion,
+                kind,
+                characterId,
+                subCharacterId,
+                ownerKey: null,
+                unit,
+                name,
+                names,
+                aliases: [...aliasSet],
+                episodeCount,
+                episodes,
+                ...(hasSpecialName && baseChar ? { characterName: `${baseChar.en} / ${baseChar.jp}` } : {}),
+            };
+        }
+
+        const builtin = ownerKey ? (SUB_CHARACTER_NAMES[ownerKey] ?? null) : null;
+        const rawNames = entry.names && typeof entry.names === "object" ? entry.names : {};
+        const subMasterName = subCharacterId != null ? (subCharById.get(subCharacterId) ?? null) : null;
+        const names = {};
+        if (builtin?.names) Object.assign(names, builtin.names);
+        if (subMasterName && !rawNames[region] && !entry.name && !names[region] && !isUntranslatedRegionName(region, subMasterName)) {
+            names[region] = subMasterName;
+        }
+        overlayCleanRegionNames(names, rawNames);
+        const explicitName = cleanSpeakerName(entry.name);
+        if (explicitName && !names[region] && !isUntranslatedRegionName(region, explicitName)) {
+            names[region] = explicitName;
+        }
+
+        const name = (!isUntranslatedRegionName(region, explicitName) && explicitName)
+            || pickLocalizedName(names, region)
+            || explicitName
+            || subMasterName
+            || ownerKey
+            || id;
+        const seenValues = new Set([name, ...Object.values(names)].filter(Boolean));
+        const aliasList = [];
+        const addAlias = (val) => {
+            const clean = cleanSpeakerName(val);
+            if (!clean || seenValues.has(clean) || aliasList.includes(clean)) return;
+            aliasList.push(clean);
+        };
+        for (const a of Array.isArray(entry.aliases) ? entry.aliases : []) addAlias(a);
+        if (builtin?.names) {
+            for (const val of Object.values(builtin.names)) addAlias(val);
+        }
+        for (const a of builtin?.aliases ?? []) addAlias(a);
+        if (subMasterName) addAlias(subMasterName);
+
+        return {
+            id,
+            motion,
+            kind,
+            characterId: null,
+            subCharacterId,
+            ownerKey,
+            unit,
+            name,
+            names,
+            aliases: aliasList,
+            episodeCount,
+            episodes,
+        };
+    });
+}
+
+function compactSearchText(s) {
+    return String(s ?? "").toLowerCase().replace(/[\s\u3000]+/g, "");
+}
+
+function modelSearchScore(model, rawQuery) {
+    const q = String(rawQuery ?? "").trim().toLowerCase();
+    if (!q) return 1;
+    const tokens = q.split(/[\s\u3000]+/).filter(Boolean);
+    const baseChar = model.characterId ? CHAR_BY_ID.get(model.characterId) : null;
+
+    const nameFields = [
+        model.name,
+        model.ownerKey,
+        ...Object.values(model.names ?? {}),
+        ...(model.aliases ?? []),
+        ...(baseChar ? [baseChar.key, baseChar.prefix, baseChar.en, baseChar.jp, baseChar.zh, ...(baseChar.aliases ?? [])] : []),
+    ].filter(Boolean).map(v => String(v));
+
+    const nameLower = nameFields.map(v => v.toLowerCase());
+    const nameCompact = nameFields.map(compactSearchText);
+    const idLower = model.id.toLowerCase();
+    const idCompact = compactSearchText(model.id);
+
+    const tokenMatches = (tok) => {
+        const tokCompact = compactSearchText(tok);
+        if (nameLower.some(f => f === tok) || nameCompact.some(f => f === tokCompact) || idLower === tok) return 3;
+        if (nameLower.some(f => f.includes(tok)) || nameCompact.some(f => f.includes(tokCompact))) return 2;
+        if (idLower.includes(tok) || idCompact.includes(tokCompact)) return 1;
+        return 0;
+    };
+
+    const wholeScore = tokenMatches(q);
+    if (wholeScore > 0) return wholeScore;
+    if (tokens.length <= 1) return 0;
+
+    let minTokenScore = 3;
+    for (const tok of tokens) {
+        const sc = tokenMatches(tok);
+        if (sc === 0) return 0;
+        if (sc < minTokenScore) minTokenScore = sc;
+    }
+    return minTokenScore;
+}
+
+export function filterAndRankCatalogModels(models, opts = {}) {
+    const rawKind = opts.kind ? String(opts.kind).trim().toLowerCase() : null;
+    if (rawKind && rawKind !== "all" && !MODEL_KINDS.includes(rawKind)) {
+        throw new Error(`Invalid model --kind '${opts.kind}' (expected ${MODEL_KINDS.join("|")}|all).`);
+    }
+    const charIds = opts.char ? new Set(resolveCharacterIds(opts.char)) : null;
+    const searchQuery = String(opts.search || opts.query || opts.filter || "").trim();
+
+    const scored = [];
+    for (const m of models ?? []) {
+        if (opts.v2Only && !m.id.startsWith("v2_")) continue;
+        if (rawKind && rawKind !== "all" && m.kind !== rawKind) continue;
+        if (charIds && (!m.characterId || !charIds.has(m.characterId))) continue;
+        const score = searchQuery ? modelSearchScore(m, searchQuery) : 1;
+        if (score === 0) continue;
+        scored.push({ model: m, score });
+    }
+
+    scored.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        const ka = KIND_ORDER[a.model.kind] ?? 9;
+        const kb = KIND_ORDER[b.model.kind] ?? 9;
+        if (ka !== kb) return ka - kb;
+        const av2 = Number(a.model.id.startsWith("v2_"));
+        const bv2 = Number(b.model.id.startsWith("v2_"));
+        if (bv2 !== av2) return bv2 - av2;
+        const variantWeight = (id) => (/(?:^|_)black\d*(?:_|$)|[a-z]black\d*$/.test(id) ? 2 : (/_zoom$/.test(id) ? 1 : 0));
+        const aSil = variantWeight(a.model.id);
+        const bSil = variantWeight(b.model.id);
+        if (aSil !== bSil) return aSil - bSil;
+        if ((b.model.episodeCount ?? 0) !== (a.model.episodeCount ?? 0)) {
+            return (b.model.episodeCount ?? 0) - (a.model.episodeCount ?? 0);
+        }
+        const oa = a.model.ownerKey ?? "";
+        const ob = b.model.ownerKey ?? "";
+        if (oa !== ob) return oa.localeCompare(ob);
+        return a.model.id.localeCompare(b.model.id);
+    });
+
+    return scored.map(s => s.model);
+}
+
+export function formatLocalizedModelTag(model) {
+    const parts = [];
+    const seen = new Set();
+    const primary = cleanSpeakerName(model.name);
+    if (primary) seen.add(primary);
+    const cn = cleanSpeakerName(model.names?.cn);
+    const jp = cleanSpeakerName(model.names?.jp);
+    const en = cleanSpeakerName(model.names?.en);
+    if (cn && !seen.has(cn)) { parts.push(`CN: ${cn}`); seen.add(cn); }
+    if (jp && !seen.has(jp)) { parts.push(`JP: ${jp}`); seen.add(jp); }
+    if (en && !seen.has(en)) { parts.push(`EN: ${en}`); seen.add(en); }
+    const locSuffix = parts.length > 0 ? ` (${parts.join(" / ")})` : "";
+    const aliases = (model.aliases ?? []).filter(a => !seen.has(a)).slice(0, 3);
+    const aliasSuffix = aliases.length > 0 ? ` [aka: ${aliases.join(", ")}]` : "";
+    return `${primary || model.ownerKey || model.id}${locSuffix}${aliasSuffix}`;
 }
 
 export function isStoryCgBackground(bgId) {
@@ -508,6 +1091,18 @@ async function loadCharacter2dMap(region, opts) {
     return map;
 }
 
+async function loadSubGameCharacterMap(region, opts) {
+    const list = await fetchMaster(region, "subGameCharacters.json", opts).catch(() => []);
+    const map = new Map();
+    for (const item of list ?? []) {
+        if (typeof item?.id === "number" && typeof item?.name === "string") {
+            const clean = stripSubMasterdataAnnotation(item.name);
+            if (clean) map.set(item.id, clean);
+        }
+    }
+    return map;
+}
+
 async function fetchTranslationEpisode(kind, fileId, episodeKey, locale, opts) {
     if (!locale || (locale !== "zh-CN" && locale !== "en-US")) return null;
     const prefixMap = {
@@ -734,6 +1329,7 @@ export function extractScenarioStudy(scenario, ctx = {}) {
     const storyKind = ctx.storyKind ?? "event";
     const scenarioId = scenario.ScenarioId || ctx.scenarioId || "";
     const chara2dById = ctx.chara2dById ?? new Map();
+    const subGameCharById = ctx.subGameCharById ?? new Map();
     const sePackByName = ctx.sePackByName ?? new Map();
     const bgmTitleByName = ctx.bgmTitleByName ?? new Map();
     const translationTalk = ctx.translationEpisode?.talkData ?? null;
@@ -744,24 +1340,90 @@ export function extractScenarioStudy(scenario, ctx = {}) {
         return translationTalk[raw] ?? translationTalk[raw.trim()] ?? null;
     };
 
+    // Pre-scan TalkData WindowDisplayName per Character2dId so supporting & collab characters
+    // receive their real human-readable story speaker names in @cast summaries.
+    const speakerNameCounts = new Map();
+    for (const td of scenario.TalkData ?? []) {
+        if (!td || !Array.isArray(td.TalkCharacters) || td.TalkCharacters.length !== 1) continue;
+        const c2dId = td.TalkCharacters[0]?.Character2dId;
+        if (!c2dId) continue;
+        const rawDisp = cleanSpeakerName(td.WindowDisplayName);
+        if (!rawDisp) continue;
+        const disp = cleanSpeakerName(translateText(td.WindowDisplayName)) || rawDisp;
+        let bucket = speakerNameCounts.get(c2dId);
+        if (!bucket) {
+            bucket = { real: new Map(), placeholder: new Map() };
+            speakerNameCounts.set(c2dId, bucket);
+        }
+        const targetMap = isPlaceholderSpeakerName(disp) ? bucket.placeholder : bucket.real;
+        targetMap.set(disp, (targetMap.get(disp) ?? 0) + 1);
+    }
+
+    const pickStoryDisplayNames = (c2dId) => {
+        const bucket = speakerNameCounts.get(c2dId);
+        if (!bucket) return [];
+        const map = bucket.real.size > 0 ? bucket.real : bucket.placeholder;
+        return [...map.entries()]
+            .sort((a, b) => b[1] - a[1] || b[0].length - a[0].length || a[0].localeCompare(b[0]))
+            .map(([label]) => label);
+    };
+
     const resolveActorInfo = (char2dId, explicitModelId) => {
         const c2d = chara2dById.get(char2dId);
         const charId = c2d?.characterType === "game_character" ? c2d.characterId : null;
         const baseChar = charId ? CHAR_BY_ID.get(charId) : null;
         const modelId = explicitModelId || "";
-        const inferredKey = baseChar?.key ?? (c2d?.assetName || (char2dId ? `char2d_${char2dId}` : "unknown"));
-        const name = baseChar ? `${baseChar.en} / ${baseChar.jp}` : (c2d?.assetName || `Char2d#${char2dId}`);
+        const rawKey = baseChar?.key ?? (c2d?.assetName || modelId || (char2dId ? `char2d_${char2dId}` : "unknown"));
+        const inferredKey = String(rawKey).replace(/[^A-Za-z0-9_-]+/g, "_") || "unknown";
+        const storyDisplayNames = pickStoryDisplayNames(char2dId);
+        const storyDisplayName = storyDisplayNames[0] ?? null;
         const motionBundle = modelId ? (inferMotionBundleCandidates(modelId)[0] ?? null) : null;
+
+        if (baseChar) {
+            return {
+                actorKey: modelId ? `${inferredKey}:${modelId}` : `${inferredKey}:id${char2dId}`,
+                shortKey: inferredKey,
+                char2dId,
+                charId,
+                name: `${baseChar.en} / ${baseChar.jp}`,
+                storyDisplayName,
+                storyDisplayNames: storyDisplayNames.slice(0, 4),
+                ownerKey: null,
+                kind: "character",
+                unit: c2d?.unit ?? baseChar.unit ?? "",
+                modelId,
+                motionBundle,
+                isSubOrMob: false,
+            };
+        }
+
+        const ownerKey = normalizeOwnerKeyWithKnown(deriveOwnerKey(modelId || c2d?.assetName || ""), new Set());
+        const builtin = ownerKey ? (SUB_CHARACTER_NAMES[ownerKey] ?? null) : null;
+        const subMasterName = c2d?.characterType === "sub_game_character" ? (subGameCharById.get(c2d.characterId) ?? null) : null;
+        const iconBundle = c2d?.characterIconAssetbundleName ?? null;
+        const kind = (iconBundle && iconBundle.endsWith("_collabo")) || COLLAB_MODEL_RE.test(modelId) || (c2d?.assetName && COLLAB_MODEL_RE.test(c2d.assetName))
+            ? "collab"
+            : (c2d?.characterType === "sub_game_character" || /^(?:v2_)?sub_/.test(modelId) || (c2d?.assetName && /^(?:v2_)?sub_/.test(c2d.assetName)) || builtin || storyDisplayName)
+                ? "sub"
+                : "mob";
+        const localizedFallback = pickLocalizedName(builtin?.names, region);
+        const name = storyDisplayName || subMasterName || localizedFallback || c2d?.assetName || `Char2d#${char2dId}`;
+
         return {
             actorKey: modelId ? `${inferredKey}:${modelId}` : `${inferredKey}:id${char2dId}`,
             shortKey: inferredKey,
             char2dId,
-            charId,
+            charId: null,
             name,
-            unit: c2d?.unit ?? baseChar?.unit ?? "",
+            storyDisplayName,
+            storyDisplayNames: storyDisplayNames.slice(0, 4),
+            ownerKey,
+            kind,
+            localizedNames: builtin?.names ? { ...builtin.names } : undefined,
+            unit: c2d?.unit ?? "",
             modelId,
             motionBundle,
-            isSubOrMob: !baseChar,
+            isSubOrMob: true,
         };
     };
 
@@ -1198,9 +1860,26 @@ export function aggregateStudyReports(reports, targetCharIds = []) {
             if (!c.modelId) continue;
             if (targetSet.size > 0 && c.charId != null && !targetSet.has(c.charId)) continue;
             const key = `${c.charId ?? c.shortKey}|${c.modelId}`;
-            const cur = castByChar.get(key) ?? { ...c, count: 0, isV2: c.modelId.startsWith("v2_") };
-            cur.count += 1;
-            castByChar.set(key, cur);
+            const existing = castByChar.get(key);
+            if (!existing) {
+                castByChar.set(key, {
+                    ...c,
+                    storyDisplayNames: [...(c.storyDisplayNames ?? [])],
+                    count: 1,
+                    isV2: c.modelId.startsWith("v2_"),
+                });
+            } else {
+                existing.count += 1;
+                for (const dn of c.storyDisplayNames ?? []) {
+                    if (dn && !existing.storyDisplayNames.includes(dn) && existing.storyDisplayNames.length < 4) {
+                        existing.storyDisplayNames.push(dn);
+                    }
+                }
+                if (c.isSubOrMob && c.storyDisplayName && !existing.storyDisplayName) {
+                    existing.storyDisplayName = c.storyDisplayName;
+                    existing.name = c.storyDisplayName;
+                }
+            }
         }
 
         for (const bg of rep.backgrounds) {
@@ -1634,11 +2313,12 @@ async function runInspectOne(selectorRaw, opts) {
     }
     const region = opts.region;
     const target = await resolveSelectorTarget(parsed, region, opts);
-    const [scenario, chara2dById, seIndex, bgmMeta, translationEpisode] = await Promise.all([
+    const [scenario, chara2dById, subGameCharById, seIndex, bgmMeta, translationEpisode] = await Promise.all([
         target.scenarioPath
             ? fetchStorageJson(region, target.scenarioPath, opts, TTL_SCENARIO_MS)
             : fetchJsonWithFallback([target.scenarioUrl], "scenario-url", target.scenarioUrl, TTL_SCENARIO_MS, opts.noCache),
         loadCharacter2dMap(region, opts),
+        loadSubGameCharacterMap(region, opts),
         loadSePackIndex(region, opts),
         loadBgmMetadata(region, opts),
         opts.translate && target.translationRef
@@ -1656,6 +2336,7 @@ async function runInspectOne(selectorRaw, opts) {
         episodeTitle: target.episodeTitle,
         scenarioUrl: target.scenarioUrl,
         chara2dById,
+        subGameCharById,
         sePackByName: seIndex.byBare,
         bgmTitleByName: bgmMeta.byName,
         translationEpisode,
@@ -1708,8 +2389,9 @@ async function runCatalog(subkind, arg, opts) {
     const filterLower = (opts.filter || opts.query || "").trim().toLowerCase();
 
     if (subkind === "models") {
-        const charIds = opts.char ? new Set(resolveCharacterIds(opts.char)) : null;
+        const searchQuery = String(opts.search || opts.query || opts.filter || arg || "").trim();
         let models = [];
+        let source = "models-v2";
         try {
             const idx = await fetchJsonWithFallback(
                 [`${LIVE2D_INDEX_BASE}/${region}/models.json`],
@@ -1718,24 +2400,41 @@ async function runCatalog(subkind, arg, opts) {
                 TTL_MASTER_MS,
                 opts.noCache,
             );
-            models = (idx.models ?? []).map(m => ({ id: m.id, motion: m.motion ?? null }));
-        } catch {
-            // Fallback to live storage live2d/model/ directory listing
-            const { directories } = await fetchDirectoryListing(region, "live2d/model/", opts);
-            models = directories.map(id => ({ id, motion: inferMotionBundleCandidates(id)[0] ?? null }));
-        }
-        const filtered = models.filter(m => {
-            if (opts.v2Only && !m.id.startsWith("v2_")) return false;
-            if (charIds) {
-                const match = /^(?:v2_)?(?:clb\d+_)?(\d{2})[a-z]+/.exec(m.id);
-                const cid = match ? Number.parseInt(match[1], 10) : null;
-                if (!cid || !charIds.has(cid)) return false;
+            if (idx?.format === 2) {
+                source = "models-v2";
+                models = normalizeCatalogModels(idx, { region });
+            } else {
+                source = "models-v1-enriched";
+                const [chara2ds, subGameChars] = await Promise.all([
+                    fetchMaster(region, "character2ds.json", opts).catch(() => []),
+                    fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
+                ]);
+                models = normalizeCatalogModels({ ...idx, chara2ds, subGameChars }, { region });
             }
-            if (filterLower && !m.id.toLowerCase().includes(filterLower)) return false;
-            return true;
+        } catch {
+            // Graceful fallback when models.json is 404: combine storage live2d/model/ +
+            // character2ds.json + subGameCharacters.json + built-in story-derived supporting names.
+            source = "storage-fallback";
+            const [{ directories }, chara2ds, subGameChars] = await Promise.all([
+                fetchDirectoryListing(region, "live2d/model/", opts),
+                fetchMaster(region, "character2ds.json", opts).catch(() => []),
+                fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
+            ]);
+            models = normalizeCatalogModels({ directories, chara2ds, subGameChars }, { region });
+        }
+        const filtered = filterAndRankCatalogModels(models, {
+            ...opts,
+            search: searchQuery,
         });
-        filtered.sort((a, b) => Number(b.id.startsWith("v2_")) - Number(a.id.startsWith("v2_")) || a.id.localeCompare(b.id));
-        return { kind: "models", region, total: filtered.length, items: filtered.slice(0, limit) };
+        return {
+            kind: "models",
+            region,
+            source,
+            filterKind: opts.kind ? String(opts.kind).trim().toLowerCase() : null,
+            search: searchQuery || null,
+            total: filtered.length,
+            items: filtered.slice(0, limit),
+        };
     }
 
     if (subkind === "clips") {
@@ -1910,7 +2609,17 @@ function printInspect(rep, opts) {
     console.log(`\n[Cast & Live2D Models (${rep.cast.length})]`);
     for (const c of rep.cast) {
         const charTag = c.charId ? ` char=${c.charId}` : "";
-        console.log(`  @cast ${c.shortKey} "${c.name}" model="${c.modelId}"${charTag}${c.motionBundle ? `  # motionBundle=${c.motionBundle}` : ""}`);
+        const notes = [];
+        if (c.isSubOrMob) {
+            const tag = c.ownerKey ? `${c.kind ?? "sub"}:${c.ownerKey}` : (c.kind ?? "sub");
+            notes.push(tag);
+            const loc = c.localizedNames
+                ? formatLocalizedModelTag({ id: c.modelId, name: c.name, names: c.localizedNames, aliases: [] })
+                : "";
+            if (loc && loc !== c.name) notes.push(loc);
+        }
+        if (c.motionBundle) notes.push(`motionBundle=${c.motionBundle}`);
+        console.log(`  @cast ${c.shortKey} "${c.name}" model="${c.modelId}"${charTag}${notes.length ? `  # ${notes.join("; ")}` : ""}`);
     }
 
     console.log(`\n[Backgrounds (${rep.backgrounds.length})]`);
@@ -2012,9 +2721,14 @@ function printStudy(kit) {
     }
 
     console.log(`\n[Recommended @cast Directives (top verified models)]`);
-    for (const c of kit.recommendedCast.slice(0, 12)) {
+    for (const c of kit.recommendedCast.slice(0, 16)) {
         const charTag = c.charId ? ` char=${c.charId}` : "";
-        console.log(`  @cast ${c.shortKey} "${c.name}" model="${c.modelId}"${charTag}  # seen in ${c.count} ep(s)`);
+        const notes = [`seen in ${c.count} ep(s)`];
+        if (c.isSubOrMob) {
+            notes.push(c.ownerKey ? `${c.kind ?? "sub"}:${c.ownerKey}` : (c.kind ?? "sub"));
+            if (c.storyDisplayNames?.length > 1) notes.push(`names: ${c.storyDisplayNames.join(" / ")}`);
+        }
+        console.log(`  @cast ${c.shortKey} "${c.name}" model="${c.modelId}"${charTag}  # ${notes.join("; ")}`);
     }
 
     console.log(`\n[Top Backgrounds (${kit.backgrounds.length})]`);
@@ -2053,9 +2767,24 @@ function printStudy(kit) {
 
 function printCatalog(res) {
     if (res.kind === "models") {
-        console.log(`=== Live2D Models (region=${res.region}, total=${res.total}, shown=${res.items.length}) ===`);
+        const hdrParts = [`region=${res.region}`];
+        if (res.filterKind) hdrParts.push(`kind=${res.filterKind}`);
+        if (res.search) hdrParts.push(`search="${res.search}"`);
+        if (res.source) hdrParts.push(`source=${res.source}`);
+        hdrParts.push(`total=${res.total}`, `shown=${res.items.length}`);
+        console.log(`=== Live2D Models (${hdrParts.join(", ")}) ===`);
+        if (res.items.length === 0) {
+            console.log("  (no matches)");
+            return;
+        }
         for (const m of res.items) {
-            console.log(`  - ${m.id}${m.motion ? `  (${m.motion})` : ""}`);
+            const ownerTag = m.ownerKey
+                ? `owner=${m.ownerKey}`
+                : (m.characterId ? `char=${m.characterId}` : "");
+            const nameTag = formatLocalizedModelTag(m);
+            const epTag = m.episodeCount > 0 ? ` | eps=${m.episodeCount}` : "";
+            const motionTag = m.motion ? `  (${m.motion})` : "";
+            console.log(`  - ${m.id}  [${m.kind}${ownerTag ? ` ${ownerTag}` : ""}]  ${nameTag}${epTag}${motionTag}`);
         }
         return;
     }
@@ -2144,7 +2873,7 @@ Commands:
 
   catalog <models|clips|bgm|bg|se|voices> [arg] [options]
       Browse live Moesekai asset catalogs directly:
-      catalog models [--char ...] [--query ...] [--v2-only]
+      catalog models [--kind character|sub|collab|mob] [--search <name>] [--char ...] [--v2-only]
       catalog clips <modelId> [--type all|motion|facial] [--filter <text>]
       catalog bgm [--query <text>] [--category <text>]
       catalog bg [--filter <text>] [--include-cg]
@@ -2170,7 +2899,7 @@ function parseCliArgs(argv) {
     };
 
     const valueFlags = new Set([
-        "--region", "--line", "--kind", "--unit", "--char", "--query", "--filter",
+        "--region", "--line", "--kind", "--unit", "--char", "--query", "--filter", "--search",
         "--limit", "--sample", "--selectors", "--translate", "--lines", "--type",
         "--category", "--model", "--scenario", "--max-examples",
     ]);

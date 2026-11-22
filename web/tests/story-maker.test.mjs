@@ -2351,3 +2351,211 @@ test("moesekai-story-script official-story.mjs pure parsers and scenario extract
     assert.equal(kit.recommendedCast.length, 2);
     assert.equal(kit.characterClips.length, 2);
 });
+
+test("moesekai-story-script official-story.mjs supports models.json format 2, 404 fallback, sub/collab search, and story WindowDisplayName in study", async () => {
+    const { resolve } = await import("node:path");
+    const { pathToFileURL } = await import("node:url");
+    const officialUrl = pathToFileURL(
+        resolve(process.cwd(), "../docs/skills/moesekai-story-script/scripts/official-story.mjs"),
+    ).href;
+    const mod = await import(officialUrl);
+
+    // 1. ownerKey & sub/collab motion bundle inference
+    assert.equal(mod.deriveOwnerKey("sub_anfather_rw"), "anfather");
+    assert.equal(mod.deriveOwnerKey("sub_anfatheryoung"), "anfather");
+    assert.equal(mod.deriveOwnerKey("v2_sub_enst_01izumi_stage"), "enst_01izumi");
+    assert.equal(mod.deriveOwnerKey("v2_sub_nenedayo_black_zoom"), "nenedayo");
+    assert.equal(mod.inferMotionBundleCandidates("v2_sub_enst_01izumi_stage")[0], "live2d/motion/v2_sub_enst_01izumi_motion_base");
+    assert.equal(mod.inferMotionBundleCandidates("sub_anfather_rw")[0], "live2d/motion/sub_anfather_motion_base");
+    assert.equal(mod.inferMotionBundleCandidates("sub_anfatheryoung")[0], "live2d/motion/sub_anfatheryoung_motion_base");
+    assert.equal(mod.inferMotionBundleCandidates("sub_arisa02_lesson")[0], "live2d/motion/sub_arisa02_motion_base");
+
+    // 2. models.json format 2 parsing & search across CN/JP/EN/aliases/ownerKey
+    const v2Catalog = mod.normalizeCatalogModels({
+        format: 2,
+        models: [
+            {
+                id: "v2_03honami_april2025_school",
+                motion: "live2d/motion/v2_03honami_motion_base",
+                kind: "character",
+                characterId: 3,
+                subCharacterId: 157,
+                name: "タントオタベ",
+                names: { jp: "タントオタベ", cn: "多吃点儿", en: "Mealmonger" },
+                aliases: ["穂波"],
+                episodeCount: 1,
+                episodes: ["area:13/2584"],
+            },
+            {
+                id: "v2_15nene_casual",
+                motion: "live2d/motion/v2_15nene_motion_base",
+                kind: "character",
+                characterId: 15,
+                episodeCount: 80,
+                episodes: ["event:152/1"],
+            },
+            {
+                id: "sub_anfather",
+                motion: "live2d/motion/sub_anfather_motion_base",
+                kind: "sub",
+                ownerKey: "anfather",
+                name: "謙",
+                names: { jp: "謙", cn: "杏的父亲", en: "An's Father" },
+                aliases: ["杏の父"],
+                episodeCount: 149,
+                episodes: ["event:12/2"],
+            },
+            {
+                id: "v2_sub_nenedayo",
+                motion: "live2d/motion/v2_sub_nenedayo_motion_base",
+                kind: "sub",
+                ownerKey: "nenedayo",
+                name: "ネネロボ",
+                names: { jp: "ネネロボ", cn: "宁宁机器人", en: "Robo-Nene" },
+                aliases: ["ネ・ネー"],
+                episodeCount: 29,
+                episodes: ["event:124/1"],
+            },
+            {
+                id: "v2_sub_enst_01izumi_stage",
+                motion: "live2d/motion/v2_sub_enst_01izumi_motion_base",
+                kind: "collab",
+                ownerKey: "enst_01izumi",
+                subCharacterId: 144,
+                name: "泉",
+                names: { jp: "泉", cn: "泉", en: "Izumi" },
+                aliases: [],
+                episodeCount: 1,
+                episodes: ["card:1116/second"],
+            },
+            {
+                id: "v2_sub_sanrio_kitty",
+                motion: "live2d/motion/v2_sub_sanrio_kitty_motion_base",
+                kind: "collab",
+                ownerKey: "sanrio_kitty",
+                subCharacterId: 1,
+                name: "キティ",
+                names: { jp: "キティ", cn: "凯蒂猫", en: "Hello Kitty" },
+                aliases: [],
+                episodeCount: 13,
+                episodes: ["card:801/first"],
+            },
+        ],
+    }, { region: "jp" });
+
+    const kenHits = mod.filterAndRankCatalogModels(v2Catalog, { kind: "sub", search: "谦" });
+    assert.deepEqual(kenHits.map(m => m.id), ["sub_anfather"]);
+    assert.equal(kenHits[0].episodeCount, 149);
+    assert.equal(kenHits[0].ownerKey, "anfather");
+    assert.ok(kenHits[0].aliases.includes("白石谦"));
+
+    const neneroboHits = mod.filterAndRankCatalogModels(v2Catalog, { search: "nenerobo" });
+    assert.deepEqual(neneroboHits.map(m => m.id), ["v2_sub_nenedayo"]);
+
+    const neneAllHits = mod.filterAndRankCatalogModels(v2Catalog, { search: "宁宁" });
+    assert.deepEqual(neneAllHits.map(m => m.id), ["v2_15nene_casual", "v2_sub_nenedayo"]);
+
+    const collabHits = mod.filterAndRankCatalogModels(v2Catalog, { kind: "collab" });
+    assert.equal(collabHits.length, 2);
+
+    const izumiHits = mod.filterAndRankCatalogModels(v2Catalog, { kind: "collab", search: "濑名泉" });
+    assert.deepEqual(izumiHits.map(m => m.id), ["v2_sub_enst_01izumi_stage"]);
+
+    const honamiHits = mod.filterAndRankCatalogModels(v2Catalog, { kind: "character", char: "3" });
+    assert.deepEqual(honamiHits.map(m => m.id), ["v2_03honami_april2025_school"]);
+    assert.equal(honamiHits[0].name, "タントオタベ");
+
+    assert.throws(() => mod.filterAndRankCatalogModels(v2Catalog, { kind: "bogus" }), /Invalid model --kind/);
+
+    // 3. Graceful 404 fallback combining storage directories + character2ds + subGameCharacters + built-in map
+    const fallbackCatalog = mod.normalizeCatalogModels({
+        directories: [
+            "sub_anfather",
+            "sub_anfather_black",
+            "sub_arisa",
+            "sub_arisa02",
+            "v2_sub_sanrio_kitty",
+            "v2_sub_egg_01_mametchi",
+            "v2_sub_child_ichika",
+        ],
+        chara2ds: [
+            { id: 900, characterType: "sub_game_character", characterId: 1, assetName: "v2_sub_sanrio_kitty", characterIconAssetbundleName: "s_collabo" },
+        ],
+        subGameChars: [
+            { id: 1, name: "ハローキティ" },
+        ],
+    }, { region: "cn" });
+
+    assert.equal(fallbackCatalog.find(m => m.id === "sub_arisa02")?.ownerKey, "arisa");
+    assert.equal(fallbackCatalog.find(m => m.id === "v2_sub_child_ichika")?.kind, "character");
+    assert.equal(fallbackCatalog.find(m => m.id === "v2_sub_child_ichika")?.characterId, 1);
+    assert.equal(mod.filterAndRankCatalogModels(fallbackCatalog, { kind: "sub", search: "爱莉莎" }).length, 2);
+    assert.equal(mod.filterAndRankCatalogModels(fallbackCatalog, { kind: "collab", search: "豆丁吉" })[0]?.id, "v2_sub_egg_01_mametchi");
+    const fallbackKen = mod.filterAndRankCatalogModels(fallbackCatalog, { kind: "sub", search: "白石谦" });
+    assert.deepEqual(fallbackKen.map(m => m.id), ["sub_anfather", "sub_anfather_black"]);
+
+    // 4. extractScenarioStudy + aggregateStudyReports carry supporting character WindowDisplayName
+    const subScenario = {
+        ScenarioId: "event_12_02",
+        AppearCharacters: [
+            { Character2dId: 501, CostumeType: "sub_anfather" },
+            { Character2dId: 900, CostumeType: "v2_sub_sanrio_kitty" },
+        ],
+        Snippets: [
+            { Index: 0, Action: 1, ReferenceIndex: 0 },
+            { Index: 1, Action: 1, ReferenceIndex: 1 },
+        ],
+        TalkData: [
+            { TalkCharacters: [{ Character2dId: 501 }], WindowDisplayName: "謙", Body: "Welcome to WEEKEND GARAGE.", Motions: [], Voices: [] },
+            { TalkCharacters: [{ Character2dId: 900 }], WindowDisplayName: "キティ", Body: "Hello everyone!", Motions: [], Voices: [] },
+        ],
+    };
+    const silentScenario = {
+        ScenarioId: "event_12_03",
+        AppearCharacters: [{ Character2dId: 501, CostumeType: "sub_anfather" }],
+        Snippets: [],
+        TalkData: [],
+    };
+    const c2dMap = new Map([
+        [501, { id: 501, characterType: "mob", characterId: 0, unit: "none", assetName: "sub_anfather" }],
+        [900, { id: 900, characterType: "sub_game_character", characterId: 1, unit: "none", assetName: "v2_sub_sanrio_kitty", characterIconAssetbundleName: "s_collabo" }],
+    ]);
+    const repSilent = mod.extractScenarioStudy(silentScenario, { region: "jp", selector: "event:12/3", chara2dById: c2dMap });
+    const repSpoken = mod.extractScenarioStudy(subScenario, { region: "jp", selector: "event:12/2", chara2dById: c2dMap });
+    assert.equal(repSpoken.cast[0].name, "謙");
+    assert.equal(repSpoken.cast[0].storyDisplayName, "謙");
+    assert.equal(repSpoken.cast[0].ownerKey, "anfather");
+    assert.equal(repSpoken.cast[1].name, "キティ");
+    assert.equal(repSpoken.cast[1].kind, "collab");
+
+    // Merging silent episode first + spoken episode second still preserves story WindowDisplayName!
+    const mergedKit = mod.aggregateStudyReports([repSilent, repSpoken]);
+    const kenCast = mergedKit.recommendedCast.find(c => c.modelId === "sub_anfather");
+    assert.equal(kenCast?.name, "謙");
+    assert.equal(kenCast?.storyDisplayName, "謙");
+    assert.equal(kenCast?.count, 2);
+
+    // 5. Built-in names table & format 2 normalizer never leak untranslated JP kana into cn/tw/en/kr
+    for (const [ownerKey, entry] of Object.entries(mod.SUB_CHARACTER_NAMES)) {
+        for (const regionKey of ["cn", "tw", "en", "kr"]) {
+            const val = entry.names?.[regionKey];
+            if (val) {
+                assert.equal(/[\u3040-\u30FF]/.test(val), false, `untranslated JP kana in ${ownerKey}.${regionKey}: ${val}`);
+            }
+        }
+    }
+    const sanitized = mod.normalizeCatalogModels({
+        format: 2,
+        models: [
+            { id: "sub_rival_douglas", kind: "sub", ownerKey: "rival_douglas", name: "ダグラス", names: { jp: "ダグラス", tw: "ダグラス", kr: "ダグラス" } },
+            { id: "sub_igs_princess", kind: "sub", ownerKey: "igs_princess", name: "エル", names: { jp: "エル", cn: "エル", tw: "エル", kr: "エル" } },
+            { id: "v2_15nene_april2026_transform", kind: "character", characterId: 15, subCharacterId: 182, names: { tw: "咲希が化けた寧々" } },
+        ],
+    }, { region: "tw" });
+    assert.equal(sanitized.find(m => m.id === "sub_rival_douglas")?.names.tw, "道格拉斯");
+    assert.equal(sanitized.find(m => m.id === "sub_rival_douglas")?.names.kr, "더글러스");
+    assert.equal(sanitized.find(m => m.id === "sub_igs_princess")?.names.cn, "艾尔");
+    assert.equal(sanitized.find(m => m.id === "sub_igs_princess")?.names.tw, "艾爾");
+    assert.equal(sanitized.find(m => m.id === "v2_15nene_april2026_transform")?.names.tw, undefined);
+    assert.equal(sanitized.find(m => m.id === "v2_15nene_april2026_transform")?.names.jp, "咲希が化けた寧々");
+});

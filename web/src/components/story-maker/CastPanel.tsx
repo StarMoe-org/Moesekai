@@ -74,7 +74,7 @@ export function CastPanel({
     onClearPreview,
     previewingCastId,
 }: CastPanelProps) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const [picking, setPicking] = useState<{ key: string | null } | null>(null);
     const [removing, setRemoving] = useState<StoryCastMember | null>(null);
     const [localPreviewKey, setLocalPreviewKey] = useState<string | null>(null);
@@ -95,7 +95,7 @@ export function CastPanel({
     const full = doc.cast.length >= STORY_LIMITS.cast;
 
     const choose = (model: Live2DModel) => {
-        const name = live2dOwnerName(t, model);
+        const name = live2dOwnerName(t, model, locale);
         const patch = { modelId: model.id, ...(model.characterId ? { characterId: model.characterId } : { characterId: undefined }) };
         if (picking?.key) {
             const editedKey = picking.key;
@@ -158,6 +158,14 @@ export function CastPanel({
                     const isPreviewOpen = activePreviewKey === member.key;
                     const draft = previewDrafts[member.key] ?? {};
                     const displayName = member.name || member.modelId;
+                    const ownerName = model ? live2dOwnerName(t, model, locale) : null;
+                    const costumeLabel = model ? live2dCostumeLabel(t, model) : null;
+                    const subtitlePrefix = model
+                        ? [
+                            ownerName && ownerName.trim() !== member.name.trim() ? ownerName : null,
+                            costumeLabel,
+                        ].filter(Boolean).join(" \u00b7 ")
+                        : "";
                     return (
                         <li
                             key={member.key}
@@ -173,7 +181,7 @@ export function CastPanel({
                                     <img src={getCharacterIconUrl(member.characterId)} alt="" className="mt-1 size-10 shrink-0 rounded-full bg-surface-container-highest object-cover" />
                                 ) : (
                                     <span className="mt-1 flex size-10 shrink-0 items-center justify-center rounded-full bg-secondary-container type-title-s text-on-secondary-container">
-                                        {(member.name || "?").slice(0, 1)}
+                                        {Array.from(member.name.trim() || "?")[0] ?? "?"}
                                     </span>
                                 )}
                                 <div className="min-w-0 flex-1 space-y-1">
@@ -185,7 +193,7 @@ export function CastPanel({
                                         placeholder={t("page.storyMaker.cast.name")}
                                     />
                                     <p className="truncate type-label-s text-on-surface-variant">
-                                        {model ? `${live2dCostumeLabel(t, model)} · ` : ""}
+                                        {subtitlePrefix ? `${subtitlePrefix} \u00b7 ` : ""}
                                         <span className="font-mono">{member.modelId}</span>
                                     </p>
                                     {list.status === "ready" && !model && (
