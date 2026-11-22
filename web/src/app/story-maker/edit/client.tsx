@@ -14,7 +14,7 @@ import {
     mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCloudDone, mdCode,
     mdContentCopy, mdDownload, mdEdit, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen,
     mdFullscreenExit, mdHistory, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
-    mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdReplay,
+    mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdPublish, mdRecordVoiceOver, mdRedo, mdReplay,
     mdRestartAlt, mdRightPanelClose, mdRightPanelOpen, mdSettings, mdSkipNext, mdSkipPrevious,
     mdStar, mdTag, mdTranslate, mdUndo, mdUploadFile, mdViewQuilt, mdVisibility, mdVisibilityOff, mdVolumeOff,
     mdVolumeUp, mdWarning,
@@ -35,6 +35,7 @@ import {
     StoryMetaDialog, applyMetaValuesToDoc, metaValuesFromDoc, type StoryMetaValues,
 } from "@/components/story-maker/StoryMetaDialog";
 import { applyInstructionToStage } from "@/components/story-maker/StoryPlayerView";
+import { StoryPublishDialog } from "@/components/story-maker/StoryPublishDialog";
 import { StoryStageView } from "@/components/story-maker/StoryStageView";
 import { StoryVoiceManifestDialog } from "@/components/story-maker/StoryVoiceManifestDialog";
 import {
@@ -62,6 +63,7 @@ import {
     type ContinueSceneOptions, type StoryDragPayload, type StoryDropTarget,
 } from "@/lib/storyMaker/document";
 import { StoryDraftsUnavailableError, createDraft, getDraft, saveDraft } from "@/lib/storyMaker/drafts";
+import { getPublishedStoryLink } from "@/lib/storyMaker/publishedLink";
 import {
     applyStoryLocaleOverlay, getAvailableStoryLocales, inferStorySourceLocale,
     resolveVoiceManifestLineUrl,
@@ -244,10 +246,17 @@ function StoryMakerEditContent() {
     const [metaOpen, setMetaOpen] = useState(false);
     const [i18nOpen, setI18nOpen] = useState(false);
     const [voiceManifestOpen, setVoiceManifestOpen] = useState(false);
+    const [voiceManifestInitialTab, setVoiceManifestInitialTab] = useState<"import" | "upload">("import");
+    const [publishOpen, setPublishOpen] = useState(false);
+    const [publishedPostId, setPublishedPostId] = useState<number | null>(null);
     const [issuesOpen, setIssuesOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [preloadOpen, setPreloadOpen] = useState(false);
     const [playSelectedLocale, setPlaySelectedLocale] = useState<UiLocale | null>(null);
+
+    useEffect(() => {
+        setPublishedPostId(getPublishedStoryLink(draftId)?.postId ?? null);
+    }, [draftId]);
     const [playVoiceManifest, setPlayVoiceManifest] = useState<StoryVoiceManifest | null>(null);
     const [snack, setSnack] = useState<string | null>(null);
     const [flash, setFlash] = useState<{ key: number; color: StoryEffectColor; seconds: number } | null>(null);
@@ -1383,7 +1392,7 @@ function StoryMakerEditContent() {
     useEffect(() => {
         if (
             workspaceMode !== "playtest" || !playAuto || playRunning || playIsTyping
-            || playVoicePending || preloadOpen || issuesOpen || i18nOpen || voiceManifestOpen || playCurrentChoice
+            || playVoicePending || preloadOpen || issuesOpen || i18nOpen || voiceManifestOpen || publishOpen || playCurrentChoice
         ) {
             return;
         }
@@ -1400,7 +1409,7 @@ function StoryMakerEditContent() {
     }, [
         workspaceMode, playActiveFrame, playAuto, playCurrentChoice, handlePlayAdvance,
         i18nOpen, issuesOpen, playIsTyping, preloadOpen, playRunning, playStageState, playVoicePending,
-        voiceManifestOpen,
+        publishOpen, voiceManifestOpen,
     ]);
 
     /** Immediately play/stop current playtest line voice when mounting or clearing a TTS manifest mid-scene. */
@@ -1559,6 +1568,7 @@ function StoryMakerEditContent() {
                 metaOpen
                 || i18nOpen
                 || voiceManifestOpen
+                || publishOpen
                 || issuesOpen
                 || importOpen
                 || preloadOpen
@@ -1675,7 +1685,7 @@ function StoryMakerEditContent() {
         workspaceMode, stageWebFullscreen, playUiHidden, exitPlaytest, handlePlayAdvance, handlePlayPrevious,
         playCurrentChoice, uiKit?.decideSoundUrl, playSe, handlePlayChoose, t,
         undo, redo, immersive, handleImmersiveChange,
-        metaOpen, i18nOpen, voiceManifestOpen, issuesOpen, importOpen, preloadOpen,
+        metaOpen, i18nOpen, voiceManifestOpen, publishOpen, issuesOpen, importOpen, preloadOpen,
         activeScene, activeBeatId, activeNode, doc, draftId, flushSave,
         handleDeleteBeat, handleDeleteNode,
     ]);
@@ -2061,7 +2071,22 @@ function StoryMakerEditContent() {
             key: "load-voice-manifest",
             label: t("page.storyMaker.voiceTrack.action"),
             icon: mdRecordVoiceOver,
-            onSelect: () => setVoiceManifestOpen(true),
+            onSelect: () => {
+                setVoiceManifestInitialTab("import");
+                setVoiceManifestOpen(true);
+            },
+        },
+        {
+            key: "publish-community",
+            label: t(
+                publishedPostId
+                    ? "page.storyMaker.publish.updateAction"
+                    : "page.storyMaker.publish.openAction",
+            ),
+            icon: mdPublish,
+            disabled: isPlaytest,
+            dividerBefore: true,
+            onSelect: () => setPublishOpen(true),
         },
         {
             key: "import-msk",
@@ -2325,8 +2350,37 @@ function StoryMakerEditContent() {
                         variant={hasPlayVoiceTrackManifest ? "tonal" : "standard"}
                         icon={mdRecordVoiceOver}
                         label={t("page.storyMaker.voiceTrack.action")}
-                        onClick={() => setVoiceManifestOpen(true)}
+                        onClick={() => {
+                            setVoiceManifestInitialTab("import");
+                            setVoiceManifestOpen(true);
+                        }}
                     />
+
+                    <button
+                        type="button"
+                        disabled={isPlaytest}
+                        onClick={() => setPublishOpen(true)}
+                        title={t(
+                            publishedPostId
+                                ? "page.storyMaker.publish.updateAction"
+                                : "page.storyMaker.publish.openAction",
+                        )}
+                        className={cn(
+                            "state-layer focus-ring inline-flex h-7 shrink-0 items-center gap-1 rounded-md3-full px-2.5 type-label-s transition-colors",
+                            isPlaytest
+                                ? "cursor-default bg-surface-container text-on-surface-variant opacity-50"
+                                : "cursor-pointer bg-primary text-on-primary",
+                        )}
+                    >
+                        <Icon path={mdPublish} size={14} className="shrink-0" />
+                        <span className="hidden xl:inline">
+                            {t(
+                                publishedPostId
+                                    ? "page.storyMaker.publish.updateAction"
+                                    : "page.storyMaker.publish.openAction",
+                            )}
+                        </span>
+                    </button>
 
                     <button
                         type="button"
@@ -3347,7 +3401,7 @@ function StoryMakerEditContent() {
                 onNotify={setSnack}
             />
 
-            {/* Custom Voice Track Manifest Dialog */}
+            {/* Custom Voice Track Manifest & Community Upload Dialog */}
             <StoryVoiceManifestDialog
                 isOpen={voiceManifestOpen}
                 onClose={() => setVoiceManifestOpen(false)}
@@ -3356,6 +3410,27 @@ function StoryMakerEditContent() {
                 onApplyManifest={setPlayVoiceManifest}
                 onSwitchToStoryImport={handleImportIntoCurrentDraft}
                 onApplyLocalePack={pack => commit(current => upsertStoryLocalePack(current, pack))}
+                enableCommunityUpload
+                publishedPostId={publishedPostId}
+                initialTab={voiceManifestInitialTab}
+                onRequestPublish={() => setPublishOpen(true)}
+                onNotify={setSnack}
+            />
+
+            {/* Direct Publish to Community Stories Dialog */}
+            <StoryPublishDialog
+                isOpen={publishOpen}
+                onClose={() => setPublishOpen(false)}
+                doc={isCodeMode && codeEval.ok ? codeEval.doc : doc}
+                draftId={draftId}
+                publishedPostId={publishedPostId}
+                hasBlockingErrors={errorCount > 0}
+                onPublished={(post) => setPublishedPostId(post.id)}
+                onOpenVoiceUpload={(postId) => {
+                    setPublishedPostId(postId);
+                    setVoiceManifestInitialTab("upload");
+                    setVoiceManifestOpen(true);
+                }}
                 onNotify={setSnack}
             />
 

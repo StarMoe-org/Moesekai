@@ -9,7 +9,7 @@ import {
     PageHeader, SegmentedButton, Snackbar, cn, type MenuItemDef,
 } from "@/components/md3";
 import {
-    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdEdit, mdErrorFill,
+    mdArrowBack, mdBookmarkAdd, mdChatBubble, mdCloseFullscreen, mdCode, mdDashboard, mdEdit, mdErrorFill,
     mdHome, mdMoreVert, mdOpenInFull, mdPlayArrowFill, mdRecordVoiceOver, mdTheaters, mdTranslate,
     mdUploadFile, mdWarning,
 } from "@/components/md3/icons";
@@ -20,17 +20,24 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { MOE_LOGO_URL } from "@/lib/assets";
+import { fetchCommunityStoryPlay, getCommunityErrorMessage } from "@/lib/community-api";
 import { SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import { compileStoryGraph } from "@/lib/storyMaker/compiler";
 import { upsertStoryLocalePack } from "@/lib/storyMaker/document";
 import { StoryDraftsUnavailableError, createDraft, getDraft } from "@/lib/storyMaker/drafts";
-import { parseAndValidateLocalePack } from "@/lib/storyMaker/i18nPack";
+import {
+    isSafeVoiceManifestUrl,
+    parseAndValidateLocalePack,
+    parseStoryVoiceManifest,
+} from "@/lib/storyMaker/i18nPack";
 import { downloadStoryScript } from "@/lib/storyMaker/starter";
+import { parseStoryDocumentDraft, validateStoryDocument } from "@/lib/storyMaker/validate";
 import type { StoryDocument, StoryVoiceManifest } from "@/types/storyMaker";
 
 type PlaySource =
     | { kind: "empty" }
     | { kind: "draft"; id: string; doc: StoryDocument }
+    | { kind: "community"; postId: number; postTitle: string; authorName: string; doc: StoryDocument }
     | { kind: "imported"; doc: StoryDocument; key: number };
 
 function StoryMakerPlayContent() {
@@ -40,6 +47,8 @@ function StoryMakerPlayContent() {
     const line = assetSource.startsWith("backup") ? "backup" : "main";
 
     const draftId = searchParams.get("id");
+    const postIdRaw = searchParams.get("postId");
+    const communityPostId = postIdRaw && /^\d+$/.test(postIdRaw) ? Number(postIdRaw) : null;
     const startNodeParam = searchParams.get("node");
     const localeParam = searchParams.get("locale");
     const initialLocaleParam: UiLocale | null = localeParam && (SUPPORTED_UI_LOCALES as readonly string[]).includes(localeParam)
@@ -52,10 +61,16 @@ function StoryMakerPlayContent() {
     const [immersive, setImmersive] = useState<boolean>(() => (
         searchParams.get("immersive") !== "0"
     ));
-    const [loading, setLoading] = useState(Boolean(draftId));
+    const [loading, setLoading] = useState(Boolean(draftId || communityPostId));
     const [voiceManifest, setVoiceManifest] = useState<StoryVoiceManifest | null>(null);
     const [preferredLocale, setPreferredLocale] = useState<UiLocale | null>(initialLocaleParam);
     const localePackInputRef = useRef<HTMLInputElement | null>(null);
+    const tRef = useRef(t);
+    const loadSeqRef = useRef(0);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
 
     const handleLayoutModeChange = useCallback((next: PlayerLayoutMode) => {
         setLayoutMode(next);
@@ -77,7 +92,8 @@ function StoryMakerPlayContent() {
         }
     }, []);
 
-    const [loadError, setLoadError] = useState<"missing" | "unavailable" | "failed" | null>(null);
+    const [loadError, setLoadError] = useState<"missing" | "unavailable" | "failed" | "communityFailed" | null>(null);
+    const [communityErrorText, setCommunityErrorText] = useState<string | null>(null);
     const [source, setSource] = useState<PlaySource>({ kind: "empty" });
     const [importOpen, setImportOpen] = useState(false);
     const [voiceManifestOpen, setVoiceManifestOpen] = useState(false);
@@ -86,10 +102,62 @@ function StoryMakerPlayContent() {
     const [importCounter, setImportCounter] = useState(0);
 
     useEffect(() => {
-        let cancelled = false;
+        const seq = ++loadSeqRef.current;
         async function load() {
             setLoadError(null);
+            setCommunityErrorText(null);
             setVoiceManifest(null);
+
+            if (communityPostId !== null) {
+                setLoading(true);
+                try {
+                    const res = await fetchCommunityStoryPlay(communityPostId);
+                    if (seq !== loadSeqRef.current) return;
+                    const validated = validateStoryDocument(res.story_doc);
+                    const loadedDoc = validated.ok ? validated.doc : parseStoryDocumentDraft(res.story_doc);
+                    if (!loadedDoc) {
+                        setSource({ kind: "empty" });
+                        setLoadError("communityFailed");
+                        setCommunityErrorText(tRef.current("page.storyMaker.publish.errors.invalidStoryDoc"));
+                        return;
+                    }
+                    let mountedManifest: StoryVoiceManifest | null = null;
+                    if (res.voice_manifest) {
+                        mountedManifest = parseStoryVoiceManifest(res.voice_manifest);
+                    } else if (res.voice_manifest_url && isSafeVoiceManifestUrl(res.voice_manifest_url)) {
+                        try {
+                            const manifestResp = await fetch(res.voice_manifest_url, {
+                                mode: "cors",
+                                credentials: "omit",
+                            });
+                            if (seq !== loadSeqRef.current) return;
+                            if (manifestResp.ok) {
+                                mountedManifest = parseStoryVoiceManifest(await manifestResp.json());
+                            }
+                        } catch {
+                            // Playable story still mounts even if optional external manifest fails
+                        }
+                    }
+                    if (seq !== loadSeqRef.current) return;
+                    setVoiceManifest(mountedManifest);
+                    setSource({
+                        kind: "community",
+                        postId: res.post_id,
+                        postTitle: res.title,
+                        authorName: res.author.display_name,
+                        doc: loadedDoc,
+                    });
+                } catch (err) {
+                    if (seq !== loadSeqRef.current) return;
+                    setSource({ kind: "empty" });
+                    setLoadError("communityFailed");
+                    setCommunityErrorText(getCommunityErrorMessage(err, tRef.current));
+                } finally {
+                    if (seq === loadSeqRef.current) setLoading(false);
+                }
+                return;
+            }
+
             if (!draftId) {
                 setLoading(false);
                 return;
@@ -97,7 +165,7 @@ function StoryMakerPlayContent() {
             setLoading(true);
             try {
                 const draft = await getDraft(draftId);
-                if (cancelled) return;
+                if (seq !== loadSeqRef.current) return;
                 if (!draft) {
                     setSource({ kind: "empty" });
                     setLoadError("missing");
@@ -105,16 +173,18 @@ function StoryMakerPlayContent() {
                     setSource({ kind: "draft", id: draft.id, doc: draft.doc });
                 }
             } catch (error) {
-                if (cancelled) return;
+                if (seq !== loadSeqRef.current) return;
                 setSource({ kind: "empty" });
                 setLoadError(error instanceof StoryDraftsUnavailableError ? "unavailable" : "failed");
             } finally {
-                if (!cancelled) setLoading(false);
+                if (seq === loadSeqRef.current) setLoading(false);
             }
         }
         void load();
-        return () => { cancelled = true; };
-    }, [draftId]);
+        return () => {
+            loadSeqRef.current += 1;
+        };
+    }, [communityPostId, draftId]);
 
     const activeDoc = source.kind === "empty" ? null : source.doc;
     const program = useMemo(() => (activeDoc ? compileStoryGraph(activeDoc) : null), [activeDoc]);
@@ -133,6 +203,7 @@ function StoryMakerPlayContent() {
         if (typeof window !== "undefined") {
             const url = new URL(window.location.href);
             url.searchParams.delete("id");
+            url.searchParams.delete("postId");
             url.searchParams.delete("node");
             window.history.replaceState({}, "", url.toString());
         }
@@ -192,9 +263,11 @@ function StoryMakerPlayContent() {
 
     const playerKey = source.kind === "draft"
         ? `draft:${source.id}`
-        : source.kind === "imported"
-            ? `imported:${source.key}`
-            : "empty";
+        : source.kind === "community"
+            ? `community:${source.postId}`
+            : source.kind === "imported"
+                ? `imported:${source.key}`
+                : "empty";
 
     const isWorkspaceActive = Boolean(activeDoc) && layoutMode === "workspace";
     const isImmersiveActive = Boolean(activeDoc) && immersive;
@@ -240,8 +313,17 @@ function StoryMakerPlayContent() {
     const editHref = source.kind === "draft"
         ? `/story-maker/edit?id=${encodeURIComponent(source.id)}${!immersive ? "&immersive=0" : ""}`
         : null;
+    const communityPostHref = source.kind === "community"
+        ? `/community/post/${source.postId}`
+        : null;
 
     const immersiveMoreItems: MenuItemDef[] = activeDoc ? [
+        ...(communityPostHref ? [{
+            key: "community-post",
+            label: t("page.storyMaker.player.viewCommunityPost"),
+            icon: mdChatBubble,
+            href: communityPostHref,
+        }] : []),
         ...(source.kind === "imported" ? [{
             key: "save-draft",
             label: t("page.storyMaker.player.saveAsDraft"),
@@ -347,6 +429,11 @@ function StoryMakerPlayContent() {
                     />
 
                     <div className="flex flex-1 shrink-0 items-center justify-end gap-1">
+                        {communityPostHref && (
+                            <Button size="xs" variant="tonal" icon={mdChatBubble} href={communityPostHref}>
+                                {t("page.storyMaker.player.viewCommunityPost")}
+                            </Button>
+                        )}
                         {editHref && (
                             <Button size="xs" variant="tonal" icon={mdEdit} href={editHref}>
                                 {t("page.storyMaker.action.edit")}
@@ -455,6 +542,11 @@ function StoryMakerPlayContent() {
                             <Button variant="text" icon={mdArrowBack} href="/story-maker" className="max-w-full px-3 sm:px-4">
                                 {t("page.storyMaker.action.backToDrafts")}
                             </Button>
+                            {communityPostHref && (
+                                <Button variant="tonal" icon={mdChatBubble} href={communityPostHref} className="max-w-full px-3 sm:px-4">
+                                    {t("page.storyMaker.player.viewCommunityPost")}
+                                </Button>
+                            )}
                             {editHref && (
                                 <Button variant="tonal" icon={mdEdit} href={editHref} className="max-w-full px-3 sm:px-4">
                                     {t("page.storyMaker.action.edit")}
@@ -509,13 +601,33 @@ function StoryMakerPlayContent() {
             ) : loadError ? (
                 <Card variant="filled" radius="xl">
                     <EmptyState
-                        title={t(loadError === "unavailable" ? "page.storyMaker.storage.unavailableTitle" : "page.storyMaker.editor.notFoundTitle")}
-                        description={t(loadError === "unavailable" ? "page.storyMaker.storage.unavailableDescription" : "page.storyMaker.editor.notFoundDescription")}
+                        title={t(
+                            loadError === "unavailable"
+                                ? "page.storyMaker.storage.unavailableTitle"
+                                : loadError === "communityFailed"
+                                    ? "common.state.loadingFailed"
+                                    : "page.storyMaker.editor.notFoundTitle",
+                        )}
+                        description={
+                            loadError === "communityFailed" && communityErrorText
+                                ? communityErrorText
+                                : t(
+                                      loadError === "unavailable"
+                                          ? "page.storyMaker.storage.unavailableDescription"
+                                          : "page.storyMaker.editor.notFoundDescription",
+                                  )
+                        }
                         action={(
                             <div className="mt-2 flex flex-wrap justify-center gap-2">
-                                <Button variant="filled" icon={mdUploadFile} onClick={() => setImportOpen(true)}>
-                                    {t("page.storyMaker.player.openScript")}
-                                </Button>
+                                {loadError === "communityFailed" ? (
+                                    <Button variant="filled" icon={mdArrowBack} href="/community?category=community_story">
+                                        {t("page.community.backToFeed")}
+                                    </Button>
+                                ) : (
+                                    <Button variant="filled" icon={mdUploadFile} onClick={() => setImportOpen(true)}>
+                                        {t("page.storyMaker.player.openScript")}
+                                    </Button>
+                                )}
                                 <Button variant="tonal" icon={mdArrowBack} href="/story-maker">
                                     {t("page.storyMaker.action.backToDrafts")}
                                 </Button>
@@ -569,7 +681,11 @@ function StoryMakerPlayContent() {
                         initialLocale={preferredLocale}
                         voiceManifest={voiceManifest}
                         onOpenVoiceManifest={() => setVoiceManifestOpen(true)}
-                        endAction={editHref ? (
+                        endAction={communityPostHref ? (
+                            <Button variant="tonal" icon={mdChatBubble} href={communityPostHref}>
+                                {t("page.storyMaker.player.viewCommunityPost")}
+                            </Button>
+                        ) : editHref ? (
                             <Button variant="tonal" icon={mdEdit} href={editHref}>
                                 {t("page.storyMaker.action.edit")}
                             </Button>

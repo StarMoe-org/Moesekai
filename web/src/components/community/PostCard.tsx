@@ -14,6 +14,7 @@ import {
 } from "@/components/md3/icons";
 import CommunityAuthorBadge from "./CommunityAuthorBadge";
 import CommunityMarkdown from "./CommunityMarkdown";
+import CommunityStoryCard from "./CommunityStoryCard";
 import {
     CONTENT_LANG_LABEL_KEYS,
     POST_CATEGORY_LABEL_KEYS,
@@ -87,7 +88,7 @@ export function PostCard({ post, onLikeToggle, onTagClick, className }: PostCard
             </Link>
 
             {/* Body preview or spoiler pill */}
-            <div className="mt-2">
+            <div className="mt-2 space-y-2.5">
                 {post.is_spoiler ? (
                     <Link
                         href={postHref}
@@ -97,7 +98,12 @@ export function PostCard({ post, onLikeToggle, onTagClick, className }: PostCard
                         <span>{t("page.community.spoilerHiddenPreview")}</span>
                     </Link>
                 ) : (
-                    <CommunityMarkdown content={post.body_md} compact />
+                    <>
+                        {post.category === "community_story" && post.story_summary && (
+                            <CommunityStoryCard postId={post.id} summary={post.story_summary} compact />
+                        )}
+                        {post.body_md.trim() && <CommunityMarkdown content={post.body_md} compact />}
+                    </>
                 )}
             </div>
 

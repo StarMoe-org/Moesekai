@@ -22,6 +22,7 @@ import {
 import { updateBlockedSubLocal, useCommunitySession } from "@/lib/community-session";
 import CommunityAuthorBadge from "@/components/community/CommunityAuthorBadge";
 import CommunityMarkdown, { SpoilerCurtain } from "@/components/community/CommunityMarkdown";
+import CommunityStoryCard from "@/components/community/CommunityStoryCard";
 import EntityCommentSection from "@/components/community/EntityCommentSection";
 import ReportDialog, { AppealDialog } from "@/components/community/ReportDialog";
 import {
@@ -360,6 +361,15 @@ export default function CommunityPostClient() {
 
                             <Divider className="my-4" />
 
+                            {post.category === "community_story" && post.story_summary && (
+                                <CommunityStoryCard
+                                    postId={post.id}
+                                    summary={post.story_summary}
+                                    showPendingVoiceStatus={isOwn || isMod}
+                                    className="mb-4"
+                                />
+                            )}
+
                             <SpoilerCurtain isSpoiler={post.is_spoiler}>
                                 <CommunityMarkdown content={post.body_md} />
                             </SpoilerCurtain>
@@ -575,18 +585,20 @@ export default function CommunityPostClient() {
                             }
                         >
                             <div className="space-y-4">
-                                <div className="flex flex-wrap gap-1.5">
-                                    {POST_CATEGORY_OPTIONS.map((opt) => (
-                                        <Chip
-                                            key={opt.id}
-                                            variant="filter"
-                                            selected={editCategory === opt.id}
-                                            onClick={() => setEditCategory(opt.id)}
-                                        >
-                                            {t(opt.labelKey)}
-                                        </Chip>
-                                    ))}
-                                </div>
+                                {post.category !== "community_story" && (
+                                    <div className="flex flex-wrap gap-1.5">
+                                        {POST_CATEGORY_OPTIONS.filter((opt) => opt.id !== "community_story").map((opt) => (
+                                            <Chip
+                                                key={opt.id}
+                                                variant="filter"
+                                                selected={editCategory === opt.id}
+                                                onClick={() => setEditCategory(opt.id)}
+                                            >
+                                                {t(opt.labelKey)}
+                                            </Chip>
+                                        ))}
+                                    </div>
+                                )}
                                 <div className="flex flex-wrap gap-1.5">
                                     {SERVER_TAG_OPTIONS.map((opt) => (
                                         <Chip

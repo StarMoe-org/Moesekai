@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
-    Banner, Button, Dialog, Divider, Icon, LoadingIndicator, Surface, TextField,
+    Banner, Button, Dialog, Divider, Icon, LoadingIndicator, Surface, Tabs, TextField,
 } from "@/components/md3";
 import {
     mdCheckCircle, mdDelete, mdLink, mdRecordVoiceOver, mdTranslate, mdUploadFile,
 } from "@/components/md3/icons";
+import { StoryAudioUploadPanel } from "@/components/story-maker/StoryAudioUploadPanel";
 import { useI18n } from "@/contexts/I18nContext";
 import { SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import {
@@ -31,6 +32,11 @@ export interface StoryVoiceManifestDialogProps {
     onSwitchToStoryImport?: (doc: StoryDocument) => void;
     /** Optional 1-click rescue when the user uploads/pastes a `.i18n.json` subtitle pack here. */
     onApplyLocalePack?: (pack: StoryLocalePack) => void;
+    /** Enables the Community Audio Upload tab when editing a draft. */
+    enableCommunityUpload?: boolean;
+    publishedPostId?: number | null;
+    initialTab?: "import" | "upload";
+    onRequestPublish?: () => void;
     onNotify?: (message: string) => void;
 }
 
@@ -93,6 +99,10 @@ export function StoryVoiceManifestDialog({
     onApplyManifest,
     onSwitchToStoryImport,
     onApplyLocalePack,
+    enableCommunityUpload = false,
+    publishedPostId = null,
+    initialTab = "import",
+    onRequestPublish,
     onNotify,
 }: StoryVoiceManifestDialogProps) {
     const { t } = useI18n();
@@ -101,12 +111,21 @@ export function StoryVoiceManifestDialog({
     const requestSeqRef = useRef(0);
     const mountedRef = useRef(true);
 
+    const [activeTab, setActiveTab] = useState<"import" | "upload">(
+        enableCommunityUpload ? initialTab : "import",
+    );
     const [urlInput, setUrlInput] = useState("");
     const [fetching, setFetching] = useState(false);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [text, setText] = useState("");
     const [fileError, setFileError] = useState<string | null>(null);
     const [evaluation, setEvaluation] = useState<ManifestEvaluation | null>(null);
+
+    useEffect(() => {
+        if (isOpen) {
+            setActiveTab(enableCommunityUpload ? initialTab : "import");
+        }
+    }, [enableCommunityUpload, initialTab, isOpen]);
 
     useEffect(() => {
         mountedRef.current = true;
@@ -246,12 +265,42 @@ export function StoryVoiceManifestDialog({
         onClose();
     };
 
+    const handleAutoMountPublishedManifest = async (manifestUrl: string) => {
+        const trimmed = manifestUrl.trim();
+        if (!trimmed || !isSafeVoiceManifestUrl(trimmed)) return;
+        abortRef.current?.abort();
+        const controller = new AbortController();
+        abortRef.current = controller;
+        const seq = ++requestSeqRef.current;
+        try {
+            const response = await fetch(trimmed, {
+                mode: "cors",
+                credentials: "omit",
+                signal: controller.signal,
+            });
+            if (!response.ok) return;
+            const rawText = await response.text();
+            if (!mountedRef.current || requestSeqRef.current !== seq) return;
+            if (rawText.length > MAX_MANIFEST_BYTES) return;
+            const parsed = parseStoryVoiceManifest(JSON.parse(rawText));
+            if (parsed) {
+                onApplyManifest(parsed);
+            }
+        } catch {
+            // Instant-published status is already shown; ignore optional preview auto-mount network errors.
+        } finally {
+            if (abortRef.current === controller) {
+                abortRef.current = null;
+            }
+        }
+    };
+
     const handleClearCurrent = () => {
         onApplyManifest(null);
         onNotify?.(t("page.storyMaker.voiceTrack.clearedToast"));
     };
 
-    const canSubmitCandidate = evaluation?.kind === "manifest";
+    const canSubmitCandidate = activeTab === "import" && evaluation?.kind === "manifest";
     const candidateZeroMatch = evaluation?.kind === "manifest" && evaluation.match.matchedCount === 0;
 
     return (
@@ -281,9 +330,40 @@ export function StoryVoiceManifestDialog({
             )}
         >
             <div className="min-w-0 space-y-4">
-                <p className="type-body-s text-on-surface-variant">
-                    {t("page.storyMaker.voiceTrack.dialogSubtitle")}
-                </p>
+                {enableCommunityUpload && (
+                    <Tabs
+                        items={[
+                            { value: "import", label: t("page.storyMaker.voiceTrack.tabImport") },
+                            { value: "upload", label: t("page.storyMaker.audioUpload.tabUpload") },
+                        ]}
+                        value={activeTab}
+                        onValueChange={setActiveTab}
+                        variant="secondary"
+                    />
+                )}
+
+                {activeTab === "upload" && enableCommunityUpload ? (
+                    <StoryAudioUploadPanel
+                        doc={doc}
+                        publishedPostId={publishedPostId}
+                        onRequestPublish={
+                            onRequestPublish
+                                ? () => {
+                                      handleClose();
+                                      onRequestPublish();
+                                  }
+                                : undefined
+                        }
+                        onVoiceManifestReady={(manifestUrl) => {
+                            void handleAutoMountPublishedManifest(manifestUrl);
+                        }}
+                        onNotify={onNotify}
+                    />
+                ) : (
+                    <>
+                        <p className="type-body-s text-on-surface-variant">
+                            {t("page.storyMaker.voiceTrack.dialogSubtitle")}
+                        </p>
 
                 {/* Current mounted manifest status */}
                 {currentManifest && currentMatch && (
@@ -510,6 +590,8 @@ export function StoryVoiceManifestDialog({
                             </Banner>
                         )}
                     </Surface>
+                )}
+                    </>
                 )}
             </div>
         </Dialog>

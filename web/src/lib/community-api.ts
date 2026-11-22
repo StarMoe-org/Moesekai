@@ -17,11 +17,15 @@ import type {
     CommunityMeResponse,
     CommunityMode,
     CommunityProfile,
+    CommunityStoryPlayResponse,
     ContentLang,
     CustomWordRule,
     EntityLinkType,
     ModActionRequest,
     ModAppealItem,
+    ModAudioQueueResponse,
+    ModAudioReviewRequest,
+    ModAudioReviewResponse,
     ModAuditItem,
     ModModeResponse,
     ModPendingItem,
@@ -40,9 +44,16 @@ import type {
     RuleMatchType,
     RuleTier,
     ServerTag,
+    StoryAudioDedupRequest,
+    StoryAudioDedupResponse,
+    StoryAudioStatusResponse,
+    StoryAudioUploadCompleteResponse,
+    StoryAudioUploadInitRequest,
+    StoryAudioUploadInitResponse,
     TargetType,
     ThreadCommentsResponse,
 } from "@/types/community";
+import type { StoryDocument } from "@/types/storyMaker";
 
 const REQUEST_TIMEOUT_MS = 20_000;
 
@@ -53,6 +64,7 @@ export interface CommunityApiErrorPayload {
     reason?: string;
     moderation_id?: number;
     muted_until?: string;
+    blocked_hashes?: string[];
 }
 
 export class CommunityApiError extends Error {
@@ -63,6 +75,7 @@ export class CommunityApiError extends Error {
     public readonly reason?: string;
     public readonly moderationId?: number;
     public readonly mutedUntil?: string;
+    public readonly blockedHashes?: string[];
 
     constructor(status: number, code: string, payload?: CommunityApiErrorPayload) {
         super(code);
@@ -80,6 +93,9 @@ export class CommunityApiError extends Error {
                 ? payload.moderation_id
                 : undefined;
         this.mutedUntil = typeof payload?.muted_until === "string" ? payload.muted_until : undefined;
+        this.blockedHashes = Array.isArray(payload?.blocked_hashes)
+            ? payload.blocked_hashes.filter((item): item is string => typeof item === "string")
+            : undefined;
     }
 }
 
@@ -241,6 +257,24 @@ export function getCommunityErrorMessage(error: unknown, t: TranslateFn): string
             return t("common.comments.errors.alreadyReported");
         case "already_appealed":
             return t("common.comments.errors.alreadyAppealed");
+        case "blocked_audio_clips":
+            return t("page.storyMaker.audioUpload.errors.blockedClips");
+        case "daily_quota_exceeded":
+            return t("page.storyMaker.audioUpload.errors.dailyQuota");
+        case "story_audio_unavailable":
+            return t("page.storyMaker.audioUpload.errors.unavailable");
+        case "credit_score_too_low":
+        case "insufficient_health_score":
+        case "low_health_score":
+            return t("page.storyMaker.audioUpload.errors.lowCreditScore");
+        case "archive_too_large":
+            return t("page.storyMaker.audioUpload.errors.archiveTooLarge");
+        case "archive_not_uploaded":
+            return t("page.storyMaker.audioUpload.errors.uploadFailed");
+        case "invalid_story_doc":
+            return t("page.storyMaker.publish.errors.invalidStoryDoc");
+        case "story_doc_too_large":
+            return t("page.storyMaker.publish.errors.storyTooLarge");
         case "forbidden":
         case "forbidden_origin":
             return t("common.comments.errors.forbidden");
@@ -341,6 +375,7 @@ export interface CreatePostInput {
     tags?: string[];
     is_spoiler?: boolean;
     turnstile_token?: string;
+    story_doc?: StoryDocument;
 }
 
 export function createCommunityPost(input: CreatePostInput): Promise<PostMutationResponse> {
@@ -364,6 +399,7 @@ export interface UpdatePostInput {
     body_md?: string;
     tags?: string[];
     is_spoiler?: boolean;
+    story_doc?: StoryDocument;
 }
 
 export function updateCommunityPost(
@@ -625,6 +661,79 @@ export function fetchModAudit(
 ): Promise<{ items: ModAuditItem[]; next_cursor: string | null }> {
     return requestJson<{ items: ModAuditItem[]; next_cursor: string | null }>(
         `/api/community/mod/audit${buildQuery(params)}`,
+    );
+}
+
+// ==================== 28-33. Community Stories & Voice Tracks ====================
+
+export function fetchCommunityStoryPlay(postId: number | string): Promise<CommunityStoryPlayResponse> {
+    return requestJson<CommunityStoryPlayResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/play`,
+    );
+}
+
+export function dedupStoryAudio(
+    postId: number | string,
+    input: StoryAudioDedupRequest,
+): Promise<StoryAudioDedupResponse> {
+    return requestJson<StoryAudioDedupResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/dedup`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+        },
+    );
+}
+
+export function initStoryAudioUpload(
+    postId: number | string,
+    input: StoryAudioUploadInitRequest,
+): Promise<StoryAudioUploadInitResponse> {
+    return requestJson<StoryAudioUploadInitResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+        },
+    );
+}
+
+export function completeStoryAudioUpload(
+    postId: number | string,
+    batchId: string,
+): Promise<StoryAudioUploadCompleteResponse> {
+    return requestJson<StoryAudioUploadCompleteResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads/${encodeURIComponent(batchId)}/complete`,
+        {
+            method: "POST",
+        },
+    );
+}
+
+export function fetchStoryAudioStatus(postId: number | string): Promise<StoryAudioStatusResponse> {
+    return requestJson<StoryAudioStatusResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/status`,
+    );
+}
+
+export function fetchModAudioQueue(
+    params: { limit?: number } = {},
+): Promise<ModAudioQueueResponse> {
+    return requestJson<ModAudioQueueResponse>(
+        `/api/community/mod/audio-queue${buildQuery(params)}`,
+    );
+}
+
+export function reviewModAudioBatch(
+    batchId: string,
+    input: ModAudioReviewRequest,
+): Promise<ModAudioReviewResponse> {
+    return requestJson<ModAudioReviewResponse>(
+        `/api/community/mod/audio-queue/${encodeURIComponent(batchId)}/review`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+        },
     );
 }
 
