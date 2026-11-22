@@ -1998,6 +1998,16 @@ export const zhCNMessages = {
                 markAllRead: "全部已读",
                 emptyTitle: "暂无通知",
                 emptyDesc: "有新的回复、点赞或审核通知时会显示在这里。",
+                emptyCommentsDesc: "暂时还没有回复或评论通知。",
+                emptyLikesDesc: "暂时还没有点赞通知。",
+                emptySystemDesc: "暂时还没有系统或审核通知。",
+                unreadBadge: "未读",
+                tabs: {
+                    all: "全部",
+                    comments: "评论",
+                    likes: "点赞",
+                    system: "系统",
+                },
                 types: {
                     reply_post: "{actor} 回复了你的帖子",
                     reply_comment: "{actor} 回复了你的评论",

@@ -92,7 +92,27 @@ export function EntityCommunitySection({
         setPostsError(null);
     }
 
-    // Defer network work until the user approaches the bottom of the detail page.
+    // Defer network work until the user approaches the bottom of the detail page,
+    // unless a notification/comment hash asks to jump straight to comments.
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const checkHash = () => {
+            const hash = window.location.hash;
+            if (hash === "#community-comments" || /^#comment-\d+$/.test(hash)) {
+                setActiveTab("comments");
+                setVisible(true);
+                if (hash === "#community-comments") {
+                    requestAnimationFrame(() => {
+                        containerRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    });
+                }
+            }
+        };
+        checkHash();
+        window.addEventListener("hashchange", checkHash);
+        return () => window.removeEventListener("hashchange", checkHash);
+    }, []);
+
     useEffect(() => {
         const el = containerRef.current;
         if (!el || visible) return;
@@ -222,7 +242,7 @@ export function EntityCommunitySection({
     ];
 
     return (
-        <div ref={containerRef} className={cn("mt-8", className)}>
+        <div id="community-comments" ref={containerRef} className={cn("mt-8 scroll-mt-20", className)}>
             <SectionCard
                 title={sectionTitle}
                 icon={hasRelatedPosts ? mdForum : mdChatBubble}

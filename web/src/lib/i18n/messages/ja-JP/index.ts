@@ -1998,6 +1998,16 @@ export const jaJPMessages = {
         markAllRead: 'すべて既読',
         emptyTitle: '通知はありません',
         emptyDesc: '返信・いいね・審査結果の通知がここに表示されます。',
+        emptyCommentsDesc: '返信やコメントの通知はまだありません。',
+        emptyLikesDesc: 'いいねの通知はまだありません。',
+        emptySystemDesc: 'システムやモデレーションの通知はまだありません。',
+        unreadBadge: '未読',
+        tabs: {
+          all: 'すべて',
+          comments: 'コメント',
+          likes: 'いいね',
+          system: 'システム',
+        },
         types: {
           reply_post: '{actor} があなたの投稿に返信しました',
           reply_comment: '{actor} があなたのコメントに返信しました',

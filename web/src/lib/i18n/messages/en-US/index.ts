@@ -1999,6 +1999,16 @@ export const enUSMessages = {
                 markAllRead: "Mark all read",
                 emptyTitle: "No notifications yet",
                 emptyDesc: "Replies, likes, and moderation notices will appear here.",
+                emptyCommentsDesc: "No reply or comment notifications yet.",
+                emptyLikesDesc: "No like notifications yet.",
+                emptySystemDesc: "No system or moderation notifications yet.",
+                unreadBadge: "Unread",
+                tabs: {
+                    all: "All",
+                    comments: "Replies",
+                    likes: "Likes",
+                    system: "System",
+                },
                 types: {
                     reply_post: "{actor} replied to your post",
                     reply_comment: "{actor} replied to your comment",

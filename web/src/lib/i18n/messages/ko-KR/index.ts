@@ -1996,6 +1996,16 @@ export const koKRMessages = {
                 markAllRead: "모두 읽음",
                 emptyTitle: "알림이 없습니다",
                 emptyDesc: "답글, 좋아요 및 검토 알림이 여기에 표시됩니다.",
+                emptyCommentsDesc: "아직 답글이나 댓글 알림이 없습니다.",
+                emptyLikesDesc: "아직 좋아요 알림이 없습니다.",
+                emptySystemDesc: "아직 시스템 또는 운영 알림이 없습니다.",
+                unreadBadge: "읽지 않음",
+                tabs: {
+                    all: "전체",
+                    comments: "댓글",
+                    likes: "좋아요",
+                    system: "시스템",
+                },
                 types: {
                     reply_post: "{actor} 님이 내 게시글에 답글을 남겼습니다",
                     reply_comment: "{actor} 님이 내 댓글에 답글을 남겼습니다",

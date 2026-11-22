@@ -111,11 +111,14 @@ export function EntityCommentSection({
     const [policyOpen, setPolicyOpen] = useState(false);
     const [reportTargetId, setReportTargetId] = useState<number | null>(null);
     const [appealTargetId, setAppealTargetId] = useState<number | null>(null);
+    const [highlightedCommentId, setHighlightedCommentId] = useState<number | null>(null);
     const pendingSubmitRef = useRef<(() => Promise<void>) | null>(null);
+    const sectionRef = useRef<HTMLElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const onCommentCountChangeRef = useRef(onCommentCountChange);
     const tRef = useRef(t);
     const requestSeqRef = useRef(0);
+    const lastScrolledHashRef = useRef<string>("");
 
     useEffect(() => {
         onCommentCountChangeRef.current = onCommentCountChange;
@@ -198,6 +201,41 @@ export function EntityCommentSection({
             requestSeqRef.current += 1;
         };
     }, [loadComments]);
+
+    useEffect(() => {
+        if (typeof window === "undefined") return;
+        const syncHash = () => {
+            const match = /^#comment-(\d+)$/.exec(window.location.hash);
+            setHighlightedCommentId(match ? Number(match[1]) : null);
+            lastScrolledHashRef.current = "";
+        };
+        syncHash();
+        window.addEventListener("hashchange", syncHash);
+        return () => window.removeEventListener("hashchange", syncHash);
+    }, []);
+
+    useEffect(() => {
+        if (typeof window === "undefined" || loading) return;
+        const hash = window.location.hash;
+        if (!hash || lastScrolledHashRef.current === hash) return;
+
+        if (/^#comment-\d+$/.test(hash)) {
+            const targetEl = document.getElementById(hash.slice(1));
+            if (targetEl) {
+                lastScrolledHashRef.current = hash;
+                requestAnimationFrame(() => {
+                    targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                });
+                return;
+            }
+        }
+        if (hash === "#community-comments" || /^#comment-\d+$/.test(hash)) {
+            lastScrolledHashRef.current = hash;
+            requestAnimationFrame(() => {
+                sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+            });
+        }
+    }, [loading, comments]);
 
     const insertAtCursor = useCallback((token: string) => {
         const el = textareaRef.current;
@@ -516,9 +554,11 @@ export function EntityCommentSection({
         return (
             <div
                 key={comment.id}
+                id={`comment-${comment.id}`}
                 className={cn(
-                    "rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest p-3.5",
+                    "scroll-mt-24 rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest p-3.5 transition-shadow",
                     isReply && "bg-surface-container/50 p-3",
+                    highlightedCommentId === comment.id && "border-primary/70 ring-2 ring-primary/25",
                 )}
             >
                 <div className="flex items-start justify-between gap-2">
@@ -680,7 +720,7 @@ export function EntityCommentSection({
     }));
 
     return (
-        <section className={cn("space-y-4", className)}>
+        <section ref={sectionRef} className={cn("space-y-4", className)}>
             {/* Header & filters */}
             <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">

@@ -771,6 +771,16 @@ export const zhTWPagePrimary = {
             markAllRead: "全部已讀",
             emptyTitle: "尚無通知",
             emptyDesc: "有新的回覆、按讚或審核通知時會顯示在這裡。",
+            emptyCommentsDesc: "暫時還沒有回覆或留言通知。",
+            emptyLikesDesc: "暫時還沒有按讚通知。",
+            emptySystemDesc: "暫時還沒有系統或審核通知。",
+            unreadBadge: "未讀",
+            tabs: {
+                all: "全部",
+                comments: "留言",
+                likes: "按讚",
+                system: "系統",
+            },
             types: {
                 reply_post: "{actor} 回覆了你的貼文",
                 reply_comment: "{actor} 回覆了你的留言",
