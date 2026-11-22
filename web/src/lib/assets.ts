@@ -373,8 +373,11 @@ export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = f
 }
 
 // Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
-export function getBondsHonorWordUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
-    const name = `${assetbundleName}_01`;
+// The word has one bundle per rarity: the game loads `{word}_{rarity + 1:00}` (low → _01 … highest → _04).
+const BONDS_HONOR_WORD_RARITY_SUFFIX: Record<string, string> = { low: "01", middle: "02", high: "03", highest: "04" };
+
+export function getBondsHonorWordUrl(assetbundleName: string, rarity: string = "low", source: AssetSourceType = "main-jp"): string {
+    const name = `${assetbundleName}_${BONDS_HONOR_WORD_RARITY_SUFFIX[rarity] ?? "01"}`;
     return buildImageAssetUrl(source, `bonds_honor/word/${name}/${name}`);
 }
 
