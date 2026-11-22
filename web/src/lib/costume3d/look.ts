@@ -435,7 +435,7 @@ export interface BorrowedVariant {
 
 /**
  * The look of `costume` in `colorId` for the role of `catalog`: its own when it has one (as the
- * document gives it), else (cross-role) the body of the role whose figure is nearest — of the
+ * document gives it, in that colour, else in its first), else (cross-role) the body of the role whose figure is nearest — of the
  * colour's looks, else of the costume's — worn with the role's own face, default hair and motions,
  * and the costume's accessory when the role can wear it.
  */
@@ -443,7 +443,8 @@ export function costumeVariant(
     costume: Costume3dCostume, catalog: Costume3dCatalog, colorId: number, pool?: Costume3dPool | null,
 ): { variant: Costume3dVariant; from: { characterId: number; unit: string } | null } | null {
     const role = catalog.role;
-    const own = costume.variants.find(entry => entry.role === roleName(role) || (entry.characterId === role.characterId && entry.unit === role.unit));
+    const owns = costume.variants.filter(entry => entry.role === roleName(role) || (entry.characterId === role.characterId && entry.unit === role.unit));
+    const own = owns.find(entry => entry.colorId === colorId) ?? owns[0];
     if (own) return { variant: own, from: null };
     if (!pool) return null;
     const wearer: PoolRole = { ...role };
