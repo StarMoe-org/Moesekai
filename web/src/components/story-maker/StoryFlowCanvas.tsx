@@ -2712,12 +2712,12 @@ export function StoryFlowCanvas({
                         transformOrigin: "0 0",
                     }}
                 >
-                    {/* SVG Explicit Edges Layer (ZERO implicit wires) */}
+                    {/* SVG Explicit Edges Layer (ZERO implicit wires; stays behind node cards) */}
                     <svg
                         width={1}
                         height={1}
                         aria-hidden
-                        className="pointer-events-none absolute left-0 top-0 overflow-visible"
+                        className="pointer-events-none absolute left-0 top-0 z-[1] overflow-visible"
                     >
                         <defs>
                             <marker
@@ -2809,9 +2809,29 @@ export function StoryFlowCanvas({
                                 </g>
                             );
                         })}
+                    </svg>
 
-                        {/* Live Rubber-Band Bezier Curve */}
-                        {rubberBandPath && (
+                    {/* Active Rubber-Band Wire SVG (stays above node cards while actively dragging) */}
+                    {rubberBandPath && (
+                        <svg
+                            width={1}
+                            height={1}
+                            aria-hidden
+                            className="pointer-events-none absolute left-0 top-0 z-[18] overflow-visible"
+                        >
+                            <defs>
+                                <marker
+                                    id={`${markerPrefix}-arrow-rubber`}
+                                    viewBox="0 0 10 10"
+                                    refX="8"
+                                    refY="5"
+                                    markerWidth="7"
+                                    markerHeight="7"
+                                    orient="auto-start-reverse"
+                                >
+                                    <path d="M 0 1.5 L 9 5 L 0 8.5 z" fill="var(--md-sys-color-primary)" />
+                                </marker>
+                            </defs>
                             <path
                                 d={rubberBandPath}
                                 fill="none"
@@ -2824,10 +2844,10 @@ export function StoryFlowCanvas({
                                 strokeWidth={2.75}
                                 strokeDasharray="7 4"
                                 strokeLinecap="round"
-                                markerEnd={`url(#${markerPrefix}-arrow-primary)`}
+                                markerEnd={`url(#${markerPrefix}-arrow-rubber)`}
                             />
-                        )}
-                    </svg>
+                        </svg>
+                    )}
 
                     {/* Draggable Edge Endpoint Handles (Tail / Source & Head / Target) */}
                     {isEdit && renderedEdges.map(({ edge, tailHandlePos, headHandlePos, tone }) => {
@@ -2860,7 +2880,10 @@ export function StoryFlowCanvas({
                                     onPointerUp={event => handleEdgeTailPointerUp(edge, event)}
                                     onPointerCancel={() => setWireDrag(null)}
                                     onClick={event => event.stopPropagation()}
-                                    className="focus-ring pointer-events-auto absolute z-[7] flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing"
+                                    className={cn(
+                                        "focus-ring pointer-events-auto absolute flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing",
+                                        isHot ? "z-[14]" : "z-[4]",
+                                    )}
                                 >
                                     <span
                                         className={cn(
@@ -2883,7 +2906,10 @@ export function StoryFlowCanvas({
                                     onPointerUp={event => handleEdgeHeadPointerUp(edge, event)}
                                     onPointerCancel={() => setWireDrag(null)}
                                     onClick={event => event.stopPropagation()}
-                                    className="focus-ring pointer-events-auto absolute z-[7] flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing"
+                                    className={cn(
+                                        "focus-ring pointer-events-auto absolute flex size-5 -translate-x-1/2 -translate-y-1/2 cursor-grab items-center justify-center rounded-full active:cursor-grabbing",
+                                        isHot ? "z-[14]" : "z-[4]",
+                                    )}
                                 >
                                     <span
                                         className={cn(
@@ -2897,7 +2923,7 @@ export function StoryFlowCanvas({
                         );
                     })}
 
-                    {/* Edge Midpoint Labels & Hover/Selected Quick-Disconnect Controls */}
+                    {/* Edge Midpoint Labels & Hover/Selected Quick-Disconnect Controls (behind cards at rest; elevated on hover/select) */}
                     {renderedEdges.map(({ edge, labelPos, label, tone, visited }) => {
                         const isHot = isEdit && (hoveredEdgeId === edge.id || selectedEdgeId === edge.id);
                         if (!label && !isHot) return null;
@@ -2905,13 +2931,21 @@ export function StoryFlowCanvas({
                         return (
                             <div
                                 key={`edge-pill:${edge.id}`}
+                                title={label || undefined}
                                 onMouseEnter={() => isEdit && setHoveredEdgeId(edge.id)}
                                 onMouseLeave={() => isEdit && setHoveredEdgeId(prev => (prev === edge.id ? null : prev))}
                                 onPointerDown={event => event.stopPropagation()}
+                                onClick={(event) => {
+                                    if (!isEdit) return;
+                                    event.stopPropagation();
+                                    setSelectedEdgeId(prev => (prev === edge.id ? null : edge.id));
+                                }}
                                 onContextMenu={isEdit ? event => openEdgeContextMenu(edge, event) : undefined}
                                 style={{ left: labelPos.x, top: labelPos.y }}
                                 className={cn(
-                                    "pointer-events-auto absolute z-[6] flex max-w-[180px] -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md3-full border shadow-elev-1",
+                                    "pointer-events-auto absolute flex max-w-[180px] -translate-x-1/2 -translate-y-1/2 items-center gap-1 rounded-md3-full border shadow-elev-1",
+                                    isEdit && "cursor-pointer",
+                                    isHot ? "z-[14]" : "z-[2]",
                                     label ? "px-2 py-0.5" : "p-0.5",
                                     visited
                                         ? "border-primary/50 bg-primary-container text-on-primary-container"
@@ -2990,8 +3024,8 @@ export function StoryFlowCanvas({
                                     onDragOver={handleRejectNodeDragOver}
                                     style={{ left: pos.x, top: pos.y }}
                                     className={cn(
-                                        "pointer-events-auto absolute z-[3] w-[196px] rounded-md3-xl border bg-primary text-on-primary shadow-elev-2 transition-shadow",
-                                        isActive ? "border-on-primary ring-2 ring-primary shadow-elev-3" : "border-primary",
+                                        "pointer-events-auto absolute z-[5] w-[196px] rounded-md3-xl border bg-primary text-on-primary shadow-elev-2 transition-shadow",
+                                        isActive ? "z-[8] border-on-primary ring-2 ring-primary shadow-elev-3" : "border-primary",
                                         isDragging && "z-20 shadow-elev-4",
                                     )}
                                 >
@@ -3041,12 +3075,12 @@ export function StoryFlowCanvas({
                                     onDragOver={handleRejectNodeDragOver}
                                     style={{ left: pos.x, top: pos.y }}
                                     className={cn(
-                                        "pointer-events-auto absolute z-[3] w-[216px] rounded-md3-xl border bg-surface-container-high text-on-surface shadow-elev-1 transition-shadow",
-                                        isActive && "border-primary ring-2 ring-primary shadow-elev-2",
+                                        "pointer-events-auto absolute z-[5] w-[216px] rounded-md3-xl border bg-surface-container-high text-on-surface shadow-elev-1 transition-shadow",
+                                        isActive && "z-[8] border-primary ring-2 ring-primary shadow-elev-2",
                                         isVisited && "border-primary/55 bg-primary-container/30",
                                         !isActive && !isVisited && "border-outline-variant/80",
                                         isValidConnectTarget && "cursor-crosshair border-primary ring-2 ring-primary/70",
-                                        isHoveredConnectTarget && "ring-4 ring-primary shadow-elev-4",
+                                        isHoveredConnectTarget && "z-[12] ring-4 ring-primary shadow-elev-4",
                                         !isReachable && !isActive && "opacity-80",
                                         isDragging && "z-20 shadow-elev-4",
                                     )}
@@ -3121,12 +3155,12 @@ export function StoryFlowCanvas({
                                     onDragOver={handleRejectNodeDragOver}
                                     style={{ left: pos.x, top: pos.y }}
                                     className={cn(
-                                        "pointer-events-auto absolute z-[3] w-[272px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
-                                        isActive && "border-primary ring-2 ring-primary shadow-elev-2",
+                                        "pointer-events-auto absolute z-[5] w-[272px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
+                                        isActive && "z-[8] border-primary ring-2 ring-primary shadow-elev-2",
                                         isVisited && "border-primary/55 bg-primary-container/25",
                                         !isActive && !isVisited && "border-tertiary/55",
                                         isValidConnectTarget && "cursor-crosshair border-primary ring-2 ring-primary/70",
-                                        isHoveredConnectTarget && "ring-4 ring-primary shadow-elev-4",
+                                        isHoveredConnectTarget && "z-[12] ring-4 ring-primary shadow-elev-4",
                                         !isReachable && !isActive && "opacity-80",
                                         isDragging && "z-20 shadow-elev-4",
                                     )}
@@ -3257,12 +3291,12 @@ export function StoryFlowCanvas({
                                     onDragOver={handleRejectNodeDragOver}
                                     style={{ left: pos.x, top: pos.y }}
                                     className={cn(
-                                        "pointer-events-auto absolute z-[3] w-[272px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
-                                        isActive && "border-primary ring-2 ring-primary shadow-elev-2",
+                                        "pointer-events-auto absolute z-[5] w-[272px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
+                                        isActive && "z-[8] border-primary ring-2 ring-primary shadow-elev-2",
                                         isVisited && "border-primary/55 bg-primary-container/25",
                                         !isActive && !isVisited && "border-secondary/60",
                                         isValidConnectTarget && "cursor-crosshair border-primary ring-2 ring-primary/70",
-                                        isHoveredConnectTarget && "ring-4 ring-primary shadow-elev-4",
+                                        isHoveredConnectTarget && "z-[12] ring-4 ring-primary shadow-elev-4",
                                         !isReachable && !isActive && "opacity-80",
                                         isDragging && "z-20 shadow-elev-4",
                                     )}
@@ -3413,12 +3447,12 @@ export function StoryFlowCanvas({
                                 }}
                                 style={{ left: pos.x, top: pos.y }}
                                 className={cn(
-                                    "group/scene pointer-events-auto absolute z-[3] w-[292px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
-                                    isActive && "border-primary ring-2 ring-primary shadow-elev-2",
+                                    "group/scene pointer-events-auto absolute z-[5] w-[292px] rounded-md3-xl border bg-surface-card shadow-elev-1 transition-shadow",
+                                    isActive && "z-[8] border-primary ring-2 ring-primary shadow-elev-2",
                                     isVisited && "border-primary/55 bg-primary-container/20",
                                     !isActive && !isVisited && "border-outline-variant/85",
                                     isValidConnectTarget && "cursor-crosshair border-primary ring-2 ring-primary/70",
-                                    isHoveredConnectTarget && "ring-4 ring-primary shadow-elev-4",
+                                    isHoveredConnectTarget && "z-[12] ring-4 ring-primary shadow-elev-4",
                                     !isReachable && !isActive && "opacity-85",
                                     isDragging && "z-20 shadow-elev-4",
                                 )}
