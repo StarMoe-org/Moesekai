@@ -10,8 +10,24 @@
  * upload files. Everything is validated strictly on import and compilation.
  */
 
+import type { UiLocale } from "../lib/i18n/locales.ts";
+
 /** The schema version tag every v2 document carries. */
 export const STORY_SCHEMA_VERSION = "moesekai-story/2" as const;
+
+/** The schema version tag for decoupled story localization packs (`.i18n.json`). */
+export const STORY_I18N_SCHEMA_VERSION = "moesekai-story-i18n/1" as const;
+
+/** The schema version tag for static sidecar custom voice track manifests. */
+export const STORY_VOICE_MANIFEST_SCHEMA_VERSION = "moesekai-story-voice/1" as const;
+
+/** Mandatory provenance level for every story locale text track. */
+export const STORY_TRANSLATION_ORIGINS = ["original", "human", "ai_assisted", "ai_raw"] as const;
+export type StoryTranslationOrigin = (typeof STORY_TRANSLATION_ORIGINS)[number];
+
+/** Provenance origins permitted for non-source locale packs (`original` is strictly reserved for the master source). */
+export const STORY_IMPORTABLE_TRANSLATION_ORIGINS = ["human", "ai_assisted", "ai_raw"] as const;
+export type StoryImportableTranslationOrigin = (typeof STORY_IMPORTABLE_TRANSLATION_ORIGINS)[number];
 
 /** The game servers a story can be set on (those with a published story library). */
 export const STORY_REGIONS = ["jp", "cn", "tw", "kr", "en"] as const;
@@ -362,17 +378,109 @@ export interface StoryEdge {
     toNodeId: string;
 }
 
+// ==================== 4.5 Native Multi-Language Packs & Custom Voice Track Manifest ====================
+
+/** Mandatory transparent provenance metadata attached to every `StoryLocalePack`. */
+export interface StoryTranslationMeta {
+    origin: StoryTranslationOrigin;
+    /** Optional AI model or translator hint (e.g. `"Claude / Gemini"`, `<= 80` chars). */
+    modelHint?: string;
+    /** Optional proofreading / style note (`<= 240` chars). */
+    note?: string;
+    /** Optional ISO 8601 timestamp of last edit. */
+    updatedAt?: string;
+}
+
+/** One translated beat entry in a `StoryLocalePack`, keyed by stable `beat.id`. */
+export interface StoryLocaleBeatEntry {
+    /** 8-char hex hash of the source beat text for incremental outdated detection. */
+    srcHash: string;
+    /** Translated dialogue / narration / telop text (must preserve `{{var}}` placeholders). */
+    body: string;
+    /** Optional localized speaker override when the beat defines custom `speakerName`. */
+    speaker?: string;
+}
+
+/**
+ * Pure-text localization overlay (`moesekai-story-i18n/1`) decoupled from stage/motion/edge logic.
+ * Attached to a `StoryDocument` under `doc.locales[locale]` or exchanged as `.i18n.json`.
+ */
+export interface StoryLocalePack {
+    schema: typeof STORY_I18N_SCHEMA_VERSION;
+    storyId: string;
+    baseRev?: number;
+    locale: UiLocale;
+    translationMeta: StoryTranslationMeta;
+    meta?: {
+        title?: string;
+        summary?: string;
+    };
+    /** Localized cast display names keyed by `cast.key`. */
+    cast?: Record<string, string>;
+    /** Localized scene place banners keyed by `sceneNode.id`. */
+    places?: Record<string, string>;
+    /** Localized beat entries keyed by `beat.id`. */
+    beats: Record<string, StoryLocaleBeatEntry>;
+    /** Localized choice option labels keyed by `choiceNode.id -> option.id`. */
+    choices?: Record<string, Record<string, string>>;
+    /** Localized ending titles/subtitles keyed by `endNode.id`. */
+    ends?: Record<string, { title?: string; subtitle?: string }>;
+}
+
+/** One audio clip entry inside a custom `StoryVoiceManifest` (`moesekai-story-voice/1`). */
+export interface StoryVoiceManifestLine {
+    /** Playable audio URL (`https://`, same-origin `/...`, or relative to `manifest.baseUrl`). */
+    url: string;
+    /** Optional clip duration in milliseconds. */
+    durationMs?: number;
+    /** Optional language of this specific line clip. */
+    locale?: UiLocale;
+    /** Optional speaker display label shown in playback UI. */
+    speaker?: string;
+    /** Optional relative path resolved against `manifest.baseUrl` when `url` is omitted. */
+    objectKey?: string;
+    /** Optional content hash for preload deduplication. */
+    audioHash?: string;
+    /** Optional audio codec tag (e.g. `"opus"`, `"mp3"`). */
+    codec?: string;
+    /** Optional clip file size in bytes. */
+    sizeBytes?: number;
+}
+
+/**
+ * Static sidecar custom voice track manifest (`moesekai-story-voice/1`) keyed by stable `beat.id`.
+ */
+export interface StoryVoiceManifest {
+    schema: typeof STORY_VOICE_MANIFEST_SCHEMA_VERSION;
+    storyId: string;
+    /** Optional track language (`zh-CN`, `zh-TW`, `en-US`, `ja-JP`, `ko-KR`). */
+    locale?: UiLocale;
+    /** Optional human-readable track title or credit. */
+    title?: string;
+    /** Optional base URL for resolving relative `lines[beatId].url` or `objectKey` entries. */
+    baseUrl?: string;
+    /** Optional revision number. */
+    storyRev?: number;
+    /** Optional ISO 8601 timestamp. */
+    generatedAt?: string;
+    lines: Record<string, StoryVoiceManifestLine>;
+}
+
 /** Root `moesekai-story/2` graph document. */
 export interface StoryDocument {
     schema: typeof STORY_SCHEMA_VERSION;
     id: string;
     region: StoryRegion;
+    /** Optional original authoring locale of the master document (`zh-CN`, `ja-JP`, etc.). */
+    sourceLocale?: UiLocale;
     meta: StoryMeta;
     cast: StoryCastMember[];
     variables: StoryVariable[];
     startNodeId: string;
     nodes: Record<string, StoryNode>;
     edges: StoryEdge[];
+    /** Optional decoupled localization overlay packs keyed by `UiLocale`. */
+    locales?: Partial<Record<UiLocale, StoryLocalePack>>;
 }
 
 /** A draft persisted locally in browser IndexedDB (`moesekai-story-maker-v2`). */

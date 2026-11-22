@@ -37,6 +37,7 @@ import {
     type TransitionSlot,
     type VarOp,
 } from "../../types/storyMaker.ts";
+import { SUPPORTED_UI_LOCALES, isUiLocale } from "../i18n/locales.ts";
 import { getNodeOutPorts } from "./document.ts";
 import {
     SLOT_X,
@@ -163,6 +164,9 @@ export function compileStoryGraph(doc: StoryDocument): CompiledStoryProgram {
     }
     if (!(STORY_REGIONS as readonly string[]).includes(doc.region)) {
         addError("regionInvalid", "region", { params: { allowed: STORY_REGIONS.join(", ") } });
+    }
+    if (doc.sourceLocale !== undefined && !isUiLocale(doc.sourceLocale)) {
+        addError("enumInvalid", "sourceLocale", { params: { allowed: SUPPORTED_UI_LOCALES.join(", ") } });
     }
     if (!STORY_ID_PATTERN.test(doc.id)) {
         addError("idInvalid", "id");

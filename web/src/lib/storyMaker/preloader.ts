@@ -16,10 +16,11 @@ import { getAssetLine, type AssetLine } from "@/lib/assets";
 import { fetchLive2DModels } from "@/lib/live2dViewer/client";
 import { live2dSources } from "@/lib/live2dViewer/config";
 import type { Live2DModel } from "@/lib/live2dViewer/models";
-import type { StoryDocument, StoryVoiceRef } from "@/types/storyMaker";
+import type { StoryDocument, StoryVoiceManifest, StoryVoiceRef } from "@/types/storyMaker";
 import {
     storyBackgroundUrl, storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls,
 } from "./assets";
+import { resolveVoiceManifestLineUrl } from "./i18nPack";
 import { decodeStoryAudio, getCachedStoryAudio, getSharedAudioContext } from "./audioCache";
 import { loadStoryUiKit } from "./uiKit";
 
@@ -92,6 +93,8 @@ export interface CollectStoryAssetsOptions {
     libraryBaseUrl?: string;
     /** Optional Live2D model index for exact `bundle` & `motionBundle` resolution. */
     models?: readonly Live2DModel[] | null;
+    /** Optional custom voice track manifest (`moesekai-story-voice/1`) for audio preloading. */
+    voiceManifest?: StoryVoiceManifest | null;
     /** Include the in-game UI Kit in the manifest (default `true`). */
     includeUiKit?: boolean;
 }
@@ -261,6 +264,20 @@ export function collectStoryAssets(
                                     label: beat.voice.voiceId,
                                     urls,
                                     voice: beat.voice,
+                                });
+                            }
+                        }
+                    } else if (options.voiceManifest) {
+                        const trackUrls = resolveVoiceManifestLineUrl(options.voiceManifest, beat.id);
+                        const trackLine = options.voiceManifest.lines[beat.id];
+                        if (trackUrls.length > 0 && trackLine) {
+                            const key = `voice-track|${trackLine.audioHash || trackUrls[0]}`;
+                            if (!voiceSeen.has(key)) {
+                                voiceSeen.add(key);
+                                voices.push({
+                                    kind: "voice",
+                                    label: trackLine.speaker || beat.id,
+                                    urls: trackUrls,
                                 });
                             }
                         }

@@ -11,8 +11,8 @@ import {
     mdAccountTree, mdAutoplay, mdCalculate, mdClose, mdCloseFullscreen, mdCloudDone, mdDashboard,
     mdDownload, mdDragHandle, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen, mdFullscreenExit,
     mdHistory, mdImage, mdInventory2, mdLeftPanelClose, mdLeftPanelOpen, mdMonitoring, mdMusicNote,
-    mdNumbers, mdPermMedia, mdPerson, mdPlayArrowFill, mdReplay, mdSkipNext, mdSkipPrevious,
-    mdSmartDisplay, mdStopFill, mdTag, mdTheaters, mdTimeline, mdVisibility, mdVisibilityOff,
+    mdNumbers, mdPermMedia, mdPerson, mdPlayArrowFill, mdRecordVoiceOver, mdReplay, mdSkipNext, mdSkipPrevious,
+    mdSmartDisplay, mdStopFill, mdTag, mdTheaters, mdTimeline, mdTranslate, mdVisibility, mdVisibilityOff,
     mdVolumeOff, mdVolumeUp, mdWarning,
 } from "@/components/md3/icons";
 import { StoryFlowCanvas } from "@/components/story-maker/StoryFlowCanvas";
@@ -20,10 +20,14 @@ import { useI18n } from "@/contexts/I18nContext";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { getCharacterIconUrl, type AssetLine } from "@/lib/assets";
+import { UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import { live2dSources } from "@/lib/live2dViewer/config";
 import { md3EffectsFast, reducedMotionFade } from "@/lib/motion";
 import { storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls } from "@/lib/storyMaker/assets";
 import { compileStoryGraph, type StoryIR } from "@/lib/storyMaker/compiler";
+import {
+    applyStoryLocaleOverlay, getAvailableStoryLocales, resolveVoiceManifestLineUrl,
+} from "@/lib/storyMaker/i18nPack";
 import { SLOT_X, STORY_FADE_SECONDS, STORY_LIMITS, layoutStageActors } from "@/lib/storyMaker/limits";
 import {
     collectStoryAssets, inspectStoryCacheStatus, preloadStoryAssets,
@@ -31,10 +35,11 @@ import {
 } from "@/lib/storyMaker/preloader";
 import {
     INITIAL_STAGE_STATE, advanceRuntime, applyVarOps, createInitialRuntime, evaluateStageAt,
-    initVariables, interpolateStoryText, type StoryRuntimeFrame,
+    initVariables, interpolateStoryText, localizeRuntimeFrame, type StoryRuntimeFrame,
 } from "@/lib/storyMaker/runtime";
 import type {
-    StoryDocument, StoryEffectColor, StoryStageActorState, StoryStageState, StoryVarValues, StoryVoiceRef,
+    StoryDocument, StoryEffectColor, StoryStageActorState, StoryStageState, StoryVarValues,
+    StoryVoiceManifest, StoryVoiceRef,
 } from "@/types/storyMaker";
 import {
     AssetPreloadDialog, readAutoPreloadPreference, writeAutoPreloadPreference,
@@ -43,6 +48,7 @@ import {
     LivePhasePanel, LivePhaseTelemetry, PHASE_META, getNodeDisplayLabel,
     type ActiveVoiceProgress, type StoryRuntimePhase,
 } from "./LivePhasePanel";
+import { originBadgeTone } from "./StoryI18nDialog";
 import { StoryStageView } from "./StoryStageView";
 import { previewStorySound, useStoryAudio } from "./useStoryAudio";
 import { useStoryModels } from "./useStoryModels";
@@ -88,6 +94,12 @@ export interface StoryPlayerViewProps {
     onLayoutModeChange?: (mode: PlayerLayoutMode) => void;
     /** Web-fullscreen / immersive mode: fills the entire viewport height with zero page chrome. */
     immersive?: boolean;
+    /** Optional initial subtitle locale (falls back to UI locale if available, else story sourceLocale). */
+    initialLocale?: UiLocale | null;
+    /** Optional custom voice track manifest (`moesekai-story-voice/1`) for fallback voice playback. */
+    voiceManifest?: StoryVoiceManifest | null;
+    /** Optional handler to open the Voice Track dialog directly from the player controls. */
+    onOpenVoiceManifest?: () => void;
     /** Optional action rendered on the ending / error card (e.g. Back to editor). */
     endAction?: React.ReactNode;
 }
@@ -422,9 +434,12 @@ export function StoryPlayerView({
     layoutMode,
     onLayoutModeChange,
     immersive = false,
+    initialLocale = null,
+    voiceManifest = null,
+    onOpenVoiceManifest,
     endAction,
 }: StoryPlayerViewProps) {
-    const { t } = useI18n();
+    const { t, locale: uiLocale } = useI18n();
     const reduced = useReducedMotion();
     const workspaceRef = useRef<HTMLDivElement>(null);
     const topRowRef = useRef<HTMLDivElement>(null);
@@ -456,8 +471,48 @@ export function StoryPlayerView({
     const draggingSplitRef = useRef(false);
     const draggingLeftRef = useRef(false);
 
-    const program = useMemo(() => compileStoryGraph(doc), [doc]);
+    const availableLocales = useMemo(() => getAvailableStoryLocales(doc), [doc]);
+    const [selectedSubtitleLocale, setSelectedSubtitleLocale] = useState<UiLocale>(() => {
+        if (initialLocale && availableLocales.some(item => item.locale === initialLocale)) {
+            return initialLocale;
+        }
+        if (availableLocales.some(item => item.locale === uiLocale)) {
+            return uiLocale;
+        }
+        return availableLocales[0]?.locale ?? "zh-CN";
+    });
+    const [prevInitialLocale, setPrevInitialLocale] = useState(initialLocale);
+    if (initialLocale !== prevInitialLocale) {
+        setPrevInitialLocale(initialLocale);
+        if (initialLocale && availableLocales.some(item => item.locale === initialLocale)) {
+            setSelectedSubtitleLocale(initialLocale);
+        }
+    }
+    const effectiveSubtitleLocale: UiLocale = availableLocales.some(item => item.locale === selectedSubtitleLocale)
+        ? selectedSubtitleLocale
+        : (availableLocales[0]?.locale ?? "zh-CN");
+    const activeLocaleInfo = availableLocales.find(item => item.locale === effectiveSubtitleLocale) ?? availableLocales[0];
+
+    const localizedDoc = useMemo(
+        () => applyStoryLocaleOverlay(doc, effectiveSubtitleLocale),
+        [doc, effectiveSubtitleLocale],
+    );
+    const program = useMemo(() => compileStoryGraph(localizedDoc), [localizedDoc]);
     const hasCompileErrors = program.errors.length > 0;
+
+    const localizedDocRef = useRef(localizedDoc);
+    const programRef = useRef(program);
+    const voiceManifestRef = useRef(voiceManifest);
+    useEffect(() => {
+        localizedDocRef.current = localizedDoc;
+        programRef.current = program;
+        voiceManifestRef.current = voiceManifest;
+    }, [localizedDoc, program, voiceManifest]);
+
+    const hasVoiceTrackManifest = Boolean(voiceManifest && Object.keys(voiceManifest.lines).length > 0);
+    const voiceTrackBadgeLabel = voiceManifest?.locale
+        ? `${t("page.storyMaker.voiceTrack.badge")} · ${UI_LOCALE_LABELS[voiceManifest.locale]}`
+        : t("page.storyMaker.voiceTrack.badge");
 
     const { models } = useStoryModels(doc.region);
     const modelsRef = useRef(models);
@@ -498,8 +553,8 @@ export function StoryPlayerView({
     }, [unlockAudio]);
 
     const assetManifest = useMemo(
-        () => collectStoryAssets(doc, { assetSource: preloadSource, models }),
-        [doc, preloadSource, models],
+        () => collectStoryAssets(doc, { assetSource: preloadSource, models, voiceManifest }),
+        [doc, preloadSource, models, voiceManifest],
     );
 
     /** First SceneNode (and optional beat) referencing each asset, for click-to-jump in Media Bin. */
@@ -730,7 +785,7 @@ export function StoryPlayerView({
     useEffect(() => {
         const enabled = readAutoPreloadPreference();
         let cancelled = false;
-        void inspectStoryCacheStatus(doc, { assetSource: preloadSource, models: modelsRef.current }).then((status) => {
+        void inspectStoryCacheStatus(doc, { assetSource: preloadSource, models: modelsRef.current, voiceManifest }).then((status) => {
             if (cancelled) return;
             setAutoPreload(enabled);
             setCacheReady(status.hasLocalCache);
@@ -746,6 +801,7 @@ export function StoryPlayerView({
             void preloadStoryAssets(doc, {
                 assetSource: preloadSource,
                 models: modelsRef.current,
+                voiceManifest,
                 signal: controller.signal,
                 onProgress: (next) => {
                     if (cancelled || preloadAbortRef.current !== controller) return;
@@ -773,7 +829,7 @@ export function StoryPlayerView({
                 preloadAbortRef.current = null;
             }
         };
-    }, [doc, preloadSource]);
+    }, [doc, preloadSource, voiceManifest]);
 
     const latestItem = history[history.length - 1] ?? null;
     const activeFrame = latestItem?.frame ?? null;
@@ -820,16 +876,17 @@ export function StoryPlayerView({
         setHistory(nextHistory);
 
         if (instant || frame.executedInstructions.length === 0) {
-            setStageState(frame.stage);
-            setLiveVariables(frame.variables);
-            setTypedCount(frame.stage.dialogue?.body.length ?? 0);
+            const finalFrame = localizeRuntimeFrame(frame, localizedDocRef.current);
+            setStageState(finalFrame.stage);
+            setLiveVariables(finalFrame.variables);
+            setTypedCount(finalFrame.stage.dialogue?.body.length ?? 0);
             setRunning(false);
             syncBgm(
-                frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, doc.region, line) : null,
-                frame.stage.bgm.volume,
+                finalFrame.stage.bgm.name ? storyBgmUrl(finalFrame.stage.bgm.name, doc.region, line) : null,
+                finalFrame.stage.bgm.volume,
             );
-            void applyStage(frame.stage, { instant: true });
-            if (frame.stoppedReason !== "blocking") setAutoPlay(false);
+            void applyStage(finalFrame.stage, { instant: true });
+            if (finalFrame.stoppedReason !== "blocking") setAutoPlay(false);
             return;
         }
 
@@ -839,7 +896,8 @@ export function StoryPlayerView({
 
         for (const inst of frame.executedInstructions) {
             if (playGenRef.current !== generation) return;
-            const stepped = applyInstructionToStage(stage, vars, inst, doc);
+            const activeDoc = localizedDocRef.current;
+            const stepped = applyInstructionToStage(stage, vars, inst, activeDoc);
             stage = stepped.stage;
             vars = stepped.variables;
 
@@ -914,19 +972,30 @@ export function StoryPlayerView({
                     setStageState(stage);
                     setLiveVariables(vars);
                     void applyStage(stage, { instant: false });
-                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, doc, vars);
+                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, activeDoc, vars);
                     setTypedCount(reduced ? body.length : 0);
                     if (beat.se) {
-                        playSe(storySeCandidateUrls(beat.se, doc.region, line), beat.seVolume);
+                        playSe(storySeCandidateUrls(beat.se, activeDoc.region, line), beat.seVolume);
                     }
                     if (beat.voice && beat.voice.scenarioId && beat.voice.voiceId) {
-                        const urls = storyVoiceCandidateUrls(beat.voice, doc.region, line);
+                        const urls = storyVoiceCandidateUrls(beat.voice, activeDoc.region, line);
                         startVoice(
                             urls,
                             { label: beat.voice.voiceId, start: beat.voice.start, end: beat.voice.end },
                             generation,
                             true,
                         );
+                    } else if (voiceManifestRef.current) {
+                        const trackUrls = resolveVoiceManifestLineUrl(voiceManifestRef.current, beat.id);
+                        const trackLine = voiceManifestRef.current.lines[beat.id];
+                        if (trackUrls.length > 0 && trackLine) {
+                            startVoice(
+                                trackUrls,
+                                { label: trackLine.speaker || beat.id },
+                                generation,
+                                true,
+                            );
+                        }
                     }
                     break;
                 }
@@ -955,19 +1024,25 @@ export function StoryPlayerView({
         }
 
         if (playGenRef.current !== generation) return;
-        setStageState(frame.stage);
-        setLiveVariables(frame.variables);
+        const finalFrame = localizeRuntimeFrame(frame, localizedDocRef.current);
+        setStageState(finalFrame.stage);
+        setLiveVariables(finalFrame.variables);
+        if (finalFrame.stage.dialogue && finalFrame.stage.dialogue.body !== stage.dialogue?.body) {
+            setTypedCount(reduced ? finalFrame.stage.dialogue.body.length : 0);
+        }
         syncBgm(
-            frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, doc.region, line) : null,
-            frame.stage.bgm.volume,
+            finalFrame.stage.bgm.name ? storyBgmUrl(finalFrame.stage.bgm.name, doc.region, line) : null,
+            finalFrame.stage.bgm.volume,
         );
         setEffectActive(false);
         setRunning(false);
-        if (frame.stoppedReason !== "blocking") setAutoPlay(false);
-    }, [applyStage, doc, line, playSe, reduced, setStageTalking, shakeStage, startVoice, stopActiveVoice, syncBgm, waitMs]);
+        if (finalFrame.stoppedReason !== "blocking") setAutoPlay(false);
+    }, [applyStage, doc.region, line, playSe, reduced, setStageTalking, shakeStage, startVoice, stopActiveVoice, syncBgm, waitMs]);
 
     /** Starts or restarts playback from `targetNodeId` (defaults to `doc.startNodeId`). */
     const startPlaybackFrom = useCallback((targetNodeId?: string | null) => {
+        const currentDoc = localizedDocRef.current;
+        const currentProgram = programRef.current;
         voiceTokenRef.current += 1;
         stopBinPreview();
         stopAll();
@@ -979,32 +1054,41 @@ export function StoryPlayerView({
         setUiHidden(false);
         setMenuOpen(false);
 
-        if (program.errors.length > 0) {
+        if (currentProgram.errors.length > 0) {
             playGenRef.current += 1;
             setHistory([]);
             setStageState(INITIAL_STAGE_STATE);
-            setLiveVariables(initVariables(doc));
+            setLiveVariables(initVariables(currentDoc));
             setRunning(false);
             return;
         }
 
-        const resolvedNodeId = targetNodeId && program.nodeEntryPc[targetNodeId] !== undefined
+        const resolvedNodeId = targetNodeId && currentProgram.nodeEntryPc[targetNodeId] !== undefined
             ? targetNodeId
-            : doc.startNodeId;
-        const initialFrame = createInitialRuntime(program, resolvedNodeId);
-        const seed = resolvedNodeId !== doc.startNodeId
-            ? evaluateStageAt(doc, resolvedNodeId)
-            : { stage: INITIAL_STAGE_STATE, variables: initVariables(doc) };
+            : currentDoc.startNodeId;
+        const initialFrame = createInitialRuntime(currentProgram, resolvedNodeId);
+        const seed = resolvedNodeId !== currentDoc.startNodeId
+            ? evaluateStageAt(currentDoc, resolvedNodeId)
+            : { stage: INITIAL_STAGE_STATE, variables: initVariables(currentDoc) };
         void executeFrame([{ frame: initialFrame }], seed.stage, seed.variables, initialFrame, false);
-    }, [doc, executeFrame, program, setStageTalking, stopAll, stopBinPreview]);
+    }, [executeFrame, setStageTalking, stopAll, stopBinPreview]);
 
     const restart = useCallback(() => {
         startPlaybackFrom(doc.startNodeId);
     }, [doc.startNodeId, startPlaybackFrom]);
 
+    // Restart playback only when the underlying story structure or start node changes (NOT on subtitle locale toggle or pack attachment!).
+    const structuralDocKey = useMemo(() => (
+        `${doc.id}|${doc.region}|${doc.startNodeId}|${Object.keys(doc.nodes).length}|${doc.edges.length}`
+    ), [doc.edges.length, doc.id, doc.nodes, doc.region, doc.startNodeId]);
+    const startPlaybackFromRef = useRef(startPlaybackFrom);
+    useEffect(() => {
+        startPlaybackFromRef.current = startPlaybackFrom;
+    }, [startPlaybackFrom]);
+
     useEffect(() => {
         const timer = window.setTimeout(() => {
-            startPlaybackFrom(startNodeId);
+            startPlaybackFromRef.current(startNodeId);
         }, 0);
         return () => {
             window.clearTimeout(timer);
@@ -1012,13 +1096,76 @@ export function StoryPlayerView({
             voiceTokenRef.current += 1;
             skipWaitRef.current?.();
         };
-    }, [startNodeId, startPlaybackFrom]);
+    }, [structuralDocKey, startNodeId]);
+
+    /** Re-localize active dialogue, stage banner, choices, ending, and backlog seamlessly when switching subtitle language or attaching a pack. */
+    const lastAppliedDocRef = useRef<StoryDocument>(localizedDoc);
+    useEffect(() => {
+        if (lastAppliedDocRef.current === localizedDoc) return;
+        lastAppliedDocRef.current = localizedDoc;
+        const current = historyRef.current;
+        if (current.length === 0) return;
+        const nextHistory = current.map(item => ({
+            ...item,
+            frame: localizeRuntimeFrame(item.frame, localizedDoc),
+        }));
+        const latest = nextHistory[nextHistory.length - 1]?.frame;
+        setHistory(nextHistory);
+        if (latest) {
+            setStageState(latest.stage);
+            setTypedCount(latest.stage.dialogue?.body.length ?? 0);
+        }
+    }, [localizedDoc]);
 
     /** Re-sync actors when the Live2D stage becomes ready or the model list finishes loading. */
     useEffect(() => {
         if (stagePhase.kind !== "ready" || !models) return;
         void applyStage(stageStateRef.current, { instant: true });
     }, [applyStage, stagePhase.kind, models]);
+
+    /** When a new voice manifest is mounted mid-scene, immediately play the active talk beat's voice clip. */
+    const lastMountedManifestRef = useRef<StoryVoiceManifest | null>(voiceManifest);
+    const startVoiceRef = useRef(startVoice);
+    const stopActiveVoiceRef = useRef(stopActiveVoice);
+    const unlockAudioRef = useRef(unlockAudio);
+    useEffect(() => {
+        startVoiceRef.current = startVoice;
+        stopActiveVoiceRef.current = stopActiveVoice;
+        unlockAudioRef.current = unlockAudio;
+    }, [startVoice, stopActiveVoice, unlockAudio]);
+
+    useEffect(() => {
+        if (lastMountedManifestRef.current === voiceManifest) return;
+        const previous = lastMountedManifestRef.current;
+        lastMountedManifestRef.current = voiceManifest;
+        if (!voiceManifest) {
+            if (!previous) return;
+            const stopTimer = window.setTimeout(() => {
+                stopActiveVoiceRef.current();
+            }, 0);
+            return () => window.clearTimeout(stopTimer);
+        }
+        const timer = window.setTimeout(() => {
+            const stepId = stageStateRef.current.dialogue?.stepId;
+            if (!stepId) return;
+            let matchedBeat: { voice?: StoryVoiceRef } | null = null;
+            for (const node of Object.values(localizedDocRef.current.nodes)) {
+                if (node.type !== "scene") continue;
+                const found = node.beats.find(beat => beat.kind === "talk" && beat.id === stepId);
+                if (found && found.kind === "talk") {
+                    matchedBeat = found;
+                    break;
+                }
+            }
+            if (!matchedBeat || matchedBeat.voice?.voiceId) return;
+            const trackUrls = resolveVoiceManifestLineUrl(voiceManifest, stepId);
+            const trackLine = voiceManifest.lines[stepId];
+            if (trackUrls.length === 0 || !trackLine) return;
+            unlockAudioRef.current();
+            startVoiceRef.current(trackUrls, { label: trackLine.speaker || stepId }, playGenRef.current, true);
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [voiceManifest]);
 
     /** Typewriter timer for the active dialogue line. */
     useEffect(() => {
@@ -1366,33 +1513,40 @@ export function StoryPlayerView({
             frame.executedInstructions.forEach((inst, instIdx) => {
                 if (inst.op === "talk") {
                     const beat = inst.beat;
-                    const member = beat.speakerKey ? doc.cast.find(item => item.key === beat.speakerKey) : undefined;
+                    const member = beat.speakerKey ? localizedDoc.cast.find(item => item.key === beat.speakerKey) : undefined;
                     const speaker = frame.stage.dialogue?.stepId === beat.id
                         ? frame.stage.dialogue.speaker
                         : beat.speakerName
-                            ? interpolateStoryText(beat.speakerName, doc, frame.variables)
+                            ? interpolateStoryText(beat.speakerName, localizedDoc, frame.variables)
                             : (member?.name ?? "");
                     const body = frame.stage.dialogue?.stepId === beat.id
                         ? frame.stage.dialogue.body
-                        : interpolateStoryText(beat.body, doc, frame.variables);
+                        : interpolateStoryText(beat.body, localizedDoc, frame.variables);
                     const hasVoice = Boolean(beat.voice && beat.voice.scenarioId && beat.voice.voiceId);
-                    const voiceUrls = hasVoice && beat.voice
-                        ? storyVoiceCandidateUrls(beat.voice, doc.region, line)
+                    const officialUrls = hasVoice && beat.voice
+                        ? storyVoiceCandidateUrls(beat.voice, localizedDoc.region, line)
                         : [];
+                    const manifestUrls = !hasVoice && voiceManifest
+                        ? resolveVoiceManifestLineUrl(voiceManifest, beat.id)
+                        : [];
+                    const voiceUrls = officialUrls.length > 0 ? officialUrls : manifestUrls;
+                    const voiceLabel = hasVoice
+                        ? beat.voice?.voiceId
+                        : (voiceManifest?.lines[beat.id]?.speaker || (manifestUrls.length > 0 ? beat.id : undefined));
                     items.push({
                         key: `${frameIndex}-${instIdx}-${beat.id}`,
                         kind: "talk",
                         speaker,
                         body,
                         voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined,
-                        voiceStart: beat.voice?.start,
-                        voiceEnd: beat.voice?.end,
-                        voiceLabel: beat.voice?.voiceId,
+                        voiceStart: hasVoice ? beat.voice?.start : undefined,
+                        voiceEnd: hasVoice ? beat.voice?.end : undefined,
+                        voiceLabel,
                     });
                 } else if (inst.op === "narration") {
                     const body = frame.stage.narration?.stepId === inst.beat.id
                         ? frame.stage.narration.body
-                        : interpolateStoryText(inst.beat.body, doc, frame.variables);
+                        : interpolateStoryText(inst.beat.body, localizedDoc, frame.variables);
                     items.push({
                         key: `${frameIndex}-${instIdx}-${inst.beat.id}`,
                         kind: "narration",
@@ -1401,7 +1555,7 @@ export function StoryPlayerView({
                 } else if (inst.op === "telop") {
                     const body = frame.stage.telop?.stepId === inst.beat.id
                         ? frame.stage.telop.body
-                        : interpolateStoryText(inst.beat.text, doc, frame.variables);
+                        : interpolateStoryText(inst.beat.text, localizedDoc, frame.variables);
                     items.push({
                         key: `${frameIndex}-${instIdx}-${inst.beat.id}`,
                         kind: "telop",
@@ -1414,9 +1568,9 @@ export function StoryPlayerView({
             }
         });
         return items;
-    }, [doc, history, line]);
+    }, [history, line, localizedDoc, voiceManifest]);
 
-    const activeNode = activeFrame?.nodeId ? doc.nodes[activeFrame.nodeId] ?? null : null;
+    const activeNode = activeFrame?.nodeId ? localizedDoc.nodes[activeFrame.nodeId] ?? null : null;
     const activeNodeLabel = activeNode ? getNodeDisplayLabel(activeNode, t) : null;
     const activeBeatProgress = useMemo(() => {
         if (!activeNode || activeNode.type !== "scene" || !activeFrame?.beatId) return null;
@@ -1743,7 +1897,7 @@ export function StoryPlayerView({
                         {audioItems.map((item) => {
                             const audioKey = item.voice
                                 ? `voice:${voiceDedupeKey(item.voice, doc.region)}`
-                                : `${item.kind}:${item.label}`;
+                                : `${item.kind}:${item.label}:${item.urls[0] ?? ""}`;
                             const isPreviewing = previewingAudioKey === audioKey;
                             const inUse = (item.kind === "bgm" && stageState.bgm.name === item.label)
                                 || (item.kind === "voice" && voiceProgress?.label === item.label);
@@ -1976,7 +2130,7 @@ export function StoryPlayerView({
                                 {leftTab === "assets" && renderMediaBin()}
                                 {leftTab === "phase" && (
                                     <LivePhaseTelemetry
-                                        doc={doc}
+                                        doc={localizedDoc}
                                         program={program}
                                         frame={activeFrame}
                                         runtimePhase={runtimePhase}
@@ -2124,7 +2278,7 @@ export function StoryPlayerView({
                             >
                                 <StoryStageView
                                     key="player-stage-host"
-                                    doc={doc}
+                                    doc={localizedDoc}
                                     state={displayState}
                                     line={line}
                                     hostRef={stageHostRef}
@@ -2280,6 +2434,82 @@ export function StoryPlayerView({
                                                             {Math.round((muted ? 0 : volume) * 100)}%
                                                         </span>
                                                     </div>
+
+                                                    {(availableLocales.length > 1 || hasVoiceTrackManifest || onOpenVoiceManifest) && (
+                                                        <div className="mt-2.5 space-y-2 rounded-md3-md bg-surface-container/60 p-2.5">
+                                                            {availableLocales.length > 1 && (
+                                                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                    <span className="inline-flex items-center gap-1.5 type-label-m text-on-surface">
+                                                                        <Icon path={mdTranslate} size={15} className="text-primary" />
+                                                                        <span>{t("page.storyMaker.i18n.subtitleLocaleLabel")}</span>
+                                                                    </span>
+                                                                    <div className="flex flex-wrap items-center gap-1.5">
+                                                                        <select
+                                                                            aria-label={t("page.storyMaker.i18n.subtitleLocaleLabel")}
+                                                                            value={effectiveSubtitleLocale}
+                                                                            onChange={event => setSelectedSubtitleLocale(event.target.value as UiLocale)}
+                                                                            className="focus-ring h-7 rounded-md3-sm border border-outline-variant/60 bg-surface-container-low px-2 type-label-s text-on-surface"
+                                                                        >
+                                                                            {availableLocales.map(item => (
+                                                                                <option key={item.locale} value={item.locale}>
+                                                                                    {UI_LOCALE_LABELS[item.locale]} ({t(`page.storyMaker.i18n.origin.${item.origin}`)})
+                                                                                </option>
+                                                                            ))}
+                                                                        </select>
+                                                                        {activeLocaleInfo && (
+                                                                            <span
+                                                                                title={[activeLocaleInfo.modelHint, activeLocaleInfo.note].filter(Boolean).join(" · ") || undefined}
+                                                                                className={cn(
+                                                                                    "rounded-md3-full px-2 py-0.5 type-label-s",
+                                                                                    originBadgeTone(activeLocaleInfo.origin),
+                                                                                )}
+                                                                            >
+                                                                                {t(`page.storyMaker.i18n.origin.${activeLocaleInfo.origin}`)}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
+                                                            {hasVoiceTrackManifest ? (
+                                                                onOpenVoiceManifest ? (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            setMenuOpen(false);
+                                                                            onOpenVoiceManifest();
+                                                                        }}
+                                                                        className="state-layer focus-ring flex w-full cursor-pointer items-center justify-between gap-2 rounded-md3-sm bg-tertiary-container/80 px-2.5 py-1.5 text-left type-label-s text-on-tertiary-container"
+                                                                    >
+                                                                        <span className="inline-flex items-center gap-1.5">
+                                                                            <Icon path={mdRecordVoiceOver} size={14} className="shrink-0" />
+                                                                            <span>{voiceTrackBadgeLabel}</span>
+                                                                        </span>
+                                                                        <span className="shrink-0 underline">
+                                                                            {t("page.storyMaker.voiceTrack.manageButton")}
+                                                                        </span>
+                                                                    </button>
+                                                                ) : (
+                                                                    <div className="flex items-center gap-1.5 rounded-md3-sm bg-tertiary-container/80 px-2.5 py-1 type-label-s text-on-tertiary-container">
+                                                                        <Icon path={mdRecordVoiceOver} size={14} className="shrink-0" />
+                                                                        <span>{voiceTrackBadgeLabel}</span>
+                                                                    </div>
+                                                                )
+                                                            ) : onOpenVoiceManifest ? (
+                                                                <Button
+                                                                    size="xs"
+                                                                    variant="tonal"
+                                                                    icon={mdRecordVoiceOver}
+                                                                    fullWidth
+                                                                    onClick={() => {
+                                                                        setMenuOpen(false);
+                                                                        onOpenVoiceManifest();
+                                                                    }}
+                                                                >
+                                                                    {t("page.storyMaker.voiceTrack.action")}
+                                                                </Button>
+                                                            ) : null}
+                                                        </div>
+                                                    )}
                                                 </div>
                                             </motion.div>
                                         )}
@@ -2554,6 +2784,59 @@ export function StoryPlayerView({
                                 </div>
 
                                 <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                                    {availableLocales.length > 1 && (
+                                        <div className="inline-flex items-center gap-1 rounded-md3-full bg-surface-container-high px-2 py-0.5">
+                                            <Icon path={mdTranslate} size={14} className="shrink-0 text-primary" />
+                                            <select
+                                                aria-label={t("page.storyMaker.i18n.subtitleLocaleLabel")}
+                                                value={effectiveSubtitleLocale}
+                                                onChange={event => setSelectedSubtitleLocale(event.target.value as UiLocale)}
+                                                className="focus-ring bg-transparent type-label-s text-on-surface"
+                                            >
+                                                {availableLocales.map(item => (
+                                                    <option key={item.locale} value={item.locale}>
+                                                        {UI_LOCALE_LABELS[item.locale]}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            {activeLocaleInfo && (
+                                                <span
+                                                    title={[activeLocaleInfo.modelHint, activeLocaleInfo.note].filter(Boolean).join(" · ") || undefined}
+                                                    className={cn(
+                                                        "shrink-0 rounded-md3-full px-1.5 py-0.5 type-label-s",
+                                                        originBadgeTone(activeLocaleInfo.origin),
+                                                    )}
+                                                >
+                                                    {t(`page.storyMaker.i18n.origin.${activeLocaleInfo.origin}`)}
+                                                </span>
+                                            )}
+                                        </div>
+                                    )}
+                                    {hasVoiceTrackManifest ? (
+                                        onOpenVoiceManifest ? (
+                                            <button
+                                                type="button"
+                                                onClick={onOpenVoiceManifest}
+                                                title={t("page.storyMaker.voiceTrack.manageButton")}
+                                                className="state-layer focus-ring inline-flex cursor-pointer items-center gap-1 rounded-md3-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container"
+                                            >
+                                                <Icon path={mdRecordVoiceOver} size={13} className="shrink-0" />
+                                                <span>{voiceTrackBadgeLabel}</span>
+                                            </button>
+                                        ) : (
+                                            <span className="inline-flex items-center gap-1 rounded-md3-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                                                <Icon path={mdRecordVoiceOver} size={13} className="shrink-0" />
+                                                <span>{voiceTrackBadgeLabel}</span>
+                                            </span>
+                                        )
+                                    ) : onOpenVoiceManifest ? (
+                                        <IconButton
+                                            size="xs"
+                                            icon={mdRecordVoiceOver}
+                                            label={t("page.storyMaker.voiceTrack.action")}
+                                            onClick={onOpenVoiceManifest}
+                                        />
+                                    ) : null}
                                     {audioBlocked && !emptyStory && !ended && !hasCompileErrors && (
                                         <Button
                                             size="xs"
@@ -2739,7 +3022,7 @@ export function StoryPlayerView({
                             <div className="min-w-0 p-3">
                                 {drawerTab === "phase" && (
                                     <LivePhasePanel
-                                        doc={doc}
+                                        doc={localizedDoc}
                                         program={program}
                                         frame={activeFrame}
                                         runtimePhase={runtimePhase}
@@ -2764,6 +3047,7 @@ export function StoryPlayerView({
                 doc={doc}
                 assetSource={preloadSource}
                 models={models}
+                voiceManifest={voiceManifest}
                 autoPreload={autoPreload}
                 onAutoPreloadChange={handleAutoPreloadChange}
                 onComplete={handlePreloadComplete}

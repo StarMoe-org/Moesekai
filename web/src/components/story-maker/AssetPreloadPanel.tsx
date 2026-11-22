@@ -15,7 +15,7 @@ import {
     collectStoryAssets, inspectStoryCacheStatus, preloadStoryAssets,
     type StoryCacheStatus, type StoryPreloadCategory, type StoryPreloadProgress,
 } from "@/lib/storyMaker/preloader";
-import type { StoryDocument } from "@/types/storyMaker";
+import type { StoryDocument, StoryVoiceManifest } from "@/types/storyMaker";
 
 export const STORY_AUTO_PRELOAD_STORAGE_KEY = "moesekai.storyMaker.autoPreload";
 
@@ -70,6 +70,7 @@ export interface AssetPreloadDialogProps {
     doc: StoryDocument;
     assetSource: AssetSourceType | AssetLine;
     models?: readonly Live2DModel[] | null;
+    voiceManifest?: StoryVoiceManifest | null;
     autoPreload?: boolean;
     onAutoPreloadChange?: (enabled: boolean) => void;
     onComplete?: (progress: StoryPreloadProgress) => void;
@@ -97,12 +98,14 @@ const CATEGORY_META: readonly {
 interface ScopedPreloadState {
     doc: StoryDocument;
     assetSource: AssetSourceType | AssetLine;
+    voiceManifest?: StoryVoiceManifest | null;
     progress: StoryPreloadProgress;
 }
 
 interface ScopedCacheState {
     doc: StoryDocument;
     assetSource: AssetSourceType | AssetLine;
+    voiceManifest?: StoryVoiceManifest | null;
     status: StoryCacheStatus;
 }
 
@@ -112,6 +115,7 @@ export function AssetPreloadDialog({
     doc,
     assetSource,
     models,
+    voiceManifest,
     autoPreload,
     onAutoPreloadChange,
     onComplete,
@@ -128,8 +132,8 @@ export function AssetPreloadDialog({
     const effectiveAutoPreload = autoPreload ?? storedAuto;
 
     const manifest = useMemo(
-        () => collectStoryAssets(doc, { assetSource, models }),
-        [doc, assetSource, models],
+        () => collectStoryAssets(doc, { assetSource, models, voiceManifest }),
+        [doc, assetSource, models, voiceManifest],
     );
 
     const [scopedCache, setScopedCache] = useState<ScopedCacheState | null>(null);
@@ -152,24 +156,30 @@ export function AssetPreloadDialog({
 
     const refreshCacheStatus = useCallback(() => {
         let cancelled = false;
-        void inspectStoryCacheStatus(doc, { assetSource, models }).then((status) => {
+        void inspectStoryCacheStatus(doc, { assetSource, models, voiceManifest }).then((status) => {
             if (!cancelled && mountedRef.current) {
-                setScopedCache({ doc, assetSource, status });
+                setScopedCache({ doc, assetSource, voiceManifest, status });
             }
         });
         return () => { cancelled = true; };
-    }, [doc, assetSource, models]);
+    }, [doc, assetSource, models, voiceManifest]);
 
     useEffect(() => {
         if (!open) return;
         return refreshCacheStatus();
     }, [open, refreshCacheStatus]);
 
-    const cacheStatus = scopedCache && scopedCache.doc === doc && scopedCache.assetSource === assetSource
+    const cacheStatus = scopedCache
+        && scopedCache.doc === doc
+        && scopedCache.assetSource === assetSource
+        && scopedCache.voiceManifest === voiceManifest
         ? scopedCache.status
         : null;
 
-    const localProgress = scopedProgress && scopedProgress.doc === doc && scopedProgress.assetSource === assetSource
+    const localProgress = scopedProgress
+        && scopedProgress.doc === doc
+        && scopedProgress.assetSource === assetSource
+        && scopedProgress.voiceManifest === voiceManifest
         ? scopedProgress.progress
         : null;
 
@@ -202,20 +212,21 @@ export function AssetPreloadDialog({
             const finalProgress = await preloadStoryAssets(doc, {
                 assetSource,
                 models,
+                voiceManifest,
                 signal: controller.signal,
                 onProgress: (next) => {
                     if (!mountedRef.current || runIdRef.current !== runId || abortRef.current !== controller) return;
-                    setScopedProgress({ doc, assetSource, progress: next });
+                    setScopedProgress({ doc, assetSource, voiceManifest, progress: next });
                 },
             });
             if (!mountedRef.current || runIdRef.current !== runId || abortRef.current !== controller) return;
             abortRef.current = null;
-            setScopedProgress({ doc, assetSource, progress: finalProgress });
+            setScopedProgress({ doc, assetSource, voiceManifest, progress: finalProgress });
             setLocalRunning(false);
-            const nextStatus = await inspectStoryCacheStatus(doc, { assetSource, models }).catch(() => null);
+            const nextStatus = await inspectStoryCacheStatus(doc, { assetSource, models, voiceManifest }).catch(() => null);
             if (!mountedRef.current || runIdRef.current !== runId) return;
             if (nextStatus) {
-                setScopedCache({ doc, assetSource, status: nextStatus });
+                setScopedCache({ doc, assetSource, voiceManifest, status: nextStatus });
             }
             if (finalProgress.done) {
                 onComplete?.(finalProgress);
@@ -225,7 +236,7 @@ export function AssetPreloadDialog({
             abortRef.current = null;
             setLocalRunning(false);
         }
-    }, [assetSource, doc, externalRunning, localRunning, models, onCancelExternal, onComplete]);
+    }, [assetSource, doc, externalRunning, localRunning, models, onCancelExternal, onComplete, voiceManifest]);
 
     const handleAutoPreloadToggle = useCallback((checked: boolean) => {
         writeAutoPreloadPreference(checked);

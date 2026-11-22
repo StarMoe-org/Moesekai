@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShellImmersiveMode } from "@/components/AppShell";
 import LocalizedLink from "@/components/LocalizedLink";
@@ -10,18 +10,23 @@ import {
 } from "@/components/md3";
 import {
     mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdEdit, mdErrorFill,
-    mdHome, mdMoreVert, mdOpenInFull, mdPlayArrowFill, mdTheaters, mdUploadFile, mdWarning,
+    mdHome, mdMoreVert, mdOpenInFull, mdPlayArrowFill, mdRecordVoiceOver, mdTheaters, mdTranslate,
+    mdUploadFile, mdWarning,
 } from "@/components/md3/icons";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
 import { StoryPlayerView, type PlayerLayoutMode } from "@/components/story-maker/StoryPlayerView";
+import { StoryVoiceManifestDialog } from "@/components/story-maker/StoryVoiceManifestDialog";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { MOE_LOGO_URL } from "@/lib/assets";
+import { SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import { compileStoryGraph } from "@/lib/storyMaker/compiler";
+import { upsertStoryLocalePack } from "@/lib/storyMaker/document";
 import { StoryDraftsUnavailableError, createDraft, getDraft } from "@/lib/storyMaker/drafts";
+import { parseAndValidateLocalePack } from "@/lib/storyMaker/i18nPack";
 import { downloadStoryScript } from "@/lib/storyMaker/starter";
-import type { StoryDocument } from "@/types/storyMaker";
+import type { StoryDocument, StoryVoiceManifest } from "@/types/storyMaker";
 
 type PlaySource =
     | { kind: "empty" }
@@ -36,6 +41,10 @@ function StoryMakerPlayContent() {
 
     const draftId = searchParams.get("id");
     const startNodeParam = searchParams.get("node");
+    const localeParam = searchParams.get("locale");
+    const initialLocaleParam: UiLocale | null = localeParam && (SUPPORTED_UI_LOCALES as readonly string[]).includes(localeParam)
+        ? (localeParam as UiLocale)
+        : null;
     const [layoutMode, setLayoutMode] = useState<PlayerLayoutMode>(() => (
         searchParams.get("layout") === "theater" ? "theater" : "workspace"
     ));
@@ -44,6 +53,9 @@ function StoryMakerPlayContent() {
         searchParams.get("immersive") !== "0"
     ));
     const [loading, setLoading] = useState(Boolean(draftId));
+    const [voiceManifest, setVoiceManifest] = useState<StoryVoiceManifest | null>(null);
+    const [preferredLocale, setPreferredLocale] = useState<UiLocale | null>(initialLocaleParam);
+    const localePackInputRef = useRef<HTMLInputElement | null>(null);
 
     const handleLayoutModeChange = useCallback((next: PlayerLayoutMode) => {
         setLayoutMode(next);
@@ -68,6 +80,7 @@ function StoryMakerPlayContent() {
     const [loadError, setLoadError] = useState<"missing" | "unavailable" | "failed" | null>(null);
     const [source, setSource] = useState<PlaySource>({ kind: "empty" });
     const [importOpen, setImportOpen] = useState(false);
+    const [voiceManifestOpen, setVoiceManifestOpen] = useState(false);
     const [issuesOpen, setIssuesOpen] = useState(false);
     const [snack, setSnack] = useState<string | null>(null);
     const [importCounter, setImportCounter] = useState(0);
@@ -76,6 +89,7 @@ function StoryMakerPlayContent() {
         let cancelled = false;
         async function load() {
             setLoadError(null);
+            setVoiceManifest(null);
             if (!draftId) {
                 setLoading(false);
                 return;
@@ -112,6 +126,8 @@ function StoryMakerPlayContent() {
         const nextKey = importCounter + 1;
         setImportCounter(nextKey);
         setLoadError(null);
+        setVoiceManifest(null);
+        setPreferredLocale(null);
         setSource({ kind: "imported", doc, key: nextKey });
         setImportOpen(false);
         if (typeof window !== "undefined") {
@@ -119,6 +135,42 @@ function StoryMakerPlayContent() {
             url.searchParams.delete("id");
             url.searchParams.delete("node");
             window.history.replaceState({}, "", url.toString());
+        }
+    };
+
+    const handleLocalePackFile = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        event.target.value = "";
+        if (!file || !activeDoc) return;
+        try {
+            const rawText = await file.text();
+            const parsed = JSON.parse(rawText) as { locale?: unknown };
+            const fileLocale = typeof parsed?.locale === "string"
+                && (SUPPORTED_UI_LOCALES as readonly string[]).includes(parsed.locale)
+                ? (parsed.locale as UiLocale)
+                : null;
+            if (!fileLocale) {
+                setSnack(t("page.storyMaker.i18n.invalidLocalePackToast"));
+                return;
+            }
+            const result = parseAndValidateLocalePack(rawText, activeDoc, fileLocale, {
+                importSource: "file_upload",
+            });
+            if (!result.ok || !result.pack) {
+                setSnack(t("page.storyMaker.i18n.invalidLocalePackToast"));
+                return;
+            }
+            const nextPack = result.pack;
+            setSource((prev) => {
+                if (prev.kind === "empty") return prev;
+                return { ...prev, doc: upsertStoryLocalePack(prev.doc, nextPack) };
+            });
+            setPreferredLocale(nextPack.locale);
+            setSnack(t("page.storyMaker.i18n.loadedLocalePackToast", {
+                locale: UI_LOCALE_LABELS[nextPack.locale],
+            }));
+        } catch {
+            setSnack(t("page.storyMaker.i18n.invalidLocalePackToast"));
         }
     };
 
@@ -197,9 +249,17 @@ function StoryMakerPlayContent() {
             onSelect: () => void handleSaveImported(),
         }] : []),
         {
+            key: "load-voice-manifest",
+            label: t("page.storyMaker.voiceTrack.action"),
+            icon: mdRecordVoiceOver,
+            dividerBefore: true,
+            onSelect: () => setVoiceManifestOpen(true),
+        },
+        {
             key: "export-msk",
             label: t("page.storyMaker.v2.script.downloadScript"),
             icon: mdCode,
+            dividerBefore: true,
             onSelect: () => {
                 downloadStoryScript(activeDoc);
                 setSnack(t("page.storyMaker.exportedToast"));
@@ -292,6 +352,19 @@ function StoryMakerPlayContent() {
                                 {t("page.storyMaker.action.edit")}
                             </Button>
                         )}
+                        <IconButton
+                            size="xs"
+                            variant={voiceManifest ? "tonal" : "standard"}
+                            icon={mdRecordVoiceOver}
+                            label={t("page.storyMaker.voiceTrack.action")}
+                            onClick={() => setVoiceManifestOpen(true)}
+                        />
+                        <IconButton
+                            size="xs"
+                            icon={mdTranslate}
+                            label={t("page.storyMaker.i18n.loadLocalePackAction")}
+                            onClick={() => localePackInputRef.current?.click()}
+                        />
                         <IconButton
                             size="xs"
                             icon={mdUploadFile}
@@ -393,17 +466,35 @@ function StoryMakerPlayContent() {
                                 </Button>
                             )}
                             {activeDoc && (
-                                <Button
-                                    variant="outlined"
-                                    icon={mdCode}
-                                    className="max-w-full px-3 sm:px-4"
-                                    onClick={() => {
-                                        downloadStoryScript(activeDoc);
-                                        setSnack(t("page.storyMaker.exportedToast"));
-                                    }}
-                                >
-                                    {t("page.storyMaker.v2.script.downloadScript")}
-                                </Button>
+                                <>
+                                    <Button
+                                        variant="outlined"
+                                        icon={mdTranslate}
+                                        className="max-w-full px-3 sm:px-4"
+                                        onClick={() => localePackInputRef.current?.click()}
+                                    >
+                                        {t("page.storyMaker.i18n.loadLocalePackAction")}
+                                    </Button>
+                                    <Button
+                                        variant={voiceManifest ? "tonal" : "outlined"}
+                                        icon={mdRecordVoiceOver}
+                                        className="max-w-full px-3 sm:px-4"
+                                        onClick={() => setVoiceManifestOpen(true)}
+                                    >
+                                        {t("page.storyMaker.voiceTrack.action")}
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        icon={mdCode}
+                                        className="max-w-full px-3 sm:px-4"
+                                        onClick={() => {
+                                            downloadStoryScript(activeDoc);
+                                            setSnack(t("page.storyMaker.exportedToast"));
+                                        }}
+                                    >
+                                        {t("page.storyMaker.v2.script.downloadScript")}
+                                    </Button>
+                                </>
                             )}
                             <Button variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="max-w-full px-3 sm:px-4">
                                 {t("page.storyMaker.player.openScript")}
@@ -475,6 +566,9 @@ function StoryMakerPlayContent() {
                         layoutMode={layoutMode}
                         onLayoutModeChange={handleLayoutModeChange}
                         immersive={isImmersiveActive}
+                        initialLocale={preferredLocale}
+                        voiceManifest={voiceManifest}
+                        onOpenVoiceManifest={() => setVoiceManifestOpen(true)}
                         endAction={editHref ? (
                             <Button variant="tonal" icon={mdEdit} href={editHref}>
                                 {t("page.storyMaker.action.edit")}
@@ -493,6 +587,25 @@ function StoryMakerPlayContent() {
                 onClose={() => setImportOpen(false)}
                 onImport={handleImportForPlay}
             />
+
+            {activeDoc && (
+                <StoryVoiceManifestDialog
+                    isOpen={voiceManifestOpen}
+                    onClose={() => setVoiceManifestOpen(false)}
+                    doc={activeDoc}
+                    currentManifest={voiceManifest}
+                    onApplyManifest={setVoiceManifest}
+                    onSwitchToStoryImport={handleImportForPlay}
+                    onApplyLocalePack={(nextPack) => {
+                        setSource((prev) => {
+                            if (prev.kind === "empty") return prev;
+                            return { ...prev, doc: upsertStoryLocalePack(prev.doc, nextPack) };
+                        });
+                        setPreferredLocale(nextPack.locale);
+                    }}
+                    onNotify={setSnack}
+                />
+            )}
 
             <Dialog
                 isOpen={issuesOpen}
@@ -529,6 +642,14 @@ function StoryMakerPlayContent() {
                     </ul>
                 )}
             </Dialog>
+
+            <input
+                ref={localePackInputRef}
+                type="file"
+                accept=".json,.i18n.json,application/json"
+                className="sr-only"
+                onChange={event => void handleLocalePackFile(event)}
+            />
 
             <Snackbar open={snack !== null} message={snack ?? ""} onClose={() => setSnack(null)} />
         </PageContainer>

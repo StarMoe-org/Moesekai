@@ -48,6 +48,9 @@ export const STORY_LIMITS = {
     /** Voice trim bounds in seconds (`0 <= start <= 600`, `0 < end <= 600`, `end - start >= 0.05`). */
     voiceTrimMax: 600,
     voiceTrimMinSpan: 0.05,
+    /** Translation provenance `modelHint` and `note` max characters. */
+    translationModelHint: 80,
+    translationNote: 240,
     /** Flow graph node canvas coordinate bounds. */
     coordMin: -20000,
     coordMax: 20000,

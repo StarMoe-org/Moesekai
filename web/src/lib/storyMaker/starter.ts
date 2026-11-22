@@ -10,8 +10,9 @@
  * - Template variable interpolation (`{{var}}`)
  * - Condition node branching & named multi-endings with clean non-overlapping canvas coordinates
  */
-import { STORY_SCHEMA_VERSION, type StoryDocument, type StoryRegion } from "../../types/storyMaker.ts";
-import { storyScriptFileName } from "./document.ts";
+import { STORY_SCHEMA_VERSION, type StoryDocument, type StoryLocalePack, type StoryRegion } from "../../types/storyMaker.ts";
+import { storyLocalePackFileName, storyScriptFileName } from "./document.ts";
+import { serializeStoryLocalePack } from "./i18nPack.ts";
 import { DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE } from "./limits.ts";
 import { parseStoryScript, serializeStoryScript } from "./script.ts";
 import { STARTER_STORY_SCRIPTS, type StarterLocale } from "./starters/index.ts";
@@ -282,4 +283,13 @@ function triggerDownload(content: string, mime: string, filename: string): void 
 /** Downloads `doc` as a MoeSekai Script `.msk` file in the browser. */
 export function downloadStoryScript(doc: StoryDocument): void {
     triggerDownload(serializeStoryScript(doc), "text/plain;charset=utf-8", storyScriptFileName(doc));
+}
+
+/** Downloads a decoupled `StoryLocalePack` as a `.<locale>.i18n.json` file in the browser. */
+export function downloadStoryLocalePack(doc: StoryDocument, pack: StoryLocalePack): void {
+    triggerDownload(
+        serializeStoryLocalePack(pack),
+        "application/json;charset=utf-8",
+        storyLocalePackFileName(doc, pack.locale),
+    );
 }

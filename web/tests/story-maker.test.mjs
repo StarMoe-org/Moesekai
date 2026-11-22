@@ -888,6 +888,10 @@ const storyVoiceCandidateUrls = (v, r) => ["https://storage.pjsk.moe/sekai-" + (
             `import { decodeStoryAudio, getCachedStoryAudio, getSharedAudioContext } from "./audioCache";`,
             `const decodeStoryAudio = async () => null;\nconst getCachedStoryAudio = () => null;\nconst getSharedAudioContext = () => null;`,
         ],
+        [
+            `import { resolveVoiceManifestLineUrl } from "./i18nPack";`,
+            `import { resolveVoiceManifestLineUrl } from "${new URL("../src/lib/storyMaker/i18nPack.ts", import.meta.url).href}";`,
+        ],
         [`import { loadStoryUiKit } from "./uiKit";`, `const loadStoryUiKit = async () => null;`],
     ]);
 

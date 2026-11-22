@@ -32,6 +32,7 @@ import {
     type StoryCastMember,
     type StoryDocument,
     type StoryEdge,
+    type StoryLocalePack,
     type StoryMeta,
     type StoryNode,
     type StoryNodePos,
@@ -44,6 +45,7 @@ import {
     type TransitionSlot,
     type VarOp,
 } from "../../types/storyMaker.ts";
+import type { UiLocale } from "../i18n/locales.ts";
 import {
     DEFAULT_STORY_BACKGROUND,
     DEFAULT_STORY_BGM,
@@ -1437,6 +1439,67 @@ export function autoLayoutGraph(
     return { ...doc, nodes: nextNodes };
 }
 
+// ==================== Native Multi-Language Pack Mutations ====================
+
+/** Sets or updates the master document's original authoring locale (`doc.sourceLocale`). */
+export function setStorySourceLocale(doc: StoryDocument, sourceLocale: UiLocale): StoryDocument {
+    if (doc.sourceLocale === sourceLocale) return doc;
+    // If an overlay pack existed for the new source locale, drop it so source stays authoritative.
+    let nextLocales = doc.locales;
+    if (nextLocales && sourceLocale in nextLocales) {
+        const rest = { ...nextLocales };
+        delete rest[sourceLocale];
+        nextLocales = Object.keys(rest).length > 0 ? rest : undefined;
+    }
+    const nextDoc: StoryDocument = { ...doc, sourceLocale };
+    if (nextLocales) {
+        nextDoc.locales = nextLocales;
+    } else {
+        delete nextDoc.locales;
+    }
+    return nextDoc;
+}
+
+/** Attaches or replaces a decoupled `StoryLocalePack` on `doc.locales[pack.locale]` without mutating `doc`. */
+export function upsertStoryLocalePack(doc: StoryDocument, pack: StoryLocalePack): StoryDocument {
+    // Source locale lives on the master document itself; never store an overlay for `doc.sourceLocale`.
+    if (doc.sourceLocale && pack.locale === doc.sourceLocale) {
+        return doc;
+    }
+    // Never allow any overlay locale pack to spoof `original`.
+    const sanitizedOrigin = pack.translationMeta.origin === "original"
+        ? "ai_raw"
+        : pack.translationMeta.origin;
+    const normalizedPack: StoryLocalePack = {
+        ...pack,
+        storyId: doc.id,
+        translationMeta: {
+            ...pack.translationMeta,
+            origin: sanitizedOrigin,
+        },
+    };
+    return {
+        ...doc,
+        locales: {
+            ...(doc.locales ?? {}),
+            [pack.locale]: normalizedPack,
+        },
+    };
+}
+
+/** Removes a locale overlay pack from `doc.locales`. */
+export function removeStoryLocalePack(doc: StoryDocument, locale: UiLocale): StoryDocument {
+    if (!doc.locales || !(locale in doc.locales)) return doc;
+    const nextLocales: Partial<Record<UiLocale, StoryLocalePack>> = { ...doc.locales };
+    delete nextLocales[locale];
+    if (Object.keys(nextLocales).length === 0) {
+        const nextDoc: StoryDocument = { ...doc };
+        delete nextDoc.locales;
+        return nextDoc;
+    }
+    return { ...doc, locales: nextLocales };
+}
+
 // ==================== Export Helpers ====================
 
 function safeFileBase(title: string): string {
@@ -1453,6 +1516,11 @@ export function storyFileName(doc: StoryDocument): string {
 /** Export filename for a MoeSekai Script source file (`.msk`). */
 export function storyScriptFileName(doc: StoryDocument): string {
     return `${safeFileBase(doc.meta.title)}.msk`;
+}
+
+/** Export filename for a decoupled story localization pack (`.<locale>.i18n.json`). */
+export function storyLocalePackFileName(doc: StoryDocument, locale: UiLocale): string {
+    return `${safeFileBase(doc.meta.title)}.${locale}.i18n.json`;
 }
 
 /** Canonical pretty-printed JSON of a v2 document. */

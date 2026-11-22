@@ -10,10 +10,12 @@ import {
     EFFECT_COLORS,
     SCENE_BEAT_KINDS,
     STAGE_ACTION_KINDS,
+    STORY_I18N_SCHEMA_VERSION,
     STORY_NODE_TYPES,
     STORY_REGIONS,
     STORY_SCHEMA_VERSION,
     STORY_SLOTS,
+    STORY_TRANSLATION_ORIGINS,
     STORY_VAR_TYPES,
     TRANSITION_KINDS,
     VOICE_KINDS,
@@ -33,14 +35,18 @@ import {
     type StoryEdge,
     type StoryIssue,
     type StoryIssueCode,
+    type StoryLocaleBeatEntry,
+    type StoryLocalePack,
     type StoryNode,
     type StoryNodePos,
     type StoryRegion,
+    type StoryTranslationMeta,
     type StoryVariable,
     type StoryVoiceRef,
     type TransitionSlot,
     type VarOp,
 } from "../../types/storyMaker.ts";
+import { SUPPORTED_UI_LOCALES, isUiLocale, type UiLocale } from "../i18n/locales.ts";
 import { compileStoryGraph, type CompiledStoryProgram } from "./compiler.ts";
 import {
     STORY_ASSET_PATTERN,
@@ -809,6 +815,254 @@ function checkEdges(checker: Checker, raw: unknown): StoryEdge[] {
     return edges;
 }
 
+function checkLocalePack(
+    checker: Checker,
+    localeKey: UiLocale,
+    raw: unknown,
+    path: string,
+): StoryLocalePack | undefined {
+    if (!isObject(raw)) {
+        checker.add("notObject", path);
+        return undefined;
+    }
+    if (raw.schema !== STORY_I18N_SCHEMA_VERSION) {
+        checker.add("formatUnsupported", `${path}.schema`, {
+            format: typeof raw.schema === "string" ? raw.schema.slice(0, 40) : String(raw.schema),
+        });
+        return undefined;
+    }
+    const storyId = checker.string(raw, "storyId", path, 64, { required: false }) ?? "";
+    let baseRev: number | undefined;
+    if (raw.baseRev !== undefined && raw.baseRev !== null) {
+        const rev = checker.number(raw, "baseRev", path, 0, 1_000_000);
+        if (rev !== undefined && Number.isInteger(rev)) baseRev = rev;
+        else if (rev !== undefined) checker.add("fieldType", `${path}.baseRev`, { expected: "integer" });
+    }
+    if (raw.locale !== localeKey) {
+        checker.add("enumInvalid", `${path}.locale`, { allowed: localeKey });
+        return undefined;
+    }
+
+    if (!isObject(raw.translationMeta)) {
+        checker.add(raw.translationMeta === undefined ? "fieldMissing" : "notObject", `${path}.translationMeta`);
+        return undefined;
+    }
+    const origin = checker.oneOf(raw.translationMeta, "origin", `${path}.translationMeta`, STORY_TRANSLATION_ORIGINS);
+    if (!origin) return undefined;
+    if (origin === "original") {
+        checker.add("enumInvalid", `${path}.translationMeta.origin`, { allowed: "human, ai_assisted, ai_raw" });
+        return undefined;
+    }
+    const modelHint = raw.translationMeta.modelHint === undefined || raw.translationMeta.modelHint === null || raw.translationMeta.modelHint === ""
+        ? undefined
+        : checker.string(raw.translationMeta, "modelHint", `${path}.translationMeta`, STORY_LIMITS.translationModelHint);
+    const note = raw.translationMeta.note === undefined || raw.translationMeta.note === null || raw.translationMeta.note === ""
+        ? undefined
+        : checker.string(raw.translationMeta, "note", `${path}.translationMeta`, STORY_LIMITS.translationNote);
+    const updatedAt = raw.translationMeta.updatedAt === undefined || raw.translationMeta.updatedAt === null || raw.translationMeta.updatedAt === ""
+        ? undefined
+        : checker.string(raw.translationMeta, "updatedAt", `${path}.translationMeta`, 64);
+
+    const translationMeta: StoryTranslationMeta = {
+        origin,
+        ...(modelHint !== undefined ? { modelHint } : {}),
+        ...(note !== undefined ? { note } : {}),
+        ...(updatedAt !== undefined ? { updatedAt } : {}),
+    };
+
+    let meta: { title?: string; summary?: string } | undefined;
+    if (raw.meta !== undefined && raw.meta !== null) {
+        if (!isObject(raw.meta)) {
+            checker.add("notObject", `${path}.meta`);
+        } else {
+            const mTitle = raw.meta.title === undefined || raw.meta.title === null
+                ? undefined
+                : checker.string(raw.meta, "title", `${path}.meta`, STORY_LIMITS.title);
+            const mSummary = raw.meta.summary === undefined || raw.meta.summary === null
+                ? undefined
+                : checker.string(raw.meta, "summary", `${path}.meta`, STORY_LIMITS.summary);
+            if (mTitle !== undefined || mSummary !== undefined) {
+                meta = {
+                    ...(mTitle !== undefined ? { title: mTitle } : {}),
+                    ...(mSummary !== undefined ? { summary: mSummary } : {}),
+                };
+            }
+        }
+    }
+
+    const readStringRecord = (
+        obj: unknown,
+        subPath: string,
+        maxEntries: number,
+        maxLen: number,
+    ): Record<string, string> | undefined => {
+        if (obj === undefined || obj === null) return undefined;
+        if (!isObject(obj)) {
+            checker.add("notObject", subPath);
+            return undefined;
+        }
+        const entries = Object.entries(obj);
+        if (entries.length > maxEntries) {
+            checker.add("tooMany", subPath, { max: maxEntries });
+            return undefined;
+        }
+        const out: Record<string, string> = {};
+        for (const [k, v] of entries) {
+            if (FORBIDDEN_KEYS.has(k) || !STORY_ID_PATTERN.test(k)) {
+                checker.add("idInvalid", `${subPath}.${k}`);
+                continue;
+            }
+            if (typeof v !== "string") {
+                checker.add("fieldType", `${subPath}.${k}`, { expected: "string" });
+                continue;
+            }
+            if (v.length > maxLen) {
+                checker.add("tooLong", `${subPath}.${k}`, { max: maxLen });
+                continue;
+            }
+            out[k] = v;
+        }
+        return Object.keys(out).length > 0 ? out : undefined;
+    };
+
+    const cast = readStringRecord(raw.cast, `${path}.cast`, STORY_LIMITS.cast, STORY_LIMITS.castName);
+    const places = readStringRecord(raw.places, `${path}.places`, STORY_LIMITS.nodes, STORY_LIMITS.place);
+
+    const beats: Record<string, StoryLocaleBeatEntry> = {};
+    if (!isObject(raw.beats)) {
+        checker.add(raw.beats === undefined ? "fieldMissing" : "notObject", `${path}.beats`);
+        return undefined;
+    }
+    const beatEntries = Object.entries(raw.beats);
+    if (beatEntries.length > STORY_LIMITS.totalBeats) {
+        checker.add("tooMany", `${path}.beats`, { max: STORY_LIMITS.totalBeats });
+        return undefined;
+    }
+    for (const [beatId, beatRaw] of beatEntries) {
+        const bPath = `${path}.beats.${beatId}`;
+        if (FORBIDDEN_KEYS.has(beatId) || !STORY_ID_PATTERN.test(beatId)) {
+            checker.add("idInvalid", bPath);
+            continue;
+        }
+        if (!isObject(beatRaw)) {
+            checker.add("notObject", bPath);
+            continue;
+        }
+        const srcHash = checker.string(beatRaw, "srcHash", bPath, 32, { required: false }) ?? "";
+        const body = checker.string(beatRaw, "body", bPath, STORY_LIMITS.body);
+        const speaker = beatRaw.speaker === undefined || beatRaw.speaker === null || beatRaw.speaker === ""
+            ? undefined
+            : checker.string(beatRaw, "speaker", bPath, STORY_LIMITS.speakerName);
+        if (body === undefined) continue;
+        beats[beatId] = {
+            srcHash,
+            body,
+            ...(speaker !== undefined ? { speaker } : {}),
+        };
+    }
+
+    let choices: Record<string, Record<string, string>> | undefined;
+    if (raw.choices !== undefined && raw.choices !== null) {
+        if (!isObject(raw.choices)) {
+            checker.add("notObject", `${path}.choices`);
+        } else {
+            const entries = Object.entries(raw.choices);
+            if (entries.length > STORY_LIMITS.nodes) {
+                checker.add("tooMany", `${path}.choices`, { max: STORY_LIMITS.nodes });
+            } else {
+                const map: Record<string, Record<string, string>> = {};
+                for (const [nodeId, optMap] of entries) {
+                    if (FORBIDDEN_KEYS.has(nodeId) || !STORY_ID_PATTERN.test(nodeId)) {
+                        checker.add("idInvalid", `${path}.choices.${nodeId}`);
+                        continue;
+                    }
+                    const checkedOpts = readStringRecord(
+                        optMap,
+                        `${path}.choices.${nodeId}`,
+                        STORY_LIMITS.choiceOptions.max,
+                        STORY_LIMITS.choiceText,
+                    );
+                    if (checkedOpts) map[nodeId] = checkedOpts;
+                }
+                if (Object.keys(map).length > 0) choices = map;
+            }
+        }
+    }
+
+    let ends: Record<string, { title?: string; subtitle?: string }> | undefined;
+    if (raw.ends !== undefined && raw.ends !== null) {
+        if (!isObject(raw.ends)) {
+            checker.add("notObject", `${path}.ends`);
+        } else {
+            const entries = Object.entries(raw.ends);
+            if (entries.length > STORY_LIMITS.nodes) {
+                checker.add("tooMany", `${path}.ends`, { max: STORY_LIMITS.nodes });
+            } else {
+                const map: Record<string, { title?: string; subtitle?: string }> = {};
+                for (const [nodeId, endRaw] of entries) {
+                    const ePath = `${path}.ends.${nodeId}`;
+                    if (FORBIDDEN_KEYS.has(nodeId) || !STORY_ID_PATTERN.test(nodeId)) {
+                        checker.add("idInvalid", ePath);
+                        continue;
+                    }
+                    if (!isObject(endRaw)) {
+                        checker.add("notObject", ePath);
+                        continue;
+                    }
+                    const eTitle = endRaw.title === undefined || endRaw.title === null
+                        ? undefined
+                        : checker.string(endRaw, "title", ePath, STORY_LIMITS.nodeTitle);
+                    const eSubtitle = endRaw.subtitle === undefined || endRaw.subtitle === null
+                        ? undefined
+                        : checker.string(endRaw, "subtitle", ePath, STORY_LIMITS.endSubtitle);
+                    if (eTitle !== undefined || eSubtitle !== undefined) {
+                        map[nodeId] = {
+                            ...(eTitle !== undefined ? { title: eTitle } : {}),
+                            ...(eSubtitle !== undefined ? { subtitle: eSubtitle } : {}),
+                        };
+                    }
+                }
+                if (Object.keys(map).length > 0) ends = map;
+            }
+        }
+    }
+
+    return {
+        schema: STORY_I18N_SCHEMA_VERSION,
+        storyId,
+        ...(baseRev !== undefined ? { baseRev } : {}),
+        locale: localeKey,
+        translationMeta,
+        ...(meta ? { meta } : {}),
+        ...(cast ? { cast } : {}),
+        ...(places ? { places } : {}),
+        beats,
+        ...(choices ? { choices } : {}),
+        ...(ends ? { ends } : {}),
+    };
+}
+
+function checkLocales(
+    checker: Checker,
+    raw: unknown,
+): Partial<Record<UiLocale, StoryLocalePack>> | undefined {
+    if (raw === undefined || raw === null) return undefined;
+    if (!isObject(raw)) {
+        checker.add("notObject", "locales");
+        return undefined;
+    }
+    const out: Partial<Record<UiLocale, StoryLocalePack>> = {};
+    for (const [key, value] of Object.entries(raw)) {
+        if (FORBIDDEN_KEYS.has(key) || !isUiLocale(key)) {
+            checker.add("enumInvalid", `locales.${key}`, { allowed: SUPPORTED_UI_LOCALES.join(", ") });
+            continue;
+        }
+        const pack = checkLocalePack(checker, key, value, `locales.${key}`);
+        if (pack) out[key] = pack;
+    }
+    return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function parseRawDocument(raw: unknown): { doc: StoryDocument | null; issues: StoryIssue[] } {
     const checker = new Checker();
     if (!isObject(raw)) {
@@ -828,6 +1082,15 @@ function parseRawDocument(raw: unknown): { doc: StoryDocument | null; issues: St
         checker.add("regionInvalid", "region", { allowed: STORY_REGIONS.join(", ") });
     } else {
         region = raw.region as StoryRegion;
+    }
+
+    let sourceLocale: UiLocale | undefined;
+    if (raw.sourceLocale !== undefined && raw.sourceLocale !== null && raw.sourceLocale !== "") {
+        if (!isUiLocale(raw.sourceLocale)) {
+            checker.add("enumInvalid", "sourceLocale", { allowed: SUPPORTED_UI_LOCALES.join(", ") });
+        } else {
+            sourceLocale = raw.sourceLocale;
+        }
     }
 
     let title: string | undefined;
@@ -865,6 +1128,7 @@ function parseRawDocument(raw: unknown): { doc: StoryDocument | null; issues: St
     }
 
     const edges = checkEdges(checker, raw.edges);
+    const locales = checkLocales(checker, raw.locales);
 
     if (checker.issues.length > 0 || !id || !region || title === undefined || !startNodeId) {
         return { doc: null, issues: checker.issues };
@@ -875,12 +1139,14 @@ function parseRawDocument(raw: unknown): { doc: StoryDocument | null; issues: St
             schema: STORY_SCHEMA_VERSION,
             id,
             region,
+            ...(sourceLocale !== undefined ? { sourceLocale } : {}),
             meta: { title, summary, author },
             cast,
             variables,
             startNodeId,
             nodes,
             edges,
+            ...(locales ? { locales } : {}),
         },
         issues: [],
     };

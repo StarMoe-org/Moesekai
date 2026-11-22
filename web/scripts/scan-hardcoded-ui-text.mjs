@@ -29,6 +29,7 @@ const ALLOWLIST = new Map([
     ["src/lib/i18n/messages/ja-JP/storyMaker.ts", "Japanese community story maker dictionary"],
     ["src/lib/storyMaker/starters/zh.ts", "Localized Simplified Chinese MoeSekai Script (.msk) starter story template"],
     ["src/lib/storyMaker/starters/ja.ts", "Localized Japanese MoeSekai Script (.msk) starter story template"],
+    ["src/lib/storyMaker/i18nPack.ts", "Project SEKAI 26-character Japanese speech-habit AI prompt hints and Japanese Drama 3 emotion presets"],
     ["src/lib/i18n/locales.ts", "Locale native names shown in the language switcher"],
     ["src/lib/seo-keywords.ts", "Localized SEO copy and Chinese keyword strategy"],
     ["src/lib/seo-zh-tw.ts", "Traditional Chinese (TW) SEO copy"],

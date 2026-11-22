@@ -52,6 +52,12 @@ var EFFECT_COLORS = ["black", "white"];
 var CONDITION_OPS = ["==", "!=", ">", ">=", "<", "<="];
 var TRANSITION_KINDS = ["none", "fadeBlack", "fadeWhite"];
 
+// src/lib/i18n/locales.ts
+var SUPPORTED_UI_LOCALES = ["zh-CN", "zh-TW", "en-US", "ja-JP", "ko-KR"];
+function isUiLocale(value) {
+  return typeof value === "string" && SUPPORTED_UI_LOCALES.includes(value);
+}
+
 // src/lib/storyMaker/limits.ts
 var STORY_LIMITS = {
   nodes: 200,
@@ -89,6 +95,8 @@ var STORY_LIMITS = {
   yMax: 0.6,
   voiceTrimMax: 600,
   voiceTrimMinSpan: 0.05,
+  translationModelHint: 80,
+  translationNote: 240,
   coordMin: -20000,
   coordMax: 20000,
   flowCoordMin: -20000,
@@ -446,6 +454,9 @@ function compileStoryGraph(doc) {
   }
   if (!STORY_REGIONS.includes(doc.region)) {
     addError("regionInvalid", "region", { params: { allowed: STORY_REGIONS.join(", ") } });
+  }
+  if (doc.sourceLocale !== undefined && !isUiLocale(doc.sourceLocale)) {
+    addError("enumInvalid", "sourceLocale", { params: { allowed: SUPPORTED_UI_LOCALES.join(", ") } });
   }
   if (!STORY_ID_PATTERN.test(doc.id)) {
     addError("idInvalid", "id");
@@ -2292,6 +2303,8 @@ function serializeBeat(beat) {
 function serializeStoryScript(doc) {
   const lines = [];
   const headerParts = [`@story ${escapeStr(doc.meta.title)}`, `region=${doc.region}`];
+  if (doc.sourceLocale)
+    headerParts.push(`lang=${doc.sourceLocale}`);
   if (doc.id)
     headerParts.push(`id=${escapeStr(doc.id)}`);
   if (doc.meta.author)
@@ -2917,6 +2930,7 @@ class ScriptParser {
   parse() {
     let docId = "";
     let region = "jp";
+    let sourceLocale;
     let title = "";
     let author = "";
     let summary = "";
@@ -2957,6 +2971,14 @@ class ScriptParser {
                 this.error(rTok, `Invalid region '${rVal}'`);
               } else {
                 region = rVal;
+              }
+            } else if (keyTok.value === "lang" || keyTok.value === "sourceLocale") {
+              const lTok = this.peek();
+              const lVal = lTok.kind === "STRING" || lTok.kind === "IDENT" ? this.next().value : "";
+              if (!isUiLocale(lVal)) {
+                this.error(lTok, `Invalid sourceLocale '${lVal}' (allowed: ${SUPPORTED_UI_LOCALES.join(", ")})`);
+              } else {
+                sourceLocale = lVal;
               }
             } else if (keyTok.value === "id") {
               const v = this.peek().kind === "STRING" || this.atId() ? this.next().value : "";
@@ -3750,6 +3772,7 @@ class ScriptParser {
       schema: STORY_SCHEMA_VERSION,
       id: docId && STORY_ID_PATTERN.test(docId) ? docId : newStoryId([], 10),
       region,
+      ...sourceLocale !== undefined ? { sourceLocale } : {},
       meta: {
         title: title.slice(0, STORY_LIMITS.title),
         summary: summary.slice(0, STORY_LIMITS.summary),

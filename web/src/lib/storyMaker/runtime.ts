@@ -947,3 +947,177 @@ export function evaluateStageAt(
 
     return { stage, variables };
 }
+
+/**
+ * Purely re-localizes a `StoryRuntimeFrame`'s displayed text (place banner, dialogue, narration,
+ * telop, pending choices, ending, and executed instruction snapshots for backlog) against
+ * `localizedDoc` (produced by `applyStoryLocaleOverlay`) so players can switch subtitle languages
+ * mid-story with zero progress loss and zero Live2D stage reload.
+ */
+export function localizeRuntimeFrame(
+    frame: StoryRuntimeFrame,
+    localizedDoc: StoryDocument,
+): StoryRuntimeFrame {
+    const vars = frame.variables;
+
+    const findSceneBeat = (nodeId: string | null, beatId: string): SceneBeat | undefined => {
+        if (nodeId) {
+            const node = localizedDoc.nodes[nodeId];
+            if (node?.type === "scene") {
+                const hit = node.beats.find(b => b.id === beatId);
+                if (hit) return hit;
+            }
+        }
+        for (const node of Object.values(localizedDoc.nodes)) {
+            if (node.type === "scene") {
+                const hit = node.beats.find(b => b.id === beatId);
+                if (hit) return hit;
+            }
+        }
+        return undefined;
+    };
+
+    let nextPlace = frame.stage.place;
+    if (nextPlace !== null) {
+        // Resolve latest explicit `place.mode === "set"` along visited path (including current node).
+        const candidates = frame.nodeId && !frame.visitedNodeIds.includes(frame.nodeId)
+            ? [...frame.visitedNodeIds, frame.nodeId]
+            : frame.visitedNodeIds;
+        for (let i = candidates.length - 1; i >= 0; i -= 1) {
+            const node = localizedDoc.nodes[candidates[i]];
+            if (node?.type === "scene") {
+                if (node.place.mode === "hide") {
+                    nextPlace = null;
+                    break;
+                }
+                if (node.place.mode === "set") {
+                    nextPlace = interpolateStoryText(node.place.text, localizedDoc, vars).trim() || null;
+                    break;
+                }
+            }
+        }
+    }
+
+    let nextDialogue = frame.stage.dialogue;
+    if (nextDialogue) {
+        const beat = findSceneBeat(frame.nodeId, nextDialogue.stepId);
+        if (beat?.kind === "talk") {
+            const member = beat.speakerKey ? localizedDoc.cast.find(item => item.key === beat.speakerKey) : undefined;
+            const speaker = beat.speakerName
+                ? interpolateStoryText(beat.speakerName, localizedDoc, vars)
+                : (member?.name ?? "");
+            nextDialogue = {
+                ...nextDialogue,
+                speaker,
+                body: interpolateStoryText(beat.body, localizedDoc, vars),
+            };
+        }
+    }
+
+    let nextNarration = frame.stage.narration;
+    if (nextNarration) {
+        const beat = findSceneBeat(frame.nodeId, nextNarration.stepId);
+        if (beat?.kind === "narration") {
+            nextNarration = {
+                ...nextNarration,
+                body: interpolateStoryText(beat.body, localizedDoc, vars),
+            };
+        }
+    }
+
+    let nextTelop = frame.stage.telop;
+    if (nextTelop) {
+        const beat = findSceneBeat(frame.nodeId, nextTelop.stepId);
+        if (beat?.kind === "telop") {
+            nextTelop = {
+                ...nextTelop,
+                body: interpolateStoryText(beat.text, localizedDoc, vars),
+            };
+        }
+    }
+
+    let nextPendingChoice = frame.pendingChoice;
+    if (nextPendingChoice) {
+        const node = localizedDoc.nodes[nextPendingChoice.nodeId];
+        if (node?.type === "choice") {
+            nextPendingChoice = {
+                ...nextPendingChoice,
+                options: nextPendingChoice.options.map((opt) => {
+                    const src = node.options.find(item => item.id === opt.id);
+                    return src ? { ...opt, text: interpolateStoryText(src.text, localizedDoc, vars) } : opt;
+                }),
+            };
+        }
+    }
+
+    let nextEnding = frame.ending;
+    if (nextEnding) {
+        const node = localizedDoc.nodes[nextEnding.nodeId];
+        if (node?.type === "end") {
+            nextEnding = {
+                nodeId: node.id,
+                title: interpolateStoryText(node.title, localizedDoc, vars),
+                ...(node.subtitle !== undefined
+                    ? { subtitle: interpolateStoryText(node.subtitle, localizedDoc, vars) }
+                    : {}),
+            };
+        }
+    }
+
+    const nextExecuted = frame.executedInstructions.map((inst): StoryIR => {
+        if (inst.op === "talk") {
+            const beat = findSceneBeat(inst.nodeId, inst.beatId);
+            return beat?.kind === "talk" ? { ...inst, beat } : inst;
+        }
+        if (inst.op === "narration") {
+            const beat = findSceneBeat(inst.nodeId, inst.beatId);
+            return beat?.kind === "narration" ? { ...inst, beat } : inst;
+        }
+        if (inst.op === "telop") {
+            const beat = findSceneBeat(inst.nodeId, inst.beatId);
+            return beat?.kind === "telop" ? { ...inst, beat } : inst;
+        }
+        if (inst.op === "enterScene") {
+            const node = localizedDoc.nodes[inst.nodeId];
+            return node?.type === "scene" ? { ...inst, title: node.title, place: node.place } : inst;
+        }
+        if (inst.op === "choice") {
+            const node = localizedDoc.nodes[inst.nodeId];
+            if (node?.type === "choice") {
+                return {
+                    ...inst,
+                    title: node.title,
+                    options: inst.options.map((opt) => {
+                        const src = node.options.find(item => item.id === opt.id);
+                        return src ? { ...opt, text: src.text } : opt;
+                    }),
+                };
+            }
+        }
+        if (inst.op === "end") {
+            const node = localizedDoc.nodes[inst.nodeId];
+            if (node?.type === "end") {
+                return {
+                    ...inst,
+                    title: node.title,
+                    ...(node.subtitle !== undefined ? { subtitle: node.subtitle } : {}),
+                };
+            }
+        }
+        return inst;
+    });
+
+    return {
+        ...frame,
+        stage: {
+            ...frame.stage,
+            place: nextPlace,
+            dialogue: nextDialogue,
+            narration: nextNarration,
+            telop: nextTelop,
+        },
+        pendingChoice: nextPendingChoice,
+        ending: nextEnding,
+        executedInstructions: nextExecuted,
+    };
+}

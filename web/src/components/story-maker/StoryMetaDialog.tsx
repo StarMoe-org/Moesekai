@@ -3,7 +3,9 @@ import { useState } from "react";
 import { Button, Dialog, Select, TextField } from "@/components/md3";
 import { useI18n } from "@/contexts/I18nContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
-import { updateStoryMeta } from "@/lib/storyMaker/document";
+import { SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
+import { setStorySourceLocale, updateStoryMeta } from "@/lib/storyMaker/document";
+import { inferStorySourceLocale } from "@/lib/storyMaker/i18nPack";
 import { STORY_LIMITS } from "@/lib/storyMaker/limits";
 import { STORY_REGIONS, type StoryDocument, type StoryRegion } from "@/types/storyMaker";
 
@@ -12,6 +14,7 @@ export interface StoryMetaValues {
     author: string;
     summary: string;
     region: StoryRegion;
+    sourceLocale?: UiLocale;
 }
 
 /** Extracts editable metadata & region values from a `moesekai-story/2` document. */
@@ -21,17 +24,24 @@ export function metaValuesFromDoc(doc: StoryDocument): StoryMetaValues {
         author: doc.meta.author,
         summary: doc.meta.summary,
         region: doc.region,
+        sourceLocale: doc.sourceLocale ?? inferStorySourceLocale(doc),
     };
 }
 
 /** Purely applies metadata & server region updates onto a `moesekai-story/2` document. */
 export function applyMetaValuesToDoc(doc: StoryDocument, values: StoryMetaValues): StoryDocument {
-    const withMeta = updateStoryMeta(doc, {
+    let next = updateStoryMeta(doc, {
         title: values.title,
         author: values.author,
         summary: values.summary,
     });
-    return withMeta.region === values.region ? withMeta : { ...withMeta, region: values.region };
+    if (next.region !== values.region) {
+        next = { ...next, region: values.region };
+    }
+    if (values.sourceLocale) {
+        next = setStorySourceLocale(next, values.sourceLocale);
+    }
+    return next;
 }
 
 export interface StoryMetaDialogProps {
@@ -48,7 +58,7 @@ export interface StoryMetaDialogProps {
 export function StoryMetaDialog({
     isOpen, onClose, title, confirmLabel, initial, showRegionHint, onSubmit,
 }: StoryMetaDialogProps) {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const [draft, setDraft] = useState<StoryMetaValues>(initial);
     const [prevOpen, setPrevOpen] = useState(isOpen);
 
@@ -65,6 +75,7 @@ export function StoryMetaDialog({
             author: draft.author.trim().slice(0, STORY_LIMITS.author),
             summary: draft.summary.trim().slice(0, STORY_LIMITS.summary),
             region: draft.region,
+            sourceLocale: draft.sourceLocale ?? locale,
         });
     };
 
@@ -98,6 +109,16 @@ export function StoryMetaDialog({
                         label: t(SERVER_LABEL_KEYS[region]),
                     }))}
                     supportingText={showRegionHint ? t("page.storyMaker.meta.regionChangeHint") : t("page.storyMaker.meta.regionHint")}
+                />
+                <Select<UiLocale>
+                    label={t("page.storyMaker.i18n.sourceLocaleLabel")}
+                    value={draft.sourceLocale ?? locale}
+                    onValueChange={sourceLocale => setDraft(previous => ({ ...previous, sourceLocale }))}
+                    options={SUPPORTED_UI_LOCALES.map(code => ({
+                        value: code,
+                        label: UI_LOCALE_LABELS[code],
+                    }))}
+                    supportingText={t("page.storyMaker.i18n.sourceLocaleHint")}
                 />
                 <TextField
                     label={t("page.storyMaker.meta.author")}

@@ -1,13 +1,16 @@
 "use client";
 import { useRef, useState } from "react";
 import { Banner, Button, Dialog, Icon, Surface } from "@/components/md3";
-import { mdCheckCircle, mdCode, mdUploadFile } from "@/components/md3/icons";
+import { mdCheckCircle, mdCode, mdTranslate, mdUploadFile } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { UI_LOCALE_LABELS } from "@/lib/i18n/locales";
 import { compileStoryGraph, type CompiledStoryProgram } from "@/lib/storyMaker/compiler";
 import { totalBeatCount } from "@/lib/storyMaker/document";
+import { detectJsonArtifactKind, getAvailableStoryLocales } from "@/lib/storyMaker/i18nPack";
 import { parseStoryScript, type StoryScriptDiagnostic } from "@/lib/storyMaker/script";
-import type { StoryCompileDiagnostic, StoryDocument } from "@/types/storyMaker";
+import { parseStoryJson } from "@/lib/storyMaker/validate";
+import type { StoryCompileDiagnostic, StoryDocument, StoryIssue } from "@/types/storyMaker";
 import { StoryIssueList } from "./StoryIssueList";
 
 const MAX_IMPORT_BYTES = 2 * 1024 * 1024;
@@ -20,11 +23,42 @@ export interface StoryImportDialogProps {
     onImport: (doc: StoryDocument) => void;
 }
 
+type ImportFormat = "msk" | "json";
+type WrongJsonArtifact = "voiceManifest" | "localePack";
+
 type ImportEvaluation =
-    | { ok: true; doc: StoryDocument; program: CompiledStoryProgram }
-    | { ok: false; scriptErrors?: StoryScriptDiagnostic[]; diagnostics?: StoryCompileDiagnostic[] };
+    | { ok: true; format: ImportFormat; doc: StoryDocument; program: CompiledStoryProgram }
+    | {
+        ok: false;
+        wrongFormat?: WrongJsonArtifact;
+        scriptErrors?: StoryScriptDiagnostic[];
+        jsonIssues?: StoryIssue[];
+        diagnostics?: StoryCompileDiagnostic[];
+    };
 
 function evaluateImportText(raw: string): ImportEvaluation {
+    const trimmed = raw.trim();
+    if (trimmed.startsWith("{")) {
+        try {
+            const parsedRaw: unknown = JSON.parse(trimmed);
+            const kind = detectJsonArtifactKind(parsedRaw);
+            if (kind === "voiceManifest" || kind === "localePack") {
+                return { ok: false, wrongFormat: kind };
+            }
+        } catch {
+            // Fall through to parseStoryJson for a structured invalidJson diagnostic.
+        }
+        const validated = parseStoryJson(trimmed);
+        if (!validated.ok) {
+            return {
+                ok: false,
+                jsonIssues: validated.issues,
+                diagnostics: validated.diagnostics,
+            };
+        }
+        return { ok: true, format: "json", doc: validated.doc, program: validated.program };
+    }
+
     const parsed = parseStoryScript(raw);
     if (!parsed.ok) {
         return { ok: false, scriptErrors: parsed.diagnostics };
@@ -33,12 +67,13 @@ function evaluateImportText(raw: string): ImportEvaluation {
     if (!program.ok) {
         return { ok: false, diagnostics: program.errors };
     }
-    return { ok: true, doc: parsed.doc, program };
+    return { ok: true, format: "msk", doc: parsed.doc, program };
 }
 
 /**
- * Imports a MoeSekai Script (`.msk`) file or pasted source, running strict syntax parsing and
- * graph compilation before accepting the document.
+ * Imports a MoeSekai Script (`.msk`) or full Story Document (`.story.json`, `moesekai-story/2`)
+ * file or pasted source, running strict syntax/schema validation and graph compilation before
+ * accepting the document.
  */
 export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImport }: StoryImportDialogProps) {
     const { t } = useI18n();
@@ -90,8 +125,10 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
     };
 
     const errorCount = parsed && !parsed.ok
-        ? (parsed.scriptErrors?.length ?? parsed.diagnostics?.length ?? 0)
+        ? (parsed.scriptErrors?.length ?? parsed.diagnostics?.length ?? parsed.jsonIssues?.length ?? 0)
         : 0;
+
+    const previewLocales = parsed?.ok ? getAvailableStoryLocales(parsed.doc) : [];
 
     return (
         <Dialog
@@ -113,7 +150,7 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                 <input
                     ref={inputRef}
                     type="file"
-                    accept=".msk,text/plain"
+                    accept=".msk,.json,text/plain,application/json"
                     className="hidden"
                     onChange={event => {
                         void loadFile(event.target.files?.[0]);
@@ -132,10 +169,17 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                 >
                     <Icon path={mdUploadFile} size={28} className="text-primary" />
                     <span className="type-title-s text-on-surface">{t("page.storyMaker.import.dropLabel")}</span>
-                    <span className="inline-flex items-center gap-1 rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
-                        <Icon path={mdCode} size={14} />
-                        <span>{t("page.storyMaker.v2.script.tabScript")}</span>
-                    </span>
+                    <span className="type-body-s text-on-surface-variant">{t("page.storyMaker.import.dropHint")}</span>
+                    <div className="flex flex-wrap items-center justify-center gap-1.5">
+                        <span className="inline-flex items-center gap-1 rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
+                            <Icon path={mdCode} size={14} />
+                            <span>{t("page.storyMaker.v2.script.tabScript")}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-md3-full bg-tertiary-container px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                            <Icon path={mdTranslate} size={14} />
+                            <span>{t("page.storyMaker.import.formatStoryJson")}</span>
+                        </span>
+                    </div>
                 </button>
 
                 <div className="space-y-1">
@@ -154,7 +198,15 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
 
                 {fileError && <Banner tone="error">{fileError}</Banner>}
 
-                {parsed && !parsed.ok && (
+                {parsed && !parsed.ok && parsed.wrongFormat && (
+                    <Banner tone="warning">
+                        {t(parsed.wrongFormat === "voiceManifest"
+                            ? "page.storyMaker.import.wrongFormatVoiceManifest"
+                            : "page.storyMaker.import.wrongFormatLocalePack")}
+                    </Banner>
+                )}
+
+                {parsed && !parsed.ok && !parsed.wrongFormat && (
                     <Banner tone="error" title={t("page.storyMaker.import.invalidTitle", { count: errorCount })}>
                         {parsed.scriptErrors && parsed.scriptErrors.length > 0 ? (
                             <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto font-mono type-body-s text-on-surface">
@@ -174,6 +226,12 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                                 compact
                                 className="mt-2 max-h-48 overflow-y-auto"
                             />
+                        ) : parsed.jsonIssues && parsed.jsonIssues.length > 0 ? (
+                            <StoryIssueList
+                                issues={parsed.jsonIssues}
+                                compact
+                                className="mt-2 max-h-48 overflow-y-auto"
+                            />
                         ) : null}
                     </Banner>
                 )}
@@ -186,7 +244,9 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                                 <span className="type-title-s">{t("page.storyMaker.import.validTitle")}</span>
                             </div>
                             <span className="rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container">
-                                {t("page.storyMaker.v2.script.tabScript")}
+                                {t(parsed.format === "json"
+                                    ? "page.storyMaker.import.formatStoryJson"
+                                    : "page.storyMaker.v2.script.tabScript")}
                             </span>
                         </div>
                         <p className="type-title-m text-on-surface">
@@ -203,6 +263,16 @@ export function StoryImportDialog({ isOpen, onClose, title, confirmLabel, onImpo
                             <span>{t("page.storyMaker.stats.cast", { count: parsed.doc.cast.length })}</span>
                             <span>{t("page.storyMaker.stats.steps", { count: totalBeatCount(parsed.doc) })}</span>
                         </div>
+                        {previewLocales.length > 1 && (
+                            <div className="inline-flex flex-wrap items-center gap-1.5 rounded-md3-full bg-tertiary-container px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                                <Icon path={mdTranslate} size={13} className="shrink-0" />
+                                <span>
+                                    {t("page.storyMaker.import.attachedLocales", {
+                                        locales: previewLocales.map(item => UI_LOCALE_LABELS[item.locale]).join(" · "),
+                                    })}
+                                </span>
+                            </div>
+                        )}
                         <p className="font-mono type-label-s text-primary">
                             {t("page.storyMaker.v2.script.compileSuccess", {
                                 nodes: Object.keys(parsed.doc.nodes).length,

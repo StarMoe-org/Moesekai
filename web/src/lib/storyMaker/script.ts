@@ -52,6 +52,7 @@ import {
     type TransitionSlot,
     type VarOp,
 } from "../../types/storyMaker.ts";
+import { SUPPORTED_UI_LOCALES, isUiLocale, type UiLocale } from "../i18n/locales.ts";
 import { autoLayoutGraph, clampCoord, getNodeOutPorts, newStoryId } from "./document.ts";
 import { STORY_ID_PATTERN, STORY_LIMITS } from "./limits.ts";
 
@@ -224,6 +225,7 @@ export function serializeStoryScript(doc: StoryDocument): string {
 
     // Header
     const headerParts = [`@story ${escapeStr(doc.meta.title)}`, `region=${doc.region}`];
+    if (doc.sourceLocale) headerParts.push(`lang=${doc.sourceLocale}`);
     if (doc.id) headerParts.push(`id=${escapeStr(doc.id)}`);
     if (doc.meta.author) headerParts.push(`author=${escapeStr(doc.meta.author)}`);
     if (doc.meta.summary) headerParts.push(`summary=${escapeStr(doc.meta.summary)}`);
@@ -889,6 +891,7 @@ class ScriptParser {
     parse(): StoryScriptParseResult {
         let docId = "";
         let region: StoryRegion = "jp";
+        let sourceLocale: UiLocale | undefined;
         let title = "";
         let author = "";
         let summary = "";
@@ -931,6 +934,14 @@ class ScriptParser {
                                 this.error(rTok, `Invalid region '${rVal}'`);
                             } else {
                                 region = rVal as StoryRegion;
+                            }
+                        } else if (keyTok.value === "lang" || keyTok.value === "sourceLocale") {
+                            const lTok = this.peek();
+                            const lVal = lTok.kind === "STRING" || lTok.kind === "IDENT" ? this.next().value : "";
+                            if (!isUiLocale(lVal)) {
+                                this.error(lTok, `Invalid sourceLocale '${lVal}' (allowed: ${SUPPORTED_UI_LOCALES.join(", ")})`);
+                            } else {
+                                sourceLocale = lVal;
                             }
                         } else if (keyTok.value === "id") {
                             const v = this.peek().kind === "STRING" || this.atId() ? this.next().value : "";
@@ -1698,6 +1709,7 @@ class ScriptParser {
             schema: STORY_SCHEMA_VERSION,
             id: docId && STORY_ID_PATTERN.test(docId) ? docId : newStoryId([], 10),
             region,
+            ...(sourceLocale !== undefined ? { sourceLocale } : {}),
             meta: {
                 title: title.slice(0, STORY_LIMITS.title),
                 summary: summary.slice(0, STORY_LIMITS.summary),

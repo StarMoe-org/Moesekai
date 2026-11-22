@@ -14,9 +14,9 @@ import {
     mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCloudDone, mdCode,
     mdContentCopy, mdDownload, mdEdit, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen,
     mdFullscreenExit, mdHistory, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
-    mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRedo, mdReplay,
+    mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdReplay,
     mdRestartAlt, mdRightPanelClose, mdRightPanelOpen, mdSettings, mdSkipNext, mdSkipPrevious,
-    mdStar, mdTag, mdUndo, mdUploadFile, mdViewQuilt, mdVisibility, mdVisibilityOff, mdVolumeOff,
+    mdStar, mdTag, mdTranslate, mdUndo, mdUploadFile, mdViewQuilt, mdVisibility, mdVisibilityOff, mdVolumeOff,
     mdVolumeUp, mdWarning,
 } from "@/components/md3/icons";
 import { AssetPreloadDialog } from "@/components/story-maker/AssetPreloadPanel";
@@ -28,6 +28,7 @@ import { NodeInspector } from "@/components/story-maker/NodeInspector";
 import { StoryCodeWorkspace, type StoryCodeEvaluation } from "@/components/story-maker/StoryCodeWorkspace";
 import { StoryEditorBin } from "@/components/story-maker/StoryEditorBin";
 import { StoryFlowCanvas, type StoryFlowViewportActions } from "@/components/story-maker/StoryFlowCanvas";
+import { StoryI18nDialog } from "@/components/story-maker/StoryI18nDialog";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
 import { StoryIssueList } from "@/components/story-maker/StoryIssueList";
 import {
@@ -35,6 +36,7 @@ import {
 } from "@/components/story-maker/StoryMetaDialog";
 import { applyInstructionToStage } from "@/components/story-maker/StoryPlayerView";
 import { StoryStageView } from "@/components/story-maker/StoryStageView";
+import { StoryVoiceManifestDialog } from "@/components/story-maker/StoryVoiceManifestDialog";
 import {
     DEFAULT_EDITOR_LAYOUT, EDITOR_LAYOUT_LIMITS, resetEditorLayout, updateEditorLayout, useEditorLayout,
 } from "@/components/story-maker/useEditorLayout";
@@ -47,6 +49,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { MOE_LOGO_URL } from "@/lib/assets";
+import { UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import { live2dSources } from "@/lib/live2dViewer/config";
 import { localizePath } from "@/lib/localized-path";
 import { storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls } from "@/lib/storyMaker/assets";
@@ -55,20 +58,24 @@ import {
     GRAPH_COL_GAP, GRAPH_ORIGIN_X, GRAPH_ORIGIN_Y, acceptsTarget, applyDragPayloadToTarget,
     autoLayoutGraph, clampCoord, connectEdge, continueAndCutScene, createNode, disconnectEdge, disconnectPort,
     duplicateBeat, duplicateNode, getOutgoingEdge, moveBeat, moveNode, removeBeat, removeNode,
-    rewireEdgeSource,
+    rewireEdgeSource, upsertStoryLocalePack,
     type ContinueSceneOptions, type StoryDragPayload, type StoryDropTarget,
 } from "@/lib/storyMaker/document";
 import { StoryDraftsUnavailableError, createDraft, getDraft, saveDraft } from "@/lib/storyMaker/drafts";
+import {
+    applyStoryLocaleOverlay, getAvailableStoryLocales, inferStorySourceLocale,
+    resolveVoiceManifestLineUrl,
+} from "@/lib/storyMaker/i18nPack";
 import { STORY_FADE_SECONDS, STORY_LIMITS } from "@/lib/storyMaker/limits";
 import {
     INITIAL_STAGE_STATE, advanceRuntime, createInitialRuntime, evaluateCondition, evaluateStageAt,
-    initVariables, interpolateStoryText, type StoryRuntimeFrame,
+    initVariables, interpolateStoryText, localizeRuntimeFrame, type StoryRuntimeFrame,
 } from "@/lib/storyMaker/runtime";
 import { parseStoryScript, serializeStoryScript } from "@/lib/storyMaker/script";
 import { downloadStoryScript } from "@/lib/storyMaker/starter";
 import type {
     SceneNode, StoryCastMember, StoryDocument, StoryEffectColor, StoryNode, StoryNodePos,
-    StoryStageState, StoryVarValues,
+    StoryStageState, StoryTranslationOrigin, StoryVarValues, StoryVoiceManifest,
 } from "@/types/storyMaker";
 
 const MAX_UNDO = 50;
@@ -125,6 +132,19 @@ function pickInitialNodeId(doc: StoryDocument): string {
 function getNodeDisplayName(node: StoryNode, t: (key: string) => string): string {
     if (node.type === "start") return t("page.storyMaker.v2.nodeTypes.start");
     return node.title.trim() || t(`page.storyMaker.v2.nodeTypes.${node.type}`);
+}
+
+function playOriginBadgeTone(origin: StoryTranslationOrigin): string {
+    switch (origin) {
+        case "original":
+            return "bg-primary-container text-on-primary-container";
+        case "human":
+            return "bg-secondary-container text-on-secondary-container";
+        case "ai_assisted":
+            return "bg-tertiary-container text-on-tertiary-container";
+        case "ai_raw":
+            return "bg-surface-container-highest text-on-surface-variant";
+    }
 }
 
 function DesktopOnlyNotice({ draftId }: { draftId: string | null }) {
@@ -222,11 +242,16 @@ function StoryMakerEditContent() {
     const [codeSelectedBeatId, setCodeSelectedBeatId] = useState<string | null>(null);
 
     const [metaOpen, setMetaOpen] = useState(false);
+    const [i18nOpen, setI18nOpen] = useState(false);
+    const [voiceManifestOpen, setVoiceManifestOpen] = useState(false);
     const [issuesOpen, setIssuesOpen] = useState(false);
     const [importOpen, setImportOpen] = useState(false);
     const [preloadOpen, setPreloadOpen] = useState(false);
+    const [playSelectedLocale, setPlaySelectedLocale] = useState<UiLocale | null>(null);
+    const [playVoiceManifest, setPlayVoiceManifest] = useState<StoryVoiceManifest | null>(null);
     const [snack, setSnack] = useState<string | null>(null);
     const [flash, setFlash] = useState<{ key: number; color: StoryEffectColor; seconds: number } | null>(null);
+    const playVoiceManifestRef = useRef<StoryVoiceManifest | null>(null);
 
     // Interactive Playtest runtime state (shares the persistently mounted WebGPU stage).
     const [playHistory, setPlayHistory] = useState<PlaytestHistoryItem[]>([]);
@@ -275,6 +300,10 @@ function StoryMakerEditContent() {
     useEffect(() => {
         workspaceModeRef.current = workspaceMode;
     }, [workspaceMode]);
+
+    useEffect(() => {
+        playVoiceManifestRef.current = playVoiceManifest;
+    }, [playVoiceManifest]);
 
     const effectiveImmersive = immersive && !loadError;
     useShellImmersiveMode(effectiveImmersive);
@@ -351,6 +380,8 @@ function StoryMakerEditContent() {
             setPlayEffectActive(false);
             setPlayVoicePending(false);
             setPlayVoiceProgress(null);
+            setPlaySelectedLocale(null);
+            setPlayVoiceManifest(null);
 
             if (!draftId) {
                 setDoc(null);
@@ -546,6 +577,34 @@ function StoryMakerEditContent() {
     const errorCount = program?.errors.length ?? 0;
     const warningCount = program?.warnings.length ?? 0;
 
+    // ==================== Playtest Multi-Language & TTS Manifest Overlay ====================
+    const availablePlayLocales = useMemo(() => (doc ? getAvailableStoryLocales(doc) : []), [doc]);
+    const effectivePlayLocale: UiLocale = useMemo(() => {
+        if (!doc) return "zh-CN";
+        if (playSelectedLocale && availablePlayLocales.some(item => item.locale === playSelectedLocale)) {
+            return playSelectedLocale;
+        }
+        return availablePlayLocales[0]?.locale ?? inferStorySourceLocale(doc);
+    }, [availablePlayLocales, doc, playSelectedLocale]);
+    const activePlayLocaleInfo = availablePlayLocales.find(item => item.locale === effectivePlayLocale) ?? availablePlayLocales[0];
+    const playLocalizedDoc = useMemo(
+        () => (doc ? applyStoryLocaleOverlay(doc, effectivePlayLocale) : null),
+        [doc, effectivePlayLocale],
+    );
+    const playLocalizedDocRef = useRef<StoryDocument | null>(playLocalizedDoc);
+    useEffect(() => {
+        playLocalizedDocRef.current = playLocalizedDoc;
+    }, [playLocalizedDoc]);
+    const playProgram = useMemo(
+        () => (playLocalizedDoc ? compileStoryGraph(playLocalizedDoc) : null),
+        [playLocalizedDoc],
+    );
+    const hasPlayVoiceTrackManifest = Boolean(playVoiceManifest && Object.keys(playVoiceManifest.lines).length > 0);
+    const playVoiceTrackBadgeLabel = playVoiceManifest?.locale
+        ? `${t("page.storyMaker.voiceTrack.badge")} · ${UI_LOCALE_LABELS[playVoiceManifest.locale]}`
+        : t("page.storyMaker.voiceTrack.badge");
+    const attachedLocaleCount = doc?.locales ? Object.keys(doc.locales).length : 0;
+
     // ==================== Code Preview Mode Evaluation ====================
     const codeDirty = workspaceMode === "code" && codeText !== codeSyncedBase;
 
@@ -736,18 +795,19 @@ function StoryMakerEditContent() {
         setPlayHistory(nextHistory);
 
         if (instant || frame.executedInstructions.length === 0) {
+            const finalFrame = localizeRuntimeFrame(frame, playLocalizedDocRef.current ?? targetDoc);
             finishStage();
             setFlash(null);
-            setPlayStageState(frame.stage);
-            setPlayLiveVariables(frame.variables);
-            setPlayTypedCount(frame.stage.dialogue?.body.length ?? 0);
+            setPlayStageState(finalFrame.stage);
+            setPlayLiveVariables(finalFrame.variables);
+            setPlayTypedCount(finalFrame.stage.dialogue?.body.length ?? 0);
             setPlayRunning(false);
             syncBgm(
-                frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, targetDoc.region, line) : null,
-                frame.stage.bgm.volume,
+                finalFrame.stage.bgm.name ? storyBgmUrl(finalFrame.stage.bgm.name, targetDoc.region, line) : null,
+                finalFrame.stage.bgm.volume,
             );
-            void applyStage(frame.stage, { instant: true });
-            if (frame.stoppedReason !== "blocking") setPlayAuto(false);
+            void applyStage(finalFrame.stage, { instant: true });
+            if (finalFrame.stoppedReason !== "blocking") setPlayAuto(false);
             return;
         }
 
@@ -757,7 +817,8 @@ function StoryMakerEditContent() {
 
         for (const inst of frame.executedInstructions) {
             if (playGenRef.current !== generation) return;
-            const stepped = applyInstructionToStage(stage, vars, inst, targetDoc);
+            const activeDoc = playLocalizedDocRef.current ?? targetDoc;
+            const stepped = applyInstructionToStage(stage, vars, inst, activeDoc);
             stage = stepped.stage;
             vars = stepped.variables;
 
@@ -832,7 +893,7 @@ function StoryMakerEditContent() {
                     setPlayStageState(stage);
                     setPlayLiveVariables(vars);
                     void applyStage(stage, { instant: false });
-                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, targetDoc, vars);
+                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, activeDoc, vars);
                     setPlayTypedCount(reduced ? body.length : 0);
                     if (beat.se) {
                         playSe(storySeCandidateUrls(beat.se, targetDoc.region, line), beat.seVolume);
@@ -845,6 +906,17 @@ function StoryMakerEditContent() {
                             generation,
                             true,
                         );
+                    } else if (playVoiceManifestRef.current) {
+                        const trackUrls = resolveVoiceManifestLineUrl(playVoiceManifestRef.current, beat.id);
+                        if (trackUrls.length > 0) {
+                            const manifestLine = playVoiceManifestRef.current.lines[beat.id];
+                            startPlayVoice(
+                                trackUrls,
+                                { label: manifestLine?.speaker || beat.id },
+                                generation,
+                                true,
+                            );
+                        }
                     }
                     break;
                 }
@@ -870,15 +942,19 @@ function StoryMakerEditContent() {
         }
 
         if (playGenRef.current !== generation) return;
-        setPlayStageState(frame.stage);
-        setPlayLiveVariables(frame.variables);
+        const finalFrame = localizeRuntimeFrame(frame, playLocalizedDocRef.current ?? targetDoc);
+        setPlayStageState(finalFrame.stage);
+        setPlayLiveVariables(finalFrame.variables);
+        if (finalFrame.stage.dialogue && finalFrame.stage.dialogue.body !== stage.dialogue?.body) {
+            setPlayTypedCount(reduced ? finalFrame.stage.dialogue.body.length : 0);
+        }
         syncBgm(
-            frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, targetDoc.region, line) : null,
-            frame.stage.bgm.volume,
+            finalFrame.stage.bgm.name ? storyBgmUrl(finalFrame.stage.bgm.name, targetDoc.region, line) : null,
+            finalFrame.stage.bgm.volume,
         );
         setPlayEffectActive(false);
         setPlayRunning(false);
-        if (frame.stoppedReason !== "blocking") setPlayAuto(false);
+        if (finalFrame.stoppedReason !== "blocking") setPlayAuto(false);
     }, [applyStage, finishStage, line, playSe, reduced, setStageTalking, shakeStage, startPlayVoice, stopActivePlayVoice, syncBgm, waitPlayMs]);
 
     const startPlaytestFrom = useCallback((
@@ -886,9 +962,14 @@ function StoryMakerEditContent() {
         docOverride?: StoryDocument,
         programOverride?: CompiledStoryProgram,
     ) => {
-        const activeTargetDoc = docOverride ?? doc;
-        const activeTargetProgram = programOverride ?? (docOverride ? compileStoryGraph(docOverride) : program);
-        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0) return;
+        const activeTargetDoc = docOverride
+            ? applyStoryLocaleOverlay(docOverride, effectivePlayLocale)
+            : (playLocalizedDoc ?? doc);
+        if (!activeTargetDoc) return;
+        const activeTargetProgram = docOverride
+            ? (programOverride && activeTargetDoc === docOverride ? programOverride : compileStoryGraph(activeTargetDoc))
+            : (playProgram ?? program);
+        if (!activeTargetProgram || activeTargetProgram.errors.length > 0) return;
         voiceTokenRef.current += 1;
         stopAllAudio();
         setPlayVoicePending(false);
@@ -906,7 +987,7 @@ function StoryMakerEditContent() {
             ? evaluateStageAt(activeTargetDoc, resolvedNodeId)
             : { stage: INITIAL_STAGE_STATE, variables: initVariables(activeTargetDoc) };
         void executePlayFrame(activeTargetDoc, [{ frame: initialFrame }], seed.stage, seed.variables, initialFrame, false);
-    }, [doc, executePlayFrame, program, setStageTalking, stopAllAudio]);
+    }, [doc, effectivePlayLocale, executePlayFrame, playLocalizedDoc, playProgram, program, setStageTalking, stopAllAudio]);
 
     const stopPlaytestSession = useCallback(() => {
         playGenRef.current += 1;
@@ -998,24 +1079,31 @@ function StoryMakerEditContent() {
         syncModeUrl("code");
     }, [activeBeatId, activeNodeId, clearClipPreview, doc, stopPlaytestSession, syncModeUrl]);
 
-    const applyCodeDoc = useCallback((nextDoc: StoryDocument, silent = false) => {
-        commit(() => nextDoc);
-        const serialized = serializeStoryScript(nextDoc);
+    const applyCodeDoc = useCallback((nextDoc: StoryDocument, silent = false, preserveLocales = true) => {
+        const mergedDoc: StoryDocument = preserveLocales && doc
+            ? {
+                ...nextDoc,
+                ...(nextDoc.sourceLocale ? {} : (doc.sourceLocale ? { sourceLocale: doc.sourceLocale } : {})),
+                ...(doc.locales && Object.keys(doc.locales).length > 0 ? { locales: doc.locales } : {}),
+            }
+            : nextDoc;
+        commit(() => mergedDoc);
+        const serialized = serializeStoryScript(mergedDoc);
         setCodeText(serialized);
         setCodeSyncedBase(serialized);
-        setCodePreviewDoc(nextDoc);
-        const nextNodeId = activeNodeId && nextDoc.nodes[activeNodeId]
+        setCodePreviewDoc(mergedDoc);
+        const nextNodeId = activeNodeId && mergedDoc.nodes[activeNodeId]
             ? activeNodeId
-            : pickInitialNodeId(nextDoc);
+            : pickInitialNodeId(mergedDoc);
         setSelectedNodeId(nextNodeId);
-        const nextNode = nextDoc.nodes[nextNodeId];
+        const nextNode = mergedDoc.nodes[nextNodeId];
         setSelectedBeatId(nextNode?.type === "scene" ? (nextNode.beats[0]?.id ?? null) : null);
         setCodeSelectedNodeId(nextNodeId);
         setCodeSelectedBeatId(nextNode?.type === "scene" ? (nextNode.beats[0]?.id ?? null) : null);
         if (!silent) {
             setSnack(t("page.storyMaker.v2.mode.codeSyncedToast"));
         }
-    }, [activeNodeId, commit, t]);
+    }, [activeNodeId, commit, doc, t]);
 
     const handleWorkspaceModeChange = useCallback((nextMode: WorkspaceMode) => {
         if (!doc || nextMode === workspaceMode) return;
@@ -1051,16 +1139,23 @@ function StoryMakerEditContent() {
     ]);
 
     const handleApplyCodeAndPlaytest = useCallback((nextDoc: StoryDocument) => {
-        const compiled = compileStoryGraph(nextDoc);
+        const mergedDoc: StoryDocument = doc
+            ? {
+                ...nextDoc,
+                ...(nextDoc.sourceLocale ? {} : (doc.sourceLocale ? { sourceLocale: doc.sourceLocale } : {})),
+                ...(doc.locales && Object.keys(doc.locales).length > 0 ? { locales: doc.locales } : {}),
+            }
+            : nextDoc;
+        const compiled = compileStoryGraph(mergedDoc);
         if (!compiled.ok) {
             setSnack(t("page.storyMaker.v2.mode.playtestBlockedErrors", { count: compiled.errors.length }));
             return;
         }
         if (codeDirty) {
-            applyCodeDoc(nextDoc, true);
+            applyCodeDoc(mergedDoc, true, true);
         }
-        enterPlaytest(undefined, nextDoc, compiled);
-    }, [applyCodeDoc, codeDirty, enterPlaytest, t]);
+        enterPlaytest(undefined, mergedDoc, compiled);
+    }, [applyCodeDoc, codeDirty, doc, enterPlaytest, t]);
 
     // Honor `?mode=playtest` or `?mode=code` on initial draft load once `doc` and `program` are ready.
     useEffect(() => {
@@ -1142,8 +1237,30 @@ function StoryMakerEditContent() {
         void applyStage(finalFrame.stage, { instant: true });
     }, [applyStage, doc, finishStage, line, stopActivePlayVoice, syncBgm]);
 
+    /** Re-localize active playtest frame & backlog seamlessly when switching subtitle language mid-playtest. */
+    const lastAppliedPlayDocRef = useRef<StoryDocument | null>(playLocalizedDoc);
+    useEffect(() => {
+        if (lastAppliedPlayDocRef.current === playLocalizedDoc) return;
+        lastAppliedPlayDocRef.current = playLocalizedDoc;
+        if (workspaceMode !== "playtest" || !playLocalizedDoc) return;
+        const current = playHistoryRef.current;
+        if (current.length === 0) return;
+        const nextHistory = current.map(item => ({
+            ...item,
+            frame: localizeRuntimeFrame(item.frame, playLocalizedDoc),
+        }));
+        const latest = nextHistory[nextHistory.length - 1]?.frame;
+        setPlayHistory(nextHistory);
+        if (latest) {
+            setPlayStageState(latest.stage);
+            setPlayTypedCount(latest.stage.dialogue?.body.length ?? 0);
+        }
+    }, [playLocalizedDoc, workspaceMode]);
+
     const handlePlayAdvance = useCallback(() => {
-        if (!doc || !program || program.errors.length > 0) return;
+        const activeTargetDoc = playLocalizedDoc ?? doc;
+        const activeTargetProgram = playProgram ?? program;
+        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0) return;
         unlockAudio();
         if (playUiHidden) {
             setPlayUiHidden(false);
@@ -1160,10 +1277,10 @@ function StoryMakerEditContent() {
         const current = playHistoryRef.current;
         const latest = current[current.length - 1];
         if (!latest || latest.frame.stoppedReason !== "blocking") return;
-        const nextFrame = advanceRuntime(program, latest.frame);
+        const nextFrame = advanceRuntime(activeTargetProgram, latest.frame);
         if (nextFrame === latest.frame) return;
         void executePlayFrame(
-            doc,
+            activeTargetDoc,
             [...current, { frame: nextFrame }],
             playStageStateRef.current,
             playLiveVariablesRef.current,
@@ -1171,12 +1288,14 @@ function StoryMakerEditContent() {
             false,
         );
     }, [
-        doc, executePlayFrame, playFullDialogueBody.length, playIsTyping, playRunning,
-        playUiHidden, program, snapPlayFrame, unlockAudio,
+        doc, executePlayFrame, playFullDialogueBody.length, playIsTyping, playLocalizedDoc, playProgram,
+        playRunning, playUiHidden, program, snapPlayFrame, unlockAudio,
     ]);
 
     const handlePlayChoose = useCallback((optionId: string, optionText: string) => {
-        if (!doc || !program || program.errors.length > 0) return;
+        const activeTargetDoc = playLocalizedDoc ?? doc;
+        const activeTargetProgram = playProgram ?? program;
+        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0) return;
         unlockAudio();
         const current = playHistoryRef.current;
         const latest = current[current.length - 1];
@@ -1186,17 +1305,17 @@ function StoryMakerEditContent() {
         const annotated = current.map((item, idx) => (
             idx === current.length - 1 ? { ...item, chosenText: optionText } : item
         ));
-        const nextFrame = advanceRuntime(program, latest.frame, optionId);
+        const nextFrame = advanceRuntime(activeTargetProgram, latest.frame, optionId);
         if (nextFrame === latest.frame) return;
         void executePlayFrame(
-            doc,
+            activeTargetDoc,
             [...annotated, { frame: nextFrame }],
             playStageStateRef.current,
             playLiveVariablesRef.current,
             nextFrame,
             false,
         );
-    }, [doc, executePlayFrame, program, unlockAudio]);
+    }, [doc, executePlayFrame, playLocalizedDoc, playProgram, program, unlockAudio]);
 
     const handlePlayPrevious = useCallback(() => {
         if (!doc) return;
@@ -1226,16 +1345,20 @@ function StoryMakerEditContent() {
     }, [applyStage, doc, line, setStageTalking, stopActivePlayVoice, syncBgm]);
 
     const jumpPlaytestToNode = useCallback((nodeId: string) => {
-        if (!doc || !program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
+        const activeTargetDoc = playLocalizedDoc ?? doc;
+        const activeTargetProgram = playProgram ?? program;
+        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0 || activeTargetProgram.nodeEntryPc[nodeId] === undefined) return;
         setPlayAuto(false);
-        const frame = createInitialRuntime(program, nodeId);
-        void executePlayFrame(doc, [{ frame }], frame.stage, frame.variables, frame, true);
-    }, [doc, executePlayFrame, program]);
+        const frame = createInitialRuntime(activeTargetProgram, nodeId);
+        void executePlayFrame(activeTargetDoc, [{ frame }], frame.stage, frame.variables, frame, true);
+    }, [doc, executePlayFrame, playLocalizedDoc, playProgram, program]);
 
     const jumpPlaytestToBeat = useCallback((nodeId: string, beatId: string) => {
-        if (!doc || !program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
+        const activeTargetDoc = playLocalizedDoc ?? doc;
+        const activeTargetProgram = playProgram ?? program;
+        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0 || activeTargetProgram.nodeEntryPc[nodeId] === undefined) return;
         setPlayAuto(false);
-        let cur = createInitialRuntime(program, nodeId);
+        let cur = createInitialRuntime(activeTargetProgram, nodeId);
         const frames: PlaytestHistoryItem[] = [{ frame: cur }];
         const maxSteps = STORY_LIMITS.beatsPerScene + 4;
 
@@ -1244,7 +1367,7 @@ function StoryMakerEditContent() {
                 || cur.executedInstructions.some(inst => "beatId" in inst && inst.beatId === beatId);
             if (hitInBatch) break;
             if (cur.stoppedReason !== "blocking" || cur.nodeId !== nodeId) break;
-            const next = advanceRuntime(program, cur);
+            const next = advanceRuntime(activeTargetProgram, cur);
             if (next === cur) break;
             const nextHasBeat = next.beatId === beatId
                 || next.executedInstructions.some(inst => "beatId" in inst && inst.beatId === beatId);
@@ -1253,14 +1376,14 @@ function StoryMakerEditContent() {
             frames.push({ frame: cur });
         }
 
-        void executePlayFrame(doc, frames, cur.stage, cur.variables, cur, true);
-    }, [doc, executePlayFrame, program]);
+        void executePlayFrame(activeTargetDoc, frames, cur.stage, cur.variables, cur, true);
+    }, [doc, executePlayFrame, playLocalizedDoc, playProgram, program]);
 
     /** Auto-advance timer in playtest mode. */
     useEffect(() => {
         if (
             workspaceMode !== "playtest" || !playAuto || playRunning || playIsTyping
-            || playVoicePending || preloadOpen || issuesOpen || playCurrentChoice
+            || playVoicePending || preloadOpen || issuesOpen || i18nOpen || voiceManifestOpen || playCurrentChoice
         ) {
             return;
         }
@@ -1276,8 +1399,52 @@ function StoryMakerEditContent() {
         return () => window.clearTimeout(timer);
     }, [
         workspaceMode, playActiveFrame, playAuto, playCurrentChoice, handlePlayAdvance,
-        issuesOpen, playIsTyping, preloadOpen, playRunning, playStageState, playVoicePending,
+        i18nOpen, issuesOpen, playIsTyping, preloadOpen, playRunning, playStageState, playVoicePending,
+        voiceManifestOpen,
     ]);
+
+    /** Immediately play/stop current playtest line voice when mounting or clearing a TTS manifest mid-scene. */
+    const lastMountedPlayManifestRef = useRef<StoryVoiceManifest | null>(playVoiceManifest);
+    const startPlayVoiceRef = useRef(startPlayVoice);
+    const stopActivePlayVoiceRef = useRef(stopActivePlayVoice);
+    const unlockAudioRef = useRef(unlockAudio);
+    useEffect(() => {
+        startPlayVoiceRef.current = startPlayVoice;
+        stopActivePlayVoiceRef.current = stopActivePlayVoice;
+        unlockAudioRef.current = unlockAudio;
+    }, [startPlayVoice, stopActivePlayVoice, unlockAudio]);
+
+    useEffect(() => {
+        if (lastMountedPlayManifestRef.current === playVoiceManifest) return;
+        const previous = lastMountedPlayManifestRef.current;
+        lastMountedPlayManifestRef.current = playVoiceManifest;
+        if (workspaceModeRef.current !== "playtest") return;
+        if (!playVoiceManifest) {
+            if (!previous) return;
+            const stopTimer = window.setTimeout(() => {
+                stopActivePlayVoiceRef.current();
+            }, 0);
+            return () => window.clearTimeout(stopTimer);
+        }
+        const timer = window.setTimeout(() => {
+            const stepId = playStageStateRef.current.dialogue?.stepId;
+            const activeDoc = playLocalizedDocRef.current;
+            if (!stepId || !activeDoc) return;
+            for (const node of Object.values(activeDoc.nodes)) {
+                if (node.type !== "scene") continue;
+                const found = node.beats.find(beat => beat.kind === "talk" && beat.id === stepId);
+                if (!found || found.kind !== "talk") continue;
+                if (found.voice?.voiceId) return;
+                const trackUrls = resolveVoiceManifestLineUrl(playVoiceManifest, stepId);
+                const manifestLine = playVoiceManifest.lines[stepId];
+                if (trackUrls.length === 0 || !manifestLine) return;
+                unlockAudioRef.current();
+                startPlayVoiceRef.current(trackUrls, { label: manifestLine.speaker || stepId }, playGenRef.current, true);
+                return;
+            }
+        }, 0);
+        return () => window.clearTimeout(timer);
+    }, [playVoiceManifest]);
 
     /** Track native fullscreen state for the stage container. */
     useEffect(() => {
@@ -1297,40 +1464,47 @@ function StoryMakerEditContent() {
     }, []);
 
     const playtestBacklogEntries = useMemo<LivePhaseBacklogItem[]>(() => {
-        if (!doc || workspaceMode !== "playtest") return [];
+        const activeTargetDoc = playLocalizedDoc ?? doc;
+        if (!activeTargetDoc || workspaceMode !== "playtest") return [];
         const items: LivePhaseBacklogItem[] = [];
         playHistory.forEach((entry, frameIndex) => {
             const { frame } = entry;
             frame.executedInstructions.forEach((inst, instIdx) => {
                 if (inst.op === "talk") {
                     const beat = inst.beat;
-                    const member = beat.speakerKey ? doc.cast.find(item => item.key === beat.speakerKey) : undefined;
+                    const member = beat.speakerKey ? activeTargetDoc.cast.find(item => item.key === beat.speakerKey) : undefined;
                     const speaker = frame.stage.dialogue?.stepId === beat.id
                         ? frame.stage.dialogue.speaker
                         : beat.speakerName
-                            ? interpolateStoryText(beat.speakerName, doc, frame.variables)
+                            ? interpolateStoryText(beat.speakerName, activeTargetDoc, frame.variables)
                             : (member?.name ?? "");
                     const body = frame.stage.dialogue?.stepId === beat.id
                         ? frame.stage.dialogue.body
-                        : interpolateStoryText(beat.body, doc, frame.variables);
+                        : interpolateStoryText(beat.body, activeTargetDoc, frame.variables);
                     const hasVoice = Boolean(beat.voice && beat.voice.scenarioId && beat.voice.voiceId);
-                    const voiceUrls = hasVoice && beat.voice
-                        ? storyVoiceCandidateUrls(beat.voice, doc.region, line)
+                    const officialUrls = hasVoice && beat.voice
+                        ? storyVoiceCandidateUrls(beat.voice, activeTargetDoc.region, line)
                         : [];
+                    const manifestUrls = !hasVoice && playVoiceManifest
+                        ? resolveVoiceManifestLineUrl(playVoiceManifest, beat.id)
+                        : [];
+                    const voiceUrls = officialUrls.length > 0 ? officialUrls : manifestUrls;
                     items.push({
                         key: `${frameIndex}-${instIdx}-${beat.id}`,
                         kind: "talk",
                         speaker,
                         body,
                         voiceUrls: voiceUrls.length > 0 ? voiceUrls : undefined,
-                        voiceStart: beat.voice?.start,
-                        voiceEnd: beat.voice?.end,
-                        voiceLabel: beat.voice?.voiceId,
+                        voiceStart: hasVoice ? beat.voice?.start : undefined,
+                        voiceEnd: hasVoice ? beat.voice?.end : undefined,
+                        voiceLabel: hasVoice
+                            ? beat.voice?.voiceId
+                            : (playVoiceManifest?.lines[beat.id]?.speaker || (manifestUrls.length > 0 ? beat.id : undefined)),
                     });
                 } else if (inst.op === "narration") {
                     const body = frame.stage.narration?.stepId === inst.beat.id
                         ? frame.stage.narration.body
-                        : interpolateStoryText(inst.beat.body, doc, frame.variables);
+                        : interpolateStoryText(inst.beat.body, activeTargetDoc, frame.variables);
                     items.push({
                         key: `${frameIndex}-${instIdx}-${inst.beat.id}`,
                         kind: "narration",
@@ -1339,7 +1513,7 @@ function StoryMakerEditContent() {
                 } else if (inst.op === "telop") {
                     const body = frame.stage.telop?.stepId === inst.beat.id
                         ? frame.stage.telop.body
-                        : interpolateStoryText(inst.beat.text, doc, frame.variables);
+                        : interpolateStoryText(inst.beat.text, activeTargetDoc, frame.variables);
                     items.push({
                         key: `${frameIndex}-${instIdx}-${inst.beat.id}`,
                         kind: "telop",
@@ -1352,7 +1526,7 @@ function StoryMakerEditContent() {
             }
         });
         return items;
-    }, [doc, line, playHistory, workspaceMode]);
+    }, [doc, line, playHistory, playLocalizedDoc, playVoiceManifest, workspaceMode]);
 
     const handlePlayReplayBacklogVoice = useCallback((item: LivePhaseBacklogItem) => {
         if (!item.voiceUrls || item.voiceUrls.length === 0) return;
@@ -1383,6 +1557,8 @@ function StoryMakerEditContent() {
             }
             const hasOpenOverlay = Boolean(
                 metaOpen
+                || i18nOpen
+                || voiceManifestOpen
                 || issuesOpen
                 || importOpen
                 || preloadOpen
@@ -1499,7 +1675,7 @@ function StoryMakerEditContent() {
         workspaceMode, stageWebFullscreen, playUiHidden, exitPlaytest, handlePlayAdvance, handlePlayPrevious,
         playCurrentChoice, uiKit?.decideSoundUrl, playSe, handlePlayChoose, t,
         undo, redo, immersive, handleImmersiveChange,
-        metaOpen, issuesOpen, importOpen, preloadOpen,
+        metaOpen, i18nOpen, voiceManifestOpen, issuesOpen, importOpen, preloadOpen,
         activeScene, activeBeatId, activeNode, doc, draftId, flushSave,
         handleDeleteBeat, handleDeleteNode,
     ]);
@@ -1703,8 +1879,11 @@ function StoryMakerEditContent() {
     };
 
     const handleImportIntoCurrentDraft = (importedDoc: StoryDocument) => {
+        if (workspaceMode === "playtest") exitPlaytest(false);
         setImportOpen(false);
-        applyCodeDoc(importedDoc, true);
+        setPlayVoiceManifest(null);
+        setPlaySelectedLocale(null);
+        applyCodeDoc(importedDoc, true, false);
         setSnack(t("page.storyMaker.landing.importedToast"));
     };
 
@@ -1870,6 +2049,19 @@ function StoryMakerEditContent() {
             disabled: isPlaytest,
             dividerBefore: true,
             onSelect: () => setMetaOpen(true),
+        },
+        {
+            key: "i18n-packs",
+            label: t("page.storyMaker.i18n.toolbarButton"),
+            icon: mdTranslate,
+            disabled: isPlaytest,
+            onSelect: () => setI18nOpen(true),
+        },
+        {
+            key: "load-voice-manifest",
+            label: t("page.storyMaker.voiceTrack.action"),
+            icon: mdRecordVoiceOver,
+            onSelect: () => setVoiceManifestOpen(true),
         },
         {
             key: "import-msk",
@@ -2107,6 +2299,37 @@ function StoryMakerEditContent() {
 
                     <button
                         type="button"
+                        disabled={isPlaytest}
+                        onClick={() => setI18nOpen(true)}
+                        title={t("page.storyMaker.i18n.toolbarButton")}
+                        className={cn(
+                            "state-layer focus-ring inline-flex h-7 shrink-0 items-center gap-1 rounded-md3-full px-2 type-label-s transition-colors",
+                            isPlaytest
+                                ? "cursor-default bg-surface-container text-on-surface-variant opacity-50"
+                                : attachedLocaleCount > 0
+                                    ? "cursor-pointer bg-primary-container text-on-primary-container"
+                                    : "cursor-pointer bg-surface-container text-on-surface hover:bg-surface-container-high",
+                        )}
+                    >
+                        <Icon path={mdTranslate} size={14} className="shrink-0" />
+                        <span className="hidden xl:inline">{t("page.storyMaker.i18n.toolbarButton")}</span>
+                        {attachedLocaleCount > 0 && (
+                            <span className="rounded-md3-full bg-surface/70 px-1.5 font-mono tabular-nums text-on-surface">
+                                {attachedLocaleCount}
+                            </span>
+                        )}
+                    </button>
+
+                    <IconButton
+                        size="xs"
+                        variant={hasPlayVoiceTrackManifest ? "tonal" : "standard"}
+                        icon={mdRecordVoiceOver}
+                        label={t("page.storyMaker.voiceTrack.action")}
+                        onClick={() => setVoiceManifestOpen(true)}
+                    />
+
+                    <button
+                        type="button"
                         onClick={() => setIssuesOpen(true)}
                         title={
                             errorCount > 0
@@ -2281,8 +2504,8 @@ function StoryMakerEditContent() {
                                 />
                             ) : isPlaytest ? (
                                 <LivePhasePanel
-                                    doc={doc}
-                                    program={program}
+                                    doc={playLocalizedDoc ?? doc}
+                                    program={playProgram ?? program}
                                     frame={playActiveFrame}
                                     runtimePhase={playRuntimePhase}
                                     stageState={playStageState}
@@ -2385,7 +2608,7 @@ function StoryMakerEditContent() {
                             >
                                 <StoryStageView
                                     key="live-stage"
-                                    doc={stageDoc}
+                                    doc={isPlaytest ? (playLocalizedDoc ?? stageDoc) : stageDoc}
                                     state={isPlaytest ? playDisplayState : editStageState}
                                     line={line}
                                     hostRef={stageHostRef}
@@ -2595,6 +2818,52 @@ function StoryMakerEditContent() {
                                     </div>
 
                                     <div className="flex shrink-0 flex-nowrap items-center gap-0.5">
+                                        {availablePlayLocales.length > 1 && (
+                                            <div className="mr-1 inline-flex shrink-0 items-center gap-1 rounded-md3-full bg-surface-container-high px-2 py-0.5">
+                                                <Icon path={mdTranslate} size={13} className="shrink-0 text-primary" />
+                                                <select
+                                                    aria-label={t("page.storyMaker.i18n.subtitleLocaleLabel")}
+                                                    value={effectivePlayLocale}
+                                                    onChange={event => setPlaySelectedLocale(event.target.value as UiLocale)}
+                                                    className="focus-ring bg-transparent type-label-s text-on-surface"
+                                                >
+                                                    {availablePlayLocales.map(item => (
+                                                        <option key={item.locale} value={item.locale}>
+                                                            {UI_LOCALE_LABELS[item.locale]}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                {activePlayLocaleInfo && (
+                                                    <span
+                                                        title={[activePlayLocaleInfo.modelHint, activePlayLocaleInfo.note].filter(Boolean).join(" · ") || undefined}
+                                                        className={cn(
+                                                            "hidden shrink-0 rounded-md3-full px-1.5 py-0.5 type-label-s @[540px]:inline",
+                                                            playOriginBadgeTone(activePlayLocaleInfo.origin),
+                                                        )}
+                                                    >
+                                                        {t(`page.storyMaker.i18n.origin.${activePlayLocaleInfo.origin}`)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                        {hasPlayVoiceTrackManifest ? (
+                                            <button
+                                                type="button"
+                                                onClick={() => setVoiceManifestOpen(true)}
+                                                title={t("page.storyMaker.voiceTrack.manageButton")}
+                                                className="state-layer focus-ring mr-1 inline-flex shrink-0 cursor-pointer items-center gap-1 rounded-md3-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container"
+                                            >
+                                                <Icon path={mdRecordVoiceOver} size={12} className="shrink-0" />
+                                                <span className="hidden @[560px]:inline">{playVoiceTrackBadgeLabel}</span>
+                                            </button>
+                                        ) : (
+                                            <IconButton
+                                                size="xs"
+                                                icon={mdRecordVoiceOver}
+                                                label={t("page.storyMaker.voiceTrack.action")}
+                                                onClick={() => setVoiceManifestOpen(true)}
+                                            />
+                                        )}
                                         {audioBlocked && !playEmptyStory && !playEnded && (
                                             <IconButton
                                                 size="xs"
@@ -3069,6 +3338,27 @@ function StoryMakerEditContent() {
                 onImport={handleImportIntoCurrentDraft}
             />
 
+            {/* Multi-Language Subtitles & AI Translation Assistant Dialog */}
+            <StoryI18nDialog
+                isOpen={i18nOpen}
+                onClose={() => setI18nOpen(false)}
+                doc={doc}
+                onDocChange={commit}
+                onNotify={setSnack}
+            />
+
+            {/* Custom Voice Track Manifest Dialog */}
+            <StoryVoiceManifestDialog
+                isOpen={voiceManifestOpen}
+                onClose={() => setVoiceManifestOpen(false)}
+                doc={doc}
+                currentManifest={playVoiceManifest}
+                onApplyManifest={setPlayVoiceManifest}
+                onSwitchToStoryImport={handleImportIntoCurrentDraft}
+                onApplyLocalePack={pack => commit(current => upsertStoryLocalePack(current, pack))}
+                onNotify={setSnack}
+            />
+
             {/* Preload Assets Dialog */}
             <AssetPreloadDialog
                 open={preloadOpen}
@@ -3076,6 +3366,7 @@ function StoryMakerEditContent() {
                 doc={doc}
                 assetSource={assetSource}
                 models={models ?? undefined}
+                voiceManifest={playVoiceManifest}
             />
 
             {/* Compiler Diagnostics Dialog */}
