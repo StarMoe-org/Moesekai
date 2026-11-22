@@ -6,7 +6,9 @@
  * Moesekai Story Maker (`moesekai-story/2`).
  *
  * Usage:
- *   node --experimental-strip-types docs/skills/moesekai-story-script/scripts/validate-msk.mjs <file.msk|-> [options]
+ *   node scripts/validate-msk.mjs <file.msk|-> [options]
+ *
+ * Zero-dependency standalone CLI (runs on Node 18+ without a repository checkout).
  *
  * Options:
  *   --simulate            Simulate all reachable choice branches & endings via the runtime VM
@@ -22,16 +24,20 @@
 import { readFile } from "node:fs/promises";
 import process from "node:process";
 
-import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN } from "../../../../web/src/lib/assetDomains.ts";
-import { live2dSources } from "../../../../web/src/lib/live2dViewer/config.ts";
-import { compileStoryGraph } from "../../../../web/src/lib/storyMaker/compiler.ts";
-import { detectStageActorOverlaps } from "../../../../web/src/lib/storyMaker/limits.ts";
-import { advanceRuntime, createInitialRuntime } from "../../../../web/src/lib/storyMaker/runtime.ts";
-import { parseStoryScript } from "../../../../web/src/lib/storyMaker/script.ts";
-import { STORY_REGIONS } from "../../../../web/src/types/storyMaker.ts";
+import {
+    ASSET_DOMAIN_BACKUP,
+    ASSET_DOMAIN_MAIN,
+    STORY_REGIONS,
+    advanceRuntime,
+    compileStoryGraph,
+    createInitialRuntime,
+    detectStageActorOverlaps,
+    live2dSources,
+    parseStoryScript,
+} from "./lib/msk-core.mjs";
 
 const HELP_TEXT = `Usage:
-  node --experimental-strip-types docs/skills/moesekai-story-script/scripts/validate-msk.mjs <file.msk|-> [options]
+  node scripts/validate-msk.mjs <file.msk|-> [options]
 
 Options:
   --simulate            Simulate all reachable choice branches & endings via the runtime VM
@@ -378,29 +384,119 @@ async function checkAnyCandidate(urls) {
     return { ok: false, matchedUrl: null, tried };
 }
 
+/** Deterministic Live2D motion bundle candidates when `models.json` is unavailable or lagging. */
+function inferMotionBundleCandidates(modelId) {
+    const out = [];
+    const add = (name) => {
+        if (!name) return;
+        const bundle = `live2d/motion/${name}`;
+        if (!out.includes(bundle)) out.push(bundle);
+    };
+    const mainChar = /^(v2_)?(\d{2}[a-z]+)_/.exec(modelId);
+    if (mainChar) {
+        add(`${mainChar[1] ?? ""}${mainChar[2]}_motion_base`);
+        return out;
+    }
+    const collab = /^(v2_)?(clb\d+_\d{2}[a-z]+\d*)/.exec(modelId);
+    if (collab) {
+        add(`${modelId}_motion_base`);
+        add(`${collab[1] ?? ""}${collab[2]}_motion_base`);
+        return out;
+    }
+    const sub = /^(v2_)?(sub_[a-z0-9]+)/.exec(modelId);
+    if (sub) {
+        add(`${modelId}_motion_base`);
+        const base = `${sub[1] ?? ""}${sub[2]}`;
+        add(`${base}_motion_base`);
+        const stripped = base.replace(/(?:black|white|zoom|young|child)?\d*$/, "");
+        if (stripped && stripped !== base && stripped.length > 4) {
+            add(`${stripped}_motion_base`);
+        }
+        return out;
+    }
+    add(`${modelId}_motion_base`);
+    return out;
+}
+
+const CLIP_STOPWORDS = new Set(["face", "w", "m", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
+
+function tokenizeClipName(name) {
+    return String(name)
+        .toLowerCase()
+        .split(/[-_\s]+/)
+        .map(t => t.replace(/\d+$/, ""))
+        .filter(t => t.length >= 2 && !CLIP_STOPWORDS.has(t));
+}
+
+const CLIP_SYNONYMS = {
+    worry: ["trouble", "sad", "serious"],
+    happy: ["smile", "glad", "joy"],
+    sparkling: ["kirakira", "smile", "glad"],
+    kirakira: ["sparkling", "smile", "glad"],
+    cry: ["sad", "tear", "heartbreak"],
+    blush: ["shy", "blushed"],
+    shy: ["blushed", "embarrass"],
+    scared: ["surprise", "shock", "trouble"],
+    angry: ["disgust", "serious", "sharp"],
+    confused: ["confusion", "trouble", "tilthead"],
+};
+
+function suggestClips(target, availableSet, maxSuggestions = 5) {
+    const targetLower = String(target).toLowerCase();
+    const targetTokens = tokenizeClipName(target);
+    const synonymTokens = new Set();
+    for (const tok of targetTokens) {
+        for (const syn of CLIP_SYNONYMS[tok] ?? []) synonymTokens.add(syn);
+    }
+    const targetPrefix = targetLower.startsWith("face_") ? "" : targetLower.slice(0, 8);
+    const scored = [];
+    for (const candidate of availableSet) {
+        const candLower = candidate.toLowerCase();
+        let score = 0;
+        if (candLower.includes(targetLower) || targetLower.includes(candLower)) score += 45;
+        const candTokens = tokenizeClipName(candidate);
+        for (const tok of targetTokens) {
+            if (candTokens.includes(tok)) score += 28;
+            else if (candTokens.some(c => c.includes(tok) || tok.includes(c))) score += 14;
+        }
+        for (const syn of synonymTokens) {
+            if (candTokens.includes(syn)) score += 22;
+            else if (candTokens.some(c => c.includes(syn))) score += 10;
+        }
+        if (targetPrefix.length >= 4 && candLower.startsWith(targetPrefix)) score += 8;
+        if (score > 0) {
+            scored.push({ candidate, score });
+        }
+    }
+    scored.sort((a, b) => b.score - a.score || a.candidate.localeCompare(b.candidate));
+    if (scored.length > 0) {
+        return scored.slice(0, maxSuggestions).map(s => s.candidate);
+    }
+    return [...availableSet].sort().slice(0, maxSuggestions);
+}
+
 async function verifyAssetsLive(assetReport) {
     const missing = [];
     const checked = { live2dModels: 0, live2dClips: 0, backgrounds: 0, bgm: 0, se: 0, voices: 0 };
+    let live2dIndexSource = "models.json";
 
-    // 1. Live2D models + motion/facial manifests
-    let modelById = new Map();
+    // 1. Live2D models + motion/facial manifests (with graceful ripper fallback when models.json is 404)
+    const modelById = new Map();
     if (assetReport.live2d.length > 0) {
         try {
-            const res = await fetch(assetReport.live2dIndexUrl);
-            if (!res.ok) {
-                missing.push({ category: "live2d-index", name: assetReport.live2dIndexUrl, reason: `HTTP ${res.status}` });
-            } else {
+            const res = await fetch(assetReport.live2dIndexUrl, {
+                signal: AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
+            });
+            if (res.ok) {
                 const json = await res.json();
                 for (const m of json.models ?? []) {
                     if (typeof m?.id === "string") modelById.set(m.id, m);
                 }
+            } else {
+                live2dIndexSource = "ripper-fallback";
             }
-        } catch (err) {
-            missing.push({
-                category: "live2d-index",
-                name: assetReport.live2dIndexUrl,
-                reason: err instanceof Error ? err.message : String(err),
-            });
+        } catch {
+            live2dIndexSource = "ripper-fallback";
         }
 
         const ripperCache = new Map();
@@ -409,7 +505,7 @@ async function verifyAssetsLive(assetReport) {
             if (ripperCache.has(bundle)) return ripperCache.get(bundle);
             const url = `${assetReport.live2dLibraryBaseUrl}library/${encodePath(bundle)}/_ripper.json`;
             try {
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS) });
                 if (!res.ok) {
                     ripperCache.set(bundle, null);
                     return null;
@@ -423,7 +519,7 @@ async function verifyAssetsLive(assetReport) {
                     if (match[1] === "motion") motions.add(match[2]);
                     else facials.add(match[2]);
                 }
-                const result = { motions, facials, url };
+                const result = { bundle, motions, facials, url };
                 ripperCache.set(bundle, result);
                 return result;
             } catch {
@@ -435,17 +531,42 @@ async function verifyAssetsLive(assetReport) {
         for (const item of assetReport.live2d) {
             checked.live2dModels += 1;
             const indexed = modelById.get(item.modelId);
-            if (!indexed) {
-                missing.push({ category: "live2d-model", name: item.modelId, reason: "Not found in models.json" });
-                continue;
+            let modelVerified = Boolean(indexed);
+            if (!modelVerified) {
+                const directCheck = await checkUrlExists(item.modelManifestUrl);
+                if (directCheck.ok) {
+                    modelVerified = true;
+                } else {
+                    missing.push({
+                        category: "live2d-model",
+                        name: item.modelId,
+                        url: item.modelManifestUrl,
+                        reason: `Model _ripper.json unavailable (HTTP ${directCheck.status})`,
+                    });
+                    continue;
+                }
             }
             if (item.motions.length > 0 || item.facials.length > 0) {
-                const bundle = indexed.motion ?? indexed.motions?.[0] ?? null;
-                const manifest = await loadMotionBundle(bundle);
+                const candidates = [];
+                if (indexed?.motion) candidates.push(indexed.motion);
+                for (const m of indexed?.motions ?? []) {
+                    if (m && !candidates.includes(m)) candidates.push(m);
+                }
+                for (const inferred of inferMotionBundleCandidates(item.modelId)) {
+                    if (!candidates.includes(inferred)) candidates.push(inferred);
+                }
+                let manifest = null;
+                for (const bundle of candidates) {
+                    const loaded = await loadMotionBundle(bundle);
+                    if (loaded) {
+                        manifest = loaded;
+                        break;
+                    }
+                }
                 if (!manifest) {
                     missing.push({
                         category: "live2d-motion-bundle",
-                        name: `${item.modelId} (${bundle ?? "none"})`,
+                        name: `${item.modelId} (${candidates[0] ?? "none"})`,
                         reason: "Motion bundle _ripper.json unavailable",
                     });
                     continue;
@@ -456,7 +577,8 @@ async function verifyAssetsLive(assetReport) {
                         missing.push({
                             category: "live2d-motion",
                             name: `${item.modelId}:${motion}`,
-                            reason: `Motion not found in ${bundle}`,
+                            reason: `Motion not found in ${manifest.bundle}`,
+                            suggestions: suggestClips(motion, manifest.motions),
                         });
                     }
                 }
@@ -466,7 +588,8 @@ async function verifyAssetsLive(assetReport) {
                         missing.push({
                             category: "live2d-facial",
                             name: `${item.modelId}:${facial}`,
-                            reason: `Facial not found in ${bundle}`,
+                            reason: `Facial not found in ${manifest.bundle}`,
+                            suggestions: suggestClips(facial, manifest.facials),
                         });
                     }
                 }
@@ -515,7 +638,7 @@ async function verifyAssetsLive(assetReport) {
         }
     }
 
-    return { ok: missing.length === 0, checked, missing };
+    return { ok: missing.length === 0, live2dIndexSource, checked, missing };
 }
 
 // ==================== Exhaustive Branch & Ending Simulator (--simulate) ====================
@@ -857,7 +980,10 @@ function printHumanReport(report, strictMode = false) {
         console.log(`\n=== Live Asset Verification (${v.ok ? "ALL OK" : `${v.missing.length} MISSING`}) ===`);
         console.log(`Checked: ${JSON.stringify(v.checked)}`);
         for (const m of v.missing) {
-            console.log(`  [MISSING] (${m.category}) ${m.name} — ${m.reason}`);
+            const hint = Array.isArray(m.suggestions) && m.suggestions.length > 0
+                ? ` (did you mean: ${m.suggestions.join(", ")})`
+                : "";
+            console.log(`  [MISSING] (${m.category}) ${m.name} — ${m.reason}${hint}`);
         }
     }
 }

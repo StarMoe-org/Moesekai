@@ -2236,3 +2236,118 @@ test("previewStorySound stops previous HTMLAudio playback on switch and on expli
         else globalThis.window = prevWindow;
     }
 });
+
+test("standalone moesekai-story-script validate-msk.mjs validates SKILL.md quick-start without TS flags", async () => {
+    const { execFileSync } = await import("node:child_process");
+    const { readFileSync } = await import("node:fs");
+    const { resolve } = await import("node:path");
+
+    const skillDir = resolve(process.cwd(), "../docs/skills/moesekai-story-script");
+    const skillMd = readFileSync(resolve(skillDir, "SKILL.md"), "utf8");
+    const mskMatch = /```msk\r?\n([\s\S]*?)\r?\n```/.exec(skillMd);
+    assert.ok(mskMatch, "expected Quick-Start .msk code fence in SKILL.md");
+
+    const validatorPath = resolve(skillDir, "scripts/validate-msk.mjs");
+    const stdout = execFileSync(
+        process.execPath,
+        [validatorPath, "-", "--strict", "--simulate", "--dump-json"],
+        { input: mskMatch[1], encoding: "utf8" },
+    );
+    const report = JSON.parse(stdout);
+    assert.equal(report.ok, true);
+    assert.equal(report.strictOk, true);
+    assert.equal(report.errors.length, 0);
+    assert.equal(report.warnings.length, 0);
+    assert.equal(report.simulation.unreachedEndings.length, 0);
+    assert.equal(report.simulation.stageOverlaps.length, 0);
+});
+
+test("moesekai-story-script official-story.mjs pure parsers and scenario extractor mine L2D/BG/BGM/SE/voice cleanly", async () => {
+    const { resolve } = await import("node:path");
+    const { pathToFileURL } = await import("node:url");
+    const officialUrl = pathToFileURL(
+        resolve(process.cwd(), "../docs/skills/moesekai-story-script/scripts/official-story.mjs"),
+    ).href;
+    const mod = await import(officialUrl);
+
+    assert.equal(mod.resolveUnitKey("25ji"), "school_refusal");
+    assert.equal(mod.resolveUnitKey("ln"), "light_sound");
+    assert.equal(mod.resolveUnitKey("WxS"), "theme_park");
+    assert.deepEqual(mod.resolveCharacterIds("17,真冬,ena,21"), [17, 18, 19, 21]);
+    assert.deepEqual(mod.inferMotionBundleCandidates("v2_18mafuyu_casual"), ["live2d/motion/v2_18mafuyu_motion_base"]);
+    assert.deepEqual(mod.inferMotionBundleCandidates("01ichika_cloth001"), ["live2d/motion/01ichika_motion_base"]);
+
+    assert.equal(mod.parseSelector("event:203/1")?.canonical, "event:203/1");
+    assert.equal(mod.parseSelector("card:900/2")?.canonical, "card:900/latter");
+    assert.equal(mod.parseSelector("unit:light-sound-story-chapter/11")?.canonical, "unit:light-sound-story-chapter/11");
+    assert.equal(mod.parseSelector("talk:100")?.canonical, "talk:100");
+
+    const sampleScenario = {
+        ScenarioId: "event_999_01",
+        FirstBackground: "bg_e000101",
+        FirstBgm: "bgm00169",
+        AppearCharacters: [
+            { Character2dId: 294, CostumeType: "v2_17kanade_casual" },
+            { Character2dId: 295, CostumeType: "v2_18mafuyu_casual" },
+        ],
+        FirstLayout: [
+            { Character2dId: 294, CostumeType: "v2_17kanade_casual", PositionSide: 3, MotionName: "w-normal15-nod", FacialName: "face_smile_01" },
+        ],
+        Snippets: [
+            { Index: 0, Action: 6, ReferenceIndex: 0 },
+            { Index: 1, Action: 2, ReferenceIndex: 0 },
+            { Index: 2, Action: 7, ReferenceIndex: 0 },
+            { Index: 3, Action: 1, ReferenceIndex: 0 },
+            { Index: 4, Action: 4, ReferenceIndex: 1 },
+        ],
+        SpecialEffectData: [
+            { EffectType: 18, StringVal: "Empty SEKAI", StringValSub: "", Duration: 0 },
+        ],
+        LayoutData: [
+            { Type: 2, SideFrom: 7, SideTo: 7, Character2dId: 295, CostumeType: "v2_18mafuyu_casual", MotionName: "w-normal15-shy", FacialName: "face_normal_01" },
+            { Type: 0, SideFrom: 3, SideTo: 3, Character2dId: 294, CostumeType: "", MotionName: "w-kanade16-tilthead", FacialName: "face_sad_02" },
+        ],
+        SoundData: [
+            { PlayMode: 0, Bgm: "", Se: "se00084_b", Volume: 1 },
+        ],
+        TalkData: [
+            {
+                TalkCharacters: [{ Character2dId: 294 }],
+                WindowDisplayName: "Kanade",
+                Body: "A Nightcord notification?",
+                Motions: [
+                    { Character2dId: 294, MotionName: "w-normal15-tilthead", FacialName: "face_smallmouth_01" },
+                    { Character2dId: 295, MotionName: "w-normal07-tilthead", FacialName: "face_darknormal_01" },
+                ],
+                Voices: [{ Character2dId: 294, VoiceId: "voice_ev_999_01_01_17", Volume: 1 }],
+            },
+        ],
+    };
+
+    const study = mod.extractScenarioStudy(sampleScenario, {
+        region: "jp",
+        selector: "event:999/1",
+        storyKind: "event",
+        storyTitle: "Midnight Demo",
+        episodeTitle: "Ep 1",
+        chara2dById: new Map([
+            [294, { id: 294, characterType: "game_character", characterId: 17, unit: "school_refusal", assetName: "v2_17kanade" }],
+            [295, { id: 295, characterType: "game_character", characterId: 18, unit: "school_refusal", assetName: "v2_18mafuyu" }],
+        ]),
+        sePackByName: new Map([["se00084_b", "se_pack00001_b"]]),
+        bgmTitleByName: new Map([["bgm00169", { name: "bgm00169", title: "at 25:00", category: "Scenario" }]]),
+    });
+
+    assert.equal(study.cast.length, 2);
+    assert.equal(study.backgrounds[0].id, "bg_e000101");
+    assert.deepEqual(study.backgrounds[0].places, ["Empty SEKAI"]);
+    assert.equal(study.bgm[0].title, "at 25:00");
+    assert.equal(study.se[0].path, "se_pack00001_b/se00084_b");
+    assert.ok(study.se[0].examples[0].after.includes("Nightcord notification"));
+    assert.equal(study.effects.coStarReactionCount, 1);
+    assert.equal(study.voices[0].ref, "voice(story:event_999_01:voice_ev_999_01_01_17@jp)");
+
+    const kit = mod.aggregateStudyReports([study], [17, 18]);
+    assert.equal(kit.recommendedCast.length, 2);
+    assert.equal(kit.characterClips.length, 2);
+});
