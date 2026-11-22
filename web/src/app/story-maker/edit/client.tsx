@@ -3,34 +3,41 @@ import React, { Suspense, useCallback, useEffect, useMemo, useRef, useState, use
 import { useReducedMotion } from "framer-motion";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useShellImmersiveMode } from "@/components/AppShell";
+import LocalizedLink from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import {
-    Banner, Button, Card, Dialog, EmptyState, Icon, IconButton, LoadingState, PageContainer,
-    SegmentedButton, Slider, Snackbar, Surface, cn,
+    Banner, Button, Card, Dialog, EmptyState, Icon, IconButton, LoadingState, Menu, PageContainer,
+    SegmentedButton, Slider, Snackbar, Surface, cn, type MenuItemDef,
 } from "@/components/md3";
 import {
-    mdArrowBack, mdAutoplay, mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose,
-    mdCloseFullscreen, mdCode, mdDownload, mdDragHandle, mdEdit, mdErrorFill, mdFlag, mdFullscreen,
-    mdFullscreenExit, mdNumbers, mdOpenInFull, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRedo,
-    mdReplay, mdSettings, mdSkipNext, mdSkipPrevious, mdStar, mdTag, mdUndo, mdViewQuilt,
-    mdVisibility, mdVisibilityOff, mdVolumeOff, mdVolumeUp, mdWarning,
+    mdAccountTree, mdAltRoute, mdArrowBack, mdAutoplay, mdBottomPanelClose, mdBottomPanelOpen,
+    mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCode,
+    mdContentCopy, mdDownload, mdEdit, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen,
+    mdFullscreenExit, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
+    mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRedo, mdReplay,
+    mdRestartAlt, mdRightPanelClose, mdRightPanelOpen, mdSettings, mdSkipNext, mdSkipPrevious,
+    mdStar, mdTag, mdUndo, mdUploadFile, mdViewQuilt, mdVisibility, mdVisibilityOff, mdVolumeOff,
+    mdVolumeUp, mdWarning,
 } from "@/components/md3/icons";
 import { AssetPreloadDialog } from "@/components/story-maker/AssetPreloadPanel";
 import type { GameStageChoiceProp } from "@/components/story-maker/GameStageOverlay";
 import {
-    LivePhasePanel, PHASE_META, getNodeDisplayLabel, summarizeActiveBeat,
-    type ActiveVoiceProgress, type LivePhaseBacklogItem, type StoryRuntimePhase,
+    LivePhasePanel, type ActiveVoiceProgress, type LivePhaseBacklogItem, type StoryRuntimePhase,
 } from "@/components/story-maker/LivePhasePanel";
 import { NodeInspector } from "@/components/story-maker/NodeInspector";
-import { ScriptCodeDialog } from "@/components/story-maker/ScriptCodeDialog";
+import { StoryCodeWorkspace, type StoryCodeEvaluation } from "@/components/story-maker/StoryCodeWorkspace";
 import { StoryEditorBin } from "@/components/story-maker/StoryEditorBin";
 import { StoryFlowCanvas } from "@/components/story-maker/StoryFlowCanvas";
+import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
 import { StoryIssueList } from "@/components/story-maker/StoryIssueList";
 import {
     StoryMetaDialog, applyMetaValuesToDoc, metaValuesFromDoc, type StoryMetaValues,
 } from "@/components/story-maker/StoryMetaDialog";
 import { applyInstructionToStage } from "@/components/story-maker/StoryPlayerView";
 import { StoryStageView } from "@/components/story-maker/StoryStageView";
+import {
+    DEFAULT_EDITOR_LAYOUT, EDITOR_LAYOUT_LIMITS, resetEditorLayout, updateEditorLayout, useEditorLayout,
+} from "@/components/story-maker/useEditorLayout";
 import { useStarterStory } from "@/components/story-maker/useStarterStory";
 import { useStoryAudio } from "@/components/story-maker/useStoryAudio";
 import { useStoryModels } from "@/components/story-maker/useStoryModels";
@@ -39,10 +46,11 @@ import { useStoryUiKit } from "@/components/story-maker/useStoryUiKit";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { MOE_LOGO_URL } from "@/lib/assets";
 import { live2dSources } from "@/lib/live2dViewer/config";
 import { localizePath } from "@/lib/localized-path";
 import { storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls } from "@/lib/storyMaker/assets";
-import { compileStoryGraph } from "@/lib/storyMaker/compiler";
+import { compileStoryGraph, type CompiledStoryProgram } from "@/lib/storyMaker/compiler";
 import {
     GRAPH_COL_GAP, GRAPH_ORIGIN_X, GRAPH_ORIGIN_Y, acceptsTarget, applyDragPayloadToTarget,
     autoLayoutGraph, connectEdge, continueAndCutScene, createNode, disconnectEdge, disconnectPort,
@@ -55,6 +63,8 @@ import {
     INITIAL_STAGE_STATE, advanceRuntime, createInitialRuntime, evaluateCondition, evaluateStageAt,
     initVariables, interpolateStoryText, type StoryRuntimeFrame,
 } from "@/lib/storyMaker/runtime";
+import { parseStoryScript, serializeStoryScript } from "@/lib/storyMaker/script";
+import { downloadStoryScript } from "@/lib/storyMaker/starter";
 import type {
     SceneNode, StoryCastMember, StoryDocument, StoryEffectColor, StoryNode, StoryNodePos,
     StoryStageState, StoryVarValues,
@@ -63,13 +73,12 @@ import type {
 const MAX_UNDO = 50;
 const AUTOSAVE_MS = 600;
 const CHAR_INTERVAL_MS = 28;
-const DEFAULT_TOP_SPLIT_PCT = 54;
-const MIN_TOP_SPLIT_PCT = 34;
-const MAX_TOP_SPLIT_PCT = 70;
+const CODE_PREVIEW_DEBOUNCE_MS = 200;
 const DESKTOP_MEDIA_QUERY = "(min-width: 1024px)";
 
 type SaveStatus = "saved" | "dirty" | "saving" | "error";
-type WorkspaceMode = "edit" | "playtest";
+type WorkspaceMode = "edit" | "playtest" | "code";
+type SplitDragAxis = "horizontal" | "left" | "right" | "code";
 
 interface PlaytestHistoryItem {
     frame: StoryRuntimeFrame;
@@ -148,6 +157,33 @@ function DesktopOnlyNotice({ draftId }: { draftId: string | null }) {
     );
 }
 
+function IdeMenuTrigger({
+    label,
+    items,
+}: {
+    label: string;
+    items: ReadonlyArray<MenuItemDef>;
+}) {
+    return (
+        <Menu
+            align="start"
+            items={items}
+            anchor={({ ref, onClick, ...aria }) => (
+                <button
+                    ref={ref}
+                    type="button"
+                    onClick={onClick}
+                    {...aria}
+                    className="state-layer focus-ring inline-flex h-7 cursor-pointer items-center gap-0.5 rounded-md3-sm px-2 type-label-m text-on-surface hover:bg-surface-container-high"
+                >
+                    <span>{label}</span>
+                    <Icon path={mdKeyboardArrowDown} size={15} className="text-on-surface-variant" />
+                </button>
+            )}
+        />
+    );
+}
+
 function StoryMakerEditContent() {
     const { t, routeLocale } = useI18n();
     const router = useRouter();
@@ -155,6 +191,7 @@ function StoryMakerEditContent() {
     const reduced = useReducedMotion();
     const { assetSource } = useTheme();
     const buildStarter = useStarterStory();
+    const layout = useEditorLayout();
     const line = assetSource.startsWith("backup") ? "backup" : "main";
 
     const draftId = searchParams.get("id");
@@ -171,13 +208,21 @@ function StoryMakerEditContent() {
     const [saveStatus, setSaveStatus] = useState<SaveStatus>("saved");
 
     const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("edit");
-    const [immersive, setImmersive] = useState(() => searchParams.get("immersive") === "1");
-    const [topSplitPct, setTopSplitPct] = useState(DEFAULT_TOP_SPLIT_PCT);
+    // Auto-enter immersive mode on entry unless explicitly disabled via `?immersive=0`.
+    const [immersive, setImmersive] = useState(() => searchParams.get("immersive") !== "0");
+    const [stageWebFullscreen, setStageWebFullscreen] = useState(false);
     const [activeDragPayload, setActiveDragPayload] = useState<StoryDragPayload | null>(null);
+
+    // Code Preview Mode state
+    const [codeText, setCodeText] = useState("");
+    const [codeSyncedBase, setCodeSyncedBase] = useState("");
+    const [codePreviewDoc, setCodePreviewDoc] = useState<StoryDocument | null>(null);
+    const [codeSelectedNodeId, setCodeSelectedNodeId] = useState<string | null>(null);
+    const [codeSelectedBeatId, setCodeSelectedBeatId] = useState<string | null>(null);
 
     const [metaOpen, setMetaOpen] = useState(false);
     const [issuesOpen, setIssuesOpen] = useState(false);
-    const [codeOpen, setCodeOpen] = useState(false);
+    const [importOpen, setImportOpen] = useState(false);
     const [preloadOpen, setPreloadOpen] = useState(false);
     const [snack, setSnack] = useState<string | null>(null);
     const [flash, setFlash] = useState<{ key: number; color: StoryEffectColor; seconds: number } | null>(null);
@@ -201,8 +246,9 @@ function StoryMakerEditContent() {
     const flashKeyRef = useRef(0);
     const dirtyDocRef = useRef<StoryDocument | null>(null);
     const nleContainerRef = useRef<HTMLDivElement | null>(null);
+    const topRowRef = useRef<HTMLDivElement | null>(null);
     const stageFullscreenRef = useRef<HTMLDivElement | null>(null);
-    const splitDragRef = useRef<{ pointerId: number } | null>(null);
+    const splitDragRef = useRef<{ axis: SplitDragAxis; pointerId: number } | null>(null);
     const playGenRef = useRef(0);
     const voiceTokenRef = useRef(0);
     const skipWaitRef = useRef<(() => void) | null>(null);
@@ -210,7 +256,7 @@ function StoryMakerEditContent() {
     const playLiveVariablesRef = useRef(playLiveVariables);
     const playHistoryRef = useRef(playHistory);
     const workspaceModeRef = useRef(workspaceMode);
-    const pendingAutoPlaytestRef = useRef<string | null>(null);
+    const pendingAutoModeRef = useRef<{ mode: "playtest" | "code"; nodeId?: string } | null>(null);
 
     useEffect(() => {
         playStageStateRef.current = playStageState;
@@ -228,22 +274,23 @@ function StoryMakerEditContent() {
         workspaceModeRef.current = workspaceMode;
     }, [workspaceMode]);
 
-    useShellImmersiveMode(immersive);
+    const effectiveImmersive = immersive && !loadError;
+    useShellImmersiveMode(effectiveImmersive);
 
     useEffect(() => {
-        if (!immersive || typeof document === "undefined") return;
+        if ((!effectiveImmersive && !stageWebFullscreen) || typeof document === "undefined") return;
         const prevOverflow = document.body.style.overflow;
         document.body.style.overflow = "hidden";
         return () => {
             document.body.style.overflow = prevOverflow;
         };
-    }, [immersive]);
+    }, [effectiveImmersive, stageWebFullscreen]);
 
     const syncModeUrl = useCallback((nextMode: WorkspaceMode) => {
         if (typeof window === "undefined") return;
         const url = new URL(window.location.href);
-        if (nextMode === "playtest") url.searchParams.set("mode", "playtest");
-        else url.searchParams.delete("mode");
+        if (nextMode === "edit") url.searchParams.delete("mode");
+        else url.searchParams.set("mode", nextMode);
         window.history.replaceState({}, "", url.toString());
     }, []);
 
@@ -251,8 +298,8 @@ function StoryMakerEditContent() {
         setImmersive(next);
         if (typeof window !== "undefined") {
             const url = new URL(window.location.href);
-            if (next) url.searchParams.set("immersive", "1");
-            else url.searchParams.delete("immersive");
+            if (next) url.searchParams.delete("immersive");
+            else url.searchParams.set("immersive", "0");
             window.history.replaceState({}, "", url.toString());
         }
     }, []);
@@ -295,6 +342,7 @@ function StoryMakerEditContent() {
             skipWaitRef.current?.();
             stopAllAudio();
             setWorkspaceMode("edit");
+            setStageWebFullscreen(false);
             setPlayHistory([]);
             setPlayAuto(false);
             setPlayRunning(false);
@@ -324,9 +372,13 @@ function StoryMakerEditContent() {
                     setDoc(draft.doc);
                     setSelectedNodeId(initialNodeId);
                     setSelectedBeatId(initialNode?.type === "scene" ? (initialNode.beats[0]?.id ?? null) : null);
-                    if (initialModeParamRef.current === "playtest") {
+                    if (initialModeParamRef.current === "playtest" || initialModeParamRef.current === "code") {
+                        const mode = initialModeParamRef.current;
                         initialModeParamRef.current = null;
-                        pendingAutoPlaytestRef.current = initialNodeParamRef.current ?? draft.doc.startNodeId;
+                        pendingAutoModeRef.current = {
+                            mode,
+                            nodeId: initialNodeParamRef.current ?? draft.doc.startNodeId,
+                        };
                     }
                 }
             } catch (error) {
@@ -471,9 +523,71 @@ function StoryMakerEditContent() {
     const errorCount = program?.errors.length ?? 0;
     const warningCount = program?.warnings.length ?? 0;
 
-    const { list: modelList, models, retry: retryModels } = useStoryModels(doc?.region ?? null);
-    const { kit: uiKit } = useStoryUiKit(doc?.region ?? null);
-    const library = useMemo(() => (doc ? live2dSources(doc.region).library : null), [doc]);
+    // ==================== Code Preview Mode Evaluation ====================
+    const codeDirty = workspaceMode === "code" && codeText !== codeSyncedBase;
+
+    const codeEval = useMemo<StoryCodeEvaluation>(() => {
+        if (workspaceMode !== "code") {
+            return doc && program
+                ? { ok: true, doc, program }
+                : { ok: false, diagnostics: [] };
+        }
+        const parsed = parseStoryScript(codeText);
+        if (!parsed.ok) {
+            return { ok: false, scriptErrors: parsed.diagnostics };
+        }
+        const compiled = compileStoryGraph(parsed.doc);
+        if (!compiled.ok) {
+            return { ok: false, diagnostics: compiled.errors };
+        }
+        return { ok: true, doc: parsed.doc, program: compiled };
+    }, [workspaceMode, codeText, doc, program]);
+
+    // Debounce live stage preview doc in Code mode so rapid typing never thrashes Live2D model loads.
+    useEffect(() => {
+        if (workspaceMode !== "code" || !codeEval.ok) return;
+        const nextPreviewDoc = codeEval.doc;
+        const timer = window.setTimeout(() => {
+            setCodePreviewDoc(nextPreviewDoc);
+        }, CODE_PREVIEW_DEBOUNCE_MS);
+        return () => window.clearTimeout(timer);
+    }, [workspaceMode, codeEval]);
+
+    const stageDoc = workspaceMode === "code" ? (codePreviewDoc ?? doc) : doc;
+
+    const codePreviewScenes = useMemo<SceneNode[]>(() => {
+        if (!stageDoc) return [];
+        return Object.values(stageDoc.nodes).filter((node): node is SceneNode => node.type === "scene");
+    }, [stageDoc]);
+
+    const effectiveCodeNodeId = useMemo(() => {
+        if (!stageDoc) return null;
+        if (codeSelectedNodeId && stageDoc.nodes[codeSelectedNodeId]) return codeSelectedNodeId;
+        return pickInitialNodeId(stageDoc);
+    }, [stageDoc, codeSelectedNodeId]);
+
+    const effectiveCodeScene: SceneNode | null = stageDoc && effectiveCodeNodeId
+        ? (stageDoc.nodes[effectiveCodeNodeId]?.type === "scene"
+            ? stageDoc.nodes[effectiveCodeNodeId] as SceneNode
+            : null)
+        : null;
+
+    const effectiveCodeBeatId = useMemo(() => {
+        if (!effectiveCodeScene) return null;
+        if (codeSelectedBeatId && effectiveCodeScene.beats.some(b => b.id === codeSelectedBeatId)) {
+            return codeSelectedBeatId;
+        }
+        return effectiveCodeScene.beats[0]?.id ?? null;
+    }, [effectiveCodeScene, codeSelectedBeatId]);
+
+    const effectiveCodeBeatIndex = effectiveCodeScene && effectiveCodeBeatId
+        ? effectiveCodeScene.beats.findIndex(b => b.id === effectiveCodeBeatId)
+        : -1;
+
+    // ==================== WebGPU Live2D Stage ====================
+    const { list: modelList, models, retry: retryModels } = useStoryModels(stageDoc?.region ?? null);
+    const { kit: uiKit } = useStoryUiKit(stageDoc?.region ?? null);
+    const library = useMemo(() => (stageDoc ? live2dSources(stageDoc.region).library : null), [stageDoc]);
     const {
         hostRef: stageHostRef,
         phase: stagePhase,
@@ -489,22 +603,25 @@ function StoryMakerEditContent() {
         shake: shakeStage,
         finish: finishStage,
         retry: retryStage,
-    } = useStoryStage({ library, cast: doc?.cast ?? [], models });
+    } = useStoryStage({ library, cast: stageDoc?.cast ?? [], models });
+
+    const previewTargetNodeId = workspaceMode === "code" ? effectiveCodeNodeId : activeNodeId;
+    const previewTargetBeatId = workspaceMode === "code" ? effectiveCodeBeatId : activeBeatId;
 
     const evaluated = useMemo(() => {
-        if (!doc || !activeNodeId) {
+        if (!stageDoc || !previewTargetNodeId) {
             return { stage: INITIAL_STAGE_STATE, variables: {} };
         }
-        return evaluateStageAt(doc, activeNodeId, activeBeatId ?? undefined);
-    }, [doc, activeNodeId, activeBeatId]);
+        return evaluateStageAt(stageDoc, previewTargetNodeId, previewTargetBeatId ?? undefined);
+    }, [stageDoc, previewTargetNodeId, previewTargetBeatId]);
 
     const editStageState = evaluated.stage;
 
-    // Sync WebGPU stage to edit preview whenever in edit mode.
+    // Sync WebGPU stage to edit/code preview whenever in edit or code mode.
     useEffect(() => {
-        if (workspaceMode !== "edit" || !doc || stagePhase.kind !== "ready" || !models) return;
+        if ((workspaceMode !== "edit" && workspaceMode !== "code") || !stageDoc || stagePhase.kind !== "ready" || !models) return;
         void applyStage(editStageState, { instant: true });
-    }, [workspaceMode, doc, applyStage, stagePhase.kind, models, editStageState]);
+    }, [workspaceMode, stageDoc, applyStage, stagePhase.kind, models, editStageState]);
 
     // Re-sync WebGPU stage to playtest state only when the stage or model list finishes initializing mid-playtest.
     useEffect(() => {
@@ -581,13 +698,13 @@ function StoryMakerEditContent() {
     }, [reduced]);
 
     const executePlayFrame = useCallback(async (
+        targetDoc: StoryDocument,
         nextHistory: PlaytestHistoryItem[],
         baseStage: StoryStageState,
         baseVars: StoryVarValues,
         frame: StoryRuntimeFrame,
         instant = false,
     ) => {
-        if (!doc) return;
         const generation = ++playGenRef.current;
         skipWaitRef.current?.();
         stopActivePlayVoice();
@@ -603,7 +720,7 @@ function StoryMakerEditContent() {
             setPlayTypedCount(frame.stage.dialogue?.body.length ?? 0);
             setPlayRunning(false);
             syncBgm(
-                frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, doc.region, line) : null,
+                frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, targetDoc.region, line) : null,
                 frame.stage.bgm.volume,
             );
             void applyStage(frame.stage, { instant: true });
@@ -617,7 +734,7 @@ function StoryMakerEditContent() {
 
         for (const inst of frame.executedInstructions) {
             if (playGenRef.current !== generation) return;
-            const stepped = applyInstructionToStage(stage, vars, inst, doc);
+            const stepped = applyInstructionToStage(stage, vars, inst, targetDoc);
             stage = stepped.stage;
             vars = stepped.variables;
 
@@ -625,7 +742,7 @@ function StoryMakerEditContent() {
                 case "enterScene": {
                     setPlayStageState(stage);
                     syncBgm(
-                        stage.bgm.name ? storyBgmUrl(stage.bgm.name, doc.region, line) : null,
+                        stage.bgm.name ? storyBgmUrl(stage.bgm.name, targetDoc.region, line) : null,
                         stage.bgm.volume,
                     );
                     if (inst.transition.kind === "fadeBlack" || inst.transition.kind === "fadeWhite") {
@@ -663,7 +780,7 @@ function StoryMakerEditContent() {
                     const beat = inst.beat;
                     setPlayStageState(stage);
                     if (beat.cueType === "se") {
-                        if (beat.se) playSe(storySeCandidateUrls(beat.se, doc.region, line), beat.seVolume);
+                        if (beat.se) playSe(storySeCandidateUrls(beat.se, targetDoc.region, line), beat.seVolume);
                     } else {
                         setPlayEffectActive(true);
                         try {
@@ -692,13 +809,13 @@ function StoryMakerEditContent() {
                     setPlayStageState(stage);
                     setPlayLiveVariables(vars);
                     void applyStage(stage, { instant: false });
-                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, doc, vars);
+                    const body = stage.dialogue?.body ?? interpolateStoryText(beat.body, targetDoc, vars);
                     setPlayTypedCount(reduced ? body.length : 0);
                     if (beat.se) {
-                        playSe(storySeCandidateUrls(beat.se, doc.region, line), beat.seVolume);
+                        playSe(storySeCandidateUrls(beat.se, targetDoc.region, line), beat.seVolume);
                     }
                     if (beat.voice && beat.voice.scenarioId && beat.voice.voiceId) {
-                        const urls = storyVoiceCandidateUrls(beat.voice, doc.region, line);
+                        const urls = storyVoiceCandidateUrls(beat.voice, targetDoc.region, line);
                         startPlayVoice(
                             urls,
                             { label: beat.voice.voiceId, start: beat.voice.start, end: beat.voice.end },
@@ -713,7 +830,7 @@ function StoryMakerEditContent() {
                     setPlayStageState(stage);
                     void applyStage(stage, { instant: false });
                     if (beat.se) {
-                        playSe(storySeCandidateUrls(beat.se, doc.region, line), beat.seVolume);
+                        playSe(storySeCandidateUrls(beat.se, targetDoc.region, line), beat.seVolume);
                     }
                     break;
                 }
@@ -733,16 +850,22 @@ function StoryMakerEditContent() {
         setPlayStageState(frame.stage);
         setPlayLiveVariables(frame.variables);
         syncBgm(
-            frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, doc.region, line) : null,
+            frame.stage.bgm.name ? storyBgmUrl(frame.stage.bgm.name, targetDoc.region, line) : null,
             frame.stage.bgm.volume,
         );
         setPlayEffectActive(false);
         setPlayRunning(false);
         if (frame.stoppedReason !== "blocking") setPlayAuto(false);
-    }, [applyStage, doc, finishStage, line, playSe, reduced, setStageTalking, shakeStage, startPlayVoice, stopActivePlayVoice, syncBgm, waitPlayMs]);
+    }, [applyStage, finishStage, line, playSe, reduced, setStageTalking, shakeStage, startPlayVoice, stopActivePlayVoice, syncBgm, waitPlayMs]);
 
-    const startPlaytestFrom = useCallback((targetNodeId?: string | null) => {
-        if (!doc || !program || program.errors.length > 0) return;
+    const startPlaytestFrom = useCallback((
+        targetNodeId?: string | null,
+        docOverride?: StoryDocument,
+        programOverride?: CompiledStoryProgram,
+    ) => {
+        const activeTargetDoc = docOverride ?? doc;
+        const activeTargetProgram = programOverride ?? (docOverride ? compileStoryGraph(docOverride) : program);
+        if (!activeTargetDoc || !activeTargetProgram || activeTargetProgram.errors.length > 0) return;
         voiceTokenRef.current += 1;
         stopAllAudio();
         setPlayVoicePending(false);
@@ -752,32 +875,17 @@ function StoryMakerEditContent() {
         setPlayAuto(false);
         setPlayUiHidden(false);
 
-        const resolvedNodeId = targetNodeId && program.nodeEntryPc[targetNodeId] !== undefined
+        const resolvedNodeId = targetNodeId && activeTargetProgram.nodeEntryPc[targetNodeId] !== undefined
             ? targetNodeId
-            : doc.startNodeId;
-        const initialFrame = createInitialRuntime(program, resolvedNodeId);
-        const seed = resolvedNodeId !== doc.startNodeId
-            ? evaluateStageAt(doc, resolvedNodeId)
-            : { stage: INITIAL_STAGE_STATE, variables: initVariables(doc) };
-        void executePlayFrame([{ frame: initialFrame }], seed.stage, seed.variables, initialFrame, false);
+            : activeTargetDoc.startNodeId;
+        const initialFrame = createInitialRuntime(activeTargetProgram, resolvedNodeId);
+        const seed = resolvedNodeId !== activeTargetDoc.startNodeId
+            ? evaluateStageAt(activeTargetDoc, resolvedNodeId)
+            : { stage: INITIAL_STAGE_STATE, variables: initVariables(activeTargetDoc) };
+        void executePlayFrame(activeTargetDoc, [{ frame: initialFrame }], seed.stage, seed.variables, initialFrame, false);
     }, [doc, executePlayFrame, program, setStageTalking, stopAllAudio]);
 
-    const enterPlaytest = useCallback((fromNodeId?: string) => {
-        if (!doc || !program) return;
-        if (program.errors.length > 0) {
-            setSnack(t("page.storyMaker.v2.mode.playtestBlockedErrors", { count: program.errors.length }));
-            setIssuesOpen(true);
-            return;
-        }
-        clearClipPreview();
-        setActiveDragPayload(null);
-        unlockAudio();
-        setWorkspaceMode("playtest");
-        syncModeUrl("playtest");
-        startPlaytestFrom(fromNodeId ?? doc.startNodeId);
-    }, [clearClipPreview, doc, program, startPlaytestFrom, syncModeUrl, t, unlockAudio]);
-
-    const exitPlaytest = useCallback((syncSelection = false) => {
+    const stopPlaytestSession = useCallback(() => {
         playGenRef.current += 1;
         voiceTokenRef.current += 1;
         skipWaitRef.current?.();
@@ -794,6 +902,31 @@ function StoryMakerEditContent() {
         if (typeof document !== "undefined" && document.fullscreenElement === stageFullscreenRef.current) {
             void document.exitFullscreen?.().catch(() => undefined);
         }
+    }, [finishStage, setStageTalking, stopAllAudio]);
+
+    const enterPlaytest = useCallback((
+        fromNodeId?: string,
+        docOverride?: StoryDocument,
+        programOverride?: CompiledStoryProgram,
+    ) => {
+        const targetDoc = docOverride ?? doc;
+        const targetProgram = programOverride ?? (docOverride ? compileStoryGraph(docOverride) : program);
+        if (!targetDoc || !targetProgram) return;
+        if (targetProgram.errors.length > 0) {
+            setSnack(t("page.storyMaker.v2.mode.playtestBlockedErrors", { count: targetProgram.errors.length }));
+            setIssuesOpen(true);
+            return;
+        }
+        clearClipPreview();
+        setActiveDragPayload(null);
+        unlockAudio();
+        setWorkspaceMode("playtest");
+        syncModeUrl("playtest");
+        startPlaytestFrom(fromNodeId ?? targetDoc.startNodeId, targetDoc, targetProgram);
+    }, [clearClipPreview, doc, program, startPlaytestFrom, syncModeUrl, t, unlockAudio]);
+
+    const exitPlaytest = useCallback((syncSelection = false) => {
+        stopPlaytestSession();
         if (syncSelection && doc) {
             const latest = playHistoryRef.current[playHistoryRef.current.length - 1]?.frame;
             if (latest?.nodeId && doc.nodes[latest.nodeId]) {
@@ -812,23 +945,117 @@ function StoryMakerEditContent() {
         }
         setWorkspaceMode("edit");
         syncModeUrl("edit");
-    }, [doc, finishStage, setStageTalking, stopAllAudio, syncModeUrl]);
+    }, [doc, stopPlaytestSession, syncModeUrl]);
 
-    // Honor `?mode=playtest` on initial draft load once `doc` and `program` are ready.
+    const enterCodeMode = useCallback((sourceDoc?: StoryDocument) => {
+        const targetDoc = sourceDoc ?? doc;
+        if (!targetDoc) return;
+        if (workspaceModeRef.current === "playtest") {
+            stopPlaytestSession();
+        }
+        clearClipPreview();
+        setActiveDragPayload(null);
+        const serialized = serializeStoryScript(targetDoc);
+        setCodeText(serialized);
+        setCodeSyncedBase(serialized);
+        setCodePreviewDoc(targetDoc);
+        const targetNodeId = activeNodeId && targetDoc.nodes[activeNodeId]
+            ? activeNodeId
+            : pickInitialNodeId(targetDoc);
+        setCodeSelectedNodeId(targetNodeId);
+        const targetNode = targetDoc.nodes[targetNodeId];
+        setCodeSelectedBeatId(
+            targetNode?.type === "scene"
+                ? (activeBeatId && targetNode.beats.some(b => b.id === activeBeatId)
+                    ? activeBeatId
+                    : (targetNode.beats[0]?.id ?? null))
+                : null,
+        );
+        setWorkspaceMode("code");
+        syncModeUrl("code");
+    }, [activeBeatId, activeNodeId, clearClipPreview, doc, stopPlaytestSession, syncModeUrl]);
+
+    const applyCodeDoc = useCallback((nextDoc: StoryDocument, silent = false) => {
+        commit(() => nextDoc);
+        const serialized = serializeStoryScript(nextDoc);
+        setCodeText(serialized);
+        setCodeSyncedBase(serialized);
+        setCodePreviewDoc(nextDoc);
+        const nextNodeId = activeNodeId && nextDoc.nodes[activeNodeId]
+            ? activeNodeId
+            : pickInitialNodeId(nextDoc);
+        setSelectedNodeId(nextNodeId);
+        const nextNode = nextDoc.nodes[nextNodeId];
+        setSelectedBeatId(nextNode?.type === "scene" ? (nextNode.beats[0]?.id ?? null) : null);
+        setCodeSelectedNodeId(nextNodeId);
+        setCodeSelectedBeatId(nextNode?.type === "scene" ? (nextNode.beats[0]?.id ?? null) : null);
+        if (!silent) {
+            setSnack(t("page.storyMaker.v2.mode.codeSyncedToast"));
+        }
+    }, [activeNodeId, commit, t]);
+
+    const handleWorkspaceModeChange = useCallback((nextMode: WorkspaceMode) => {
+        if (!doc || nextMode === workspaceMode) return;
+
+        // Leaving Code mode: auto-sync valid dirty changes or warn on syntax errors.
+        let resolvedDoc = doc;
+        let resolvedProgram = program ?? undefined;
+        if (workspaceMode === "code" && codeDirty) {
+            if (!codeEval.ok) {
+                setSnack(t("page.storyMaker.v2.mode.codeBlockedSwitch"));
+                return;
+            }
+            resolvedDoc = codeEval.doc;
+            resolvedProgram = codeEval.program;
+            applyCodeDoc(resolvedDoc, false);
+        }
+
+        if (nextMode === "code") {
+            enterCodeMode(resolvedDoc);
+        } else if (nextMode === "playtest") {
+            enterPlaytest(undefined, resolvedDoc, resolvedProgram);
+        } else {
+            if (workspaceMode === "playtest") {
+                exitPlaytest(false);
+            } else {
+                setWorkspaceMode("edit");
+                syncModeUrl("edit");
+            }
+        }
+    }, [
+        applyCodeDoc, codeDirty, codeEval, doc, enterCodeMode, enterPlaytest,
+        exitPlaytest, program, syncModeUrl, t, workspaceMode,
+    ]);
+
+    const handleApplyCodeAndPlaytest = useCallback((nextDoc: StoryDocument) => {
+        const compiled = compileStoryGraph(nextDoc);
+        if (!compiled.ok) {
+            setSnack(t("page.storyMaker.v2.mode.playtestBlockedErrors", { count: compiled.errors.length }));
+            return;
+        }
+        if (codeDirty) {
+            applyCodeDoc(nextDoc, true);
+        }
+        enterPlaytest(undefined, nextDoc, compiled);
+    }, [applyCodeDoc, codeDirty, enterPlaytest, t]);
+
+    // Honor `?mode=playtest` or `?mode=code` on initial draft load once `doc` and `program` are ready.
     useEffect(() => {
-        const target = pendingAutoPlaytestRef.current;
-        if (!target || !doc || !program) return;
-        pendingAutoPlaytestRef.current = null;
+        const pending = pendingAutoModeRef.current;
+        if (!pending || !doc || !program) return;
+        pendingAutoModeRef.current = null;
         const timer = window.setTimeout(() => {
-            if (program.errors.length === 0) {
-                enterPlaytest(target);
+            if (pending.mode === "code") {
+                enterCodeMode(doc);
+            } else if (program.errors.length === 0) {
+                enterPlaytest(pending.nodeId);
             } else {
                 setSnack(t("page.storyMaker.v2.mode.playtestBlockedErrors", { count: program.errors.length }));
                 setIssuesOpen(true);
             }
         }, 0);
         return () => window.clearTimeout(timer);
-    }, [doc, enterPlaytest, program, t]);
+    }, [doc, enterCodeMode, enterPlaytest, program, t]);
 
     // Cleanup pending timers when unmounting editor.
     useEffect(() => () => {
@@ -893,7 +1120,7 @@ function StoryMakerEditContent() {
     }, [applyStage, doc, finishStage, line, stopActivePlayVoice, syncBgm]);
 
     const handlePlayAdvance = useCallback(() => {
-        if (!program || program.errors.length > 0) return;
+        if (!doc || !program || program.errors.length > 0) return;
         unlockAudio();
         if (playUiHidden) {
             setPlayUiHidden(false);
@@ -913,6 +1140,7 @@ function StoryMakerEditContent() {
         const nextFrame = advanceRuntime(program, latest.frame);
         if (nextFrame === latest.frame) return;
         void executePlayFrame(
+            doc,
             [...current, { frame: nextFrame }],
             playStageStateRef.current,
             playLiveVariablesRef.current,
@@ -920,12 +1148,12 @@ function StoryMakerEditContent() {
             false,
         );
     }, [
-        executePlayFrame, playFullDialogueBody.length, playIsTyping, playRunning,
+        doc, executePlayFrame, playFullDialogueBody.length, playIsTyping, playRunning,
         playUiHidden, program, snapPlayFrame, unlockAudio,
     ]);
 
     const handlePlayChoose = useCallback((optionId: string, optionText: string) => {
-        if (!program || program.errors.length > 0) return;
+        if (!doc || !program || program.errors.length > 0) return;
         unlockAudio();
         const current = playHistoryRef.current;
         const latest = current[current.length - 1];
@@ -938,13 +1166,14 @@ function StoryMakerEditContent() {
         const nextFrame = advanceRuntime(program, latest.frame, optionId);
         if (nextFrame === latest.frame) return;
         void executePlayFrame(
+            doc,
             [...annotated, { frame: nextFrame }],
             playStageStateRef.current,
             playLiveVariablesRef.current,
             nextFrame,
             false,
         );
-    }, [executePlayFrame, program, unlockAudio]);
+    }, [doc, executePlayFrame, program, unlockAudio]);
 
     const handlePlayPrevious = useCallback(() => {
         if (!doc) return;
@@ -974,14 +1203,14 @@ function StoryMakerEditContent() {
     }, [applyStage, doc, line, setStageTalking, stopActivePlayVoice, syncBgm]);
 
     const jumpPlaytestToNode = useCallback((nodeId: string) => {
-        if (!program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
+        if (!doc || !program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
         setPlayAuto(false);
         const frame = createInitialRuntime(program, nodeId);
-        void executePlayFrame([{ frame }], frame.stage, frame.variables, frame, true);
-    }, [executePlayFrame, program]);
+        void executePlayFrame(doc, [{ frame }], frame.stage, frame.variables, frame, true);
+    }, [doc, executePlayFrame, program]);
 
     const jumpPlaytestToBeat = useCallback((nodeId: string, beatId: string) => {
-        if (!program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
+        if (!doc || !program || program.errors.length > 0 || program.nodeEntryPc[nodeId] === undefined) return;
         setPlayAuto(false);
         let cur = createInitialRuntime(program, nodeId);
         const frames: PlaytestHistoryItem[] = [{ frame: cur }];
@@ -1001,8 +1230,8 @@ function StoryMakerEditContent() {
             frames.push({ frame: cur });
         }
 
-        void executePlayFrame(frames, cur.stage, cur.variables, cur, true);
-    }, [executePlayFrame, program]);
+        void executePlayFrame(doc, frames, cur.stage, cur.variables, cur, true);
+    }, [doc, executePlayFrame, program]);
 
     /** Auto-advance timer in playtest mode. */
     useEffect(() => {
@@ -1027,7 +1256,7 @@ function StoryMakerEditContent() {
         issuesOpen, playIsTyping, preloadOpen, playRunning, playStageState, playVoicePending,
     ]);
 
-    /** Track native fullscreen state for the playtest stage container. */
+    /** Track native fullscreen state for the stage container. */
     useEffect(() => {
         const sync = () => setPlayFullscreen(document.fullscreenElement === stageFullscreenRef.current);
         document.addEventListener("fullscreenchange", sync);
@@ -1132,19 +1361,27 @@ function StoryMakerEditContent() {
             const hasOpenOverlay = Boolean(
                 metaOpen
                 || issuesOpen
-                || codeOpen
+                || importOpen
                 || preloadOpen
                 || target?.closest('[role="dialog"], [role="alertdialog"], [aria-modal="true"], [data-clip-picker-drawer]')
                 || document.querySelector('[role="dialog"][aria-modal="true"], [role="alertdialog"][aria-modal="true"], [data-clip-picker-drawer]'),
             );
             if (hasOpenOverlay) return;
 
+            if (event.key === "Escape") {
+                if (document.fullscreenElement) return;
+                if (stageWebFullscreen) {
+                    event.preventDefault();
+                    setStageWebFullscreen(false);
+                    return;
+                }
+            }
+
             if (workspaceMode === "playtest") {
                 if (event.key === "Delete" || event.key === "Backspace") {
                     return;
                 }
                 if (event.key === "Escape") {
-                    if (document.fullscreenElement) return;
                     if (playUiHidden) {
                         event.preventDefault();
                         setPlayUiHidden(false);
@@ -1173,6 +1410,19 @@ function StoryMakerEditContent() {
                         if (uiKit?.decideSoundUrl) playSe(uiKit.decideSoundUrl);
                         handlePlayChoose(option.id, option.text || t("page.storyMaker.player.emptyOption"));
                     }
+                }
+                return;
+            }
+
+            if (workspaceMode === "code") {
+                if (
+                    event.key === "Escape"
+                    && immersive
+                    && !event.defaultPrevented
+                    && !document.querySelector('[role="menu"]')
+                ) {
+                    event.preventDefault();
+                    handleImmersiveChange(false);
                 }
                 return;
             }
@@ -1212,10 +1462,10 @@ function StoryMakerEditContent() {
         window.addEventListener("keydown", onKeyDown);
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [
-        workspaceMode, playUiHidden, exitPlaytest, handlePlayAdvance, handlePlayPrevious,
+        workspaceMode, stageWebFullscreen, playUiHidden, exitPlaytest, handlePlayAdvance, handlePlayPrevious,
         playCurrentChoice, uiKit?.decideSoundUrl, playSe, handlePlayChoose, t,
         undo, redo, immersive, handleImmersiveChange,
-        metaOpen, issuesOpen, codeOpen, preloadOpen,
+        metaOpen, issuesOpen, importOpen, preloadOpen,
         activeScene, activeBeatId, activeNode, doc,
         handleDeleteBeat, handleDeleteNode,
     ]);
@@ -1223,24 +1473,26 @@ function StoryMakerEditContent() {
     // ==================== Edit Preview & Graph Actions ====================
 
     const previewChoice = useMemo<GameStageChoiceProp | null>(() => {
-        if (!doc || !activeNode || activeNode.type !== "choice") return null;
+        if (!stageDoc || !previewTargetNodeId) return null;
+        const targetNode = stageDoc.nodes[previewTargetNodeId];
+        if (!targetNode || targetNode.type !== "choice") return null;
         return {
-            id: activeNode.id,
-            options: activeNode.options.map(opt => ({
+            id: targetNode.id,
+            options: targetNode.options.map(opt => ({
                 id: opt.id,
-                text: interpolateStoryText(opt.text, doc, evaluated.variables),
+                text: interpolateStoryText(opt.text, stageDoc, evaluated.variables),
                 available: opt.condition ? evaluateCondition(opt.condition, evaluated.variables) : true,
             })),
         };
-    }, [doc, activeNode, evaluated.variables]);
+    }, [stageDoc, previewTargetNodeId, evaluated.variables]);
 
     const previewingCastMember = useMemo(
-        () => (doc && previewingCastKey ? doc.cast.find(member => member.key === previewingCastKey) ?? null : null),
-        [doc, previewingCastKey],
+        () => (stageDoc && previewingCastKey ? stageDoc.cast.find(member => member.key === previewingCastKey) ?? null : null),
+        [stageDoc, previewingCastKey],
     );
 
     const replayActionInfo = useMemo(() => {
-        if (!doc || !activeBeat) return null;
+        if (workspaceMode !== "edit" || !doc || !activeBeat) return null;
         if (activeBeat.kind === "talk" && activeBeat.speakerKey && (activeBeat.motion || activeBeat.facial)) {
             const member = doc.cast.find(item => item.key === activeBeat.speakerKey);
             if (!member) return null;
@@ -1252,7 +1504,7 @@ function StoryMakerEditContent() {
             return { member, clip: { motion: activeBeat.motion, facial: activeBeat.facial } };
         }
         return null;
-    }, [doc, activeBeat]);
+    }, [workspaceMode, doc, activeBeat]);
 
     const handlePreviewClip = useCallback((castMember: StoryCastMember, clip?: { motion?: string; facial?: string }) => {
         if (stagePhase.kind !== "ready") {
@@ -1379,17 +1631,33 @@ function StoryMakerEditContent() {
     }, [activeScene, commit, doc, handleAddNode, t]);
 
     const handleUpdateMeta = (values: StoryMetaValues) => {
-        commit(current => applyMetaValuesToDoc(current, values));
+        if (!doc) return;
+        const next = applyMetaValuesToDoc(doc, values);
+        commit(() => next);
+        if (workspaceMode === "code" && !codeDirty) {
+            const serialized = serializeStoryScript(next);
+            setCodeText(serialized);
+            setCodeSyncedBase(serialized);
+            setCodePreviewDoc(next);
+        }
         setMetaOpen(false);
     };
 
-    const handleApplyCode = (nextDoc: StoryDocument) => {
-        commit(() => nextDoc);
-        const nextNodeId = activeNodeId && nextDoc.nodes[activeNodeId]
-            ? activeNodeId
-            : pickInitialNodeId(nextDoc);
-        setSelectedNodeId(nextNodeId);
-        setSelectedBeatId(null);
+    const handleImportIntoCurrentDraft = (importedDoc: StoryDocument) => {
+        setImportOpen(false);
+        applyCodeDoc(importedDoc, true);
+        setSnack(t("page.storyMaker.landing.importedToast"));
+    };
+
+    const handleCopyScriptFromMenu = async () => {
+        if (!doc) return;
+        const source = workspaceMode === "code" ? codeText : serializeStoryScript(doc);
+        try {
+            await navigator.clipboard.writeText(source);
+            setSnack(t("page.storyMaker.v2.script.copied"));
+        } catch {
+            // Clipboard write denied.
+        }
     };
 
     const handleCreateStarterHere = async () => {
@@ -1397,24 +1665,60 @@ function StoryMakerEditContent() {
         router.push(localizePath(`/story-maker/edit?id=${encodeURIComponent(created.id)}`, routeLocale));
     };
 
-    const handleSplitterPointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    // ==================== Multi-Axis Resizable Splitters ====================
+
+    const handleSplitPointerDown = (axis: SplitDragAxis, event: React.PointerEvent<HTMLDivElement>) => {
         if (event.button !== 0 && event.pointerType === "mouse") return;
         event.currentTarget.setPointerCapture(event.pointerId);
-        splitDragRef.current = { pointerId: event.pointerId };
+        splitDragRef.current = { axis, pointerId: event.pointerId };
     };
 
-    const handleSplitterPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
-        if (!splitDragRef.current || splitDragRef.current.pointerId !== event.pointerId) return;
-        const container = nleContainerRef.current;
-        if (!container) return;
-        const rect = container.getBoundingClientRect();
-        if (rect.height <= 0) return;
-        const rawPct = ((event.clientY - rect.top) / rect.height) * 100;
-        const clamped = Math.min(MAX_TOP_SPLIT_PCT, Math.max(MIN_TOP_SPLIT_PCT, Math.round(rawPct * 10) / 10));
-        setTopSplitPct(clamped);
+    const handleSplitPointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+        const active = splitDragRef.current;
+        if (!active || active.pointerId !== event.pointerId) return;
+
+        if (active.axis === "horizontal") {
+            const container = nleContainerRef.current;
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            if (rect.height <= 0) return;
+            const rawPct = ((event.clientY - rect.top) / rect.height) * 100;
+            updateEditorLayout({ topSplitPct: rawPct });
+            return;
+        }
+
+        const row = topRowRef.current;
+        if (!row) return;
+        const rect = row.getBoundingClientRect();
+        if (rect.width <= 0) return;
+
+        if (active.axis === "code") {
+            const rawPct = ((event.clientX - rect.left) / rect.width) * 100;
+            updateEditorLayout({ codeSplitPct: rawPct });
+            return;
+        }
+
+        const rightReserved = workspaceMode === "edit" && layout.showRightPane ? layout.rightWidthPx : 0;
+        const leftReserved = layout.showLeftPane ? layout.leftWidthPx : 0;
+
+        if (active.axis === "left") {
+            const maxAllowed = Math.min(
+                EDITOR_LAYOUT_LIMITS.leftMax,
+                Math.max(EDITOR_LAYOUT_LIMITS.leftMin, rect.width - rightReserved - EDITOR_LAYOUT_LIMITS.centerMin),
+            );
+            const rawPx = event.clientX - rect.left;
+            updateEditorLayout({ leftWidthPx: Math.min(maxAllowed, rawPx) });
+        } else if (active.axis === "right") {
+            const maxAllowed = Math.min(
+                EDITOR_LAYOUT_LIMITS.rightMax,
+                Math.max(EDITOR_LAYOUT_LIMITS.rightMin, rect.width - leftReserved - EDITOR_LAYOUT_LIMITS.centerMin),
+            );
+            const rawPx = rect.right - event.clientX;
+            updateEditorLayout({ rightWidthPx: Math.min(maxAllowed, rawPx) });
+        }
     };
 
-    const handleSplitterPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    const handleSplitPointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
         if (splitDragRef.current?.pointerId === event.pointerId) {
             splitDragRef.current = null;
         }
@@ -1424,7 +1728,7 @@ function StoryMakerEditContent() {
         return <PageContainer wide><LoadingState /></PageContainer>;
     }
 
-    if (loadError || !doc || !draftId || !program) {
+    if (loadError || !doc || !draftId || !program || !stageDoc) {
         return (
             <PageContainer>
                 <EmptyState
@@ -1448,8 +1752,14 @@ function StoryMakerEditContent() {
     }
 
     const isPlaytest = workspaceMode === "playtest";
+    const isCodeMode = workspaceMode === "code";
+    const isEditMode = workspaceMode === "edit";
     const saveStatusLabel = t(`page.storyMaker.editor.saveStatus.${saveStatus}`);
     const modelArray = models ?? [];
+
+    const showLeftPane = isCodeMode || layout.showLeftPane;
+    const showRightPane = isEditMode && layout.showRightPane;
+    const showBottomPane = !isCodeMode && layout.showBottomPane;
 
     // Derived Playtest presentation state
     const playStoppedReason = playActiveFrame?.stoppedReason ?? null;
@@ -1479,22 +1789,158 @@ function StoryMakerEditContent() {
                             : playAuto
                                 ? "auto"
                                 : "waiting";
-    const playPhaseMeta = PHASE_META[playRuntimePhase];
 
-    const playActiveNode = playActiveFrame?.nodeId ? doc.nodes[playActiveFrame.nodeId] ?? null : null;
-    const playActiveNodeLabel = getNodeDisplayLabel(playActiveNode, t);
-    const playActiveBeatInfo = (() => {
-        if (!playActiveNode || playActiveNode.type !== "scene" || !playActiveFrame?.beatId) return null;
-        const idx = playActiveNode.beats.findIndex(item => item.id === playActiveFrame.beatId);
-        if (idx < 0) return null;
-        const beat = playActiveNode.beats[idx];
-        return {
-            index: idx,
-            total: playActiveNode.beats.length,
-            beat,
-            summary: summarizeActiveBeat(beat, doc, playLiveVariables, t),
-        };
-    })();
+    // IDE Dropdown Menu Definitions
+    const fileMenuItems: MenuItemDef[] = [
+        {
+            key: "back-drafts",
+            label: t("page.storyMaker.action.backToDrafts"),
+            icon: mdArrowBack,
+            href: "/story-maker",
+        },
+        {
+            key: "back-home",
+            label: t("page.storyMaker.v2.ide.backHome"),
+            icon: mdHome,
+            href: "/",
+        },
+        {
+            key: "meta",
+            label: t("page.storyMaker.editor.storySettings"),
+            icon: mdSettings,
+            disabled: isPlaytest,
+            dividerBefore: true,
+            onSelect: () => setMetaOpen(true),
+        },
+        {
+            key: "import-msk",
+            label: t("page.storyMaker.v2.ide.importIntoDraft"),
+            icon: mdUploadFile,
+            disabled: isPlaytest,
+            onSelect: () => setImportOpen(true),
+        },
+        {
+            key: "copy-msk",
+            label: t("page.storyMaker.v2.script.copyCode"),
+            icon: mdContentCopy,
+            onSelect: () => void handleCopyScriptFromMenu(),
+        },
+        {
+            key: "export-msk",
+            label: t("page.storyMaker.v2.script.downloadScript"),
+            icon: mdDownload,
+            onSelect: () => {
+                downloadStoryScript(isCodeMode && codeEval.ok ? codeEval.doc : doc);
+                setSnack(t("page.storyMaker.exportedToast"));
+            },
+        },
+        {
+            key: "preload",
+            label: t("page.storyMaker.preload.buttonLabel"),
+            icon: mdDownload,
+            dividerBefore: true,
+            onSelect: () => setPreloadOpen(true),
+        },
+    ];
+
+    const editMenuItems: MenuItemDef[] = [
+        {
+            key: "undo",
+            label: t("page.storyMaker.editor.undo"),
+            icon: mdUndo,
+            trailing: <span className="font-mono type-label-s text-on-surface-variant">Ctrl+Z</span>,
+            disabled: !isEditMode || past.length === 0,
+            onSelect: undo,
+        },
+        {
+            key: "redo",
+            label: t("page.storyMaker.editor.redo"),
+            icon: mdRedo,
+            trailing: <span className="font-mono type-label-s text-on-surface-variant">Ctrl+Y</span>,
+            disabled: !isEditMode || future.length === 0,
+            onSelect: redo,
+        },
+        {
+            key: "auto-layout",
+            label: t("page.storyMaker.flow.autoLayout"),
+            icon: mdAccountTree,
+            disabled: !isEditMode,
+            dividerBefore: true,
+            onSelect: () => commit(current => autoLayoutGraph(current)),
+        },
+        {
+            key: "add-scene",
+            label: t("page.storyMaker.flow.addScene"),
+            icon: mdMovie,
+            disabled: !isEditMode,
+            onSelect: () => handleAddNode("scene"),
+        },
+        {
+            key: "add-choice",
+            label: t("page.storyMaker.flow.addChoice"),
+            icon: mdAltRoute,
+            disabled: !isEditMode,
+            onSelect: () => handleAddNode("choice"),
+        },
+        {
+            key: "add-condition",
+            label: t("page.storyMaker.v2.nodeTypes.condition"),
+            icon: mdCalculate,
+            disabled: !isEditMode,
+            onSelect: () => handleAddNode("condition"),
+        },
+        {
+            key: "add-end",
+            label: t("page.storyMaker.v2.nodeTypes.end"),
+            icon: mdFlag,
+            disabled: !isEditMode,
+            onSelect: () => handleAddNode("end"),
+        },
+    ];
+
+    const viewMenuItems: MenuItemDef[] = [
+        {
+            key: "toggle-left",
+            label: t("page.storyMaker.v2.ide.toggleLeftPane"),
+            selected: layout.showLeftPane,
+            disabled: isCodeMode,
+            onSelect: () => updateEditorLayout(prev => ({ ...prev, showLeftPane: !prev.showLeftPane })),
+        },
+        {
+            key: "toggle-bottom",
+            label: t("page.storyMaker.v2.ide.toggleBottomPane"),
+            selected: layout.showBottomPane,
+            disabled: isCodeMode,
+            onSelect: () => updateEditorLayout(prev => ({ ...prev, showBottomPane: !prev.showBottomPane })),
+        },
+        {
+            key: "toggle-right",
+            label: t("page.storyMaker.v2.ide.toggleRightPane"),
+            selected: layout.showRightPane,
+            disabled: !isEditMode,
+            onSelect: () => updateEditorLayout(prev => ({ ...prev, showRightPane: !prev.showRightPane })),
+        },
+        {
+            key: "web-fullscreen",
+            label: t("page.storyMaker.v2.ide.webFullscreen"),
+            selected: stageWebFullscreen,
+            dividerBefore: true,
+            onSelect: () => setStageWebFullscreen(prev => !prev),
+        },
+        {
+            key: "immersive",
+            label: t("page.storyMaker.nle.enterImmersive"),
+            selected: immersive,
+            onSelect: () => handleImmersiveChange(!immersive),
+        },
+        {
+            key: "reset-layout",
+            label: t("page.storyMaker.v2.ide.resetLayout"),
+            icon: mdRestartAlt,
+            dividerBefore: true,
+            onSelect: resetEditorLayout,
+        },
+    ];
 
     return (
         <div
@@ -1502,47 +1948,73 @@ function StoryMakerEditContent() {
             className={cn(
                 "min-w-0",
                 immersive
-                    ? "fixed inset-0 z-[150] flex flex-col gap-2.5 overflow-hidden bg-surface p-2 sm:p-3"
-                    : "mx-auto w-full max-w-[1720px] space-y-2.5 px-4 py-3 sm:px-6 sm:py-4",
+                    ? "fixed inset-0 z-[150] flex flex-col gap-1.5 overflow-hidden bg-surface p-1.5 sm:p-2"
+                    : "mx-auto w-full max-w-[1720px] space-y-2 px-3 py-2.5 sm:px-5 sm:py-3",
             )}
         >
-            {/* Top Editor Toolbar */}
-            <Surface
-                tone="low"
-                radius="lg"
+            {/* Slim Permanent IDE Menu Bar */}
+            <header
                 className={cn(
-                    "flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-2 px-3 py-2 transition-colors",
-                    isPlaytest && "border border-primary/50 bg-primary-container/15",
+                    "flex h-11 min-w-0 shrink-0 items-center justify-between gap-2 rounded-md3-lg border bg-surface-container-low px-2 transition-colors",
+                    isPlaytest ? "border-primary/45 bg-primary-container/10" : "border-outline-variant/60",
                 )}
             >
-                <div className="flex min-w-[min(12rem,100%)] flex-1 items-center gap-1.5 sm:gap-2">
-                    <IconButton
-                        size="s"
-                        icon={mdArrowBack}
-                        label={t("page.storyMaker.action.backToDrafts")}
+                {/* Left: MoeSekai Logo + IDE Dropdown Menus + Compact Document Title */}
+                <div className="flex min-w-0 flex-1 items-center gap-1">
+                    <LocalizedLink
                         href="/story-maker"
-                    />
+                        title={t("page.storyMaker.title")}
+                        className="focus-ring flex shrink-0 items-center gap-1.5 rounded-md3-sm px-1.5 py-1"
+                    >
+                        <span
+                            className="block h-5 w-[3.25rem] bg-primary"
+                            style={{
+                                maskImage: `url(${MOE_LOGO_URL})`,
+                                maskSize: "contain",
+                                maskPosition: "center",
+                                maskRepeat: "no-repeat",
+                                WebkitMaskImage: `url(${MOE_LOGO_URL})`,
+                                WebkitMaskSize: "contain",
+                                WebkitMaskPosition: "center",
+                                WebkitMaskRepeat: "no-repeat",
+                            }}
+                        />
+                        <span className="rounded-md3-xs bg-tertiary-container px-1 py-0.5 text-[10px] font-semibold leading-none text-on-tertiary-container">
+                            {t("page.storyMaker.betaBadge")}
+                        </span>
+                    </LocalizedLink>
+
+                    <nav aria-label={t("page.storyMaker.title")} className="flex shrink-0 items-center gap-0.5">
+                        <IdeMenuTrigger label={t("page.storyMaker.v2.ide.menuFile")} items={fileMenuItems} />
+                        <IdeMenuTrigger label={t("page.storyMaker.v2.ide.menuEdit")} items={editMenuItems} />
+                        <IdeMenuTrigger label={t("page.storyMaker.v2.ide.menuView")} items={viewMenuItems} />
+                    </nav>
+
+                    <span aria-hidden className="mx-1 h-4 w-px shrink-0 bg-outline-variant/60" />
+
                     <button
                         type="button"
                         disabled={isPlaytest}
                         onClick={() => setMetaOpen(true)}
+                        title={doc.meta.title || t("page.storyMaker.untitled")}
                         className={cn(
-                            "state-layer focus-ring min-w-0 flex-1 rounded-md3-md px-2 py-1 text-left",
+                            "state-layer focus-ring flex min-w-0 items-center gap-1.5 rounded-md3-sm px-1.5 py-0.5 text-left",
                             isPlaytest ? "cursor-default" : "cursor-pointer",
                         )}
                     >
-                        <span className="flex min-w-0 items-center gap-2">
-                            <span className="min-w-0 truncate type-title-m text-on-surface">
-                                {doc.meta.title || t("page.storyMaker.untitled")}
-                            </span>
-                            <span className="shrink-0 rounded-md3-full bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
-                                {t("page.storyMaker.betaBadge")}
-                            </span>
+                        <span className="max-w-[14rem] truncate type-label-l text-on-surface">
+                            {doc.meta.title || t("page.storyMaker.untitled")}
                         </span>
-                        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 type-label-s text-on-surface-variant">
-                            <span className="truncate">{t(SERVER_LABEL_KEYS[doc.region])}</span>
-                            <span>·</span>
-                            <span className={cn("truncate", saveStatus === "error" && "text-error")}>{saveStatusLabel}</span>
+                        <span className="hidden shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant xl:inline">
+                            {t(SERVER_LABEL_KEYS[doc.region])}
+                        </span>
+                        <span
+                            className={cn(
+                                "hidden shrink-0 type-label-s sm:inline",
+                                saveStatus === "error" ? "text-error" : "text-on-surface-variant",
+                            )}
+                        >
+                            {saveStatusLabel}
                         </span>
                     </button>
                     {saveStatus === "error" && (
@@ -1552,110 +2024,116 @@ function StoryMakerEditContent() {
                     )}
                 </div>
 
-                <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
-                    {/* In-Place Edit <-> Playtest Mode Switcher */}
-                    <SegmentedButton<WorkspaceMode>
-                        density={-1}
-                        value={workspaceMode}
-                        onValueChange={(next) => {
-                            if (next === "playtest") enterPlaytest();
-                            else exitPlaytest(false);
-                        }}
-                        aria-label={t("page.storyMaker.v2.mode.edit")}
-                        className="w-auto shrink-0"
-                        options={[
-                            { value: "edit", label: t("page.storyMaker.v2.mode.edit"), icon: mdEdit },
-                            { value: "playtest", label: t("page.storyMaker.v2.mode.playtest"), icon: mdPlayArrowFill },
-                        ]}
-                    />
+                {/* Center: 3-Way Compact Mode Switcher (Edit | Playtest | Code) */}
+                <SegmentedButton<WorkspaceMode>
+                    density={-2}
+                    value={workspaceMode}
+                    onValueChange={handleWorkspaceModeChange}
+                    aria-label={t("page.storyMaker.v2.mode.edit")}
+                    className="w-auto shrink-0"
+                    options={[
+                        { value: "edit", label: t("page.storyMaker.v2.mode.edit"), icon: mdEdit },
+                        { value: "playtest", label: t("page.storyMaker.v2.mode.playtest"), icon: mdPlayArrowFill },
+                        { value: "code", label: t("page.storyMaker.v2.mode.code"), icon: mdCode },
+                    ]}
+                />
 
-                    <IconButton
-                        size="s"
-                        icon={mdUndo}
-                        label={t("page.storyMaker.editor.undo")}
-                        disabled={isPlaytest || past.length === 0}
-                        onClick={undo}
-                    />
-                    <IconButton
-                        size="s"
-                        icon={mdRedo}
-                        label={t("page.storyMaker.editor.redo")}
-                        disabled={isPlaytest || future.length === 0}
-                        onClick={redo}
-                    />
-                    <IconButton
-                        size="s"
-                        icon={mdSettings}
-                        label={t("page.storyMaker.editor.storySettings")}
-                        disabled={isPlaytest}
-                        onClick={() => setMetaOpen(true)}
-                    />
-
-                    {/* Compiler Status Pill */}
-                    {errorCount > 0 ? (
-                        <Button
-                            size="s"
-                            variant="tonal"
-                            color="error"
-                            icon={mdErrorFill}
-                            className="px-3 sm:px-3.5"
-                            onClick={() => setIssuesOpen(true)}
-                        >
-                            {t("page.storyMaker.v2.compiler.statusErrors", { count: errorCount })}
-                        </Button>
-                    ) : warningCount > 0 ? (
-                        <Button
-                            size="s"
-                            variant="tonal"
-                            color="tertiary"
-                            icon={mdWarning}
-                            className="px-3 sm:px-3.5"
-                            onClick={() => setIssuesOpen(true)}
-                        >
-                            {t("page.storyMaker.v2.compiler.statusWarnings", { count: warningCount })}
-                        </Button>
-                    ) : (
-                        <Button
-                            size="s"
-                            variant="outlined"
-                            icon={mdCheckCircle}
-                            className="px-3 sm:px-3.5"
-                            onClick={() => setIssuesOpen(true)}
-                        >
-                            {t("page.storyMaker.v2.compiler.statusOk")}
-                        </Button>
+                {/* Right: Compact Undo/Redo + Compiler Status Pill + VS Code-Style Pane Toggles + Web Fullscreen */}
+                <div className="flex flex-1 shrink-0 items-center justify-end gap-1">
+                    {isEditMode && (
+                        <>
+                            <IconButton
+                                size="xs"
+                                icon={mdUndo}
+                                label={t("page.storyMaker.editor.undo")}
+                                disabled={past.length === 0}
+                                onClick={undo}
+                            />
+                            <IconButton
+                                size="xs"
+                                icon={mdRedo}
+                                label={t("page.storyMaker.editor.redo")}
+                                disabled={future.length === 0}
+                                onClick={redo}
+                            />
+                        </>
                     )}
 
-                    <Button
-                        size="s"
-                        variant="tonal"
-                        icon={mdCode}
-                        disabled={isPlaytest}
-                        className="px-3 sm:px-3.5"
-                        onClick={() => setCodeOpen(true)}
+                    <button
+                        type="button"
+                        onClick={() => setIssuesOpen(true)}
+                        title={
+                            errorCount > 0
+                                ? t("page.storyMaker.v2.compiler.statusErrors", { count: errorCount })
+                                : warningCount > 0
+                                    ? t("page.storyMaker.v2.compiler.statusWarnings", { count: warningCount })
+                                    : t("page.storyMaker.v2.compiler.statusOk")
+                        }
+                        className={cn(
+                            "state-layer focus-ring inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md3-full px-2 type-label-s transition-colors",
+                            errorCount > 0
+                                ? "bg-error-container text-on-error-container"
+                                : warningCount > 0
+                                    ? "bg-tertiary-container text-on-tertiary-container"
+                                    : "bg-surface-container text-on-surface-variant hover:text-on-surface",
+                        )}
                     >
-                        {t("page.storyMaker.v2.script.buttonLabel")}
-                    </Button>
-                    <Button
-                        size="s"
-                        variant="outlined"
-                        icon={mdDownload}
-                        className="px-3 sm:px-3.5"
-                        onClick={() => setPreloadOpen(true)}
-                    >
-                        {t("page.storyMaker.preload.buttonLabel")}
-                    </Button>
-                    <Button
-                        size="s"
-                        variant={immersive ? "tonal" : "outlined"}
-                        icon={immersive ? mdCloseFullscreen : mdOpenInFull}
-                        className="px-3 sm:px-3.5"
-                        onClick={() => handleImmersiveChange(!immersive)}
-                    >
-                        {t(immersive ? "page.storyMaker.nle.exitImmersive" : "page.storyMaker.nle.enterImmersive")}
-                    </Button>
+                        <Icon
+                            path={errorCount > 0 ? mdErrorFill : warningCount > 0 ? mdWarning : mdCheckCircle}
+                            size={14}
+                            className={cn(
+                                "shrink-0",
+                                errorCount === 0 && warningCount === 0 && "text-primary",
+                            )}
+                        />
+                        {errorCount > 0 ? (
+                            <span className="font-mono tabular-nums">{errorCount}</span>
+                        ) : warningCount > 0 ? (
+                            <span className="font-mono tabular-nums">{warningCount}</span>
+                        ) : (
+                            <span className="hidden xl:inline">{t("page.storyMaker.v2.compiler.statusOk")}</span>
+                        )}
+                    </button>
+
+                    <span aria-hidden className="mx-0.5 h-4 w-px shrink-0 bg-outline-variant/60" />
+
+                    {!isCodeMode && (
+                        <>
+                            <IconButton
+                                size="xs"
+                                icon={layout.showLeftPane ? mdLeftPanelClose : mdLeftPanelOpen}
+                                label={t("page.storyMaker.v2.ide.toggleLeftPane")}
+                                selected={layout.showLeftPane}
+                                onClick={() => updateEditorLayout(prev => ({ ...prev, showLeftPane: !prev.showLeftPane }))}
+                            />
+                            <IconButton
+                                size="xs"
+                                icon={layout.showBottomPane ? mdBottomPanelClose : mdBottomPanelOpen}
+                                label={t("page.storyMaker.v2.ide.toggleBottomPane")}
+                                selected={layout.showBottomPane}
+                                onClick={() => updateEditorLayout(prev => ({ ...prev, showBottomPane: !prev.showBottomPane }))}
+                            />
+                            {isEditMode && (
+                                <IconButton
+                                    size="xs"
+                                    icon={layout.showRightPane ? mdRightPanelClose : mdRightPanelOpen}
+                                    label={t("page.storyMaker.v2.ide.toggleRightPane")}
+                                    selected={layout.showRightPane}
+                                    onClick={() => updateEditorLayout(prev => ({ ...prev, showRightPane: !prev.showRightPane }))}
+                                />
+                            )}
+                        </>
+                    )}
+
+                    <IconButton
+                        size="xs"
+                        icon={stageWebFullscreen ? mdCloseFullscreen : mdFitScreen}
+                        label={t(stageWebFullscreen ? "page.storyMaker.v2.ide.exitWebFullscreen" : "page.storyMaker.v2.ide.webFullscreen")}
+                        selected={stageWebFullscreen}
+                        onClick={() => setStageWebFullscreen(prev => !prev)}
+                    />
                 </div>
-            </Surface>
+            </header>
 
             {stagePhase.kind === "unavailable" && (
                 <Banner tone="info" title={t("page.storyMaker.engine.unavailable")}>
@@ -1668,84 +2146,164 @@ function StoryMakerEditContent() {
                 </Banner>
             )}
 
-            {/* Desktop 3-Pane NLE Cockpit (lg: 1024px+ upward) */}
+            {/* Desktop Resizable Multi-Pane NLE / IDE Cockpit */}
             <div
                 ref={nleContainerRef}
-                style={{ "--nle-top-h": `${topSplitPct}%` } as React.CSSProperties}
                 className={cn(
                     "flex min-w-0 flex-col gap-0 overflow-hidden",
                     immersive
                         ? "min-h-0 flex-1"
-                        : "h-[calc(100svh-8.5rem)] min-h-[42rem]",
+                        : "h-[calc(100svh-8rem)] min-h-[42rem]",
                 )}
             >
-                {/* Top Row: Left Bin/LivePhase | Center Persistently Mounted 16:9 Stage | Right Inspector/Playtest Handoff */}
+                {/* Top Row: Resizable Left Pane | Persistently Mounted 16:9 Stage | Resizable Right Inspector (Edit only) */}
                 <div
                     key="top-workspace-row"
-                    className="grid h-[var(--nle-top-h)] min-h-0 min-w-0 shrink-0 gap-2.5 lg:grid-cols-[17.5rem_minmax(0,1fr)_20.5rem] xl:grid-cols-[19.5rem_minmax(0,1fr)_23rem]"
+                    ref={topRowRef}
+                    style={showBottomPane ? { height: `${layout.topSplitPct}%` } : undefined}
+                    className={cn(
+                        "flex min-h-0 min-w-0 gap-0 overflow-hidden",
+                        showBottomPane ? "shrink-0" : "flex-1",
+                    )}
                 >
-                    {/* Top-Left Pane: Edit Bin OR Read-Only Playtest LivePhasePanel */}
-                    <Surface
-                        key="desktop-left-pane"
-                        tone="low"
-                        radius="xl"
-                        className={cn(
-                            "flex min-h-0 flex-col overflow-hidden",
-                            isPlaytest && "border border-primary/35",
-                        )}
-                    >
-                        {isPlaytest ? (
-                            <LivePhasePanel
-                                doc={doc}
-                                program={program}
-                                frame={playActiveFrame}
-                                runtimePhase={playRuntimePhase}
-                                stageState={playStageState}
-                                liveVariables={playLiveVariables}
-                                activeVoiceProgress={playVoiceProgress}
-                                backlog={playtestBacklogEntries}
-                                onReplayVoice={handlePlayReplayBacklogVoice}
-                                onSelectNode={jumpPlaytestToNode}
-                                onSelectBeat={jumpPlaytestToBeat}
-                                docked
-                                className="min-h-0 flex-1"
-                            />
-                        ) : (
-                            <StoryEditorBin
-                                doc={doc}
-                                assetSource={assetSource}
-                                models={modelArray}
-                                modelInfo={modelInfo}
-                                modelList={modelList}
-                                onRetryModels={retryModels}
-                                activeNodeId={activeNodeId}
-                                previewingCastId={previewingCastKey}
-                                onDocChange={commit}
-                                onSelectNode={handleSelectNode}
-                                onQuickDrop={handleQuickDrop}
-                                onDragPayloadStart={setActiveDragPayload}
-                                onPreviewCast={handlePreviewClip}
-                                onClearPreview={clearClipPreview}
-                                className="min-h-0 flex-1"
-                            />
-                        )}
-                    </Surface>
+                    {/* Top-Left Pane: Edit Bin | Playtest LivePhasePanel | Code Workbench */}
+                    {showLeftPane && (
+                        <Surface
+                            key="desktop-left-pane"
+                            tone="low"
+                            radius="xl"
+                            style={
+                                isCodeMode
+                                    ? { width: `${layout.codeSplitPct}%` }
+                                    : { width: `${layout.leftWidthPx}px` }
+                            }
+                            className={cn(
+                                "flex min-h-0 shrink-0 flex-col overflow-hidden border border-outline-variant/50",
+                                !isCodeMode && "max-w-[46%]",
+                                isPlaytest && "border-primary/35",
+                            )}
+                        >
+                            {isCodeMode ? (
+                                <StoryCodeWorkspace
+                                    doc={doc}
+                                    codeText={codeText}
+                                    isDirty={codeDirty}
+                                    evaluation={codeEval}
+                                    onChangeCode={setCodeText}
+                                    onApply={nextDoc => applyCodeDoc(nextDoc, false)}
+                                    onApplyAndPlaytest={handleApplyCodeAndPlaytest}
+                                    onReset={() => {
+                                        const serialized = serializeStoryScript(doc);
+                                        setCodeText(serialized);
+                                        setCodeSyncedBase(serialized);
+                                        setCodePreviewDoc(doc);
+                                    }}
+                                    onSelectDiagnostic={(nodeId, beatId) => {
+                                        setCodeSelectedNodeId(nodeId);
+                                        setCodeSelectedBeatId(beatId ?? null);
+                                    }}
+                                    onNotify={setSnack}
+                                    className="min-h-0 flex-1"
+                                />
+                            ) : isPlaytest ? (
+                                <LivePhasePanel
+                                    doc={doc}
+                                    program={program}
+                                    frame={playActiveFrame}
+                                    runtimePhase={playRuntimePhase}
+                                    stageState={playStageState}
+                                    liveVariables={playLiveVariables}
+                                    activeVoiceProgress={playVoiceProgress}
+                                    backlog={playtestBacklogEntries}
+                                    onReplayVoice={handlePlayReplayBacklogVoice}
+                                    onSelectNode={jumpPlaytestToNode}
+                                    onSelectBeat={jumpPlaytestToBeat}
+                                    docked
+                                    className="min-h-0 flex-1"
+                                />
+                            ) : (
+                                <StoryEditorBin
+                                    doc={doc}
+                                    assetSource={assetSource}
+                                    models={modelArray}
+                                    modelInfo={modelInfo}
+                                    modelList={modelList}
+                                    onRetryModels={retryModels}
+                                    activeNodeId={activeNodeId}
+                                    previewingCastId={previewingCastKey}
+                                    onDocChange={commit}
+                                    onSelectNode={handleSelectNode}
+                                    onQuickDrop={handleQuickDrop}
+                                    onDragPayloadStart={setActiveDragPayload}
+                                    onPreviewCast={handlePreviewClip}
+                                    onClearPreview={clearClipPreview}
+                                    className="min-h-0 flex-1"
+                                />
+                            )}
+                        </Surface>
+                    )}
 
-                    {/* Top-Center Pane: Persistently Mounted Live 16:9 Stage + Mode-Aware Monitor/Transport Strip */}
+                    {/* Left Vertical Resizer */}
+                    {showLeftPane && (
+                        <div
+                            key="left-splitter"
+                            role="separator"
+                            tabIndex={0}
+                            aria-orientation="vertical"
+                            aria-label={t("page.storyMaker.v2.ide.resizeColumn")}
+                            aria-valuenow={isCodeMode ? Math.round(layout.codeSplitPct) : layout.leftWidthPx}
+                            aria-valuemin={isCodeMode ? EDITOR_LAYOUT_LIMITS.codeMinPct : EDITOR_LAYOUT_LIMITS.leftMin}
+                            aria-valuemax={isCodeMode ? EDITOR_LAYOUT_LIMITS.codeMaxPct : EDITOR_LAYOUT_LIMITS.leftMax}
+                            title={t("page.storyMaker.v2.ide.resizeColumn")}
+                            onPointerDown={event => handleSplitPointerDown(isCodeMode ? "code" : "left", event)}
+                            onPointerMove={handleSplitPointerMove}
+                            onPointerUp={handleSplitPointerUp}
+                            onPointerCancel={() => { splitDragRef.current = null; }}
+                            onKeyDown={(event) => {
+                                if (event.key === "ArrowLeft") {
+                                    event.preventDefault();
+                                    if (isCodeMode) updateEditorLayout(prev => ({ ...prev, codeSplitPct: prev.codeSplitPct - 2 }));
+                                    else updateEditorLayout(prev => ({ ...prev, leftWidthPx: prev.leftWidthPx - 16 }));
+                                } else if (event.key === "ArrowRight") {
+                                    event.preventDefault();
+                                    if (isCodeMode) updateEditorLayout(prev => ({ ...prev, codeSplitPct: prev.codeSplitPct + 2 }));
+                                    else updateEditorLayout(prev => ({ ...prev, leftWidthPx: prev.leftWidthPx + 16 }));
+                                } else if (event.key === "Home") {
+                                    event.preventDefault();
+                                    if (isCodeMode) updateEditorLayout({ codeSplitPct: EDITOR_LAYOUT_LIMITS.codeMinPct });
+                                    else updateEditorLayout({ leftWidthPx: EDITOR_LAYOUT_LIMITS.leftMin });
+                                } else if (event.key === "End") {
+                                    event.preventDefault();
+                                    if (isCodeMode) updateEditorLayout({ codeSplitPct: EDITOR_LAYOUT_LIMITS.codeMaxPct });
+                                    else updateEditorLayout({ leftWidthPx: EDITOR_LAYOUT_LIMITS.leftMax });
+                                }
+                            }}
+                            onDoubleClick={() => {
+                                if (isCodeMode) updateEditorLayout({ codeSplitPct: DEFAULT_EDITOR_LAYOUT.codeSplitPct });
+                                else updateEditorLayout({ leftWidthPx: DEFAULT_EDITOR_LAYOUT.leftWidthPx });
+                            }}
+                            className="focus-ring group flex w-2.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center rounded-md3-full"
+                        >
+                            <span className="h-9 w-1 rounded-full bg-outline-variant/65 transition-colors group-hover:bg-primary" />
+                        </div>
+                    )}
+
+                    {/* Top-Center Pane: Persistently Mounted Live 16:9 Stage (NEVER unmounts on mode/layout/web-fullscreen switch!) */}
                     <div
                         key="center-stage-pane"
                         ref={stageFullscreenRef}
                         className={cn(
-                            "flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden",
+                            "flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 overflow-hidden",
+                            stageWebFullscreen && !playFullscreen && "fixed inset-0 z-[170] h-dvh w-screen bg-surface p-2 sm:p-3",
                             playFullscreen && "h-dvh w-full justify-center bg-surface p-4",
                         )}
                     >
                         <div
                             key="stage-fit-outer"
                             className={cn(
-                                "flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-md3-xl bg-surface-container-low p-1.5 transition-shadow [container-type:size]",
+                                "flex min-h-0 min-w-0 flex-1 items-center justify-center overflow-hidden rounded-md3-xl bg-surface-container-low p-1 transition-shadow [container-type:size]",
                                 isPlaytest
-                                    ? "border-2 border-primary ring-2 ring-primary/35"
+                                    ? "border-2 border-primary ring-2 ring-primary/30"
                                     : "border border-outline-variant/60",
                             )}
                         >
@@ -1755,7 +2313,7 @@ function StoryMakerEditContent() {
                             >
                                 <StoryStageView
                                     key="live-stage"
-                                    doc={doc}
+                                    doc={stageDoc}
                                     state={isPlaytest ? playDisplayState : editStageState}
                                     line={line}
                                     hostRef={stageHostRef}
@@ -1907,29 +2465,26 @@ function StoryMakerEditContent() {
                             </div>
                         </div>
 
-                        {/* Mode-Aware Monitor / Transport Strip */}
-                        <Surface
-                            tone="low"
-                            radius="lg"
+                        {/* Slim Unified Stage Monitor / Transport Bar */}
+                        <div
                             className={cn(
-                                "flex min-w-0 shrink-0 flex-wrap items-center justify-between gap-1.5 px-2.5 py-1.5",
-                                isPlaytest && "border border-primary/40 bg-primary-container/15",
+                                "flex h-9 min-w-0 shrink-0 items-center justify-between gap-2 rounded-md3-lg border bg-surface-container-low px-2",
+                                isPlaytest ? "border-primary/40 bg-primary-container/10" : "border-outline-variant/50",
                             )}
                         >
                             {isPlaytest ? (
                                 <>
-                                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
-                                        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-primary px-2.5 py-0.5 type-label-s text-on-primary">
+                                    <div className="flex min-w-0 items-center gap-1">
+                                        <span className="inline-flex shrink-0 items-center gap-1.5 px-1.5 type-label-s font-medium text-primary">
                                             <span
                                                 aria-hidden
                                                 className={cn(
-                                                    "inline-block size-2 shrink-0 rounded-full bg-on-primary",
+                                                    "inline-block size-2 shrink-0 rounded-full bg-primary",
                                                     !reduced && "animate-pulse",
                                                 )}
                                             />
-                                            <span>{t("page.storyMaker.v2.mode.playtestBadge")}</span>
+                                            <span>{t("page.storyMaker.v2.mode.playtest")}</span>
                                         </span>
-
                                         <IconButton
                                             size="xs"
                                             icon={mdSkipPrevious}
@@ -1939,7 +2494,7 @@ function StoryMakerEditContent() {
                                         />
                                         <Button
                                             size="xs"
-                                            variant="filled"
+                                            variant="tonal"
                                             icon={mdSkipNext}
                                             disabled={Boolean(playCurrentChoice) || playEnded || playEmptyStory}
                                             onClick={handlePlayAdvance}
@@ -1953,28 +2508,26 @@ function StoryMakerEditContent() {
                                             disabled={playEmptyStory}
                                             onClick={() => startPlaytestFrom(doc.startNodeId)}
                                         />
-                                        <Button
+                                        <IconButton
                                             size="xs"
-                                            variant={playAuto ? "filled" : "tonal"}
+                                            variant={playAuto ? "filled" : "standard"}
                                             selected={playAuto}
                                             icon={mdAutoplay}
+                                            label={t("page.storyMaker.player.auto")}
                                             disabled={playEmptyStory || playEnded}
                                             onClick={() => setPlayAuto(on => !on)}
-                                        >
-                                            {t("page.storyMaker.player.auto")}
-                                        </Button>
+                                        />
                                     </div>
 
-                                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                                    <div className="flex shrink-0 items-center gap-1">
                                         {audioBlocked && !playEmptyStory && !playEnded && (
-                                            <Button
+                                            <IconButton
                                                 size="xs"
                                                 variant="tonal"
                                                 icon={mdVolumeUp}
+                                                label={t("page.storyMaker.player.tapToEnableAudio")}
                                                 onClick={() => unlockAudio()}
-                                            >
-                                                {t("page.storyMaker.player.tapToEnableAudio")}
-                                            </Button>
+                                            />
                                         )}
                                         <IconButton
                                             size="xs"
@@ -1996,7 +2549,20 @@ function StoryMakerEditContent() {
                                             onValueChange={handlePlayVolumeChange}
                                             aria-label={t("page.storyMaker.player.volume")}
                                             formatValue={val => `${Math.round(val * 100)}%`}
-                                            className="h-6 w-16"
+                                            className="h-6 w-14"
+                                        />
+                                        <IconButton
+                                            size="xs"
+                                            icon={mdEdit}
+                                            label={t("page.storyMaker.v2.mode.stopAndEditHere")}
+                                            onClick={() => exitPlaytest(true)}
+                                        />
+                                        <IconButton
+                                            size="xs"
+                                            icon={stageWebFullscreen ? mdCloseFullscreen : mdFitScreen}
+                                            label={t(stageWebFullscreen ? "page.storyMaker.v2.ide.exitWebFullscreen" : "page.storyMaker.v2.ide.webFullscreen")}
+                                            selected={stageWebFullscreen}
+                                            onClick={() => setStageWebFullscreen(prev => !prev)}
                                         />
                                         <IconButton
                                             size="xs"
@@ -2004,27 +2570,91 @@ function StoryMakerEditContent() {
                                             label={t(playFullscreen ? "page.storyMaker.player.exitFullscreen" : "page.storyMaker.player.fullscreen")}
                                             onClick={togglePlayFullscreen}
                                         />
-                                        <Button
+                                    </div>
+                                </>
+                            ) : isCodeMode ? (
+                                <>
+                                    <div className="flex min-w-0 items-center gap-1.5">
+                                        {codePreviewScenes.length > 0 && (
+                                            <select
+                                                aria-label={t("page.storyMaker.v2.script.previewScene")}
+                                                value={effectiveCodeScene?.id ?? ""}
+                                                onChange={(event) => {
+                                                    const nextId = event.target.value;
+                                                    setCodeSelectedNodeId(nextId);
+                                                    const target = stageDoc.nodes[nextId];
+                                                    setCodeSelectedBeatId(target?.type === "scene" ? (target.beats[0]?.id ?? null) : null);
+                                                }}
+                                                className="focus-ring h-7 max-w-[12rem] truncate rounded-md3-sm border border-outline-variant/60 bg-surface-container px-2 type-label-m text-on-surface"
+                                            >
+                                                {codePreviewScenes.map(scene => (
+                                                    <option key={scene.id} value={scene.id}>
+                                                        {getNodeDisplayName(scene, t)}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                        )}
+
+                                        {effectiveCodeScene && effectiveCodeScene.beats.length > 0 && (
+                                            <div className="inline-flex shrink-0 items-center gap-0.5">
+                                                <IconButton
+                                                    size="xs"
+                                                    icon={mdChevronLeft}
+                                                    label={t("page.storyMaker.editor.prevStep")}
+                                                    disabled={effectiveCodeBeatIndex <= 0}
+                                                    onClick={() => {
+                                                        const target = effectiveCodeScene.beats[Math.max(0, effectiveCodeBeatIndex - 1)];
+                                                        if (target) setCodeSelectedBeatId(target.id);
+                                                    }}
+                                                />
+                                                <span className="min-w-10 text-center font-mono type-label-s tabular-nums text-on-surface-variant">
+                                                    {effectiveCodeBeatIndex >= 0
+                                                        ? `${effectiveCodeBeatIndex + 1}/${effectiveCodeScene.beats.length}`
+                                                        : `0/${effectiveCodeScene.beats.length}`}
+                                                </span>
+                                                <IconButton
+                                                    size="xs"
+                                                    icon={mdChevronRight}
+                                                    label={t("page.storyMaker.editor.nextStep")}
+                                                    disabled={effectiveCodeBeatIndex >= effectiveCodeScene.beats.length - 1}
+                                                    onClick={() => {
+                                                        const nextIdx = effectiveCodeBeatIndex < 0
+                                                            ? 0
+                                                            : Math.min(effectiveCodeScene.beats.length - 1, effectiveCodeBeatIndex + 1);
+                                                        const target = effectiveCodeScene.beats[nextIdx];
+                                                        if (target) setCodeSelectedBeatId(target.id);
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex shrink-0 items-center gap-1">
+                                        {codeEval.ok && (
+                                            <Button
+                                                size="xs"
+                                                variant="tonal"
+                                                icon={mdPlayArrowFill}
+                                                onClick={() => handleApplyCodeAndPlaytest(codeEval.doc)}
+                                            >
+                                                {t("page.storyMaker.v2.mode.playtest")}
+                                            </Button>
+                                        )}
+                                        <IconButton
                                             size="xs"
-                                            variant="tonal"
-                                            icon={mdEdit}
-                                            onClick={() => exitPlaytest(false)}
-                                        >
-                                            {t("page.storyMaker.v2.mode.returnToEdit")}
-                                        </Button>
+                                            icon={stageWebFullscreen ? mdCloseFullscreen : mdFitScreen}
+                                            label={t(stageWebFullscreen ? "page.storyMaker.v2.ide.exitWebFullscreen" : "page.storyMaker.v2.ide.webFullscreen")}
+                                            selected={stageWebFullscreen}
+                                            onClick={() => setStageWebFullscreen(prev => !prev)}
+                                        />
                                     </div>
                                 </>
                             ) : (
                                 <>
-                                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
-                                        <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-container px-2.5 py-0.5 type-label-s text-on-surface-variant">
-                                            <Icon path={mdEdit} size={13} className="shrink-0" />
-                                            <span>{t("page.storyMaker.v2.mode.editBadge")}</span>
-                                        </span>
-
+                                    <div className="flex min-w-0 items-center gap-1.5">
                                         {activeNode && (
-                                            <span className="inline-flex max-w-[14rem] items-center gap-1.5 rounded-md3-full bg-surface-container px-2.5 py-0.5 type-label-m text-on-surface">
-                                                <span className="shrink-0 type-label-s text-primary">
+                                            <span className="inline-flex max-w-[13rem] items-center gap-1.5 rounded-md3-full bg-surface-container px-2 py-0.5 type-label-s text-on-surface">
+                                                <span className="shrink-0 text-primary">
                                                     {t(`page.storyMaker.v2.nodeTypes.${activeNode.type}`)}
                                                 </span>
                                                 <span className="min-w-0 truncate">{getNodeDisplayName(activeNode, t)}</span>
@@ -2032,7 +2662,7 @@ function StoryMakerEditContent() {
                                         )}
 
                                         {activeScene && activeScene.beats.length > 0 && (
-                                            <div className="inline-flex items-center gap-0.5">
+                                            <div className="inline-flex shrink-0 items-center gap-0.5">
                                                 <IconButton
                                                     size="xs"
                                                     icon={mdChevronLeft}
@@ -2043,10 +2673,10 @@ function StoryMakerEditContent() {
                                                         if (target) setSelectedBeatId(target.id);
                                                     }}
                                                 />
-                                                <span className="min-w-12 text-center font-mono type-label-s text-on-surface-variant">
+                                                <span className="min-w-10 text-center font-mono type-label-s tabular-nums text-on-surface-variant">
                                                     {activeBeatIndex >= 0
-                                                        ? `${activeBeatIndex + 1} / ${activeScene.beats.length}`
-                                                        : `0 / ${activeScene.beats.length}`}
+                                                        ? `${activeBeatIndex + 1}/${activeScene.beats.length}`
+                                                        : `0/${activeScene.beats.length}`}
                                                 </span>
                                                 <IconButton
                                                     size="xs"
@@ -2063,7 +2693,7 @@ function StoryMakerEditContent() {
                                         )}
 
                                         {isSoloPreview && previewingCastMember && (
-                                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md3-full bg-tertiary-container px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                                            <span className="inline-flex max-w-[12rem] items-center gap-1 rounded-md3-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
                                                 <span className="truncate">
                                                     {t("page.storyMaker.nle.previewingModel", {
                                                         name: previewingCastMember.name || previewingCastMember.key,
@@ -2072,16 +2702,16 @@ function StoryMakerEditContent() {
                                                 <button
                                                     type="button"
                                                     onClick={clearClipPreview}
-                                                    className="state-layer focus-ring inline-flex cursor-pointer items-center gap-0.5 rounded-md3-full bg-surface-container-lowest/70 px-1.5 py-0.5 type-label-s text-on-surface"
+                                                    className="state-layer focus-ring inline-flex shrink-0 cursor-pointer items-center rounded-full p-0.5 text-on-surface"
+                                                    aria-label={t("page.storyMaker.nle.exitPreview")}
                                                 >
                                                     <Icon path={mdClose} size={12} />
-                                                    <span>{t("page.storyMaker.nle.exitPreview")}</span>
                                                 </button>
                                             </span>
                                         )}
                                     </div>
 
-                                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
+                                    <div className="flex shrink-0 items-center gap-1">
                                         {replayActionInfo && (
                                             <Button
                                                 size="xs"
@@ -2096,183 +2726,75 @@ function StoryMakerEditContent() {
                                             </Button>
                                         )}
                                         {activeScene && (
-                                            <Button
+                                            <IconButton
                                                 size="xs"
                                                 variant="tonal"
                                                 icon={mdPlayCircle}
+                                                label={t("page.storyMaker.v2.ending.playFromScene")}
                                                 onClick={() => enterPlaytest(activeScene.id)}
-                                            >
-                                                {t("page.storyMaker.v2.ending.playFromScene")}
-                                            </Button>
+                                            />
                                         )}
+                                        <IconButton
+                                            size="xs"
+                                            icon={stageWebFullscreen ? mdCloseFullscreen : mdFitScreen}
+                                            label={t(stageWebFullscreen ? "page.storyMaker.v2.ide.exitWebFullscreen" : "page.storyMaker.v2.ide.webFullscreen")}
+                                            selected={stageWebFullscreen}
+                                            onClick={() => setStageWebFullscreen(prev => !prev)}
+                                        />
                                     </div>
                                 </>
                             )}
-                        </Surface>
+                        </div>
                     </div>
 
-                    {/* Top-Right Pane: NodeInspector (Edit) OR Read-Only Playtest Status & Quick-Edit Handoff */}
-                    <Surface
-                        key="desktop-inspector"
-                        tone="low"
-                        radius="xl"
-                        className={cn(
-                            "flex min-h-0 flex-col overflow-hidden",
-                            isPlaytest && "border border-primary/35",
-                        )}
-                    >
-                        <div className="min-h-0 flex-1 overflow-y-auto p-3.5">
-                            {isPlaytest ? (
-                                <div className="min-w-0 space-y-3">
-                                    <Banner tone="info">
-                                        {t("page.storyMaker.v2.mode.playtestReadonlyBanner")}
-                                    </Banner>
+                    {/* Right Vertical Resizer (Edit mode only) */}
+                    {showRightPane && (
+                        <div
+                            key="right-splitter"
+                            role="separator"
+                            tabIndex={0}
+                            aria-orientation="vertical"
+                            aria-label={t("page.storyMaker.v2.ide.resizeColumn")}
+                            aria-valuenow={layout.rightWidthPx}
+                            aria-valuemin={EDITOR_LAYOUT_LIMITS.rightMin}
+                            aria-valuemax={EDITOR_LAYOUT_LIMITS.rightMax}
+                            title={t("page.storyMaker.v2.ide.resizeColumn")}
+                            onPointerDown={event => handleSplitPointerDown("right", event)}
+                            onPointerMove={handleSplitPointerMove}
+                            onPointerUp={handleSplitPointerUp}
+                            onPointerCancel={() => { splitDragRef.current = null; }}
+                            onKeyDown={(event) => {
+                                if (event.key === "ArrowLeft") {
+                                    event.preventDefault();
+                                    updateEditorLayout(prev => ({ ...prev, rightWidthPx: prev.rightWidthPx + 16 }));
+                                } else if (event.key === "ArrowRight") {
+                                    event.preventDefault();
+                                    updateEditorLayout(prev => ({ ...prev, rightWidthPx: prev.rightWidthPx - 16 }));
+                                } else if (event.key === "Home") {
+                                    event.preventDefault();
+                                    updateEditorLayout({ rightWidthPx: EDITOR_LAYOUT_LIMITS.rightMin });
+                                } else if (event.key === "End") {
+                                    event.preventDefault();
+                                    updateEditorLayout({ rightWidthPx: EDITOR_LAYOUT_LIMITS.rightMax });
+                                }
+                            }}
+                            onDoubleClick={() => updateEditorLayout({ rightWidthPx: DEFAULT_EDITOR_LAYOUT.rightWidthPx })}
+                            className="focus-ring group flex w-2.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center rounded-md3-full"
+                        >
+                            <span className="h-9 w-1 rounded-full bg-outline-variant/65 transition-colors group-hover:bg-primary" />
+                        </div>
+                    )}
 
-                                    <Button
-                                        variant="filled"
-                                        icon={mdEdit}
-                                        className="w-full justify-center"
-                                        onClick={() => exitPlaytest(true)}
-                                    >
-                                        {t("page.storyMaker.v2.mode.stopAndEditHere")}
-                                    </Button>
-
-                                    {/* Current Running Node & Beat Summary */}
-                                    <div className="min-w-0 space-y-2 rounded-md3-md border border-outline-variant/50 bg-surface-container p-3">
-                                        <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5">
-                                            <span className={cn("inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 type-label-s", playPhaseMeta.chipClass)}>
-                                                <Icon path={playPhaseMeta.icon} size={13} className="shrink-0" />
-                                                <span>{t(playPhaseMeta.labelKey)}</span>
-                                            </span>
-                                            {playActiveNode && (
-                                                <span className="rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant">
-                                                    {t(`page.storyMaker.v2.nodeTypes.${playActiveNode.type}`)}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        <div className="min-w-0">
-                                            <div className="type-label-s text-on-surface-variant">
-                                                {t("page.storyMaker.phase.currentNode")}
-                                            </div>
-                                            <p className="truncate type-title-s text-on-surface">
-                                                {playActiveNodeLabel}
-                                            </p>
-                                        </div>
-
-                                        {playActiveBeatInfo && (
-                                            <div className="min-w-0 space-y-1 border-t border-outline-variant/40 pt-2">
-                                                <div className="flex items-center justify-between gap-2 type-label-s text-on-surface-variant">
-                                                    <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 text-on-secondary-container">
-                                                        {t(`page.storyMaker.v2.beats.${playActiveBeatInfo.beat.kind}`)}
-                                                    </span>
-                                                    <span className="font-mono tabular-nums">
-                                                        {t("page.storyMaker.phase.currentStep", {
-                                                            current: playActiveBeatInfo.index + 1,
-                                                            total: playActiveBeatInfo.total,
-                                                        })}
-                                                    </span>
-                                                </div>
-                                                <p className="line-clamp-3 break-words type-body-s text-on-surface">
-                                                    {playActiveBeatInfo.summary}
-                                                </p>
-                                            </div>
-                                        )}
-
-                                        {playReachedEnding && playActiveFrame?.ending && (
-                                            <div className="min-w-0 space-y-1 border-t border-outline-variant/40 pt-2">
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container">
-                                                    <Icon path={mdFlag} size={12} className="shrink-0" />
-                                                    <span>{t("page.storyMaker.v2.ending.achievedBadge")}</span>
-                                                </span>
-                                                <p className="break-words type-title-s text-on-surface">
-                                                    {playActiveFrame.ending.title || t("page.storyMaker.player.endTitle")}
-                                                </p>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Live Variables & Counters Readout */}
-                                    <div className="min-w-0 space-y-2 rounded-md3-md border border-outline-variant/50 bg-surface-container p-3">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <span className="flex min-w-0 items-center gap-1.5 type-label-m text-on-surface">
-                                                <Icon path={mdCalculate} size={15} className="shrink-0 text-primary" />
-                                                <span className="truncate">{t("page.storyMaker.v2.variables.liveMonitorTitle")}</span>
-                                            </span>
-                                            <span className="shrink-0 font-mono type-label-s tabular-nums text-on-surface-variant">
-                                                {doc.variables.length}
-                                            </span>
-                                        </div>
-
-                                        {doc.variables.length === 0 ? (
-                                            <p className="type-body-s text-on-surface-variant">
-                                                {t("page.storyMaker.phase.none")}
-                                            </p>
-                                        ) : (
-                                            <ul className="min-w-0 space-y-1.5">
-                                                {doc.variables.map((variable) => {
-                                                    const currentValue = playLiveVariables[variable.id] ?? variable.initial;
-                                                    const isChanged = currentValue !== variable.initial;
-                                                    return (
-                                                        <li
-                                                            key={variable.id}
-                                                            className={cn(
-                                                                "flex min-w-0 items-center justify-between gap-2 rounded-md3-sm border px-2 py-1.5",
-                                                                isChanged
-                                                                    ? "border-primary/50 bg-primary-container/25"
-                                                                    : "border-outline-variant/40 bg-surface-container-low",
-                                                            )}
-                                                        >
-                                                            <span className="flex min-w-0 items-center gap-1.5">
-                                                                <Icon
-                                                                    path={variable.type === "number" ? mdNumbers : mdTag}
-                                                                    size={14}
-                                                                    className="shrink-0 text-primary"
-                                                                />
-                                                                <span className="min-w-0 truncate type-label-m text-on-surface">
-                                                                    {variable.name || variable.id}
-                                                                </span>
-                                                            </span>
-                                                            <span
-                                                                className={cn(
-                                                                    "shrink-0 rounded-md3-xs px-2 py-0.5 font-mono type-label-s tabular-nums",
-                                                                    isChanged
-                                                                        ? "bg-primary text-on-primary"
-                                                                        : "bg-surface-container-highest text-on-surface-variant",
-                                                                )}
-                                                            >
-                                                                {variable.type === "number" ? String(currentValue) : String(Boolean(currentValue))}
-                                                            </span>
-                                                        </li>
-                                                    );
-                                                })}
-                                            </ul>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            size="s"
-                                            variant="outlined"
-                                            icon={mdReplay}
-                                            disabled={playEmptyStory}
-                                            className="flex-1 justify-center"
-                                            onClick={() => startPlaytestFrom(doc.startNodeId)}
-                                        >
-                                            {t("page.storyMaker.player.replay")}
-                                        </Button>
-                                        <Button
-                                            size="s"
-                                            variant="tonal"
-                                            icon={mdArrowBack}
-                                            className="flex-1 justify-center"
-                                            onClick={() => exitPlaytest(false)}
-                                        >
-                                            {t("page.storyMaker.v2.mode.returnToEdit")}
-                                        </Button>
-                                    </div>
-                                </div>
-                            ) : (
+                    {/* Top-Right Pane: NodeInspector (Edit mode only; Playtest gives this width to the Stage) */}
+                    {showRightPane && (
+                        <Surface
+                            key="desktop-inspector"
+                            tone="low"
+                            radius="xl"
+                            style={{ width: `${layout.rightWidthPx}px` }}
+                            className="flex min-h-0 max-w-[46%] shrink-0 flex-col overflow-hidden border border-outline-variant/50"
+                        >
+                            <div className="min-h-0 flex-1 overflow-y-auto p-3">
                                 <NodeInspector
                                     doc={doc}
                                     selectedNodeId={activeNodeId}
@@ -2289,47 +2811,50 @@ function StoryMakerEditContent() {
                                     onContinueScene={handleContinueScene}
                                     onPreviewEffect={handlePreviewEffect}
                                 />
-                            )}
-                        </div>
-                    </Surface>
+                            </div>
+                        </Surface>
+                    )}
                 </div>
 
-                {/* Draggable Keyboard-Accessible Horizontal Splitter Bar */}
-                <div
-                    role="separator"
-                    tabIndex={0}
-                    aria-orientation="horizontal"
-                    aria-label={t("page.storyMaker.nle.resizeSplit")}
-                    aria-valuenow={Math.round(topSplitPct)}
-                    aria-valuemin={MIN_TOP_SPLIT_PCT}
-                    aria-valuemax={MAX_TOP_SPLIT_PCT}
-                    title={t("page.storyMaker.nle.resizeSplit")}
-                    onPointerDown={handleSplitterPointerDown}
-                    onPointerMove={handleSplitterPointerMove}
-                    onPointerUp={handleSplitterPointerUp}
-                    onPointerCancel={() => { splitDragRef.current = null; }}
-                    onKeyDown={(event) => {
-                        if (event.key === "ArrowUp") {
-                            event.preventDefault();
-                            setTopSplitPct(prev => Math.max(MIN_TOP_SPLIT_PCT, prev - 2));
-                        } else if (event.key === "ArrowDown") {
-                            event.preventDefault();
-                            setTopSplitPct(prev => Math.min(MAX_TOP_SPLIT_PCT, prev + 2));
-                        } else if (event.key === "Home") {
-                            event.preventDefault();
-                            setTopSplitPct(MIN_TOP_SPLIT_PCT);
-                        } else if (event.key === "End") {
-                            event.preventDefault();
-                            setTopSplitPct(MAX_TOP_SPLIT_PCT);
-                        }
-                    }}
-                    onDoubleClick={() => setTopSplitPct(DEFAULT_TOP_SPLIT_PCT)}
-                    className="focus-ring flex h-3 shrink-0 cursor-row-resize touch-none select-none items-center justify-center rounded-md3-full transition-colors hover:bg-surface-container-high"
-                >
-                    <Icon path={mdDragHandle} size={18} className="text-on-surface-variant" />
-                </div>
+                {/* Draggable Horizontal Splitter Bar */}
+                {showBottomPane && (
+                    <div
+                        key="bottom-splitter"
+                        role="separator"
+                        tabIndex={0}
+                        aria-orientation="horizontal"
+                        aria-label={t("page.storyMaker.nle.resizeSplit")}
+                        aria-valuenow={Math.round(layout.topSplitPct)}
+                        aria-valuemin={EDITOR_LAYOUT_LIMITS.topMinPct}
+                        aria-valuemax={EDITOR_LAYOUT_LIMITS.topMaxPct}
+                        title={t("page.storyMaker.nle.resizeSplit")}
+                        onPointerDown={event => handleSplitPointerDown("horizontal", event)}
+                        onPointerMove={handleSplitPointerMove}
+                        onPointerUp={handleSplitPointerUp}
+                        onPointerCancel={() => { splitDragRef.current = null; }}
+                        onKeyDown={(event) => {
+                            if (event.key === "ArrowUp") {
+                                event.preventDefault();
+                                updateEditorLayout(prev => ({ ...prev, topSplitPct: prev.topSplitPct - 2 }));
+                            } else if (event.key === "ArrowDown") {
+                                event.preventDefault();
+                                updateEditorLayout(prev => ({ ...prev, topSplitPct: prev.topSplitPct + 2 }));
+                            } else if (event.key === "Home") {
+                                event.preventDefault();
+                                updateEditorLayout({ topSplitPct: EDITOR_LAYOUT_LIMITS.topMinPct });
+                            } else if (event.key === "End") {
+                                event.preventDefault();
+                                updateEditorLayout({ topSplitPct: EDITOR_LAYOUT_LIMITS.topMaxPct });
+                            }
+                        }}
+                        onDoubleClick={() => updateEditorLayout({ topSplitPct: DEFAULT_EDITOR_LAYOUT.topSplitPct })}
+                        className="focus-ring group flex h-2.5 shrink-0 cursor-row-resize touch-none select-none items-center justify-center rounded-md3-full"
+                    >
+                        <span className="h-1 w-10 rounded-full bg-outline-variant/65 transition-colors group-hover:bg-primary" />
+                    </div>
+                )}
 
-                {/* Bottom Row: Full-Width Flow Canvas (Edit or Read-Only Playtest Monitor, preserving zoom/pan!) */}
+                {/* Bottom Row: Full-Width Flow Canvas (kept mounted with CSS hidden so zoom/pan survives Code mode & collapse!) */}
                 <StoryFlowCanvas
                     key="desktop-flow-canvas"
                     doc={doc}
@@ -2363,7 +2888,7 @@ function StoryMakerEditContent() {
                     onContinueScene={isPlaytest ? undefined : handleContinueScene}
                     onPlayFromNode={isPlaytest ? undefined : (nodeId => enterPlaytest(nodeId))}
                     onAutoLayout={isPlaytest ? undefined : (() => commit(current => autoLayoutGraph(current)))}
-                    className="flex min-h-0 flex-1"
+                    className={cn("min-h-0 flex-1", showBottomPane ? "flex" : "hidden")}
                 />
             </div>
 
@@ -2378,12 +2903,11 @@ function StoryMakerEditContent() {
                 onSubmit={handleUpdateMeta}
             />
 
-            {/* Bidirectional MoeSekai Script (.msk) Dialog */}
-            <ScriptCodeDialog
-                isOpen={codeOpen}
-                onClose={() => setCodeOpen(false)}
-                doc={doc}
-                onApply={handleApplyCode}
+            {/* Import .msk Into Current Draft Dialog */}
+            <StoryImportDialog
+                isOpen={importOpen}
+                onClose={() => setImportOpen(false)}
+                onImport={handleImportIntoCurrentDraft}
             />
 
             {/* Preload Assets Dialog */}
@@ -2407,6 +2931,11 @@ function StoryMakerEditContent() {
                     onSelectDiagnostic={(nodeId, beatId) => {
                         if (workspaceMode === "playtest") {
                             exitPlaytest(false);
+                        } else if (workspaceMode === "code") {
+                            setCodeSelectedNodeId(nodeId);
+                            setCodeSelectedBeatId(beatId ?? null);
+                            setIssuesOpen(false);
+                            return;
                         }
                         if (beatId) handleSelectBeat(nodeId, beatId);
                         else handleSelectNode(nodeId);

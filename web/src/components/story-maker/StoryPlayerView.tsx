@@ -8,11 +8,12 @@ import {
     Banner, Button, Icon, IconButton, LoadingIndicator, SegmentedButton, SideSheet, Slider, Surface, Tabs, cn,
 } from "@/components/md3";
 import {
-    mdAccountTree, mdAutoplay, mdCalculate, mdClose, mdCloudDone, mdDashboard, mdDownload, mdDragHandle,
-    mdErrorFill, mdFlag, mdFullscreen, mdFullscreenExit, mdHistory, mdImage, mdInventory2, mdMonitoring,
-    mdMusicNote, mdNumbers, mdPermMedia, mdPerson, mdPlayArrowFill, mdReplay, mdSkipNext, mdSkipPrevious,
-    mdSmartDisplay, mdStopFill, mdTag, mdTheaters, mdTimeline, mdVisibility, mdVisibilityOff, mdVolumeOff,
-    mdVolumeUp, mdWarning,
+    mdAccountTree, mdAutoplay, mdCalculate, mdClose, mdCloseFullscreen, mdCloudDone, mdDashboard,
+    mdDownload, mdDragHandle, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen, mdFullscreenExit,
+    mdHistory, mdImage, mdInventory2, mdLeftPanelClose, mdLeftPanelOpen, mdMonitoring, mdMusicNote,
+    mdNumbers, mdPermMedia, mdPerson, mdPlayArrowFill, mdReplay, mdSkipNext, mdSkipPrevious,
+    mdSmartDisplay, mdStopFill, mdTag, mdTheaters, mdTimeline, mdVisibility, mdVisibilityOff,
+    mdVolumeOff, mdVolumeUp, mdWarning,
 } from "@/components/md3/icons";
 import { StoryFlowCanvas } from "@/components/story-maker/StoryFlowCanvas";
 import { useI18n } from "@/contexts/I18nContext";
@@ -93,11 +94,17 @@ export interface StoryPlayerViewProps {
 
 const CHAR_INTERVAL_MS = 28;
 const PLAYER_SPLIT_STORAGE_KEY = "moesekai.storyMaker.playerSplitPct";
+const PLAYER_LEFT_WIDTH_STORAGE_KEY = "moesekai.storyMaker.playerLeftWidthPx";
 const DEFAULT_TOP_SPLIT_PCT = 56;
-const MIN_TOP_SPLIT_PCT = 36;
-const MAX_TOP_SPLIT_PCT = 72;
+const MIN_TOP_SPLIT_PCT = 24;
+const MAX_TOP_SPLIT_PCT = 84;
+const DEFAULT_LEFT_WIDTH_PX = 340;
+const MIN_LEFT_WIDTH_PX = 220;
+const MAX_LEFT_WIDTH_PX = 520;
+const MIN_STAGE_WIDTH_PX = 360;
 
 const splitListeners = new Set<() => void>();
+const leftWidthListeners = new Set<() => void>();
 
 function clampSplitPct(value: number): number {
     if (!Number.isFinite(value)) return DEFAULT_TOP_SPLIT_PCT;
@@ -130,6 +137,39 @@ function writeTopSplitPct(next: number): void {
 function subscribeTopSplitPct(listener: () => void): () => void {
     splitListeners.add(listener);
     return () => { splitListeners.delete(listener); };
+}
+
+function clampLeftWidthPx(value: number): number {
+    if (!Number.isFinite(value)) return DEFAULT_LEFT_WIDTH_PX;
+    return Math.max(MIN_LEFT_WIDTH_PX, Math.min(MAX_LEFT_WIDTH_PX, Math.round(value)));
+}
+
+function readLeftWidthPx(): number {
+    if (typeof window === "undefined") return DEFAULT_LEFT_WIDTH_PX;
+    try {
+        const raw = window.sessionStorage.getItem(PLAYER_LEFT_WIDTH_STORAGE_KEY);
+        if (!raw) return DEFAULT_LEFT_WIDTH_PX;
+        return clampLeftWidthPx(Number(raw));
+    } catch {
+        return DEFAULT_LEFT_WIDTH_PX;
+    }
+}
+
+function writeLeftWidthPx(next: number): void {
+    const clamped = clampLeftWidthPx(next);
+    if (typeof window !== "undefined") {
+        try {
+            window.sessionStorage.setItem(PLAYER_LEFT_WIDTH_STORAGE_KEY, String(clamped));
+        } catch {
+            // Ignore private-mode / quota errors
+        }
+    }
+    for (const listener of leftWidthListeners) listener();
+}
+
+function subscribeLeftWidthPx(listener: () => void): () => void {
+    leftWidthListeners.add(listener);
+    return () => { leftWidthListeners.delete(listener); };
 }
 
 function voiceDedupeKey(voice: StoryVoiceRef, defaultRegion: StoryDocument["region"]): string {
@@ -387,6 +427,7 @@ export function StoryPlayerView({
     const { t } = useI18n();
     const reduced = useReducedMotion();
     const workspaceRef = useRef<HTMLDivElement>(null);
+    const topRowRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const preloadSource = assetSource ?? line;
 
@@ -405,7 +446,15 @@ export function StoryPlayerView({
         readTopSplitPct,
         () => DEFAULT_TOP_SPLIT_PCT,
     );
+    const leftWidthPx = useSyncExternalStore(
+        subscribeLeftWidthPx,
+        readLeftWidthPx,
+        () => DEFAULT_LEFT_WIDTH_PX,
+    );
+    const [showLeftPane, setShowLeftPane] = useState(true);
+    const [stageWebFullscreen, setStageWebFullscreen] = useState(false);
     const draggingSplitRef = useRef(false);
+    const draggingLeftRef = useRef(false);
 
     const program = useMemo(() => compileStoryGraph(doc), [doc]);
     const hasCompileErrors = program.errors.length > 0;
@@ -1182,6 +1231,11 @@ export function StoryPlayerView({
                     setMenuOpen(false);
                     return;
                 }
+                if (stageWebFullscreen) {
+                    event.preventDefault();
+                    setStageWebFullscreen(false);
+                    return;
+                }
                 if (uiHidden) {
                     event.preventDefault();
                     setUiHidden(false);
@@ -1212,7 +1266,7 @@ export function StoryPlayerView({
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [
         backlogOpen, currentChoice, handleAdvance, handleChoose, handlePrevious, hasCompileErrors,
-        menuOpen, playSe, preloadOpen, t, uiHidden, uiKit?.decideSoundUrl,
+        menuOpen, playSe, preloadOpen, stageWebFullscreen, t, uiHidden, uiKit?.decideSoundUrl,
     ]);
 
     /** Track native fullscreen state. */
@@ -1264,6 +1318,44 @@ export function StoryPlayerView({
         } else if (event.key === "End") {
             event.preventDefault();
             writeTopSplitPct(MAX_TOP_SPLIT_PCT);
+        }
+    };
+
+    const handleLeftSplitterPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (event.button !== 0) return;
+        event.preventDefault();
+        draggingLeftRef.current = true;
+        event.currentTarget.setPointerCapture(event.pointerId);
+    };
+
+    const handleLeftSplitterPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+        if (!draggingLeftRef.current || !topRowRef.current) return;
+        const rect = topRowRef.current.getBoundingClientRect();
+        if (rect.width <= 0) return;
+        const maxAllowed = Math.min(
+            MAX_LEFT_WIDTH_PX,
+            Math.max(MIN_LEFT_WIDTH_PX, rect.width - MIN_STAGE_WIDTH_PX),
+        );
+        writeLeftWidthPx(Math.min(maxAllowed, event.clientX - rect.left));
+    };
+
+    const handleLeftSplitterPointerEnd = () => {
+        draggingLeftRef.current = false;
+    };
+
+    const handleLeftSplitterKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
+        if (event.key === "ArrowLeft") {
+            event.preventDefault();
+            writeLeftWidthPx(leftWidthPx - 16);
+        } else if (event.key === "ArrowRight") {
+            event.preventDefault();
+            writeLeftWidthPx(leftWidthPx + 16);
+        } else if (event.key === "Home") {
+            event.preventDefault();
+            writeLeftWidthPx(MIN_LEFT_WIDTH_PX);
+        } else if (event.key === "End") {
+            event.preventDefault();
+            writeLeftWidthPx(MAX_LEFT_WIDTH_PX);
         }
     };
 
@@ -1839,23 +1931,26 @@ export function StoryPlayerView({
                 )}
                 style={isNleWorkspace ? ({ "--nle-top-split": `${topSplitPct}%` } as CSSProperties) : undefined}
             >
-                {/* TOP ROW (xl+ workspace: 2-col [23rem Media/Phase/Backlog | 1fr Preview Monitor]; mobile/theater: single col) */}
+                {/* TOP ROW (xl+ workspace: resizable [Left Media/Phase/Backlog | 1fr Preview Monitor]; mobile/theater: single col) */}
                 <div
+                    ref={topRowRef}
                     className={cn(
                         "min-w-0 max-w-full",
                         isNleWorkspace
-                            ? "flex flex-col gap-3 xl:grid xl:min-h-0 xl:shrink-0 xl:grow-0 xl:basis-[var(--nle-top-split)] xl:grid-cols-[23rem_minmax(0,1fr)] xl:gap-3"
+                            ? "flex flex-col gap-3 xl:min-h-0 xl:shrink-0 xl:grow-0 xl:basis-[var(--nle-top-split)] xl:flex-row xl:gap-0"
                             : isImmersiveTheaterFill
                                 ? "flex min-h-0 flex-1 flex-col gap-2"
                                 : "space-y-3",
                     )}
                 >
                     {/* Top-Left Pane: Assets + Live Phase & Variables + Backlog (xl+ workspace only) */}
-                    {isNleWorkspace && (
+                    {isNleWorkspace && showLeftPane && (
                         <Surface
+                            key="player-left-pane"
                             tone="low"
                             radius="lg"
-                            className="hidden min-h-0 min-w-0 flex-col overflow-hidden border border-outline-variant/60 xl:flex"
+                            style={{ width: `${leftWidthPx}px` }}
+                            className="hidden min-h-0 min-w-0 max-w-[46%] shrink-0 flex-col overflow-hidden border border-outline-variant/60 xl:flex"
                         >
                             <div className="flex shrink-0 items-center justify-between gap-2 border-b border-outline-variant/50 px-3 py-1.5">
                                 <span className="flex min-w-0 items-center gap-1.5 type-label-l text-on-surface">
@@ -1898,6 +1993,31 @@ export function StoryPlayerView({
                         </Surface>
                     )}
 
+                    {/* Vertical Splitter (xl+ workspace only) */}
+                    {isNleWorkspace && showLeftPane && (
+                        <div
+                            key="player-left-splitter"
+                            role="separator"
+                            aria-orientation="vertical"
+                            aria-label={t("page.storyMaker.v2.ide.resizeColumn")}
+                            aria-valuemin={MIN_LEFT_WIDTH_PX}
+                            aria-valuemax={MAX_LEFT_WIDTH_PX}
+                            aria-valuenow={leftWidthPx}
+                            tabIndex={0}
+                            title={t("page.storyMaker.v2.ide.resizeColumn")}
+                            onPointerDown={handleLeftSplitterPointerDown}
+                            onPointerMove={handleLeftSplitterPointerMove}
+                            onPointerUp={handleLeftSplitterPointerEnd}
+                            onPointerCancel={handleLeftSplitterPointerEnd}
+                            onLostPointerCapture={handleLeftSplitterPointerEnd}
+                            onDoubleClick={() => writeLeftWidthPx(DEFAULT_LEFT_WIDTH_PX)}
+                            onKeyDown={handleLeftSplitterKeyDown}
+                            className="focus-ring group hidden w-2.5 shrink-0 cursor-col-resize touch-none select-none items-center justify-center rounded-md3-full xl:flex"
+                        >
+                            <span className="h-9 w-1 rounded-full bg-outline-variant/65 transition-colors group-hover:bg-primary" />
+                        </div>
+                    )}
+
                     {/* Top-Right Pane (or full-width Stage): ALWAYS mounted at same slot so WebGPU never resets! */}
                     <div
                         key="player-stage-host"
@@ -1906,24 +2026,36 @@ export function StoryPlayerView({
                             "min-w-0 max-w-full",
                             fullscreen
                                 ? "flex h-dvh w-full max-w-full flex-col justify-center gap-2 overflow-x-hidden bg-surface p-4"
-                                : isNleWorkspace
-                                    ? "flex min-h-0 flex-col gap-2 xl:overflow-hidden xl:rounded-md3-lg xl:border xl:border-outline-variant/60 xl:bg-surface-container-low xl:p-2.5"
-                                    : isImmersiveTheaterFill
-                                        ? "flex min-h-0 flex-1 flex-col gap-2"
-                                        : "space-y-2",
+                                : stageWebFullscreen
+                                    ? "fixed inset-0 z-[170] flex h-dvh w-screen flex-col gap-2 overflow-hidden bg-surface p-2 sm:p-3"
+                                    : isNleWorkspace
+                                        ? "flex min-h-0 flex-1 flex-col gap-2 xl:overflow-hidden xl:rounded-md3-lg xl:border xl:border-outline-variant/60 xl:bg-surface-container-low xl:p-2"
+                                        : isImmersiveTheaterFill
+                                            ? "flex min-h-0 flex-1 flex-col gap-2"
+                                            : "space-y-2",
                         )}
                     >
-                        {isNleWorkspace && (
+                        {isNleWorkspace && !stageWebFullscreen && (
                             <div className="hidden shrink-0 items-center justify-between gap-2 px-0.5 xl:flex">
-                                <div className="flex min-w-0 items-center gap-2">
-                                    <Icon path={mdSmartDisplay} size={17} className="shrink-0 text-primary" />
-                                    <span className="truncate type-label-l text-on-surface">
+                                <div className="flex min-w-0 items-center gap-1.5">
+                                    <IconButton
+                                        size="xs"
+                                        icon={showLeftPane ? mdLeftPanelClose : mdLeftPanelOpen}
+                                        label={t("page.storyMaker.v2.ide.toggleLeftPane")}
+                                        selected={showLeftPane}
+                                        onClick={() => setShowLeftPane(prev => !prev)}
+                                    />
+                                    <Icon path={mdSmartDisplay} size={16} className="shrink-0 text-primary" />
+                                    <span className="truncate type-label-m text-on-surface">
                                         {t("page.storyMaker.nle.panePreview")}
                                     </span>
                                     {!emptyStory && (
                                         <button
                                             type="button"
-                                            onClick={() => setLeftTab("phase")}
+                                            onClick={() => {
+                                                setShowLeftPane(true);
+                                                setLeftTab("phase");
+                                            }}
                                             className="state-layer focus-ring inline-flex min-w-0 items-center gap-1.5 rounded-full bg-surface-container px-2 py-0.5 type-label-s text-on-surface-variant hover:text-on-surface"
                                         >
                                             <span
@@ -1967,24 +2099,27 @@ export function StoryPlayerView({
                             </div>
                         )}
 
-                        {/* 16:9 Stage Viewport Box (contained in both width & height inside NLE preview pane & immersive theater) */}
+                        {/* 16:9 Stage Viewport Box (contained in both width & height inside NLE preview pane, web-fullscreen & immersive theater) */}
                         <div
                             className={cn(
                                 "relative w-full min-w-0",
                                 fullscreen
                                     ? "mx-auto max-w-[min(100%,calc((100dvh-7rem)*16/9))]"
-                                    : isNleWorkspace
-                                        ? "xl:flex xl:min-h-0 xl:flex-1 xl:items-center xl:justify-center xl:overflow-hidden xl:rounded-md3-md xl:bg-scrim/20 xl:[container-type:size]"
-                                        : isImmersiveTheaterFill
-                                            ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md3-md bg-scrim/20 [container-type:size]"
-                                            : undefined,
+                                    : stageWebFullscreen
+                                        ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md3-md bg-scrim/20 [container-type:size]"
+                                        : isNleWorkspace
+                                            ? "xl:flex xl:min-h-0 xl:flex-1 xl:items-center xl:justify-center xl:overflow-hidden xl:rounded-md3-md xl:bg-scrim/20 xl:[container-type:size]"
+                                            : isImmersiveTheaterFill
+                                                ? "flex min-h-0 flex-1 items-center justify-center overflow-hidden rounded-md3-md bg-scrim/20 [container-type:size]"
+                                                : undefined,
                             )}
                         >
                             <div
                                 className={cn(
                                     "relative w-full",
-                                    isNleWorkspace && "xl:w-[min(100cqw,calc(100cqh*16/9))]",
-                                    isImmersiveTheaterFill && "w-[min(100cqw,calc(100cqh*16/9))]",
+                                    stageWebFullscreen && "w-[min(100cqw,calc(100cqh*16/9))]",
+                                    !stageWebFullscreen && isNleWorkspace && "xl:w-[min(100cqw,calc(100cqh*16/9))]",
+                                    !stageWebFullscreen && isImmersiveTheaterFill && "w-[min(100cqw,calc(100cqh*16/9))]",
                                 )}
                             >
                                 <StoryStageView
@@ -2385,40 +2520,37 @@ export function StoryPlayerView({
                             <div className="flex min-w-0 flex-wrap items-center justify-between gap-1.5">
                                 <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
                                     <IconButton
-                                        size="s"
+                                        size="xs"
                                         icon={mdSkipPrevious}
                                         label={t("page.storyMaker.player.previous")}
                                         disabled={history.length <= 1 || hasCompileErrors}
                                         onClick={handlePrevious}
                                     />
                                     <Button
-                                        size="s"
-                                        variant="filled"
+                                        size="xs"
+                                        variant="tonal"
                                         icon={mdSkipNext}
                                         disabled={Boolean(currentChoice) || ended || emptyStory || hasCompileErrors}
-                                        className="px-3 sm:px-3.5"
                                         onClick={handleAdvance}
                                     >
                                         {t("page.storyMaker.player.next")}
                                     </Button>
                                     <IconButton
-                                        size="s"
+                                        size="xs"
                                         icon={mdReplay}
                                         label={t("page.storyMaker.player.replay")}
                                         disabled={emptyStory || hasCompileErrors}
                                         onClick={restart}
                                     />
-                                    <Button
-                                        size="s"
-                                        variant={autoPlay ? "filled" : "tonal"}
+                                    <IconButton
+                                        size="xs"
+                                        variant={autoPlay ? "filled" : "standard"}
                                         icon={mdAutoplay}
+                                        label={t("page.storyMaker.player.auto")}
                                         disabled={emptyStory || ended || hasCompileErrors}
                                         selected={autoPlay}
-                                        className="px-2.5 sm:px-3"
                                         onClick={() => setAutoPlay(on => !on)}
-                                    >
-                                        {t("page.storyMaker.player.auto")}
-                                    </Button>
+                                    />
                                 </div>
 
                                 <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1">
@@ -2433,36 +2565,31 @@ export function StoryPlayerView({
                                             <span className="truncate">{t("page.storyMaker.player.tapToEnableAudio")}</span>
                                         </Button>
                                     )}
-                                    <Button
-                                        size="s"
-                                        variant={(effectiveLayoutMode === "theater" ? phaseOpen : mobileDrawerOpen) ? "filled" : "tonal"}
+                                    <IconButton
+                                        size="xs"
+                                        variant={(effectiveLayoutMode === "theater" ? phaseOpen : mobileDrawerOpen) ? "filled" : "standard"}
                                         selected={effectiveLayoutMode === "theater" ? phaseOpen : mobileDrawerOpen}
                                         icon={mdTimeline}
-                                        className={cn("px-2.5 sm:px-3", isNleWorkspace && "xl:hidden")}
+                                        label={t("page.storyMaker.phase.toggleButton")}
+                                        className={cn(isNleWorkspace && "xl:hidden")}
                                         onClick={handlePhaseButtonClick}
-                                    >
-                                        {t("page.storyMaker.phase.toggleButton")}
-                                    </Button>
-                                    <Button
-                                        size="s"
-                                        variant={isPreloadReady ? "tonal" : "text"}
-                                        icon={isPreloadReady ? mdCloudDone : mdDownload}
-                                        className="px-2.5 sm:px-3"
-                                        onClick={() => setPreloadOpen(true)}
-                                    >
-                                        {t("page.storyMaker.preload.buttonLabel")}
-                                    </Button>
-                                    <Button
-                                        size="s"
-                                        variant="text"
-                                        icon={mdHistory}
-                                        className={cn("px-2.5 sm:px-3", isNleWorkspace && "xl:hidden")}
-                                        onClick={() => setBacklogOpen(true)}
-                                    >
-                                        {t("page.storyMaker.player.backlog")}
-                                    </Button>
+                                    />
                                     <IconButton
-                                        size="s"
+                                        size="xs"
+                                        variant={isPreloadReady ? "tonal" : "standard"}
+                                        icon={isPreloadReady ? mdCloudDone : mdDownload}
+                                        label={t("page.storyMaker.preload.buttonLabel")}
+                                        onClick={() => setPreloadOpen(true)}
+                                    />
+                                    <IconButton
+                                        size="xs"
+                                        icon={mdHistory}
+                                        label={t("page.storyMaker.player.backlog")}
+                                        className={cn(isNleWorkspace && "xl:hidden")}
+                                        onClick={() => setBacklogOpen(true)}
+                                    />
+                                    <IconButton
+                                        size="xs"
                                         icon={uiHidden ? mdVisibility : mdVisibilityOff}
                                         label={t(uiHidden ? "page.storyMaker.player.showUi" : "page.storyMaker.player.hideUi")}
                                         onClick={() => {
@@ -2472,7 +2599,7 @@ export function StoryPlayerView({
                                     />
                                     <div className="flex items-center gap-1">
                                         <IconButton
-                                            size="s"
+                                            size="xs"
                                             icon={muted || volume === 0 ? mdVolumeOff : mdVolumeUp}
                                             label={t(muted ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
                                             onClick={toggleMute}
@@ -2485,11 +2612,18 @@ export function StoryPlayerView({
                                             onValueChange={handleVolumeChange}
                                             aria-label={t("page.storyMaker.player.volume")}
                                             formatValue={val => `${Math.round(val * 100)}%`}
-                                            className="hidden h-7 w-20 sm:flex"
+                                            className="hidden h-6 w-16 sm:flex"
                                         />
                                     </div>
                                     <IconButton
-                                        size="s"
+                                        size="xs"
+                                        icon={stageWebFullscreen ? mdCloseFullscreen : mdFitScreen}
+                                        label={t(stageWebFullscreen ? "page.storyMaker.v2.ide.exitWebFullscreen" : "page.storyMaker.v2.ide.webFullscreen")}
+                                        selected={stageWebFullscreen}
+                                        onClick={() => setStageWebFullscreen(prev => !prev)}
+                                    />
+                                    <IconButton
+                                        size="xs"
                                         icon={fullscreen ? mdFullscreenExit : mdFullscreen}
                                         label={t(fullscreen ? "page.storyMaker.player.exitFullscreen" : "page.storyMaker.player.fullscreen")}
                                         onClick={toggleFullscreen}

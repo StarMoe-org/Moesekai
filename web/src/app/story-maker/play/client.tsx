@@ -2,20 +2,22 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { useShellImmersiveMode } from "@/components/AppShell";
+import LocalizedLink from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
 import {
-    Banner, Button, Card, Dialog, EmptyState, Icon, LoadingState, PageContainer, PageHeader,
-    SegmentedButton, Snackbar, cn,
+    Banner, Button, Card, Dialog, EmptyState, Icon, IconButton, LoadingState, Menu, PageContainer,
+    PageHeader, SegmentedButton, Snackbar, cn, type MenuItemDef,
 } from "@/components/md3";
 import {
-    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdEdit,
-    mdErrorFill, mdOpenInFull, mdPlayArrowFill, mdTheaters, mdUploadFile, mdWarning,
+    mdArrowBack, mdBookmarkAdd, mdCloseFullscreen, mdCode, mdDashboard, mdEdit, mdErrorFill,
+    mdHome, mdMoreVert, mdOpenInFull, mdPlayArrowFill, mdTheaters, mdUploadFile, mdWarning,
 } from "@/components/md3/icons";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
 import { StoryPlayerView, type PlayerLayoutMode } from "@/components/story-maker/StoryPlayerView";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { MOE_LOGO_URL } from "@/lib/assets";
 import { compileStoryGraph } from "@/lib/storyMaker/compiler";
 import { StoryDraftsUnavailableError, createDraft, getDraft } from "@/lib/storyMaker/drafts";
 import { downloadStoryScript } from "@/lib/storyMaker/starter";
@@ -37,8 +39,9 @@ function StoryMakerPlayContent() {
     const [layoutMode, setLayoutMode] = useState<PlayerLayoutMode>(() => (
         searchParams.get("layout") === "theater" ? "theater" : "workspace"
     ));
+    // Auto-enter immersive mode when a story is loaded unless `?immersive=0` is explicitly set.
     const [immersive, setImmersive] = useState<boolean>(() => (
-        searchParams.get("immersive") === "1"
+        searchParams.get("immersive") !== "0"
     ));
     const [loading, setLoading] = useState(Boolean(draftId));
 
@@ -56,8 +59,8 @@ function StoryMakerPlayContent() {
         setImmersive(next);
         if (typeof window !== "undefined") {
             const url = new URL(window.location.href);
-            if (next) url.searchParams.set("immersive", "1");
-            else url.searchParams.delete("immersive");
+            if (next) url.searchParams.delete("immersive");
+            else url.searchParams.set("immersive", "0");
             window.history.replaceState({}, "", url.toString());
         }
     }, []);
@@ -182,134 +185,233 @@ function StoryMakerPlayContent() {
         return () => window.removeEventListener("keydown", onKeyDown);
     }, [handleImmersiveChange, isImmersiveActive]);
 
-    const headerButtonSize = isImmersiveActive ? "s" : undefined;
     const editHref = source.kind === "draft"
-        ? `/story-maker/edit?id=${encodeURIComponent(source.id)}${immersive ? "&immersive=1" : ""}`
+        ? `/story-maker/edit?id=${encodeURIComponent(source.id)}${!immersive ? "&immersive=0" : ""}`
         : null;
+
+    const immersiveMoreItems: MenuItemDef[] = activeDoc ? [
+        ...(source.kind === "imported" ? [{
+            key: "save-draft",
+            label: t("page.storyMaker.player.saveAsDraft"),
+            icon: mdBookmarkAdd,
+            onSelect: () => void handleSaveImported(),
+        }] : []),
+        {
+            key: "export-msk",
+            label: t("page.storyMaker.v2.script.downloadScript"),
+            icon: mdCode,
+            onSelect: () => {
+                downloadStoryScript(activeDoc);
+                setSnack(t("page.storyMaker.exportedToast"));
+            },
+        },
+        {
+            key: "exit-immersive",
+            label: t("page.storyMaker.nle.exitImmersive"),
+            icon: mdCloseFullscreen,
+            dividerBefore: true,
+            onSelect: () => handleImmersiveChange(false),
+        },
+        {
+            key: "back-drafts",
+            label: t("page.storyMaker.action.backToDrafts"),
+            icon: mdArrowBack,
+            href: "/story-maker",
+        },
+        {
+            key: "back-home",
+            label: t("page.storyMaker.v2.ide.backHome"),
+            icon: mdHome,
+            href: "/",
+        },
+    ] : [];
 
     return (
         <PageContainer
             className={cn(
                 "min-w-0 max-w-full overflow-x-clip",
                 isWorkspaceActive && !isImmersiveActive && "xl:max-w-[1680px] xl:py-3",
-                isImmersiveActive && "fixed inset-0 z-[150] flex h-dvh w-screen max-w-none flex-col overflow-x-hidden bg-surface p-2 sm:p-3",
+                isImmersiveActive && "fixed inset-0 z-[150] flex h-dvh w-screen max-w-none flex-col gap-1.5 overflow-x-hidden bg-surface p-1.5 sm:p-2",
                 isImmersiveActive && (layoutMode === "workspace" ? "overflow-y-auto xl:overflow-hidden" : "overflow-y-auto"),
             )}
         >
-            <PageHeader
-                className={cn(
-                    isImmersiveActive ? "mb-2 shrink-0" : isWorkspaceActive && "xl:mb-2.5",
-                )}
-                eyebrow={activeDoc && !isImmersiveActive ? (
-                    <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 break-words">
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
-                            {t("page.storyMaker.betaBadge")}
-                        </span>
-                        <span>{t(SERVER_LABEL_KEYS[activeDoc.region])}</span>
-                        {activeDoc.meta.author && (
-                            <>
-                                <span>·</span>
-                                <span className="min-w-0 break-words">
-                                    {t("page.storyMaker.meta.authorBy", { author: activeDoc.meta.author })}
-                                </span>
-                            </>
-                        )}
-                        {source.kind === "imported" && (
-                            <>
-                                <span>·</span>
-                                <span>{t("page.storyMaker.player.unsavedBadge")}</span>
-                            </>
-                        )}
-                    </span>
-                ) : undefined}
-                title={activeDoc ? (
-                    isImmersiveActive ? (
-                        <span className="inline-flex max-w-full flex-wrap items-center gap-2">
-                            <span className="min-w-0 break-words">
-                                {activeDoc.meta.title || t("page.storyMaker.untitled")}
+            {isImmersiveActive && activeDoc ? (
+                <header className="flex h-11 min-w-0 shrink-0 items-center justify-between gap-2 rounded-md3-lg border border-outline-variant/60 bg-surface-container-low px-2">
+                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                        <LocalizedLink
+                            href="/story-maker"
+                            title={t("page.storyMaker.title")}
+                            className="focus-ring flex shrink-0 items-center gap-1.5 rounded-md3-sm px-1.5 py-1"
+                        >
+                            <span
+                                className="block h-5 w-[3.25rem] bg-primary"
+                                style={{
+                                    maskImage: `url(${MOE_LOGO_URL})`,
+                                    maskSize: "contain",
+                                    maskPosition: "center",
+                                    maskRepeat: "no-repeat",
+                                    WebkitMaskImage: `url(${MOE_LOGO_URL})`,
+                                    WebkitMaskSize: "contain",
+                                    WebkitMaskPosition: "center",
+                                    WebkitMaskRepeat: "no-repeat",
+                                }}
+                            />
+                            <span className="rounded-md3-xs bg-tertiary-container px-1 py-0.5 text-[10px] font-semibold leading-none text-on-tertiary-container">
+                                {t("page.storyMaker.betaBadge")}
                             </span>
+                        </LocalizedLink>
+                        <span aria-hidden className="h-4 w-px shrink-0 bg-outline-variant/60" />
+                        <span className="min-w-0 truncate type-label-l text-on-surface">
+                            {activeDoc.meta.title || t("page.storyMaker.untitled")}
+                        </span>
+                        <span className="hidden shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant md:inline">
+                            {t(SERVER_LABEL_KEYS[activeDoc.region])}
+                        </span>
+                        {source.kind === "imported" && (
+                            <span className="hidden shrink-0 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container lg:inline">
+                                {t("page.storyMaker.player.unsavedBadge")}
+                            </span>
+                        )}
+                    </div>
+
+                    <SegmentedButton<PlayerLayoutMode>
+                        density={-2}
+                        value={layoutMode}
+                        onValueChange={handleLayoutModeChange}
+                        aria-label={t("page.storyMaker.nle.layoutWorkspace")}
+                        className="w-auto shrink-0"
+                        options={[
+                            { value: "workspace", label: t("page.storyMaker.nle.layoutWorkspace"), icon: mdDashboard },
+                            { value: "theater", label: t("page.storyMaker.nle.layoutTheater"), icon: mdTheaters },
+                        ]}
+                    />
+
+                    <div className="flex flex-1 shrink-0 items-center justify-end gap-1">
+                        {editHref && (
+                            <Button size="xs" variant="tonal" icon={mdEdit} href={editHref}>
+                                {t("page.storyMaker.action.edit")}
+                            </Button>
+                        )}
+                        <IconButton
+                            size="xs"
+                            icon={mdUploadFile}
+                            label={t("page.storyMaker.player.openScript")}
+                            onClick={() => setImportOpen(true)}
+                        />
+                        <Menu
+                            align="end"
+                            items={immersiveMoreItems}
+                            anchor={({ ref, onClick, ...aria }) => (
+                                <IconButton
+                                    ref={ref}
+                                    size="xs"
+                                    icon={mdMoreVert}
+                                    label={t("page.storyMaker.v2.ide.moreActions")}
+                                    onClick={onClick}
+                                    {...aria}
+                                />
+                            )}
+                        />
+                    </div>
+                </header>
+            ) : (
+                <PageHeader
+                    className={cn(isWorkspaceActive && "xl:mb-2.5")}
+                    eyebrow={activeDoc ? (
+                        <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 gap-y-1 break-words">
+                            <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
+                                {t("page.storyMaker.betaBadge")}
+                            </span>
+                            <span>{t(SERVER_LABEL_KEYS[activeDoc.region])}</span>
+                            {activeDoc.meta.author && (
+                                <>
+                                    <span>·</span>
+                                    <span className="min-w-0 break-words">
+                                        {t("page.storyMaker.meta.authorBy", { author: activeDoc.meta.author })}
+                                    </span>
+                                </>
+                            )}
+                            {source.kind === "imported" && (
+                                <>
+                                    <span>·</span>
+                                    <span>{t("page.storyMaker.player.unsavedBadge")}</span>
+                                </>
+                            )}
+                        </span>
+                    ) : undefined}
+                    title={activeDoc ? (
+                        activeDoc.meta.title || t("page.storyMaker.untitled")
+                    ) : (
+                        <span className="inline-flex max-w-full flex-wrap items-center gap-2">
+                            <span className="min-w-0 break-words">{t("page.storyMaker.player.pageTitle")}</span>
                             <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
                                 {t("page.storyMaker.betaBadge")}
                             </span>
                         </span>
-                    ) : (
-                        activeDoc.meta.title || t("page.storyMaker.untitled")
-                    )
-                ) : (
-                    <span className="inline-flex max-w-full flex-wrap items-center gap-2">
-                        <span className="min-w-0 break-words">{t("page.storyMaker.player.pageTitle")}</span>
-                        <span className="inline-flex shrink-0 items-center rounded-full bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
-                            {t("page.storyMaker.betaBadge")}
-                        </span>
-                    </span>
-                )}
-                description={isImmersiveActive
-                    ? undefined
-                    : activeDoc
+                    )}
+                    description={activeDoc
                         ? (activeDoc.meta.summary
                             ? <span className={cn(isWorkspaceActive && "xl:line-clamp-1")}>{activeDoc.meta.summary}</span>
                             : undefined)
                         : t("page.storyMaker.player.pageDescription")}
-                actions={(
-                    <>
-                        {activeDoc && (
-                            <SegmentedButton<PlayerLayoutMode>
-                                density={isImmersiveActive ? -2 : -1}
-                                value={layoutMode}
-                                onValueChange={handleLayoutModeChange}
-                                aria-label={t("page.storyMaker.nle.layoutWorkspace")}
-                                className="w-auto max-w-full"
-                                options={[
-                                    { value: "workspace", label: t("page.storyMaker.nle.layoutWorkspace"), icon: mdDashboard },
-                                    { value: "theater", label: t("page.storyMaker.nle.layoutTheater"), icon: mdTheaters },
-                                ]}
-                            />
-                        )}
-                        {activeDoc && (
-                            <Button
-                                size={headerButtonSize}
-                                variant={isImmersiveActive ? "filled" : "tonal"}
-                                selected={isImmersiveActive}
-                                icon={isImmersiveActive ? mdCloseFullscreen : mdOpenInFull}
-                                onClick={() => handleImmersiveChange(!isImmersiveActive)}
-                                className="max-w-full px-3 sm:px-3.5"
-                            >
-                                {t(isImmersiveActive ? "page.storyMaker.nle.exitImmersive" : "page.storyMaker.nle.enterImmersive")}
+                    actions={(
+                        <>
+                            {activeDoc && (
+                                <SegmentedButton<PlayerLayoutMode>
+                                    density={-1}
+                                    value={layoutMode}
+                                    onValueChange={handleLayoutModeChange}
+                                    aria-label={t("page.storyMaker.nle.layoutWorkspace")}
+                                    className="w-auto max-w-full"
+                                    options={[
+                                        { value: "workspace", label: t("page.storyMaker.nle.layoutWorkspace"), icon: mdDashboard },
+                                        { value: "theater", label: t("page.storyMaker.nle.layoutTheater"), icon: mdTheaters },
+                                    ]}
+                                />
+                            )}
+                            {activeDoc && (
+                                <Button
+                                    variant="tonal"
+                                    icon={mdOpenInFull}
+                                    onClick={() => handleImmersiveChange(true)}
+                                    className="max-w-full px-3 sm:px-3.5"
+                                >
+                                    {t("page.storyMaker.nle.enterImmersive")}
+                                </Button>
+                            )}
+                            <Button variant="text" icon={mdArrowBack} href="/story-maker" className="max-w-full px-3 sm:px-4">
+                                {t("page.storyMaker.action.backToDrafts")}
                             </Button>
-                        )}
-                        <Button size={headerButtonSize} variant="text" icon={mdArrowBack} href="/story-maker" className="max-w-full px-3 sm:px-4">
-                            {t("page.storyMaker.action.backToDrafts")}
-                        </Button>
-                        {editHref && (
-                            <Button size={headerButtonSize} variant="tonal" icon={mdEdit} href={editHref} className="max-w-full px-3 sm:px-4">
-                                {t("page.storyMaker.action.edit")}
+                            {editHref && (
+                                <Button variant="tonal" icon={mdEdit} href={editHref} className="max-w-full px-3 sm:px-4">
+                                    {t("page.storyMaker.action.edit")}
+                                </Button>
+                            )}
+                            {source.kind === "imported" && (
+                                <Button variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()} className="max-w-full px-3 sm:px-4">
+                                    {t("page.storyMaker.player.saveAsDraft")}
+                                </Button>
+                            )}
+                            {activeDoc && (
+                                <Button
+                                    variant="outlined"
+                                    icon={mdCode}
+                                    className="max-w-full px-3 sm:px-4"
+                                    onClick={() => {
+                                        downloadStoryScript(activeDoc);
+                                        setSnack(t("page.storyMaker.exportedToast"));
+                                    }}
+                                >
+                                    {t("page.storyMaker.v2.script.downloadScript")}
+                                </Button>
+                            )}
+                            <Button variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="max-w-full px-3 sm:px-4">
+                                {t("page.storyMaker.player.openScript")}
                             </Button>
-                        )}
-                        {source.kind === "imported" && (
-                            <Button size={headerButtonSize} variant="tonal" icon={mdBookmarkAdd} onClick={() => void handleSaveImported()} className="max-w-full px-3 sm:px-4">
-                                {t("page.storyMaker.player.saveAsDraft")}
-                            </Button>
-                        )}
-                        {activeDoc && (
-                            <Button
-                                size={headerButtonSize}
-                                variant="outlined"
-                                icon={mdCode}
-                                className="max-w-full px-3 sm:px-4"
-                                onClick={() => {
-                                    downloadStoryScript(activeDoc);
-                                    setSnack(t("page.storyMaker.v2.script.downloadScript"));
-                                }}
-                            >
-                                {t("page.storyMaker.v2.script.downloadScript")}
-                            </Button>
-                        )}
-                        <Button size={headerButtonSize} variant={activeDoc ? "outlined" : "filled"} icon={mdUploadFile} onClick={() => setImportOpen(true)} className="max-w-full px-3 sm:px-4">
-                            {t("page.storyMaker.player.openScript")}
-                        </Button>
-                    </>
-                )}
-            />
+                        </>
+                    )}
+                />
+            )}
 
             {loading ? (
                 <LoadingState />
@@ -349,7 +451,7 @@ function StoryMakerPlayContent() {
                     />
                 </Card>
             ) : (
-                <div className={cn("min-w-0", isImmersiveActive ? "flex min-h-0 flex-1 flex-col gap-2" : "space-y-3")}>
+                <div className={cn("min-w-0", isImmersiveActive ? "flex min-h-0 flex-1 flex-col gap-1.5" : "space-y-3")}>
                     {!hasBlockingErrors && warnings.length > 0 && (
                         <Banner
                             tone="warning"
