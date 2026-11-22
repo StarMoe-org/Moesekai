@@ -336,7 +336,9 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		seen <- seenRequest{
-			method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, body: string(body), cookie: r.Header.Get("Cookie"),
+			// Compared in canonical (sorted) form: with a go.mod older than Go 1.24, newer toolchains default
+			// GODEBUG urlmaxqueryparams=0, which makes ReverseProxy re-encode every query string.
+			method: r.Method, path: r.URL.Path, query: r.URL.Query().Encode(), body: string(body), cookie: r.Header.Get("Cookie"),
 			forwardedFor: r.Header.Get("X-Forwarded-For"), forwardedHost: r.Header.Get("X-Forwarded-Host"),
 			forwardedProto: r.Header.Get("X-Forwarded-Proto"), connectingIP: r.Header.Get("CF-Connecting-IP"),
 		}
@@ -371,7 +373,7 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 				"CF-Connecting-IP":  "203.0.113.7",
 			},
 			want: seenRequest{
-				method: http.MethodPost, path: "/api/guess-music/daily/sessions", query: "tier=hard&practice=1",
+				method: http.MethodPost, path: "/api/guess-music/daily/sessions", query: "practice=1&tier=hard",
 				body: `{"tier":"hard"}`, cookie: "__Host-ms_session=old; theme=dark",
 				forwardedFor: "203.0.113.7, 10.0.0.2, 127.0.0.1", forwardedHost: "pjsk.moe",
 				forwardedProto: "https", connectingIP: "203.0.113.7",

@@ -74,7 +74,7 @@ test("story entry cards use primary/surface styling rather than tertiary actions
 
 test("card filter thumbnail choice shares the global preference setter", () => {
     const source = readWeb("src/components/cards/CardFilters.tsx");
-    assert.match(source, /const \{ useTrainedThumbnail, setUseTrainedThumbnail \} = useTheme\(\)/);
+    assert.match(source, /const \{ useTrainedThumbnail, setUseTrainedThumbnail(?:, \w+)* \} = useTheme\(\)/);
     assert.match(source, /value=\{useTrainedThumbnail \? "trained" : "normal"\}/);
     assert.match(source, /onValueChange=\{\(value\) => setUseTrainedThumbnail\(value === "trained"\)\}/);
     assert.doesNotMatch(source, /useState|localStorage|sessionStorage/);
@@ -92,16 +92,21 @@ test("card tables show both available artworks, without inventing missing normal
         return exports;
     };
     const types = compile("src/types/types.ts", id => id === "@/lib/theme-seeds" ? { THEME_SEED_COLORS: {} } : require(id));
-    const { default: CardGrid } = compile("src/components/cards/CardGrid.tsx", (id) => {
+    // The table view lives in CardTable; CardGrid hands `view="table"` to it.
+    assert.match(readWeb("src/components/cards/CardGrid.tsx"), /view === "table"[\s\S]{0,40}<CardTable cards=\{cards\}/);
+    const { default: CardGrid } = compile("src/components/cards/CardTable.tsx", (id) => {
         if (id === "react") return React;
         if (id === "@/types/types") return types;
         if (id === "@/contexts/I18nContext") return { useI18n: () => ({ t: key => key, formatDate: String }) };
+        if (id === "@/contexts/ThemeContext") return { useTheme: () => ({ assetSource: "main" }) };
         if (id === "@/lib/i18n") return { getCharacterName: () => "Character" };
-        if (id === "./DatabaseTable") return { __esModule: true, default: ({ rows }) => React.createElement("div", null, rows.map(row => React.createElement("div", { key: row.id, "data-card": row.id }, row.thumbnail))) };
+        if (id === "@/lib/assets") return { getAttrIconUrl: () => "", getCharacterChibiIconUrl: () => "", getUnitTabIconUrl: () => "" };
+        if (id === "@/lib/skill") return { getCardMaxSkillMultiplier: () => null, getCardSkillTypes: () => [] };
+        if (id === "@/hooks/useCardSupplyType") return { getCardSupplyMeta: () => ({ colorClass: "", icon: "M0 0" }) };
         if (id === "./SekaiCardThumbnail") return { __esModule: true, default: ({ trained }) => React.createElement("img", { "data-trained": String(trained) }) };
         if (id === "@/components/common/TranslatedText") return { TranslatedText: () => null };
-        if (id === "@/hooks/useGridReflowAnimation") return { useGridReflowAnimation: () => () => {} };
-        return { __esModule: true, default: () => null };
+        if (id === "@/components/md3") return { Icon: () => null };
+        return { __esModule: true, default: ({ children }) => React.createElement("a", null, children) };
     });
     const base = { id: 1, cardRarityType: "rarity_4", specialTrainingPower1BonusFixed: 1, specialTrainingPower2BonusFixed: 0, specialTrainingPower3BonusFixed: 0 };
     const artworks = card => [...renderToStaticMarkup(React.createElement(CardGrid, { cards: [card], view: "table" })).matchAll(/data-trained="(true|false)"/g)].map(match => match[1]);
