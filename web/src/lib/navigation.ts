@@ -61,6 +61,7 @@ const allNavigationGroups: NavGroupData[] = [
         href: "/breadcrumb-community",
         items: [
             { href: "/community" },
+            { href: "/community/stories" },
         ],
     },
     {
@@ -127,6 +128,13 @@ export function findNavMatch(pathname: string): { group: NavGroupData; item: Nav
             if (normalized === item.href || normalized.startsWith(item.href + "/")) {
                 // Prevent /music/meta from matching /music first.
                 if (item.href === "/music" && normalized.startsWith("/music/meta")) {
+                    continue;
+                }
+                // Prevent /community/stories from matching /community.
+                if (
+                    item.href === "/community"
+                    && (normalized === "/community/stories" || normalized.startsWith("/community/stories/"))
+                ) {
                     continue;
                 }
                 if (!bestMatch || item.href.length > bestMatch.item.href.length) {
@@ -206,6 +214,8 @@ const allSearchableNavItems: SearchableNavItem[] = [
 
     // "\u793e\u533a" / "\u5e7f\u573a" / "\u8ba8\u8bba": community, square, discussion (escaped to keep UI source free of Han text).
     { href: "/community", group: "community", keywords: ["community", "forum", "square", "posts", "discussion", "comments", "\u793e\u533a", "\u5e7f\u573a", "\u8ba8\u8bba"] },
+    // "\u793e\u533a\u5267\u60c5" / "\u793e\u7fa4\u5287\u60c5" / "\u5267\u60c5": community stories (escaped to keep UI source free of Han text).
+    { href: "/community/stories", group: "community", keywords: ["community stories", "community story", "playable story", "fan story", "custom story", "story", "\u793e\u533a\u5267\u60c5", "\u793e\u7fa4\u5287\u60c5", "\u5267\u60c5"] },
 
     { href: "/goods-gacha", group: "games", keywords: ["goods gacha", "goods", "blind box"] },
     { href: "/guess-who", group: "games", keywords: ["guess who", "quiz", "game"] },
@@ -316,6 +326,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/story/self": "layout.nav.items.selfIntro",
     "/story/special": "layout.nav.items.specialStory",
     "/community": "layout.nav.items.community",
+    "/community/stories": "layout.nav.items.communityStories",
     "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/deck-recommend": "layout.nav.items.deckRecommend",
     "/deck-comparator": "layout.nav.items.deckComparator",
@@ -371,6 +382,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/story/special": "layout.groupPages.storySpecial",
     "/prediction": "layout.groupPages.prediction",
     "/community": "layout.groupPages.community",
+    "/community/stories": "layout.groupPages.communityStories",
     "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/deck-recommend": "layout.groupPages.deckRecommend",
     "/deck-comparator": "layout.groupPages.deckComparator",

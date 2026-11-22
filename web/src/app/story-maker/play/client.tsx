@@ -620,8 +620,8 @@ function StoryMakerPlayContent() {
                         action={(
                             <div className="mt-2 flex flex-wrap justify-center gap-2">
                                 {loadError === "communityFailed" ? (
-                                    <Button variant="filled" icon={mdArrowBack} href="/community?category=community_story">
-                                        {t("page.community.backToFeed")}
+                                    <Button variant="filled" icon={mdArrowBack} href="/community/stories">
+                                        {t("page.community.stories.backToStories")}
                                     </Button>
                                 ) : (
                                     <Button variant="filled" icon={mdUploadFile} onClick={() => setImportOpen(true)}>

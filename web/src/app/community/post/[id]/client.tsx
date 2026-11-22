@@ -273,8 +273,17 @@ export default function CommunityPostClient() {
         <MainLayout>
             <PageContainer className="max-w-4xl">
                 <div className="mb-4 flex items-center justify-between gap-2">
-                    <Button variant="tonal" size="s" icon={mdArrowBack} href="/community">
-                        {t("page.community.backToFeed")}
+                    <Button
+                        variant="tonal"
+                        size="s"
+                        icon={mdArrowBack}
+                        href={post?.category === "community_story" ? "/community/stories" : "/community"}
+                    >
+                        {t(
+                            post?.category === "community_story"
+                                ? "page.community.stories.backToStories"
+                                : "page.community.backToFeed",
+                        )}
                     </Button>
                     {isMod && (
                         <Button variant="outlined" size="s" icon={mdShield} href="/community/mod">

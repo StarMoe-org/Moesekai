@@ -207,6 +207,7 @@ const navigationGroups: NavGroup[] = [
         id: "community",
         items: [
             { id: "community", href: "/community", icon: mdForum, activeIcon: mdForumFill },
+            { id: "communityStories", href: "/community/stories", icon: mdAutoStories, activeIcon: mdAutoStoriesFill },
         ],
     },
     {
@@ -355,6 +356,12 @@ export default function Sidebar({
         for (const group of navigationGroups) {
             for (const item of group.items) {
                 if (item.href === "/music" && unlocalizedPathname.startsWith("/music/meta")) {
+                    continue;
+                }
+                if (
+                    item.href === "/community"
+                    && (unlocalizedPathname === "/community/stories" || unlocalizedPathname.startsWith("/community/stories/"))
+                ) {
                     continue;
                 }
                 if (unlocalizedPathname === item.href || unlocalizedPathname.startsWith(item.href + "/")) {

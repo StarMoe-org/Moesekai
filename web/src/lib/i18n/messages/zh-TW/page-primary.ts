@@ -652,6 +652,17 @@ export const zhTWPagePrimary = {
                 rejected: "配音未通過",
             },
         },
+        stories: {
+            title: "社群",
+            highlight: "劇情",
+            description: "遊玩玩家創作的 PJSK 互動劇情，支援多語言字幕與自訂配音。",
+            filterTitle: "劇情篩選",
+            countUnit: "部劇情",
+            searchPlaceholder: "搜尋劇情標題或關鍵字…",
+            emptyTitle: "尚無社群劇情",
+            emptyDescription: "換個篩選條件試試，或是去創作第一部劇情吧！",
+            backToStories: "返回社群劇情",
+        },
         servers: {
             all: "全部伺服器",
             jp: "日服 (JP)",

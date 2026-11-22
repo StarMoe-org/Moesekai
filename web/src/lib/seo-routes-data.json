@@ -35,6 +35,7 @@
   { "path": "/story/self/", "pageKey": "story_self", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/story/special/", "pageKey": "story_special", "priority": 0.6, "changefreq": "monthly", "indexable": true },
   { "path": "/community/", "pageKey": "community", "priority": 0.7, "changefreq": "daily", "indexable": true },
+  { "path": "/community/stories/", "pageKey": "community_stories", "priority": 0.7, "changefreq": "daily", "indexable": true },
   { "path": "/community/new/", "pageKey": "community_new", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Authenticated community post composer form" },
   { "path": "/community/mod/", "pageKey": "community_mod", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Role-gated community moderation dashboard" },
   { "path": "/community/u/", "pageKey": "community_user", "priority": 0.0, "changefreq": "never", "indexable": false, "excludeReason": "Dynamic user community profile page" },

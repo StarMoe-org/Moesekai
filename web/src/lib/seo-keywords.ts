@@ -1232,6 +1232,22 @@ export const SEO_PAGE_METADATA = {
       "ko-KR": ["커뮤니티", "프로세카 커뮤니티", "게시판", "카드 댓글", "토론"],
     },
   ),
+  community_stories: definePage(
+    "/community/stories",
+    { "zh-CN": "社区剧情", "en-US": "Community Stories", "ja-JP": "コミュニティストーリー", "ko-KR": "커뮤니티 스토리" },
+    {
+      "zh-CN": "浏览并在线游玩玩家使用 Story Maker 创作的 Project SEKAI 社区剧情，支持多语言字幕与自定义配音。",
+      "en-US": "Browse and play Project SEKAI community stories created with Story Maker, featuring multilingual subtitles and custom voice tracks.",
+      "ja-JP": "Story Maker で制作されたプロセカのコミュニティストーリーをブラウザで再生・共有できます。多言語字幕やカスタムボイスにも対応しています。",
+      "ko-KR": "Story Maker로 제작된 프로젝트 세카이 커뮤니티 스토리를 브라우저에서 바로 플레이하고 공유해 보세요. 다국어 자막과 커스텀 보이스를 지원합니다.",
+    },
+    {
+      "zh-CN": ["社区剧情", "PJSK二创剧情", "可游玩剧情", "Story Maker", "Live2D剧情"],
+      "en-US": ["community stories", "PJSK fan stories", "playable stories", "Story Maker", "Live2D story"],
+      "ja-JP": ["コミュニティストーリー", "プロセカ 創作ストーリー", "Live2Dストーリー", "Story Maker"],
+      "ko-KR": ["커뮤니티 스토리", "프로세카 창작 스토리", "플레이 스토리", "Story Maker"],
+    },
+  ),
   community_new: definePage(
     "/community/new",
     { "zh-CN": "发布新帖", "en-US": "New Community Post", "ja-JP": "新規投稿", "ko-KR": "새 글 작성" },

@@ -404,14 +404,9 @@ export default function CommunityFeedClient() {
                                 </Button>
                             )}
                             {effectiveMode !== "read_only" && (
-                                <>
-                                    <Button variant="tonal" size="s" icon={mdMovie} href="/story-maker/edit">
-                                        {t("page.community.createStory")}
-                                    </Button>
-                                    <Button variant="filled" size="s" icon={mdEdit} href="/community/new">
-                                        {t("page.community.newPost")}
-                                    </Button>
-                                </>
+                                <Button variant="filled" size="s" icon={mdEdit} href="/community/new">
+                                    {t("page.community.newPost")}
+                                </Button>
                             )}
                         </>
                     }
