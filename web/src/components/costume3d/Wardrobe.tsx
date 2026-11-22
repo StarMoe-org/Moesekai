@@ -8,7 +8,7 @@ import { Banner, Button, Icon, IconButton, Tabs, TextField, cn } from "@/compone
 import { mdApparel, mdBlock, mdCheck, mdCheckroom, mdCrown, mdFace3, mdFilterList, mdScience, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTranslation } from "@/contexts/TranslationContext";
-import { blocked, released, wearableBy, type Costume3dLook, type Costume3dPool, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
+import { blocked, partAvailable, released, wearableBy, type Costume3dLook, type Costume3dPool, type HeadGroup, type RoleCostume } from "@/lib/costume3d/look";
 import { RARITY_IDS, RARITY_LABEL_KEYS, SOURCE_IDS, SOURCE_LABEL_KEYS, type ICostumeInfo } from "@/types/costume";
 import type { Costume3dCatalog, Costume3dPart, Costume3dVariant } from "@/types/costume3d";
 
@@ -39,6 +39,8 @@ interface Swatch {
     thumbnail: string | null;
     label: string;
     selected: boolean;
+    /** A colour the version cannot show. */
+    disabled?: boolean;
     onClick: () => void;
 }
 
@@ -107,12 +109,13 @@ function Card({ thumbnail, title, subtitle, colors, tags, selected, disabled, hi
                             key={swatch.key}
                             type="button"
                             onClick={swatch.onClick}
-                            disabled={disabled}
+                            disabled={disabled || swatch.disabled}
                             aria-pressed={swatch.selected}
                             aria-label={`${title} · ${swatch.label}`}
                             title={swatch.label}
                             className={cn(
                                 "focus-ring relative h-5 w-5 overflow-hidden rounded-full bg-surface-container-high transition-shadow disabled:cursor-not-allowed",
+                                swatch.disabled && "opacity-40 grayscale",
                                 swatch.selected
                                     ? "shadow-[0_0_0_2px_var(--md-sys-color-surface-container-low),0_0_0_4px_var(--md-sys-color-primary)]"
                                     : "shadow-[0_0_0_1px_var(--md-sys-color-outline-variant)]",
@@ -219,6 +222,8 @@ export function Wardrobe(props: WardrobeProps) {
         const raw = color.colorName || colorName(costume, color.colorId);
         return raw ? translate("costumes", "colorName", raw) || raw : t("page.costume3d.colorNumber", { number: color.colorId });
     };
+    /** A colour's label, saying when the version cannot show it. */
+    const unavailable = (label: string, available: boolean) => (available ? label : `${label} · ${t("page.costume3d.colorUnavailable")}`);
     const ownerName = useCallback((part: Costume3dPart) => unrestricted?.ownerName(part) ?? null, [unrestricted]);
     const matches = useCallback((number: number | undefined, original: string, also?: string | null) => !query || String(number) === query
         || original.toLowerCase().includes(query) || name(original).toLowerCase().includes(query)
@@ -316,7 +321,8 @@ export function Wardrobe(props: WardrobeProps) {
             <div className={grid}>
                 {shown.map(costume => {
                     const selected = costume.costumeNumber === costumeNumber;
-                    const shownColor = selected ? colorId : costume.colors[0]?.colorId ?? 1;
+                    const firstColor = costume.colors.find(color => color.available) ?? costume.colors[0];
+                    const shownColor = selected ? colorId : firstColor?.colorId ?? 1;
                     const upcoming = costume.publishedAt == null || costume.publishedAt > now;
                     const borrowed = unrestricted?.borrowedCostumes.has(costume.costumeNumber);
                     return (
@@ -338,8 +344,9 @@ export function Wardrobe(props: WardrobeProps) {
                                 swatches={costume.colors.map(color => ({
                                     key: String(color.colorId),
                                     thumbnail: costumeThumbnail(costume.costumeNumber, color.colorId),
-                                    label: named(color, costume.costumeNumber),
+                                    label: unavailable(named(color, costume.costumeNumber), color.available),
                                     selected: selected && color.colorId === colorId,
+                                    disabled: !color.available,
                                     onClick: () => onCostume(costume.costumeNumber, color.colorId),
                                 }))}
                             />
@@ -358,6 +365,7 @@ export function Wardrobe(props: WardrobeProps) {
                 <div className={grid}>
                     {shown.map(part => {
                         const isBlocked = !fullHead && (pool ? headPicked : true) && blocked(catalog, look?.head, part, pool);
+                        const missing = !partAvailable(part);
                         const dropsHead = !fullHead && !isBlocked && pool != null && blocked(catalog, costumeHead, part, pool);
                         const owner = ownerName(part);
                         return (
@@ -369,10 +377,11 @@ export function Wardrobe(props: WardrobeProps) {
                                 subtitle={owner ?? (costumeOf(part) === 0 ? undefined : `#${part.costumeNumber}`)}
                                 tags={isBlocked ? <Icon path={mdBlock} className="h-4 w-4 text-error" /> : undefined}
                                 selected={!fullHead && look?.hair === part}
-                                disabled={fullHead || isBlocked}
+                                disabled={fullHead || isBlocked || missing}
                                 hint={fullHead
                                     ? t("page.costume3d.hairLockedByFullHead", { name: look?.head ? name(look.head.name ?? "") : "" })
-                                    : isBlocked ? t("page.costume3d.incompatible") : dropsHead ? t("page.costume3d.unrestricted.dropsHead") : undefined}
+                                    : isBlocked ? t("page.costume3d.incompatible")
+                                    : missing ? t("page.costume3d.colorUnavailable") : dropsHead ? t("page.costume3d.unrestricted.dropsHead") : undefined}
                                 onClick={() => onHair(part)}
                             />
                         );
@@ -400,6 +409,8 @@ export function Wardrobe(props: WardrobeProps) {
                     const shownPart = worn ?? group.parts[0];
                     const borrowed = Boolean(ownerName(group.parts[0]));
                     const mismatch = headMismatch(group.parts[0]);
+                    // The card picks the first colour the version can show.
+                    const firstPart = group.parts.find(partAvailable);
                     return (
                         <Card
                             key={group.key}
@@ -418,14 +429,15 @@ export function Wardrobe(props: WardrobeProps) {
                                 </>
                             ) : undefined}
                             selected={Boolean(worn)}
-                            disabled={mismatch}
-                            hint={mismatch ? t("page.costume3d.unrestricted.hairMismatch") : undefined}
-                            onClick={() => onHead(group.parts[0].costume3dId)}
+                            disabled={mismatch || !firstPart}
+                            hint={mismatch ? t("page.costume3d.unrestricted.hairMismatch") : !firstPart ? t("page.costume3d.colorUnavailable") : undefined}
+                            onClick={() => firstPart && onHead(firstPart.costume3dId)}
                             swatches={group.parts.map(part => ({
                                 key: String(part.costume3dId),
                                 thumbnail: partThumbnail(part),
-                                label: named({ colorName: "", colorId: part.colorId }, group.costumeNumber),
+                                label: unavailable(named({ colorName: "", colorId: part.colorId }, group.costumeNumber), partAvailable(part)),
                                 selected: part.costume3dId === wornHead,
+                                disabled: !partAvailable(part),
                                 onClick: () => onHead(part.costume3dId),
                             }))}
                         />

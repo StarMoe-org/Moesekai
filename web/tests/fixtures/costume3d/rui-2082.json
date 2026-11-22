@@ -1,0 +1,412 @@
+{
+ "_source": "pjsk.moe jp 7.1.0.70, trimmed to Rui (theme_park), costumes 2082 and 2077 (issues #162, #163)",
+ "catalog": {
+  "format": "costume-role",
+  "version": 1,
+  "role": {
+   "characterId": 16,
+   "unit": "theme_park",
+   "figure": "mens",
+   "breastSize": "none",
+   "skin": {
+    "default": "#fff5e8",
+    "shadow1": "#f4b6bc",
+    "shadow2": "#e9828b"
+   },
+   "defaultBody": 32,
+   "defaultHead": 31,
+   "defaultHair": 216
+  },
+  "parts": [
+   {
+    "costume3dId": 216,
+    "slot": "hair",
+    "colorId": 1,
+    "colorName": "ノーマル",
+    "name": "デフォルト",
+    "headType": "head_and_hair",
+    "thumbnail": "hair_default_16",
+    "model": {
+     "asset": "live_pv/model/characterv2/face/16/0001/face"
+    }
+   },
+   {
+    "costume3dId": 2077025,
+    "slot": "head",
+    "costumeNumber": 2077,
+    "colorId": 1,
+    "colorName": "オリジナル",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "headType": "head_only",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_head",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2235/a05/optional",
+     "attach": "a05"
+    }
+   },
+   {
+    "costume3dId": 2077026,
+    "slot": "body",
+    "costumeNumber": 2077,
+    "colorId": 1,
+    "colorName": "オリジナル",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_body",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2235/mens/body"
+    }
+   },
+   {
+    "costume3dId": 2077027,
+    "slot": "head",
+    "costumeNumber": 2077,
+    "colorId": 2,
+    "colorName": "アナザー1",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "headType": "head_only",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_head_01",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2235/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2235/a05/01 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2077028,
+    "slot": "body",
+    "costumeNumber": 2077,
+    "colorId": 2,
+    "colorName": "アナザー1",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_body_01",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2235/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2235/mens/01 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2077029,
+    "slot": "head",
+    "costumeNumber": 2077,
+    "colorId": 3,
+    "colorName": "アナザー2",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "headType": "head_only",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_head_02",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2235/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2235/a05/02 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2077030,
+    "slot": "body",
+    "costumeNumber": 2077,
+    "colorId": 3,
+    "colorName": "アナザー2",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_body_02",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2235/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2235/mens/02 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2077031,
+    "slot": "head",
+    "costumeNumber": 2077,
+    "colorId": 4,
+    "colorName": "アナザー3",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "headType": "head_only",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_head_03",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2235/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2235/a05/03 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2077032,
+    "slot": "body",
+    "costumeNumber": 2077,
+    "colorId": 4,
+    "colorName": "アナザー3",
+    "name": "Hoppin' Fun Rhythm!（メンズ）",
+    "publishedAt": 1792810800000,
+    "thumbnail": "cos2077_body_03",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2235/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2235/mens/03 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082025,
+    "slot": "head",
+    "costumeNumber": 2082,
+    "colorId": 1,
+    "colorName": "オリジナル",
+    "name": "Labyrinth of Time",
+    "headType": "head_only",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_head",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+     "attach": "a05"
+    }
+   },
+   {
+    "costume3dId": 2082026,
+    "slot": "body",
+    "costumeNumber": 2082,
+    "colorId": 1,
+    "colorName": "オリジナル",
+    "name": "Labyrinth of Time",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_body",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+    }
+   },
+   {
+    "costume3dId": 2082027,
+    "slot": "head",
+    "costumeNumber": 2082,
+    "colorId": 2,
+    "colorName": "アナザー1",
+    "name": "Labyrinth of Time",
+    "headType": "head_only",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_head_01",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2237/a05/01 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082028,
+    "slot": "body",
+    "costumeNumber": 2082,
+    "colorId": 2,
+    "colorName": "アナザー1",
+    "name": "Labyrinth of Time",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_body_01",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/01 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082029,
+    "slot": "head",
+    "costumeNumber": 2082,
+    "colorId": 3,
+    "colorName": "アナザー2",
+    "name": "Labyrinth of Time",
+    "headType": "head_only",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_head_02",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2237/a05/02 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082030,
+    "slot": "body",
+    "costumeNumber": 2082,
+    "colorId": 3,
+    "colorName": "アナザー2",
+    "name": "Labyrinth of Time",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_body_02",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/02 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082031,
+    "slot": "head",
+    "costumeNumber": 2082,
+    "colorId": 4,
+    "colorName": "アナザー3",
+    "name": "Labyrinth of Time",
+    "headType": "head_only",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_head_03",
+    "model": {
+     "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+     "attach": "a05"
+    },
+    "missing": [
+     "the colour color_variation/head_optional/2237/a05/03 is not in the version"
+    ]
+   },
+   {
+    "costume3dId": 2082032,
+    "slot": "body",
+    "costumeNumber": 2082,
+    "colorId": 4,
+    "colorName": "アナザー3",
+    "name": "Labyrinth of Time",
+    "publishedAt": 1793458800000,
+    "thumbnail": "cos2082_body_03",
+    "model": {
+     "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/03 is not in the version"
+    ]
+   }
+  ],
+  "notAvailable": [],
+  "defaultHairs": {
+   "2077025": 216,
+   "2077027": 216,
+   "2077029": 216,
+   "2077031": 216,
+   "2082025": 216,
+   "2082027": 216,
+   "2082029": 216,
+   "2082031": 216
+  }
+ },
+ "costume": {
+  "format": "costume",
+  "version": 1,
+  "costumeNumber": 2082,
+  "name": "Labyrinth of Time",
+  "variants": [
+   {
+    "role": "costume/role/16-theme_park",
+    "characterId": 16,
+    "unit": "theme_park",
+    "colorId": 1,
+    "body": 2082026,
+    "head": 2082025,
+    "hair": 216,
+    "alternativeHeads": [],
+    "models": {
+     "body": {
+      "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+     },
+     "face": "live_pv/model/characterv2/face/16/0001/face",
+     "accessory": {
+      "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+      "attach": "a05"
+     }
+    }
+   },
+   {
+    "role": "costume/role/16-theme_park",
+    "characterId": 16,
+    "unit": "theme_park",
+    "colorId": 2,
+    "body": 2082028,
+    "head": 2082027,
+    "hair": 216,
+    "alternativeHeads": [
+     2082025
+    ],
+    "models": {
+     "body": {
+      "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+     },
+     "face": "live_pv/model/characterv2/face/16/0001/face",
+     "accessory": {
+      "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+      "attach": "a05"
+     }
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/01 is not in the version",
+     "the colour color_variation/head_optional/2237/a05/01 is not in the version"
+    ]
+   },
+   {
+    "role": "costume/role/16-theme_park",
+    "characterId": 16,
+    "unit": "theme_park",
+    "colorId": 3,
+    "body": 2082030,
+    "head": 2082029,
+    "hair": 216,
+    "alternativeHeads": [
+     2082025
+    ],
+    "models": {
+     "body": {
+      "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+     },
+     "face": "live_pv/model/characterv2/face/16/0001/face",
+     "accessory": {
+      "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+      "attach": "a05"
+     }
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/02 is not in the version",
+     "the colour color_variation/head_optional/2237/a05/02 is not in the version"
+    ]
+   },
+   {
+    "role": "costume/role/16-theme_park",
+    "characterId": 16,
+    "unit": "theme_park",
+    "colorId": 4,
+    "body": 2082032,
+    "head": 2082031,
+    "hair": 216,
+    "alternativeHeads": [
+     2082025
+    ],
+    "models": {
+     "body": {
+      "asset": "live_pv/model/characterv2/body/99/2237/mens/body"
+     },
+     "face": "live_pv/model/characterv2/face/16/0001/face",
+     "accessory": {
+      "asset": "live_pv/model/characterv2/head_optional/2237/a05/optional",
+      "attach": "a05"
+     }
+    },
+    "missing": [
+     "the colour color_variation/body/99/2237/mens/03 is not in the version",
+     "the colour color_variation/head_optional/2237/a05/03 is not in the version"
+    ]
+   }
+  ]
+ }
+}

@@ -44,6 +44,7 @@ export const costume3dMessages = {
     "hairReplaced": "「{name}」はこのアクセと同時に着けられないため、アクセのデフォルトの髪型にしました。",
     "loadFailed": "データを読み込めませんでした。時間をおいて再度お試しください。",
     "costumeUnavailable": "この衣装には、このキャラクターの 3D データがまだありません。",
+    "colorUnavailable": "このカラーはまだ書き出されていません",
     "stage": {
         "webglUnavailableTitle": "3D を表示できません",
         "webglUnavailableMessage": "ブラウザが WebGL を利用できません。ハードウェアアクセラレーションが無効の可能性があります。衣装一覧は引き続き見られます。",

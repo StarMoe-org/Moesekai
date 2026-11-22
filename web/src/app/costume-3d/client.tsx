@@ -154,7 +154,10 @@ function Costume3dContent() {
     // What only the pool brings, for the wardrobe to mark.
     const borrowedCostumes = useMemo(() => new Set(pool ? costumes.filter(entry => !ownCostumes.some(own => own.costumeNumber === entry.costumeNumber)).map(entry => entry.costumeNumber) : []), [pool, costumes, ownCostumes]);
     const costume = costumes.find(entry => entry.costumeNumber === want.costumeNumber) ?? costumes[0] ?? null;
-    const colorId = costume?.colors.some(color => color.colorId === want.colorId) ? want.colorId as number : costume?.colors[0]?.colorId ?? 1;
+    // A colour the version cannot show is not chosen: the costume's first one it can, instead.
+    const colorId = costume?.colors.some(color => color.colorId === want.colorId && color.available)
+        ? want.colorId as number
+        : (costume?.colors.find(color => color.available) ?? costume?.colors[0])?.colorId ?? 1;
     const hairs = useMemo(() => {
         const own = catalog ? hairOptions(catalog) : [];
         const faces = new Set(own.map(part => part.model?.asset));
@@ -194,8 +197,13 @@ function Costume3dContent() {
     const worn = costumeState.value && catalog ? costumeVariant(costumeState.value, catalog, colorId, pool ?? null) : null;
     const variant = worn?.variant ?? null;
     const look = variant && catalog ? resolveLook(variant, catalog, { hair, hairUnit, head }, pool ?? null) : null;
+    // The colours count: the colours of one costume share its models.
     const loadKey = look && variant
-        ? [variant.models.body?.asset, look.face, look.hairFrom, look.accessory?.model.asset, look.accessory?.attach, ...Object.values(catalog?.role.motions ?? {})].join("|")
+        ? [
+            look.body.asset, JSON.stringify(look.body.colors ?? null), look.face, look.hairFrom,
+            look.accessory?.model.asset, JSON.stringify(look.accessory?.model.colors ?? null), look.accessory?.attach,
+            ...Object.values(catalog?.role.motions ?? {}),
+        ].join("|")
         : null;
 
     const stageLoad = useMemo<StageLoad | null>(() => {

@@ -24,13 +24,19 @@
  */
 import type { Costume3dCatalog, Costume3dCostume, Costume3dPart, Costume3dPartModel, Costume3dRole, Costume3dVariant } from "@/types/costume3d";
 
-/** A costume of one role: its colours and when it was first worn by this role. */
+/**
+ * A costume of one role: its colours and when it was first worn by this role. A colour is
+ * `available` when the version holds what shows it (its body part misses nothing).
+ */
 export interface RoleCostume {
     costumeNumber: number;
     name: string;
     publishedAt: number | null;
-    colors: Array<{ colorId: number; colorName: string }>;
+    colors: Array<{ colorId: number; colorName: string; available: boolean }>;
 }
+
+/** Whether the version holds everything that shows a part (its colour-variation textures among them). */
+export const partAvailable = (part: Costume3dPart): boolean => !part.missing?.length;
 
 /**
  * Hair and head picked over what the costume brings: null follows the costume, a head of 0 is
@@ -93,9 +99,9 @@ export function roleCostumes(catalog: Costume3dCatalog): RoleCostume[] {
         if (part.publishedAt != null && (costume.publishedAt == null || part.publishedAt < costume.publishedAt)) {
             costume.publishedAt = part.publishedAt;
         }
-        if (!costume.colors.some(color => color.colorId === part.colorId)) {
-            costume.colors.push({ colorId: part.colorId, colorName: colorNameOf(part) });
-        }
+        const known = costume.colors.find(color => color.colorId === part.colorId);
+        if (known) known.available ||= partAvailable(part);
+        else costume.colors.push({ colorId: part.colorId, colorName: colorNameOf(part), available: partAvailable(part) });
     }
     const list = [...byNumber.values()];
     for (const costume of list) costume.colors.sort((a, b) => a.colorId - b.colorId);
@@ -225,8 +231,9 @@ export function defaultLook(variant: Costume3dVariant, catalog?: Costume3dCatalo
 export function resolveLook(variant: Costume3dVariant, catalog: Costume3dCatalog | null | undefined, overrides: LookOverrides, pool?: Costume3dPool | null): Costume3dLook {
     const asGiven = defaultLook(variant, catalog, pool);
     if (!catalog || (overrides.head == null && overrides.hair == null)) return asGiven;
+    // A part whose colour the version does not hold is not worn: its own model in another colour would stand in for it.
     const own = (part: Costume3dPart | null | undefined): part is Costume3dPart =>
-        Boolean(part && (catalog.parts.includes(part) || pool?.roleOf.has(part)));
+        Boolean(part && partAvailable(part) && (catalog.parts.includes(part) || pool?.roleOf.has(part)));
     // A head of 0 is a choice of none.
     const head = overrides.head ? partById(catalog, overrides.head, pool) : null;
     const pickedHead = own(head) ? head : null;
@@ -267,10 +274,11 @@ export function resolveLook(variant: Costume3dVariant, catalog: Costume3dCatalog
     const ownFace = !wornHair || catalog.parts.includes(wornHair)
         ? null
         : (partById(catalog, catalog.role.defaultHair) ?? hairOptions(catalog)[0])?.model?.asset ?? null;
-    // The costume's accessory goes with its head, unless a pick takes the head off; another role's
-    // head is worn without one (it may be on another character's face).
-    const accessory = overrides.head === 0 || (overrides.head != null && !worn)
-        ? null
+    // A picked head is its own model, with its colours and attach point; following the costume, the
+    // costume's accessory goes with its head, unless a pick takes the head off.
+    const accessory = overrides.head === 0 ? null
+        : overrides.head != null ? (worn?.model ? { model: worn.model, attach: worn.model.attach ?? null } : null)
+        : headDropped ? null
         : variant.models.accessory ? { model: variant.models.accessory, attach: variant.models.accessory.attach ?? null } : null;
     return {
         ...look,
@@ -342,11 +350,16 @@ export class PoolBuilder {
             add(this.costumeCharacters, characterId);
             add(this.costumeGenders, figure === "ladies" ? "female" : "male");
             if (!known) {
-                this.costumes.set(costume.costumeNumber, { ...costume, colors: [...costume.colors] });
+                this.costumes.set(costume.costumeNumber, { ...costume, colors: costume.colors.map(color => ({ ...color })) });
                 continue;
             }
             if (costume.publishedAt != null && (known.publishedAt == null || costume.publishedAt < known.publishedAt)) known.publishedAt = costume.publishedAt;
-            for (const color of costume.colors) if (!known.colors.some(other => other.colorId === color.colorId)) known.colors.push(color);
+            // A colour any role can show can be borrowed.
+            for (const color of costume.colors) {
+                const other = known.colors.find(entry => entry.colorId === color.colorId);
+                if (other) other.available ||= color.available;
+                else known.colors.push({ ...color });
+            }
         }
         // Of parts that are the same, the lowest id is kept: documents arrive in any order, and
         // the address names parts by id.
@@ -434,26 +447,31 @@ export interface BorrowedVariant {
 }
 
 /**
- * The look of `costume` in `colorId` for the role of `catalog`: its own when it has one (as the
- * document gives it), else (cross-role) the body of the role whose figure is nearest — of the
- * colour's looks, else of the costume's — worn with the role's own face, default hair and motions,
- * and the costume's accessory when the role can wear it.
+ * The look of `costume` in `colorId` for the role of `catalog`: its own in that colour when it has
+ * one (as the document gives it), else (cross-role) the body of the role whose figure is nearest
+ * among the colour's looks, worn with the role's own face, default hair and motions, and the
+ * costume's accessory when the role can wear it. Null when no look shows that colour.
  */
 export function costumeVariant(
     costume: Costume3dCostume, catalog: Costume3dCatalog, colorId: number, pool?: Costume3dPool | null,
 ): { variant: Costume3dVariant; from: { characterId: number; unit: string } | null } | null {
     const role = catalog.role;
-    const own = costume.variants.find(entry => entry.role === roleName(role) || (entry.characterId === role.characterId && entry.unit === role.unit));
-    if (own) return { variant: own, from: null };
+    // The role's own look in this colour; a role with looks of the costume but none in this colour has none to show.
+    const mine = costume.variants.filter(entry => entry.role === roleName(role) || (entry.characterId === role.characterId && entry.unit === role.unit));
+    if (mine.length) {
+        const own = mine.find(entry => entry.colorId === colorId);
+        return own ? { variant: own, from: null } : null;
+    }
     if (!pool) return null;
     const wearer: PoolRole = { ...role };
     const distance = (entry: Costume3dVariant) => {
         const of = pool.roles.find(other => other.characterId === entry.characterId && other.unit === entry.unit);
         return (of ? figureDistance(wearer, of) : 20) + (entry.characterId === role.characterId ? 0 : 0.5);
     };
+    // Only a look in this colour: another colour's body would show under this colour's name.
     const donor = costume.variants
-        .filter(showable)
-        .sort((a, b) => (a.colorId !== colorId ? 1 : 0) - (b.colorId !== colorId ? 1 : 0) || distance(a) - distance(b) || a.characterId - b.characterId)[0];
+        .filter(entry => entry.colorId === colorId && showable(entry))
+        .sort((a, b) => distance(a) - distance(b) || a.characterId - b.characterId)[0];
     if (!donor?.models.body) return null;
     // The role's own hair on its own face; the costume's accessory only when the role can wear it there.
     const hair = partById(catalog, role.defaultHair) ?? hairOptions(catalog)[0] ?? null;

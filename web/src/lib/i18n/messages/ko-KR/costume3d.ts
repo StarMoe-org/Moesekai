@@ -44,6 +44,7 @@ export const costume3dMessages = {
     "hairReplaced": "「{name}」은(는) 이 액세서리와 함께 착용할 수 없어 액세서리의 기본 헤어스타일로 바꿨습니다.",
     "loadFailed": "데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.",
     "costumeUnavailable": "이 의상은 이 캐릭터의 3D 데이터가 아직 없습니다.",
+    "colorUnavailable": "이 색상은 아직 내보내지지 않았습니다",
     "stage": {
         "webglUnavailableTitle": "3D를 표시할 수 없습니다",
         "webglUnavailableMessage": "브라우저에서 WebGL을 사용할 수 없습니다. 하드웨어 가속이 꺼져 있을 수 있습니다. 의상 목록은 계속 볼 수 있습니다.",

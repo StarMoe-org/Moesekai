@@ -44,6 +44,7 @@ export const costume3dMessages = {
     "hairReplaced": "“{name}” can't be worn with this accessory; its default hairstyle is shown instead.",
     "loadFailed": "Couldn't load the data. Please try again later.",
     "costumeUnavailable": "This costume has no 3D data for this character yet.",
+    "colorUnavailable": "This colour has not been exported yet",
     "stage": {
         "webglUnavailableTitle": "3D isn't available",
         "webglUnavailableMessage": "Your browser doesn't provide WebGL; hardware acceleration may be turned off. You can still browse the costumes.",

@@ -517,7 +517,9 @@ export class Costume3dStage {
             const attach = accessory?.attach;
             let anchor: THREE.Object3D | null = null;
             group.traverse(object => { if (!anchor && attach && object.name === attach) anchor = object; });
-            (anchor ?? group).add(accessoryPart.model.scene);
+            // An attach point the face does not have would leave the accessory at the feet: it is not worn.
+            if (attach && !anchor) disposeGroup(accessoryPart.model.scene);
+            else (anchor ?? group).add(accessoryPart.model.scene);
         }
         const offsetValue = bodyPart.model.scene.getObjectByName("OffsetValue");
         const positionOffset = bodyPart.model.scene.getObjectByName("PositionOffset");

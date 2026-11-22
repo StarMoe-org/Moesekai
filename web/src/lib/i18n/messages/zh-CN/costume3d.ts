@@ -44,6 +44,7 @@ export const costume3dMessages = {
     "hairReplaced": "「{name}」不能和这个头饰同时佩戴，已换成头饰的默认发型。",
     "loadFailed": "数据加载失败，请稍后重试。",
     "costumeUnavailable": "这套服装在这个角色上还没有 3D 数据。",
+    "colorUnavailable": "该配色暂未导出",
     "stage": {
         "webglUnavailableTitle": "无法显示 3D",
         "webglUnavailableMessage": "浏览器没有提供 WebGL，可能是关闭了硬件加速。仍可以浏览服装列表。",

@@ -44,6 +44,7 @@ export const costume3dMessages = {
     "hairReplaced": "「{name}」不能和這個頭飾同時佩戴，已換成頭飾的預設髮型。",
     "loadFailed": "資料載入失敗，請稍後再試。",
     "costumeUnavailable": "這套服裝在這個角色上還沒有 3D 資料。",
+    "colorUnavailable": "此配色尚未匯出",
     "stage": {
         "webglUnavailableTitle": "無法顯示 3D",
         "webglUnavailableMessage": "瀏覽器沒有提供 WebGL，可能是關閉了硬體加速。仍可瀏覽服裝列表。",
