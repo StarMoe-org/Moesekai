@@ -400,6 +400,11 @@ export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: A
     return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
 }
 
+/** The white inner ring and shapes the game lays over a bonds honor's two colours. */
+export function getBondsHonorPatternUrl(sub: boolean = false, source: AssetSourceType = "main-jp"): string {
+    return getInappSpriteUrl(`degree_bgTexture_${sub ? "sub" : "main"}`, source);
+}
+
 export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourceType = "main-jp"): string {
     return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
