@@ -27,21 +27,35 @@ function useImageLoaded(url: string | undefined): boolean {
     return !!url && loadedUrl === url;
 }
 
-function useImageSize(url: string | undefined): { width: number; height: number } | null {
-    const [size, setSize] = useState<{ url: string; width: number; height: number } | null>(null);
+interface LoadedImage {
+    url: string;
+    width: number;
+    height: number;
+}
+
+/** The first of `urls` that loads, with its natural size; later URLs are fallbacks for missing ones. */
+function useFirstLoadedImage(urls: string[]): LoadedImage | null {
+    const key = urls.join("\n");
+    const [loaded, setLoaded] = useState<(LoadedImage & { key: string }) | null>(null);
 
     useEffect(() => {
-        if (!url) return;
-        const targetUrl = url;
+        if (!key) return;
+        const candidates = key.split("\n");
+        let cancelled = false;
         const img = new Image();
-        img.onload = () => setSize({ url: targetUrl, width: img.naturalWidth, height: img.naturalHeight });
-        img.onerror = () => setSize(prev => (prev?.url === targetUrl ? null : prev));
-        img.src = targetUrl;
-        return () => { img.onload = null; img.onerror = null; };
-    }, [url]);
+        const tryAt = (index: number) => {
+            if (cancelled || index >= candidates.length) return;
+            img.onload = () => {
+                if (!cancelled) setLoaded({ key, url: candidates[index], width: img.naturalWidth, height: img.naturalHeight });
+            };
+            img.onerror = () => tryAt(index + 1);
+            img.src = candidates[index];
+        };
+        tryAt(0);
+        return () => { cancelled = true; img.onload = null; img.onerror = null; };
+    }, [key]);
 
-    if (!url || !size || size.url !== url) return null;
-    return { width: size.width, height: size.height };
+    return key && loaded?.key === key ? loaded : null;
 }
 
 interface BondsDegreeImageProps {
@@ -85,10 +99,14 @@ export default function BondsDegreeImage({
     const sdLeftUrl = leftChara ? getBondsHonorCharacterUrl(leftChara.gameCharacterId, source) : undefined;
     const sdRightUrl = rightChara ? getBondsHonorCharacterUrl(rightChara.gameCharacterId, source) : undefined;
 
-    // Word image URL (the game shows the word only in the main slot)
-    const wordUrl = !sub && bondsHonorWordAssetbundleName
-        ? getBondsHonorWordUrl(bondsHonorWordAssetbundleName, source)
-        : undefined;
+    // Word image (the game shows the word only in the main slot), in the honor's rarity style.
+    // If a server's storage has not caught up with a rarity yet, the low one stands in for it.
+    const wordUrls: string[] = [];
+    if (!sub && bondsHonorWordAssetbundleName) {
+        wordUrls.push(getBondsHonorWordUrl(bondsHonorWordAssetbundleName, bondsHonor.honorRarity, source));
+        const lowWordUrl = getBondsHonorWordUrl(bondsHonorWordAssetbundleName, "low", source);
+        if (lowWordUrl !== wordUrls[0]) wordUrls.push(lowWordUrl);
+    }
 
     // Frame, pattern and level icons — sprites from the client package
     const frameUrl = getHonorFrameUrl(bondsHonor.honorRarity, sub, source);
@@ -99,17 +117,16 @@ export default function BondsDegreeImage({
     // Preload images
     const sdLeftLoaded = useImageLoaded(sdLeftUrl);
     const sdRightLoaded = useImageLoaded(sdRightUrl);
-    const wordLoaded = useImageLoaded(wordUrl);
     const frameLoaded = useImageLoaded(frameUrl);
     const patternLoaded = useImageLoaded(patternUrl);
 
     // The word is drawn at its own size, centred
-    const wordSize = useImageSize(wordUrl);
+    const word = useFirstLoadedImage(wordUrls);
 
     if (!leftChara || !rightChara) return null;
 
-    const wordOffsetX = wordSize ? (width - wordSize.width) / 2 : 0;
-    const wordOffsetY = wordSize ? (height - wordSize.height) / 2 : 0;
+    const wordOffsetX = word ? (width - word.width) / 2 : 0;
+    const wordOffsetY = word ? (height - word.height) / 2 : 0;
 
     // Level icons
     const showLevel = honorLevel && honorLevel > 0 && bondsHonor.levels.length > 1;
@@ -182,8 +199,8 @@ export default function BondsDegreeImage({
                 <image href={frameUrl} x="0" y="0" height={height} width={width} />
             )}
             {/* Word (main slot only) */}
-            {wordLoaded && wordSize && wordUrl && (
-                <image href={wordUrl} x={wordOffsetX} y={wordOffsetY} />
+            {word && (
+                <image href={word.url} x={wordOffsetX} y={wordOffsetY} width={word.width} height={word.height} />
             )}
             {/* Level icons (1-5) */}
             {levelIconUrl && levelCount > 0 && Array.from({ length: levelCount }).map((_, idx) => (

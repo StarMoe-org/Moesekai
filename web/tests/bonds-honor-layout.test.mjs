@@ -47,3 +47,18 @@ test("level icons are 16px in both slots, along the bottom edge from x=50", () =
         assert.deepEqual(layout.levelIcon(4), { x: 114, y: 64, width: 16, height: 16 });
     }
 });
+
+const assets = await importWebTypeScript("src/lib/assets.ts", [
+    ['import {\n    type AssetSourceType,\n} from "@/contexts/ThemeContext";', 'type AssetSourceType = string;'],
+    ['import { ASSET_DOMAIN_BACKUP, ASSET_DOMAIN_MAIN } from "@/lib/assetDomains";', 'const ASSET_DOMAIN_MAIN = "https://main.example"; const ASSET_DOMAIN_BACKUP = "https://backup.example";'],
+    ['import { defaultContentRegionForPathname } from "@/lib/locale-routing";', 'const defaultContentRegionForPathname = () => "jp";'],
+]);
+
+test("bonds honor word: one bundle per rarity, as the game names them", () => {
+    const url = (rarity) => assets.getBondsHonorWordUrl("honorname_0102_01", rarity, "main-jp");
+    assert.equal(url("low"), "https://main.example/sekai-jp-assets/bonds_honor/word/honorname_0102_01_01/honorname_0102_01_01.webp");
+    assert.match(url("middle"), /honorname_0102_01_02\/honorname_0102_01_02\.webp$/);
+    assert.match(url("high"), /honorname_0102_01_03\/honorname_0102_01_03\.webp$/);
+    assert.match(url("highest"), /honorname_0102_01_04\/honorname_0102_01_04\.webp$/);
+    assert.match(url("unknown"), /honorname_0102_01_01\.webp$/);
+});
