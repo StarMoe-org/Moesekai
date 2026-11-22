@@ -2135,3 +2135,104 @@ test("rewireEdgeSource atomically moves an edge's source port while preserving i
     assert.equal(rewireEdgeSource(rewired, s1Edge.id, "e2", "out"), rewired);
     assert.equal(rewireEdgeSource(rewired, s1Edge.id, "s2", "out"), rewired);
 });
+
+test("previewStorySound stops previous HTMLAudio playback on switch and on explicit stop(null)", async () => {
+    const { previewStorySound } = await import("../src/components/story-maker/useStoryAudio.ts");
+    const prevAudio = globalThis.Audio;
+    const prevWindow = globalThis.window;
+
+    /** @type {Array<{ src: string | null; volume: number; paused: boolean; pauseCount: number; loadCount: number; resolvePlay: () => void }>} */
+    const created = [];
+
+    class FakeAudio {
+        constructor(src) {
+            this.src = src;
+            this.volume = 1;
+            this.paused = true;
+            this.pauseCount = 0;
+            this.loadCount = 0;
+            this.readyState = 0;
+            this.currentTime = 0;
+            this.duration = NaN;
+            this.listeners = new Map();
+            this.resolvePlay = () => {};
+            created.push(this);
+        }
+        addEventListener(type, fn) {
+            this.listeners.set(type, fn);
+        }
+        removeEventListener(type, fn) {
+            if (this.listeners.get(type) === fn) this.listeners.delete(type);
+        }
+        play() {
+            this.paused = false;
+            return new Promise((resolve) => {
+                this.resolvePlay = resolve;
+            });
+        }
+        pause() {
+            this.paused = true;
+            this.pauseCount += 1;
+        }
+        removeAttribute(name) {
+            if (name === "src") this.src = null;
+        }
+        load() {
+            this.loadCount += 1;
+        }
+    }
+
+    globalThis.Audio = FakeAudio;
+    globalThis.window = {
+        cancelAnimationFrame: () => {},
+        requestAnimationFrame: () => 1,
+        setTimeout: globalThis.setTimeout.bind(globalThis),
+        clearTimeout: globalThis.clearTimeout.bind(globalThis),
+    };
+
+    try {
+        let endedA = 0;
+        let endedB = 0;
+        previewStorySound("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00001/bgm00001.mp3", {
+            volume: 0.65,
+            onEnd: () => { endedA += 1; },
+        });
+        assert.equal(created.length, 1);
+        const audioA = created[0];
+        assert.equal(audioA.paused, false);
+
+        // Switching to a second BGM must stop and detach audioA immediately.
+        previewStorySound("https://storage.pjsk.moe/sekai-jp-assets/sound/scenario/bgm/bgm00002/bgm00002.mp3", {
+            volume: 0.65,
+            onEnd: () => { endedB += 1; },
+        });
+        assert.equal(created.length, 2);
+        const audioB = created[1];
+        assert.equal(audioA.paused, true);
+        assert.ok(audioA.pauseCount >= 1, "expected audioA.pause() to be called on switch");
+        assert.equal(audioA.src, null, "expected audioA src to be cleared on switch");
+        assert.equal(endedA, 1);
+        assert.equal(audioB.paused, false);
+
+        // Even if audioA's pending play() resolves late, it must remain paused and cleared.
+        audioA.resolvePlay();
+        await Promise.resolve();
+        assert.equal(audioA.paused, true);
+        assert.equal(audioA.src, null);
+
+        // Clicking stop (`previewStorySound(null)`) must stop and detach audioB immediately.
+        audioB.resolvePlay();
+        await Promise.resolve();
+        previewStorySound(null);
+        assert.equal(audioB.paused, true);
+        assert.ok(audioB.pauseCount >= 1, "expected audioB.pause() to be called on stop");
+        assert.equal(audioB.src, null, "expected audioB src to be cleared on stop");
+        assert.equal(endedB, 1);
+    } finally {
+        previewStorySound(null);
+        if (prevAudio === undefined) delete globalThis.Audio;
+        else globalThis.Audio = prevAudio;
+        if (prevWindow === undefined) delete globalThis.window;
+        else globalThis.window = prevWindow;
+    }
+});

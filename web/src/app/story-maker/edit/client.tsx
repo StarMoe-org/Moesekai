@@ -11,7 +11,7 @@ import {
 } from "@/components/md3";
 import {
     mdAccountTree, mdAltRoute, mdArrowBack, mdAutoplay, mdBottomPanelClose, mdBottomPanelOpen,
-    mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCode,
+    mdCalculate, mdCheckCircle, mdChevronLeft, mdChevronRight, mdClose, mdCloseFullscreen, mdCloudDone, mdCode,
     mdContentCopy, mdDownload, mdEdit, mdErrorFill, mdFitScreen, mdFlag, mdFullscreen,
     mdFullscreenExit, mdHistory, mdHome, mdKeyboardArrowDown, mdLeftPanelClose, mdLeftPanelOpen, mdMovie,
     mdNumbers, mdPlayArrow, mdPlayArrowFill, mdPlayCircle, mdRedo, mdReplay,
@@ -27,7 +27,7 @@ import {
 import { NodeInspector } from "@/components/story-maker/NodeInspector";
 import { StoryCodeWorkspace, type StoryCodeEvaluation } from "@/components/story-maker/StoryCodeWorkspace";
 import { StoryEditorBin } from "@/components/story-maker/StoryEditorBin";
-import { StoryFlowCanvas } from "@/components/story-maker/StoryFlowCanvas";
+import { StoryFlowCanvas, type StoryFlowViewportActions } from "@/components/story-maker/StoryFlowCanvas";
 import { StoryImportDialog } from "@/components/story-maker/StoryImportDialog";
 import { StoryIssueList } from "@/components/story-maker/StoryIssueList";
 import {
@@ -53,7 +53,7 @@ import { storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls } from "@/li
 import { compileStoryGraph, type CompiledStoryProgram } from "@/lib/storyMaker/compiler";
 import {
     GRAPH_COL_GAP, GRAPH_ORIGIN_X, GRAPH_ORIGIN_Y, acceptsTarget, applyDragPayloadToTarget,
-    autoLayoutGraph, connectEdge, continueAndCutScene, createNode, disconnectEdge, disconnectPort,
+    autoLayoutGraph, clampCoord, connectEdge, continueAndCutScene, createNode, disconnectEdge, disconnectPort,
     duplicateBeat, duplicateNode, getOutgoingEdge, moveBeat, moveNode, removeBeat, removeNode,
     rewireEdgeSource,
     type ContinueSceneOptions, type StoryDragPayload, type StoryDropTarget,
@@ -249,6 +249,7 @@ function StoryMakerEditContent() {
     const nleContainerRef = useRef<HTMLDivElement | null>(null);
     const topRowRef = useRef<HTMLDivElement | null>(null);
     const stageFullscreenRef = useRef<HTMLDivElement | null>(null);
+    const flowViewportRef = useRef<StoryFlowViewportActions | null>(null);
     const splitDragRef = useRef<{ axis: SplitDragAxis; pointerId: number } | null>(null);
     const playGenRef = useRef(0);
     const voiceTokenRef = useRef(0);
@@ -1564,18 +1565,42 @@ function StoryMakerEditContent() {
         return t(`page.storyMaker.v2.nodeTypes.${nodeType}`);
     }, [t]);
 
-    const nextNodePos = useCallback((currentDoc: StoryDocument): StoryNodePos => {
-        const anchor = activeNodeId ? currentDoc.nodes[activeNodeId] : undefined;
-        if (anchor) {
-            return { x: anchor.pos.x + GRAPH_COL_GAP, y: anchor.pos.y + 40 };
+    const nextNodePos = useCallback((
+        currentDoc: StoryDocument,
+        nodeType: "scene" | "choice" | "condition" | "end",
+    ): StoryNodePos => {
+        const viewportCenter = flowViewportRef.current?.getViewportCenterPos(nodeType) ?? null;
+        let x: number;
+        let y: number;
+        if (viewportCenter) {
+            x = viewportCenter.x;
+            y = viewportCenter.y;
+        } else {
+            const anchor = activeNodeId ? currentDoc.nodes[activeNodeId] : undefined;
+            if (anchor) {
+                x = anchor.pos.x + GRAPH_COL_GAP;
+                y = anchor.pos.y + 40;
+            } else {
+                const count = Object.keys(currentDoc.nodes).length;
+                x = GRAPH_ORIGIN_X + count * 48;
+                y = GRAPH_ORIGIN_Y + count * 32;
+            }
         }
-        const count = Object.keys(currentDoc.nodes).length;
-        return { x: GRAPH_ORIGIN_X + count * 48, y: GRAPH_ORIGIN_Y + count * 32 };
+        const existingNodes = Object.values(currentDoc.nodes);
+        for (let step = 0; step < 24; step += 1) {
+            const collides = existingNodes.some(
+                node => Math.abs(node.pos.x - x) < 24 && Math.abs(node.pos.y - y) < 24,
+            );
+            if (!collides) break;
+            x = clampCoord(x + 32);
+            y = clampCoord(y + 32);
+        }
+        return { x: clampCoord(x), y: clampCoord(y) };
     }, [activeNodeId]);
 
     const handleAddNode = useCallback((nodeType: "scene" | "choice" | "condition" | "end", pos?: StoryNodePos) => {
         if (!doc) return;
-        const targetPos = pos ?? nextNodePos(doc);
+        const targetPos = pos ?? nextNodePos(doc, nodeType);
         const title = defaultNewNodeTitle(doc, nodeType);
         const res = createNode(doc, nodeType, targetPos, { title });
         if (!res.node) return;
@@ -1661,6 +1686,7 @@ function StoryMakerEditContent() {
         commit(() => res.doc);
         setSelectedNodeId(targetScene.id);
         setSelectedBeatId(res.beatId ?? null);
+        flowViewportRef.current?.ensureNodeVisible(targetScene.id, targetScene.pos);
     }, [activeScene, commit, doc, handleAddNode, t]);
 
     const handleUpdateMeta = (values: StoryMetaValues) => {
@@ -2041,20 +2067,7 @@ function StoryMakerEditContent() {
                         <span className="hidden shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant xl:inline">
                             {t(SERVER_LABEL_KEYS[doc.region])}
                         </span>
-                        <span
-                            className={cn(
-                                "hidden shrink-0 type-label-s sm:inline",
-                                saveStatus === "error" ? "text-error" : "text-on-surface-variant",
-                            )}
-                        >
-                            {saveStatusLabel}
-                        </span>
                     </button>
-                    {saveStatus === "error" && (
-                        <Button size="xs" variant="text" color="error" className="shrink-0" onClick={() => void flushSave(draftId, doc)}>
-                            {t("common.action.retry")}
-                        </Button>
-                    )}
                 </div>
 
                 {/* Center: 3-Way Compact Mode Switcher (Edit | Playtest | Code) */}
@@ -2071,10 +2084,10 @@ function StoryMakerEditContent() {
                     ]}
                 />
 
-                {/* Right: Compact Undo/Redo + Compiler Status Pill + VS Code-Style Pane Toggles + Web Fullscreen */}
-                <div className="flex flex-1 shrink-0 items-center justify-end gap-1">
+                {/* Right: Save Status + Compiler Status + VS Code-Style Pane Toggles + Web Fullscreen */}
+                <div className="flex min-w-0 flex-1 flex-nowrap items-center justify-end gap-1">
                     {isEditMode && (
-                        <>
+                        <div className={cn("shrink-0 items-center gap-0.5", showBottomPane ? "hidden xl:inline-flex" : "inline-flex")}>
                             <IconButton
                                 size="xs"
                                 icon={mdUndo}
@@ -2089,7 +2102,7 @@ function StoryMakerEditContent() {
                                 disabled={future.length === 0}
                                 onClick={redo}
                             />
-                        </>
+                        </div>
                     )}
 
                     <button
@@ -2125,6 +2138,36 @@ function StoryMakerEditContent() {
                             <span className="font-mono tabular-nums">{warningCount}</span>
                         ) : (
                             <span className="hidden xl:inline">{t("page.storyMaker.v2.compiler.statusOk")}</span>
+                        )}
+                    </button>
+
+                    <button
+                        type="button"
+                        disabled={saveStatus === "saving"}
+                        onClick={() => {
+                            if (saveStatus === "error" || saveStatus === "dirty") {
+                                dirtyDocRef.current = doc;
+                                void flushSave(draftId, doc);
+                            }
+                        }}
+                        title={saveStatus === "error" ? `${saveStatusLabel} — ${t("common.action.retry")}` : saveStatusLabel}
+                        className={cn(
+                            "focus-ring inline-flex h-7 shrink-0 items-center gap-1 rounded-md3-full px-2 type-label-s transition-colors",
+                            saveStatus === "error"
+                                ? "state-layer cursor-pointer bg-error-container text-on-error-container"
+                                : saveStatus === "dirty"
+                                    ? "state-layer cursor-pointer bg-surface-container text-on-surface-variant hover:text-on-surface"
+                                    : "cursor-default bg-surface-container text-on-surface-variant",
+                        )}
+                    >
+                        <Icon
+                            path={saveStatus === "error" ? mdErrorFill : mdCloudDone}
+                            size={14}
+                            className={cn("shrink-0", saveStatus === "saved" && "text-primary")}
+                        />
+                        <span className="whitespace-nowrap">{saveStatusLabel}</span>
+                        {saveStatus === "error" && (
+                            <span className="ml-0.5 underline">{t("common.action.retry")}</span>
                         )}
                     </button>
 
@@ -2497,14 +2540,14 @@ function StoryMakerEditContent() {
                         {/* Slim Unified Stage Monitor / Transport Bar */}
                         <div
                             className={cn(
-                                "flex h-9 min-w-0 shrink-0 items-center justify-between gap-2 rounded-md3-lg border bg-surface-container-low px-2",
+                                "@container flex h-9 min-w-0 shrink-0 flex-nowrap items-center justify-between gap-1.5 overflow-x-auto overflow-y-hidden rounded-md3-lg border bg-surface-container-low px-2",
                                 isPlaytest ? "border-primary/40 bg-primary-container/10" : "border-outline-variant/50",
                             )}
                         >
                             {isPlaytest ? (
                                 <>
-                                    <div className="flex min-w-0 items-center gap-1">
-                                        <span className="inline-flex shrink-0 items-center gap-1.5 px-1.5 type-label-s font-medium text-primary">
+                                    <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1">
+                                        <span className="inline-flex shrink-0 items-center gap-1.5 px-1 type-label-s font-medium text-primary">
                                             <span
                                                 aria-hidden
                                                 className={cn(
@@ -2512,7 +2555,7 @@ function StoryMakerEditContent() {
                                                     !reduced && "animate-pulse",
                                                 )}
                                             />
-                                            <span>{t("page.storyMaker.v2.mode.playtest")}</span>
+                                            <span className="hidden @[460px]:inline">{t("page.storyMaker.v2.mode.playtest")}</span>
                                         </span>
                                         <IconButton
                                             size="xs"
@@ -2525,10 +2568,13 @@ function StoryMakerEditContent() {
                                             size="xs"
                                             variant="tonal"
                                             icon={mdSkipNext}
+                                            aria-label={t("page.storyMaker.player.next")}
+                                            title={t("page.storyMaker.player.next")}
                                             disabled={Boolean(playCurrentChoice) || playEnded || playEmptyStory}
+                                            className="shrink-0 gap-1 px-2"
                                             onClick={handlePlayAdvance}
                                         >
-                                            {t("page.storyMaker.player.next")}
+                                            <span className="hidden @[400px]:inline">{t("page.storyMaker.player.next")}</span>
                                         </Button>
                                         <IconButton
                                             size="xs"
@@ -2548,7 +2594,7 @@ function StoryMakerEditContent() {
                                         />
                                     </div>
 
-                                    <div className="flex shrink-0 items-center gap-1">
+                                    <div className="flex shrink-0 flex-nowrap items-center gap-0.5">
                                         {audioBlocked && !playEmptyStory && !playEnded && (
                                             <IconButton
                                                 size="xs"
@@ -2570,16 +2616,18 @@ function StoryMakerEditContent() {
                                             label={t(playMuted ? "page.storyMaker.player.unmute" : "page.storyMaker.player.mute")}
                                             onClick={togglePlayMute}
                                         />
-                                        <Slider
-                                            min={0}
-                                            max={1}
-                                            step={0.05}
-                                            value={playMuted ? 0 : playVolume}
-                                            onValueChange={handlePlayVolumeChange}
-                                            aria-label={t("page.storyMaker.player.volume")}
-                                            formatValue={val => `${Math.round(val * 100)}%`}
-                                            className="h-6 w-14"
-                                        />
+                                        <div className="hidden shrink-0 @[480px]:block">
+                                            <Slider
+                                                min={0}
+                                                max={1}
+                                                step={0.05}
+                                                value={playMuted ? 0 : playVolume}
+                                                onValueChange={handlePlayVolumeChange}
+                                                aria-label={t("page.storyMaker.player.volume")}
+                                                formatValue={val => `${Math.round(val * 100)}%`}
+                                                className="h-6 w-14"
+                                            />
+                                        </div>
                                         <IconButton
                                             size="xs"
                                             icon={mdEdit}
@@ -2747,11 +2795,13 @@ function StoryMakerEditContent() {
                                                 variant="tonal"
                                                 color="tertiary"
                                                 icon={mdPlayArrow}
+                                                aria-label={t("page.storyMaker.nle.replayAction")}
                                                 disabled={stagePhase.kind !== "ready"}
-                                                title={stagePhase.kind !== "ready" ? t("page.storyMaker.nle.previewNeedsWebgpu") : undefined}
+                                                title={stagePhase.kind !== "ready" ? t("page.storyMaker.nle.previewNeedsWebgpu") : t("page.storyMaker.nle.replayAction")}
+                                                className="shrink-0 gap-1 px-2"
                                                 onClick={() => handlePreviewClip(replayActionInfo.member, replayActionInfo.clip)}
                                             >
-                                                {t("page.storyMaker.nle.replayAction")}
+                                                <span className="hidden @[440px]:inline">{t("page.storyMaker.nle.replayAction")}</span>
                                             </Button>
                                         )}
                                         {activeScene && (
@@ -2996,9 +3046,7 @@ function StoryMakerEditContent() {
                     redoCount={future.length}
                     onUndo={isPlaytest ? undefined : undo}
                     onRedo={isPlaytest ? undefined : redo}
-                    saveStatus={saveStatus}
-                    saveStatusLabel={saveStatusLabel}
-                    onRetrySave={() => void flushSave(draftId, doc)}
+                    viewportActionsRef={flowViewportRef}
                     className={cn("min-h-0 flex-1", showBottomPane ? "flex" : "hidden")}
                 />
             </div>

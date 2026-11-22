@@ -3,7 +3,7 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { Button, Icon, IconButton, cn } from "@/components/md3";
 import {
     mdAccessibilityNew, mdAccountTree, mdAdd, mdAltRoute, mdAnimation, mdArticle, mdBlock,
-    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdCloudDone, mdContentCopy, mdContentCut,
+    mdCalculate, mdCenterFocusStrong, mdChat, mdClose, mdContentCopy, mdContentCut,
     mdDelete, mdDragIndicator, mdErrorFill, mdFlag, mdGroups, mdHourglassTop, mdImage,
     mdKeyboardArrowDown, mdKeyboardArrowUp, mdLabel, mdLink, mdLinkOff, mdLock, mdMood, mdMovie,
     mdMusicNote, mdMusicOff, mdPlayArrowFill, mdPlayCircle, mdRecordVoiceOver, mdRedo, mdTitle,
@@ -21,6 +21,11 @@ import type {
     ConditionExpr, SceneBeat, SceneNode, StoryCompileDiagnostic, StoryDocument, StoryEdge,
     StoryNode, StoryNodePos, StoryVariable, VarOp,
 } from "@/types/storyMaker";
+
+export interface StoryFlowViewportActions {
+    getViewportCenterPos: (nodeType: "scene" | "choice" | "condition" | "end") => StoryNodePos | null;
+    ensureNodeVisible: (nodeId: string, fallbackPos?: StoryNodePos) => void;
+}
 
 export interface StoryFlowCanvasProps {
     doc: StoryDocument;
@@ -59,9 +64,7 @@ export interface StoryFlowCanvasProps {
     redoCount?: number;
     onUndo?: () => void;
     onRedo?: () => void;
-    saveStatus?: "saved" | "dirty" | "saving" | "error";
-    saveStatusLabel?: string;
-    onRetrySave?: () => void;
+    viewportActionsRef?: React.MutableRefObject<StoryFlowViewportActions | null>;
     activeDragPayload?: StoryDragPayload | null;
     className?: string;
 }
@@ -539,9 +542,7 @@ export function StoryFlowCanvas({
     redoCount = 0,
     onUndo,
     onRedo,
-    saveStatus,
-    saveStatusLabel,
-    onRetrySave,
+    viewportActionsRef,
     activeDragPayload = null,
     className,
 }: StoryFlowCanvasProps): React.JSX.Element {
@@ -574,6 +575,10 @@ export function StoryFlowCanvas({
     const fitPendingRef = useRef(false);
 
     const [view, setView] = useState<CanvasView>({ x: 36, y: 36, zoom: 0.9 });
+    const viewRef = useRef(view);
+    useEffect(() => {
+        viewRef.current = view;
+    }, [view]);
     const [measured, setMeasured] = useState<MeasuredGeometry>({ sizes: {}, ports: {} });
     const measuredRef = useRef(measured);
     useEffect(() => {
@@ -862,6 +867,63 @@ export function StoryFlowCanvas({
         window.addEventListener("dragend", clear);
         return () => window.removeEventListener("dragend", clear);
     }, [dropHover, draggingBeat]);
+
+    const getViewportCenterPos = useCallback((nodeType: "scene" | "choice" | "condition" | "end"): StoryNodePos | null => {
+        const viewport = viewportRef.current;
+        const currentView = viewRef.current;
+        if (!viewport || viewport.clientWidth <= 0 || viewport.clientHeight <= 0) {
+            return null;
+        }
+        const estW = nodeType === "scene"
+            ? SCENE_NODE_WIDTH
+            : nodeType === "end"
+                ? END_NODE_WIDTH
+                : BRANCH_NODE_WIDTH;
+        const estH = nodeType === "scene" ? 210 : nodeType === "end" ? 72 : 140;
+        const centerWorldX = (viewport.clientWidth / 2 - currentView.x) / currentView.zoom;
+        const centerWorldY = (viewport.clientHeight / 2 - currentView.y) / currentView.zoom;
+        return {
+            x: snapCoord(centerWorldX - estW / 2),
+            y: snapCoord(centerWorldY - estH / 2),
+        };
+    }, []);
+
+    const ensureNodeVisible = useCallback((nodeId: string, fallbackPos?: StoryNodePos) => {
+        const viewport = viewportRef.current;
+        if (!viewport || viewport.clientWidth <= 0 || viewport.clientHeight <= 0) return;
+        const target = docRef.current.nodes[nodeId];
+        const pos = target?.pos ?? fallbackPos;
+        if (!pos) return;
+        const size = target
+            ? (measuredRef.current.sizes[nodeId] ?? defaultNodeSize(target))
+            : { w: SCENE_NODE_WIDTH, h: 210 };
+        const currentView = viewRef.current;
+        const leftPx = pos.x * currentView.zoom + currentView.x;
+        const topPx = pos.y * currentView.zoom + currentView.y;
+        const rightPx = (pos.x + size.w) * currentView.zoom + currentView.x;
+        const bottomPx = (pos.y + size.h) * currentView.zoom + currentView.y;
+        const pad = 32;
+        const isVisible = rightPx >= pad
+            && leftPx <= viewport.clientWidth - pad
+            && bottomPx >= pad
+            && topPx <= viewport.clientHeight - pad;
+        if (isVisible) return;
+        const cx = pos.x + size.w / 2;
+        const cy = pos.y + size.h / 2;
+        setView(prev => ({
+            ...prev,
+            x: Math.round(viewport.clientWidth / 2 - cx * prev.zoom),
+            y: Math.round(viewport.clientHeight / 2 - cy * prev.zoom),
+        }));
+    }, []);
+
+    useEffect(() => {
+        if (!viewportActionsRef) return;
+        viewportActionsRef.current = { getViewportCenterPos, ensureNodeVisible };
+        return () => {
+            viewportActionsRef.current = null;
+        };
+    }, [viewportActionsRef, getViewportCenterPos, ensureNodeVisible]);
 
     const zoomBy = useCallback((factor: number) => {
         const viewport = viewportRef.current;
@@ -2374,25 +2436,27 @@ export function StoryFlowCanvas({
                 className,
             )}
         >
-            {/* Top Canvas Toolbar */}
-            <div className="z-10 flex min-w-0 flex-wrap items-center justify-between gap-2 border-b border-outline-variant/60 bg-surface-container-low px-2.5 py-1.5">
+            {/* Top Canvas Toolbar (strictly single-row with container-query progressive compression) */}
+            <div className="@container z-10 flex h-10 min-w-0 shrink-0 flex-nowrap items-center justify-between gap-1.5 overflow-x-auto overflow-y-hidden border-b border-outline-variant/60 bg-surface-container-low px-2">
                 {isEdit ? (
-                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
+                    <div className="flex min-w-0 shrink-0 flex-nowrap items-center gap-1">
                         {(onUndo || onRedo) && (
                             <>
-                                <div className="inline-flex items-center gap-1">
+                                <div className="inline-flex shrink-0 items-center gap-1">
                                     {onUndo && (
                                         <Button
                                             size="xs"
                                             variant="outlined"
                                             icon={mdUndo}
                                             disabled={!canUndo}
+                                            aria-label={t("page.storyMaker.editor.undo")}
                                             title={`${t("page.storyMaker.editor.undo")} (Ctrl+Z)`}
+                                            className="shrink-0 gap-1 px-2"
                                             onClick={onUndo}
                                         >
-                                            {t("page.storyMaker.editor.undo")}
+                                            <span className="hidden @[980px]:inline">{t("page.storyMaker.editor.undo")}</span>
                                             {undoCount > 0 && (
-                                                <span className="ml-0.5 font-mono opacity-75">({undoCount})</span>
+                                                <span className="font-mono text-[11px] opacity-80">{undoCount}</span>
                                             )}
                                         </Button>
                                     )}
@@ -2402,12 +2466,14 @@ export function StoryFlowCanvas({
                                             variant="outlined"
                                             icon={mdRedo}
                                             disabled={!canRedo}
+                                            aria-label={t("page.storyMaker.editor.redo")}
                                             title={`${t("page.storyMaker.editor.redo")} (Ctrl+Y)`}
+                                            className="shrink-0 gap-1 px-2"
                                             onClick={onRedo}
                                         >
-                                            {t("page.storyMaker.editor.redo")}
+                                            <span className="hidden @[980px]:inline">{t("page.storyMaker.editor.redo")}</span>
                                             {redoCount > 0 && (
-                                                <span className="ml-0.5 font-mono opacity-75">({redoCount})</span>
+                                                <span className="font-mono text-[11px] opacity-80">{redoCount}</span>
                                             )}
                                         </Button>
                                     )}
@@ -2416,15 +2482,18 @@ export function StoryFlowCanvas({
                             </>
                         )}
                         {onAddNode && (
-                            <>
+                            <div className="inline-flex shrink-0 items-center gap-1">
                                 <Button
                                     size="xs"
                                     variant="tonal"
                                     icon={mdMovie}
                                     disabled={nodesFull}
+                                    aria-label={t("page.storyMaker.v2.nodeTypes.scene")}
+                                    title={t("page.storyMaker.v2.nodeTypes.scene")}
+                                    className="shrink-0 gap-1 px-2"
                                     onClick={() => onAddNode("scene")}
                                 >
-                                    + {t("page.storyMaker.v2.nodeTypes.scene")}
+                                    <span className="hidden @[700px]:inline">{t("page.storyMaker.v2.nodeTypes.scene")}</span>
                                 </Button>
                                 <Button
                                     size="xs"
@@ -2432,9 +2501,12 @@ export function StoryFlowCanvas({
                                     color="tertiary"
                                     icon={mdAltRoute}
                                     disabled={nodesFull}
+                                    aria-label={t("page.storyMaker.v2.nodeTypes.choice")}
+                                    title={t("page.storyMaker.v2.nodeTypes.choice")}
+                                    className="shrink-0 gap-1 px-2"
                                     onClick={() => onAddNode("choice")}
                                 >
-                                    + {t("page.storyMaker.v2.nodeTypes.choice")}
+                                    <span className="hidden @[700px]:inline">{t("page.storyMaker.v2.nodeTypes.choice")}</span>
                                 </Button>
                                 <Button
                                     size="xs"
@@ -2442,86 +2514,78 @@ export function StoryFlowCanvas({
                                     color="secondary"
                                     icon={mdCalculate}
                                     disabled={nodesFull}
+                                    aria-label={t("page.storyMaker.v2.nodeTypes.condition")}
+                                    title={t("page.storyMaker.v2.nodeTypes.condition")}
+                                    className="shrink-0 gap-1 px-2"
                                     onClick={() => onAddNode("condition")}
                                 >
-                                    + {t("page.storyMaker.v2.nodeTypes.condition")}
+                                    <span className="hidden @[700px]:inline">{t("page.storyMaker.v2.nodeTypes.condition")}</span>
                                 </Button>
                                 <Button
                                     size="xs"
                                     variant="outlined"
                                     icon={mdFlag}
                                     disabled={nodesFull}
+                                    aria-label={t("page.storyMaker.v2.nodeTypes.end")}
+                                    title={t("page.storyMaker.v2.nodeTypes.end")}
+                                    className="shrink-0 gap-1 px-2"
                                     onClick={() => onAddNode("end")}
                                 >
-                                    + {t("page.storyMaker.v2.nodeTypes.end")}
+                                    <span className="hidden @[700px]:inline">{t("page.storyMaker.v2.nodeTypes.end")}</span>
                                 </Button>
-                            </>
+                            </div>
                         )}
                         {onAutoLayout && (
-                            <Button size="xs" variant="outlined" icon={mdWandStars} onClick={handleTriggerAutoLayout}>
-                                {t("page.storyMaker.flow.autoLayout")}
+                            <Button
+                                size="xs"
+                                variant="outlined"
+                                icon={mdWandStars}
+                                aria-label={t("page.storyMaker.flow.autoLayout")}
+                                title={t("page.storyMaker.flow.autoLayout")}
+                                className="shrink-0 gap-1 px-2"
+                                onClick={handleTriggerAutoLayout}
+                            >
+                                <span className="hidden @[860px]:inline">{t("page.storyMaker.flow.autoLayout")}</span>
                             </Button>
                         )}
                     </div>
                 ) : (
-                    <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">
+                    <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1.5 overflow-hidden">
                         {isPlay && (
-                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md3-full bg-primary px-2.5 py-0.5 type-label-m text-on-primary">
-                                <Icon path={mdLock} size={13} className="shrink-0" />
-                                <span className="truncate">{t("page.storyMaker.v2.mode.canvasReadonlyHint")}</span>
+                            <span className="inline-flex shrink-0 items-center gap-1 rounded-md3-full bg-primary px-2 py-0.5 type-label-s text-on-primary">
+                                <Icon path={mdLock} size={12} className="shrink-0" />
+                                <span className="hidden truncate @[820px]:inline">{t("page.storyMaker.v2.mode.canvasReadonlyHint")}</span>
                             </span>
                         )}
                         {activeNodeObj && (
-                            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md3-full bg-primary-container px-2.5 py-0.5 type-label-m text-on-primary-container">
+                            <span className="inline-flex min-w-0 max-w-[16rem] items-center gap-1.5 rounded-md3-full bg-primary-container px-2 py-0.5 type-label-s text-on-primary-container">
                                 <span aria-hidden className="inline-block size-2 shrink-0 animate-pulse rounded-full bg-primary" />
                                 <span className="truncate">
-                                    {t("page.storyMaker.phase.currentNode")}: {nodeDisplayTitle(activeNodeObj, t)}
+                                    {nodeDisplayTitle(activeNodeObj, t)}
                                 </span>
                             </span>
                         )}
-                        <span className="inline-flex items-center gap-1 rounded-md3-full bg-surface-container-high px-2.5 py-0.5 type-label-s text-on-surface-variant">
-                            <Icon path={mdAccountTree} size={14} className="shrink-0" />
+                        <span className="hidden shrink-0 items-center gap-1 rounded-md3-full bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant @[680px]:inline-flex">
+                            <Icon path={mdAccountTree} size={13} className="shrink-0" />
                             <span>{t("page.storyMaker.phase.visitedNodes", { count: visitedNodeSet.size })}</span>
                         </span>
                     </div>
                 )}
 
-                <div className="flex shrink-0 flex-wrap items-center gap-0.5">
-                    {isEdit && saveStatusLabel && (
-                        <span
-                            className={cn(
-                                "mr-1.5 inline-flex items-center gap-1 rounded-md3-full px-2 py-0.5 type-label-s",
-                                saveStatus === "error"
-                                    ? "bg-error-container text-on-error-container"
-                                    : "bg-surface-container text-on-surface-variant",
-                            )}
-                        >
-                            <Icon
-                                path={saveStatus === "error" ? mdErrorFill : mdCloudDone}
-                                size={13}
-                                className={cn("shrink-0", saveStatus === "saved" && "text-primary")}
-                            />
-                            <span>{saveStatusLabel}</span>
-                            {saveStatus === "error" && onRetrySave && (
-                                <button
-                                    type="button"
-                                    onClick={onRetrySave}
-                                    className="ml-1 cursor-pointer underline"
-                                >
-                                    {t("common.action.retry")}
-                                </button>
-                            )}
-                        </span>
-                    )}
+                <div className="flex shrink-0 flex-nowrap items-center gap-0.5">
                     {expandableNodeIds.length > 0 && (
                         <Button
                             size="xs"
                             variant="text"
                             icon={allExpandableExpanded ? mdUnfoldLess : mdUnfoldMore}
+                            aria-label={t(allExpandableExpanded ? "page.storyMaker.nle.collapseAllNodes" : "page.storyMaker.nle.expandAllNodes")}
+                            title={t(allExpandableExpanded ? "page.storyMaker.nle.collapseAllNodes" : "page.storyMaker.nle.expandAllNodes")}
                             onClick={toggleAllExpanded}
-                            className="mr-1"
+                            className="mr-0.5 shrink-0 gap-1 px-1.5"
                         >
-                            {t(allExpandableExpanded ? "page.storyMaker.nle.collapseAllNodes" : "page.storyMaker.nle.expandAllNodes")}
+                            <span className="hidden @[860px]:inline">
+                                {t(allExpandableExpanded ? "page.storyMaker.nle.collapseAllNodes" : "page.storyMaker.nle.expandAllNodes")}
+                            </span>
                         </Button>
                     )}
                     <IconButton
@@ -2535,7 +2599,7 @@ export function StoryFlowCanvas({
                         type="button"
                         onClick={() => fitView()}
                         title={t("page.storyMaker.flow.fitView")}
-                        className="state-layer focus-ring min-w-12 rounded-md3-sm px-1.5 py-1 text-center font-mono type-label-m text-on-surface-variant"
+                        className="state-layer focus-ring min-w-10 shrink-0 rounded-md3-sm px-1 py-1 text-center font-mono type-label-s text-on-surface-variant"
                     >
                         {zoomPercent}%
                     </button>

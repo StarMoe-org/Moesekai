@@ -309,12 +309,20 @@ function startHtmlAudioPlayback(
 
     const cleanupCurrent = () => {
         cancelRaf();
+        const audio = activeAudio;
         detachActive?.();
         detachActive = null;
-        if (activeAudio) {
-            activeAudio.pause();
-            activeAudio.removeAttribute("src");
-            activeAudio = null;
+        activeAudio = null;
+        if (audio) {
+            audio.pause();
+            audio.removeAttribute("src");
+            if (typeof audio.load === "function") {
+                try {
+                    audio.load();
+                } catch {
+                    // Ignore load() errors in stub/headless environments.
+                }
+            }
         }
     };
 
@@ -446,7 +454,11 @@ function startHtmlAudioPlayback(
 
         audio.play().then(
             () => {
-                if (settled || stopped) return;
+                if (settled || stopped || activeAudio !== audio) {
+                    audio.pause();
+                    audio.removeAttribute("src");
+                    return;
+                }
                 applyInitialSeek();
                 startProgressLoop();
             },
@@ -572,7 +584,10 @@ export function useStoryAudio(volume: number, muted: boolean): StoryAudioControl
         pending.then(
             () => {
                 entry.starting = false;
-                if (bgmRef.current !== entry) return;
+                if (bgmRef.current !== entry) {
+                    entry.audio.pause();
+                    return;
+                }
                 if (clamp01(entry.level * masterRef.current) <= 0) {
                     entry.audio.pause();
                 }
