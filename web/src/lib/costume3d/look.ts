@@ -267,11 +267,10 @@ export function resolveLook(variant: Costume3dVariant, catalog: Costume3dCatalog
     const ownFace = !wornHair || catalog.parts.includes(wornHair)
         ? null
         : (partById(catalog, catalog.role.defaultHair) ?? hairOptions(catalog)[0])?.model?.asset ?? null;
-    // The costume's accessory goes with its head, unless a pick takes the head off; another role's
-    // head is worn without one (it may be on another character's face).
-    const accessory = overrides.head === 0 || (overrides.head != null && !worn)
-        ? null
-        : variant.models.accessory ? { model: variant.models.accessory, attach: variant.models.accessory.attach ?? null } : null;
+    // The accessory is the worn head's: the costume's as the look has it, a picked head's own model.
+    const accessory = !worn?.model ? null
+        : worn === asGiven.head ? asGiven.accessory
+        : { model: worn.model, attach: worn.model.attach ?? null };
     return {
         ...look,
         face: ownFace ?? wornHair?.model?.asset ?? asGiven.face,
