@@ -7,7 +7,7 @@ import { PageContainer, PageHeader, Surface } from "@/components/md3";
 import { MOESEKAI_QQ_GROUP_ID } from "@/lib/team-links";
 
 const bulletGroups = [
-    ["account.passport", "account.games", "account.haruki", "account.guest"],
+    ["account.passport", "account.avatar", "account.games", "account.haruki", "account.guest"],
     ["local.preferences", "local.account", "local.tokens", "local.gameData"],
     ["server.accounts", "server.gameData", "server.guessMusic", "server.community"],
     ["network.starmoe", "network.publicApi", "network.turnstile", "network.analytics"],

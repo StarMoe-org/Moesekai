@@ -1741,7 +1741,7 @@ export const koKRMessages = {
         },
         privacy: {
             title: "개인정보 처리방침",
-            updated: "최종 업데이트: 2026년 11월 21일",
+            updated: "최종 업데이트: 2026년 11월 23일",
             overview: {
                 title: "1. 개요",
                 body: "Moesekai(pjsk.moe)는 비영리 PROJECT SEKAI 팬 데이터 뷰어입니다. 보기 기능은 모두 로그인 없이 쓸 수 있으며, StarMoe 패스포트로 로그인하면 게임 계정을 다른 기기에서도 쓸 수 있습니다. 이 방침은 사이트가 기기와 서버에 무엇을 저장하는지, 언제 제3자 서비스와 통신하는지, 이용자가 그 데이터를 어떻게 관리할 수 있는지 설명합니다.",
@@ -1750,6 +1750,7 @@ export const koKRMessages = {
                 title: "2. StarMoe 패스포트와 게임 계정",
                 intro: "로그인은 선택 사항입니다. 로그인하면:",
                 passport: "로그인은 StarMoe 패스포트(passport.star.moe)가 처리합니다. Moesekai는 패스포트의 사용자 ID, 표시 이름, 사용자 이름, 아바타만 받으며 비밀번호에는 접근하지 않습니다.",
+                avatar: "Moesekai에서 고른 아바타(카드 일러스트)는 패스포트에 기록되어 다른 StarMoe 사이트에서도 표시됩니다. Moesekai는 패스포트의 다른 정보를 변경할 수 없습니다.",
                 games: "직접 추가한 게임 계정(서버, UID, 메모)은 Moesekai 서버에 저장되어 다른 기기에서 로그인해도 쓸 수 있습니다.",
                 haruki: "Haruki 툴박스를 연결하면 인증은 StarMoe Connect(connect.star.moe)가 보관하며 Moesekai는 Haruki 토큰에 접근하지 않습니다. Haruki에서 인증한 게임 계정이 자동으로 나타나고, 게임 데이터는 Moesekai 서버가 대신 Haruki에서 읽어 옵니다.",
                 guest: "로그인하지 않으면(게스트 모드) 게임 계정과 게임 데이터는 이 브라우저에만 저장됩니다.",
@@ -1990,6 +1991,7 @@ export const koKRMessages = {
                 empty: "일치하는 카드가 없습니다",
                 emptyHint: "다른 캐릭터, 레어도 필터 또는 검색어를 시도해 보세요.",
                 notTrainable: "이 레어도는 특훈 후 일러스트가 없습니다",
+                passportNote: "아바타는 StarMoe 패스포트에도 저장되어 다른 StarMoe 사이트에서도 표시됩니다.",
             },
             notifications: {
                 title: "알림",

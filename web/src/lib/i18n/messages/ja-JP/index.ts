@@ -1743,7 +1743,7 @@ export const jaJPMessages = {
     },
     privacy: {
       title: 'プライバシーポリシー',
-      updated: '最終更新日：2026年11月21日',
+      updated: '最終更新日：2026年11月23日',
       overview: {
         title: '1. 概要',
         body: 'Moesekai（pjsk.moe）は非営利の PROJECT SEKAI ファン向けデータビューアーです。閲覧機能はすべてログインなしで使えます。StarMoe パスポートでログインすると、ゲームアカウントを別の端末でも使えます。本ポリシーでは、本サイトが端末とサーバーに何を保存するか、いつ第三者サービスと通信するか、利用者がそのデータをどう管理できるかを説明します。',
@@ -1752,6 +1752,7 @@ export const jaJPMessages = {
         title: '2. StarMoe パスポートとゲームアカウント',
         intro: 'ログインは任意です。ログインすると：',
         passport: 'ログインは StarMoe パスポート（passport.star.moe）で行います。Moesekai が受け取るのはパスポートのユーザー ID、表示名、ユーザー名、アイコンのみで、パスワードには触れません。',
+        avatar: 'Moesekai で選んだアイコン（カードの絵柄）はパスポートに書き込まれ、ほかの StarMoe サイトでも表示されます。Moesekai がパスポートのほかの情報を変更することはできません。',
         games: '手動で追加したゲームアカウント（サーバー、UID、メモ）は Moesekai のサーバーに保存され、別の端末でログインしても使えます。',
         haruki: 'Haruki ツールボックスを連携すると、認可は StarMoe Connect（connect.star.moe）が保管し、Moesekai は Haruki のトークンに触れません。Haruki で認証済みのゲームアカウントは自動で表示され、ゲームデータは Moesekai のサーバーが代わりに Haruki から読み込みます。',
         guest: 'ログインしない場合（ゲストモード）、ゲームアカウントとゲームデータはこのブラウザーにのみ保存されます。',
@@ -1992,6 +1993,7 @@ export const jaJPMessages = {
         empty: '該当するカードがありません',
         emptyHint: 'キャラクターやレアリティ、検索語を変更してみてください。',
         notTrainable: 'このレアリティに特訓後イラストはありません',
+        passportNote: 'アバターは StarMoe パスポートにも保存され、ほかの StarMoe サイトでも表示されます。',
       },
       notifications: {
         title: '通知',

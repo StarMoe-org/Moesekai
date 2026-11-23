@@ -1744,7 +1744,7 @@ export const enUSMessages = {
         },
         privacy: {
             title: "Privacy Policy",
-            updated: "Last updated: November 21, 2026",
+            updated: "Last updated: November 23, 2026",
             overview: {
                 title: "1. Overview",
                 body: "Moesekai (pjsk.moe) is a non-profit PROJECT SEKAI fan data viewer. Everything you can view works without signing in; sign in with a StarMoe Passport and your game accounts follow you to other devices. This policy explains what the site keeps on your device and on our servers, when it talks to third-party services, and how you can control that data.",
@@ -1753,6 +1753,7 @@ export const enUSMessages = {
                 title: "2. StarMoe Passport and game accounts",
                 intro: "Signing in is optional. Once you sign in:",
                 passport: "Sign-in is handled by StarMoe Passport (passport.star.moe). Moesekai receives only your Passport user ID, display name, username, and avatar, never your password.",
+                avatar: "The avatar you pick on Moesekai (a card face) is written to your Passport, so other StarMoe sites show it too. Moesekai cannot change anything else on your Passport.",
                 games: "Game accounts you add by hand (server, UID, and label) are kept on Moesekai's servers, so they are there when you sign in on another device.",
                 haruki: "When you connect Haruki Toolbox, the authorization is kept by StarMoe Connect (connect.star.moe); Moesekai never sees the Haruki token. Accounts Haruki has verified appear automatically, and Moesekai's servers read their game data from Haruki for you.",
                 guest: "Without signing in (guest mode), game accounts and game data stay in this browser only.",
@@ -1993,6 +1994,7 @@ export const enUSMessages = {
                 empty: "No matching cards",
                 emptyHint: "Try another character, rarity filter, or search term.",
                 notTrainable: "This rarity has no trained artwork",
+                passportNote: "Your avatar is saved to your StarMoe Passport, so other StarMoe sites show it too.",
             },
             notifications: {
                 title: "Notifications",
