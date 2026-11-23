@@ -18,11 +18,7 @@ import LocalizedLink from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { MOE_LOGO_URL } from "@/lib/assets";
-import {
-    LIVE2D_VIEWER_PATH,
-    live2dCoreUrl,
-    live2dSources,
-} from "@/lib/live2dViewer/config";
+import { LIVE2D_VIEWER_PATH, live2dCoreUrl } from "@/lib/live2dViewer/config";
 import { LIVE2D_VIEWER_RELEASE } from "@/lib/live2dViewer/release";
 import { localizePath } from "@/lib/localized-path";
 import { SSE_WEB_PATH, sseWebSources } from "@/lib/sseWeb/config";
@@ -101,7 +97,6 @@ export function StoryStudioWebProvider({ children }: StoryStudioWebProviderProps
             pathname={pathname}
             live2dScriptBase={live2dScriptBase}
             live2dCoreUrl={live2dCore}
-            live2dSources={live2dSources}
             sseWebScriptBase={sseWebScriptBase}
             coreConfig={coreConfig}
             brandLogoUrl={MOE_LOGO_URL}

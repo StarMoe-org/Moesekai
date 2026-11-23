@@ -1,26 +1,42 @@
 import { getAssetBaseUrl, type AssetLine } from "@/lib/assets";
-import { live2dSources, type Live2DRegion } from "./config";
-import { parseLive2DModelIndex, type Live2DModel } from "./models";
+import { live2dListingUrl, type Live2DRegion } from "./config";
+import { live2dModelsFromListings, type Live2DModel } from "./models";
 
-/** The network side of the Live2D viewer page: a server's model index, and the story backgrounds to stand a model on. */
+/** The network side of the Live2D viewer page: a server's models, and the story backgrounds to stand a model on. */
 
-const modelIndexCache = new Map<string, Promise<Live2DModel[]>>();
+/** The subdirectories of a directory listing of the site; null when the site has no such directory (404). */
+async function subdirectories(url: string): Promise<string[] | null> {
+    const response = await fetch(url, { credentials: "omit", headers: { Accept: "application/json" } });
+    if (response.status === 404) return null;
+    if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
+    const listing = await response.json() as { format?: string; version?: number; directories?: string[] };
+    if (listing.format !== "directory-listing" || listing.version !== 1) {
+        throw new Error(`${url}: unsupported listing ${String(listing.format)} ${String(listing.version)}`);
+    }
+    return listing.directories ?? [];
+}
 
-/** A server's models; none when its index is not published yet (404). Cached per `${region}|${url}` (retries on rejection). */
+const modelCache = new Map<string, Promise<Live2DModel[]>>();
+
+/**
+ * A server's models, from the listings of its publication's `live2d/model/` and `live2d/motion/`;
+ * none when it publishes no models. Cached per `${region}|${url}` (retries on rejection).
+ */
 export function fetchLive2DModels(region: Live2DRegion, signal?: AbortSignal): Promise<Live2DModel[]> {
     if (signal?.aborted) return Promise.reject(createAbortError());
-    const url = live2dSources(region).index;
-    const key = `${region}|${url}`;
-    let cached = modelIndexCache.get(key);
+    const modelsUrl = live2dListingUrl(region, "live2d/model/");
+    const key = `${region}|${modelsUrl}`;
+    let cached = modelCache.get(key);
     if (!cached) {
         const loading = (async (): Promise<Live2DModel[]> => {
-            const response = await fetch(url, { credentials: "omit", headers: { Accept: "application/json" } });
-            if (response.status === 404) return [];
-            if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-            return parseLive2DModelIndex(await response.json());
+            const [models, motions] = await Promise.all([
+                subdirectories(modelsUrl),
+                subdirectories(live2dListingUrl(region, "live2d/motion/")),
+            ]);
+            return live2dModelsFromListings(models ?? [], motions ?? []);
         })();
-        modelIndexCache.set(key, loading);
-        loading.catch(() => modelIndexCache.delete(key));
+        modelCache.set(key, loading);
+        loading.catch(() => modelCache.delete(key));
         cached = loading;
     }
     return withAbortSignal(cached, signal);
@@ -80,14 +96,10 @@ export function fetchStoryBackgrounds(region: Live2DRegion, line: AssetLine, sig
     if (!cached) {
         const url = `${getAssetBaseUrl(`${line}-${region}`)}/${BACKGROUND_DIRECTORY}`;
         const loading = (async () => {
-            const response = await fetch(url, { credentials: "omit", headers: { Accept: "application/json" } });
-            if (!response.ok) throw new Error(`${url}: HTTP ${response.status}`);
-            const listing = await response.json() as { format?: string; version?: number; directories?: string[] };
-            if (listing.format !== "directory-listing" || listing.version !== 1) {
-                throw new Error(`${url}: unsupported listing ${String(listing.format)} ${String(listing.version)}`);
-            }
+            const directories = await subdirectories(url);
+            if (!directories) throw new Error(`${url}: HTTP 404`);
             // a few directories are not backgrounds of their own
-            return (listing.directories ?? []).filter(name => /^bg/.test(name));
+            return directories.filter(name => /^bg/.test(name));
         })();
         backgroundCache.set(key, loading);
         loading.catch(() => backgroundCache.delete(key));
