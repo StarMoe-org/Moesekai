@@ -12,8 +12,8 @@ Web-specific Moesekai Community Stories features (`StoryPublishDialog.tsx`, `Sto
 `web/package.json` declares standard public npm semver ranges:
 
 ```json
-"@moesekai/story-core": "^0.1.3",
-"@moesekai/story-editor": "^0.1.3"
+"@moesekai/story-core": "^0.1.4",
+"@moesekai/story-editor": "^0.1.4"
 ```
 
 - **Zero authentication required**: Both packages are published publicly under `@moesekai/*` on `registry.npmjs.org`. No `.npmrc` token or private registry secret is needed.
