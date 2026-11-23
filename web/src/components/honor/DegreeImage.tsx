@@ -2,15 +2,20 @@
 import React, { useState, useEffect } from "react";
 import { IHonorInfo, IHonorGroup } from "@/types/honor";
 import {
+    getHonorBackgroundUrl,
     getHonorBgUrl,
     getHonorCustomFrameUrl,
     getHonorFrameUrl,
     getHonorLevelIconUrl,
     getHonorRankUrl,
     getHonorRankMatchBgUrl,
+    getHonorWordUrl,
 } from "@/lib/assets";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 import { mdMilitaryTech } from "@/components/md3/icons";
+import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
+import { resolveCharacterHonorStyle } from "@/lib/character-honor-styles";
+import type { ServerSourceType } from "@/lib/fetch";
 
 // Achievement group IDs that should show level icons
 const ACHIEVEMENT_LEVEL_WHITELIST = new Set([33, 36, 37, 52, 72, 73, 74, 75, 76, 77]);
@@ -43,6 +48,12 @@ interface DegreeImageProps {
     sub?: boolean;
     source?: AssetSourceType;
     className?: string;
+    /** A character honor's chosen background style (honorBackgrounds id); 0 or absent is the default. */
+    honorBackgroundId?: number;
+    /** A character honor's chosen word (honorWords id); 0 or absent is the default. */
+    honorWordId?: number;
+    /** The server whose masterdata the honor comes from; the current one when omitted. */
+    server?: ServerSourceType;
 }
 
 export default function DegreeImage({
@@ -52,6 +63,9 @@ export default function DegreeImage({
     sub = false,
     source = "main-jp",
     className,
+    honorBackgroundId,
+    honorWordId,
+    server,
 }: DegreeImageProps) {
     const width = sub ? 180 : 380;
     const height = 80;
@@ -70,13 +84,13 @@ export default function DegreeImage({
     const isWorldLinkDegree = bgAssetName ? /.*_cp\d$/.test(bgAssetName) : false;
 
     // ── Background URL ──
-    let bgUrl: string | undefined;
+    let legacyBgUrl: string | undefined;
     if (honorType === "rank_match" && honorGroup?.backgroundAssetbundleName) {
-        bgUrl = getHonorRankMatchBgUrl(honorGroup.backgroundAssetbundleName, sub, source);
+        legacyBgUrl = getHonorRankMatchBgUrl(honorGroup.backgroundAssetbundleName, sub, source);
     } else if (honorGroup?.backgroundAssetbundleName) {
-        bgUrl = getHonorBgUrl(honorGroup.backgroundAssetbundleName, sub, source);
+        legacyBgUrl = getHonorBgUrl(honorGroup.backgroundAssetbundleName, sub, source);
     } else if (bgAssetName) {
-        bgUrl = getHonorBgUrl(bgAssetName, sub, source);
+        legacyBgUrl = getHonorBgUrl(bgAssetName, sub, source);
     }
 
     // ── Frame URL ──
@@ -87,6 +101,22 @@ export default function DegreeImage({
 
     const rarityNumMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     const rarityNum = rarityNumMap[rarity] || 1;
+
+    // ── Character honor: chosen background style + word ──
+    // The game draws a character honor from a background style, with the word laid over it on
+    // the main slot. The legacy honor art is style 1 with the first word baked in and looks the
+    // same, so the tables are only loaded when the player chose something else.
+    const customStyle = honorType === "character" && (!!honorBackgroundId || !!honorWordId);
+    const honorStyles = useCharacterHonorStyles(server, customStyle);
+    const stylesPending = customStyle && !honorStyles;
+    const style = honorStyles
+        ? resolveCharacterHonorStyle(honorStyles, honor.groupId, honorBackgroundId, honorWordId)
+        : undefined;
+    // All or nothing: the legacy art already carries a word, and a style background without
+    // its word would be blank. Servers without the tables keep the legacy art.
+    const styleBg = style?.background && (sub || style.word) ? style.background : undefined;
+    const styleBgUrl = styleBg ? getHonorBackgroundUrl(styleBg.assetbundleName, sub, source) : undefined;
+    const wordUrl = styleBg && !sub && style?.word ? getHonorWordUrl(style.word.assetbundleName, rarity, source) : undefined;
 
     // Custom frame bundles only ship the high/highest variants (birthday also has middle);
     // other rarities use the default frame, which is also the fallback when the custom one is missing.
@@ -159,7 +189,19 @@ export default function DegreeImage({
     }
 
     // ── Preload images to hide 404s ──
-    const bgStatus = useImageStatus(bgUrl);
+    const styleBgStatus = useImageStatus(styleBgUrl);
+    const wordStatus = useImageStatus(wordUrl);
+    const useStyle = !!styleBgUrl && styleBgStatus !== "error" && wordStatus !== "error";
+    const legacyStatus = useImageStatus(stylesPending || useStyle ? undefined : legacyBgUrl);
+    const bgUrl = useStyle ? styleBgUrl : legacyBgUrl;
+    let bgStatus: ImageStatus;
+    if (stylesPending) {
+        bgStatus = "loading";
+    } else if (useStyle) {
+        bgStatus = styleBgStatus === "loaded" && (!wordUrl || wordStatus === "loaded") ? "loaded" : "loading";
+    } else {
+        bgStatus = legacyStatus;
+    }
     const bgLoaded = bgStatus === "loaded";
     const customFrameLoaded = useImageStatus(customFrameUrl) === "loaded";
     const frameUrl = customFrameUrl && customFrameLoaded ? customFrameUrl : defaultFrameUrl;
@@ -192,6 +234,16 @@ export default function DegreeImage({
             {bgUrl && bgLoaded && (
                 <image
                     href={bgUrl}
+                    x="0"
+                    y="0"
+                    height={height}
+                    width={width}
+                />
+            )}
+            {/* Character honor word, over its background style */}
+            {useStyle && wordUrl && bgLoaded && (
+                <image
+                    href={wordUrl}
                     x="0"
                     y="0"
                     height={height}

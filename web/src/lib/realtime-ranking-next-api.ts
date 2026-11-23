@@ -124,7 +124,13 @@ function normalizeHonor(item: RawProfileHonorV2): NormalizedPlayerHonor | null {
     }
 
     if (!honorId) return null;
-    return { kind: "normal", honorId, honorLevel };
+    return {
+        kind: "normal",
+        honorId,
+        honorLevel,
+        honorBackgroundId: tryNumber(item.honorBackgroundId),
+        honorWordId: tryNumber(item.honorWordId),
+    };
 }
 
 function normalizeHonors(entry: RawRankingEntryV2): NormalizedPlayerHonor[] {

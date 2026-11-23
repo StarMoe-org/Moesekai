@@ -24,6 +24,7 @@ export async function fetchRealtimeRankingMasterData(region: RealtimeRankingRegi
     ]);
 
     return {
+        server: region,
         cards,
         honors,
         honorGroups,

@@ -29,6 +29,29 @@ export interface IHonorGroup {
     frameName?: string;
 }
 
+/**
+ * A word a character honor can show (honorWords.json): seq 1 is the "fan" word the honor always
+ * had, seq 2 the "oshi" word. Each one unlocks at a character rank, which its description states.
+ */
+export interface IHonorWord {
+    id: number;
+    seq: number;
+    honorGroupId: number;
+    assetbundleName: string;
+    name: string;
+    description: string;
+}
+
+/** A background style a character honor can use (honorBackgrounds.json), unlocked the same way. */
+export interface IHonorBackground {
+    id: number;
+    seq: number;
+    honorGroupId: number;
+    assetbundleName: string;
+    name: string;
+    description: string;
+}
+
 // ==================== Bonds Honor Types ====================
 
 export interface IBondsHonor {

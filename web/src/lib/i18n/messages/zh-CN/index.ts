@@ -3342,6 +3342,10 @@ export const zhCNMessages = {
                 main: "主牌",
                 sub: "副牌",
             },
+            characterStyle: {
+                background: "背景",
+                word: "字样",
+            },
             bondsBadge: "羁绊",
             loadingFallback: "正在加载称号数据...",
         },

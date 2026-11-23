@@ -20,7 +20,7 @@ export type ServerSourceType = "en" | "jp" | "cn" | "tw" | "kr";
 /**
  * Get current server from localStorage (client-side only)
  */
-function getCurrentServer(): ServerSourceType {
+export function getCurrentServer(): ServerSourceType {
     if (typeof window === "undefined" || typeof localStorage === "undefined") return "cn";
     try {
         const saved = localStorage.getItem("server-source");

@@ -3366,6 +3366,10 @@ export const jaJPMessages = {
         main: 'メイン',
         sub: 'サブ'
       },
+      characterStyle: {
+        background: '背景',
+        word: 'ワード'
+      },
       bondsBadge: 'Bonds',
       loadingFallback: 'Loading honor data...'
     },

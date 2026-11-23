@@ -356,6 +356,21 @@ export function getHonorBgUrl(assetbundleName: string, sub: boolean = false, sou
     return buildImageAssetUrl(source, `honor/${assetbundleName}/degree_${sub ? "sub" : "main"}`);
 }
 
+/** A character honor's background style: honor art without the word, 380x80 main / 180x80 sub. */
+export function getHonorBackgroundUrl(assetbundleName: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
+    return buildImageAssetUrl(source, `honor_background/${assetbundleName}/degree_${sub ? "sub" : "main"}`);
+}
+
+// Honor words (character and bonds) have one bundle per rarity, each with its own outline colour:
+// the game loads `{word}_{rarity + 1:00}` (low → _01 … highest → _04).
+const HONOR_WORD_RARITY_SUFFIX: Record<string, string> = { low: "01", middle: "02", high: "03", highest: "04" };
+
+/** A character honor's word, 380x80 to lay over the main background at (0, 0). */
+export function getHonorWordUrl(assetbundleName: string, rarity: string = "low", source: AssetSourceType = "main-jp"): string {
+    const name = `${assetbundleName}_${HONOR_WORD_RARITY_SUFFIX[rarity] ?? "01"}`;
+    return buildImageAssetUrl(source, `honor_word/${name}/${name}`);
+}
+
 export function getHonorCustomFrameUrl(frameName: string, rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
     const num = rarityMap[rarity] || 1;
@@ -373,11 +388,9 @@ export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = f
 }
 
 // Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
-// The word has one bundle per rarity: the game loads `{word}_{rarity + 1:00}` (low → _01 … highest → _04).
-const BONDS_HONOR_WORD_RARITY_SUFFIX: Record<string, string> = { low: "01", middle: "02", high: "03", highest: "04" };
-
+// The word has one bundle per rarity (HONOR_WORD_RARITY_SUFFIX).
 export function getBondsHonorWordUrl(assetbundleName: string, rarity: string = "low", source: AssetSourceType = "main-jp"): string {
-    const name = `${assetbundleName}_${BONDS_HONOR_WORD_RARITY_SUFFIX[rarity] ?? "01"}`;
+    const name = `${assetbundleName}_${HONOR_WORD_RARITY_SUFFIX[rarity] ?? "01"}`;
     return buildImageAssetUrl(source, `bonds_honor/word/${name}/${name}`);
 }
 

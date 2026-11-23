@@ -2113,6 +2113,10 @@ export const zhTWPagePrimary = {
                 main: "主牌",
                 sub: "副牌",
             },
+            characterStyle: {
+                background: "背景",
+                word: "字樣",
+            },
             bondsBadge: "羈絆",
             loadingFallback: "正在載入稱號資料...",
         },

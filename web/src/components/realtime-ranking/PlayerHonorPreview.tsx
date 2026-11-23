@@ -60,6 +60,9 @@ function renderHonorItem(
                     source={assetSource}
                     sub
                     className="w-full"
+                    honorBackgroundId={item.honorBackgroundId}
+                    honorWordId={item.honorWordId}
+                    server={masterData.server}
                 />
             </div>
         );
