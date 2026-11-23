@@ -5,13 +5,16 @@ import {
     buildAudioTarBundle,
     buildSafeArchiveClipPath,
     buildUstarHeader,
+    connectEdge,
+    createNode,
+    createSceneBeat,
+    createStoryDocument,
     estimateTarArchiveBytes,
     extractTalkBeatsForVoice,
     matchAudioFilesToTalkBeats,
     sha256Hex,
     validateAudioSelection,
-} from "../src/lib/storyMaker/audioBundle.ts";
-import { connectEdge, createNode, createSceneBeat, createStoryDocument } from "../src/lib/storyMaker/document.ts";
+} from "@moesekai/story-core";
 
 /** Minimal POSIX USTAR parser to verify every header block, checksum, padding, and EOF record. */
 function parseUstarTar(bytes) {

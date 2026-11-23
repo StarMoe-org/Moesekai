@@ -2,7 +2,7 @@ import { assetGuideMessages } from "./assetGuide";
 import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
-import { storyMakerMessages } from "./storyMaker";
+import { storyMakerMessages } from "@moesekai/story-editor/messages/zh-CN";
 import type { MessageTree } from "../types";
 
 export const zhCNMessages = {

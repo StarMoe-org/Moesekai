@@ -3,7 +3,7 @@
  * All UI labels are resolved through i18n keys (labelKey) rather than hardcoded strings.
  */
 
-import type { StoryDocument, StoryVoiceManifest } from "./storyMaker";
+import type { StoryDocument, StoryVoiceManifest } from "@moesekai/story-core";
 
 export type CommunityMode = "normal" | "strict_review" | "read_only";
 export type CommunityRole = "user" | "mod" | "admin";
@@ -295,7 +295,7 @@ export interface StoryAudioUploadCompleteResponse {
 
 export interface StoryAudioBatchSummary {
     batch_id: string;
-    status: StoryVoiceStatus | "failed";
+    status: StoryVoiceStatus | "leased" | "failed";
     voice_locale: string;
     total_clip_count: number;
     new_clip_count: number;

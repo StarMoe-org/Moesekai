@@ -99,6 +99,9 @@ const nextConfig: NextConfig = {
   // Keep QA builds separate from a running standalone server on Windows.
   distDir: process.env.MOE_NEXT_DIST_DIR || ".next",
   output: "standalone",
+  // Shared Story Studio packages published from StarMoe-org/moesekai-story-studio
+  // on public npmjs.org (see web/docs/story-maker-packages.md).
+  transpilePackages: ["@moesekai/story-core", "@moesekai/story-editor"],
   cacheMaxMemorySize: 50 * 1024 * 1024,
   trailingSlash: true,
   allowedDevOrigins: getAllowedDevOrigins(),

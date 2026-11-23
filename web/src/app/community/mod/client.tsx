@@ -19,7 +19,7 @@ import {
     submitModAction,
     upsertModRule,
 } from "@/lib/community-api";
-import { formatByteSize, formatDurationMs } from "@/lib/storyMaker/audioBundle";
+import { formatByteSize, formatDurationMs, isSafeVoiceManifestUrl } from "@moesekai/story-core";
 import { setCommunityModeLocal, useCommunitySession } from "@/lib/community-session";
 import CommunityAuthorBadge from "@/components/community/CommunityAuthorBadge";
 import CommunityAvatar from "@/components/community/CommunityAvatar";
@@ -872,7 +872,7 @@ export default function CommunityModClient() {
                                                                             </div>
                                                                         </div>
 
-                                                                        {clip.preview_url && (
+                                                                        {clip.preview_url && isSafeVoiceManifestUrl(clip.preview_url) && (
                                                                             <audio
                                                                                 controls
                                                                                 preload="none"

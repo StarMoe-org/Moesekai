@@ -332,6 +332,7 @@ export default function CommunityStoriesClient() {
     useQuickFilter(t("page.community.stories.filterTitle"), filterContent, [
         langFilter,
         serverTag,
+        tagFilter,
         sort,
         searchQuery,
         visiblePosts.length,

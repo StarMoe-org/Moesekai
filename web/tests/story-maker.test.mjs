@@ -14,12 +14,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
-const { STORY_ISSUE_CODES, STORY_SCHEMA_VERSION } = await import("../src/types/storyMaker.ts");
+const storyCore = await import("@moesekai/story-core");
 const {
+    STORY_ISSUE_CODES, STORY_SCHEMA_VERSION,
     DEFAULT_STORY_BACKGROUND, DEFAULT_STORY_BGM, DEFAULT_STORY_SE, SLOT_X, STORY_AUDIO_PATH_PATTERN,
     STORY_LIMITS, STORY_MOTION_PATTERN, detectStageActorOverlaps, layoutStageActors,
-} = await import("../src/lib/storyMaker/limits.ts");
-const {
     STORY_DRAG_MIME, STORY_BEAT_DRAG_MIME, GRAPH_COL_GAP, GRAPH_ROW_GAP,
     newStoryId, createStoryDocument, createNode, moveNode, removeNode, duplicateNode,
     continueAndCutScene,
@@ -33,21 +32,16 @@ const {
     addVariable, updateVariable, removeVariable, variableUsage,
     acceptsTarget, canDropOnTarget, applyDragPayloadToTarget, autoLayoutGraph,
     storyFileName, storyScriptFileName, serializeStory,
-} = await import("../src/lib/storyMaker/document.ts");
-const { compileStoryGraph } = await import("../src/lib/storyMaker/compiler.ts");
-const { validateStoryDocument, parseStoryJson, parseStoryDocumentDraft } = await import("../src/lib/storyMaker/validate.ts");
-const {
+    compileStoryGraph,
+    validateStoryDocument, parseStoryJson, parseStoryDocumentDraft,
     INITIAL_STAGE_STATE, initVariables, interpolateStoryText, evaluateCondition, applyVarOps,
     createInitialRuntime, advanceRuntime, evaluateStageAt,
-} = await import("../src/lib/storyMaker/runtime.ts");
-const {
     STORY_SCRIPT_EXT, STORY_SCRIPT_NAME, serializeStoryScript, parseStoryScript,
-} = await import("../src/lib/storyMaker/script.ts");
-const starterModule = await import("../src/lib/storyMaker/starter.ts");
-const { createStarterStoryDocument, createStarterStoryFromScript } = starterModule;
-const {
+    createStarterStoryDocument, createStarterStoryFromScript,
     extractWaveformPeaks, decodeStoryAudio, getCachedStoryAudio, clearStoryAudioCache,
-} = await import("../src/lib/storyMaker/audioCache.ts");
+    configureStoryCore, resetStoryCoreConfig,
+} = storyCore;
+const starterModule = storyCore;
 const { importWebTypeScript } = await import("./characterization/test-helpers.mjs");
 
 function starterStrings() {
@@ -867,33 +861,8 @@ test("parseStoryScript reports precise line:col diagnostics on syntax errors", (
 // ==================== 6. v2 Preloader & Cache Inspector Tests ====================
 
 test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross-server voices) and preloadStoryAssets matches stage-worker.js cache keys", async () => {
-    const preloaderMod = await importWebTypeScript("src/lib/storyMaker/preloader.ts", [
-        [
-            `import { getAssetLine, type AssetLine } from "@/lib/assets";`,
-            `const getAssetLine = (s) => String(s).startsWith("backup") ? "backup" : "main";`,
-        ],
-        [`import { fetchLive2DModels } from "@/lib/live2dViewer/client";`, `const fetchLive2DModels = async () => [];`],
-        [
-            `import { live2dSources } from "@/lib/live2dViewer/config";`,
-            `const live2dSources = (r) => ({ library: "https://assets.pjsk.moe/ripper/" + r + "/", index: "" });`,
-        ],
-        [
-            `import {\n    storyBackgroundUrl, storyBgmUrl, storySeCandidateUrls, storyVoiceCandidateUrls,\n} from "./assets";`,
-            `const storyBackgroundUrl = (n, r) => "https://storage.pjsk.moe/sekai-" + r + "-assets/scenario/background/" + n + "/" + n + ".webp";
-const storyBgmUrl = (n, r) => "https://storage.pjsk.moe/sekai-" + r + "-assets/sound/scenario/bgm/" + n + "/" + n + ".mp3";
-const storySeCandidateUrls = (n, r) => ["https://storage.pjsk.moe/sekai-" + r + "-assets/sound/scenario/se/" + n + ".mp3"];
-const storyVoiceCandidateUrls = (v, r) => ["https://storage.pjsk.moe/sekai-" + (v.region || r) + "-assets/sound/" + v.kind + "/" + v.scenarioId + "/" + v.voiceId + ".mp3"];`,
-        ],
-        [
-            `import { decodeStoryAudio, getCachedStoryAudio, getSharedAudioContext } from "./audioCache";`,
-            `const decodeStoryAudio = async () => null;\nconst getCachedStoryAudio = () => null;\nconst getSharedAudioContext = () => null;`,
-        ],
-        [
-            `import { resolveVoiceManifestLineUrl } from "./i18nPack";`,
-            `import { resolveVoiceManifestLineUrl } from "${new URL("../src/lib/storyMaker/i18nPack.ts", import.meta.url).href}";`,
-        ],
-        [`import { loadStoryUiKit } from "./uiKit";`, `const loadStoryUiKit = async () => null;`],
-    ]);
+    const preloaderMod = storyCore;
+    configureStoryCore({ live2dLibraryBase: "https://assets.pjsk.moe/ripper/" });
 
     let doc = createStoryDocument("jp", "v2 Dedup");
     doc = addCastMember(doc, { key: "a", modelId: "v2_01ichika_casual", name: "Ichika A" });
@@ -1035,6 +1004,7 @@ const storyVoiceCandidateUrls = (v, r) => ["https://storage.pjsk.moe/sekai-" + (
         assert.equal(status.live2dCachedModels, 1);
         assert.equal(status.hasLocalCache, true);
     } finally {
+        resetStoryCoreConfig();
         globalThis.caches = prevCaches;
         globalThis.fetch = prevFetch;
     }
@@ -1227,35 +1197,7 @@ test("extractWaveformPeaks normalizes stereo buffers and decodeStoryAudio caches
 });
 
 test("storyMaker assets URL resolution, cross-server voice URLs, and cached catalogs work cleanly", async () => {
-    globalThis.__testMasterMock = {
-        fail: false,
-        tracks: [
-            { id: 101, seq: 10, title: "一緒に歌おう！", musicSoundTrackCategoryId: 12, assetbundleName: "mysekai/sound/bgm/music0001", assetbundleFileName: "music0001" },
-            { id: 104, seq: 20, title: "斜陽に照らされて", musicSoundTrackCategoryId: 3, assetbundleName: "sound/scenario/bgm/bgm_area00001", assetbundleFileName: "bgm_area00001" },
-        ],
-        categories: [{ id: 3, name: "レオニ" }, { id: 12, name: "マイセカイ" }],
-    };
-
-    const assetsMod = await importWebTypeScript("src/lib/storyMaker/assets.ts", [
-        [
-            `import {\n    getAreaTalkVoiceUrl, getAssetBaseUrl, getBackgroundImageUrl, getCardStoryVoiceUrl, getStoryBgmUrl,\n    getStorySoundEffectUrl, getStoryVoiceUrl, type AssetLine,\n} from "@/lib/assets";`,
-            `const getAssetBaseUrl = (s) => (s.startsWith("backup-") ? "https://storage.exmeaning.com" : "https://storage.pjsk.moe") + "/sekai-" + s.slice(s.indexOf("-") + 1) + "-assets";
-const getBackgroundImageUrl = (n, s) => getAssetBaseUrl(s) + "/scenario/background/" + n + "/" + n + ".webp";
-const getStoryBgmUrl = (n, s) => getAssetBaseUrl(s) + "/sound/scenario/bgm/" + n + "/" + n + ".mp3";
-const getStorySoundEffectUrl = (n, s) => getAssetBaseUrl(s) + "/sound/scenario/se/" + n + ".mp3";
-const getStoryVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/scenario/voice/" + sc + "/" + v + ".mp3";
-const getCardStoryVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/card_scenario/voice/" + sc + "/" + v + ".mp3";
-const getAreaTalkVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/actionset/voice/" + sc + "/" + v + ".mp3";`,
-        ],
-        [
-            `import { fetchMasterDataForServer } from "@/lib/fetch";`,
-            `const fetchMasterDataForServer = async (_s, p) => p === "musicSoundTracks.json" ? globalThis.__testMasterMock.tracks : globalThis.__testMasterMock.categories;`,
-        ],
-        [
-            `import { STORY_ASSET_PATTERN, STORY_AUDIO_PATH_PATTERN } from "./limits";`,
-            `const STORY_ASSET_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;\nconst STORY_AUDIO_PATH_PATTERN = /^(?=.{1,128}$)[A-Za-z0-9_-]+(?:\\/[A-Za-z0-9_-]+){0,4}$/;`,
-        ],
-    ]);
+    const assetsMod = storyCore;
 
     assert.equal(
         assetsMod.storyBgmUrl("bgm00020", "jp", "main"),
@@ -1272,39 +1214,19 @@ const getAreaTalkVoiceUrl = (sc, v, s) => getAssetBaseUrl(s) + "/sound/actionset
             "https://storage.pjsk.moe/sekai-en-assets/sound/scenario/voice/part_voice_01ichika_light_sound/partvoice_01_001.mp3",
         ],
     );
-    delete globalThis.__testMasterMock;
 });
 
 test("voiceSearch resolves scenario JSON paths including EN card member_scenario and partvoice refs", async () => {
-    const voiceSearchMod = await importWebTypeScript("src/lib/storyMaker/voiceSearch.ts", [
-        [
-            `import { getAssetBaseUrl, getAssetLine, type AssetLine } from "@/lib/assets";`,
-            `const getAssetLine = (s) => String(s).startsWith("backup") ? "backup" : "main";
-const getAssetBaseUrl = (s) => "https://storage.pjsk.moe/sekai-" + s.slice(s.indexOf("-") + 1) + "-assets";`,
-        ],
-        [
-            `import { fetchMasterDataForServer } from "@/lib/fetch";`,
-            `const fetchMasterDataForServer = async (_server, table) => globalThis.__testVoiceMaster[table] ?? [];`,
-        ],
-        [
-            `import { parseDialogueLines } from "@/lib/story-search/dialogue";`,
-            `const parseDialogueLines = (text) => text.split("\\n").slice(1).filter(Boolean).map(raw => {
-    const idx = raw.indexOf(": ");
-    return idx > 0 ? { speaker: raw.slice(0, idx), speech: raw.slice(idx + 2), raw } : { speaker: null, speech: raw, raw };
-});`,
-        ],
-        [
-            `import { STORY_ASSET_PATTERN } from "./limits";`,
-            `const STORY_ASSET_PATTERN = /^[A-Za-z0-9_-]{1,64}$/;`,
-        ],
-    ]);
-
-    globalThis.__testVoiceMaster = {
+    const voiceSearchMod = storyCore;
+    const mockMaster = {
         "cards.json": [{ id: 42, assetbundleName: "res001_no001" }],
         "character2ds.json": [
             { id: 1, characterType: "game_character", characterId: 1, assetName: "01ichika", unit: "light_sound" },
         ],
     };
+    configureStoryCore({
+        masterDataFetcher: async (_server, table) => mockMaster[table] ?? [],
+    });
     const prevFetch = globalThis.fetch;
     const requestedUrls = [];
     globalThis.fetch = async (url) => {
@@ -1345,8 +1267,8 @@ const getAssetBaseUrl = (s) => "https://storage.pjsk.moe/sekai-" + s.slice(s.ind
         assert.equal(requestedUrls[0], "https://storage.pjsk.moe/sekai-en-assets/character/member_scenario/res001_no001/001001_ichika01.json");
         assert.deepEqual(lines[0].voiceRef, { kind: "part", scenarioId: "01ichika_light_sound", voiceId: "partvoice_01_001", region: "en" });
     } finally {
+        resetStoryCoreConfig();
         globalThis.fetch = prevFetch;
-        delete globalThis.__testVoiceMaster;
     }
 });
 
@@ -1355,7 +1277,7 @@ test("useStoryAudio unlocks autoplay-blocked BGM on first user gesture without l
     const React = (await import("react")).default;
     const { act } = React;
     const { createRoot } = await import("react-dom/client");
-    const { useStoryAudio } = await import("../src/components/story-maker/useStoryAudio.ts");
+    const { useStoryAudio } = await import("@moesekai/story-editor");
 
     const dom = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>");
     const prevWindow = globalThis.window;
@@ -1603,12 +1525,7 @@ test("drafts.ts uses moesekai-story-maker-v2 IndexedDB, persists/renames/duplica
         },
     };
 
-    const draftsMod = await importWebTypeScript("src/lib/storyMaker/drafts.ts", [
-        [`import type { StoryDocument, StoryDraft } from "@/types/storyMaker";`, ``],
-        [`import { createStoryDocument, newStoryId, updateStoryMeta } from "./document";`, `import { createStoryDocument, newStoryId, updateStoryMeta } from "${new URL("../src/lib/storyMaker/document.ts", import.meta.url).href}";`],
-        [`import { STORY_LIMITS } from "./limits";`, `import { STORY_LIMITS } from "${new URL("../src/lib/storyMaker/limits.ts", import.meta.url).href}";`],
-        [`import { parseStoryDocumentDraft, validateStoryDocument } from "./validate";`, `import { parseStoryDocumentDraft, validateStoryDocument } from "${new URL("../src/lib/storyMaker/validate.ts", import.meta.url).href}";`],
-    ]);
+    const draftsMod = storyCore;
 
     try {
         // Seed a legacy v1 record that must be filtered out automatically.
@@ -2055,14 +1972,16 @@ test("createStarterStoryFromScript parses zh/en/ja .msk templates with 0 errors 
     assert.equal(typeof starterModule.downloadStoryScript, "function");
 
     const cases = [
-        { locale: "zh", region: "cn" },
-        { locale: "en", region: "en" },
-        { locale: "ja", region: "jp" },
+        { locale: "zh", region: "cn", expectedTitle: "25时的未名余音" },
+        { locale: "en", region: "en", expectedTitle: "Unspoken Echo at 25:00" },
+        { locale: "ja", region: "jp", expectedTitle: "25時の名もなき余韻" },
     ];
-    for (const { locale, region } of cases) {
+    for (const { locale, region, expectedTitle } of cases) {
         const doc = createStarterStoryFromScript(region, locale);
         assert.equal(doc.schema, STORY_SCHEMA_VERSION);
         assert.equal(doc.region, region);
+        assert.equal(doc.meta.title, expectedTitle);
+        assert.deepEqual(doc.cast.map(c => c.key), ["kanade", "mafuyu", "ena", "mizuki", "miku"]);
 
         const validated = validateStoryDocument(doc);
         assert.equal(validated.ok, true, `${locale}: ${JSON.stringify(validated.ok ? [] : validated.issues)}`);
@@ -2072,7 +1991,7 @@ test("createStarterStoryFromScript parses zh/en/ja .msk templates with 0 errors 
         const declaredEndings = Object.values(doc.nodes)
             .filter(node => node.type === "end")
             .map(node => node.id);
-        assert.ok(declaredEndings.length >= 2, `${locale}: expected >= 2 endings, got ${declaredEndings.length}`);
+        assert.equal(declaredEndings.length, 3, `${locale}: expected 3 Nightcord starter endings, got ${declaredEndings.length}`);
         assert.equal(validated.program.endingNodeIds.length, declaredEndings.length, `${locale}: all endings must be graph-reachable`);
 
         // Generic BFS branch explorer across arbitrary choices/conditions to verify every declared ending is reachable.
@@ -2141,7 +2060,7 @@ test("rewireEdgeSource atomically moves an edge's source port while preserving i
 });
 
 test("previewStorySound stops previous HTMLAudio playback on switch and on explicit stop(null)", async () => {
-    const { previewStorySound } = await import("../src/components/story-maker/useStoryAudio.ts");
+    const { previewStorySound } = await import("@moesekai/story-editor");
     const prevAudio = globalThis.Audio;
     const prevWindow = globalThis.window;
 

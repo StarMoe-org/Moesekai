@@ -20,6 +20,7 @@
     "test:sse-web-config": "node --experimental-strip-types scripts/test-sse-web-config.mjs",
     "test:live2d-viewer": "node --experimental-strip-types scripts/test-live2d-viewer.mjs",
     "test:story-maker": "node --experimental-strip-types --test tests/story-maker.test.mjs tests/story-maker-i18n.test.mjs tests/story-maker-audio-bundle.test.mjs",
+    "sync:story-studio": "node scripts/sync-story-studio.mjs",
     "build:msk-skill": "bun scripts/build-msk-skill-core.mjs",
     "test:mysekai-workspace": "node --experimental-strip-types scripts/test-mysekai-workspace.mjs",
     "test:mysekai-character-filter": "node --experimental-strip-types scripts/test-mysekai-character-filter.mjs",
@@ -43,6 +44,8 @@
   "dependencies": {
     "@empty-sekai/allium-deck-wasm": "0.1.0",
     "@fontsource-variable/roboto-flex": "^5.3.0",
+    "@moesekai/story-core": "^0.1.3",
+    "@moesekai/story-editor": "^0.1.3",
     "@supabase/supabase-js": "2.106.0",
     "@swc/helpers": "^0.5.15",
     "@types/qrcode": "^1.5.6",

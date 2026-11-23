@@ -25,7 +25,9 @@ const {
     rotate90CwPixels,
     buildNameBarPixels,
     loadStoryUiKit,
-} = await import("../src/lib/storyMaker/uiKit.ts");
+    configureStoryCore,
+    resetStoryCoreConfig,
+} = await import("@moesekai/story-core");
 
 function approx(actual, expected, eps = 1e-4, label = "") {
     assert.ok(
@@ -226,30 +228,24 @@ test("parseChoiceLayout accepts valid client JSON and falls back cleanly on bad 
     );
 });
 
-test("resolveStoryUiKitSources falls back to NEXT_PUBLIC_LIVE2D_ASSET_PROXY when SSE proxy is unset", () => {
-    const savedSse = process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY;
-    const savedL2d = process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY;
+test("resolveStoryUiKitSources falls back to live2dAssetProxy when SSE proxy is unset", () => {
     try {
-        delete process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY;
-        delete process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY;
+        resetStoryCoreConfig();
         const plain = resolveStoryUiKitSources("jp");
         assert.ok(plain);
         assert.equal(plain.proxy, undefined);
 
-        process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY = "http://127.0.0.1:8788/remote/";
+        configureStoryCore({ live2dAssetProxy: "http://127.0.0.1:8788/remote/" });
         const viaL2d = resolveStoryUiKitSources("jp");
         assert.equal(viaL2d?.proxy, "http://127.0.0.1:8788/remote/");
 
-        process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY = "http://127.0.0.1:8787/remote/";
+        configureStoryCore({ sseWebAssetProxy: "http://127.0.0.1:8787/remote/" });
         const viaSse = resolveStoryUiKitSources("jp");
         assert.equal(viaSse?.proxy, "http://127.0.0.1:8787/remote/");
 
         assert.equal(resolveStoryUiKitSources("unknown"), null);
     } finally {
-        if (savedSse === undefined) delete process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY;
-        else process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY = savedSse;
-        if (savedL2d === undefined) delete process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY;
-        else process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY = savedL2d;
+        resetStoryCoreConfig();
     }
 });
 
@@ -305,4 +301,49 @@ test("pure sprite pixel transforms match native_ui.rs semantics", () => {
 test("loadStoryUiKit degrades gracefully to null in non-browser Node runtime", async () => {
     const kit = await loadStoryUiKit("jp");
     assert.equal(kit, null);
+});
+
+test("loadStoryUiKit skips spawning kit-worker.js when sse-web manifest omits it", async () => {
+    const origWindow = globalThis.window;
+    const origWorker = globalThis.Worker;
+    const origFetch = globalThis.fetch;
+    let workerSpawned = 0;
+    const fetchedUrls = [];
+    try {
+        globalThis.window = { location: { origin: "http://127.0.0.1:3000" } };
+        globalThis.Worker = class FakeWorker {
+            constructor() {
+                workerSpawned += 1;
+            }
+            postMessage() {}
+            terminate() {}
+        };
+        globalThis.fetch = async (url) => {
+            fetchedUrls.push(String(url));
+            return {
+                ok: true,
+                json: async () => ({
+                    format: "sse-web-release/1",
+                    version: "2.0.0",
+                    sha256: {
+                        "player.js": "abc",
+                        "render-worker.js": "def",
+                        "sim-worker.js": "ghi",
+                    },
+                }),
+            };
+        };
+
+        const base = "http://127.0.0.1:3000/sse-web/2.0.0-test-no-kit/";
+        const kit1 = await loadStoryUiKit("jp", { scriptBaseUrl: base });
+        const kit2 = await loadStoryUiKit("jp", { scriptBaseUrl: base });
+        assert.equal(kit1, null);
+        assert.equal(kit2, null);
+        assert.equal(workerSpawned, 0, "must not spawn kit-worker.js when absent from manifest.json");
+        assert.deepEqual(fetchedUrls, [`${base}manifest.json`], "manifest probe must be cached per scriptBaseUrl");
+    } finally {
+        globalThis.window = origWindow;
+        globalThis.Worker = origWorker;
+        globalThis.fetch = origFetch;
+    }
 });

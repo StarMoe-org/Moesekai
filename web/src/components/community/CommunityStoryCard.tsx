@@ -63,7 +63,7 @@ export function CommunityStoryCard({
             ? [summary.source_locale]
             : [];
     const localeLabel = locales.map(formatLocaleChip).join(" / ");
-    const pendingKey = !summary.has_voice_track && showPendingVoiceStatus
+    const pendingKey = showPendingVoiceStatus && summary.voice_status !== "published"
         ? voiceStatusKey(summary.voice_status)
         : null;
 

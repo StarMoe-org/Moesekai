@@ -1,20 +1,22 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { signIn } from "@/lib/moesekai-account";
 import {
     createCommunityPost,
+    fetchCommunityPost,
     getCommunityErrorMessage,
     isCommunityApiError,
     updateCommunityPost,
 } from "@/lib/community-api";
-import { useCommunitySession } from "@/lib/community-session";
-import { STORY_LIMITS } from "@/lib/storyMaker/limits";
+import { getCommunitySession, useCommunitySession } from "@/lib/community-session";
 import {
+    STORY_LIMITS,
     clearPublishedStoryLink,
     setPublishedStoryLink,
-} from "@/lib/storyMaker/publishedLink";
+    type StoryDocument,
+} from "@moesekai/story-core";
 import PolicyAgreementDialog from "@/components/community/PolicyAgreementDialog";
 import TurnstileWidget from "@/components/community/TurnstileWidget";
 import {
@@ -43,7 +45,6 @@ import {
     type PostItem,
     type ServerTag,
 } from "@/types/community";
-import type { StoryDocument } from "@/types/storyMaker";
 
 const MAX_TAGS = 5;
 
@@ -55,6 +56,7 @@ export interface StoryPublishDialogProps {
     publishedPostId: number | null;
     hasBlockingErrors: boolean;
     onPublished: (post: PostItem) => void;
+    onClearPublishedLink?: () => void;
     onOpenVoiceUpload?: (postId: number) => void;
     onNotify?: (message: string) => void;
 }
@@ -71,6 +73,7 @@ export function StoryPublishDialog({
     publishedPostId,
     hasBlockingErrors,
     onPublished,
+    onClearPublishedLink,
     onOpenVoiceUpload,
     onNotify,
 }: StoryPublishDialogProps) {
@@ -95,22 +98,68 @@ export function StoryPublishDialog({
     const [notice, setNotice] = useState<string | null>(null);
     const [resultPost, setResultPost] = useState<PostItem | null>(null);
 
+    const hydrateSeqRef = useRef(0);
+    const wasOpenRef = useRef(false);
+    const tagsDirtyRef = useRef(false);
+    const spoilerDirtyRef = useRef(false);
+    const serverTagDirtyRef = useRef(false);
+
     const isUpdateMode = Boolean(publishedPostId && !createAsNew);
     const needsTurnstile = !isUpdateMode && Boolean(session.turnstileSiteKey) && session.turnstileRequired;
 
     useEffect(() => {
-        if (!isOpen) return;
+        if (!isOpen) {
+            wasOpenRef.current = false;
+            hydrateSeqRef.current += 1;
+            return;
+        }
+        if (wasOpenRef.current) return;
+        wasOpenRef.current = true;
+        tagsDirtyRef.current = false;
+        spoilerDirtyRef.current = false;
+        serverTagDirtyRef.current = false;
         setTitle(doc.meta.title.trim());
         setBodyMd(doc.meta.summary.trim());
         setServerTag(defaultServerTag(doc.region));
+        setTags([]);
         setTagInput("");
+        setIsSpoiler(false);
         setCreateAsNew(false);
         setError(null);
         setNotice(null);
         setResultPost(null);
         setTurnstileToken("");
         setTurnstileResetNonce((n) => n + 1);
-    }, [doc.meta.summary, doc.meta.title, doc.region, isOpen]);
+
+        if (!publishedPostId) return;
+        const seq = ++hydrateSeqRef.current;
+        void fetchCommunityPost(publishedPostId)
+            .then((post) => {
+                if (seq !== hydrateSeqRef.current) return;
+                if (!tagsDirtyRef.current) {
+                    setTags(Array.isArray(post.tags) ? post.tags.slice(0, MAX_TAGS) : []);
+                }
+                if (!spoilerDirtyRef.current) {
+                    setIsSpoiler(Boolean(post.is_spoiler));
+                }
+                if (!serverTagDirtyRef.current && isServerTag(post.server_tag)) {
+                    setServerTag(post.server_tag);
+                }
+            })
+            .catch((err) => {
+                if (seq !== hydrateSeqRef.current) return;
+                if (isCommunityApiError(err) && err.status === 404) {
+                    if (draftId) {
+                        clearPublishedStoryLink(draftId);
+                    }
+                    onClearPublishedLink?.();
+                    setCreateAsNew(true);
+                }
+            });
+        return () => {
+            hydrateSeqRef.current += 1;
+        };
+    }, [doc.meta.summary, doc.meta.title, doc.region, draftId, isOpen, onClearPublishedLink, publishedPostId]);
 
     useEffect(() => {
         if (cooldownSec <= 0) return;
@@ -124,12 +173,13 @@ export function StoryPublishDialog({
         const cleaned = tagInput.trim().replace(/^#+/, "");
         if (!cleaned || tags.length >= MAX_TAGS) return;
         if (!tags.includes(cleaned)) {
+            tagsDirtyRef.current = true;
             setTags((prev) => [...prev, cleaned]);
         }
         setTagInput("");
     };
 
-    const handleSubmit = useCallback(async () => {
+    const handleSubmit = useCallback(async (options?: { bypassPolicyCheck?: boolean }) => {
         if (hasBlockingErrors) {
             setError(t("page.storyMaker.publish.errors.hasBlockingErrors"));
             return;
@@ -139,11 +189,19 @@ export function StoryPublishDialog({
             setError(t("page.storyMaker.publish.errors.missingTitle"));
             return;
         }
-        if (session.communityMode === "read_only") {
+        const latestSession = getCommunitySession();
+        const effectiveCommunityMode = latestSession.communityMode ?? session.communityMode;
+        const effectiveProfile = latestSession.profile ?? session.profile;
+        if (effectiveCommunityMode === "read_only") {
             setError(t("common.comments.errors.readOnly"));
             return;
         }
-        if (session.authenticated && session.profile && !session.profile.policy_accepted_at) {
+        if (
+            !options?.bypassPolicyCheck &&
+            session.authenticated &&
+            effectiveProfile &&
+            !effectiveProfile.policy_accepted_at
+        ) {
             setPolicyOpen(true);
             return;
         }
@@ -217,8 +275,11 @@ export function StoryPublishDialog({
                 if (err.code === "rate_limited" && err.retryAfterSec) {
                     setCooldownSec(err.retryAfterSec);
                 }
-                if (isUpdateMode && err.status === 404 && draftId) {
-                    clearPublishedStoryLink(draftId);
+                if (isUpdateMode && err.status === 404) {
+                    if (draftId) {
+                        clearPublishedStoryLink(draftId);
+                    }
+                    onClearPublishedLink?.();
                     setCreateAsNew(true);
                 }
             }
@@ -234,6 +295,7 @@ export function StoryPublishDialog({
         isSpoiler,
         isUpdateMode,
         needsTurnstile,
+        onClearPublishedLink,
         onNotify,
         onPublished,
         publishedPostId,
@@ -461,7 +523,10 @@ export function StoryPublishDialog({
                                             key={opt.id}
                                             variant="filter"
                                             selected={serverTag === opt.id}
-                                            onClick={() => setServerTag(opt.id)}
+                                            onClick={() => {
+                                                serverTagDirtyRef.current = true;
+                                                setServerTag(opt.id);
+                                            }}
                                         >
                                             {t(opt.labelKey)}
                                         </Chip>
@@ -500,9 +565,10 @@ export function StoryPublishDialog({
                                                 key={tag}
                                                 variant="input"
                                                 selected
-                                                onRemove={() =>
-                                                    setTags((prev) => prev.filter((item) => item !== tag))
-                                                }
+                                                onRemove={() => {
+                                                    tagsDirtyRef.current = true;
+                                                    setTags((prev) => prev.filter((item) => item !== tag));
+                                                }}
                                                 removeLabel={t("common.action.close")}
                                             >
                                                 #{tag}
@@ -514,7 +580,10 @@ export function StoryPublishDialog({
 
                             <Switch
                                 checked={isSpoiler}
-                                onCheckedChange={setIsSpoiler}
+                                onCheckedChange={(checked) => {
+                                    spoilerDirtyRef.current = true;
+                                    setIsSpoiler(checked);
+                                }}
                                 label={t("page.community.composer.spoilerLabel")}
                                 description={t("page.community.composer.spoilerDesc")}
                             />
@@ -538,7 +607,7 @@ export function StoryPublishDialog({
                 isOpen={policyOpen}
                 onClose={() => setPolicyOpen(false)}
                 onAccepted={() => {
-                    void handleSubmit();
+                    void handleSubmit({ bypassPolicyCheck: true });
                 }}
             />
         </>

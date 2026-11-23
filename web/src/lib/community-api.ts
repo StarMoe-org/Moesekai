@@ -53,9 +53,10 @@ import type {
     TargetType,
     ThreadCommentsResponse,
 } from "@/types/community";
-import type { StoryDocument } from "@/types/storyMaker";
+import type { StoryDocument } from "@moesekai/story-core";
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const MOD_AUDIO_REVIEW_TIMEOUT_MS = 60_000;
 
 export interface CommunityApiErrorPayload {
     error?: string;
@@ -103,9 +104,19 @@ export function isCommunityApiError(error: unknown): error is CommunityApiError 
     return error instanceof CommunityApiError;
 }
 
-async function rawRequest(path: string, init: RequestInit = {}): Promise<Response> {
+async function rawRequest(
+    path: string,
+    init: RequestInit = {},
+    timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+    const externalSignal = init.signal;
+    if (externalSignal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+    }
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const onExternalAbort = () => controller.abort();
+    externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const method = (init.method ?? "GET").toUpperCase();
         const url = `${MOESEKAI_API_ORIGIN}${path}`;
@@ -124,6 +135,7 @@ async function rawRequest(path: string, init: RequestInit = {}): Promise<Respons
         });
     } finally {
         clearTimeout(timeoutId);
+        externalSignal?.removeEventListener("abort", onExternalAbort);
     }
 }
 
@@ -153,12 +165,19 @@ async function parseError(response: Response): Promise<CommunityApiError> {
     return new CommunityApiError(response.status, code, payload);
 }
 
-async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function requestJson<T>(
+    path: string,
+    init: RequestInit = {},
+    timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<T> {
     let response: Response;
     try {
-        response = await rawRequest(path, init);
+        response = await rawRequest(path, init, timeoutMs);
     } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
+            if (init.signal?.aborted) {
+                throw error;
+            }
             throw new CommunityApiError(0, "request_timeout");
         }
         throw new CommunityApiError(0, "network_error");
@@ -248,7 +267,9 @@ export function getCommunityErrorMessage(error: unknown, t: TranslateFn): string
         case "empty_content":
             return t("common.comments.errors.emptyContent");
         case "content_too_long":
-            return t("common.comments.errors.contentTooLong");
+            return error.status === 413
+                ? t("page.storyMaker.publish.errors.storyTooLarge")
+                : t("common.comments.errors.contentTooLong");
         case "links_not_allowed":
             return t("common.comments.errors.linksNotAllowed");
         case "too_many_tags":
@@ -273,6 +294,7 @@ export function getCommunityErrorMessage(error: unknown, t: TranslateFn): string
             return t("page.storyMaker.audioUpload.errors.uploadFailed");
         case "invalid_story_doc":
             return t("page.storyMaker.publish.errors.invalidStoryDoc");
+        case "request_too_large":
         case "story_doc_too_large":
             return t("page.storyMaker.publish.errors.storyTooLarge");
         case "forbidden":
@@ -675,12 +697,14 @@ export function fetchCommunityStoryPlay(postId: number | string): Promise<Commun
 export function dedupStoryAudio(
     postId: number | string,
     input: StoryAudioDedupRequest,
+    options: { signal?: AbortSignal } = {},
 ): Promise<StoryAudioDedupResponse> {
     return requestJson<StoryAudioDedupResponse>(
         `/api/community/stories/${encodeURIComponent(String(postId))}/audio/dedup`,
         {
             method: "POST",
             body: JSON.stringify(input),
+            signal: options.signal,
         },
     );
 }
@@ -688,12 +712,14 @@ export function dedupStoryAudio(
 export function initStoryAudioUpload(
     postId: number | string,
     input: StoryAudioUploadInitRequest,
+    options: { signal?: AbortSignal } = {},
 ): Promise<StoryAudioUploadInitResponse> {
     return requestJson<StoryAudioUploadInitResponse>(
         `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads`,
         {
             method: "POST",
             body: JSON.stringify(input),
+            signal: options.signal,
         },
     );
 }
@@ -701,11 +727,13 @@ export function initStoryAudioUpload(
 export function completeStoryAudioUpload(
     postId: number | string,
     batchId: string,
+    options: { signal?: AbortSignal } = {},
 ): Promise<StoryAudioUploadCompleteResponse> {
     return requestJson<StoryAudioUploadCompleteResponse>(
         `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads/${encodeURIComponent(batchId)}/complete`,
         {
             method: "POST",
+            signal: options.signal,
         },
     );
 }
@@ -734,6 +762,7 @@ export function reviewModAudioBatch(
             method: "POST",
             body: JSON.stringify(input),
         },
+        MOD_AUDIO_REVIEW_TIMEOUT_MS,
     );
 }
 

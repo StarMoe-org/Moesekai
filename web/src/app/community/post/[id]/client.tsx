@@ -188,7 +188,11 @@ export default function CommunityPostClient() {
         setActionError(null);
         try {
             await deleteCommunityPost(post.id);
-            router.push(localizePathForBrowser("/community"));
+            router.push(
+                localizePathForBrowser(
+                    post.category === "community_story" ? "/community/stories" : "/community",
+                ),
+            );
         } catch (err) {
             setActionError(getCommunityErrorMessage(err, t));
             setDeleting(false);

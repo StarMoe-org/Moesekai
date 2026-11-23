@@ -11,8 +11,6 @@ import assert from "node:assert/strict";
 const {
     STORY_I18N_SCHEMA_VERSION,
     STORY_VOICE_MANIFEST_SCHEMA_VERSION,
-} = await import("../src/types/storyMaker.ts");
-const {
     addCastMember,
     addVariable,
     connectEdge,
@@ -25,16 +23,14 @@ const {
     updateBeat,
     updateNode,
     upsertStoryLocalePack,
-} = await import("../src/lib/storyMaker/document.ts");
-const { compileStoryGraph } = await import("../src/lib/storyMaker/compiler.ts");
-const {
+    compileStoryGraph,
     advanceRuntime,
     createInitialRuntime,
     localizeRuntimeFrame,
-} = await import("../src/lib/storyMaker/runtime.ts");
-const { parseStoryScript, serializeStoryScript } = await import("../src/lib/storyMaker/script.ts");
-const { parseStoryJson, validateStoryDocument } = await import("../src/lib/storyMaker/validate.ts");
-const {
+    parseStoryScript,
+    serializeStoryScript,
+    parseStoryJson,
+    validateStoryDocument,
     PJSK_CHARACTER_SPEECH_HINTS,
     applyStoryLocaleOverlay,
     buildAiTranslationPrompt,
@@ -52,7 +48,7 @@ const {
     parseStoryVoiceManifest,
     resolveVoiceManifestLineUrl,
     upgradePackToProofread,
-} = await import("../src/lib/storyMaker/i18nPack.ts");
+} = await import("@moesekai/story-core");
 
 function buildSampleBilingualDoc() {
     let doc = createStoryDocument("jp", "屋顶上的小约定");
@@ -812,4 +808,25 @@ test("9. Legacy v2 docs & .msk scripts round-trip cleanly; lang= preserved; remo
         beats: {},
     });
     assert.equal(unchangedDoc.locales?.["zh-CN"], undefined);
+});
+
+test("10. parseStoryVoiceManifest accepts backend-compatible beat IDs ([A-Za-z0-9_.:-]{1,128}) and drops unsafe/overlong ones", () => {
+    const longBeatId = "scene_01." + "b".repeat(119); // 128 chars
+    const tooLongBeatId = "b".repeat(129);
+    const parsed = parseStoryVoiceManifest({
+        schema: STORY_VOICE_MANIFEST_SCHEMA_VERSION,
+        storyId: "story_1",
+        baseUrl: "https://cdn.example.com/audio",
+        lines: {
+            "scene.1:beat_001": { objectKey: "clips/1.ogg" },
+            [longBeatId]: { objectKey: "clips/long.ogg" },
+            [tooLongBeatId]: { objectKey: "clips/too_long.ogg" },
+            "bad/beat": { objectKey: "clips/bad.ogg" },
+        },
+    });
+    assert.ok(parsed);
+    assert.ok(parsed.lines["scene.1:beat_001"]);
+    assert.ok(parsed.lines[longBeatId]);
+    assert.equal(parsed.lines[tooLongBeatId], undefined);
+    assert.equal(parsed.lines["bad/beat"], undefined);
 });

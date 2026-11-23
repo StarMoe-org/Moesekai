@@ -21,6 +21,7 @@ import {
     extractTalkBeatsForVoice,
     formatByteSize,
     formatDurationMs,
+    inferStorySourceLocale,
     isSupportedAudioFilename,
     matchAudioFilesToTalkBeats,
     probeAudioDurationMs,
@@ -28,9 +29,9 @@ import {
     sha256Hex,
     validateAudioSelection,
     type AudioValidationIssue,
+    type StoryDocument,
     type TalkBeatVoiceSlot,
-} from "@/lib/storyMaker/audioBundle";
-import { inferStorySourceLocale } from "@/lib/storyMaker/i18nPack";
+} from "@moesekai/story-core";
 import {
     Banner,
     Button,
@@ -52,7 +53,6 @@ import {
     mdUploadFile,
 } from "@/components/md3/icons";
 import type { StoryAudioStatusResponse, StoryVoiceStatus } from "@/types/community";
-import type { StoryDocument } from "@/types/storyMaker";
 
 interface AssignedAudioClip {
     file: File;
@@ -129,7 +129,7 @@ export function StoryAudioUploadPanel({
     const singleBeatTargetRef = useRef<string | null>(null);
     const uploadAbortRef = useRef<AbortController | null>(null);
     const statusSeqRef = useRef(0);
-    const probeSeqRef = useRef(0);
+    const mountedRef = useRef(true);
     const tRef = useRef(t);
 
     useEffect(() => {
@@ -144,11 +144,12 @@ export function StoryAudioUploadPanel({
     }, []);
 
     useEffect(() => {
+        mountedRef.current = true;
         return () => {
+            mountedRef.current = false;
             uploadAbortRef.current?.abort();
             uploadAbortRef.current = null;
             statusSeqRef.current += 1;
-            probeSeqRef.current += 1;
         };
     }, []);
 
@@ -196,6 +197,8 @@ export function StoryAudioUploadPanel({
     }, [publishedPostId, session.authenticated]);
 
     useEffect(() => {
+        setServerStatus(null);
+        setStatusError(null);
         if (publishedPostId && session.authenticated) {
             void loadStatus();
         }
@@ -206,23 +209,27 @@ export function StoryAudioUploadPanel({
 
     const probeFilesForBeats = useCallback(async (pairs: Array<[string, File]>) => {
         if (pairs.length === 0) return;
-        const seq = ++probeSeqRef.current;
         let cursor = 0;
         const runWorker = async () => {
             while (cursor < pairs.length) {
                 const index = cursor;
                 cursor += 1;
                 const [beatId, file] = pairs[index];
-                const durationMs = await probeAudioDurationMs(file);
-                if (seq !== probeSeqRef.current) return;
-                setAssignedByBeat((prev) => {
-                    const existing = prev[beatId];
-                    if (!existing || existing.file !== file) return prev;
-                    return {
-                        ...prev,
-                        [beatId]: { ...existing, durationMs, probing: false },
-                    };
-                });
+                let durationMs: number | null = null;
+                try {
+                    durationMs = await probeAudioDurationMs(file);
+                } finally {
+                    if (mountedRef.current) {
+                        setAssignedByBeat((prev) => {
+                            const existing = prev[beatId];
+                            if (!existing || existing.file !== file) return prev;
+                            return {
+                                ...prev,
+                                [beatId]: { ...existing, durationMs, probing: false },
+                            };
+                        });
+                    }
+                }
             }
         };
         await Promise.all(Array.from({ length: Math.min(PROBE_CONCURRENCY, pairs.length) }, runWorker));
@@ -402,14 +409,18 @@ export function StoryAudioUploadPanel({
             // 2. Incremental dedup check
             setPhase("deduping");
             setProgressRatio(0);
-            const dedupRes = await dedupStoryAudio(publishedPostId, {
-                clips: hashedClips.map((c) => ({
-                    beat_id: c.beatId,
-                    raw_sha256: c.rawSha256,
-                    duration_ms: c.durationMs,
-                    size_bytes: c.sizeBytes,
-                })),
-            });
+            const dedupRes = await dedupStoryAudio(
+                publishedPostId,
+                {
+                    clips: hashedClips.map((c) => ({
+                        beat_id: c.beatId,
+                        raw_sha256: c.rawSha256,
+                        duration_ms: c.durationMs,
+                        size_bytes: c.sizeBytes,
+                    })),
+                },
+                { signal: controller.signal },
+            );
             if (controller.signal.aborted) {
                 throw new DOMException("Aborted", "AbortError");
             }
@@ -453,20 +464,24 @@ export function StoryAudioUploadPanel({
                 }
             }
 
-            const initRes = await initStoryAudioUpload(publishedPostId, {
-                rights_confirmed: true,
-                voice_locale: voiceLocale,
-                archive_format: "tar",
-                archive_size_bytes: archiveSizeBytes,
-                estimated_duration_ms: totalDurationMs,
-                clips: hashedClips.map((c) => ({
-                    beat_id: c.beatId,
-                    raw_sha256: c.rawSha256,
-                    filename: archiveFilenameByBeat.get(c.beatId),
-                    duration_ms: c.durationMs,
-                    size_bytes: c.sizeBytes,
-                })),
-            });
+            const initRes = await initStoryAudioUpload(
+                publishedPostId,
+                {
+                    rights_confirmed: true,
+                    voice_locale: voiceLocale,
+                    archive_format: "tar",
+                    archive_size_bytes: archiveSizeBytes,
+                    estimated_duration_ms: totalDurationMs,
+                    clips: hashedClips.map((c) => ({
+                        beat_id: c.beatId,
+                        raw_sha256: c.rawSha256,
+                        filename: archiveFilenameByBeat.get(c.beatId),
+                        duration_ms: c.durationMs,
+                        size_bytes: c.sizeBytes,
+                    })),
+                },
+                { signal: controller.signal },
+            );
             if (controller.signal.aborted) {
                 throw new DOMException("Aborted", "AbortError");
             }
@@ -496,10 +511,18 @@ export function StoryAudioUploadPanel({
                     setProgressRatio(percent / 100);
                 },
             });
+            if (controller.signal.aborted) {
+                throw new DOMException("Aborted", "AbortError");
+            }
 
             // 5. Commit upload completion -> enters moderation queue
             setPhase("completing");
-            await completeStoryAudioUpload(publishedPostId, initRes.batch_id);
+            await completeStoryAudioUpload(publishedPostId, initRes.batch_id, {
+                signal: controller.signal,
+            });
+            if (controller.signal.aborted) {
+                throw new DOMException("Aborted", "AbortError");
+            }
 
             const queuedMsg = t("page.storyMaker.audioUpload.queuedToast", {
                 uploaded: initRes.new_clip_count,
@@ -509,19 +532,31 @@ export function StoryAudioUploadPanel({
             onNotify?.(queuedMsg);
             await loadStatus();
         } catch (err) {
-            if (err instanceof DOMException && err.name === "AbortError") {
+            if (
+                controller.signal.aborted
+                || (err instanceof DOMException && err.name === "AbortError")
+                || uploadAbortRef.current !== controller
+            ) {
                 return;
             }
             if (isCommunityApiError(err)) {
                 setUploadError(getCommunityErrorMessage(err, t));
+            } else if (err instanceof Error && err.message.startsWith("Archive size exceeds limit")) {
+                setUploadError(t("page.storyMaker.audioUpload.errors.archiveTooLarge"));
+            } else if (err instanceof Error && err.message.startsWith("Too many clips")) {
+                setUploadError(
+                    t("page.storyMaker.audioUpload.errors.tooManyClips", {
+                        max: STORY_AUDIO_LIMITS.maxArchiveClipFiles,
+                    }),
+                );
             } else {
                 setUploadError(t("page.storyMaker.audioUpload.errors.uploadFailed"));
             }
         } finally {
             if (uploadAbortRef.current === controller) {
                 uploadAbortRef.current = null;
+                setPhase("idle");
             }
-            setPhase("idle");
         }
     };
 
