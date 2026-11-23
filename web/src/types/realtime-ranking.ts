@@ -18,6 +18,9 @@ export interface RealtimeRankingRawProfileHonor {
     honorLevel: number;
     bondsHonorViewType?: string;
     bondsHonorWordId?: number;
+    // A character honor's chosen background style and word (0 or absent: the default).
+    honorBackgroundId?: number | null;
+    honorWordId?: number | null;
 }
 
 export interface RealtimeRankingRawLeaderCard {
@@ -67,6 +70,8 @@ export interface NormalizedPlayerHonor {
     bondsHonorId?: number;
     bondsHonorLevel?: number;
     bondsHonorWordAssetbundleName?: string;
+    honorBackgroundId?: number;
+    honorWordId?: number;
 }
 
 export interface RealtimeRankingEntry {
@@ -143,6 +148,8 @@ export interface WorldLinkSnapshot {
 }
 
 export interface RealtimeRankingMasterData {
+    /** The server the tables came from. */
+    server?: RealtimeRankingRegion;
     cards: ICardInfo[];
     honors: IHonorInfo[];
     honorGroups: IHonorGroup[];

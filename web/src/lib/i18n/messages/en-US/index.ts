@@ -3343,6 +3343,10 @@ export const enUSMessages = {
                 main: "Main",
                 sub: "Sub",
             },
+            characterStyle: {
+                background: "Background",
+                word: "Word",
+            },
             bondsBadge: "Bonds",
             loadingFallback: "Loading honor data...",
         },

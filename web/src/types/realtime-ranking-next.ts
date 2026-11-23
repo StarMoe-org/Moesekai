@@ -57,6 +57,8 @@ export interface RawProfileHonorV2 {
     honorLevel?: number;
     bondsHonorViewType?: string;
     bondsHonorWordId?: number;
+    honorBackgroundId?: number | null;
+    honorWordId?: number | null;
 }
 
 export interface RawRankingEntryV2 {

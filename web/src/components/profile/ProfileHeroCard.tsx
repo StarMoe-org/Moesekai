@@ -57,6 +57,9 @@ function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: Prof
                         source={assetSource}
                         sub={!main}
                         className="block h-auto w-full"
+                        honorBackgroundId={honor.honorBackgroundId ?? undefined}
+                        honorWordId={honor.honorWordId ?? undefined}
+                        server={master.server}
                     />
                 );
             }

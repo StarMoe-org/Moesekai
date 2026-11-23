@@ -3364,6 +3364,10 @@ export const koKRMessages = {
                 main: "메인",
                 sub: "서브"
             },
+            characterStyle: {
+                background: "배경",
+                word: "문구"
+            },
             bondsBadge: "인연",
             loadingFallback: "칭호 데이터 불러오는 중..."
         },

@@ -133,8 +133,29 @@ test("honor detail dialogs toggle between main and sub badge previews and export
     };
 
     let lastPreviewFileName = "";
+    // Character honor style tables: two backgrounds and two words for honor group 17.
+    const honorStyleTables = {
+        backgrounds: [
+            { id: 11702, seq: 2, honorGroupId: 17, assetbundleName: "honor_bg_style_02_17", name: "BG2", description: "Rank 180" },
+            { id: 11701, seq: 1, honorGroupId: 17, assetbundleName: "honor_bg_style_01_17", name: "BG1", description: "Rank 5" },
+            { id: 10101, seq: 1, honorGroupId: 1, assetbundleName: "honor_bg_style_01_01", name: "Other", description: "" },
+        ],
+        words: [
+            { id: 11701, seq: 1, honorGroupId: 17, assetbundleName: "honor_word_17_01", name: "Fan", description: "Rank 5" },
+            { id: 11702, seq: 2, honorGroupId: 17, assetbundleName: "honor_word_17_02", name: "Oshi", description: "Rank 180" },
+        ],
+    };
+    const honorStyles = compile("src/lib/character-honor-styles.ts", (id) => {
+        if (id === "@/lib/fetch") return { fetchMasterData: async () => [], getCurrentServer: () => "jp" };
+        return require(id);
+    });
+    const degreeProps = [];
     const makeResolve = () => (id) => {
         if (id === "react") return React;
+        if (id === "@/hooks/useCharacterHonorStyles") {
+            return { useCharacterHonorStyles: (_server, enabled) => (enabled ? honorStyleTables : null) };
+        }
+        if (id === "@/lib/character-honor-styles") return honorStyles;
         if (id === "@/contexts/I18nContext") return { useI18n: () => ({ t: (key) => key }) };
         if (id === "@/lib/i18n") return { getCharacterName: (_t, charId) => `Chara${charId}` };
         if (id === "@/hooks/useSvgPreviewActions") {
@@ -176,8 +197,11 @@ test("honor detail dialogs toggle between main and sub badge previews and export
         if (id === "./DegreeImage") {
             return {
                 __esModule: true,
-                default: ({ sub = false, honorLevel }) =>
-                    React.createElement("svg", { "data-degree-sub": String(sub), "data-level": String(honorLevel ?? "") }),
+                default: (props) => {
+                    const { sub = false, honorLevel } = props;
+                    degreeProps.push(props);
+                    return React.createElement("svg", { "data-degree-sub": String(sub), "data-level": String(honorLevel ?? "") });
+                },
             };
         }
         if (id === "./BondsDegreeImage") {
@@ -232,6 +256,57 @@ test("honor detail dialogs toggle between main and sub badge previews and export
             [...container.querySelectorAll("svg[data-degree-sub]")].map((el) => el.getAttribute("data-degree-sub")),
             ["true", "true"],
         );
+
+        // Character honors pick a background style (both slots) and a word (main slot only).
+        const characterGroup = { id: 17, name: "KanadeFan", honorType: "character" };
+        const characterHonor = (id) => ({
+            id,
+            seq: 1,
+            groupId: 17,
+            name: "KanadeFan",
+            honorRarity: "highest",
+            levels: [{ honorId: id, level: 1, bonus: 0, description: "Lv1" }],
+        });
+        const preview = () => degreeProps[degreeProps.length - 1];
+        const groups = () => container.querySelectorAll('[role="radiogroup"]');
+        const pickIn = async (groupIndex, value) => {
+            await act(async () => {
+                groups()[groupIndex].querySelector(`button[data-segment="${value}"]`).click();
+            });
+        };
+
+        await act(async () => {
+            root.render(React.createElement(HonorDetailDialog, { open: true, onClose: () => {}, honor: characterHonor(68), honorGroup: characterGroup }));
+        });
+        // Still on the sub badge from above: background picker only, defaults to the group's first rows.
+        assert.equal(groups().length, 2);
+        assert.equal(preview().honorBackgroundId, 11701);
+        assert.equal(lastPreviewFileName, "KanadeFan_68_1_sub");
+
+        await act(async () => {
+            container.querySelector('button[data-segment="main"]').click();
+        });
+        assert.equal(groups().length, 3);
+        assert.deepEqual([preview().honorBackgroundId, preview().honorWordId], [11701, 11701]);
+        assert.equal(lastPreviewFileName, "KanadeFan_68_1-1");
+
+        await pickIn(1, "11702");
+        assert.deepEqual([preview().honorBackgroundId, preview().honorWordId], [11702, 11701]);
+        await pickIn(2, "11702");
+        assert.deepEqual([preview().honorBackgroundId, preview().honorWordId], [11702, 11702]);
+        assert.equal(lastPreviewFileName, "KanadeFan_68_2-2");
+
+        // Another rarity of the same character keeps the pick.
+        await act(async () => {
+            root.render(React.createElement(HonorDetailDialog, { open: true, onClose: () => {}, honor: characterHonor(65), honorGroup: characterGroup }));
+        });
+        assert.deepEqual([preview().honorBackgroundId, preview().honorWordId], [11702, 11702]);
+        assert.equal(lastPreviewFileName, "KanadeFan_65_2-2");
+
+        // The game's fallback: an id the group doesn't have resolves to its first row.
+        const resolved = honorStyles.resolveCharacterHonorStyle(honorStyleTables, 17, 99999, 11702);
+        assert.deepEqual([resolved.background.id, resolved.word.id], [11701, 11702]);
+        assert.deepEqual(honorStyles.resolveCharacterHonorStyle({ backgrounds: [], words: [] }, 17), { background: undefined, word: undefined });
 
         const sampleBondsHonor = {
             id: 99,
