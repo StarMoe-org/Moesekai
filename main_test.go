@@ -667,22 +667,6 @@ func TestProxiedAPIRoutesRejectOversizedBodyWith413(t *testing.T) {
 	defer upstream.Close()
 
 	front := newMoesekaiAPIFront(t, upstream.URL)
-
-	// A 2.5 MiB community_story payload must pass the edge proxy body limit.
-	storyPayload := strings.NewReader(strings.Repeat("a", (2<<20)+(512<<10)))
-	okReq, err := http.NewRequest(http.MethodPost, front.URL+"/api/community/posts", storyPayload)
-	if err != nil {
-		t.Fatal(err)
-	}
-	okResp, err := front.Client().Do(okReq)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_ = okResp.Body.Close()
-	if okResp.StatusCode != http.StatusOK {
-		t.Fatalf("2.5 MiB community story POST status = %d, want 200", okResp.StatusCode)
-	}
-
 	oversized := strings.NewReader(strings.Repeat("x", int(proxyMaxBodyBytes)+1024))
 	req, err := http.NewRequest(http.MethodPost, front.URL+"/api/community/posts", oversized)
 	if err != nil {

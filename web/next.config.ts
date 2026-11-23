@@ -102,28 +102,6 @@ const nextConfig: NextConfig = {
   cacheMaxMemorySize: 50 * 1024 * 1024,
   trailingSlash: true,
   allowedDevOrigins: getAllowedDevOrigins(),
-  async headers() {
-    return [
-      {
-        source: "/live2d-viewer/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
-      {
-        source: "/sse-web/:path*",
-        headers: [
-          {
-            key: "Cache-Control",
-            value: "public, max-age=31536000, immutable",
-          },
-        ],
-      },
-    ];
-  },
   async redirects() {
     return [
       {

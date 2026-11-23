@@ -1,18 +1,16 @@
 "use client";
 import { useMemo, useState, type ReactNode } from "react";
-import Link from "@/components/LocalizedLink";
-import { Button, Chip, Icon, LoadingState, Surface, Switch, Tabs, cn } from "@/components/md3";
-import { mdMovie, mdOpenInNew, mdRestartAlt } from "@/components/md3/icons";
+import { Button, Chip, LoadingState, Surface, Switch, Tabs, cn } from "@/components/md3";
+import { mdRestartAlt } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { groupLive2DFacials, groupLive2DMotions, live2dMotionStyle, type Live2DClipRow, type Live2DMotionGroup } from "@/lib/live2dViewer/clips";
 import type { Live2DRegion } from "@/lib/live2dViewer/config";
 import type { Live2DModel } from "@/lib/live2dViewer/models";
 import type { Live2DViewer } from "@/lib/live2dViewer/viewer";
-import { storyPlayerHref } from "@/lib/storyPlayer/episodes";
 import { Live2DBackgroundGrid } from "./Live2DBackgroundGrid";
 import { Live2DClipRows } from "./Live2DClipRows";
 import { Live2DModelPicker } from "./Live2DModelPicker";
-import { live2dGroupKey, live2dOwnerAliases } from "./labels";
+import { live2dGroupKey } from "./labels";
 import type { Live2DViewerState } from "./useLive2DViewer";
 
 type Tab = "models" | "motions" | "facials" | "scene";
@@ -46,23 +44,13 @@ interface Live2DInspectorProps {
 export function Live2DInspector({
     region, line, models, listStatus, onRetryList, current, onSelect, state, act, clipError, loop, onLoopChange, background, onBackgroundChange, className,
 }: Live2DInspectorProps) {
-    const { t, locale } = useI18n();
+    const { t } = useI18n();
     const [tab, setTab] = useState<Tab>("models");
     // The group being looked through; it follows the model shown until another is chosen.
     const [browsing, setBrowsing] = useState<string | null>(null);
     const group = browsing ?? (current ? live2dGroupKey(current) : "character:1");
     // The clip being fetched (a motion or facial is fetched the first time it is used).
     const [pending, setPending] = useState<string | null>(null);
-
-    const currentAliases = useMemo(() => (current ? live2dOwnerAliases(current, locale) : []), [current, locale]);
-    const currentEpisodes = current?.episodes ?? [];
-    const currentEpisodeCount = current ? Math.max(current.episodeCount, currentEpisodes.length) : 0;
-    const hasStoryInfo = Boolean(current && (currentEpisodes.length > 0 || currentAliases.length > 0));
-
-    const handleSelectModel = (model: Live2DModel) => {
-        setBrowsing(null);
-        onSelect(model);
-    };
 
     const motionGroups = useMemo(() => groupLive2DMotions(state?.motions ?? []), [state?.motions]);
     const facialRows = useMemo(() => groupLive2DFacials(state?.facials ?? []), [state?.facials]);
@@ -115,18 +103,7 @@ export function Live2DInspector({
                             <p className="type-body-s text-on-surface-variant">{t("page.live2d.listEmptyDescription")}</p>
                         </Notice>
                     ) : (
-                        <div className="space-y-3">
-                            {hasStoryInfo && (
-                                <ModelStoryMeta
-                                    region={region}
-                                    episodes={currentEpisodes}
-                                    episodeCount={currentEpisodeCount}
-                                    aliases={currentAliases}
-                                    compact
-                                />
-                            )}
-                            <Live2DModelPicker models={models} current={current} group={group} onGroupChange={setBrowsing} onSelect={handleSelectModel} />
-                        </div>
+                        <Live2DModelPicker models={models} current={current} group={group} onGroupChange={setBrowsing} onSelect={onSelect} />
                     )
                 )}
 
@@ -208,14 +185,6 @@ export function Live2DInspector({
 
                 {tab === "scene" && (
                     <div className="space-y-5">
-                        {hasStoryInfo && (
-                            <ModelStoryMeta
-                                region={region}
-                                episodes={currentEpisodes}
-                                episodeCount={currentEpisodeCount}
-                                aliases={currentAliases}
-                            />
-                        )}
                         <section className="space-y-2">
                             <h3 className="type-title-s text-on-surface">{t("page.live2d.motionOptions")}</h3>
                             <Switch
@@ -239,106 +208,6 @@ export function Live2DInspector({
                 )}
             </div>
         </Surface>
-    );
-}
-
-function ModelStoryMeta({
-    region,
-    episodes,
-    episodeCount,
-    aliases,
-    compact = false,
-}: {
-    region: Live2DRegion;
-    episodes: readonly string[];
-    episodeCount: number;
-    aliases: readonly string[];
-    compact?: boolean;
-}) {
-    const { t } = useI18n();
-    const watchTitle = t("page.live2d.watchInStoryPlayer");
-
-    if (compact) {
-        return (
-            <div className="space-y-1.5 rounded-md3-md border border-outline-variant/60 bg-surface-container px-2.5 py-2">
-                {episodes.length > 0 && (
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                        <span className="inline-flex shrink-0 items-center gap-1 type-label-m text-on-surface">
-                            <Icon path={mdMovie} size={15} className="text-primary" />
-                            {t("page.live2d.storyAppearances")}
-                        </span>
-                        <span className="shrink-0 type-label-s text-on-surface-variant">
-                            {t("page.live2d.storyAppearancesCount", { count: episodeCount })}
-                        </span>
-                        <div className="flex shrink-0 items-center gap-1">
-                            {episodes.map(ep => (
-                                <Link
-                                    key={ep}
-                                    href={storyPlayerHref(region, ep)}
-                                    title={watchTitle}
-                                    className="state-layer focus-ring inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-container-high px-2 py-0.5 font-mono type-label-s text-primary transition-colors hover:bg-secondary-container hover:text-on-secondary-container"
-                                >
-                                    <span>{ep}</span>
-                                    <Icon path={mdOpenInNew} size={12} />
-                                </Link>
-                            ))}
-                        </div>
-                    </div>
-                )}
-                {aliases.length > 0 && (
-                    <p className="truncate type-label-s text-on-surface-variant">
-                        <span className="text-on-surface">{t("page.live2d.aliasesLabel")}:</span>{" "}
-                        {aliases.join(" / ")}
-                    </p>
-                )}
-            </div>
-        );
-    }
-
-    return (
-        <section className="space-y-2.5 rounded-md3-lg border border-outline-variant/60 bg-surface-container p-3">
-            {episodes.length > 0 && (
-                <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-1.5">
-                        <h3 className="inline-flex items-center gap-1.5 type-title-s text-on-surface">
-                            <Icon path={mdMovie} size={17} className="text-primary" />
-                            {t("page.live2d.storyAppearances")}
-                        </h3>
-                        <span className="rounded-full bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
-                            {t("page.live2d.storyAppearancesCount", { count: episodeCount })}
-                        </span>
-                    </div>
-                    <div className="flex flex-wrap gap-1.5">
-                        {episodes.map(ep => (
-                            <Link
-                                key={ep}
-                                href={storyPlayerHref(region, ep)}
-                                title={watchTitle}
-                                className="state-layer focus-ring inline-flex items-center gap-1 rounded-full border border-outline-variant/70 bg-surface-container-high px-2.5 py-1 font-mono type-label-s text-primary transition-colors hover:border-primary/50 hover:bg-secondary-container hover:text-on-secondary-container"
-                            >
-                                <span>{ep}</span>
-                                <Icon path={mdOpenInNew} size={13} />
-                            </Link>
-                        ))}
-                    </div>
-                </div>
-            )}
-            {aliases.length > 0 && (
-                <div className="space-y-1">
-                    <p className="type-label-m text-on-surface">{t("page.live2d.aliasesLabel")}</p>
-                    <div className="flex flex-wrap gap-1">
-                        {aliases.map(alias => (
-                            <span
-                                key={alias}
-                                className="rounded-md3-xs bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant"
-                            >
-                                {alias}
-                            </span>
-                        ))}
-                    </div>
-                </div>
-            )}
-        </section>
     );
 }
 

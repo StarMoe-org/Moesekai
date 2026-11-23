@@ -35,9 +35,7 @@ const (
 	serverIdleTimeout               = 60 * time.Second
 	serverMaxHeaderBytes            = 1 << 20
 	serverShutdownTimeout           = 4 * time.Second
-	// Allows community_story posts carrying up to 2 MiB story_doc JSON (~2.5 MiB total);
-	// raw audio archives upload directly to object storage via presigned PUT.
-	proxyMaxBodyBytes         int64 = 3 << 20
+	proxyMaxBodyBytes         int64 = 2 << 20
 	frontendHealthCacheTTL          = 2 * time.Second
 	masterDataRetryInterval         = 30 * time.Second
 	masterDataRefreshInterval       = 6 * time.Hour

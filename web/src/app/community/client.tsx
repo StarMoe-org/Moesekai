@@ -32,7 +32,6 @@ import {
     mdAccountCircle,
     mdClose,
     mdEdit,
-    mdMovie,
     mdShield,
 } from "@/components/md3/icons";
 import {
@@ -510,16 +509,9 @@ export default function CommunityFeedClient() {
                         description={t("page.community.emptyDescription")}
                         action={
                             hasActiveFilters ? (
-                                <div className="flex flex-wrap justify-center gap-2">
-                                    {category === "community_story" && effectiveMode !== "read_only" && (
-                                        <Button variant="filled" icon={mdMovie} href="/story-maker/edit">
-                                            {t("page.community.createStory")}
-                                        </Button>
-                                    )}
-                                    <Button variant="tonal" onClick={handleResetFilters}>
-                                        {t("page.community.resetFilters")}
-                                    </Button>
-                                </div>
+                                <Button variant="tonal" onClick={handleResetFilters}>
+                                    {t("page.community.resetFilters")}
+                                </Button>
                             ) : effectiveMode !== "read_only" ? (
                                 <Button variant="filled" icon={mdEdit} href="/community/new">
                                     {t("page.community.newPost")}

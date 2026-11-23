@@ -257,7 +257,7 @@ export default function NewPostClient() {
                                     {t("page.community.filters.category")}
                                 </p>
                                 <div className="flex flex-wrap gap-2">
-                                    {POST_CATEGORY_OPTIONS.filter((opt) => opt.id !== "community_story").map((opt) => (
+                                    {POST_CATEGORY_OPTIONS.map((opt) => (
                                         <Chip
                                             key={opt.id}
                                             variant="filter"

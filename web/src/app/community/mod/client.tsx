@@ -9,17 +9,14 @@ import {
     deleteModRule,
     fetchCommunityUser,
     fetchModAudit,
-    fetchModAudioQueue,
     fetchModMode,
     fetchModQueue,
     fetchModRules,
     getCommunityErrorMessage,
-    reviewModAudioBatch,
     setModMode,
     submitModAction,
     upsertModRule,
 } from "@/lib/community-api";
-import { formatByteSize, formatDurationMs } from "@/lib/storyMaker/audioBundle";
 import { setCommunityModeLocal, useCommunitySession } from "@/lib/community-session";
 import CommunityAuthorBadge from "@/components/community/CommunityAuthorBadge";
 import CommunityAvatar from "@/components/community/CommunityAvatar";
@@ -49,10 +46,7 @@ import {
     mdDelete,
     mdLock,
     mdLogin,
-    mdOpenInNew,
     mdPerson,
-    mdPlayArrowFill,
-    mdRecordVoiceOver,
     mdRefresh,
     mdSearch,
     mdShield,
@@ -70,7 +64,6 @@ import {
     type CustomWordRule,
     type ModActionRequest,
     type ModAppealItem,
-    type ModAudioQueueItem,
     type ModAuditItem,
     type ModModeResponse,
     type ModPendingItem,
@@ -81,7 +74,7 @@ import {
     type RuleTier,
 } from "@/types/community";
 
-type DashboardTab = "pending" | "audio" | "reports" | "appeals" | "users" | "events" | "rules" | "audit";
+type DashboardTab = "pending" | "reports" | "appeals" | "users" | "events" | "rules" | "audit";
 
 export default function CommunityModClient() {
     const { t, formatDate } = useI18n();
@@ -101,9 +94,6 @@ export default function CommunityModClient() {
     });
 
     const [pendingItems, setPendingItems] = useState<ModPendingItem[]>([]);
-    const [audioQueueItems, setAudioQueueItems] = useState<ModAudioQueueItem[]>([]);
-    const [audioReviewReasons, setAudioReviewReasons] = useState<Record<string, string>>({});
-    const [audioHealthDeltas, setAudioHealthDeltas] = useState<Record<string, number>>({});
     const [reportItems, setReportItems] = useState<ModReportItem[]>([]);
     const [appealItems, setAppealItems] = useState<ModAppealItem[]>([]);
     const [eventItems, setEventItems] = useState<ModerationEvent[]>([]);
@@ -157,13 +147,10 @@ export default function CommunityModClient() {
         appealItems.forEach((appeal) => {
             if (!appeal.appellant.is_deleted) add(appeal.appellant.sub, appeal.appellant.display_name);
         });
-        audioQueueItems.forEach((audioBatch) => {
-            add(audioBatch.author_sub);
-        });
         return Array.from(seen.entries())
             .slice(0, 10)
             .map(([sub, label]) => ({ sub, label }));
-    }, [appealItems, audioQueueItems, pendingItems, reportItems]);
+    }, [appealItems, pendingItems, reportItems]);
 
     const tRef = useRef(t);
     const tabRequestSeqRef = useRef(0);
@@ -195,10 +182,6 @@ export default function CommunityModClient() {
                 setCounts(res.counts);
                 setPendingItems(res.items);
                 setSelectedMode(res.community_mode);
-            } else if (activeTab === "audio") {
-                const res = await fetchModAudioQueue({ limit: 20 });
-                if (seq !== tabRequestSeqRef.current) return;
-                setAudioQueueItems(res.items);
             } else if (activeTab === "reports") {
                 const res = await fetchModQueue("reports", { limit: 30 });
                 if (seq !== tabRequestSeqRef.current) return;
@@ -303,28 +286,6 @@ export default function CommunityModClient() {
         setNotice(null);
         try {
             await submitModAction(input);
-            setNotice(t("page.community.mod.actionSuccess"));
-            await loadActiveTab();
-        } catch (err) {
-            setError(getCommunityErrorMessage(err, t));
-        } finally {
-            setBusyId(null);
-        }
-    };
-
-    const runAudioReview = async (batchId: string, action: "approve" | "reject") => {
-        const key = `audio-${batchId}`;
-        setBusyId(key);
-        setError(null);
-        setNotice(null);
-        try {
-            const reason = (audioReviewReasons[batchId] ?? "").trim();
-            const delta = action === "reject" ? (audioHealthDeltas[batchId] ?? 0) : 0;
-            await reviewModAudioBatch(batchId, {
-                action,
-                reason,
-                ...(delta < 0 ? { health_delta: delta } : {}),
-            });
             setNotice(t("page.community.mod.actionSuccess"));
             await loadActiveTab();
         } catch (err) {
@@ -538,10 +499,6 @@ export default function CommunityModClient() {
                                         label: `${t("page.community.mod.tabs.pending")} (${pendingTotal})`,
                                     },
                                     {
-                                        value: "audio",
-                                        label: t("page.community.mod.tabs.audio"),
-                                    },
-                                    {
                                         value: "reports",
                                         label: `${t("page.community.mod.tabs.reports")} (${counts.open_reports})`,
                                     },
@@ -751,222 +708,6 @@ export default function CommunityModClient() {
                                                                 {t("page.community.mod.actions.manageUser")}
                                                             </Button>
                                                         )}
-                                                    </div>
-                                                </Surface>
-                                            );
-                                        })}
-                                    </div>
-                                )
-                            ) : activeTab === "audio" ? (
-                                audioQueueItems.length === 0 ? (
-                                    <EmptyState
-                                        title={t("page.community.mod.audio.emptyTitle")}
-                                        description={t("page.community.mod.audio.emptyDesc")}
-                                    />
-                                ) : (
-                                    <div className="space-y-4">
-                                        {audioQueueItems.map((batch) => {
-                                            const itemKey = `audio-${batch.batch_id}`;
-                                            const isBusy = busyId === itemKey;
-                                            const currentDelta = audioHealthDeltas[batch.batch_id] ?? 0;
-                                            return (
-                                                <Surface
-                                                    key={batch.batch_id}
-                                                    tone="default"
-                                                    radius="md"
-                                                    className="space-y-3 p-4"
-                                                >
-                                                    <div className="flex flex-wrap items-start justify-between gap-2">
-                                                        <div className="space-y-1">
-                                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                                <span className="inline-flex items-center gap-1 rounded-md3-xs bg-tertiary-container px-2 py-0.5 type-label-s text-on-tertiary-container">
-                                                                    <Icon path={mdRecordVoiceOver} size={13} />
-                                                                    <span>{t("page.community.mod.audio.batchBadge", { postId: batch.post_id })}</span>
-                                                                </span>
-                                                                <span className="rounded-md3-xs bg-surface-container-high px-2 py-0.5 font-mono type-label-s text-on-surface-variant">
-                                                                    {batch.voice_locale}
-                                                                </span>
-                                                                <span className="type-body-s text-on-surface-variant">
-                                                                    {t("page.community.mod.audio.batchMeta", {
-                                                                        count: batch.total_clip_count,
-                                                                        duration: formatDurationMs(batch.estimated_duration_ms),
-                                                                    })}
-                                                                </span>
-                                                            </div>
-                                                            <p className="type-label-s text-on-surface-variant">
-                                                                {t("page.community.mod.audio.authorSub", { sub: batch.author_sub })} ·{" "}
-                                                                {formatDate(batch.created_at, {
-                                                                    year: "numeric",
-                                                                    month: "short",
-                                                                    day: "numeric",
-                                                                    hour: "2-digit",
-                                                                    minute: "2-digit",
-                                                                })}
-                                                            </p>
-                                                        </div>
-
-                                                        <div className="flex flex-wrap items-center gap-1.5">
-                                                            <Button
-                                                                size="xs"
-                                                                variant="tonal"
-                                                                icon={mdOpenInNew}
-                                                                href={`/community/post/${batch.post_id}`}
-                                                            >
-                                                                {t("page.community.mod.audio.openPost")}
-                                                            </Button>
-                                                            <Button
-                                                                size="xs"
-                                                                variant="outlined"
-                                                                icon={mdPlayArrowFill}
-                                                                href={`/story-maker/play?postId=${batch.post_id}`}
-                                                            >
-                                                                {t("page.community.storyCard.playNow")}
-                                                            </Button>
-                                                            <Button
-                                                                size="xs"
-                                                                variant="text"
-                                                                icon={mdPerson}
-                                                                onClick={() => openUserGovernance(batch.author_sub)}
-                                                            >
-                                                                {t("page.community.mod.actions.manageUser")}
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Flagged clips */}
-                                                    <div className="space-y-2">
-                                                        <p className="type-label-l text-on-surface">
-                                                            {t("page.community.mod.audio.flaggedClipsTitle", {
-                                                                count: batch.flagged_clips.length,
-                                                            })}
-                                                        </p>
-                                                        {batch.flagged_clips.length === 0 ? (
-                                                            <p className="type-body-s text-on-surface-variant">
-                                                                {t("page.community.mod.audio.noFlaggedClips")}
-                                                            </p>
-                                                        ) : (
-                                                            <div className="space-y-2">
-                                                                {batch.flagged_clips.map((clip) => (
-                                                                    <div
-                                                                        key={`${batch.batch_id}-${clip.beat_id}-${clip.raw_sha256}`}
-                                                                        className="space-y-2 rounded-md3-md border border-outline-variant/60 bg-surface-container-low p-3"
-                                                                    >
-                                                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                                                <span className="font-mono type-label-l text-primary">
-                                                                                    {clip.beat_id}
-                                                                                </span>
-                                                                                <span className="type-label-s text-on-surface-variant">
-                                                                                    {formatDurationMs(clip.duration_ms)} · {formatByteSize(clip.size_bytes)}
-                                                                                </span>
-                                                                                {clip.detected_lang && (
-                                                                                    <span className="rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 font-mono type-label-s text-on-surface-variant">
-                                                                                        {clip.detected_lang}
-                                                                                    </span>
-                                                                                )}
-                                                                                {clip.block_reason && (
-                                                                                    <span className="rounded-md3-xs bg-error-container px-2 py-0.5 type-label-s text-on-error-container">
-                                                                                        {clip.block_reason}
-                                                                                    </span>
-                                                                                )}
-                                                                            </div>
-                                                                        </div>
-
-                                                                        {clip.preview_url && (
-                                                                            <audio
-                                                                                controls
-                                                                                preload="none"
-                                                                                src={clip.preview_url}
-                                                                                className="h-9 w-full max-w-md"
-                                                                            />
-                                                                        )}
-
-                                                                        {clip.asr_transcript && (
-                                                                            <div className="rounded-md3-sm bg-surface-container px-2.5 py-1.5 type-body-s text-on-surface">
-                                                                                <span className="mr-1.5 type-label-s text-on-surface-variant">
-                                                                                    {t("page.community.mod.audio.transcriptLabel")}
-                                                                                </span>
-                                                                                <span>{clip.asr_transcript}</span>
-                                                                            </div>
-                                                                        )}
-
-                                                                        {clip.acoustic_summary?.trim() && (
-                                                                            <div className="rounded-md3-sm bg-surface-container px-2.5 py-1.5 type-body-s text-on-surface-variant">
-                                                                                {clip.acoustic_summary.trim()}
-                                                                            </div>
-                                                                        )}
-
-                                                                        {clip.scores && Object.keys(clip.scores).length > 0 && (
-                                                                            <pre className="max-h-36 overflow-auto rounded-md3-sm bg-surface-container p-2 font-mono type-label-s text-on-surface-variant">
-                                                                                {JSON.stringify(clip.scores, null, 2)}
-                                                                            </pre>
-                                                                        )}
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Review controls */}
-                                                    <div className="space-y-2.5 border-t border-outline-variant/60 pt-3">
-                                                        <TextField
-                                                            label={t("page.community.mod.audio.reasonLabel")}
-                                                            value={audioReviewReasons[batch.batch_id] ?? ""}
-                                                            onValueChange={(next) =>
-                                                                setAudioReviewReasons((prev) => ({
-                                                                    ...prev,
-                                                                    [batch.batch_id]: next,
-                                                                }))
-                                                            }
-                                                            placeholder={t("page.community.mod.audio.reasonPlaceholder")}
-                                                            disabled={isBusy}
-                                                        />
-
-                                                        <div className="flex flex-wrap items-center justify-between gap-2">
-                                                            <div className="flex flex-wrap items-center gap-1.5">
-                                                                <span className="type-label-s text-on-surface-variant">
-                                                                    {t("page.community.mod.audio.creditPenaltyLabel")}
-                                                                </span>
-                                                                {[0, -20, -40].map((delta) => (
-                                                                    <Chip
-                                                                        key={delta}
-                                                                        variant="filter"
-                                                                        selected={currentDelta === delta}
-                                                                        disabled={isBusy}
-                                                                        onClick={() =>
-                                                                            setAudioHealthDeltas((prev) => ({
-                                                                                ...prev,
-                                                                                [batch.batch_id]: delta,
-                                                                            }))
-                                                                        }
-                                                                    >
-                                                                        {delta === 0
-                                                                            ? t("page.community.mod.audio.noPenalty")
-                                                                            : `${delta}`}
-                                                                    </Chip>
-                                                                ))}
-                                                            </div>
-
-                                                            <div className="flex flex-wrap items-center gap-2">
-                                                                <Button
-                                                                    variant="filled"
-                                                                    size="s"
-                                                                    disabled={isBusy}
-                                                                    onClick={() => void runAudioReview(batch.batch_id, "approve")}
-                                                                >
-                                                                    {t("page.community.mod.audio.approvePublish")}
-                                                                </Button>
-                                                                <Button
-                                                                    variant="filled"
-                                                                    size="s"
-                                                                    color="error"
-                                                                    disabled={isBusy}
-                                                                    onClick={() => void runAudioReview(batch.batch_id, "reject")}
-                                                                >
-                                                                    {t("page.community.mod.audio.rejectAction")}
-                                                                </Button>
-                                                            </div>
-                                                        </div>
                                                     </div>
                                                 </Surface>
                                             );

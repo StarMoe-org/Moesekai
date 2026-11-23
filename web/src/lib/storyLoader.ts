@@ -39,11 +39,6 @@ export async function fetchScenarioData(scenarioUrl: string): Promise<IScenarioD
     return response.json();
 }
 
-interface ISubGameCharacter {
-    id: number;
-    name?: string;
-}
-
 /**
  * Get character name from character2d ID
  * Returns character info with unit annotation for virtual singers
@@ -51,8 +46,7 @@ interface ISubGameCharacter {
 async function getCharacterName(
     character2dId: number,
     character2ds: ICharacter2D[],
-    _unitProfiles: IUnitProfile[],
-    subGameCharacters: ISubGameCharacter[] = [],
+    _unitProfiles: IUnitProfile[]
 ): Promise<{ id: number; name: string; unitName?: string; unitField?: string }> {
     const chara2d = character2ds.find((c) => c.id === character2dId);
 
@@ -72,13 +66,6 @@ async function getCharacterName(
         }
         
         return { id: chara2d.characterId, name };
-    }
-
-    if ((chara2d.characterType as string) === "sub_game_character") {
-        const sub = subGameCharacters.find((c) => c.id === chara2d.characterId);
-        const subName = sub?.name?.trim();
-        // Keep id = 0 so TalkSnippet does not treat a sub-character id as a main character avatar (1..26).
-        return { id: 0, name: subName || "???" };
     }
 
     // As in the game, a mob is named only by its line's own WindowDisplayName (which every mob
@@ -110,11 +97,10 @@ export async function processScenarioForDisplay(
     serverSource: ServerSourceType = "jp"
 ): Promise<IProcessedScenarioData> {
     // Fetch required master data
-    const [character2ds, _gameCharacters, unitProfiles, subGameCharacters] = await Promise.all([
+    const [character2ds, _gameCharacters, unitProfiles] = await Promise.all([
         fetchMasterData<ICharacter2D[]>("character2ds.json").catch(() => []),
         fetchMasterData<IGameChara[]>("gameCharacters.json").catch(() => []),
         fetchMasterData<IUnitProfile[]>("unitProfiles.json").catch(() => []),
-        fetchMasterData<ISubGameCharacter[]>("subGameCharacters.json", false, serverSource).catch(() => []),
     ]);
 
     const scenarioId = extractScenarioIdFromData(data);
@@ -178,7 +164,7 @@ export async function processScenarioForDisplay(
 
                 const character2dId = talkData.TalkCharacters[0]?.Character2dId || 0;
                 const charInfo = character2dId
-                    ? await getCharacterName(character2dId, character2ds, unitProfiles, subGameCharacters)
+                    ? await getCharacterName(character2dId, character2ds, unitProfiles)
                     : { id: 0, name: talkData.WindowDisplayName };
 
                 // Use WindowDisplayName if it differs from resolved name (for mobs/custom names)

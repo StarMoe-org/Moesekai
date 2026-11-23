@@ -3,8 +3,6 @@
  * All UI labels are resolved through i18n keys (labelKey) rather than hardcoded strings.
  */
 
-import type { StoryDocument, StoryVoiceManifest } from "./storyMaker";
-
 export type CommunityMode = "normal" | "strict_review" | "read_only";
 export type CommunityRole = "user" | "mod" | "admin";
 export type TrustLevel = 0 | 1 | 2 | 3 | 4;
@@ -14,19 +12,9 @@ export type PostCategory =
     | "showcase"
     | "review"
     | "story"
-    | "community_story"
     | "guide"
     | "question"
     | "tiering";
-
-export type StoryVoiceStatus =
-    | "none"
-    | "uploading"
-    | "queued"
-    | "processing"
-    | "published"
-    | "pending_review"
-    | "rejected";
 
 export type ServerTag = "all" | "jp" | "cn" | "tw" | "en" | "kr";
 export type ContentLang = "zh" | "en" | "ja" | "ko" | "other";
@@ -186,21 +174,6 @@ export interface EntityLink {
     entity_id: string;
 }
 
-export interface CommunityStorySummary {
-    story_id: string;
-    story_rev: number;
-    region: string;
-    source_locale: string;
-    available_locales: string[];
-    beat_count: number;
-    has_voice_track: boolean;
-    voice_status: StoryVoiceStatus;
-    voice_locale: string;
-    voice_manifest_url?: string;
-    voice_clip_count: number;
-    voice_duration_ms: number;
-}
-
 export interface PostItem {
     id: number;
     author: AuthorSummary;
@@ -221,149 +194,8 @@ export interface PostItem {
     thread_locked: boolean;
     can_edit: boolean;
     can_delete: boolean;
-    story_summary?: CommunityStorySummary | null;
-    story_doc?: StoryDocument;
-    voice_manifest?: StoryVoiceManifest | null;
     created_at: string;
     updated_at: string;
-}
-
-export interface CommunityStoryPlayResponse {
-    post_id: number;
-    title: string;
-    status: ContentStatus;
-    author: AuthorSummary;
-    story_summary: CommunityStorySummary;
-    story_doc: StoryDocument;
-    voice_manifest?: StoryVoiceManifest | null;
-    voice_manifest_url: string;
-    updated_at: string;
-}
-
-export interface StoryAudioClipMeta {
-    beat_id: string;
-    raw_sha256: string;
-    filename?: string;
-    duration_ms: number;
-    size_bytes: number;
-}
-
-export interface StoryAudioDedupRequest {
-    clips: Array<{
-        beat_id: string;
-        raw_sha256: string;
-        duration_ms: number;
-        size_bytes: number;
-    }>;
-}
-
-export interface StoryAudioDedupResponse {
-    reusable_hashes: string[];
-    blocked_hashes: string[];
-    need_upload_hashes: string[];
-    remaining_daily_duration_ms: number;
-}
-
-export interface StoryAudioUploadInitRequest {
-    rights_confirmed: true;
-    voice_locale: string;
-    archive_format: "tar" | "zip";
-    archive_size_bytes: number;
-    estimated_duration_ms?: number;
-    clips: StoryAudioClipMeta[];
-}
-
-export interface StoryAudioUploadInitResponse {
-    batch_id: string;
-    status: StoryVoiceStatus;
-    instant_published?: boolean;
-    voice_manifest_url?: string;
-    upload_put_url?: string;
-    staging_object_key?: string;
-    expires_in_sec?: number;
-    total_clip_count: number;
-    new_clip_count: number;
-    reused_clip_count: number;
-}
-
-export interface StoryAudioUploadCompleteResponse {
-    ok: boolean;
-    batch_id: string;
-    status: StoryVoiceStatus;
-    staging_size_bytes: number;
-}
-
-export interface StoryAudioBatchSummary {
-    batch_id: string;
-    status: StoryVoiceStatus | "failed";
-    voice_locale: string;
-    total_clip_count: number;
-    new_clip_count: number;
-    reused_clip_count: number;
-    estimated_duration_ms: number;
-    failure_reason: string;
-    summary: Record<string, unknown>;
-    created_at: string;
-    updated_at: string;
-}
-
-export interface StoryAudioStatusResponse {
-    post_id: number;
-    story_id: string;
-    story_rev: number;
-    has_voice_track: boolean;
-    voice_status: StoryVoiceStatus;
-    voice_locale: string;
-    voice_manifest_url: string;
-    voice_clip_count: number;
-    voice_duration_ms: number;
-    latest_batch: StoryAudioBatchSummary | null;
-}
-
-export interface ModAudioFlaggedClip {
-    beat_id: string;
-    raw_sha256: string;
-    clean_sha256: string;
-    status: string;
-    duration_ms: number;
-    size_bytes: number;
-    asr_transcript: string;
-    detected_lang: string;
-    acoustic_summary: string;
-    scores: Record<string, unknown>;
-    block_reason?: string;
-    preview_url?: string;
-}
-
-export interface ModAudioQueueItem {
-    batch_id: string;
-    post_id: number;
-    author_sub: string;
-    story_rev: number;
-    voice_locale: string;
-    total_clip_count: number;
-    estimated_duration_ms: number;
-    summary: Record<string, unknown>;
-    created_at: string;
-    updated_at: string;
-    flagged_clips: ModAudioFlaggedClip[];
-}
-
-export interface ModAudioQueueResponse {
-    items: ModAudioQueueItem[];
-}
-
-export interface ModAudioReviewRequest {
-    action: "approve" | "reject";
-    reason: string;
-    health_delta?: number;
-}
-
-export interface ModAudioReviewResponse {
-    ok: boolean;
-    batch_id: string;
-    batch_status: StoryVoiceStatus | "failed";
-    voice_manifest_url?: string;
 }
 
 export interface CommentThread {
@@ -419,10 +251,10 @@ export interface CommunityNotification {
 
 export interface ModerationEvent {
     id: number;
-    target_type: "post" | "comment" | "story_audio";
+    target_type: "post" | "comment";
     target_id: number;
     author_sub: string;
-    stage: "rule_l2" | "gemini_decisions_l3" | "report_l4" | "manual" | "colab_audio_l3";
+    stage: "rule_l2" | "gemini_decisions_l3" | "report_l4" | "manual";
     decision: "pass" | "auto_spoiler" | "flag" | "shadowban" | "block" | "remove";
     reason: string;
     scores: Record<string, unknown>;
@@ -583,7 +415,6 @@ export const POST_CATEGORY_OPTIONS: readonly LabeledOption<PostCategory>[] = [
     { id: "showcase", labelKey: "page.community.categories.showcase" },
     { id: "review", labelKey: "page.community.categories.review" },
     { id: "story", labelKey: "page.community.categories.story" },
-    { id: "community_story", labelKey: "page.community.categories.community_story" },
     { id: "guide", labelKey: "page.community.categories.guide" },
     { id: "question", labelKey: "page.community.categories.question" },
     { id: "tiering", labelKey: "page.community.categories.tiering" },
@@ -594,7 +425,6 @@ export const POST_CATEGORY_LABEL_KEYS: Record<PostCategory, string> = {
     showcase: "page.community.categories.showcase",
     review: "page.community.categories.review",
     story: "page.community.categories.story",
-    community_story: "page.community.categories.community_story",
     guide: "page.community.categories.guide",
     question: "page.community.categories.question",
     tiering: "page.community.categories.tiering",
@@ -713,7 +543,6 @@ export function isPostCategory(value: string | null | undefined): value is PostC
         value === "showcase" ||
         value === "review" ||
         value === "story" ||
-        value === "community_story" ||
         value === "guide" ||
         value === "question" ||
         value === "tiering"

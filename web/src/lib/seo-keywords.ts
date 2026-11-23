@@ -704,60 +704,6 @@ export const SEO_PAGE_METADATA = {
       "zh-TW": ["劇情瀏覽器", "Live2D 劇情", "劇情播放"],
     },
   ),
-  story_maker: definePage(
-    "/story-maker",
-    { "zh-CN": "剧情制作器 BETA", "en-US": "Story Maker BETA", "ja-JP": "ストーリーメーカー BETA", "ko-KR": "스토리 메이커 BETA", "zh-TW": "劇情製作器 BETA" },
-    {
-      "zh-CN": "在线编排并播放 Project SEKAI Live2D 原创剧情，支持本地草稿管理、分支选项与 .msk 剧本导入导出。",
-      "en-US": "Create and play Project SEKAI Live2D fan stories with local drafts, branching choices, and .msk script import/export.",
-      "ja-JP": "Project SEKAI の Live2D モデルと素材でオリジナルストーリーを作成・再生できます。ローカル下書き保存、分岐選択肢、.msk 入出力に対応。",
-      "ko-KR": "Project SEKAI Live2D 모델과 에셋으로 오리지널 스토리를 제작·재생하고 로컬 초안과 .msk 가져오기/내보내기를 지원합니다.",
-      "zh-TW": "線上編排並播放 Project SEKAI Live2D 原創劇情，支援本機草稿管理、分支選項與 .msk 劇本匯入匯出。",
-    },
-    {
-      "zh-CN": ["剧情制作器 BETA", "剧情制作器", "社区剧情", "同人剧情", "Live2D 剧情制作", "小剧场制作"],
-      "en-US": ["Story Maker BETA", "story maker", "community story maker", "Live2D story editor", "fan story", "custom scenario"],
-      "ja-JP": ["ストーリーメーカー BETA", "ストーリーメーカー", "オリジナルストーリー", "Live2D ストーリー制作", "二次創作ストーリー"],
-      "ko-KR": ["스토리 메이커 BETA", "스토리 메이커", "커뮤니티 스토리", "Live2D 스토리 제작", "팬 스토리"],
-      "zh-TW": ["劇情製作器 BETA", "劇情製作器", "社群劇情", "同人劇情", "Live2D 劇情製作"],
-    },
-  ),
-  story_maker_edit: definePage(
-    "/story-maker/edit",
-    { "zh-CN": "剧情编辑器 - 剧情制作器 BETA", "en-US": "Story Editor - Story Maker BETA", "ja-JP": "ストーリーエディタ - ストーリーメーカー BETA", "ko-KR": "스토리 편집기 - 스토리 메이커 BETA", "zh-TW": "劇情編輯器 - 劇情製作器 BETA" },
-    {
-      "zh-CN": "在浏览器中编排 Project SEKAI Live2D 原创剧情的场景节点、动作表情、台词、音频、分支与 .msk 剧本。",
-      "en-US": "Edit Project SEKAI Live2D story scenes, motions, dialogue, audio, branches, and .msk scripts in your browser.",
-      "ja-JP": "ブラウザ上で Project SEKAI Live2D ストーリーのシーン、モーション、セリフ、音声、分岐、.msk スクリプトを編集できます。",
-      "ko-KR": "브라우저에서 Project SEKAI Live2D 스토리의 장면, 모션, 대사, 오디오, 분기 및 .msk 스크립트를 편집합니다.",
-      "zh-TW": "在瀏覽器中編排 Project SEKAI Live2D 原創劇情的場景節點、動作表情、台詞、音訊、分支與 .msk 劇本。",
-    },
-    {
-      "zh-CN": ["剧情编辑器", "剧情制作器 BETA", "剧情制作器", "Live2D 剧情编辑"],
-      "en-US": ["story editor", "Story Maker BETA", "story maker", "Live2D scenario editor"],
-      "ja-JP": ["ストーリーエディタ", "ストーリーメーカー BETA", "ストーリーメーカー", "Live2D 編集"],
-      "ko-KR": ["스토리 편집기", "스토리 메이커 BETA", "스토리 메이커", "Live2D 편집"],
-      "zh-TW": ["劇情編輯器", "劇情製作器 BETA", "劇情製作器", "Live2D 劇情編輯"],
-    },
-  ),
-  story_maker_play: definePage(
-    "/story-maker/play",
-    { "zh-CN": "剧情播放器 - 剧情制作器 BETA", "en-US": "Story Player - Story Maker BETA", "ja-JP": "ストーリープレイヤー - ストーリーメーカー BETA", "ko-KR": "스토리 플레이어 - 스토리 메이커 BETA", "zh-TW": "劇情播放器 - 劇情製作器 BETA" },
-    {
-      "zh-CN": "在线播放本地草稿或 .msk 原创剧情，支持 Live2D 演出、口型同步、选项分支、对话记录与自动播放。",
-      "en-US": "Play local drafts or imported .msk stories with Live2D stage playback, lip sync, choices, backlog, and AUTO mode.",
-      "ja-JP": "ローカル下書きや .msk ストーリーを Live2D 演出・口パク・選択肢分岐・ログ・AUTO 再生付きで再生できます。",
-      "ko-KR": "로컬 초안 또는 .msk 스토리를 Live2D 연출, 립싱크, 선택지, 로그 및 자동 재생으로 감상하세요.",
-      "zh-TW": "線上播放本機草稿或 .msk 原創劇情，支援 Live2D 演出、口型同步、選項分支、對話紀錄與自動播放。",
-    },
-    {
-      "zh-CN": ["剧情制作器 BETA", "社区剧情播放", "剧情制作器播放", "moesekai-story", "msk"],
-      "en-US": ["Story Maker BETA", "community story player", "play msk story", "moesekai-story"],
-      "ja-JP": ["ストーリーメーカー BETA", "コミュニティストーリー再生", "msk ストーリー再生", "moesekai-story"],
-      "ko-KR": ["스토리 메이커 BETA", "커뮤니티 스토리 플레이어", "msk 스토리 재생", "moesekai-story"],
-      "zh-TW": ["劇情製作器 BETA", "社群劇情播放", "劇情製作器播放", "moesekai-story", "msk"],
-    },
-  ),
   story_search: definePage(
     "/story-search",
     { "zh-CN": "剧情检索器", "en-US": "Story Search", "ja-JP": "ストーリー検索", "ko-KR": "스토리 검색기", "zh-TW": "劇情檢索器" },
@@ -1230,22 +1176,6 @@ export const SEO_PAGE_METADATA = {
       "en-US": ["community", "PJSK community", "Project SEKAI forum", "card comments", "discussion"],
       "ja-JP": ["コミュニティ", "プロセカ コミュニティ", "掲示板", "カードコメント", "雑談"],
       "ko-KR": ["커뮤니티", "프로세카 커뮤니티", "게시판", "카드 댓글", "토론"],
-    },
-  ),
-  community_stories: definePage(
-    "/community/stories",
-    { "zh-CN": "社区剧情", "en-US": "Community Stories", "ja-JP": "コミュニティストーリー", "ko-KR": "커뮤니티 스토리" },
-    {
-      "zh-CN": "浏览并在线游玩玩家使用 Story Maker 创作的 Project SEKAI 社区剧情，支持多语言字幕与自定义配音。",
-      "en-US": "Browse and play Project SEKAI community stories created with Story Maker, featuring multilingual subtitles and custom voice tracks.",
-      "ja-JP": "Story Maker で制作されたプロセカのコミュニティストーリーをブラウザで再生・共有できます。多言語字幕やカスタムボイスにも対応しています。",
-      "ko-KR": "Story Maker로 제작된 프로젝트 세카이 커뮤니티 스토리를 브라우저에서 바로 플레이하고 공유해 보세요. 다국어 자막과 커스텀 보이스를 지원합니다.",
-    },
-    {
-      "zh-CN": ["社区剧情", "PJSK二创剧情", "可游玩剧情", "Story Maker", "Live2D剧情"],
-      "en-US": ["community stories", "PJSK fan stories", "playable stories", "Story Maker", "Live2D story"],
-      "ja-JP": ["コミュニティストーリー", "プロセカ 創作ストーリー", "Live2Dストーリー", "Story Maker"],
-      "ko-KR": ["커뮤니티 스토리", "프로세카 창작 스토리", "플레이 스토리", "Story Maker"],
     },
   ),
   community_new: definePage(
