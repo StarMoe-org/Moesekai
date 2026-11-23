@@ -5,9 +5,9 @@
  * (scripts/copy-live2d-viewer.mjs): the viewer starts its worker from its own directory, and a
  * worker script has to be same-origin with the page.
  *
- * The models are those of the story libraries (SekaiStoryRipper's output, one per server): the
- * viewer reads a model's files from `<library base>/<region>/library/`, and the list of models
- * from an index published beside them, `<index base>/<region>/models.json`.
+ * The models are those the site publishes for each server (`<site><region>/`): the page lists them
+ * from the directory listings of `live2d/model/` and `live2d/motion/`, and the viewer reads a
+ * model from the version the site publishes now.
  *
  * Values must already be canonical (what the URL parser gives back), https, or http on a loopback
  * host for development. Every variable is optional.
@@ -16,13 +16,12 @@
 /** Same-origin path the releases are served under, each in a directory of its own. */
 export const LIVE2D_VIEWER_PATH = "/live2d-viewer/";
 
-/** The game servers a story library (and so a model index) is published for. */
+/** The game servers whose models the site publishes. */
 export const LIVE2D_REGIONS = ["jp", "cn", "tw", "kr", "en"] as const;
 
 export type Live2DRegion = (typeof LIVE2D_REGIONS)[number];
 
-const DEFAULT_LIBRARY_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/";
-const DEFAULT_INDEX_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-live2d/";
+const DEFAULT_SITE = "https://storage.pjsk.moe/";
 
 function parse(raw: string, name: string): URL {
     const invalid = new Error(`live2d_viewer_config_invalid:${name}`);
@@ -76,25 +75,31 @@ export function live2dFetchUrl(url: string): string {
     return relay ? url.replace(/^https:\/\//, relay) : url;
 }
 
-export interface Live2DSources {
-    /** The story library's root (holding `ripper.lock.json` and `library/`), as fetched. */
-    library: string;
-    /** The server's model index, as fetched. */
-    index: string;
+/**
+ * The site that publishes the models: `NEXT_PUBLIC_LIVE2D_SITE`, else the story player's
+ * (`NEXT_PUBLIC_SSE_WEB_SITE`), else the main asset site.
+ */
+function site(): string {
+    return directory(process.env.NEXT_PUBLIC_LIVE2D_SITE, "NEXT_PUBLIC_LIVE2D_SITE")
+        ?? directory(process.env.NEXT_PUBLIC_SSE_WEB_SITE, "NEXT_PUBLIC_SSE_WEB_SITE")
+        ?? DEFAULT_SITE;
 }
 
-/**
- * Where the viewer reads `region`'s models from. The libraries are `<base>/<region>/`
- * (`NEXT_PUBLIC_LIVE2D_LIBRARY_BASE`), the indexes `<base>/<region>/models.json`
- * (`NEXT_PUBLIC_LIVE2D_INDEX_BASE`).
- */
+/** Where the viewer reads `region`'s models from: the site, and the development relay when one is set. */
+export interface Live2DSources {
+    site: string;
+    region: Live2DRegion;
+    proxy?: string;
+}
+
 export function live2dSources(region: Live2DRegion): Live2DSources {
-    const libraries = directory(process.env.NEXT_PUBLIC_LIVE2D_LIBRARY_BASE, "NEXT_PUBLIC_LIVE2D_LIBRARY_BASE") ?? DEFAULT_LIBRARY_BASE;
-    const indexes = directory(process.env.NEXT_PUBLIC_LIVE2D_INDEX_BASE, "NEXT_PUBLIC_LIVE2D_INDEX_BASE") ?? DEFAULT_INDEX_BASE;
-    return {
-        library: live2dFetchUrl(`${libraries}${region}/`),
-        index: live2dFetchUrl(`${indexes}${region}/models.json`),
-    };
+    const relay = proxy();
+    return { site: site(), region, ...(relay ? { proxy: relay } : {}) };
+}
+
+/** The listing of `directory` (ending in `/`) of `region`'s current publication, as fetched. */
+export function live2dListingUrl(region: Live2DRegion, directory: string): string {
+    return live2dFetchUrl(`${site()}${region}/${directory}`);
 }
 
 /** Reads every setting once, so that a malformed one fails the build (next.config.ts). */

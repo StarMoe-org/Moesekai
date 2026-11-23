@@ -1,18 +1,16 @@
 {
   "format": "sekai-live2d-viewer-release/1",
-  "version": "0.2.1",
-  "commit": "d83380922d69a41a6e3f9fa063520daf5870fb9b",
+  "version": "0.2.0",
+  "commit": "5c140bb2b91b7676bd108aa5653f32530e5cd729",
   "dirty": false,
   "toolchain": { "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)", "wasmBindgen": "0.2.128" },
   "sha256": {
     "LICENSE": "0d96a4ff68ad6d4b6f1f30f713b18d5184912ba8dd389f86aa7710db079abcb0",
     "LICENSE-EXCEPTION": "415f550d8372c34ab5f9e1e9a06acff438d51b9b396908c997c05cd5595fc0f8",
-    "README.md": "8200e40b04cb13aff6f21daa89eb211522850157b045120905aa33a00c4cbf1a",
-    "pkg/sekai_live2d_viewer.js": "006f47624cfd5ef6e3f3484b57a126b942ae48b24305411a81a80e0931b2e8e2",
-    "pkg/sekai_live2d_viewer_bg.wasm": "fe75f7905ddb08a4f08922260fdf21cc16ac111bbf60e8a6c26290912856a99d",
-    "stage-worker.js": "140423737f53ea2c19d1e4c79c4aec45c3a72c9e7fd035e5d86e5faa745434c2",
-    "stage.js": "6e03cd1286e8d6dc5973d47f4e02685e1237b9effc6c3740ac93f46d7ef75fea",
-    "viewer-worker.js": "bbdf784ea7b1abba03bd9b07ab3251eb94f0b9088e613ba6e0a19593cee3bbb1",
-    "viewer.js": "46adb60a6c75562163f5a28b692dd54ed9c12e12043410c21dcbf6fc5738f201"
+    "README.md": "3611204d43e5c7a5e9633f3dc7ca4fa2f43ec2783c9b77ec0c0213ff4c9f8320",
+    "pkg/sekai_live2d_viewer.js": "c659e2726c04ed3a85e5aeec9bb7f1feba5af06fae64b6b0ebdd03a7268acc84",
+    "pkg/sekai_live2d_viewer_bg.wasm": "964a52d7f672689b2721616accdba447d56e9785cfa66b1a06f724c70e171e0e",
+    "viewer-worker.js": "24a217acc025d22bd48b3c74f682d529a59b68d3196a70dd0234c4e54ca003c4",
+    "viewer.js": "dfae9c01d2f8a4344d5ede3b6eedad5cc6b65bbb93747ce8b6976540e59eba5f"
   }
 }
