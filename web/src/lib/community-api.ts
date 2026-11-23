@@ -17,11 +17,15 @@ import type {
     CommunityMeResponse,
     CommunityMode,
     CommunityProfile,
+    CommunityStoryPlayResponse,
     ContentLang,
     CustomWordRule,
     EntityLinkType,
     ModActionRequest,
     ModAppealItem,
+    ModAudioQueueResponse,
+    ModAudioReviewRequest,
+    ModAudioReviewResponse,
     ModAuditItem,
     ModModeResponse,
     ModPendingItem,
@@ -40,11 +44,19 @@ import type {
     RuleMatchType,
     RuleTier,
     ServerTag,
+    StoryAudioDedupRequest,
+    StoryAudioDedupResponse,
+    StoryAudioStatusResponse,
+    StoryAudioUploadCompleteResponse,
+    StoryAudioUploadInitRequest,
+    StoryAudioUploadInitResponse,
     TargetType,
     ThreadCommentsResponse,
 } from "@/types/community";
+import type { StoryDocument } from "@moesekai/story-core";
 
 const REQUEST_TIMEOUT_MS = 20_000;
+const MOD_AUDIO_REVIEW_TIMEOUT_MS = 60_000;
 
 export interface CommunityApiErrorPayload {
     error?: string;
@@ -53,6 +65,7 @@ export interface CommunityApiErrorPayload {
     reason?: string;
     moderation_id?: number;
     muted_until?: string;
+    blocked_hashes?: string[];
 }
 
 export class CommunityApiError extends Error {
@@ -63,6 +76,7 @@ export class CommunityApiError extends Error {
     public readonly reason?: string;
     public readonly moderationId?: number;
     public readonly mutedUntil?: string;
+    public readonly blockedHashes?: string[];
 
     constructor(status: number, code: string, payload?: CommunityApiErrorPayload) {
         super(code);
@@ -80,6 +94,9 @@ export class CommunityApiError extends Error {
                 ? payload.moderation_id
                 : undefined;
         this.mutedUntil = typeof payload?.muted_until === "string" ? payload.muted_until : undefined;
+        this.blockedHashes = Array.isArray(payload?.blocked_hashes)
+            ? payload.blocked_hashes.filter((item): item is string => typeof item === "string")
+            : undefined;
     }
 }
 
@@ -87,9 +104,19 @@ export function isCommunityApiError(error: unknown): error is CommunityApiError 
     return error instanceof CommunityApiError;
 }
 
-async function rawRequest(path: string, init: RequestInit = {}): Promise<Response> {
+async function rawRequest(
+    path: string,
+    init: RequestInit = {},
+    timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<Response> {
+    const externalSignal = init.signal;
+    if (externalSignal?.aborted) {
+        throw new DOMException("Aborted", "AbortError");
+    }
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+    const onExternalAbort = () => controller.abort();
+    externalSignal?.addEventListener("abort", onExternalAbort, { once: true });
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
     try {
         const method = (init.method ?? "GET").toUpperCase();
         const url = `${MOESEKAI_API_ORIGIN}${path}`;
@@ -108,6 +135,7 @@ async function rawRequest(path: string, init: RequestInit = {}): Promise<Respons
         });
     } finally {
         clearTimeout(timeoutId);
+        externalSignal?.removeEventListener("abort", onExternalAbort);
     }
 }
 
@@ -137,12 +165,19 @@ async function parseError(response: Response): Promise<CommunityApiError> {
     return new CommunityApiError(response.status, code, payload);
 }
 
-async function requestJson<T>(path: string, init: RequestInit = {}): Promise<T> {
+async function requestJson<T>(
+    path: string,
+    init: RequestInit = {},
+    timeoutMs = REQUEST_TIMEOUT_MS,
+): Promise<T> {
     let response: Response;
     try {
-        response = await rawRequest(path, init);
+        response = await rawRequest(path, init, timeoutMs);
     } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
+            if (init.signal?.aborted) {
+                throw error;
+            }
             throw new CommunityApiError(0, "request_timeout");
         }
         throw new CommunityApiError(0, "network_error");
@@ -232,7 +267,9 @@ export function getCommunityErrorMessage(error: unknown, t: TranslateFn): string
         case "empty_content":
             return t("common.comments.errors.emptyContent");
         case "content_too_long":
-            return t("common.comments.errors.contentTooLong");
+            return error.status === 413
+                ? t("page.storyMaker.publish.errors.storyTooLarge")
+                : t("common.comments.errors.contentTooLong");
         case "links_not_allowed":
             return t("common.comments.errors.linksNotAllowed");
         case "too_many_tags":
@@ -241,6 +278,25 @@ export function getCommunityErrorMessage(error: unknown, t: TranslateFn): string
             return t("common.comments.errors.alreadyReported");
         case "already_appealed":
             return t("common.comments.errors.alreadyAppealed");
+        case "blocked_audio_clips":
+            return t("page.storyMaker.audioUpload.errors.blockedClips");
+        case "daily_quota_exceeded":
+            return t("page.storyMaker.audioUpload.errors.dailyQuota");
+        case "story_audio_unavailable":
+            return t("page.storyMaker.audioUpload.errors.unavailable");
+        case "credit_score_too_low":
+        case "insufficient_health_score":
+        case "low_health_score":
+            return t("page.storyMaker.audioUpload.errors.lowCreditScore");
+        case "archive_too_large":
+            return t("page.storyMaker.audioUpload.errors.archiveTooLarge");
+        case "archive_not_uploaded":
+            return t("page.storyMaker.audioUpload.errors.uploadFailed");
+        case "invalid_story_doc":
+            return t("page.storyMaker.publish.errors.invalidStoryDoc");
+        case "request_too_large":
+        case "story_doc_too_large":
+            return t("page.storyMaker.publish.errors.storyTooLarge");
         case "forbidden":
         case "forbidden_origin":
             return t("common.comments.errors.forbidden");
@@ -341,6 +397,7 @@ export interface CreatePostInput {
     tags?: string[];
     is_spoiler?: boolean;
     turnstile_token?: string;
+    story_doc?: StoryDocument;
 }
 
 export function createCommunityPost(input: CreatePostInput): Promise<PostMutationResponse> {
@@ -364,6 +421,7 @@ export interface UpdatePostInput {
     body_md?: string;
     tags?: string[];
     is_spoiler?: boolean;
+    story_doc?: StoryDocument;
 }
 
 export function updateCommunityPost(
@@ -625,6 +683,86 @@ export function fetchModAudit(
 ): Promise<{ items: ModAuditItem[]; next_cursor: string | null }> {
     return requestJson<{ items: ModAuditItem[]; next_cursor: string | null }>(
         `/api/community/mod/audit${buildQuery(params)}`,
+    );
+}
+
+// ==================== 28-33. Community Stories & Voice Tracks ====================
+
+export function fetchCommunityStoryPlay(postId: number | string): Promise<CommunityStoryPlayResponse> {
+    return requestJson<CommunityStoryPlayResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/play`,
+    );
+}
+
+export function dedupStoryAudio(
+    postId: number | string,
+    input: StoryAudioDedupRequest,
+    options: { signal?: AbortSignal } = {},
+): Promise<StoryAudioDedupResponse> {
+    return requestJson<StoryAudioDedupResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/dedup`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+            signal: options.signal,
+        },
+    );
+}
+
+export function initStoryAudioUpload(
+    postId: number | string,
+    input: StoryAudioUploadInitRequest,
+    options: { signal?: AbortSignal } = {},
+): Promise<StoryAudioUploadInitResponse> {
+    return requestJson<StoryAudioUploadInitResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+            signal: options.signal,
+        },
+    );
+}
+
+export function completeStoryAudioUpload(
+    postId: number | string,
+    batchId: string,
+    options: { signal?: AbortSignal } = {},
+): Promise<StoryAudioUploadCompleteResponse> {
+    return requestJson<StoryAudioUploadCompleteResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/uploads/${encodeURIComponent(batchId)}/complete`,
+        {
+            method: "POST",
+            signal: options.signal,
+        },
+    );
+}
+
+export function fetchStoryAudioStatus(postId: number | string): Promise<StoryAudioStatusResponse> {
+    return requestJson<StoryAudioStatusResponse>(
+        `/api/community/stories/${encodeURIComponent(String(postId))}/audio/status`,
+    );
+}
+
+export function fetchModAudioQueue(
+    params: { limit?: number } = {},
+): Promise<ModAudioQueueResponse> {
+    return requestJson<ModAudioQueueResponse>(
+        `/api/community/mod/audio-queue${buildQuery(params)}`,
+    );
+}
+
+export function reviewModAudioBatch(
+    batchId: string,
+    input: ModAudioReviewRequest,
+): Promise<ModAudioReviewResponse> {
+    return requestJson<ModAudioReviewResponse>(
+        `/api/community/mod/audio-queue/${encodeURIComponent(batchId)}/review`,
+        {
+            method: "POST",
+            body: JSON.stringify(input),
+        },
+        MOD_AUDIO_REVIEW_TIMEOUT_MS,
     );
 }
 

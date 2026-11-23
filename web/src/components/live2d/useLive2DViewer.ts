@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { live2dCoreUrl, type Live2DSources } from "@/lib/live2dViewer/config";
+import { live2dCoreUrl } from "@/lib/live2dViewer/config";
 import type { Live2DModel } from "@/lib/live2dViewer/models";
 import { IDENTITY_VIEW, type Live2DView } from "@/lib/live2dViewer/view";
 import {
@@ -65,8 +65,8 @@ function pixelRatio(): number {
 }
 
 interface UseLive2DViewerOptions {
-    /** Where the model is read from. */
-    sources: Live2DSources;
+    /** The story library's root, as fetched. */
+    library: string;
     /** The model shown; null for none. */
     model: Live2DModel | null;
 }
@@ -77,7 +77,7 @@ interface UseLive2DViewerOptions {
  * the model changes or the page is left. The stage's size is followed, and the view (zoom and
  * pan) applied.
  */
-export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
+export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewerRef = useRef<Live2DViewer | null>(null);
     const [attempt, setAttempt] = useState(0);
@@ -86,7 +86,7 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
     const motion = model?.motions[0] ?? null;
     // What each viewer reports is kept with the viewer it is about (`key`): another model, or a
     // retry, starts from a loading stage, no lists and the identity view.
-    const key = bundle ? `${sources.site}|${sources.region}|${bundle}|${motion ?? ""}|${attempt}` : null;
+    const key = bundle ? `${library}|${bundle}|${motion ?? ""}|${attempt}` : null;
     const [phaseOf, setPhaseOf] = useState<{ key: string; phase: Live2DViewerPhase } | null>(null);
     const [stateOf, setStateOf] = useState<{ key: string; state: Live2DViewerState } | null>(null);
     const [viewOf, setViewOf] = useState<{ key: string; view: Live2DView } | null>(null);
@@ -149,8 +149,8 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
                 canvas,
                 js: live2dViewerScriptBase(),
                 ...(core ? { core } : {}),
-                sources,
-                model: { asset: bundle, motion },
+                library,
+                model: { bundle, motion },
                 width,
                 height,
                 signal,
@@ -186,7 +186,7 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
             viewer?.destroy();
             host.replaceChildren();
         };
-    }, [key, sources, bundle, motion]);
+    }, [key, library, bundle, motion]);
 
     useEffect(() => {
         viewerRef.current?.setView(view);

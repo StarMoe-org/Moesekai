@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import ts from "typescript";
 
+const STORY_EDITOR_MESSAGE_RE = /^@moesekai\/story-editor\/messages\/(zh-CN|zh-TW|en-US|ja-JP|ko-KR)$/;
+
 export const WEB_ROOT = path.resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const SRC_ROOT = path.join(WEB_ROOT, "src");
 export const MESSAGE_FILES = {
@@ -71,6 +73,27 @@ export function flattenMessageKeys(value, prefix = "") {
 // adding a small message module must not silently disappear from lint/SEO tools.
 // These are trusted local data modules; external imports and root escapes are
 // rejected rather than exposing Node's general-purpose require inside the VM.
+function loadAllowlistedPackageMessage(specifier, cache) {
+    if (!STORY_EDITOR_MESSAGE_RE.test(specifier)) {
+        throw new Error(`External message import is not allowed: ${specifier}`);
+    }
+    const target = fileURLToPath(import.meta.resolve(specifier));
+    if (cache.has(target)) return cache.get(target).exports;
+    const messageModule = { exports: {} };
+    cache.set(target, messageModule);
+    const { outputText } = ts.transpileModule(fs.readFileSync(target, "utf8"), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020, allowJs: true },
+        fileName: target,
+    });
+    const denyRequire = (nested) => {
+        throw new Error(`Nested import inside package message module is not allowed: ${nested}`);
+    };
+    vm.runInNewContext(outputText, { module: messageModule, exports: messageModule.exports, require: denyRequire }, {
+        filename: target, timeout: 5000,
+    });
+    return messageModule.exports;
+}
+
 function loadMessageModule(filePath, cache = new Map()) {
     const absolute = path.resolve(filePath);
     const messageRoot = path.join(SRC_ROOT, "lib/i18n/messages");
@@ -86,6 +109,9 @@ function loadMessageModule(filePath, cache = new Map()) {
         fileName: absolute,
     });
     const localRequire = specifier => {
+        if (typeof specifier === "string" && STORY_EDITOR_MESSAGE_RE.test(specifier)) {
+            return loadAllowlistedPackageMessage(specifier, cache);
+        }
         if (typeof specifier !== "string" || !specifier.startsWith(".")) {
             throw new Error(`External message import is not allowed: ${specifier}`);
         }

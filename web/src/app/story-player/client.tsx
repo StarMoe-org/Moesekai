@@ -1,11 +1,13 @@
 "use client";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useSearchParams } from "next/navigation";
+import Link from "@/components/LocalizedLink";
 import MainLayout from "@/components/MainLayout";
-import { Banner, Button, IconButton, LoadingState, PageContainer, PageHeader, Select, Slider, Surface } from "@/components/md3";
+import { Banner, Button, Icon, IconButton, LoadingState, PageContainer, PageHeader, Select, Slider, Surface } from "@/components/md3";
 import {
-    mdChevronLeft, mdChevronRight, mdFullscreen, mdListAlt, mdMenuBook, mdPlayArrowFill, mdReplay, mdSkipNext, mdTune,
+    mdChevronLeft, mdChevronRight, mdFace, mdFullscreen, mdListAlt, mdMenuBook, mdOpenInNew, mdPlayArrowFill, mdReplay, mdSkipNext, mdTune,
 } from "@/components/md3/icons";
+import { live2dCostumeLabel, live2dOwnerName } from "@/components/live2d/labels";
 import { Live2DPlayerSettings } from "@/components/story/Live2DPlayerSettings";
 import { Live2DControls, Live2DFailureBanner, Live2DStage } from "@/components/story/Live2DStage";
 import { live2dActiveRow, live2dRows } from "@/components/story/live2dRows";
@@ -18,9 +20,12 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useStoryCatalogs } from "@/hooks/useStoryCatalogs";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
+import { getCharacterIconUrl } from "@/lib/assets";
+import { live2dViewerHref } from "@/lib/live2dViewer/models";
 import { SSE_WEB_REGIONS, sseWebSources, type SseWebRegion } from "@/lib/sseWeb/config";
 import type { SsePlayerNode } from "@/lib/sseWeb/player";
 import { StoryAssetMissingError } from "@/lib/storyAsset";
+import { fetchEpisodeModels, type EpisodeModelEntry } from "@/lib/storyPlayer/episodeModels";
 import {
     parseSelector, selectorKind, storyPlayerHref, type StoryEpisode, type StoryKind,
 } from "@/lib/storyPlayer/episodes";
@@ -65,13 +70,35 @@ function useEpisodeScript(episode: StoryEpisode | undefined, region: SseWebRegio
     return result?.key === key ? result.state : { status: "loading" };
 }
 
+/** Unique Live2D models appearing in the current episode, gracefully empty on 404 or error. */
+function useEpisodeModels(region: SseWebRegion | null, selector: string | null): readonly EpisodeModelEntry[] {
+    const key = region && selector ? `${region}|${selector}` : null;
+    const [result, setResult] = useState<{ key: string; entries: EpisodeModelEntry[] } | null>(null);
+
+    useEffect(() => {
+        if (!key || !region || !selector) return;
+        const controller = new AbortController();
+        fetchEpisodeModels(region, selector, controller.signal).then(
+            entries => {
+                if (!controller.signal.aborted) setResult({ key, entries });
+            },
+            () => {
+                if (!controller.signal.aborted) setResult({ key, entries: [] });
+            },
+        );
+        return () => controller.abort();
+    }, [key, region, selector]);
+
+    return key && result?.key === key ? result.entries : [];
+}
+
 /**
  * The story player: one episode a server publishes played on a stage, with its
  * script beside it, the two following each other. The address names the server and the
  * episode (`?server=jp&ep=event:140/1`), so a link opens the same one.
  */
 function StoryPlayerContent() {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const params = useSearchParams();
     const { serverSource, hasHydratedThemeSettings } = useTheme();
     const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
@@ -108,6 +135,7 @@ function StoryPlayerContent() {
     const catalog = catalogState?.status === "ready" ? catalogState.catalog : null;
     const episode = catalog && selector ? catalog.episodes.get(selector) : undefined;
     const notInLibrary = catalog !== null && selector !== null && episode === undefined;
+    const episodeModels = useEpisodeModels(region, notInLibrary ? null : selector);
     const index = episode && catalog ? catalog.order.indexOf(episode) : -1;
     const previousEpisode = index > 0 ? catalog?.order[index - 1] : undefined;
     const nextEpisode = index >= 0 ? catalog?.order[index + 1] : undefined;
@@ -318,6 +346,53 @@ function StoryPlayerContent() {
                         </Surface>
 
                         {phase === "failed" && <Live2DFailureBanner player={player} className="mt-4" />}
+                        {episodeModels.length > 0 && (
+                            <Surface tone="low" radius="xl" className="mt-3 px-4 py-3">
+                                <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                        <Icon path={mdFace} size={18} className="text-primary" />
+                                        <h3 className="type-title-s text-on-surface">{t("page.storyPlayer.episodeModels")}</h3>
+                                        <span className="rounded-full bg-surface-container-high px-2 py-0.5 type-label-s text-on-surface-variant">
+                                            {t("page.storyPlayer.episodeModelsCount", { count: episodeModels.length })}
+                                        </span>
+                                    </div>
+                                    <span className="type-label-s text-on-surface-variant">{t("page.storyPlayer.episodeModelsHint")}</span>
+                                </div>
+                                <div className="flex flex-wrap gap-1.5">
+                                    {episodeModels.map(({ model }) => {
+                                        const ownerName = live2dOwnerName(t, model, locale);
+                                        const costumeLabel = live2dCostumeLabel(t, model);
+                                        return (
+                                            <Link
+                                                key={model.id}
+                                                href={live2dViewerHref(region, model.id)}
+                                                title={`${ownerName} \u00b7 ${costumeLabel} (${t("page.storyPlayer.episodeModelsHint")})`}
+                                                className="state-layer focus-ring inline-flex max-w-full items-center gap-2 rounded-full border border-outline-variant/60 bg-surface-container py-1 pl-1 pr-3 text-on-surface transition-colors hover:border-primary/50 hover:bg-secondary-container/40"
+                                            >
+                                                {model.kind === "character" && model.characterId !== null ? (
+                                                    <img
+                                                        src={getCharacterIconUrl(model.characterId)}
+                                                        alt=""
+                                                        loading="lazy"
+                                                        className="size-7 shrink-0 rounded-full bg-surface-container-highest object-cover"
+                                                    />
+                                                ) : (
+                                                    <span
+                                                        aria-hidden
+                                                        className="flex size-7 shrink-0 items-center justify-center rounded-full bg-secondary-container type-label-m text-on-secondary-container"
+                                                    >
+                                                        {Array.from(ownerName.trim())[0] ?? "?"}
+                                                    </span>
+                                                )}
+                                                <span className="min-w-0 truncate type-label-m text-on-surface">{ownerName}</span>
+                                                <span className="truncate type-label-s text-on-surface-variant">{costumeLabel}</span>
+                                                <Icon path={mdOpenInNew} size={14} className="shrink-0 text-on-surface-variant" />
+                                            </Link>
+                                        );
+                                    })}
+                                </div>
+                            </Surface>
+                        )}
                         {player.notes.length > 0 && (
                             <ul className="mt-3 space-y-1 px-2 type-body-s text-on-surface-variant">
                                 {player.notes.map(line => <li key={line}>{line}</li>)}

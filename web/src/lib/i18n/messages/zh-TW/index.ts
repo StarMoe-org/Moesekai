@@ -2,6 +2,7 @@ import { assetGuideMessages } from "./assetGuide";
 import { accountMessages } from "./account";
 import { costume3dMessages } from "./costume3d";
 import { mysekaiWorkspaceMessages } from "./mysekai-workspace";
+import { storyMakerMessages } from "@moesekai/story-editor/messages/zh-TW";
 import type { MessageTree } from "../types";
 import { zhTWCommon } from "./common";
 import { zhTWPagePrimary } from "./page-primary";
@@ -23,6 +24,7 @@ export const zhTWMessages = {
     page: {
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
+        storyMaker: storyMakerMessages,
         account: accountMessages,
         assetGuide: assetGuideMessages,
         ...zhTWPagePrimary,

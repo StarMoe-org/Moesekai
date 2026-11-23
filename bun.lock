@@ -11,6 +11,8 @@
       "dependencies": {
         "@empty-sekai/allium-deck-wasm": "0.1.0",
         "@fontsource-variable/roboto-flex": "^5.3.0",
+        "@moesekai/story-core": "^0.1.4",
+        "@moesekai/story-editor": "^0.1.4",
         "@supabase/supabase-js": "2.106.0",
         "@swc/helpers": "^0.5.15",
         "@types/qrcode": "^1.5.6",
@@ -119,7 +121,7 @@
 
     "@emnapi/wasi-threads": ["@emnapi/wasi-threads@1.2.1", "https://registry.npmmirror.com/@emnapi/wasi-threads/-/wasi-threads-1.2.1.tgz", { "dependencies": { "tslib": "^2.4.0" } }, "sha512-uTII7OYF+/Mes/MrcIOYp5yOtSMLBWSIoLPpcgwipoiKbli6k322tcoFsxoIIxPDqW01SQGAgko4EzZi2BNv2w=="],
 
-    "@empty-sekai/allium-deck-wasm": ["@empty-sekai/allium-deck-wasm@0.1.0", "", {}, "sha512-bJtkM5TbZvgy0BC1l+ZimOsXBA8kfJFwhEBHUrqV2jqFJiCVocH7tBvOBtuRDs4X5XWnPKnPGFE3FkH7IocB+Q=="],
+    "@empty-sekai/allium-deck-wasm": ["@empty-sekai/allium-deck-wasm@0.1.0", "https://registry.npmmirror.com/@empty-sekai/allium-deck-wasm/-/allium-deck-wasm-0.1.0.tgz", {}, "sha512-bJtkM5TbZvgy0BC1l+ZimOsXBA8kfJFwhEBHUrqV2jqFJiCVocH7tBvOBtuRDs4X5XWnPKnPGFE3FkH7IocB+Q=="],
 
     "@eslint-community/eslint-utils": ["@eslint-community/eslint-utils@4.9.1", "https://registry.npmmirror.com/@eslint-community/eslint-utils/-/eslint-utils-4.9.1.tgz", { "dependencies": { "eslint-visitor-keys": "^3.4.3" }, "peerDependencies": { "eslint": "^6.0.0 || ^7.0.0 || >=8.0.0" } }, "sha512-phrYmNiYppR7znFEdqgfWHXR6NCkZEK7hwWDHZUjit/2/U0r6XvkDl0SYnoM51Hq7FhCGdLDT6zxCCOY1hexsQ=="],
 
@@ -220,6 +222,10 @@
     "@material-symbols/svg-400": ["@material-symbols/svg-400@0.47.6", "https://registry.npmmirror.com/@material-symbols/svg-400/-/svg-400-0.47.6.tgz", {}, "sha512-lXYsZWNXXu6gTVTAS/aRtOuKrjYhbyl1Y/t1JELXku3GZe0DLPfQ8O8UcbHGs1H22s32kGJVilkTKO2OkGzPXA=="],
 
     "@material/material-color-utilities": ["@material/material-color-utilities@0.4.0", "https://registry.npmmirror.com/@material/material-color-utilities/-/material-color-utilities-0.4.0.tgz", {}, "sha512-dlq6VExJReb8dhjj3a/yTigr3ncNwoFmL5Iy2ENtbDX03EmNeOEdZ+vsaGrj7RTuO+mB7L58II4LCsl4NpM8uw=="],
+
+    "@moesekai/story-core": ["@moesekai/story-core@0.1.4", "", {}, "sha512-Lurmpp/5JiNDzSsrHWTa6GgGBolf20kJPZ1HpFR16qULPC0ipoTWxka3XIhY0YDrkgZz0YYVb04kL6scmFKOmw=="],
+
+    "@moesekai/story-editor": ["@moesekai/story-editor@0.1.4", "", { "peerDependencies": { "@moesekai/story-core": "^0.1.4", "framer-motion": "^12.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moesekai/story-core"] }, "sha512-OYTfCAIwhK36iFKh5BO6RUrFR0CEp7lIXtrWg/ucIyJ4PlK3ve1DjUvMCqjSoBlzJz8ESTZXq5ypWnJAX5p9fg=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "https://registry.npmmirror.com/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.6.tgz", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 
@@ -1001,7 +1007,7 @@
 
     "picomatch": ["picomatch@4.0.4", "https://registry.npmmirror.com/picomatch/-/picomatch-4.0.4.tgz", {}, "sha512-QP88BAKvMam/3NxH6vj2o21R6MjxZUAd6nlwAS/pnGvN9IVLocLHxGYIzFhg6fUQ+5th6P4dv4eW9jX3DSIj7A=="],
 
-    "pinyin-pro": ["pinyin-pro@3.29.4", "", {}, "sha512-SPXpDT2cHEy+d26V1RXYMlVzXN42hotFAak1fzyWPi4o2dKXb61UqD4pzxDJHwk6gbv8vQ6EfErd+hYX0Qhzug=="],
+    "pinyin-pro": ["pinyin-pro@3.29.4", "https://registry.npmmirror.com/pinyin-pro/-/pinyin-pro-3.29.4.tgz", {}, "sha512-SPXpDT2cHEy+d26V1RXYMlVzXN42hotFAak1fzyWPi4o2dKXb61UqD4pzxDJHwk6gbv8vQ6EfErd+hYX0Qhzug=="],
 
     "pngjs": ["pngjs@5.0.0", "https://registry.npmmirror.com/pngjs/-/pngjs-5.0.0.tgz", {}, "sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw=="],
 
@@ -1207,7 +1213,7 @@
 
     "w3c-xmlserializer": ["w3c-xmlserializer@5.0.0", "https://registry.npmmirror.com/w3c-xmlserializer/-/w3c-xmlserializer-5.0.0.tgz", { "dependencies": { "xml-name-validator": "^5.0.0" } }, "sha512-o8qghlI8NZHU1lLPrpi2+Uq7abh4GGPpYANlalzWxyWteJOCsr/P+oPBA49TOLu5FTZO4d3F9MnWJfiMo4BkmA=="],
 
-    "wanakana": ["wanakana@5.3.1", "", {}, "sha512-OSDqupzTlzl2LGyqTdhcXcl6ezMiFhcUwLBP8YKaBIbMYW1wAwDvupw2T9G9oVaKT9RmaSpyTXjxddFPUcFFIw=="],
+    "wanakana": ["wanakana@5.3.1", "https://registry.npmmirror.com/wanakana/-/wanakana-5.3.1.tgz", {}, "sha512-OSDqupzTlzl2LGyqTdhcXcl6ezMiFhcUwLBP8YKaBIbMYW1wAwDvupw2T9G9oVaKT9RmaSpyTXjxddFPUcFFIw=="],
 
     "webidl-conversions": ["webidl-conversions@8.0.1", "https://registry.npmmirror.com/webidl-conversions/-/webidl-conversions-8.0.1.tgz", {}, "sha512-BMhLD/Sw+GbJC21C/UgyaZX41nPt8bUTg+jWyDeg7e7YN4xOM05YPSIXceACnXVtqyEw/LMClUQMtMZ+PGGpqQ=="],
 

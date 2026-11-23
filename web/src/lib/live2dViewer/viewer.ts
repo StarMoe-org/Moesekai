@@ -32,10 +32,10 @@ export interface Live2DViewerOptions {
     js?: string;
     /** The deployment's own Cubism Core for Web; Live2D's own when left out. */
     core?: string;
-    /** The site and server whose current publication the model is read from; `proxy` relays `https://` for development. */
-    sources: { site: string; region: string; version?: string; proxy?: string };
-    /** The model's `live2d-model` asset and its motion set's `live2d-motions` asset (none: no motions or facials), each by name or by a directory that holds it. */
-    model: { asset: string; motion: string | null };
+    /** The story library's root, as the browser fetches it. */
+    library: string;
+    /** The model's bundle and its motion bundle (none: no motions or facials), as `models.json` gives them. */
+    model: { bundle: string; motion: string | null };
     /** The drawing buffer, in device pixels. */
     width: number;
     height: number;

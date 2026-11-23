@@ -97,6 +97,8 @@ import {
     mdPianoFill,
     mdSmartDisplay,
     mdSmartDisplayFill,
+    mdMovieEdit,
+    mdMovieEditFill,
     mdManageSearch,
     mdManageSearchFill,
     mdStyler,
@@ -205,6 +207,7 @@ const navigationGroups: NavGroup[] = [
         id: "community",
         items: [
             { id: "community", href: "/community", icon: mdForum, activeIcon: mdForumFill },
+            { id: "communityStories", href: "/community/stories", icon: mdAutoStories, activeIcon: mdAutoStoriesFill },
         ],
     },
     {
@@ -228,6 +231,7 @@ const navigationGroups: NavGroup[] = [
             { id: "stickerMaker", href: "/sticker-maker", icon: mdAddPhotoAlternate, activeIcon: mdAddPhotoAlternateFill },
             { id: "chartPreview", href: "/chart-preview", icon: mdPiano, activeIcon: mdPianoFill },
             { id: "storyPlayer", href: "/story-player", icon: mdSmartDisplay, activeIcon: mdSmartDisplayFill },
+            { id: "storyMaker", href: "/story-maker", icon: mdMovieEdit, activeIcon: mdMovieEditFill },
             { id: "storySearch", href: "/story-search", icon: mdManageSearch, activeIcon: mdManageSearchFill },
             { id: "costume3d", href: "/costume-3d", icon: mdStyler, activeIcon: mdStylerFill },
             { id: "live2dViewer", href: "/live2d", icon: mdFace, activeIcon: mdFaceFill },
@@ -352,6 +356,12 @@ export default function Sidebar({
         for (const group of navigationGroups) {
             for (const item of group.items) {
                 if (item.href === "/music" && unlocalizedPathname.startsWith("/music/meta")) {
+                    continue;
+                }
+                if (
+                    item.href === "/community"
+                    && (unlocalizedPathname === "/community/stories" || unlocalizedPathname.startsWith("/community/stories/"))
+                ) {
                     continue;
                 }
                 if (unlocalizedPathname === item.href || unlocalizedPathname.startsWith(item.href + "/")) {
