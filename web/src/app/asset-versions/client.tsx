@@ -82,6 +82,7 @@ import {
     listDiffDirectory,
     searchDiffDirectory,
     type DiffCause,
+    type DiffDirectoryNode,
     type DiffMediaCategory,
 } from "./diffTree";
 
@@ -800,6 +801,20 @@ function AssetVersionsContent() {
             </span>
         ) : null;
 
+    // Tells how many changes of a folder only the conversion made, while the changes of every
+    // cause are shown: all of them, or a count of those.
+    const renderFolderConversion = ({ counts }: DiffDirectoryNode) =>
+        activeCause === "all" && counts.conversion > 0 ? (
+            <span
+                className="shrink-0 rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant"
+                title={t("page.assetVersions.causeConversionHint")}
+            >
+                {counts.conversion === counts.total
+                    ? t(CAUSE_LABEL_KEYS.conversion)
+                    : t("page.assetVersions.conversionCount", { count: formatNumber(counts.conversion) })}
+            </span>
+        ) : null;
+
     const formatPublishedAt = (publishedAt: string) =>
         formatDate(new Date(publishedAt), {
             year: "numeric",
@@ -1231,12 +1246,15 @@ function AssetVersionsContent() {
                                                                 <Icon path={mdFolderFill} size={22} />
                                                             </div>
                                                             <div className="min-w-0 flex-1">
-                                                                <p
-                                                                    className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
-                                                                    title={folder.name}
-                                                                >
-                                                                    {folder.name}
-                                                                </p>
+                                                                <div className="flex min-w-0 items-center gap-2">
+                                                                    <p
+                                                                        className="truncate type-title-s text-on-surface transition-colors group-hover:text-primary"
+                                                                        title={folder.name}
+                                                                    >
+                                                                        {folder.name}
+                                                                    </p>
+                                                                    {renderFolderConversion(folder)}
+                                                                </div>
                                                                 {relParent && (
                                                                     <p className="truncate font-mono type-label-s text-on-surface-variant">
                                                                         {relParent}
@@ -1382,6 +1400,7 @@ function AssetVersionsContent() {
                                                                             {folder.counts.removed > 0 && (
                                                                                 <span className="text-error">-{folder.counts.removed}</span>
                                                                             )}
+                                                                            {renderFolderConversion(folder)}
                                                                         </div>
                                                                     </div>
                                                                 </div>
