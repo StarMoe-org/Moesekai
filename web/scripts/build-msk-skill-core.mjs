@@ -17,6 +17,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const webDir = resolve(here, "..");
 const repoRoot = resolve(webDir, "..");
 const outFile = resolve(repoRoot, "docs/skills/moesekai-story-script/scripts/lib/msk-core.mjs");
+const coreEntry = fileURLToPath(import.meta.resolve("@moesekai/story-core"));
 
 const entrySource = `
 export {
@@ -26,13 +27,29 @@ export {
     STORY_REGIONS,
     advanceRuntime,
     compileStoryGraph,
+    computeActorRenderOrders,
+    configureStoryCore,
     createInitialRuntime,
     detectStageActorOverlaps,
+    extractLive2DMotionClips,
+    fetchLive2DModelClips,
+    fetchLive2DModels,
+    fetchMotionBundleClips,
+    inferLive2DMotionBundleCandidates,
     layoutStageActors,
+    live2dListingUrl,
+    live2dMemberUrl,
+    live2dModelsFromListings,
+    live2dMotionSet,
+    live2dSiteListingUrl,
     live2dSources,
+    live2dVersionedBaseUrl,
     parseStoryScript,
+    resolveLive2DAssetDocument,
+    resolveLive2DPublishedVersion,
+    resolveLive2DSiteBase,
     serializeStoryScript,
-} from "@moesekai/story-core";
+} from ${JSON.stringify(coreEntry)};
 `;
 
 const tempEntry = join(tmpdir(), `moesekai-msk-core-entry-${process.pid}.ts`);

@@ -22,24 +22,32 @@ function withSlash(url) {
   return url.endsWith("/") ? url : `${url}/`;
 }
 
+function resolveUrl(url) {
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(url)) return url;
+  return typeof location !== "undefined" ? new URL(url, location.href).href : url;
+}
+
 /**
  * The base URL of the published version of `region` on `site`, ending in `/`:
  * `<site>/<region>@<version>/`, the version the site publishes now unless `version` is given.
  * `proxy`, when set, replaces `https://` in front of the URLs (`<proxy><host>/…`), for a
  * development server that relays them.
  * @param {{site: string, region: string, version?: string, proxy?: string}} sources
+ * @param {{signal?: AbortSignal}} [opts]
  */
-export async function resolveBase({ site, region, version, proxy }) {
-  const through = (url) => (proxy ? url.replace(/^https:\/\//, proxy) : url);
-  const root = site.replace(/\/+$/, "");
-  if (version === undefined) {
+export async function resolveBase({ site, region, version, proxy }, { signal } = {}) {
+  const relay = proxy ? withSlash(resolveUrl(proxy)) : "";
+  const through = (url) => (relay ? url.replace(/^https:\/\//, relay) : url);
+  const root = resolveUrl(site).replace(/\/+$/, "");
+  if (version === undefined || version === null || version === "") {
     const url = through(`${root}/${region}/`);
     let listing;
     try {
-      const r = await fetch(url, { cache: "no-cache" });
+      const r = await fetch(url, { cache: "no-cache", signal });
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
       listing = await r.json();
     } catch (e) {
+      if (signal?.aborted || e?.name === "AbortError") throw e;
       throw Object.assign(new Error(String(e?.message ?? e)), { kind: "network", url });
     }
     if (typeof listing.published_version !== "string") {
@@ -152,6 +160,8 @@ export class SekaiLive2DViewer extends EventTarget {
   /** The `live2d-model` asset opened, and the `live2d-motions` asset (null: none). */
   model = null;
   motionSet = null;
+  /** The resolved published-version base URL, ending in `/`. */
+  base = null;
   /** Whether the model has a physics rig (`physics` changes nothing without one). */
   hasPhysics = false;
   /** The body motion last started, and the facial last set. */
@@ -160,10 +170,13 @@ export class SekaiLive2DViewer extends EventTarget {
 
   async #load(o) {
     const js = withSlash(new URL(o.js ?? HERE, location.href).href);
+    const base = await resolveBase(o.sources, { signal: o.signal });
+    o.signal?.throwIfAborted();
+    this.base = base;
     const options = {
       pkg: withSlash(new URL(o.pkg ?? "pkg/", js).href),
       core: new URL(o.core ?? CORE, location.href).href,
-      base: await resolveBase(o.sources),
+      base,
       model: { asset: o.model.asset, motion: o.model.motion ?? null },
       width: Math.max(1, Math.round(o.width)),
       height: Math.max(1, Math.round(o.height)),

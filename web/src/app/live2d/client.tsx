@@ -11,9 +11,17 @@ import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { getBackgroundImageUrl, getCharacterIconUrl } from "@/lib/assets";
-import { fetchLive2DModels } from "@/lib/live2dViewer/client";
-import { LIVE2D_REGIONS, isLive2DRegion, live2dSources, type Live2DRegion } from "@/lib/live2dViewer/config";
-import { live2dViewerHref, parseLive2DCharacterParam, parseLive2DModelParam, type Live2DModel } from "@/lib/live2dViewer/models";
+import {
+    LIVE2D_REGIONS,
+    fetchLive2DModels,
+    isLive2DRegion,
+    live2dSources,
+    live2dViewerHref,
+    parseLive2DCharacterParam,
+    parseLive2DModelParam,
+    type Live2DModel,
+    type Live2DRegion,
+} from "@moesekai/story-core";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 
 const subscribeNever = () => () => {};
@@ -44,7 +52,7 @@ function useModelList(region: Live2DRegion | null) {
 }
 
 /**
- * The Live2D model viewer: a server's models (those its story library holds), one shown on the
+ * The Live2D model viewer: a server's models (from the canonical asset site), one shown on the
  * stage with the game's own motions, facials, blinking, breath and physics, and a panel beside it
  * to choose the model, its motion and facial, and the scene. The address names the server and the
  * model (`?server=jp&model=v2_01ichika_casual`), so a link opens the same one; without one the
@@ -87,12 +95,12 @@ function Live2DViewerContent() {
     }, [region, shownId, linkedCharacter, listLoading]);
 
     // The viewer.
-    // one object per server: the viewer is made again when it changes
-    const sources = useMemo(() => live2dSources(region ?? "jp"), [region]);
+    // one object per server/line: the viewer is made again when it changes
+    const line = assetSource.startsWith("backup") ? "backup" : "main";
+    const sources = useMemo(() => live2dSources(region ?? "jp", line), [region, line]);
     const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ sources, model: current });
     const [loop, setLoop] = useState(false);
     const [background, setBackground] = useState<string | null>(null);
-    const line = assetSource.startsWith("backup") ? "backup" : "main";
     const backgroundUrl = background && region ? getBackgroundImageUrl(background, `${line}-${region}` as AssetSourceType) : null;
     const ready = phase.kind === "ready" ? state : null;
 

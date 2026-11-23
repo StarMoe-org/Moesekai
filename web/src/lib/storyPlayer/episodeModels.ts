@@ -1,5 +1,4 @@
-import { fetchLive2DModels } from "@/lib/live2dViewer/client";
-import { compareLive2DModels, type Live2DModel } from "@/lib/live2dViewer/models";
+import { compareLive2DModels, fetchLive2DModels, type Live2DModel } from "@moesekai/story-core";
 import { sseWebSources, type SseWebRegion } from "@/lib/sseWeb/config";
 import { parseSelector } from "./episodes";
 

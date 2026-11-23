@@ -4,9 +4,10 @@
  *
  * Zero-dependency pure Node.js ESM (Node 18+) designed for AI agents and human authors writing
  * MoeSekai Script (`.msk`) stories. Queries Moesekai's public CORS-enabled endpoints
- * (`metadata.pjsk.moe`, `storage.pjsk.moe`, `assets.pjsk.moe`, `translation.exmeaning.com`)
- * so agents can study real official Project SEKAI scenarios and mine verified Live2D models,
- * `(motion, facial)` palettes with dialogue context, backgrounds, BGM tracks, SE clips, and voices.
+ * (`metadata.pjsk.moe`, `storage.pjsk.moe`, `assets.pjsk.moe/sekai-extra-assets/sekai-story-search`,
+ * `translation.exmeaning.com`) so agents can study real official Project SEKAI scenarios and mine
+ * verified Live2D models, `(motion, facial)` palettes with dialogue context, backgrounds, BGM
+ * tracks, SE clips, and voices.
  *
  * Public Asset Attribution: Moesekai (pjsk.moe)
  *
@@ -39,8 +40,6 @@ const STORAGE_DOMAINS = {
     backup: ["https://storage.exmeaning.com", "https://storage.pjsk.moe"],
 };
 
-const RIPPER_LIBRARY_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper";
-const LIVE2D_INDEX_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-live2d";
 const STORY_SEARCH_BASE = "https://assets.pjsk.moe/sekai-extra-assets/sekai-story-search";
 const TRANSLATION_BASE = "https://translation.exmeaning.com";
 
@@ -48,9 +47,12 @@ const CACHE_DIR = join(tmpdir(), "moesekai-msk-skill-cache");
 const HTTP_TIMEOUT_MS = 20_000;
 const CORPUS_TIMEOUT_MS = 60_000;
 
+const TTL_PUBLISHED_VERSION_MS = 60 * 1000;
 const TTL_MASTER_MS = 6 * 60 * 60 * 1000;
 const TTL_MANIFEST_MS = 60 * 60 * 1000;
 const TTL_SCENARIO_MS = 24 * 60 * 60 * 1000;
+const MAX_ASSET_WALK_DEPTH = 12;
+const MAX_ASSET_WALK_DIRS = 64;
 
 const SE_PACKS = ["se_pack00001_b", "se_pack00001"];
 const AUDIO_EXT_RE = /\.(mp3|wav|ogg|acb|flac)$/i;
@@ -135,9 +137,8 @@ const SUB_VARIANT_SEGMENTS = new Set([
     "rw", "patient", "sunset", "cloth", "jc", "school", "transform",
 ]);
 
-// Compact 5-region story-derived supporting & collab character name table (verified against
-// sekai-live2d-index models.json format 2 across jp/cn/tw/en/kr). Used to enrich format 1
-// indexes and 404 storage directory fallbacks, and to supply canonical full-name search aliases.
+// Compact 5-region story-derived supporting & collab character name table across jp/cn/tw/en/kr.
+// Used to enrich canonical asset-site directory listings and supply canonical full-name search aliases.
 export const SUB_CHARACTER_NAMES = {
     "anfather": { kind: "sub", names: { jp: "謙", cn: "谦", tw: "謙", en: "Ken", kr: "켄" }, aliases: ["白石谦", "白石謙", "杏的父亲", "杏的父親", "杏の父", "An's Father", "Shiraishi Ken"] },
     "arata": { kind: "sub", names: { cn: "新", en: "Arata", jp: "新", kr: "아라타", tw: "新" }, aliases: ["远野新", "遠野新", "Tono Arata"] },
@@ -472,6 +473,46 @@ export function inferMotionBundleCandidates(modelId) {
     return out;
 }
 
+function motionSetCandidateNames(id) {
+    const clean = String(id ?? "").trim();
+    if (!clean) return [];
+    const generation = clean.startsWith("v2_") ? "v2_" : "";
+    const rest = clean.slice(generation.length);
+    const prefixes = generation ? [generation, ""] : [""];
+    const trimmed = (stem) => stem.replace(/(?:black\d*|young|\d+)+$/, "");
+    const character = /^(?:clb\d+_)?(\d{2}[a-z]+)/.exec(rest);
+    const parts = rest.split("_");
+    const stems = character
+        ? [character[1], trimmed(character[1])]
+        : parts.flatMap((_, index) => {
+            const stem = parts.slice(0, parts.length - index).join("_");
+            const stripped = trimmed(stem);
+            return stripped && stripped !== stem ? [stem, stripped] : [stem];
+        });
+
+    const out = [];
+    const seen = new Set();
+    for (const stem of stems) {
+        if (!stem || stem === "sub") continue;
+        for (const prefix of prefixes) {
+            const name = `${prefix}${stem}_motion_base`;
+            if (!seen.has(name)) {
+                seen.add(name);
+                out.push(name);
+            }
+        }
+    }
+    return out;
+}
+
+function resolveMotionSetName(modelId, motionSets) {
+    if (!motionSets || motionSets.size === 0) return null;
+    for (const name of motionSetCandidateNames(modelId)) {
+        if (motionSets.has(name)) return name;
+    }
+    return null;
+}
+
 function pickLocalizedName(names, region) {
     if (!names || typeof names !== "object") return null;
     if (names[region]) return names[region];
@@ -511,9 +552,9 @@ function findMatchingChara2d(modelId, assetName, rawC2dIds, lookups) {
 
 /**
  * Pure model catalog normalizer supporting:
- * 1. `models.json` format 2 (`format: 2, models: [...]`)
- * 2. `models.json` format 1 (`format: 1, models: [...]`, enriched with masterdata + built-in names)
- * 3. Storage directory fallback (`directories: [...]` + `character2ds.json` + `subGameCharacters.json` + built-in names)
+ * 1. Canonical asset-site directory listings (`directories` + optional `motionDirectories` +
+ *    `character2ds.json` + `subGameCharacters.json` + built-in localized supporting names)
+ * 2. Pre-enriched structured model entries (`models: [...]`)
  */
 function isUntranslatedRegionName(regionKey, raw) {
     const s = cleanSpeakerName(raw);
@@ -535,6 +576,10 @@ export function normalizeCatalogModels(rawInput, ctx = {}) {
     const region = ctx.region ?? "jp";
     const chara2ds = rawInput?.chara2ds ?? ctx.chara2ds ?? [];
     const subGameChars = rawInput?.subGameChars ?? ctx.subGameChars ?? [];
+    const motionDirectories = rawInput?.motionDirectories ?? ctx.motionDirectories;
+    const motionSetNames = Array.isArray(motionDirectories) && motionDirectories.length > 0
+        ? new Set(motionDirectories.filter(x => typeof x === "string"))
+        : null;
     const lookups = buildCharacter2dLookups(chara2ds);
     const subCharById = new Map();
     for (const s of subGameChars ?? []) {
@@ -631,7 +676,13 @@ export function normalizeCatalogModels(rawInput, ctx = {}) {
     return staged.map((item) => {
         const { id, entry, matchedC2d, assetName, iconBundle, characterId, subCharacterId, kind, rawOwnerKey } = item;
         const ownerKey = kind === "character" ? null : normalizeOwnerKeyWithKnown(rawOwnerKey, ownerKeySet);
-        const motion = entry.motion ?? inferMotionBundleCandidates(id)[0] ?? null;
+        const motion = entry.motion
+            ?? (motionSetNames
+                ? (() => {
+                    const matched = resolveMotionSetName(id, motionSetNames);
+                    return matched ? `live2d/motion/${matched}` : null;
+                })()
+                : (inferMotionBundleCandidates(id)[0] ?? null));
         const unit = entry.unit || matchedC2d?.unit || (characterId ? CHAR_BY_ID.get(characterId)?.unit : null) || null;
         const episodeCount = Number.isFinite(entry.episodeCount) ? entry.episodeCount : 0;
         const episodes = Array.isArray(entry.episodes) ? entry.episodes.filter(x => typeof x === "string") : [];
@@ -1020,6 +1071,169 @@ async function fetchDirectoryListing(region, dirPath, opts) {
         ? data.files.map(x => (typeof x === "string" ? x : x?.name)).filter(x => typeof x === "string")
         : [];
     return { directories, files };
+}
+
+async function fetchCanonicalDirectoryListing(region, dirPath, opts, ttlMs = TTL_MASTER_MS) {
+    const trimmed = String(dirPath ?? "").trim().replace(/^\/+|\/+$/g, "");
+    const encodedDir = trimmed ? encodePath(trimmed) : "";
+    const domains = STORAGE_DOMAINS[opts.line] ?? STORAGE_DOMAINS.main;
+    const urls = domains.map(d =>
+        encodedDir
+            ? `${d}/${encodeURIComponent(region)}/${encodedDir}/`
+            : `${d}/${encodeURIComponent(region)}/`,
+    );
+    const data = await fetchJsonWithFallback(urls, "canonical-listing", `${opts.line}:${region}:${trimmed}`, ttlMs, opts.noCache);
+    if (data?.format !== "directory-listing" || data?.version !== 1) {
+        throw new Error(`Unsupported canonical directory listing for ${region}/${trimmed}`);
+    }
+    const directories = Array.isArray(data.directories)
+        ? data.directories.filter(x => typeof x === "string")
+        : [];
+    const files = Array.isArray(data.files)
+        ? data.files.map(x => (typeof x === "string" ? x : x?.name)).filter(x => typeof x === "string")
+        : [];
+    return {
+        publishedVersion: typeof data.published_version === "string" && data.published_version.trim()
+            ? data.published_version.trim()
+            : null,
+        directories,
+        files,
+    };
+}
+
+async function resolveCanonicalPublishedSite(region, opts) {
+    const domains = STORAGE_DOMAINS[opts.line] ?? STORAGE_DOMAINS.main;
+    const filePath = cacheFilePath("canonical-version", `${opts.line}:${region}`, "json");
+    const cached = await readCacheFile(filePath, TTL_PUBLISHED_VERSION_MS, opts.noCache);
+    if (cached) {
+        try {
+            const parsed = JSON.parse(cached.toString("utf8"));
+            if (parsed?.domain && parsed?.version) return parsed;
+        } catch {
+            // ignore corrupt cache entry
+        }
+    }
+    let lastErr = null;
+    for (const domain of domains) {
+        const url = `${domain}/${encodeURIComponent(region)}/`;
+        try {
+            const res = await fetch(url, {
+                headers: { Accept: "application/json" },
+                signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+            });
+            if (!res.ok) {
+                lastErr = new Error(`${url}: HTTP ${res.status}`);
+                continue;
+            }
+            const data = await res.json();
+            if (data?.format !== "directory-listing" || data?.version !== 1 || typeof data?.published_version !== "string" || !data.published_version.trim()) {
+                lastErr = new Error(`${url}: missing published_version`);
+                continue;
+            }
+            const entry = { domain, version: data.published_version.trim() };
+            await writeCacheFile(filePath, JSON.stringify(entry));
+            return entry;
+        } catch (err) {
+            lastErr = err instanceof Error ? err : new Error(String(err));
+        }
+    }
+    throw lastErr ?? new Error(`Failed to resolve published_version for '${region}'.`);
+}
+
+function sortAssetCandidateStems(stems) {
+    return [...stems].sort((a, b) => {
+        const aBuild = /^build\w*data$/i.test(a) ? 0 : 1;
+        const bBuild = /^build\w*data$/i.test(b) ? 0 : 1;
+        return aBuild - bBuild || (a < b ? -1 : a > b ? 1 : 0);
+    });
+}
+
+async function resolveCanonicalAssetDocument(region, assetPath, expectedForm, opts, pinnedSite) {
+    const cleanPath = String(assetPath ?? "").trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "");
+    if (!cleanPath) return null;
+
+    const { domain, version } = pinnedSite ?? (await resolveCanonicalPublishedSite(region, opts));
+    const baseUrl = `${domain}/${encodeURIComponent(region)}@${encodeURIComponent(version)}`;
+    const cacheFile = cacheFilePath("canonical-asset", `${region}@${version}:${expectedForm}:${cleanPath}`, "json");
+    const cached = await readCacheFile(cacheFile, TTL_SCENARIO_MS, opts.noCache);
+    if (cached) {
+        try {
+            const parsed = JSON.parse(cached.toString("utf8"));
+            if (parsed?.doc?.form === expectedForm && Array.isArray(parsed?.doc?.members) && parsed?.url) {
+                return parsed;
+            }
+        } catch {
+            // ignore corrupt cache entry
+        }
+    }
+
+    const fetchDocAt = async (relDocPath) => {
+        const url = `${baseUrl}/${encodePath(relDocPath)}.asset.json`;
+        const res = await fetch(url, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+        });
+        if (res.status === 404) return null;
+        if (!res.ok) throw new Error(`${url}: HTTP ${res.status}`);
+        const doc = await res.json();
+        if (doc?.format !== "asset" || doc?.version !== 1 || doc?.form !== expectedForm || !Array.isArray(doc?.members)) {
+            return null;
+        }
+        return { doc, url };
+    };
+
+    // 1. Direct `<path>.asset.json` lookup
+    const direct = await fetchDocAt(cleanPath);
+    if (direct) {
+        await writeCacheFile(cacheFile, JSON.stringify(direct));
+        return direct;
+    }
+
+    // 2. Bounded BFS directory walk (depth <= 12), prioritizing `build*data.asset.json`
+    const queue = [{ dir: cleanPath, depth: 0 }];
+    const visited = new Set([cleanPath]);
+    let inspectedDirs = 0;
+
+    while (queue.length > 0 && inspectedDirs < MAX_ASSET_WALK_DIRS) {
+        const current = queue.shift();
+        inspectedDirs += 1;
+        const listUrl = `${baseUrl}/${encodePath(current.dir)}/`;
+        const res = await fetch(listUrl, {
+            headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(HTTP_TIMEOUT_MS),
+        });
+        if (res.status === 404) continue;
+        if (!res.ok) throw new Error(`${listUrl}: HTTP ${res.status}`);
+        const listing = await res.json();
+        if (listing?.format !== "directory-listing" || listing?.version !== 1) continue;
+
+        const stems = [];
+        for (const f of listing.files ?? []) {
+            const name = typeof f === "string" ? f : f?.name;
+            if (typeof name === "string" && name.toLowerCase().endsWith(".asset.json")) {
+                const stem = name.slice(0, -".asset.json".length);
+                if (stem) stems.push(stem);
+            }
+        }
+        for (const stem of sortAssetCandidateStems(stems)) {
+            const match = await fetchDocAt(`${current.dir}/${stem}`);
+            if (match) {
+                await writeCacheFile(cacheFile, JSON.stringify(match));
+                return match;
+            }
+        }
+        if (current.depth < MAX_ASSET_WALK_DEPTH) {
+            for (const sub of listing.directories ?? []) {
+                if (typeof sub !== "string" || !sub || sub === "." || sub === ".." || sub.includes("/")) continue;
+                const nextDir = `${current.dir}/${sub}`;
+                if (visited.has(nextDir)) continue;
+                visited.add(nextDir);
+                queue.push({ dir: nextDir, depth: current.depth + 1 });
+            }
+        }
+    }
+
+    return null;
 }
 
 async function loadSePackIndex(region, opts) {
@@ -2390,38 +2604,18 @@ async function runCatalog(subkind, arg, opts) {
 
     if (subkind === "models") {
         const searchQuery = String(opts.search || opts.query || opts.filter || arg || "").trim();
-        let models = [];
-        let source = "models-v2";
-        try {
-            const idx = await fetchJsonWithFallback(
-                [`${LIVE2D_INDEX_BASE}/${region}/models.json`],
-                "live2d-index",
-                region,
-                TTL_MASTER_MS,
-                opts.noCache,
-            );
-            if (idx?.format === 2) {
-                source = "models-v2";
-                models = normalizeCatalogModels(idx, { region });
-            } else {
-                source = "models-v1-enriched";
-                const [chara2ds, subGameChars] = await Promise.all([
-                    fetchMaster(region, "character2ds.json", opts).catch(() => []),
-                    fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
-                ]);
-                models = normalizeCatalogModels({ ...idx, chara2ds, subGameChars }, { region });
-            }
-        } catch {
-            // Graceful fallback when models.json is 404: combine storage live2d/model/ +
-            // character2ds.json + subGameCharacters.json + built-in story-derived supporting names.
-            source = "storage-fallback";
-            const [{ directories }, chara2ds, subGameChars] = await Promise.all([
-                fetchDirectoryListing(region, "live2d/model/", opts),
-                fetchMaster(region, "character2ds.json", opts).catch(() => []),
-                fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
-            ]);
-            models = normalizeCatalogModels({ directories, chara2ds, subGameChars }, { region });
-        }
+        const [modelListing, motionListing, chara2ds, subGameChars] = await Promise.all([
+            fetchCanonicalDirectoryListing(region, "live2d/model/", opts, TTL_MASTER_MS),
+            fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => ({ directories: [], files: [] })),
+            fetchMaster(region, "character2ds.json", opts).catch(() => []),
+            fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
+        ]);
+        const models = normalizeCatalogModels({
+            directories: modelListing.directories,
+            motionDirectories: motionListing.directories,
+            chara2ds,
+            subGameChars,
+        }, { region });
         const filtered = filterAndRankCatalogModels(models, {
             ...opts,
             search: searchQuery,
@@ -2429,7 +2623,7 @@ async function runCatalog(subkind, arg, opts) {
         return {
             kind: "models",
             region,
-            source,
+            source: "asset-site-listing",
             filterKind: opts.kind ? String(opts.kind).trim().toLowerCase() : null,
             search: searchQuery || null,
             total: filtered.length,
@@ -2440,39 +2634,69 @@ async function runCatalog(subkind, arg, opts) {
     if (subkind === "clips") {
         const modelId = (arg || opts.model || "").trim();
         if (!modelId) throw new Error("Usage: catalog clips <modelId> [--type all|motion|facial] [--filter <text>]");
-        const candidates = inferMotionBundleCandidates(modelId);
-        let manifest = null;
+        const [pinnedSite, motionListing] = await Promise.all([
+            resolveCanonicalPublishedSite(region, opts),
+            fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => null),
+        ]);
+        const candidates = [];
+        const addCandidate = (bundle) => {
+            const clean = String(bundle ?? "").trim().replace(/^\/+|\/+$/g, "");
+            if (clean && !candidates.includes(clean)) candidates.push(clean);
+        };
+        if (modelId.startsWith("live2d/motion/")) {
+            addCandidate(modelId);
+        } else if (modelId.endsWith("_motion_base")) {
+            addCandidate(`live2d/motion/${modelId}`);
+        }
+        if (motionListing?.directories?.length) {
+            const matchedSet = resolveMotionSetName(modelId, new Set(motionListing.directories));
+            if (matchedSet) addCandidate(`live2d/motion/${matchedSet}`);
+        }
+        for (const inferred of inferMotionBundleCandidates(modelId)) addCandidate(inferred);
+        for (const name of motionSetCandidateNames(modelId)) addCandidate(`live2d/motion/${name}`);
+
+        let resolved = null;
         let matchedBundle = null;
         for (const bundle of candidates) {
-            const url = `${RIPPER_LIBRARY_BASE}/${region}/library/${encodePath(bundle)}/_ripper.json`;
             try {
-                manifest = await fetchJsonWithFallback([url], "ripper-motion", `${region}:${bundle}`, TTL_SCENARIO_MS, opts.noCache);
-                matchedBundle = bundle;
-                break;
+                const hit = await resolveCanonicalAssetDocument(region, bundle, "live2d-motions", opts, pinnedSite);
+                if (hit) {
+                    resolved = hit;
+                    matchedBundle = bundle;
+                    break;
+                }
             } catch {
                 // try next candidate
             }
         }
-        if (!manifest) {
-            throw new Error(`Motion bundle _ripper.json not found for '${modelId}' (tried: ${candidates.join(", ")}).`);
+        if (!resolved) {
+            throw new Error(`Motion set live2d-motions .asset.json not found for '${modelId}' (tried: ${candidates.join(", ")}).`);
         }
-        const motions = [];
-        const facials = [];
-        for (const f of manifest.files ?? []) {
-            const match = /^(motion|facial)\/(.+)\.sse-motion\.json$/.exec(String(f?.path ?? ""));
-            if (!match) continue;
-            if (filterLower && !match[2].toLowerCase().includes(filterLower)) continue;
-            if (match[1] === "motion") motions.push(match[2]);
-            else facials.push(match[2]);
+        const motionSet = new Set();
+        const facialSet = new Set();
+        for (const member of resolved.doc.members ?? []) {
+            const role = typeof member?.role === "string" ? member.role : "";
+            if (role.startsWith("motion/")) {
+                const name = role.slice("motion/".length);
+                if (name && (!filterLower || name.toLowerCase().includes(filterLower))) {
+                    motionSet.add(name);
+                }
+            } else if (role.startsWith("facial/")) {
+                const name = role.slice("facial/".length);
+                if (name && (!filterLower || name.toLowerCase().includes(filterLower))) {
+                    facialSet.add(name);
+                }
+            }
         }
-        motions.sort();
-        facials.sort();
+        const motions = [...motionSet].sort();
+        const facials = [...facialSet].sort();
         const type = opts.type ?? "all";
         return {
             kind: "clips",
             region,
             modelId,
             motionBundle: matchedBundle,
+            assetUrl: resolved.url,
             totalMotions: motions.length,
             totalFacials: facials.length,
             motions: type === "facial" ? [] : motions.slice(0, limit),

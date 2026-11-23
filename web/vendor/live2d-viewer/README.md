@@ -14,9 +14,11 @@
 
 | 文件 | 作用 |
 |---|---|
-| `viewer.js` | 页面引入的 ES 模块，导出 `SekaiLive2DViewer` |
+| `viewer.js` | 页面引入的 ES 模块，导出 `SekaiLive2DViewer` 与 `resolveBase` |
 | `viewer-worker.js` | Worker：从站点的发布版本取文件（动作和表情按需取）、缓存，在 OffscreenCanvas 上绘制 |
-| `pkg/sekai_live2d_viewer.js`、`pkg/sekai_live2d_viewer_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入） |
+| `stage.js` | 多角色舞台模式的 ES 模块，导出 `SekaiLive2DStage` 与 `resolveBase`（用法见 `docs/stage.md`） |
+| `stage-worker.js` | 舞台模式的 Worker：单设备单画布驱动多名角色并共享文件表与缓存 |
+| `pkg/sekai_live2d_viewer.js`、`pkg/sekai_live2d_viewer_bg.wasm` | wasm（`no-modules` 产物，Worker 用 `importScripts` 载入，同时导出 `Viewer` 与 `Stage`） |
 | `manifest.json` | 这份发布物的来历，见下 |
 | `LICENSE`、`LICENSE-EXCEPTION`、`README.md` | 许可和这份说明 |
 

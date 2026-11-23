@@ -523,7 +523,7 @@ test("8. Generalized StoryVoiceManifest, HTTPS/private-IP guard, baseUrl resolut
         storyId: doc.id,
         locale: "zh-CN",
         title: "中文同人配音版",
-        baseUrl: "https://assets.pjsk.moe/sekai-tts-audio/custom/demo",
+        baseUrl: "https://example.test/sekai-tts-audio/custom/demo",
         lines: {
             [beatIds.b1]: {
                 url: "lines/b1.ogg",
@@ -559,10 +559,10 @@ test("8. Generalized StoryVoiceManifest, HTTPS/private-IP guard, baseUrl resolut
     assert.equal(customManifest.locale, "zh-CN");
     assert.equal(customManifest.title, "中文同人配音版");
     assert.deepEqual(resolveVoiceManifestLineUrl(customManifest, beatIds.b1), [
-        "https://assets.pjsk.moe/sekai-tts-audio/custom/demo/lines/b1.ogg",
+        "https://example.test/sekai-tts-audio/custom/demo/lines/b1.ogg",
     ]);
     assert.deepEqual(resolveVoiceManifestLineUrl(customManifest, beatIds.b2), [
-        "https://assets.pjsk.moe/sekai-tts-audio/custom/demo/lines/b2.ogg",
+        "https://example.test/sekai-tts-audio/custom/demo/lines/b2.ogg",
     ]);
     assert.deepEqual(resolveVoiceManifestLineUrl(customManifest, beatIds.b3), [
         "/local-voice/b3.ogg",
@@ -580,7 +580,7 @@ test("8. Generalized StoryVoiceManifest, HTTPS/private-IP guard, baseUrl resolut
         model: "legacy-model",
         translationOrigin: "ai_assisted",
         generatedAt: "2026-11-22T00:00:00Z",
-        baseUrl: "https://assets.pjsk.moe/sekai-tts-audio/demo/sample",
+        baseUrl: "https://example.test/sekai-tts-audio/demo/sample",
         lines: {
             [beatIds.b1]: {
                 audioHash: "aaa111",
@@ -600,7 +600,7 @@ test("8. Generalized StoryVoiceManifest, HTTPS/private-IP guard, baseUrl resolut
     assert.equal("translationOrigin" in legacyManifest, false);
     assert.equal("voiceId" in legacyManifest.lines[beatIds.b1], false);
     assert.deepEqual(resolveVoiceManifestLineUrl(legacyManifest, beatIds.b1), [
-        "https://assets.pjsk.moe/sekai-tts-audio/demo/sample/lines/b1.ogg",
+        "https://example.test/sekai-tts-audio/demo/sample/lines/b1.ogg",
     ]);
 
     // 8d: Reject invalid locale, unsafe baseUrl, or manifest whose lines are ALL unsafe
@@ -623,9 +623,9 @@ test("8. Generalized StoryVoiceManifest, HTTPS/private-IP guard, baseUrl resolut
     }), null);
 
     // 8e: Strict HTTPS + private/loopback IP URL safety checks
-    assert.equal(isSafeVoiceManifestUrl("https://assets.pjsk.moe/sekai-tts-audio/custom/manifest.json"), true);
+    assert.equal(isSafeVoiceManifestUrl("https://example.test/sekai-tts-audio/custom/manifest.json"), true);
     assert.equal(isSafeVoiceManifestUrl("/voice/manifest.json"), true);
-    assert.equal(isSafeVoiceManifestUrl("http://assets.pjsk.moe/manifest.json"), false);
+    assert.equal(isSafeVoiceManifestUrl("http://example.test/manifest.json"), false);
     assert.equal(isSafeVoiceManifestUrl("http://localhost:8080/manifest.json"), false);
     assert.equal(isSafeVoiceManifestUrl("https://localhost/manifest.json"), false);
     assert.equal(isSafeVoiceManifestUrl("https://127.0.0.1/manifest.json"), false);

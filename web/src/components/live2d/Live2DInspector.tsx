@@ -4,9 +4,15 @@ import Link from "@/components/LocalizedLink";
 import { Button, Chip, Icon, LoadingState, Surface, Switch, Tabs, cn } from "@/components/md3";
 import { mdMovie, mdOpenInNew, mdRestartAlt } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { groupLive2DFacials, groupLive2DMotions, live2dMotionStyle, type Live2DClipRow, type Live2DMotionGroup } from "@/lib/live2dViewer/clips";
-import type { Live2DRegion } from "@/lib/live2dViewer/config";
-import type { Live2DModel } from "@/lib/live2dViewer/models";
+import {
+    groupLive2DFacials,
+    groupLive2DMotions,
+    live2dMotionStyle,
+    type Live2DClipRow,
+    type Live2DModel,
+    type Live2DMotionGroup,
+    type Live2DRegion,
+} from "@moesekai/story-core";
 import type { Live2DViewer } from "@/lib/live2dViewer/viewer";
 import { storyPlayerHref } from "@/lib/storyPlayer/episodes";
 import { Live2DBackgroundGrid } from "./Live2DBackgroundGrid";

@@ -21,7 +21,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useStoryCatalogs } from "@/hooks/useStoryCatalogs";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { getCharacterIconUrl } from "@/lib/assets";
-import { live2dViewerHref } from "@/lib/live2dViewer/models";
+import { live2dViewerHref } from "@moesekai/story-core";
 import { SSE_WEB_REGIONS, sseWebSources, type SseWebRegion } from "@/lib/sseWeb/config";
 import type { SsePlayerNode } from "@/lib/sseWeb/player";
 import { StoryAssetMissingError } from "@/lib/storyAsset";

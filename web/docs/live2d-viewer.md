@@ -6,7 +6,7 @@
 
 ## 播放器
 
-播放器是 SekaiLive2DViewer 的发布物（`viewer.js`、Worker 脚本和 wasm），它复用 SekaiStoryExporter 的 `sse-live2d`（游戏的角色运行时）与 `sse-live2d-render`（模型绘制）。和剧情播放器一样，发布物原样放在本仓库的 `web/vendor/live2d-viewer/`，由 `copy:wasm`（`scripts/copy-live2d-viewer.mjs`）拷到 `public/live2d-viewer/<发布物名>/` 给浏览器加载；`public/live2d-viewer/` 不入库。发布物名写在生成的 `src/lib/live2dViewer/release.ts` 里。
+播放器是 SekaiLive2DViewer 的发布物（单模型 `viewer.js` 与多角色舞台 `stage.js`、各自的 Worker 脚本和 wasm），它复用 SekaiStoryExporter 的 `sse-live2d`（游戏的角色运行时）与 `sse-live2d-render`（模型绘制），供 `/live2d` 与 `/story-maker`（`@moesekai/story-editor`）共用。和剧情播放器一样，发布物原样放在本仓库的 `web/vendor/live2d-viewer/`，由 `copy:wasm`（`scripts/copy-live2d-viewer.mjs`）拷到 `public/live2d-viewer/<发布物名>/` 给浏览器加载；`public/live2d-viewer/` 不入库。发布物名写在生成的 `src/lib/live2dViewer/release.ts` 里。
 
 两份发布物共用 `scripts/vendored-release.mjs`：按 `manifest.json` 校验每个文件，发布物名是版本号加全部文件哈希的摘要。还没有放入发布物时 `release.ts` 是 `null`，`copy:wasm` 跳过它，页面显示「Live2D 预览暂时不可用」。
 
@@ -58,12 +58,10 @@ bun run --cwd web copy:wasm
 
 | 文件 | 内容 |
 |---|---|
-| `src/lib/live2dViewer/config.ts` | 读取并校验上面的变量 |
-| `src/lib/live2dViewer/viewer.ts` | 播放器接口的类型声明，运行时加载 `viewer.js` |
-| `src/lib/live2dViewer/models.ts` | 由目录列表建模型列表、配动作集、模型名解析、排序、地址 |
-| `src/lib/live2dViewer/client.ts` | 读取模型和动作集的目录列表、剧情背景列表 |
+| `@moesekai/story-core`（由 `src/lib/live2dViewer/{config,models,client,clips,subCharacterNames}.ts` 薄重导出） | 变量校验、模型目录列表加载、`<stem>_motion_base` 配对、模型名/服装解析、配角本地化回退名、动作表情分组与地址构造 |
+| `src/lib/live2dViewer/viewer.ts` | 单模型播放器接口的类型声明，运行时加载 `viewer.js` |
+| `src/lib/live2dViewer/release.ts` | 由 `sync-live2d-viewer.mjs` 生成的发布物目录名 |
 | `src/lib/live2dViewer/view.ts` | 缩放与平移的计算 |
-| `src/lib/live2dViewer/clips.ts` | 动作与表情的分组 |
 | `src/components/live2d/useLive2DViewer.ts` | 播放器的生命周期、状态与操作 |
 | `src/components/live2d/Live2DModelStage.tsx` | 舞台、工具栏、手势、浮层 |
 | `src/components/live2d/Live2DInspector.tsx` | 面板（模型、动作、表情、场景四页） |

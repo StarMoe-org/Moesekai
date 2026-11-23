@@ -30,10 +30,17 @@ import {
     STORY_REGIONS,
     advanceRuntime,
     compileStoryGraph,
+    configureStoryCore,
     createInitialRuntime,
     detectStageActorOverlaps,
+    extractLive2DMotionClips,
+    fetchLive2DModels,
+    inferLive2DMotionBundleCandidates,
+    live2dSiteListingUrl,
     live2dSources,
     parseStoryScript,
+    resolveLive2DAssetDocument,
+    resolveLive2DPublishedVersion,
 } from "./lib/msk-core.mjs";
 
 const HELP_TEXT = `Usage:
@@ -114,25 +121,25 @@ function parseArgs(argv) {
 async function readInput(fileArg) {
     let raw;
     if (fileArg === "-") {
-        const chunks = [];
-        for await (const chunk of process.stdin) {
-            chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+        if (typeof globalThis.Bun !== "undefined" && typeof globalThis.Bun.stdin?.text === "function") {
+            raw = await globalThis.Bun.stdin.text();
+        } else {
+            const chunks = [];
+            for await (const chunk of process.stdin) {
+                chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+            }
+            raw = Buffer.concat(chunks).toString("utf8");
         }
-        raw = Buffer.concat(chunks).toString("utf8");
     } else {
         raw = await readFile(fileArg, "utf8");
     }
     return raw.startsWith("\uFEFF") ? raw.slice(1) : raw;
 }
 
-// ==================== Asset URL Builders (matching web/src/lib/storyMaker/assets.ts) ====================
+// ==================== Asset URL Builders (matching @moesekai/story-core (assets.ts)) ====================
 
 function normalizeAssetPath(value) {
     return String(value ?? "").trim().replace(/^\/+|\/+$/g, "");
-}
-
-function encodePath(p) {
-    return p.split("/").map(encodeURIComponent).join("/");
 }
 
 function assetBase(region, line) {
@@ -231,7 +238,9 @@ function buildVoiceCandidateUrls(voice, docRegion, line) {
 }
 
 function collectAssetReport(doc, region, line) {
-    const l2dSources = live2dSources(region);
+    const l2dSources = live2dSources(region, line);
+    const live2dModelListingUrl = live2dSiteListingUrl(l2dSources, "live2d/model/");
+    const live2dMotionListingUrl = live2dSiteListingUrl(l2dSources, "live2d/motion/");
     const castModelByKey = new Map();
     const live2dMap = new Map();
 
@@ -240,10 +249,12 @@ function collectAssetReport(doc, region, line) {
         castModelByKey.set(member.key, member.modelId);
         let entry = live2dMap.get(member.modelId);
         if (!entry) {
+            const modelAssetPath = `live2d/model/${member.modelId}`;
             entry = {
                 modelId: member.modelId,
                 castKeys: [],
-                modelManifestUrl: `${l2dSources.library}library/live2d/model/${encodePath(member.modelId)}/_ripper.json`,
+                modelAssetPath,
+                modelListingUrl: live2dSiteListingUrl(l2dSources, modelAssetPath),
                 motions: new Set(),
                 facials: new Set(),
             };
@@ -323,7 +334,8 @@ function collectAssetReport(doc, region, line) {
     const live2d = [...live2dMap.values()].map(item => ({
         modelId: item.modelId,
         castKeys: item.castKeys,
-        modelManifestUrl: item.modelManifestUrl,
+        modelAssetPath: item.modelAssetPath,
+        modelListingUrl: item.modelListingUrl,
         motions: [...item.motions].sort(),
         facials: [...item.facials].sort(),
     }));
@@ -331,8 +343,9 @@ function collectAssetReport(doc, region, line) {
     return {
         region,
         line,
-        live2dIndexUrl: l2dSources.index,
-        live2dLibraryBaseUrl: l2dSources.library,
+        live2dSiteUrl: l2dSources.site,
+        live2dModelListingUrl,
+        live2dMotionListingUrl,
         live2d,
         backgrounds,
         bgm,
@@ -382,40 +395,6 @@ async function checkAnyCandidate(urls) {
         if (res.ok) return { ok: true, matchedUrl: url, tried };
     }
     return { ok: false, matchedUrl: null, tried };
-}
-
-/** Deterministic Live2D motion bundle candidates when `models.json` is unavailable or lagging. */
-function inferMotionBundleCandidates(modelId) {
-    const out = [];
-    const add = (name) => {
-        if (!name) return;
-        const bundle = `live2d/motion/${name}`;
-        if (!out.includes(bundle)) out.push(bundle);
-    };
-    const mainChar = /^(v2_)?(\d{2}[a-z]+)_/.exec(modelId);
-    if (mainChar) {
-        add(`${mainChar[1] ?? ""}${mainChar[2]}_motion_base`);
-        return out;
-    }
-    const collab = /^(v2_)?(clb\d+_\d{2}[a-z]+\d*)/.exec(modelId);
-    if (collab) {
-        add(`${modelId}_motion_base`);
-        add(`${collab[1] ?? ""}${collab[2]}_motion_base`);
-        return out;
-    }
-    const sub = /^(v2_)?(sub_[a-z0-9]+)/.exec(modelId);
-    if (sub) {
-        add(`${modelId}_motion_base`);
-        const base = `${sub[1] ?? ""}${sub[2]}`;
-        add(`${base}_motion_base`);
-        const stripped = base.replace(/(?:black|white|zoom|young|child)?\d*$/, "");
-        if (stripped && stripped !== base && stripped.length > 4) {
-            add(`${stripped}_motion_base`);
-        }
-        return out;
-    }
-    add(`${modelId}_motion_base`);
-    return out;
 }
 
 const CLIP_STOPWORDS = new Set(["face", "w", "m", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10"]);
@@ -478,52 +457,63 @@ function suggestClips(target, availableSet, maxSuggestions = 5) {
 async function verifyAssetsLive(assetReport) {
     const missing = [];
     const checked = { live2dModels: 0, live2dClips: 0, backgrounds: 0, bgm: 0, se: 0, voices: 0 };
-    let live2dIndexSource = "models.json";
+    let live2dIndexSource = "asset-site-listing";
 
-    // 1. Live2D models + motion/facial manifests (with graceful ripper fallback when models.json is 404)
+    // 1. Live2D models + motion/facial manifests via canonical asset-site directory listings & `.asset.json`
     const modelById = new Map();
     if (assetReport.live2d.length > 0) {
+        configureStoryCore({ defaultAssetLine: assetReport.line });
+        const l2dSources = live2dSources(assetReport.region, assetReport.line);
+
         try {
-            const res = await fetch(assetReport.live2dIndexUrl, {
-                signal: AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
-            });
-            if (res.ok) {
-                const json = await res.json();
-                for (const m of json.models ?? []) {
-                    if (typeof m?.id === "string") modelById.set(m.id, m);
+            const listedModels = await fetchLive2DModels(
+                assetReport.region,
+                AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
+            );
+            if (listedModels.length > 0) {
+                for (const m of listedModels) {
+                    modelById.set(m.id, m);
                 }
             } else {
-                live2dIndexSource = "ripper-fallback";
+                live2dIndexSource = "asset-site-document";
             }
         } catch {
-            live2dIndexSource = "ripper-fallback";
+            live2dIndexSource = "asset-site-document";
         }
 
-        const ripperCache = new Map();
-        const loadMotionBundle = async (bundle) => {
-            if (!bundle) return null;
-            if (ripperCache.has(bundle)) return ripperCache.get(bundle);
-            const url = `${assetReport.live2dLibraryBaseUrl}library/${encodePath(bundle)}/_ripper.json`;
+        // Warm the 60s published_version cache once (with automatic backup-line fallback on default domains)
+        try {
+            await resolveLive2DPublishedVersion(l2dSources, AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS));
+        } catch {
+            // Individual document checks below will surface missing errors cleanly.
+        }
+
+        const motionClipCache = new Map();
+        const loadMotionBundle = async (motionAsset) => {
+            if (!motionAsset) return null;
+            if (motionClipCache.has(motionAsset)) return motionClipCache.get(motionAsset);
             try {
-                const res = await fetch(url, { signal: AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS) });
-                if (!res.ok) {
-                    ripperCache.set(bundle, null);
+                const resolved = await resolveLive2DAssetDocument(
+                    l2dSources,
+                    motionAsset,
+                    "live2d-motions",
+                    AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
+                );
+                if (!resolved) {
+                    motionClipCache.set(motionAsset, null);
                     return null;
                 }
-                const data = await res.json();
-                const motions = new Set();
-                const facials = new Set();
-                for (const f of data.files ?? []) {
-                    const match = /^(motion|facial)\/(.+)\.sse-motion\.json$/.exec(String(f?.path ?? ""));
-                    if (!match) continue;
-                    if (match[1] === "motion") motions.add(match[2]);
-                    else facials.add(match[2]);
-                }
-                const result = { bundle, motions, facials, url };
-                ripperCache.set(bundle, result);
+                const extracted = extractLive2DMotionClips(resolved.doc);
+                const result = {
+                    bundle: motionAsset,
+                    motions: new Set(extracted.motions),
+                    facials: new Set(extracted.facials),
+                    url: resolved.url,
+                };
+                motionClipCache.set(motionAsset, result);
                 return result;
             } catch {
-                ripperCache.set(bundle, null);
+                motionClipCache.set(motionAsset, null);
                 return null;
             }
         };
@@ -533,18 +523,28 @@ async function verifyAssetsLive(assetReport) {
             const indexed = modelById.get(item.modelId);
             let modelVerified = Boolean(indexed);
             if (!modelVerified) {
-                const directCheck = await checkUrlExists(item.modelManifestUrl);
-                if (directCheck.ok) {
-                    modelVerified = true;
-                } else {
-                    missing.push({
-                        category: "live2d-model",
-                        name: item.modelId,
-                        url: item.modelManifestUrl,
-                        reason: `Model _ripper.json unavailable (HTTP ${directCheck.status})`,
-                    });
-                    continue;
+                try {
+                    const directDoc = await resolveLive2DAssetDocument(
+                        l2dSources,
+                        item.modelAssetPath,
+                        "live2d-model",
+                        AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
+                    );
+                    if (directDoc) {
+                        modelVerified = true;
+                    }
+                } catch {
+                    // Treated as unavailable below
                 }
+            }
+            if (!modelVerified) {
+                missing.push({
+                    category: "live2d-model",
+                    name: item.modelId,
+                    url: item.modelListingUrl,
+                    reason: "Live2D model not found in canonical asset-site listing or live2d-model .asset.json",
+                });
+                continue;
             }
             if (item.motions.length > 0 || item.facials.length > 0) {
                 const candidates = [];
@@ -552,7 +552,7 @@ async function verifyAssetsLive(assetReport) {
                 for (const m of indexed?.motions ?? []) {
                     if (m && !candidates.includes(m)) candidates.push(m);
                 }
-                for (const inferred of inferMotionBundleCandidates(item.modelId)) {
+                for (const inferred of inferLive2DMotionBundleCandidates(item.modelId)) {
                     if (!candidates.includes(inferred)) candidates.push(inferred);
                 }
                 let manifest = null;
@@ -567,7 +567,7 @@ async function verifyAssetsLive(assetReport) {
                     missing.push({
                         category: "live2d-motion-bundle",
                         name: `${item.modelId} (${candidates[0] ?? "none"})`,
-                        reason: "Motion bundle _ripper.json unavailable",
+                        reason: "Motion set live2d-motions .asset.json unavailable on canonical asset site",
                     });
                     continue;
                 }
@@ -945,13 +945,13 @@ function printHumanReport(report, strictMode = false) {
     if (report.assets) {
         const a = report.assets;
         console.log(`\n=== Referenced Assets (region=${a.region}, line=${a.line}) ===`);
-        console.log(`Live2D index: ${a.live2dIndexUrl}`);
+        console.log(`Live2D asset site: ${a.live2dSiteUrl} (models: ${a.live2dModelListingUrl})`);
         console.log(`Live2D models (${a.live2d.length}):`);
         for (const m of a.live2d) {
             console.log(`  - ${m.modelId} (cast: ${m.castKeys.join(", ")})`);
-            console.log(`    manifest: ${m.modelManifestUrl}`);
-            if (m.motions.length > 0) console.log(`    motions:  ${m.motions.join(", ")}`);
-            if (m.facials.length > 0) console.log(`    facials:  ${m.facials.join(", ")}`);
+            console.log(`    asset:   ${m.modelAssetPath} (${m.modelListingUrl})`);
+            if (m.motions.length > 0) console.log(`    motions: ${m.motions.join(", ")}`);
+            if (m.facials.length > 0) console.log(`    facials: ${m.facials.join(", ")}`);
         }
         console.log(`Backgrounds (${a.backgrounds.length}):`);
         for (const bg of a.backgrounds) {

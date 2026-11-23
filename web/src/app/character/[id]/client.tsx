@@ -32,7 +32,7 @@ import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { formatCharacterDisplayName } from "@/lib/character-name";
 import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, SegmentedButton, Surface } from "@/components/md3";
 import { mdArrowBack, mdBadge, mdFace, mdPerson, mdPlayingCards, mdZoomIn } from "@/components/md3/icons";
-import { live2dCharacterHref } from "@/lib/live2dViewer/models";
+import { live2dCharacterHref } from "@moesekai/story-core";
 
 // Derive unit field → icon filename from centralized maps
 const UNIT_FIELD_ICONS: Record<string, string> = Object.fromEntries(

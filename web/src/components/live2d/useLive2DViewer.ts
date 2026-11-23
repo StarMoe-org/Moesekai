@@ -1,7 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { live2dCoreUrl, type Live2DSources } from "@/lib/live2dViewer/config";
-import type { Live2DModel } from "@/lib/live2dViewer/models";
+import { live2dCoreUrl, type Live2DModel, type Live2DSources } from "@moesekai/story-core";
 import { IDENTITY_VIEW, type Live2DView } from "@/lib/live2dViewer/view";
 import {
     LIVE2D_VIEWER_AVAILABLE, live2dViewerScriptBase, loadLive2DViewer,
@@ -81,12 +80,14 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewerRef = useRef<Live2DViewer | null>(null);
     const [attempt, setAttempt] = useState(0);
-    const bundle = model?.bundle ?? null;
+    const asset = model?.asset ?? null;
     // a model without a motion bundle is shown without motions or facials
-    const motion = model?.motions[0] ?? null;
+    const motion = model?.motion ?? model?.motions[0] ?? null;
     // What each viewer reports is kept with the viewer it is about (`key`): another model, or a
     // retry, starts from a loading stage, no lists and the identity view.
-    const key = bundle ? `${sources.site}|${sources.region}|${bundle}|${motion ?? ""}|${attempt}` : null;
+    const key = asset
+        ? `${sources.site}|${sources.region}|${sources.version ?? ""}|${sources.proxy ?? ""}|${asset}|${motion ?? ""}|${attempt}`
+        : null;
     const [phaseOf, setPhaseOf] = useState<{ key: string; phase: Live2DViewerPhase } | null>(null);
     const [stateOf, setStateOf] = useState<{ key: string; state: Live2DViewerState } | null>(null);
     const [viewOf, setViewOf] = useState<{ key: string; view: Live2DView } | null>(null);
@@ -102,7 +103,7 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
 
     useEffect(() => {
         const host = hostRef.current;
-        if (!host || !key || !bundle || !LIVE2D_VIEWER_AVAILABLE) return;
+        if (!host || !key || !asset || !LIVE2D_VIEWER_AVAILABLE) return;
         const setPhase = (next: Live2DViewerPhase) => setPhaseOf({ key, phase: next });
         const controller = new AbortController();
         const { signal } = controller;
@@ -150,7 +151,7 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
                 js: live2dViewerScriptBase(),
                 ...(core ? { core } : {}),
                 sources,
-                model: { asset: bundle, motion },
+                model: { asset, motion },
                 width,
                 height,
                 signal,
@@ -186,7 +187,7 @@ export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
             viewer?.destroy();
             host.replaceChildren();
         };
-    }, [key, sources, bundle, motion]);
+    }, [key, sources, asset, motion]);
 
     useEffect(() => {
         viewerRef.current?.setView(view);

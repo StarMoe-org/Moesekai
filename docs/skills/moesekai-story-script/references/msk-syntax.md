@@ -1,6 +1,6 @@
 # MoeSekai Script (`.msk`) Complete Language Reference
 
-This reference documents the exact grammar, lexical patterns, numeric/string limits, compiler diagnostics, and stage geometry enforced by Moesekai Story Maker (`moesekai-story/2`, `web/src/lib/storyMaker/`).
+This reference documents the exact grammar, lexical patterns, numeric/string limits, compiler diagnostics, and stage geometry enforced by Moesekai Story Maker (`moesekai-story/2`, `@moesekai/story-core`).
 
 ---
 
@@ -25,7 +25,7 @@ This reference documents the exact grammar, lexical patterns, numeric/string lim
 | Cast & stage | Max **8 cast definitions**, **5 simultaneous actors** in `stageCast`, **4 `react(...)` clauses** per `talk` beat |
 | Variables & branching | Max **32 variables**, **16 varOps** per `set`/option, **12 condition rules**, **2–4 options** per `choice` |
 | String lengths | title `80`, summary `500`, author `40`, cast name `40`, var display name `32`, node title `60`, end subtitle `160`, rule label `40`, dialogue/narration body `500`, telop `120`, place `80`, speaker override `40`, choice text `80`, audio path `128` |
-| Numeric bounds | `duration` `0..10` s, `vol`/`seVol` `0..1`, `scale` `0.5..2.0`, `y` `-0.6..0.6`, number var `-1,000,000..1,000,000`, voice trim `0 <= start <= 600`, `0 < end <= 600`, `end - start >= 0.05`, canvas `@pos(x, y)` `-20000..20000` |
+| Numeric bounds | `duration` `0..10` s, `vol`/`seVol` `0..1`, `scale` `0.5..2.0`, `y` `-0.6..0.6`, `z` integer `-99..99`, number var `-1,000,000..1,000,000`, voice trim `0 <= start <= 600`, `0 < end <= 600`, `end - start >= 0.05`, canvas `@pos(x, y)` `-20000..20000` |
 | Runtime loop guard | Max **4,000** non-blocking IR instructions per advance |
 
 ---
@@ -73,14 +73,15 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 - **`cast set [...]` actor slot syntax** (newline- or comma-separated; `cast set []` clears actors):
   ```msk
   cast set [
-    ichika at left scale=1 y=0 motion="w-normal01-nod" facial="face_smile_01"
-    saki at right scale=1
-    # Intentional cheek-to-cheek huddle ("贴贴"):
-    # ichika at center overlap facial="face_smile_01"
-    # saki at center overlap facial="face_sparkling_01"
+    ichika at center z=10 scale=1 y=0 motion="w-normal01-nod" facial="face_smile_01"
+    honami at left z=1 scale=1
+    saki at right z=2 scale=1
+    # Intentional cheek-to-cheek huddle ("贴贴") with foreground/background control:
+    # ichika at center z=5 overlap facial="face_smile_01"
+    # saki at center z=1 overlap facial="face_sparkling_01"
   ]
   ```
-  Standing slots: `farLeft`, `left`, `center`, `right`, `farRight`.
+  Standing slots: `farLeft`, `left`, `center`, `right`, `farRight`. Optional integer `z` (`-99..99`) sets explicit draw depth (higher renders in front; default omitted = auto `0`).
 
 ### All 6 Scene Performance Beats
 
@@ -89,7 +90,7 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 | `talk` | Yes | `talk <speakerKey> [as "<name>"] "<body>" [motion="..."] [facial="..."] [react(<castKey> [motion="..."] [facial="..."]) ...] [voice(...)] [se="..."] [seVol=0.8]`<br>or off-cast free speaker:<br>`talk "<speakerName>" "<body>" [se="..."] [seVol=0.8]` | Supports `{{var}}` in `body` and speaker name. Up to 4 `react(...)` clauses trigger simultaneously on co-stars. |
 | `narration` | Yes | `narration "<body>" [se="<path>"] [seVol=<0..1>]` | Full-width narration box; supports `{{var}}`. |
 | `telop` | Yes | `telop "<text>"` | Chapter / time-skip banner card; supports `{{var}}`. |
-| `stage` | No | `stage enter <castKey> [at <slot>] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`<br>`stage move <castKey> to <slot> [dur=0.5] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`<br>`stage pose <castKey> [motion="..."] [facial="..."]`<br>`stage exit <castKey>` | `at` and `to` are interchangeable in the parser; canonical form uses `at` for `enter` and `to` for `move`. |
+| `stage` | No | `stage enter <castKey> [at <slot>] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`<br>`stage move <castKey> to <slot> [dur=0.5] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`<br>`stage pose <castKey> [z=<int>] [motion="..."] [facial="..."]`<br>`stage exit <castKey>` | `at` and `to` are interchangeable in the parser; canonical form uses `at` for `enter` and `to` for `move`. Optional `z=<int>` (`-99..99`) updates explicit draw depth (omitting `z` preserves existing `z` and auto-elevates moving/entering actors). |
 | `cue` | No | `cue se "<path>" [vol=<0..1>]`<br>`cue flash <black|white> [<dur>]`<br>`cue shake [<dur>]`<br>`cue wait [<dur>]` | Non-blocking stage/audio/camera cue. |
 | `set` | No | `set <var> += 1, <var> -= 2, <var> = 5, <flag> = true, <flag> toggle` | Comma-separated variable mutations. |
 
@@ -155,7 +156,13 @@ end <nodeId> ["<title>"] [subtitle="<subtitle>"] [@pos(x, y)]
 - **Intentional overlap ("贴贴" / close huddle)**:
   - Accidental shared slots or overly tight spacing trigger `--strict` warnings (`stageSlotDuplicate` / `stageActorOverlap`).
   - When characters intentionally lean in, hug, whisper, or huddle cheek-to-cheek, explicitly add `overlap` on **all** huddling actors' `cast set` entries or `stage enter`/`stage move` beats (e.g. `ichika at center overlap` + `saki at center overlap`, or moving both actors with `overlap`).
-  - Declared `overlap` pairs relax smoothly to a snug **`0.22` cheek-to-cheek huddle gap** (e.g. `[-0.11, +0.11]` at center — shoulders touching while keeping both faces unobstructed) and suppress overlap warnings while keeping bystanders cleanly separated!
+- **Declared `overlap` pairs** relax smoothly to a snug **`0.22` cheek-to-cheek huddle gap** (e.g. `[-0.11, +0.11]` at center — shoulders touching while keeping both faces unobstructed) and suppress overlap warnings while keeping non-overlapping bystanders cleanly separated!
+- **Live2D Z-Layering (`z=<int>`) & Automatic Anti-Occlusion (`computeActorRenderOrders`)**:
+  Draw order resolves deterministically in 4 strict tiers (higher renders in front):
+  1. **Explicit `z`** (`-99..99`, default `0` when omitted): Author/Agent-specified `z` ALWAYS wins and is never overridden by movement or speech (e.g. center focal character `z=10`, front huddle `z=5`, background observer `z=-1`, moving behind others `stage move ... z=-1`, reset to default with `z=0`).
+  2. **Automatic move / enter / speak recency (`autoOrder`)**: When `z` ties, a character executing `stage enter` or `stage move` automatically elevates above stationary neighbors so they glide **in front** instead of passing behind them.
+  3. **Active speaker tie-breaker (`speaking`)**: When `z` and `autoOrder` tie (e.g. right after `cast set`), the currently speaking actor renders in front of silent neighbors so close/huddled speakers are never occluded.
+  4. **Cast declaration order** fallback.
 
 ---
 

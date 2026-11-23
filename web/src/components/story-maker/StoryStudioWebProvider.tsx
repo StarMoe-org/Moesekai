@@ -3,10 +3,12 @@
 import React, { useCallback, useMemo, useSyncExternalStore } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import {
+    LIVE2D_VIEWER_PATH,
     STORY_REGIONS,
     WEB_STORY_WORKSPACE_CAPABILITIES,
     createBrowserStoryExportAdapter,
     createIndexedDbStoryDraftStorageAdapter,
+    live2dCoreUrl,
     type AssetLine,
     type StoryCoreConfig,
     type StoryRegion,
@@ -18,7 +20,6 @@ import LocalizedLink from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { MOE_LOGO_URL } from "@/lib/assets";
-import { LIVE2D_VIEWER_PATH, live2dCoreUrl } from "@/lib/live2dViewer/config";
 import { LIVE2D_VIEWER_RELEASE } from "@/lib/live2dViewer/release";
 import { localizePath } from "@/lib/localized-path";
 import { SSE_WEB_PATH, sseWebSources } from "@/lib/sseWeb/config";
@@ -76,14 +77,24 @@ export function StoryStudioWebProvider({ children }: StoryStudioWebProviderProps
 
     const coreConfig = useMemo<Partial<StoryCoreConfig>>(() => {
         const sse = sseWebSources("jp");
+        // Spell each NEXT_PUBLIC_* variable in full so Next.js inlines build-time values.
+        const explicitLive2DSite = process.env.NEXT_PUBLIC_LIVE2D_SITE?.trim()
+            || process.env.NEXT_PUBLIC_SSE_WEB_SITE?.trim()
+            || "";
+        const explicitLive2DProxy = process.env.NEXT_PUBLIC_LIVE2D_ASSET_PROXY?.trim()
+            || process.env.NEXT_PUBLIC_SSE_WEB_ASSET_PROXY?.trim()
+            || null;
         return {
             defaultAssetLine: assetLine,
             defaultRegion,
+            live2dSite: explicitLive2DSite,
+            live2dCoreUrl: live2dCore,
+            live2dAssetProxy: explicitLive2DProxy,
             ...(sse?.site ? { sseWebSite: sse.site } : {}),
             ...(sse?.proxy ? { sseWebAssetProxy: sse.proxy } : {}),
             ...(sseWebScriptBase ? { sseWebScriptBase } : {}),
         };
-    }, [assetLine, defaultRegion, sseWebScriptBase]);
+    }, [assetLine, defaultRegion, live2dCore, sseWebScriptBase]);
 
     return (
         <StoryStudioProvider

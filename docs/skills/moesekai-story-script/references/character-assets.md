@@ -50,7 +50,7 @@ node scripts/official-story.mjs catalog models --kind collab --region jp
 node scripts/official-story.mjs catalog clips v2_sub_nenedayo --region jp
 ```
 
-#### Iconic Supporting Characters (`kind="sub"`, verified across 5-region story libraries)
+#### Iconic Supporting Characters (`kind="sub"`, verified across all 5 server regions)
 
 | Story Group | Character (CN / JP / EN) | `ownerKey` | Verified `modelId`s |
 | --- | --- | --- | --- |
@@ -116,14 +116,17 @@ node scripts/official-story.mjs catalog clips v2_sub_nenedayo --region jp
 
 ## 2. Live2D Model & Motion/Facial Clip Conventions
 
-- **Live model directory**: `https://storage.pjsk.moe/sekai-<region>-assets/live2d/model/` (JSON directory listing of all models).
-- **Model manifest**: `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/<region>/library/live2d/model/<modelId>/_ripper.json`
-- **Motion bundle manifest**: `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/<region>/library/live2d/motion/<motionBundle>/_ripper.json`
+- **Canonical Live2D model & motion listings** (backup: `https://storage.exmeaning.com`):
+  - Models: `https://storage.pjsk.moe/<region>/live2d/model/` (`directory-listing` v1 JSON; requires trailing `/`).
+  - Motion sets: `https://storage.pjsk.moe/<region>/live2d/motion/` (`directory-listing` v1 JSON; requires trailing `/`).
+- **Canonical `.asset.json` documents** (pinned via `published_version` from `https://storage.pjsk.moe/<region>/`):
+  - Model document (`form: "live2d-model"`): nested under `https://storage.pjsk.moe/<region>@<published_version>/live2d/model/<modelId>/...` (typically `.../buildmodeldata.asset.json`).
+  - Motion set document (`form: "live2d-motions"`): nested under `https://storage.pjsk.moe/<region>@<published_version>/live2d/motion/<motionSet>/...` (typically `.../buildmotiondata.asset.json`).
   - Every main character model `[v2_]<NNname>_<costume>` uses `live2d/motion/[v2_]<NNname>_motion_base`.
-  - Read `files[].path`: `motion/<name>.sse-motion.json` → `motion="<name>"`; `facial/<name>.sse-motion.json` → `facial="<name>"`.
+  - Read `members[].role` from the `live2d-motions` `.asset.json`: `motion/<name>` → `motion="<name>"`; `facial/<name>` → `facial="<name>"`.
 - **Body motion pitfalls**:
   - **Female (`w-`) vs Male (`m-`)**: NEVER assign `w-*` to male characters (`11akito`, `12touya`, `13tsukasa`, `16rui`, `23len`, `26kaito`) or `m-*` to female characters!
-  - **v1 vs v2 motion names differ!** Gen-1 models use `w-cool-nod01` (digits after action); `v2_` models use `w-cool02-tilthead` / `w-normal15-nod` (digits after style) plus character-specific clips like `w-kanade16-tilthead` or `m-tsukasa-smug01`. Always check the model's own `_ripper.json` or mine from a recent `v2_` official episode!
+  - **v1 vs v2 motion names differ!** Gen-1 models use `w-cool-nod01` (digits after action); `v2_` models use `w-cool02-tilthead` / `w-normal15-nod` (digits after style) plus character-specific clips like `w-kanade16-tilthead` or `m-tsukasa-smug01`. Always check the model's canonical `live2d-motions` `.asset.json` (via `catalog clips <modelId>`) or mine from a recent `v2_` official episode!
 - **Facial pitfalls**:
   - Common roots: `face_normal_01`, `face_smile_01..06`, `face_sparkling_01`, `face_surprise_01`, `face_shy_01`, `face_trouble_01`, `face_sad_01..03`, `face_angry_01`, `face_closeeye_01`, `face_smallmouth_01`, `face_lookaway_01l/r`, `face_lookdown_01`.
   - Tagged sets exist on specific characters (e.g., `face_dark*` on Mafuyu, `face_nc*` = closed-mouth/soft variants, `face_band_*` on Leo/need Miku).

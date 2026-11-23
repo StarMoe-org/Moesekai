@@ -4,9 +4,8 @@ import { Chip, ErrorState, Icon, LoadMore, LoadingState, TextField, cn } from "@
 import { mdBlock, mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
+import { fetchStoryBackgrounds, isStoryCgBackground, type Live2DRegion } from "@moesekai/story-core";
 import { getBackgroundImageUrl, type AssetLine } from "@/lib/assets";
-import { fetchStoryBackgrounds, isStoryCgBackground } from "@/lib/live2dViewer/client";
-import type { Live2DRegion } from "@/lib/live2dViewer/config";
 
 export type Live2DBackgroundCategory = "all" | "scene" | "cg";
 

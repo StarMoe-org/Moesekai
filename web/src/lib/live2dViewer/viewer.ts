@@ -1,9 +1,9 @@
-import { LIVE2D_VIEWER_PATH } from "./config";
+import { LIVE2D_VIEWER_PATH, type Live2DSources } from "@moesekai/story-core";
 import { LIVE2D_VIEWER_RELEASE } from "./release";
 
 /**
- * The interface of the Live2D model viewer (SekaiLive2DViewer), as far as this site uses it, and
- * its loader. The viewer is loaded at runtime from the vendored release, so it is declared here;
+ * The interface of the Live2D model viewer (SekaiLive2DViewer 0.3.0), as far as this site uses it,
+ * and its loader. The viewer is loaded at runtime from the vendored release, so it is declared here;
  * the release's README documents the full interface.
  */
 
@@ -18,7 +18,7 @@ export interface Live2DViewerError extends Error {
     url?: string;
 }
 
-/** The camera: `zoom` ≥ 1, `x` / `y` an offset in normalized device coordinates (-1..1 across the canvas, y up). */
+/** The camera: `zoom` >= 1, `x` / `y` an offset in normalized device coordinates (-1..1 across the canvas, y up). */
 export interface Live2DViewerView {
     zoom: number;
     x: number;
@@ -30,12 +30,14 @@ export interface Live2DViewerOptions {
     canvas: HTMLCanvasElement;
     /** The release's directory (the worker's script and `pkg/`); `viewer.js`'s own when left out. */
     js?: string;
+    /** The wasm directory (`pkg/` relative to `js` when left out). */
+    pkg?: string;
     /** The deployment's own Cubism Core for Web; Live2D's own when left out. */
     core?: string;
     /** The site and server whose current publication the model is read from; `proxy` relays `https://` for development. */
-    sources: { site: string; region: string; version?: string; proxy?: string };
+    sources: Live2DSources;
     /** The model's `live2d-model` asset and its motion set's `live2d-motions` asset (none: no motions or facials), each by name or by a directory that holds it. */
-    model: { asset: string; motion: string | null };
+    model: { asset: string; motion?: string | null };
     /** The drawing buffer, in device pixels. */
     width: number;
     height: number;
@@ -45,6 +47,11 @@ export interface Live2DViewerOptions {
 }
 
 export interface Live2DViewer extends EventTarget {
+    /** The resolved published-version base URL, ending in `/`. */
+    readonly base: string | null;
+    /** The `live2d-model` asset opened, and the `live2d-motions` asset (null: none). */
+    readonly model: string | null;
+    readonly motionSet: string | null;
     readonly motions: readonly string[];
     readonly facials: readonly string[];
     /** The body motion playing and the facial shown (null: none, a model without motions). */

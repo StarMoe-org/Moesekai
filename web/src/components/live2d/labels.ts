@@ -1,7 +1,11 @@
+import {
+    compareLive2DModels,
+    resolveFallbackSubCharacter,
+    type Live2DCostumePart,
+    type Live2DModel,
+} from "@moesekai/story-core";
 import { getCharacterName } from "@/lib/i18n";
 import type { CharacterNameTranslationFn } from "@/lib/i18n/characters";
-import { compareLive2DModels, type Live2DCostumePart, type Live2DModel } from "@/lib/live2dViewer/models";
-import { resolveFallbackSubCharacter } from "@/lib/live2dViewer/subCharacterNames";
 import { UNIT_ID_LABEL_KEYS } from "@/types/types";
 
 type Translate = CharacterNameTranslationFn;

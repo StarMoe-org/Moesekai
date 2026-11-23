@@ -9,7 +9,7 @@ MoeSekai Script (`.msk`) is the lossless, human- and AI-readable DSL for **Moese
 
 **Golden Rule**: Assets are referenced strictly by official Project SEKAI names on the story's server (`jp`, `cn`, `tw`, `kr`, `en`) — **never guess IDs!** Both scripts in `scripts/` are **100% standalone zero-dependency Node.js 18+ CLIs** (no repo checkout, no `npm install`).
 
-> **Public Asset Attribution**: Moesekai (`pjsk.moe`) serves `metadata.pjsk.moe`, `storage.pjsk.moe`, `assets.pjsk.moe`, and `translation.exmeaning.com` with `Access-Control-Allow-Origin: *`. Credit `Moesekai (pjsk.moe)` if you embed these endpoints externally.
+> **Public Asset Attribution**: Moesekai (`pjsk.moe`) serves `metadata.pjsk.moe`, `storage.pjsk.moe`, `assets.pjsk.moe/sekai-extra-assets/sekai-story-search`, and `translation.exmeaning.com` with `Access-Control-Allow-Origin: *`. Credit `Moesekai (pjsk.moe)` if you embed these endpoints externally.
 
 ---
 
@@ -55,6 +55,9 @@ Design a crisp interactive structure before writing:
   - Default `scale=1` (omit `scale`) is exact 1:1 in-game PJSK height. Use `scale=1` for 3–5 actors; reserve `scale=1.05–1.25` for 1–2 actor close-ups.
   - Spread actors across distinct slots: 2 actors → `left, right`; 3 → `left, center, right`; 4 → `farLeft, left, right, farRight`; 5 → all 5 slots.
   - **Intentional overlap / "贴贴" (close huddle)**: Only when two characters intentionally lean cheek-to-cheek or hug, add `overlap` explicitly on **both** huddling actors' `cast set` entries or `stage enter`/`stage move` beats (e.g. `ichika at center overlap` + `saki at center overlap`). Never leave undeclared overlaps!
+  - **Live2D Z-Layering (`z=<int>`, `-99..99`) & Move Anti-Occlusion**:
+    - By default (`z` omitted, effective `0`), moving/entering characters and the currently speaking character automatically rise in front of stationary neighbors so a moving or talking actor is never buried behind another model.
+    - When you want deterministic foreground/background depth (e.g. center focal character in front of flanking teammates, close huddle front/back, or background observers), specify integer `z=<int>` on `cast set`, `stage enter`, `stage move`, or `stage pose` (higher `z` ALWAYS renders in front; negative `z` stays behind default `0` actors; e.g. `ichika at center z=10`, `honami at left z=1`, `saki at right z=2`, background bystander `z=-1`, reset with `z=0`).
 
 ### Step 3 — Draft `.msk` with Authentic PJSK Directing Craft
 
@@ -86,7 +89,7 @@ node scripts/validate-msk.mjs - --strict --simulate --verify-assets < path/to/st
 What this verifies automatically:
 - **Syntax & Static Compiler (`--strict`)**: 0 parse errors, 0 compiler errors, **0 compiler warnings** (`mergeNodeInheritAmbiguous`, `stageSlotDuplicate`, `stageActorOverlap`, `portUnwired`, `nodeUnreachable`, `sceneEmptyBeats`, `endingMissing`, `cycleDetected`).
 - **Exhaustive Branch Simulator (`--simulate`)**: Executes every reachable choice combination, confirming every `end` is reachable, 0 deadlocks/loops/disconnected paths, 0 unintended runtime overlaps, and flags any off-stage `talk` beats (`stage.speaking === null`) for review.
-- **Live HTTPS Asset Verifier (`--verify-assets`)**: Checks every BG `.webp`, BGM `.mp3`, SE `.mp3`, voice `.mp3`, Live2D model `_ripper.json`, AND every single `motion` and `facial` clip against Moesekai's live ripper manifests! When a clip is missing, it prints **`did you mean: ...`** suggestions from that character's real manifest so you can self-heal in one turn!
+- **Live HTTPS Asset Verifier (`--verify-assets`)**: Checks every BG `.webp`, BGM `.mp3`, SE `.mp3`, voice `.mp3`, Live2D model on `storage.pjsk.moe/<region>/live2d/model/`, AND every single `motion` and `facial` clip against the model's canonical `live2d-motions` `.asset.json` document! When a clip is missing, it prints **`did you mean: ...`** suggestions from that character's real motion set so you can self-heal in one turn!
 - Add `--assets` to dump all concrete preview URLs (if you have vision/audio tools, inspect the `.webp` backgrounds and `.mp3` audio directly!) or `--dump-json` for machine-readable reports.
 
 **Do NOT stop until exit code is `0` with 0 errors, 0 warnings, 0 missing assets, and 100% endings reached!**
@@ -173,7 +176,7 @@ end end_cafe "Sweet Ending" subtitle="Recharged for tomorrow! (Harmony: {{harmon
 - **Nodes** (all accept optional `@pos(x, y)`):
   - `start [id=<id>] -> <target>`
   - `scene <id> ["<title>"] { <slots> <beats...> } -> <target>`
-    - Slots: `bg set "<id>" | inherit | clear`, `bgm play "<path>" [vol=0.75] | inherit | stop`, `place set "<text>" | inherit | hide`, `transition <none|fadeBlack|fadeWhite> [<dur>]`, `cast set [ <key> at <farLeft|left|center|right|farRight> [scale=1] [y=0] [overlap] [motion="..."] [facial="..."] ... ] | inherit | clear`
+    - Slots: `bg set "<id>" | inherit | clear`, `bgm play "<path>" [vol=0.75] | inherit | stop`, `place set "<text>" | inherit | hide`, `transition <none|fadeBlack|fadeWhite> [<dur>]`, `cast set [ <key> at <farLeft|left|center|right|farRight> [scale=1] [y=0] [z=<int>] [overlap] [motion="..."] [facial="..."] ... ] | inherit | clear`
   - `choice <id> ["<title>"] { [<optId>:] "<text>" [if <var> <op> <val>] [<varOps>] -> <target> ... }` (2–4 options)
   - `condition <id> ["<title>"] { [<ruleId>:] if <var> <op> <val> ["<label>"] -> <target> ... else -> <target> }`
   - `end <id> ["<title>"] [subtitle="<text>"]`
@@ -181,9 +184,9 @@ end end_cafe "Sweet Ending" subtitle="Recharged for tomorrow! (Harmony: {{harmon
   - `talk <key> [as "<name>"] "<body>" [motion="..."] [facial="..."] [react(<key> [motion="..."] [facial="..."]) ...] [voice(<kind>:<scenarioId>:<voiceId>[[start..end]][@region])] [se="<path>"] [seVol=0.8]` (or off-cast `talk "<name>" "<body>"`)
   - `narration "<body>" [se="<path>"] [seVol=0.8]`
   - `telop "<text>"`
-  - `stage enter <key> [at <slot>] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`
-  - `stage move <key> to <slot> [dur=0.5] [scale=...] [y=...] [overlap] [motion="..."] [facial="..."]`
-  - `stage pose <key> [motion="..."] [facial="..."]` | `stage exit <key>`
+  - `stage enter <key> [at <slot>] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`
+  - `stage move <key> to <slot> [dur=0.5] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`
+  - `stage pose <key> [z=<int>] [motion="..."] [facial="..."]` | `stage exit <key>`
   - `cue se "<path>" [vol=0.8]` | `cue flash <black|white> [<dur>]` | `cue shake [<dur>]` | `cue wait [<dur>]`
   - `set <var> += 1, <var> -= 1, <var> = 5, <flag> = true, <flag> toggle`
 

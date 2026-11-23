@@ -2,12 +2,14 @@ import assert from "node:assert/strict";
 
 const { live2dCoreUrl, live2dFetchUrl, live2dSources, live2dListingUrl, live2dCheckConfig, isLive2DRegion, LIVE2D_REGIONS } = await import("../src/lib/live2dViewer/config.ts");
 const { parseLive2DModelId, live2dMotionSet, live2dModelsFromListings, parseLive2DModelParam, live2dViewerHref } = await import("../src/lib/live2dViewer/models.ts");
+const { resetStoryCoreConfig } = await import("@moesekai/story-core");
 
 const NAMES = [
     "NEXT_PUBLIC_LIVE2D_CORE_URL", "NEXT_PUBLIC_SSE_WEB_CORE_URL", "NEXT_PUBLIC_LIVE2D_SITE", "NEXT_PUBLIC_SSE_WEB_SITE",
     "NEXT_PUBLIC_LIVE2D_ASSET_PROXY", "NEXT_PUBLIC_SSE_WEB_ASSET_PROXY",
 ];
 const set = (values) => {
+    resetStoryCoreConfig();
     for (const name of NAMES) delete process.env[name];
     Object.assign(process.env, values);
 };
@@ -19,7 +21,7 @@ const set = (values) => {
 for (const empty of [{}, { NEXT_PUBLIC_LIVE2D_CORE_URL: " ", NEXT_PUBLIC_LIVE2D_SITE: "" }]) {
     set(empty);
     assert.equal(live2dCoreUrl(), null);
-    assert.deepEqual(live2dSources("jp"), { site: "https://storage.pjsk.moe/", region: "jp" });
+    assert.deepEqual(live2dSources("jp"), { site: "https://storage.pjsk.moe", region: "jp" });
     assert.equal(live2dListingUrl("cn", "live2d/model/"), "https://storage.pjsk.moe/cn/live2d/model/");
     live2dCheckConfig();
 }
@@ -35,11 +37,11 @@ assert.equal(live2dCoreUrl(), "https://cdn.example.com/b.js");
 // A moved site (the viewer's own, else the story player's), and the development relay (the
 // viewer's own, else the story player's), which the viewer and the listings both go through.
 set({ NEXT_PUBLIC_SSE_WEB_SITE: "https://a.example.com/s/" });
-assert.deepEqual(live2dSources("cn"), { site: "https://a.example.com/s/", region: "cn" });
+assert.deepEqual(live2dSources("cn"), { site: "https://a.example.com/s", region: "cn" });
 set({ NEXT_PUBLIC_SSE_WEB_SITE: "https://a.example.com/s/", NEXT_PUBLIC_LIVE2D_SITE: "https://b.example.com/" });
-assert.deepEqual(live2dSources("cn"), { site: "https://b.example.com/", region: "cn" });
+assert.deepEqual(live2dSources("cn"), { site: "https://b.example.com", region: "cn" });
 set({ NEXT_PUBLIC_SSE_WEB_ASSET_PROXY: "http://127.0.0.1:8787/remote/" });
-assert.deepEqual(live2dSources("jp"), { site: "https://storage.pjsk.moe/", region: "jp", proxy: "http://127.0.0.1:8787/remote/" });
+assert.deepEqual(live2dSources("jp"), { site: "https://storage.pjsk.moe", region: "jp", proxy: "http://127.0.0.1:8787/remote/" });
 assert.equal(live2dListingUrl("jp", "live2d/motion/"), "http://127.0.0.1:8787/remote/storage.pjsk.moe/jp/live2d/motion/");
 assert.equal(live2dFetchUrl("https://storage.exmeaning.com/a.webp"), "http://127.0.0.1:8787/remote/storage.exmeaning.com/a.webp");
 set({ NEXT_PUBLIC_SSE_WEB_ASSET_PROXY: "http://127.0.0.1:1/a/", NEXT_PUBLIC_LIVE2D_ASSET_PROXY: "http://localhost:2/b/" });
@@ -105,9 +107,11 @@ const models = live2dModelsFromListings(
 );
 assert.deepEqual(models.map(model => model.id), ["v2_01ichika_casual", "v2_01ichika_school01", "01ichika_normal", "sub_airichild", "sub_still", "mob_x"]);
 assert.deepEqual(models[1].motions, ["live2d/motion/v2_01ichika_motion_base"]);
-assert.equal(models[2].bundle, "live2d/model/01ichika_normal");
+assert.equal(models[1].motion, "live2d/motion/v2_01ichika_motion_base");
+assert.equal(models[2].asset, "live2d/model/01ichika_normal");
 // a model without a motion set is listed (it shows breath and physics alone)
 assert.deepEqual(models[4].motions, []);
+assert.equal(models[4].motion, null);
 assert.equal(models[3].kind, "sub");
 assert.equal(models[3].subName, "airichild");
 assert.equal(models[5].characterId, null);

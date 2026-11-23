@@ -1,13 +1,11 @@
 "use client";
 import { useMemo, useState } from "react";
+import { resolveFallbackSubCharacter, type Live2DModel, type Live2DModelKind } from "@moesekai/story-core";
 import { TextField, cn } from "@/components/md3";
 import { mdSearch } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
-import type { Live2DModel } from "@/lib/live2dViewer/models";
-import { resolveFallbackSubCharacter } from "@/lib/live2dViewer/subCharacterNames";
-import type { Live2DModelKind } from "@/types/live2d";
 import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS } from "@/types/types";
 import {
     groupLive2DModelsByOwner,
@@ -30,10 +28,6 @@ interface Live2DModelPickerProps {
 
 function ownerInitial(label: string): string {
     return Array.from(label.trim())[0] ?? "?";
-}
-
-function formatModelSize(bytes: number): string {
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 /**
@@ -152,11 +146,6 @@ export function Live2DModelPicker({ models, current, group, onGroupChange, onSel
                                             {model.generation === 2 && (
                                                 <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                                                     v2
-                                                </span>
-                                            )}
-                                            {model.bytes > 0 && (
-                                                <span className="w-14 shrink-0 text-right font-mono type-label-s opacity-70">
-                                                    {formatModelSize(model.bytes)}
                                                 </span>
                                             )}
                                         </button>
@@ -281,11 +270,6 @@ export function Live2DModelPicker({ models, current, group, onGroupChange, onSel
                                                         v2
                                                     </span>
                                                 )}
-                                                {model.bytes > 0 && (
-                                                    <span className="w-14 shrink-0 text-right font-mono type-label-s opacity-70">
-                                                        {formatModelSize(model.bytes)}
-                                                    </span>
-                                                )}
                                             </button>
                                         </li>
                                     );
@@ -347,11 +331,6 @@ export function Live2DModelPicker({ models, current, group, onGroupChange, onSel
                                                             v2
                                                         </span>
                                                     )}
-                                                    {model.bytes > 0 && (
-                                                        <span className="w-14 shrink-0 text-right font-mono type-label-s opacity-70">
-                                                            {formatModelSize(model.bytes)}
-                                                        </span>
-                                                    )}
                                                 </button>
                                             </li>
                                         );
@@ -409,11 +388,6 @@ export function Live2DModelPicker({ models, current, group, onGroupChange, onSel
                                                                 {model.generation === 2 && (
                                                                     <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
                                                                         v2
-                                                                    </span>
-                                                                )}
-                                                                {model.bytes > 0 && (
-                                                                    <span className="w-14 shrink-0 text-right font-mono type-label-s opacity-70">
-                                                                        {formatModelSize(model.bytes)}
                                                                     </span>
                                                                 )}
                                                             </button>

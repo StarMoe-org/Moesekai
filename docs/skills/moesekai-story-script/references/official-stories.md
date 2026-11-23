@@ -2,7 +2,7 @@
 
 Because Project SEKAI does not publish a global semantic index of SE sound names, background locations, or per-character pose habits, the highest-leverage way for an AI agent to write authentic `.msk` scripts is to **inspect real official Project SEKAI scenario JSONs served by Moesekai**!
 
-> **Public Asset Attribution**: Moesekai (`pjsk.moe`) serves `metadata.pjsk.moe` (`metadata.exmeaning.com`), `storage.pjsk.moe` (`storage.exmeaning.com`), `assets.pjsk.moe`, and `translation.exmeaning.com` with permissive CORS (`*`). Credit `Moesekai (pjsk.moe)` if you embed these endpoints externally.
+> **Public Asset Attribution**: Moesekai (`pjsk.moe`) serves `metadata.pjsk.moe` (`metadata.exmeaning.com`), `storage.pjsk.moe` (`storage.exmeaning.com`), `assets.pjsk.moe/sekai-extra-assets/sekai-story-search`, and `translation.exmeaning.com` with permissive CORS (`*`). Credit `Moesekai (pjsk.moe)` if you embed these endpoints externally.
 
 ---
 
@@ -93,7 +93,7 @@ node scripts/official-story.mjs inspect event:223/1 --region jp --json
 # List verified v2_ Live2D models for Kanade (char 17)
 node scripts/official-story.mjs catalog models --char 17 --v2-only --region jp
 
-# List exact motion & facial clips for a model (reads _ripper.json live!)
+# List exact motion & facial clips for a model (reads canonical live2d-motions .asset.json live!)
 node scripts/official-story.mjs catalog clips v2_18mafuyu_casual --filter dark --region jp
 node scripts/official-story.mjs catalog clips v2_01ichika_casual --type motion --filter nod --region jp
 
@@ -122,7 +122,7 @@ If you are running in an environment without Node.js (e.g., Python or direct web
 | --- | --- | --- |
 | Masterdata JSON | `https://metadata.pjsk.moe/<region>/master/<file>.json` | `https://metadata.exmeaning.com/<region>/master/<file>.json` |
 | Game Storage Assets & Scenario JSONs | `https://storage.pjsk.moe/sekai-<region>-assets/<path>` | `https://storage.exmeaning.com/sekai-<region>-assets/<path>` |
-| Live2D Ripper Library (`_ripper.json`) | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/<region>/library/<bundle>/_ripper.json` | — |
+| Canonical Live2D Asset Site (listings & `.asset.json`) | `https://storage.pjsk.moe/<region>/live2d/{model,motion}/`<br>`https://storage.pjsk.moe/<region>@<published_version>/<asset>/.../*.asset.json` | `https://storage.exmeaning.com/<region>/live2d/{model,motion}/`<br>`https://storage.exmeaning.com/<region>@<published_version>/<asset>/.../*.asset.json` |
 | Story Search Corpus (Brotli JSONL) | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story-search/manifest.json` | — |
 | Story Translations (JP → CN / EN) | `https://translation.exmeaning.com/translation/<path>` (zh-CN)<br>`https://translation.exmeaning.com/v2/en-US/translation/<path>` (en-US) | — |
 

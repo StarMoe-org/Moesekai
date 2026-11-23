@@ -79,6 +79,7 @@ async function fetchBytes(url) {
       const r = await fetch(url, { signal: abort.signal });
       status = r.status;
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      if (!r.body) return new Uint8Array(await r.arrayBuffer());
       const reader = r.body.getReader();
       const pieces = [];
       let length = 0;
@@ -152,7 +153,7 @@ class Loader {
       if (hit) return new Uint8Array(await hit.arrayBuffer());
     } catch { /* fetch it */ }
     const bytes = await fetchBytes(url);
-    this.cache?.put(url, new Response(bytes)).catch(() => {});
+    try { this.cache?.put(url, new Response(bytes))?.catch(() => {}); } catch { /* custom scheme or opaque origin */ }
     return bytes;
   }
 
@@ -227,7 +228,7 @@ class Loader {
         .map((f) => f.name)
         .filter((n) => n.endsWith(".asset.json"))
         .map((n) => n.slice(0, -".asset.json".length))
-        .sort((a, b) => Number(!/^build\w*data$/.test(a)) - Number(!/^build\w*data$/.test(b)));
+        .sort((a, b) => Number(!/^build\w*data$/i.test(a)) - Number(!/^build\w*data$/i.test(b)));
       for (const asset of assets) {
         const found = await take(`${dir}/${asset}`);
         if (found) return found;

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 import ts from "typescript";
 
+import * as storyCore from "@moesekai/story-core";
 import * as modelsModule from "../src/lib/live2dViewer/models.ts";
 import * as subNamesModule from "../src/lib/live2dViewer/subCharacterNames.ts";
 
@@ -10,9 +11,9 @@ const {
     LIVE2D_COSTUME_TOKENS,
     compareLive2DModels,
     deriveSubOwnerKey,
+    live2dModelsFromListings,
     parseLive2DModel,
     parseLive2DModelId,
-    parseLive2DModelIndex,
     parseLive2DSubVariant,
 } = modelsModule;
 
@@ -39,6 +40,7 @@ function loadLabelsModule() {
         vs: "common.units.vs",
     };
     const requireStub = (id) => {
+        if (id === "@moesekai/story-core") return storyCore;
         if (id === "@/lib/i18n") {
             return {
                 getCharacterName: (t, characterId, variant = "full") => {
@@ -171,69 +173,69 @@ test("parseLive2DModelId decomposes compound main-character tokens cleanly", () 
     assert.deepEqual(parseLive2DModelId("13tsukasa_liondance").costume, [{ token: "liondance" }]);
 });
 
-test("parseLive2DModelIndex accepts both format 1 and format 2 and rejects others", () => {
-    const v1 = parseLive2DModelIndex({
-        format: 1,
-        models: [
-            { id: "v2_03honami_april2025_school", bundle: "live2d/model/v2_03honami_april2025_school", motion: null, kind: "sub", characterId: null },
-            { id: "v2_15nene_april2026_transform", bundle: "live2d/model/v2_15nene_april2026_transform", motion: null, kind: "sub" },
-            { id: "v2_14emu_igs_princess", bundle: "live2d/model/v2_14emu_igs_princess", motion: null, kind: "sub" },
-            { id: "v2_sub_sanrio_kitty", bundle: "live2d/model/v2_sub_sanrio_kitty", motion: null, kind: "sub" },
-            { id: "v2_sub_enst_01izumi_stage", bundle: "live2d/model/v2_sub_enst_01izumi_stage", motion: null, kind: "sub" },
+test("live2dModelsFromListings and parseLive2DModel classify special main-char, sub, and collab models", () => {
+    const listed = live2dModelsFromListings(
+        [
+            "v2_03honami_april2025_school",
+            "v2_15nene_april2026_transform",
+            "v2_14emu_igs_princess",
+            "v2_sub_sanrio_kitty",
+            "v2_sub_enst_01izumi_stage",
         ],
-    });
-    const byId = new Map(v1.map(m => [m.id, m]));
-    // Special main-character models are re-homed to `character` even under format 1.
+        [
+            "v2_03honami_motion_base",
+            "v2_15nene_motion_base",
+            "v2_14emu_motion_base",
+            "sub_sanrio_kitty_motion_base",
+            "v2_sub_enst_01izumi_motion_base",
+        ],
+    );
+    const byId = new Map(listed.map(m => [m.id, m]));
+    // Special main-character models resolve as `character` with canonical asset & motion paths.
     assert.equal(byId.get("v2_03honami_april2025_school")?.kind, "character");
     assert.equal(byId.get("v2_03honami_april2025_school")?.characterId, 3);
+    assert.equal(byId.get("v2_03honami_april2025_school")?.asset, "live2d/model/v2_03honami_april2025_school");
+    assert.equal(byId.get("v2_03honami_april2025_school")?.motion, "live2d/motion/v2_03honami_motion_base");
     assert.equal(byId.get("v2_15nene_april2026_transform")?.kind, "character");
     assert.equal(byId.get("v2_15nene_april2026_transform")?.characterId, 15);
     assert.equal(byId.get("v2_14emu_igs_princess")?.kind, "character");
     assert.equal(byId.get("v2_14emu_igs_princess")?.characterId, 14);
-    // Collab models are classified as `collab` even under format 1.
+    // Collab models are classified as `collab`.
     assert.equal(byId.get("v2_sub_sanrio_kitty")?.kind, "collab");
     assert.equal(byId.get("v2_sub_sanrio_kitty")?.ownerKey, "sanrio_kitty");
+    assert.equal(byId.get("v2_sub_sanrio_kitty")?.motion, "live2d/motion/sub_sanrio_kitty_motion_base");
     assert.equal(byId.get("v2_sub_enst_01izumi_stage")?.kind, "collab");
     assert.equal(byId.get("v2_sub_enst_01izumi_stage")?.ownerKey, "enst_01izumi");
     assert.deepEqual(byId.get("v2_sub_enst_01izumi_stage")?.subVariant, [{ token: "stage" }]);
 
-    const v2 = parseLive2DModelIndex({
-        format: 2,
-        region: "jp",
-        models: [
-            {
-                id: "sub_anfather",
-                bundle: "live2d/model/sub_anfather",
-                motion: "live2d/motion/sub_anfather_motion_base",
-                kind: "sub",
-                subCharacterId: 12,
-                assetName: "sub_anfather",
-                ownerKey: "anfather",
-                iconBundle: "chr_ts_sub_anfather",
-                unit: "street",
-                name: "\u8b19",
-                aliases: ["\u767d\u77f3\u8b19"],
-                names: { jp: "\u8b19", cn: "\u8c26", tw: "\u8b19", en: "Ken", kr: "\ucf04" },
-                episodeCount: 42,
-                episodes: ["event:10/1", "event:25/8"],
-            },
-        ],
+    const enriched = parseLive2DModel({
+        id: "sub_anfather",
+        asset: "live2d/model/sub_anfather",
+        motion: "live2d/motion/sub_anfather_motion_base",
+        kind: "sub",
+        subCharacterId: 12,
+        assetName: "sub_anfather",
+        ownerKey: "anfather",
+        iconBundle: "chr_ts_sub_anfather",
+        unit: "street",
+        name: "\u8b19",
+        aliases: ["\u767d\u77f3\u8b19"],
+        names: { jp: "\u8b19", cn: "\u8c26", tw: "\u8b19", en: "Ken", kr: "\ucf04" },
+        episodeCount: 42,
+        episodes: ["event:10/1", "event:25/8"],
     });
-    assert.equal(v2.length, 1);
-    assert.equal(v2[0].subCharacterId, 12);
-    assert.equal(v2[0].assetName, "sub_anfather");
-    assert.equal(v2[0].ownerKey, "anfather");
-    assert.equal(v2[0].iconBundle, "chr_ts_sub_anfather");
-    assert.equal(v2[0].unit, "street");
-    assert.equal(v2[0].name, "\u8b19");
-    assert.deepEqual(v2[0].aliases, ["\u767d\u77f3\u8b19"]);
-    assert.equal(v2[0].names.en, "Ken");
-    assert.equal(v2[0].episodeCount, 42);
-    assert.deepEqual(v2[0].episodes, ["event:10/1", "event:25/8"]);
-
-    assert.throws(() => parseLive2DModelIndex({ format: 3, models: [] }), /live2d_index_invalid/);
-    assert.throws(() => parseLive2DModelIndex({ format: 0, models: [] }), /live2d_index_invalid/);
-    assert.throws(() => parseLive2DModelIndex(null), /live2d_index_invalid/);
+    assert.equal(enriched.subCharacterId, 12);
+    assert.equal(enriched.asset, "live2d/model/sub_anfather");
+    assert.equal(enriched.motion, "live2d/motion/sub_anfather_motion_base");
+    assert.equal(enriched.assetName, "sub_anfather");
+    assert.equal(enriched.ownerKey, "anfather");
+    assert.equal(enriched.iconBundle, "chr_ts_sub_anfather");
+    assert.equal(enriched.unit, "street");
+    assert.equal(enriched.name, "\u8b19");
+    assert.deepEqual(enriched.aliases, ["\u767d\u77f3\u8b19"]);
+    assert.equal(enriched.names.en, "Ken");
+    assert.equal(enriched.episodeCount, 42);
+    assert.deepEqual(enriched.episodes, ["event:10/1", "event:25/8"]);
 });
 
 test("ownerKey derivation, second-pass 02 merge, and subVariant parsing match contract", () => {
@@ -253,16 +255,16 @@ test("ownerKey derivation, second-pass 02 merge, and subVariant parsing match co
     assert.deepEqual(parseLive2DSubVariant("sub_arisa02_live01", "arisa"), [{ variant: 2 }, { token: "live", variant: 1 }]);
     assert.deepEqual(parseLive2DSubVariant("sub_miu_cloth", "miu"), [{ token: "casual" }]);
 
-    const models = parseLive2DModelIndex({
-        format: 1,
-        models: [
-            { id: "sub_arisa", bundle: "b/1", motion: null, kind: "sub" },
-            { id: "sub_arisa02_live01", bundle: "b/2", motion: null, kind: "sub" },
-            { id: "sub_wl3_extra02", bundle: "b/3", motion: null, kind: "sub" },
-            { id: "sub_otoribrother1", bundle: "b/4", motion: null, kind: "sub" },
-            { id: "sub_otoribrother2", bundle: "b/5", motion: null, kind: "sub" },
+    const models = live2dModelsFromListings(
+        [
+            "sub_arisa",
+            "sub_arisa02_live01",
+            "sub_wl3_extra02",
+            "sub_otoribrother1",
+            "sub_otoribrother2",
         ],
-    });
+        [],
+    );
     const byId = new Map(models.map(m => [m.id, m]));
     // `arisa02` merges into `arisa` because `arisa` exists.
     assert.equal(byId.get("sub_arisa02_live01")?.ownerKey, "arisa");
@@ -274,21 +276,21 @@ test("ownerKey derivation, second-pass 02 merge, and subVariant parsing match co
 });
 
 test("compareLive2DModels orders kinds and sub variants by tier and generation", () => {
-    const models = parseLive2DModelIndex({
-        format: 2,
-        models: [
-            { id: "mob_a", bundle: "b/mob", motion: null, kind: "mob" },
-            { id: "v2_sub_sanrio_kitty", bundle: "b/kitty", motion: null, kind: "collab" },
-            { id: "sub_anfather_black", bundle: "b/blk", motion: null, kind: "sub" },
-            { id: "v2_sub_anfather_black", bundle: "b/v2blk", motion: null, kind: "sub" },
-            { id: "sub_anfather_zoom", bundle: "b/zoom", motion: null, kind: "sub" },
-            { id: "sub_anfatheryoung", bundle: "b/young", motion: null, kind: "sub" },
-            { id: "sub_anfather_rw", bundle: "b/rw", motion: null, kind: "sub" },
-            { id: "sub_anfather", bundle: "b/v1", motion: null, kind: "sub" },
-            { id: "v2_sub_anfather", bundle: "b/v2", motion: null, kind: "sub" },
-            { id: "v2_01ichika_casual", bundle: "b/ichika", motion: null, kind: "character", characterId: 1 },
+    const models = live2dModelsFromListings(
+        [
+            "mob_a",
+            "v2_sub_sanrio_kitty",
+            "sub_anfather_black",
+            "v2_sub_anfather_black",
+            "sub_anfather_zoom",
+            "sub_anfatheryoung",
+            "sub_anfather_rw",
+            "sub_anfather",
+            "v2_sub_anfather",
+            "v2_01ichika_casual",
         ],
-    });
+        [],
+    );
     assert.deepEqual(models.map(m => m.id), [
         "v2_01ichika_casual",
         "v2_sub_anfather",
@@ -313,7 +315,7 @@ test("labels.ts localization, secondary name, aliases, costume label, search, an
 
     const kenMain = parseLive2DModel({
         id: "sub_anfather",
-        bundle: "b/1",
+        asset: "live2d/model/sub_anfather",
         motion: null,
         kind: "sub",
         ownerKey: "anfather",
@@ -325,7 +327,7 @@ test("labels.ts localization, secondary name, aliases, costume label, search, an
     });
     const kenRw = parseLive2DModel({
         id: "sub_anfather_rw",
-        bundle: "b/2",
+        asset: "live2d/model/sub_anfather_rw",
         motion: null,
         kind: "sub",
         ownerKey: "anfather",
@@ -335,7 +337,7 @@ test("labels.ts localization, secondary name, aliases, costume label, search, an
     });
     const kenBlack = parseLive2DModel({
         id: "sub_anfather_black",
-        bundle: "b/3",
+        asset: "live2d/model/sub_anfather_black",
         motion: null,
         kind: "sub",
         ownerKey: "anfather",
@@ -345,7 +347,7 @@ test("labels.ts localization, secondary name, aliases, costume label, search, an
     });
     const arisaLive = parseLive2DModel({
         id: "sub_arisa02_live01",
-        bundle: "b/4",
+        asset: "live2d/model/sub_arisa02_live01",
         motion: null,
         kind: "sub",
         ownerKey: "arisa",
@@ -355,7 +357,7 @@ test("labels.ts localization, secondary name, aliases, costume label, search, an
     });
     const honamiApril = parseLive2DModel({
         id: "v2_03honami_april2025_school",
-        bundle: "b/5",
+        asset: "live2d/model/v2_03honami_april2025_school",
         motion: null,
         kind: "character",
         characterId: 3,
@@ -426,21 +428,21 @@ test("subCharacterNames.ts is pure ASCII and provides 5-region fallback names an
         }
     }
 
-    // Format 1 models (no `name` / `names`) resolve cleanly from subCharacterNames.ts.
-    const v1Models = parseLive2DModelIndex({
-        format: 1,
-        models: [
-            { id: "sub_anfather", bundle: "b/1", motion: null, kind: "sub" },
-            { id: "sub_anfatheryoung", bundle: "b/2", motion: null, kind: "sub" },
-            { id: "v2_sub_sanrio_kitty", bundle: "b/3", motion: null, kind: "sub" },
-            { id: "v2_sub_enst_01izumi_stage", bundle: "b/4", motion: null, kind: "sub" },
-            { id: "sub_nenedayo", bundle: "b/5", motion: null, kind: "sub" },
-            { id: "sub_mikurobo", bundle: "b/6", motion: null, kind: "sub" },
-            { id: "sub_wl3_extra02", bundle: "b/7", motion: null, kind: "sub" },
-            { id: "sub_igs_princess", bundle: "b/8", motion: null, kind: "sub" },
+    // Listing-only models (no `name` / `names`) resolve cleanly from subCharacterNames.
+    const listedModels = live2dModelsFromListings(
+        [
+            "sub_anfather",
+            "sub_anfatheryoung",
+            "v2_sub_sanrio_kitty",
+            "v2_sub_enst_01izumi_stage",
+            "sub_nenedayo",
+            "sub_mikurobo",
+            "sub_wl3_extra02",
+            "sub_igs_princess",
         ],
-    });
-    const byId = new Map(v1Models.map(m => [m.id, m]));
+        [],
+    );
+    const byId = new Map(listedModels.map(m => [m.id, m]));
 
     assert.equal(live2dOwnerName(t, byId.get("sub_anfather"), "zh-CN"), "\u674f\u7684\u7236\u4eb2");
     assert.equal(live2dOwnerName(t, byId.get("sub_anfather"), "en-US"), "An's Father");
@@ -489,10 +491,10 @@ test("childhood and sub_* main-character models parse costume parts while keepin
         costume: [],
     });
 
-    // Format 1 entry without characterId stays `kind: "sub"`.
+    // Listing entry without characterId stays `kind: "sub"`.
     const legacySub = parseLive2DModel({
         id: "sub_airichild",
-        bundle: "live2d/model/sub_airichild",
+        asset: "live2d/model/sub_airichild",
         motion: null,
         kind: "sub",
     });
@@ -500,21 +502,18 @@ test("childhood and sub_* main-character models parse costume parts while keepin
     assert.equal(legacySub.characterId, null);
     assert.equal(legacySub.subName, "airichild");
 
-    // Format 2 / characterId-tagged main-character `sub_*` models parse childhood & costume tokens.
-    const models = parseLive2DModelIndex({
-        format: 2,
-        models: [
-            { id: "sub_airichild", bundle: "b/1", motion: null, kind: "character", characterId: 7 },
-            { id: "sub_airichildblack", bundle: "b/2", motion: null, kind: "character", characterId: 7 },
-            { id: "sub_akitochild02", bundle: "b/3", motion: null, kind: "character", characterId: 11 },
-            { id: "sub_harukachild_black", bundle: "b/4", motion: null, kind: "character", characterId: 6 },
-            { id: "sub_shihochild_js", bundle: "b/5", motion: null, kind: "character", characterId: 4 },
-            { id: "v2_sub_child_ichika", bundle: "b/6", motion: null, kind: "character", characterId: 1 },
-            { id: "v2_sub_child10_ichika", bundle: "b/7", motion: null, kind: "character", characterId: 1 },
-            { id: "v2_sub_kanadechild02", bundle: "b/8", motion: null, kind: "character", characterId: 17 },
-            { id: "sub_emu_princess", bundle: "b/9", motion: null, kind: "character", characterId: 14 },
-        ],
-    });
+    // characterId-tagged main-character `sub_*` models parse childhood & costume tokens.
+    const models = [
+        { id: "sub_airichild", asset: "live2d/model/sub_airichild", motion: null, kind: "character", characterId: 7 },
+        { id: "sub_airichildblack", asset: "live2d/model/sub_airichildblack", motion: null, kind: "character", characterId: 7 },
+        { id: "sub_akitochild02", asset: "live2d/model/sub_akitochild02", motion: null, kind: "character", characterId: 11 },
+        { id: "sub_harukachild_black", asset: "live2d/model/sub_harukachild_black", motion: null, kind: "character", characterId: 6 },
+        { id: "sub_shihochild_js", asset: "live2d/model/sub_shihochild_js", motion: null, kind: "character", characterId: 4 },
+        { id: "v2_sub_child_ichika", asset: "live2d/model/v2_sub_child_ichika", motion: null, kind: "character", characterId: 1 },
+        { id: "v2_sub_child10_ichika", asset: "live2d/model/v2_sub_child10_ichika", motion: null, kind: "character", characterId: 1 },
+        { id: "v2_sub_kanadechild02", asset: "live2d/model/v2_sub_kanadechild02", motion: null, kind: "character", characterId: 17 },
+        { id: "sub_emu_princess", asset: "live2d/model/sub_emu_princess", motion: null, kind: "character", characterId: 14 },
+    ].map(parseLive2DModel).sort(compareLive2DModels);
     const byId = new Map(models.map(m => [m.id, m]));
 
     assert.deepEqual(byId.get("sub_airichild")?.costume, [{ token: "child" }]);
