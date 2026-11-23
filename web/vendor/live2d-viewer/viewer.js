@@ -113,8 +113,9 @@ export class SekaiLive2DViewer extends EventTarget {
    *   `proxy`: see `resolveBase`
    * @param {{asset: string, motion?: string|null}} o.model  the model's `live2d-model` asset and
    *   its `live2d-motions` asset, each by its name, or by a directory of the published version
-   *   holding it (the first found going down its listings), such as `live2d/model/<name>` and
-   *   `live2d/motion/<name>_motion_base`. A motion set the version does not have leaves the
+   *   holding it (the first found going down its listings), such as `live2d/model/<name>/` and
+   *   `live2d/motion/<name>_motion_base/` (a trailing `/` marks a directory explicitly so the
+   *   worker skips probing `<path>.asset.json`). A motion set the version does not have leaves the
    *   model without motions
    * @param {number} o.width   drawing size in pixels (the CSS size × devicePixelRatio)
    * @param {number} o.height

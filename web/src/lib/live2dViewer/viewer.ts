@@ -2,7 +2,7 @@ import { LIVE2D_VIEWER_PATH, type Live2DSources } from "@moesekai/story-core";
 import { LIVE2D_VIEWER_RELEASE } from "./release";
 
 /**
- * The interface of the Live2D model viewer (SekaiLive2DViewer 0.3.0), as far as this site uses it,
+ * The interface of the Live2D model viewer (SekaiLive2DViewer 0.3.1), as far as this site uses it,
  * and its loader. The viewer is loaded at runtime from the vendored release, so it is declared here;
  * the release's README documents the full interface.
  */
@@ -36,7 +36,11 @@ export interface Live2DViewerOptions {
     core?: string;
     /** The site and server whose current publication the model is read from; `proxy` relays `https://` for development. */
     sources: Live2DSources;
-    /** The model's `live2d-model` asset and its motion set's `live2d-motions` asset (none: no motions or facials), each by name or by a directory that holds it. */
+    /**
+     * The model's `live2d-model` asset and its motion set's `live2d-motions` asset (none: no
+     * motions or facials), each by exact asset name (1 direct fetch) or by a directory ending in
+     * `/` (skips `<path>.asset.json` probing).
+     */
     model: { asset: string; motion?: string | null };
     /** The drawing buffer, in device pixels. */
     width: number;

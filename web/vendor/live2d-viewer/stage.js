@@ -258,7 +258,9 @@ export class SekaiLive2DStage extends EventTarget {
   }
 
   /**
-   * Loads a model (`{ asset, motion? }`, each an asset name or directory holding it; files fetched
+   * Loads a model (`{ asset, motion? }`, each an asset name or directory holding it — pass a
+   * trailing `/` for a directory such as `live2d/model/<name>/` or
+   * `live2d/motion/<name>_motion_base/` to skip probing `<path>.asset.json`; files fetched
    * and cached as the viewer does; an asset another actor uses is not fetched again) and puts it
    * on stage as actor `id`, placed by `p` (x 0, y 0, scale 1, alpha 1, not mirrored, in front of
    * the actors before it). A motion set the published version does not have leaves the actor

@@ -950,7 +950,8 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
     assert.equal(manifest.voices.length, 2);
     assert.deepEqual(manifest.counts, { live2d: 2, background: 1, audio: 5, uikit: 1, total: 9 });
 
-    // Cache API key verification matching SekaiLive2DViewer / SekaiLive2DStage 0.3.0 (`sekai-live2d-v2`)
+    // Cache API key verification matching SekaiLive2DViewer / SekaiLive2DStage 0.3.1 (`sekai-live2d-v2`)
+    storyCore.clearLive2DSiteCache();
     const VERSION = "7.1.0-preload-test";
     const modelDocName = "live2d/model/v2_01ichika_casual/live2d/model/v2/main/01_ichika/v2_01ichika_casual/buildmodeldata";
     const motionDocName = "live2d/motion/v2_01ichika_motion_base/live2d/motion/v2/main/01_ichika/v2_01ichika_motion_base/buildmotiondata";
@@ -960,6 +961,7 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
     const prevCaches = globalThis.caches;
     const prevFetch = globalThis.fetch;
     const fetchedUrls = [];
+    const assetJson404Urls = [];
     globalThis.caches = {
         async has(name) { return name === "sekai-live2d-v2"; },
         async open(name) {
@@ -974,6 +976,9 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
     globalThis.fetch = async (url) => {
         const s = String(url);
         fetchedUrls.push(s);
+        if (s.includes("/listings/")) {
+            return { ok: false, status: 404, json: async () => ({}) };
+        }
         if (s === "https://storage.pjsk.moe/jp/") {
             return {
                 ok: true, status: 200,
@@ -1027,7 +1032,31 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
                 }),
             };
         }
-        if (s === `https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base.asset.json`) {
+        if (s === `https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base/`) {
+            return {
+                ok: true, status: 200,
+                json: async () => ({
+                    format: "directory-listing",
+                    version: 1,
+                    directories: ["live2d"],
+                    files: [],
+                }),
+            };
+        }
+        if (s === `https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base/live2d/`) {
+            return {
+                ok: true, status: 200,
+                json: async () => ({
+                    format: "directory-listing",
+                    version: 1,
+                    directories: [],
+                    files: [
+                        { name: "buildmotiondata.asset.json", extension: "json" },
+                    ],
+                }),
+            };
+        }
+        if (s === `https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base/live2d/buildmotiondata.asset.json`) {
             return {
                 ok: true, status: 200,
                 json: async () => ({
@@ -1045,6 +1074,7 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
             };
         }
         if (s.endsWith(".asset.json")) {
+            assetJson404Urls.push(s);
             return { ok: false, status: 404, json: async () => ({}) };
         }
         return { ok: true, status: 200, arrayBuffer: async () => new Uint8Array([1, 2]).buffer };
@@ -1065,9 +1095,12 @@ test("collectStoryAssets walks v2 SceneNodes (slots, beats, reactions, SE, cross
         assert.equal(final.failed, 0);
         assert.equal(final.byCategory.live2d.total, 4);
         assert.equal(final.byCategory.live2d.cached, 1);
+        assert.deepEqual(assetJson404Urls, [], "preloader must never fire 404 .asset.json probes on directory paths");
         assert.equal(fetchedUrls.some(u => u.endsWith("/moc.moc3")), false);
         assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/live2d/model/v2_01ichika_casual/live2d/buildmodeldata.asset.json`));
-        assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base.asset.json`));
+        assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base/live2d/buildmotiondata.asset.json`));
+        assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/live2d/model/v2_01ichika_casual/?sekai-asset-resolve=live2d-model`));
+        assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/live2d/motion/v2_01ichika_motion_base/?sekai-asset-resolve=live2d-motions`));
         assert.ok(stored.has(`https://storage.pjsk.moe/jp@${VERSION}/${motionDocName}/facial/face_%20worry_01.json`));
 
         const status = await preloaderMod.inspectStoryCacheStatus(smallDoc, {
@@ -1701,17 +1734,50 @@ test("isStoryCgBackground classifies CG vs scene backgrounds and fetchStoryBackg
     }
 });
 
-test("fetchLive2DModels reads canonical asset-site listings, caches per region, and returns [] on 404", async () => {
+test("fetchLive2DModels prefers canonical form listings, falls back to directory listings, caches per region, and returns [] on 404", async () => {
     const clientMod = await import("../src/lib/live2dViewer/client.ts");
     clientMod.clearLive2DClientCaches();
+    storyCore.clearLive2DSiteCache();
     resetStoryCoreConfig();
 
     const prevFetch = globalThis.fetch;
     const requestedUrls = [];
+    let serveFormListings = false;
+    const EXACT_MODEL = "live2d/model/v2_01ichika_casual/live2d/model/v2/main/01_ichika/v2_01ichika_casual/buildmodeldata";
+    const EXACT_MOTION = "live2d/motion/v2_01ichika_motion_base/live2d/motion/v2/main/01_ichika/v2_01ichika_motion_base/buildmotiondata";
     globalThis.fetch = async (url) => {
         const s = String(url);
         requestedUrls.push(s);
         if (s.includes("/en/")) return { ok: false, status: 404, json: async () => ({}) };
+        if (serveFormListings && s.endsWith("/listings/jp/canonical/live2d-model")) {
+            return {
+                ok: true, status: 200,
+                json: async () => ({
+                    format: "form-listing",
+                    version: 1,
+                    view: "canonical",
+                    published_version: "7.2.0-form-test",
+                    form: "live2d-model",
+                    assets: [
+                        { name: EXACT_MODEL },
+                        { name: "title_screen/default_bg/ichika/model/buildmodeldata" },
+                    ],
+                }),
+            };
+        }
+        if (serveFormListings && s.endsWith("/listings/jp/canonical/live2d-motions")) {
+            return {
+                ok: true, status: 200,
+                json: async () => ({
+                    format: "form-listing",
+                    version: 1,
+                    view: "canonical",
+                    published_version: "7.2.0-form-test",
+                    form: "live2d-motions",
+                    assets: [{ name: EXACT_MOTION }],
+                }),
+            };
+        }
         if (s.endsWith("/jp/live2d/model/")) {
             return {
                 ok: true, status: 200,
@@ -1735,17 +1801,37 @@ test("fetchLive2DModels reads canonical asset-site listings, caches per region, 
         return { ok: false, status: 404, json: async () => ({}) };
     };
     try {
+        // 1. Legacy server without `/listings/`: falls back to `/jp/live2d/{model,motion}/` and caches
         const first = await clientMod.fetchLive2DModels("jp");
+        const countAfterFirst = requestedUrls.length;
         const second = await clientMod.fetchLive2DModels("jp");
         assert.equal(first.length, 1);
         assert.equal(first[0].id, "v2_01ichika_casual");
         assert.equal(first[0].asset, "live2d/model/v2_01ichika_casual");
         assert.equal(first[0].motion, "live2d/motion/v2_01ichika_motion_base");
         assert.deepEqual(second, first);
-        assert.equal(requestedUrls.filter(u => u.includes("/jp/")).length, 2);
+        assert.equal(requestedUrls.length, countAfterFirst, "cached second fetch must not hit network");
+        assert.equal(requestedUrls.filter(u => u.endsWith("/jp/live2d/model/") || u.endsWith("/jp/live2d/motion/")).length, 2);
         assert.deepEqual(await clientMod.fetchLive2DModels("en"), []);
+
+        // 2. Canonical `/listings/` fast path: zero directory listing fetches, filters title_screen, seeds exact paths
+        clientMod.clearLive2DClientCaches();
+        storyCore.clearLive2DSiteCache();
+        requestedUrls.length = 0;
+        serveFormListings = true;
+        const indexed = await clientMod.fetchLive2DModels("jp");
+        assert.equal(indexed.length, 1);
+        assert.equal(indexed[0].id, "v2_01ichika_casual");
+        assert.equal(indexed[0].asset, "live2d/model/v2_01ichika_casual");
+        assert.equal(indexed[0].motion, "live2d/motion/v2_01ichika_motion_base");
+        assert.equal(requestedUrls.length, 2);
+        assert.ok(requestedUrls.every(u => u.includes("/listings/jp/canonical/live2d-")));
+        const jpSources = storyCore.live2dSources("jp");
+        assert.equal(storyCore.live2dAssetRequestPath(jpSources, indexed[0].asset, "live2d-model"), EXACT_MODEL);
+        assert.equal(storyCore.live2dAssetRequestPath(jpSources, indexed[0].motion, "live2d-motions"), EXACT_MOTION);
     } finally {
         clientMod.clearLive2DClientCaches();
+        storyCore.clearLive2DSiteCache();
         resetStoryCoreConfig();
         globalThis.fetch = prevFetch;
     }

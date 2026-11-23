@@ -5,7 +5,8 @@
 // with importScripts before the wasm (SSE's ADR-0032).
 //
 // Adding an actor fetches the documents of its `live2d-model` asset and its `live2d-motions`
-// asset (each given by name, or by a directory holding it; resolved once per worker), the
+// asset (each given by name, or by a directory holding it — a trailing `/` skips the
+// `<path>.asset.json` probe; resolved directory mappings are cached per published version), the
 // model's files and the starting body motion and facial; any other clip is fetched the first
 // time it is played. An asset two actors use is fetched once: the file table is shared.
 //
@@ -161,6 +162,20 @@ class Loader {
     this.loaded = new Map();
     this.jsons = new Map();
     this.assets = new Map();
+    this.resolved = new Map();
+  }
+
+  /** Normalized URL for `path` under `this.base` (preserving a single trailing `/` when given). */
+  assetUrl(path) {
+    const raw = String(path ?? "");
+    const trailing = raw.endsWith("/");
+    const clean = raw.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+    return clean ? `${this.base}${encodePath(clean)}${trailing ? "/" : ""}` : this.base;
+  }
+
+  /** Cache API key for a resolved directory -> nested asset mapping under this published version. */
+  resolveCacheUrl(name, form) {
+    return `${this.base}${encodePath(name)}/?sekai-asset-resolve=${encodeURIComponent(form)}`;
   }
 
   /** The bytes of the publication path `path` (a directory's listing when it ends in `/`). */
@@ -232,14 +247,21 @@ class Loader {
   }
 
   /**
-   * The asset of form `form` that `path` names: that asset (its document `<path>.asset.json` is
-   * there), or one in a directory, the first found going down its listings in order (the ones
-   * the client names `buildmodeldata` and `buildmotiondata` first). Its document is put in the
-   * table. Undefined when there is none.
+   * The asset of form `form` that `path` names:
+   * - When `path` ends with `/`, it names a directory directly (skipping `<path>.asset.json` so
+   *   cold directory loads never incur a 404 probe) and walks its listings for the first matching
+   *   asset (`buildmodeldata` / `buildmotiondata` first).
+   * - Otherwise, it checks `<path>.asset.json` first and falls back to walking `<path>/`.
+   * Resolved directory -> nested-asset mappings are persisted in `sekai-live2d-v2` (and kept in
+   * the worker) per immutable published version so warm reloads jump straight to the resolved
+   * `.asset.json`. Its document is put in the table. Undefined when there is none.
    */
   asset(path, form) {
-    const name = path.replace(/^\/+|\/+$/g, "");
-    const key = `${form}\0${name}`;
+    const raw = String(path ?? "");
+    const explicitDir = raw.endsWith("/");
+    const name = raw.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+    if (!name) return Promise.resolve(undefined);
+    const key = `${form}\0${name}${explicitDir ? "/" : ""}`;
     let p = this.assets.get(key);
     if (!p) {
       p = (async () => {
@@ -249,8 +271,53 @@ class Loader {
           this.putFile(`${ROOT}${asset}.asset.json`, new TextEncoder().encode(JSON.stringify(document)));
           return asset;
         };
-        const own = await take(name);
-        if (own) return own;
+        const resolvedKey = `${form}\0${name}`;
+        const resolveUrl = this.resolveCacheUrl(name, form);
+
+        let cachedAsset = this.resolved.get(resolvedKey);
+        let fromCache = false;
+        if (!cachedAsset && this.cache) {
+          let hit;
+          try {
+            hit = await this.cache.match(resolveUrl);
+          } catch { /* custom scheme or opaque origin */ }
+          if (hit) {
+            fromCache = true;
+            try {
+              const data = await hit.json();
+              if (typeof data?.asset === "string") {
+                const normalized = data.asset.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+                if (normalized.startsWith(`${name}/`) && !normalized.split("/").includes("..")) {
+                  cachedAsset = normalized;
+                }
+              }
+            } catch { /* corrupt cache entry */ }
+            if (!cachedAsset) {
+              try { await this.cache.delete?.(resolveUrl); } catch { /* ignore */ }
+            }
+          }
+        }
+        if (cachedAsset) {
+          let validated;
+          try {
+            validated = await take(cachedAsset);
+          } catch (e) {
+            if (e?.kind === "network") throw e;
+          }
+          if (validated) {
+            this.resolved.set(resolvedKey, validated);
+            return validated;
+          }
+          this.resolved.delete(resolvedKey);
+          if (fromCache) {
+            try { await this.cache?.delete?.(resolveUrl); } catch { /* ignore */ }
+          }
+        }
+
+        if (!explicitDir) {
+          const own = await take(name);
+          if (own) return own;
+        }
         const walk = async (dir, depth) => {
           const listing = await this.json(`${dir}/`);
           if (!listing) return undefined;
@@ -270,7 +337,21 @@ class Loader {
           }
           return undefined;
         };
-        return walk(name, 0);
+        const found = await walk(name, 0);
+        if (found && found !== name) {
+          this.resolved.set(resolvedKey, found);
+          if (this.cache) {
+            try {
+              await this.cache.put(
+                resolveUrl,
+                new Response(JSON.stringify({ asset: found }), {
+                  headers: { "Content-Type": "application/json" },
+                }),
+              );
+            } catch { /* custom scheme or opaque origin */ }
+          }
+        }
+        return found;
       })();
       this.assets.set(key, p);
       p.catch(() => this.assets.delete(key));
@@ -362,7 +443,7 @@ async function add(m) {
       throw failure(
         `the published version has no model ${m.model.asset}`,
         "not-found",
-        loader.base + encodePath(m.model.asset),
+        loader.assetUrl(m.model.asset),
       );
     }
     // a motion set the site does not have leaves the actor without motions

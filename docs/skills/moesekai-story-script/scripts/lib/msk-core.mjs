@@ -3833,7 +3833,7 @@ function parseStoryScript(source) {
   return { ok: true, doc: result.doc, diagnostics: [] };
 }
 
-// ../node_modules/@moesekai/story-core/dist/chunk-m7t7j613.js
+// ../node_modules/@moesekai/story-core/dist/chunk-vhc7gejg.js
 var DEFAULT_STORY_CORE_CONFIG = Object.freeze({
   assetDomainMain: "https://storage.pjsk.moe",
   assetDomainBackup: "https://storage.exmeaning.com",
@@ -4008,10 +4008,22 @@ function live2dListingUrl(region, dir, line) {
 var PUBLISHED_VERSION_TTL_MS = 60000;
 var MAX_ASSET_WALK_DEPTH = 12;
 var MAX_ASSET_WALK_DIRS = 64;
+var LIVE2D_CONTAINER_DIR_RE = /^live2d\/(?:model|motion)\/[^/]+$/;
+var MODEL_FORM_ASSET_RE = /^live2d\/model\/([^/]+)(?:\/.+)?$/;
+var MOTION_FORM_ASSET_RE = /^live2d\/motion\/([^/]+)(?:\/.+)?$/;
+function isCanonicalContainerForForm(cleanPath, form) {
+  if (!LIVE2D_CONTAINER_DIR_RE.test(cleanPath))
+    return false;
+  return form === "live2d-model" ? cleanPath.startsWith("live2d/model/") : cleanPath.startsWith("live2d/motion/");
+}
 var versionCache = new Map;
 var versionInflight = new Map;
 var assetDocCache = new Map;
 var assetDocInflight = new Map;
+var formAssetIndexByVersion = new Map;
+var formAssetIndexLatest = new Map;
+var formListingInflight = new Map;
+var formListingUnavailable = new Map;
 function createAbortError() {
   if (typeof DOMException !== "undefined") {
     return new DOMException("The operation was aborted.", "AbortError");
@@ -4062,6 +4074,15 @@ function live2dSiteListingUrl(sources, dirPath) {
   const url = encodedDir ? `${base}/${encodedDir}/` : `${base}/`;
   return applyProxy(url, sources.proxy);
 }
+function live2dFormListingUrl(sources, form, view = "canonical") {
+  const root = cleanSiteRoot(sources.site);
+  const regionSeg = encodeURIComponent(sources.region);
+  const version = sources.version?.trim();
+  const viewSeg = version ? `${encodeURIComponent(view)}@${encodeURIComponent(version)}` : encodeURIComponent(view);
+  const formSeg = encodeURIComponent(form.trim());
+  const url = `${root}/listings/${regionSeg}/${viewSeg}/${formSeg}`;
+  return applyProxy(url, sources.proxy);
+}
 function live2dMemberUrl(base, docName, member, proxy2) {
   const cleanBase = base.trim().replace(/\/+$/, "");
   const encodedDoc = encodePathSegments(docName);
@@ -4107,6 +4128,200 @@ function parseDirectoryListing(url, raw) {
     directories,
     files
   };
+}
+function parseFormListing(raw, expectedForm) {
+  if (!raw || typeof raw !== "object")
+    return null;
+  const obj = raw;
+  if (obj.format !== "form-listing" || obj.version !== 1)
+    return null;
+  if (typeof obj.form !== "string" || obj.form !== expectedForm)
+    return null;
+  if (!Array.isArray(obj.assets))
+    return null;
+  const assets = [];
+  for (const entry of obj.assets) {
+    if (typeof entry === "string") {
+      const name = entry.trim();
+      if (name)
+        assets.push({ name });
+    } else if (entry && typeof entry === "object" && typeof entry.name === "string") {
+      const item = entry;
+      const name = item.name.trim();
+      if (!name)
+        continue;
+      assets.push({
+        name,
+        ...typeof item.fingerprint === "string" ? { fingerprint: item.fingerprint } : {},
+        ...typeof item.size === "number" ? { size: item.size } : {}
+      });
+    }
+  }
+  return {
+    format: "form-listing",
+    version: 1,
+    ...typeof obj.view === "string" ? { view: obj.view } : {},
+    ...typeof obj.published_version === "string" ? { published_version: obj.published_version } : {},
+    ...typeof obj.revision === "string" ? { revision: obj.revision } : {},
+    form: obj.form,
+    assets
+  };
+}
+function isBuildDataLeaf(assetName) {
+  const leaf = assetName.split("/").pop() ?? "";
+  return /^build\w*data$/i.test(leaf);
+}
+function preferCanonicalFormAsset(existing, candidate) {
+  if (!existing)
+    return candidate;
+  const existingBuild = isBuildDataLeaf(existing);
+  const candidateBuild = isBuildDataLeaf(candidate);
+  if (candidateBuild !== existingBuild)
+    return candidateBuild ? candidate : existing;
+  return compareStrings3(candidate, existing) < 0 ? candidate : existing;
+}
+function buildLive2DFormAssetIndex(form, assets) {
+  const pattern = form === "live2d-model" ? MODEL_FORM_ASSET_RE : MOTION_FORM_ASSET_RE;
+  const prefix = form === "live2d-model" ? "live2d/model/" : "live2d/motion/";
+  const out = new Map;
+  for (const entry of assets) {
+    const raw = typeof entry === "string" ? entry : entry?.name;
+    const clean = typeof raw === "string" ? raw.trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "") : "";
+    if (!clean)
+      continue;
+    const match = pattern.exec(clean);
+    if (!match)
+      continue;
+    const containerId = match[1];
+    if (!containerId || containerId === "." || containerId === "..")
+      continue;
+    const containerKey = `${prefix}${containerId}`;
+    out.set(containerKey, preferCanonicalFormAsset(out.get(containerKey), clean));
+  }
+  return out;
+}
+function extractLive2DFormContainerIds(form, assets) {
+  const prefix = form === "live2d-model" ? "live2d/model/" : "live2d/motion/";
+  const map = buildLive2DFormAssetIndex(form, assets);
+  const ids = [];
+  for (const containerKey of map.keys()) {
+    ids.push(containerKey.slice(prefix.length));
+  }
+  return ids;
+}
+function formIndexSiteKey(site, region, proxy2, form) {
+  return `${cleanSiteRoot(site)}|${region}|${proxy2 ?? ""}|${form}`;
+}
+function formIndexVersionKey(site, region, version, proxy2, form) {
+  return `${cleanSiteRoot(site)}|${region}|${version.trim()}|${proxy2 ?? ""}|${form}`;
+}
+function isFormListingUnavailable(sources, form) {
+  const key = formIndexSiteKey(sources.site, sources.region, sources.proxy, form);
+  const failedAt = formListingUnavailable.get(key);
+  if (failedAt === undefined)
+    return false;
+  if (Date.now() - failedAt < PUBLISHED_VERSION_TTL_MS)
+    return true;
+  formListingUnavailable.delete(key);
+  return false;
+}
+function recordFormListingInCache(sources, form, listing) {
+  const site = cleanSiteRoot(sources.site) || "/";
+  const map = buildLive2DFormAssetIndex(form, listing.assets);
+  const resolvedVersion = listing.published_version?.trim() || sources.version?.trim() || "";
+  const siteKey = formIndexSiteKey(site, sources.region, sources.proxy, form);
+  formListingUnavailable.delete(siteKey);
+  if (resolvedVersion) {
+    formAssetIndexByVersion.set(formIndexVersionKey(site, sources.region, resolvedVersion, sources.proxy, form), map);
+    if (!sources.version?.trim()) {
+      const vKey = versionCacheKey({ site, region: sources.region, proxy: sources.proxy });
+      versionCache.set(vKey, { version: resolvedVersion, site, fetchedAt: Date.now() });
+    }
+  }
+  if (!sources.version?.trim() || !formAssetIndexLatest.has(siteKey)) {
+    formAssetIndexLatest.set(siteKey, {
+      ...resolvedVersion ? { version: resolvedVersion } : {},
+      map
+    });
+  }
+  return map;
+}
+function hasIndexedLive2DFormVersion(sources, form) {
+  const version = sources.version?.trim();
+  if (!version)
+    return false;
+  const site = cleanSiteRoot(sources.site) || "/";
+  return formAssetIndexByVersion.has(formIndexVersionKey(site, sources.region, version, sources.proxy, form));
+}
+function getIndexedLive2DFormMapForVersion(sources, form) {
+  const version = sources.version?.trim();
+  if (!version)
+    return null;
+  const site = cleanSiteRoot(sources.site) || "/";
+  return formAssetIndexByVersion.get(formIndexVersionKey(site, sources.region, version, sources.proxy, form)) ?? null;
+}
+function lookupIndexedLive2DAssetPath(sources, cleanContainerPath, form) {
+  const site = cleanSiteRoot(sources.site) || "/";
+  const explicitVersion = sources.version?.trim();
+  if (explicitVersion) {
+    const byVer = formAssetIndexByVersion.get(formIndexVersionKey(site, sources.region, explicitVersion, sources.proxy, form));
+    return byVer?.get(cleanContainerPath) ?? null;
+  }
+  const cachedBase = getCachedLive2DSiteBase(sources);
+  if (cachedBase) {
+    const byCachedVer = formAssetIndexByVersion.get(formIndexVersionKey(cachedBase.site, sources.region, cachedBase.version, sources.proxy, form));
+    const hit = byCachedVer?.get(cleanContainerPath);
+    if (hit)
+      return hit;
+  }
+  const latest = formAssetIndexLatest.get(formIndexSiteKey(site, sources.region, sources.proxy, form));
+  return latest?.map.get(cleanContainerPath) ?? null;
+}
+async function fetchLive2DFormListing(sources, form, signal) {
+  if (signal?.aborted)
+    throw createAbortError();
+  if (isFormListingUnavailable(sources, form))
+    return null;
+  const url = live2dFormListingUrl(sources, form);
+  let pending = formListingInflight.get(url);
+  if (!pending) {
+    pending = (async () => {
+      const siteKey = formIndexSiteKey(sources.site, sources.region, sources.proxy, form);
+      const response = await getCoreFetch()(url, {
+        credentials: "omit",
+        headers: { Accept: "application/json" }
+      });
+      if (response.status === 404) {
+        formListingUnavailable.set(siteKey, Date.now());
+        return null;
+      }
+      if (!response.ok) {
+        throw new Error(`${url}: HTTP ${response.status}`);
+      }
+      if (typeof response.json !== "function") {
+        formListingUnavailable.set(siteKey, Date.now());
+        return null;
+      }
+      let raw;
+      try {
+        raw = await response.json();
+      } catch {
+        formListingUnavailable.set(siteKey, Date.now());
+        return null;
+      }
+      const parsed = parseFormListing(raw, form);
+      if (!parsed) {
+        formListingUnavailable.set(siteKey, Date.now());
+        return null;
+      }
+      recordFormListingInCache(sources, form, parsed);
+      return parsed;
+    })().finally(() => {
+      formListingInflight.delete(url);
+    });
+    formListingInflight.set(url, pending);
+  }
+  return withAbortSignal(pending, signal);
 }
 async function fetchListingJson(url) {
   const fetchFn = getCoreFetch();
@@ -4199,6 +4414,27 @@ async function resolveLive2DSiteBase(sources, signal) {
   const entry = await resolveSiteVersionEntry(sources, signal);
   return live2dVersionedBaseUrl(entry.site, sources.region, entry.version);
 }
+function getCachedLive2DSiteBase(sources) {
+  const explicitVersion = sources.version?.trim();
+  if (explicitVersion) {
+    const site = cleanSiteRoot(sources.site) || "/";
+    return {
+      baseUrl: live2dVersionedBaseUrl(site, sources.region, explicitVersion),
+      version: explicitVersion,
+      site,
+      ...sources.proxy ? { proxy: sources.proxy } : {}
+    };
+  }
+  const cached = versionCache.get(versionCacheKey(sources));
+  if (!cached || Date.now() - cached.fetchedAt >= PUBLISHED_VERSION_TTL_MS)
+    return null;
+  return {
+    baseUrl: live2dVersionedBaseUrl(cached.site, sources.region, cached.version),
+    version: cached.version,
+    site: cached.site,
+    ...sources.proxy ? { proxy: sources.proxy } : {}
+  };
+}
 function parseAssetDocument(raw) {
   if (!raw || typeof raw !== "object")
     return null;
@@ -4245,6 +4481,47 @@ function assetDocCacheKey(baseUrl, proxy2, cleanPath, expectedForm) {
 function normalizeAssetLookupPath(assetPath) {
   return assetPath.trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "");
 }
+function live2dDirectoryPath(assetPath) {
+  const trimmed = assetPath.trim();
+  if (!trimmed)
+    return "";
+  const withoutLeading = trimmed.replace(/^\/+/, "");
+  const hadTrailingSlash = withoutLeading.endsWith("/");
+  const clean = withoutLeading.replace(/\/+$/, "");
+  if (!clean)
+    return "";
+  if (/\.asset\.json$/i.test(clean))
+    return clean;
+  if (hadTrailingSlash || LIVE2D_CONTAINER_DIR_RE.test(clean)) {
+    return `${clean}/`;
+  }
+  return clean;
+}
+function live2dAssetRequestPath(sources, assetPath, expectedForm) {
+  const trimmed = assetPath.trim();
+  if (!trimmed)
+    return "";
+  const clean = normalizeAssetLookupPath(trimmed);
+  if (!clean)
+    return "";
+  if (!LIVE2D_CONTAINER_DIR_RE.test(clean) || /\.asset\.json$/i.test(trimmed.replace(/\/+$/, ""))) {
+    return live2dDirectoryPath(trimmed);
+  }
+  if (sources) {
+    const form = expectedForm ?? (clean.startsWith("live2d/model/") ? "live2d-model" : "live2d-motions");
+    if (isCanonicalContainerForForm(clean, form)) {
+      const indexed = lookupIndexedLive2DAssetPath(sources, clean, form);
+      if (indexed)
+        return indexed;
+    }
+    const cachedDoc = getCachedLive2DAssetDocument(sources, clean, form);
+    const cachedPath = cachedDoc ? normalizeAssetLookupPath(cachedDoc.assetPath ?? cachedDoc.doc.name) : "";
+    if (cachedPath && cachedPath.startsWith(`${clean}/`)) {
+      return cachedPath;
+    }
+  }
+  return live2dDirectoryPath(trimmed);
+}
 function sortAssetCandidateStems(stems) {
   return [...stems].sort((a, b) => {
     const aBuild = /^build\w*data$/i.test(a) ? 0 : 1;
@@ -4252,10 +4529,22 @@ function sortAssetCandidateStems(stems) {
     return aBuild - bBuild || compareStrings3(a, b);
   });
 }
+function getCachedLive2DAssetDocument(sources, assetPath, expectedForm) {
+  const cleanPath = normalizeAssetLookupPath(assetPath);
+  if (!cleanPath)
+    return null;
+  const base = getCachedLive2DSiteBase(sources);
+  if (!base)
+    return null;
+  return assetDocCache.get(assetDocCacheKey(base.baseUrl, base.proxy, cleanPath, expectedForm)) ?? null;
+}
 async function resolveLive2DAssetDocument(sources, assetPath, expectedForm, signal) {
   if (signal?.aborted)
     throw createAbortError();
-  const cleanPath = normalizeAssetLookupPath(assetPath);
+  const trimmed = assetPath.trim();
+  const isExplicitAssetFile = /\.asset\.json$/i.test(trimmed.replace(/\/+$/, ""));
+  const isExplicitDirectory = !isExplicitAssetFile && trimmed.endsWith("/");
+  const cleanPath = normalizeAssetLookupPath(trimmed);
   if (!cleanPath)
     return null;
   const entry = await resolveSiteVersionEntry(sources, signal);
@@ -4265,9 +4554,11 @@ async function resolveLive2DAssetDocument(sources, assetPath, expectedForm, sign
   const proxy2 = sources.proxy;
   const key = assetDocCacheKey(baseUrl, proxy2, cleanPath, expectedForm);
   const cached = assetDocCache.get(key);
-  if (cached)
+  if (cached && (!isExplicitDirectory || normalizeAssetLookupPath(cached.doc.name) !== cleanPath)) {
     return cached;
-  let pending = assetDocInflight.get(key);
+  }
+  const inflightKey = `${key}|${isExplicitDirectory ? "dir" : "any"}`;
+  let pending = assetDocInflight.get(inflightKey);
   if (!pending) {
     pending = (async () => {
       const fetchDocAt = async (relDocPath) => {
@@ -4286,16 +4577,53 @@ async function resolveLive2DAssetDocument(sources, assetPath, expectedForm, sign
           return null;
         return {
           doc: parsed,
+          assetPath: normalizeAssetLookupPath(relDocPath),
           url,
           baseUrl,
           version: entry.version,
           ...proxy2 ? { proxy: proxy2 } : {}
         };
       };
-      const direct = await fetchDocAt(cleanPath);
-      if (direct) {
-        assetDocCache.set(key, direct);
-        return direct;
+      const cacheMatch = (match) => {
+        assetDocCache.set(key, match);
+        const resolvedPath = normalizeAssetLookupPath(match.assetPath ?? match.doc.name);
+        if (resolvedPath && resolvedPath !== cleanPath) {
+          assetDocCache.set(assetDocCacheKey(baseUrl, proxy2, resolvedPath, expectedForm), match);
+        }
+        const resolvedName = normalizeAssetLookupPath(match.doc.name);
+        if (resolvedName && resolvedName !== cleanPath && resolvedName !== resolvedPath) {
+          assetDocCache.set(assetDocCacheKey(baseUrl, proxy2, resolvedName, expectedForm), match);
+        }
+        return match;
+      };
+      if (isCanonicalContainerForForm(cleanPath, expectedForm) && !isExplicitAssetFile) {
+        const pinnedSources = {
+          site: entry.site,
+          region: sources.region,
+          version: entry.version,
+          ...proxy2 ? { proxy: proxy2 } : {}
+        };
+        if (!hasIndexedLive2DFormVersion(pinnedSources, expectedForm) && !isFormListingUnavailable(pinnedSources, expectedForm)) {
+          await fetchLive2DFormListing(pinnedSources, expectedForm).catch(() => null);
+        }
+        const versionIndex = getIndexedLive2DFormMapForVersion(pinnedSources, expectedForm);
+        if (versionIndex && versionIndex.size > 0) {
+          const indexedPath = versionIndex.get(cleanPath);
+          if (indexedPath) {
+            const indexedMatch = await fetchDocAt(indexedPath);
+            if (indexedMatch) {
+              return cacheMatch(indexedMatch);
+            }
+          } else if (isExplicitDirectory) {
+            return null;
+          }
+        }
+      }
+      if (!isExplicitDirectory) {
+        const direct = await fetchDocAt(cleanPath);
+        if (direct) {
+          return cacheMatch(direct);
+        }
       }
       const queue = [{ dir: cleanPath, depth: 0 }];
       const visited = new Set([cleanPath]);
@@ -4319,8 +4647,7 @@ async function resolveLive2DAssetDocument(sources, assetPath, expectedForm, sign
           const candidatePath = `${current.dir}/${stem}`;
           const match = await fetchDocAt(candidatePath);
           if (match) {
-            assetDocCache.set(key, match);
-            return match;
+            return cacheMatch(match);
           }
         }
         if (current.depth < MAX_ASSET_WALK_DEPTH) {
@@ -4337,9 +4664,9 @@ async function resolveLive2DAssetDocument(sources, assetPath, expectedForm, sign
       }
       return null;
     })().finally(() => {
-      assetDocInflight.delete(key);
+      assetDocInflight.delete(inflightKey);
     });
-    assetDocInflight.set(key, pending);
+    assetDocInflight.set(inflightKey, pending);
   }
   return withAbortSignal(pending, signal);
 }
@@ -4861,7 +5188,7 @@ function live2dModelsFromListings(modelDirectories, motionDirectories) {
   return finalizeLive2DModels(models);
 }
 
-// ../node_modules/@moesekai/story-core/dist/chunk-2wj8thd5.js
+// ../node_modules/@moesekai/story-core/dist/chunk-cbq3pk67.js
 var LIVE2D_MOTION_STYLES = ["normal", "cute", "cool", "happy", "adult", "pure", "animal", "special"];
 var LIVE2D_MOTION_ACTIONS = [
   "default",
@@ -4996,6 +5323,20 @@ async function fetchDirectorySubdirectories(url) {
   }
   return Array.isArray(listing.directories) ? listing.directories.filter((entry) => typeof entry === "string") : [];
 }
+async function fetchModelsFromFormListingsOnLine(region, line) {
+  const sources = live2dSources(region, line);
+  const [modelListing, motionListing] = await Promise.all([
+    fetchLive2DFormListing(sources, "live2d-model"),
+    fetchLive2DFormListing(sources, "live2d-motions").catch(() => null)
+  ]);
+  if (!modelListing)
+    return null;
+  const modelDirs = extractLive2DFormContainerIds("live2d-model", modelListing.assets);
+  if (modelDirs.length === 0)
+    return null;
+  const motionDirs = motionListing ? extractLive2DFormContainerIds("live2d-motions", motionListing.assets) : await fetchDirectorySubdirectories(live2dSiteListingUrl(sources, "live2d/motion/")).catch(() => null) ?? [];
+  return live2dModelsFromListings(modelDirs, motionDirs);
+}
 async function fetchModelsFromListingsOnLine(region, line) {
   const sources = live2dSources(region, line);
   const [modelDirs, motionDirs] = await Promise.all([
@@ -5005,6 +5346,26 @@ async function fetchModelsFromListingsOnLine(region, line) {
   if (!modelDirs || modelDirs.length === 0)
     return null;
   return live2dModelsFromListings(modelDirs, motionDirs ?? []);
+}
+async function fetchModelsOnLine(region, line) {
+  let formError = null;
+  try {
+    const fromForms = await fetchModelsFromFormListingsOnLine(region, line);
+    if (fromForms && fromForms.length > 0)
+      return fromForms;
+  } catch (err) {
+    formError = err;
+  }
+  try {
+    const fromDirs = await fetchModelsFromListingsOnLine(region, line);
+    if (fromDirs && fromDirs.length > 0)
+      return fromDirs;
+  } catch (err) {
+    throw err;
+  }
+  if (formError)
+    throw formError;
+  return null;
 }
 function fetchLive2DModels(region, signal) {
   if (signal?.aborted)
@@ -5023,7 +5384,7 @@ function fetchLive2DModels(region, signal) {
     const loading = (async () => {
       let lastError = null;
       try {
-        const listed = await fetchModelsFromListingsOnLine(region, primaryLine);
+        const listed = await fetchModelsOnLine(region, primaryLine);
         if (listed && listed.length > 0)
           return listed;
       } catch (err) {
@@ -5031,7 +5392,7 @@ function fetchLive2DModels(region, signal) {
       }
       if (canFallback) {
         try {
-          const backupListed = await fetchModelsFromListingsOnLine(region, backupLine);
+          const backupListed = await fetchModelsOnLine(region, backupLine);
           if (backupListed && backupListed.length > 0)
             return backupListed;
         } catch (err) {
@@ -5053,7 +5414,7 @@ function fetchLive2DModels(region, signal) {
   return withAbortSignal2(cached, signal);
 }
 
-// ../node_modules/@moesekai/story-core/dist/chunk-kvyzq3we.js
+// ../node_modules/@moesekai/story-core/dist/chunk-ehzfaw17.js
 function normalizeAssetPath(value) {
   return value.trim().replace(/^\/+|\/+$/g, "");
 }
@@ -5101,7 +5462,8 @@ async function fetchMotionBundleClips(sources, motionAsset, signal) {
   const asset = normalizeAssetPath(motionAsset);
   if (!asset)
     return { motions: [], facials: [] };
-  const resolved = await resolveLive2DAssetDocument(sources, asset, "live2d-motions", signal);
+  const lookupPath = live2dDirectoryPath(motionAsset);
+  const resolved = await resolveLive2DAssetDocument(sources, lookupPath, "live2d-motions", signal);
   if (!resolved) {
     throw new Error(`Live2D motion asset not found: ${asset}`);
   }
@@ -5116,7 +5478,7 @@ async function fetchLive2DModelClips(sources, modelId, motionAsset, signal) {
     const clean = asset ? normalizeAssetPath(asset) : "";
     if (clean && !seen.has(clean)) {
       seen.add(clean);
-      candidates.push(clean);
+      candidates.push({ canonical: clean, lookup: live2dDirectoryPath(asset) });
     }
   };
   addCandidate(motionAsset);
@@ -5133,8 +5495,8 @@ async function fetchLive2DModelClips(sources, modelId, motionAsset, signal) {
     if (signal?.aborted)
       throw createAbortError3();
     try {
-      const clips = await fetchMotionBundleClips(pinnedSources, candidate, signal);
-      return { ...clips, motionBundle: candidate };
+      const clips = await fetchMotionBundleClips(pinnedSources, candidate.lookup, signal);
+      return { ...clips, motionBundle: candidate.canonical };
     } catch (err) {
       if (signal?.aborted)
         throw createAbortError3();
@@ -5376,11 +5738,15 @@ export {
   live2dModelsFromListings,
   live2dMemberUrl,
   live2dListingUrl,
+  live2dFormListingUrl,
+  live2dDirectoryPath,
+  live2dAssetRequestPath,
   layoutStageActors,
   inferLive2DMotionBundleCandidates,
   fetchMotionBundleClips,
   fetchLive2DModels,
   fetchLive2DModelClips,
+  fetchLive2DFormListing,
   extractLive2DMotionClips,
   detectStageActorOverlaps,
   createInitialRuntime,

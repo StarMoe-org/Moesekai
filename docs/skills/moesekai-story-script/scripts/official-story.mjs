@@ -1101,6 +1101,48 @@ async function fetchCanonicalDirectoryListing(region, dirPath, opts, ttlMs = TTL
     };
 }
 
+async function fetchCanonicalFormListing(region, form, opts, ttlMs = TTL_MASTER_MS, pinnedVersion = null) {
+    const domains = STORAGE_DOMAINS[opts.line] ?? STORAGE_DOMAINS.main;
+    const viewSeg = pinnedVersion ? `canonical@${encodeURIComponent(pinnedVersion)}` : "canonical";
+    const urls = domains.map(d => `${d}/listings/${encodeURIComponent(region)}/${viewSeg}/${encodeURIComponent(form)}`);
+    try {
+        const data = await fetchJsonWithFallback(
+            urls,
+            "canonical-form-listing",
+            `${opts.line}:${region}:${viewSeg}:${form}`,
+            ttlMs,
+            opts.noCache,
+        );
+        if (data?.format !== "form-listing" || data?.version !== 1 || data?.form !== form || !Array.isArray(data?.assets)) {
+            return null;
+        }
+        const prefix = form === "live2d-model" ? "live2d/model/" : "live2d/motion/";
+        const pattern = form === "live2d-model" ? /^live2d\/model\/([^/]+)(?:\/.+)?$/ : /^live2d\/motion\/([^/]+)(?:\/.+)?$/;
+        const byContainer = new Map();
+        for (const entry of data.assets) {
+            const raw = typeof entry === "string" ? entry : entry?.name;
+            const clean = typeof raw === "string" ? raw.trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "") : "";
+            const match = pattern.exec(clean);
+            if (!match || !match[1] || match[1] === "." || match[1] === "..") continue;
+            const container = `${prefix}${match[1]}`;
+            const prev = byContainer.get(container);
+            const isBuild = (s) => /^build\w*data$/i.test(s.split("/").pop() ?? "");
+            if (!prev || (isBuild(clean) && !isBuild(prev)) || (isBuild(clean) === isBuild(prev) && clean < prev)) {
+                byContainer.set(container, clean);
+            }
+        }
+        return {
+            publishedVersion: typeof data.published_version === "string" && data.published_version.trim()
+                ? data.published_version.trim()
+                : null,
+            directories: [...byContainer.keys()].map(k => k.slice(prefix.length)),
+            byContainer,
+        };
+    } catch {
+        return null;
+    }
+}
+
 async function resolveCanonicalPublishedSite(region, opts) {
     const domains = STORAGE_DOMAINS[opts.line] ?? STORAGE_DOMAINS.main;
     const filePath = cacheFilePath("canonical-version", `${opts.line}:${region}`, "json");
@@ -1148,8 +1190,27 @@ function sortAssetCandidateStems(stems) {
     });
 }
 
+const LIVE2D_CONTAINER_DIR_RE = /^live2d\/(?:model|motion)\/[^/]+$/;
+
+function toLive2DDirectoryPath(assetPath) {
+    const trimmed = String(assetPath ?? "").trim();
+    if (!trimmed) return "";
+    const withoutLeading = trimmed.replace(/^\/+/, "");
+    const hadTrailingSlash = withoutLeading.endsWith("/");
+    const clean = withoutLeading.replace(/\/+$/, "");
+    if (!clean) return "";
+    if (/\.asset\.json$/i.test(clean)) return clean;
+    if (hadTrailingSlash || LIVE2D_CONTAINER_DIR_RE.test(clean)) {
+        return `${clean}/`;
+    }
+    return clean;
+}
+
 async function resolveCanonicalAssetDocument(region, assetPath, expectedForm, opts, pinnedSite) {
-    const cleanPath = String(assetPath ?? "").trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "");
+    const trimmed = String(assetPath ?? "").trim();
+    const isExplicitAssetFile = /\.asset\.json$/i.test(trimmed.replace(/\/+$/, ""));
+    const isExplicitDirectory = !isExplicitAssetFile && trimmed.endsWith("/");
+    const cleanPath = trimmed.replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "");
     if (!cleanPath) return null;
 
     const { domain, version } = pinnedSite ?? (await resolveCanonicalPublishedSite(region, opts));
@@ -1160,7 +1221,10 @@ async function resolveCanonicalAssetDocument(region, assetPath, expectedForm, op
         try {
             const parsed = JSON.parse(cached.toString("utf8"));
             if (parsed?.doc?.form === expectedForm && Array.isArray(parsed?.doc?.members) && parsed?.url) {
-                return parsed;
+                const cachedName = String(parsed.doc.name ?? "").trim().replace(/^\/+|\/+$/g, "").replace(/\.asset\.json$/i, "");
+                if (!isExplicitDirectory || cachedName !== cleanPath) {
+                    return parsed;
+                }
             }
         } catch {
             // ignore corrupt cache entry
@@ -1182,11 +1246,13 @@ async function resolveCanonicalAssetDocument(region, assetPath, expectedForm, op
         return { doc, url };
     };
 
-    // 1. Direct `<path>.asset.json` lookup
-    const direct = await fetchDocAt(cleanPath);
-    if (direct) {
-        await writeCacheFile(cacheFile, JSON.stringify(direct));
-        return direct;
+    // 1. Direct `<path>.asset.json` lookup (skipped when trailing `/` explicitly marks a directory)
+    if (!isExplicitDirectory) {
+        const direct = await fetchDocAt(cleanPath);
+        if (direct) {
+            await writeCacheFile(cacheFile, JSON.stringify(direct));
+            return direct;
+        }
     }
 
     // 2. Bounded BFS directory walk (depth <= 12), prioritizing `build*data.asset.json`
@@ -2604,15 +2670,21 @@ async function runCatalog(subkind, arg, opts) {
 
     if (subkind === "models") {
         const searchQuery = String(opts.search || opts.query || opts.filter || arg || "").trim();
-        const [modelListing, motionListing, chara2ds, subGameChars] = await Promise.all([
-            fetchCanonicalDirectoryListing(region, "live2d/model/", opts, TTL_MASTER_MS),
-            fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => ({ directories: [], files: [] })),
+        const [modelForm, motionForm, chara2ds, subGameChars] = await Promise.all([
+            fetchCanonicalFormListing(region, "live2d-model", opts, TTL_MASTER_MS),
+            fetchCanonicalFormListing(region, "live2d-motions", opts, TTL_MASTER_MS),
             fetchMaster(region, "character2ds.json", opts).catch(() => []),
             fetchMaster(region, "subGameCharacters.json", opts).catch(() => []),
         ]);
+        const modelDirs = modelForm?.directories?.length
+            ? modelForm.directories
+            : (await fetchCanonicalDirectoryListing(region, "live2d/model/", opts, TTL_MASTER_MS)).directories;
+        const motionDirs = motionForm?.directories?.length
+            ? motionForm.directories
+            : (await fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => ({ directories: [], files: [] }))).directories;
         const models = normalizeCatalogModels({
-            directories: modelListing.directories,
-            motionDirectories: motionListing.directories,
+            directories: modelDirs,
+            motionDirectories: motionDirs,
             chara2ds,
             subGameChars,
         }, { region });
@@ -2634,10 +2706,11 @@ async function runCatalog(subkind, arg, opts) {
     if (subkind === "clips") {
         const modelId = (arg || opts.model || "").trim();
         if (!modelId) throw new Error("Usage: catalog clips <modelId> [--type all|motion|facial] [--filter <text>]");
-        const [pinnedSite, motionListing] = await Promise.all([
-            resolveCanonicalPublishedSite(region, opts),
-            fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => null),
-        ]);
+        const pinnedSite = await resolveCanonicalPublishedSite(region, opts);
+        const motionForm = await fetchCanonicalFormListing(region, "live2d-motions", opts, TTL_SCENARIO_MS, pinnedSite.version);
+        const motionListing = motionForm?.directories?.length
+            ? motionForm
+            : await fetchCanonicalDirectoryListing(region, "live2d/motion/", opts, TTL_MASTER_MS).catch(() => null);
         const candidates = [];
         const addCandidate = (bundle) => {
             const clean = String(bundle ?? "").trim().replace(/^\/+|\/+$/g, "");
@@ -2659,7 +2732,17 @@ async function runCatalog(subkind, arg, opts) {
         let matchedBundle = null;
         for (const bundle of candidates) {
             try {
-                const hit = await resolveCanonicalAssetDocument(region, bundle, "live2d-motions", opts, pinnedSite);
+                const exactPath = motionForm?.byContainer?.get(bundle);
+                const hit = (exactPath
+                    ? await resolveCanonicalAssetDocument(region, exactPath, "live2d-motions", opts, pinnedSite).catch(() => null)
+                    : null)
+                    ?? await resolveCanonicalAssetDocument(
+                        region,
+                        toLive2DDirectoryPath(bundle),
+                        "live2d-motions",
+                        opts,
+                        pinnedSite,
+                    );
                 if (hit) {
                     resolved = hit;
                     matchedBundle = bundle;

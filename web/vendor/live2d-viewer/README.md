@@ -61,7 +61,7 @@ const dpr = devicePixelRatio;
 const viewer = await SekaiLive2DViewer.create({
   canvas,                                      // 一个新的 <canvas>，交给查看器后就归它所有
   sources: { site: "https://storage.pjsk.moe", region: "jp" },  // 发布数据的站点和区服；可加 version 固定版本
-  model: { asset: "live2d/model/01ichika_normal", motion: "live2d/motion/01ichika_motion_base" },
+  model: { asset: "live2d/model/01ichika_normal/", motion: "live2d/motion/01ichika_motion_base/" },
   width: canvas.clientWidth * dpr,             // 绘制尺寸（像素）= CSS 尺寸 × devicePixelRatio
   height: canvas.clientHeight * dpr,
   // core: "https://<站点>/live2dcubismcore.min.js",  // 可选：自己托管的 Cubism Core
@@ -87,8 +87,8 @@ viewer.destroy();         // 释放 Worker 及其中的文件和 GPU 资源；�
 
 `model.asset` 是模型的 `live2d-model` 资产，`model.motion` 是它的动作集（`live2d-motions` 资产）。两者都可以：
 
-- 写完整的资产名，例如 `live2d/model/01ichika_normal/live2d/model/v1/main/01_ichika/01ichika_normal/buildmodeldata`；
-- 或者只写包含它的目录，例如 `live2d/model/01ichika_normal`、`live2d/motion/01ichika_motion_base`。查看器沿目录列表往下找第一个形式相符的资产，多花几次请求。
+- 写完整的资产名，例如 `live2d/model/01ichika_normal/live2d/model/v1/main/01_ichika/01ichika_normal/buildmodeldata`（最快，1 次请求直接命中资产文档、零目录遍历；支持 form listing 的站点如 `storage.pjsk.moe` 可经 `/listings/<region>/canonical@<version>/live2d-model` 与 `live2d-motions` 一次获取全部精确资产名）；
+- 或者只写包含它的目录，**建议以 `/` 结尾**，例如 `live2d/model/01ichika_normal/`、`live2d/motion/01ichika_motion_base/`。以 `/` 结尾时查看器直接沿目录列表向下查找第一个形式相符的资产，不先试探 `<路径>.asset.json`（避免产生多余的 404 请求）；不带 `/` 时为兼容仍会先试探 `<路径>.asset.json` 再走目录。同一发布版本内，解析出的目录→资产映射会保存在 `sekai-live2d-v2` 缓存中，下次打开可直接定位资产文档而无需再遍历目录。
 
 打开后，`viewer.model` 和 `viewer.motionSet` 是实际打开的两个资产名，站点可以记下来，下次直接用。
 
@@ -192,7 +192,7 @@ const y2 = p.y - (p.y - y1) * z2 / z1;
 
 ## 缓存
 
-- 文件按地址存在 Cache API 的 `sekai-live2d-v2` 里。发布版本里的文件不再改变，所以缓存里有就直接读；区服根目录的列表（当前的版本）每次都重新请求。
+- 文件以及解析出的目录→资产映射按地址存在 Cache API 的 `sekai-live2d-v2` 里。发布版本里的文件不再改变，所以缓存里有就直接读；区服根目录的列表（当前的版本）每次都重新请求。
 - 站点发布了新版本后，地址里的版本号不同，文件按新地址重新下载。
 - 页面开着期间，它读的版本可能被站点回收，那之后取不到的文件报 `network` 错误；可以提示用户刷新页面。
 

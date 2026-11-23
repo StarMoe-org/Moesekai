@@ -36,6 +36,7 @@ import {
     extractLive2DMotionClips,
     fetchLive2DModels,
     inferLive2DMotionBundleCandidates,
+    live2dDirectoryPath,
     live2dSiteListingUrl,
     live2dSources,
     parseStoryScript,
@@ -495,7 +496,7 @@ async function verifyAssetsLive(assetReport) {
             try {
                 const resolved = await resolveLive2DAssetDocument(
                     l2dSources,
-                    motionAsset,
+                    live2dDirectoryPath(motionAsset),
                     "live2d-motions",
                     AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
                 );
@@ -526,7 +527,7 @@ async function verifyAssetsLive(assetReport) {
                 try {
                     const directDoc = await resolveLive2DAssetDocument(
                         l2dSources,
-                        item.modelAssetPath,
+                        live2dDirectoryPath(item.modelAssetPath),
                         "live2d-model",
                         AbortSignal.timeout(ASSET_CHECK_TIMEOUT_MS),
                     );
