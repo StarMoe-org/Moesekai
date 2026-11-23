@@ -1,4 +1,4 @@
-import type { ChangeCause, ChangedFile, ChangeKind } from "@/lib/assetHistory";
+import type { ChangeCause, ChangedFile } from "@/lib/assetHistory";
 import type { DirectoryTreeNodeLike } from "@/components/common/DirectoryTreeSidebar";
 
 export type DiffMediaCategory = "image" | "audio" | "video" | "text" | "other";
@@ -11,6 +11,8 @@ export interface DiffCounts {
     added: number;
     changed: number;
     removed: number;
+    /** How many of them only the conversion made. */
+    conversion: number;
 }
 
 export interface DiffDirectoryNode extends DirectoryTreeNodeLike {
@@ -65,12 +67,13 @@ export function countDiffCauses(files: ChangedFile[]): Record<DiffCause, number>
 }
 
 function emptyCounts(): DiffCounts {
-    return { total: 0, added: 0, changed: 0, removed: 0 };
+    return { total: 0, added: 0, changed: 0, removed: 0, conversion: 0 };
 }
 
-function bumpKind(counts: DiffCounts, kind: ChangeKind) {
+function countFile(counts: DiffCounts, file: ChangedFile) {
     counts.total += 1;
-    counts[kind] += 1;
+    counts[file.kind] += 1;
+    if (file.cause === "conversion") counts.conversion += 1;
 }
 
 function createNode(name: string, path: string): DiffDirectoryNode {
@@ -100,7 +103,7 @@ export function buildDiffDirectoryTree(files: ChangedFile[]): DiffDirectoryNode 
     for (const file of files) {
         const parts = file.path.split("/").filter(Boolean);
         let current = root;
-        bumpKind(current.counts, file.kind);
+        countFile(current.counts, file);
 
         for (let i = 0; i < parts.length - 1; i += 1) {
             const segment = parts[i];
@@ -113,7 +116,7 @@ export function buildDiffDirectoryTree(files: ChangedFile[]): DiffDirectoryNode 
                 current.directories.push(next);
             }
             current = next;
-            bumpKind(current.counts, file.kind);
+            countFile(current.counts, file);
         }
 
         current.files.push(file);
