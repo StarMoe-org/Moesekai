@@ -309,7 +309,7 @@ export default function BoardRow({
                 </div>
 
                 {/* Score */}
-                <div className="col-span-2 col-start-2 min-w-0 text-right sm:w-36 sm:shrink-0">
+                <div className="col-span-2 col-start-2 min-w-0 text-right sm:w-44 sm:shrink-0">
                     <motion.div
                         key={hasCurrentChange ? entry.score : "stable"}
                         initial={hasCurrentChange ? { scale: 1.12 } : false}
@@ -339,7 +339,7 @@ export default function BoardRow({
                                     <span className="text-[8px]">{displayScoreDelta > 0 ? "▲" : "▼"}</span>
                                     <span>{displayScoreDelta > 0 ? "+" : ""}{formatNumber(displayScoreDelta)}</span>
                                     {displayChangedAt && (
-                                        <ChangeTime changedAt={displayChangedAt} className="ml-0.5 text-[8px] font-medium opacity-60" />
+                                        <ChangeTime changedAt={displayChangedAt} className="ml-0.5 shrink-0 whitespace-nowrap text-[8px] font-medium opacity-60" />
                                     )}
                                 </motion.span>
                             ) : (
