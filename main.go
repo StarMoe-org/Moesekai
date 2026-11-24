@@ -27,17 +27,17 @@ import (
 const (
 	serverReadHeaderTimeout   = 5 * time.Second
 	serverReadTimeout         = 15 * time.Second
-	serverWriteTimeout        = 30 * time.Second
+	serverWriteTimeout        = 45 * time.Second
 	serverIdleTimeout         = 60 * time.Second
 	serverMaxHeaderBytes      = 1 << 20
 	masterDataRetryInterval   = 30 * time.Second
 	masterDataRefreshInterval = 6 * time.Hour
 )
 
-// moesekai-api (sign-in and guess-music) runs as its own service on the
-// private network. Forwarding its paths keeps the browser on one origin, so
-// the session cookie stays first-party and no CORS is involved.
-var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/"}
+// moesekai-api (sign-in, guess-music and masterdata-diff) runs as its own
+// service on the private network. Forwarding its paths keeps the browser on
+// one origin, so the session cookie stays first-party and no CORS is involved.
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/masterdata-diff/"}
 
 func main() {
 	// Load configuration
@@ -183,7 +183,7 @@ func newFrontendProxy(nextjsURL *url.URL) *httputil.ReverseProxy {
 	transport.MaxIdleConns = 100
 	transport.MaxIdleConnsPerHost = 32
 	transport.IdleConnTimeout = 90 * time.Second
-	transport.ResponseHeaderTimeout = 30 * time.Second
+	transport.ResponseHeaderTimeout = 45 * time.Second
 	nextjsProxy.Transport = transport
 	nextjsProxy.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
 		fmt.Printf("Next.js proxy error for %s: %v\n", r.URL.Path, err)
@@ -217,7 +217,7 @@ func newMoesekaiAPIProxy(target *url.URL) *httputil.ReverseProxy {
 	transport.TLSHandshakeTimeout = 5 * time.Second
 	transport.MaxIdleConnsPerHost = 32
 	transport.IdleConnTimeout = 90 * time.Second
-	transport.ResponseHeaderTimeout = 30 * time.Second
+	transport.ResponseHeaderTimeout = 45 * time.Second
 	return &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)

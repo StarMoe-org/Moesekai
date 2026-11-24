@@ -1276,6 +1276,20 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["バージョン履歴", "アセット更新", "更新履歴", "差分"],
     },
   ),
+  masterdata_diff: definePage(
+    "/masterdata-diff",
+    { "zh-CN": "Masterdata 更新预览", "en-US": "Masterdata Diff & AI Summary", "ja-JP": "マスターデータ更新差分" },
+    {
+      "zh-CN": "查看 StarMoe 同步的 Project SEKAI JP/EN/CN 主数据版本更新内容、核心实体亮点预览、结构化 JSON Diff 与 AI 更新摘要。",
+      "en-US": "Preview Project Sekai JP/EN/CN masterdata updates from StarMoe with semantic entity highlights, structured JSON diffs, and AI summaries.",
+      "ja-JP": "StarMoe 同期の Project SEKAI JP/EN/CN マスターデータ更新内容、主要エンティティハイライト、構造化 JSON 差分、AI 要約を確認できます。",
+    },
+    {
+      "zh-CN": ["masterdata diff", "主数据更新", "更新预览", "AI摘要", "解包预览"],
+      "en-US": ["masterdata diff", "masterdata changelog", "ai summary", "sekai update", "json diff"],
+      "ja-JP": ["マスターデータ差分", "更新プレビュー", "AI要約", "データ更新"],
+    },
+  ),
   blank: definePage(
     "/blank",
     { "zh-CN": "空白素材页", "en-US": "Blank Asset Page", "ja-JP": "空白アセットページ" },

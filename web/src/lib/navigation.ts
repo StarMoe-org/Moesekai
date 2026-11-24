@@ -77,6 +77,7 @@ const allNavigationGroups: NavGroupData[] = [
         items: [
             { href: "/asset-viewer" },
             { href: "/asset-versions" },
+            { href: "/masterdata-diff" },
             { href: "/deck-recommend" },
             { href: "/deck-comparator" },
             { href: "/score-control" },
@@ -208,6 +209,7 @@ const allSearchableNavItems: SearchableNavItem[] = [
 
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
     { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
+    { href: "/masterdata-diff", group: "tools", keywords: ["masterdata", "masterdata diff", "diff", "ai summary", "changelog", "update"] },
     { href: "/deck-recommend", group: "tools", keywords: ["deck recommend", "deck", "team"] },
     { href: "/deck-comparator", group: "tools", keywords: ["deck compare", "comparator"] },
     { href: "/score-control", group: "tools", keywords: ["score control", "score", "calculator"] },
@@ -319,6 +321,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
     "/asset-viewer": "layout.nav.items.assetViewer",
     "/asset-versions": "layout.nav.items.assetVersions",
+    "/masterdata-diff": "layout.nav.items.masterdataDiff",
     "/profile": "layout.nav.items.profile",
     "/my-cards": "layout.nav.items.myCards",
     "/my-musics": "layout.nav.items.myMusics",
@@ -371,6 +374,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/mysekai-preview/scene": "layout.groupPages.mysekaiPreviewScene",
     "/asset-viewer": "layout.groupPages.assetViewer",
     "/asset-versions": "layout.groupPages.assetVersions",
+    "/masterdata-diff": "layout.groupPages.masterdataDiff",
     "/profile": "layout.groupPages.profile",
     "/my-cards": "layout.groupPages.myCards",
     "/my-musics": "layout.groupPages.myMusics",
