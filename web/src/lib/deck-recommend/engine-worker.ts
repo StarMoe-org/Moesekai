@@ -172,10 +172,16 @@ async function ensureMasterData(
     return await promise;
 }
 
+/** One account's user data, read one way: a different source must not reuse the cached snapshot. */
+function userDataCacheKey(userId: string, server: string, oauthAccessToken?: string, viaStarMoe?: boolean): string {
+    return `${userId}|${server}|${viaStarMoe ? "starmoe" : ""}|${oauthAccessToken ?? ""}`;
+}
+
 async function ensureUserData(
     server: string,
     userId: string,
     oauthAccessToken?: string,
+    viaStarMoe?: boolean,
     onProgress?: (stage: string, percent: number, progressKey: string) => void,
 ): Promise<{
     engine: DeckEngine;
@@ -184,7 +190,7 @@ async function ensureUserData(
     handleCache: NonNullable<typeof handleCache>;
 }> {
     const { engine, master } = await ensureMasterData(server, userId, oauthAccessToken, onProgress);
-    const userKey = `${userId}|${server}|${oauthAccessToken ?? ""}`;
+    const userKey = userDataCacheKey(userId, server, oauthAccessToken, viaStarMoe);
 
     if (userCache && userCache.key === userKey && handleCache && handleCache.key === userKey) {
         return { engine, master, userCache, handleCache };
@@ -202,7 +208,7 @@ async function ensureUserData(
             }
             onProgress?.("fetching", 10, "page.deckRecommend.progress.fetchingUserData");
             const dataProvider = new CachedDeckDataProvider(
-                new SnowyDataProvider(userId, server as HarukiServer, oauthAccessToken || null),
+                new SnowyDataProvider(userId, server as HarukiServer, oauthAccessToken || null, viaStarMoe === true),
             );
             const userData = (await dataProvider.getUserDataAll()) as Record<string, unknown>;
             userCache = { key: userKey, userData };
@@ -228,13 +234,14 @@ async function ensureUserData(
 }
 
 async function runDeck(input: DeckWorkerInput): Promise<DeckWorkerOutput> {
-    const { mode, userId, server, oauthAccessToken, target } = input;
+    const { mode, userId, server, oauthAccessToken, viaStarMoe, target } = input;
 
     // 1. 确保 Master data 与 User data 已加载进引擎缓存
     const { engine, master, userCache: cachedUser } = await ensureUserData(
         server,
         userId,
         oauthAccessToken,
+        viaStarMoe,
         sendProgress,
     );
 
@@ -246,7 +253,7 @@ async function runDeck(input: DeckWorkerInput): Promise<DeckWorkerOutput> {
     // 2. 进阶数据覆盖与角色过滤：按 Haruki 语义改写快照后交给引擎。
     // 无覆盖且账号未变时直接复用已解析的用户句柄（跳过 createUserData）。
     const hasOverrides = hasEffectiveUserDataOverrides(input);
-    const userKey = `${userId}|${server}|${oauthAccessToken ?? ""}`;
+    const userKey = userDataCacheKey(userId, server, oauthAccessToken, viaStarMoe);
     let user: DeckEngineUserHandle;
     let isTempUser = false;
     if (!hasOverrides && handleCache && handleCache.key === userKey) {
@@ -338,6 +345,7 @@ interface WarmupMessage {
     server?: string;
     userId?: string;
     oauthAccessToken?: string;
+    viaStarMoe?: boolean;
 }
 
 self.onmessage = async (
@@ -360,7 +368,7 @@ self.onmessage = async (
 
         (async () => {
             if (warmupServer && warmupUserId && warmupUserId.trim()) {
-                await ensureUserData(warmupServer, warmupUserId.trim(), warmupToken);
+                await ensureUserData(warmupServer, warmupUserId.trim(), warmupToken, warmupData.viaStarMoe);
             } else if (warmupServer) {
                 await ensureMasterData(warmupServer);
             } else {

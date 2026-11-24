@@ -43,9 +43,9 @@ test("all JSON-LD uses one closing-script-safe serializer", async () => {
 });
 
 test("OAuth return routes reject external, protocol-relative, encoded, and control-character forms", async () => {
-  const oauth = await importWebTypeScript("src/lib/oauth.ts", [
+  const oauth = await importWebTypeScript("src/lib/legacy-oauth/client.ts", [
     [
-      'import { normalizeServer, type ServerType } from "./account-servers";',
+      'import { normalizeServer, type ServerType } from "../account-servers";',
       'const normalizeServer = (value) => (typeof value === "string" && ["cn", "jp", "tw", "kr", "en"].includes(value.trim().toLowerCase()) ? value.trim().toLowerCase() : null);\ntype ServerType = "cn" | "jp" | "tw" | "kr" | "en";',
     ],
     [

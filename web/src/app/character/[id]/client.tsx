@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import Link from "@/components/LocalizedLink";
 import { useBreadcrumb } from "@/contexts/BreadcrumbContext";
 import Image from "next/image";
@@ -31,11 +32,16 @@ import DetailPageAdCard from "@/components/DetailPageAdCard";
 import { formatCharacterDisplayName } from "@/lib/character-name";
 import { Button, EmptyState, Icon, LoadingState, PageContainer, SectionCard, SegmentedButton, Surface } from "@/components/md3";
 import { mdArrowBack, mdBadge, mdFace, mdPerson, mdPlayingCards, mdZoomIn } from "@/components/md3/icons";
-import { live2dCharacterHref } from "@/lib/live2dViewer/models";
+import { live2dCharacterHref } from "@moesekai/story-core";
 
 // Derive unit field → icon filename from centralized maps
 const UNIT_FIELD_ICONS: Record<string, string> = Object.fromEntries(
     Object.entries(UNIT_FIELD_TO_ID).map(([field, id]) => [field, UNIT_ICON_FILES[id]])
+);
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
 );
 
 export default function CharacterDetailClient() {
@@ -384,6 +390,11 @@ export default function CharacterDetailClient() {
                     <DetailPageAdCard />
                 </div>
             </div>
+
+            {/* Community Comments & Related Posts */}
+            {Number.isFinite(id) && (
+                <EntityCommunitySection targetType="character" targetId={id} />
+            )}
         </PageContainer>
     );
 }

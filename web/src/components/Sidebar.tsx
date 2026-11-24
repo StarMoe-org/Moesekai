@@ -1,19 +1,8 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo, useSyncExternalStore } from "react";
-import Image from "next/image";
-import Link from "@/components/LocalizedLink";
 import { usePathname, useRouter } from "next/navigation";
 import { localizePathForBrowser, stripRouteLocale } from "@/lib/localized-path";
-import {
-    ACCOUNTS_CHANGED_EVENT,
-    getActiveAccount,
-    getCharacterIconUrl,
-    getTopCharacterId,
-    getCachedAvatarUrl,
-    type MoesekaiAccount,
-} from "@/lib/account";
-import { useCardThumbnail } from "@/hooks/useCardThumbnail";
-import { useTheme } from "@/contexts/ThemeContext";
+import AccountCenter from "@/components/account/AccountCenter";
 import { useI18n } from "@/contexts/I18nContext";
 import {
     NAV_ITEM_LABEL_KEYS,
@@ -86,8 +75,6 @@ import {
     mdRecordVoiceOverFill,
     mdStar,
     mdStarFill,
-    mdSchool,
-    mdSchoolFill,
     mdRedeem,
     mdRedeemFill,
     mdQuiz,
@@ -110,6 +97,10 @@ import {
     mdPianoFill,
     mdSmartDisplay,
     mdSmartDisplayFill,
+    mdMovieEdit,
+    mdMovieEditFill,
+    mdManageSearch,
+    mdManageSearchFill,
     mdStyler,
     mdStylerFill,
     mdFace,
@@ -129,7 +120,6 @@ import {
     mdHome,
     mdHomeFill,
     mdKeyboardArrowDown,
-    mdChevronRight,
     mdMenuOpen,
     mdGraphicEq,
 } from "@/components/md3/icons";
@@ -216,7 +206,8 @@ const navigationGroups: NavGroup[] = [
     {
         id: "community",
         items: [
-            { id: "guides", href: "/guides", icon: mdSchool, activeIcon: mdSchoolFill },
+            { id: "community", href: "/community", icon: mdForum, activeIcon: mdForumFill },
+            { id: "communityStories", href: "/community/stories", icon: mdAutoStories, activeIcon: mdAutoStoriesFill },
         ],
     },
     {
@@ -234,12 +225,15 @@ const navigationGroups: NavGroup[] = [
             { id: "assetViewer", href: "/asset-viewer", icon: mdImageSearch, activeIcon: mdImageSearchFill },
             { id: "assetVersions", href: "/asset-versions", icon: mdHistory, activeIcon: mdHistoryFill },
             { id: "masterdataDiff", href: "/masterdata-diff", icon: mdCompareArrows, activeIcon: mdCompareArrowsFill },
+            { id: "gachaSimulator", href: "/gacha-simulator", icon: mdCasino, activeIcon: mdCasinoFill },
             { id: "deckRecommend", href: "/deck-recommend", icon: mdTune, activeIcon: mdTuneFill },
             { id: "deckComparator", href: "/deck-comparator", icon: mdCompareArrows, activeIcon: mdCompareArrowsFill },
             { id: "scoreControl", href: "/score-control", icon: mdScoreboard, activeIcon: mdScoreboardFill },
             { id: "stickerMaker", href: "/sticker-maker", icon: mdAddPhotoAlternate, activeIcon: mdAddPhotoAlternateFill },
             { id: "chartPreview", href: "/chart-preview", icon: mdPiano, activeIcon: mdPianoFill },
             { id: "storyPlayer", href: "/story-player", icon: mdSmartDisplay, activeIcon: mdSmartDisplayFill },
+            { id: "storyMaker", href: "/story-maker", icon: mdMovieEdit, activeIcon: mdMovieEditFill },
+            { id: "storySearch", href: "/story-search", icon: mdManageSearch, activeIcon: mdManageSearchFill },
             { id: "costume3d", href: "/costume-3d", icon: mdStyler, activeIcon: mdStylerFill },
             { id: "live2dViewer", href: "/live2d", icon: mdFace, activeIcon: mdFaceFill },
             { id: "mysekaiPreviewScene", href: "/mysekai-preview/scene", icon: mdLandscape, activeIcon: mdLandscapeFill },
@@ -350,7 +344,6 @@ export default function Sidebar({
 }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { assetSource } = useTheme();
     const { t } = useI18n();
     // On the home page, the mobile navbar stays single-row (~64px tall); on
     // other pages it grows by a breadcrumb row (~32px + border). The sidebar
@@ -364,6 +357,12 @@ export default function Sidebar({
         for (const group of navigationGroups) {
             for (const item of group.items) {
                 if (item.href === "/music" && unlocalizedPathname.startsWith("/music/meta")) {
+                    continue;
+                }
+                if (
+                    item.href === "/community"
+                    && (unlocalizedPathname === "/community/stories" || unlocalizedPathname.startsWith("/community/stories/"))
+                ) {
                     continue;
                 }
                 if (unlocalizedPathname === item.href || unlocalizedPathname.startsWith(item.href + "/")) {
@@ -390,8 +389,6 @@ export default function Sidebar({
         () => navigationGroups.map((group) => group.id).filter((id) => groupPreferences[id] ?? id === activeGroupId),
         [groupPreferences, activeGroupId]
     );
-    const [activeAccount, setActiveAccountState] = useState<MoesekaiAccount | null>(null);
-    const activeAccountCardThumbnail = useCardThumbnail(activeAccount?.avatarCardId ?? null, assetSource);
     const navRef = useRef<HTMLElement>(null);
 
     // Keyboard navigation state: -1 means no focused item.
@@ -409,22 +406,6 @@ export default function Sidebar({
         }
         return items;
     }, [expandedGroups]);
-
-    // Load and sync the active account.
-    useEffect(() => {
-        const syncActiveAccount = () => {
-            const account = getActiveAccount();
-            setActiveAccountState(account);
-        };
-
-        syncActiveAccount();
-        window.addEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-        window.addEventListener("storage", syncActiveAccount);
-        return () => {
-            window.removeEventListener(ACCOUNTS_CHANGED_EVENT, syncActiveAccount);
-            window.removeEventListener("storage", syncActiveAccount);
-        };
-    }, []);
 
     // Restore the sidebar scroll position once the groups have their final
     // layout. After a route change the saved offset was measured on the
@@ -602,7 +583,7 @@ export default function Sidebar({
 
                 {/* Navigation groups - scrollable area. Docked, nothing sits above it, so it starts below
                     the pane's rounded top corners to keep its scrollbar out of the curve. */}
-                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:mt-4">
+                <nav ref={navRef} className="flex-grow overflow-y-auto overscroll-contain px-2 pb-2 md:pt-4">
                     {/* Home */}
                     <NavigationDrawerItem
                         density="compact"
@@ -668,45 +649,9 @@ export default function Sidebar({
                     })}
                 </nav>
 
-                {/* Account */}
+                {/* Account: who you are (StarMoe Passport) and the game account being viewed. */}
                 <div className="shrink-0 border-t border-outline-variant p-3">
-                    <Link
-                        href="/profile"
-                        prefetch={false}
-                        onClick={handleNavClick}
-                        className="state-layer focus-ring flex items-center gap-3 rounded-md3-lg p-2"
-                    >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-container text-on-primary-container">
-                            {activeAccount ? (
-                                <Image
-                                    src={
-                                        activeAccountCardThumbnail ||
-                                        getCachedAvatarUrl(activeAccount.id) ||
-                                        getCharacterIconUrl(
-                                            activeAccount.avatarCharacterId ||
-                                            (activeAccount.userCharacters ? getTopCharacterId(activeAccount.userCharacters) : 21)
-                                        )
-                                    }
-                                    alt={activeAccount.userGamedata?.name || activeAccount.nickname || activeAccount.gameId}
-                                    width={40}
-                                    height={40}
-                                    className="h-full w-full object-cover"
-                                    unoptimized
-                                />
-                            ) : (
-                                <Icon path={mdPerson} size={24} />
-                            )}
-                        </span>
-                        <span className="min-w-0 flex-grow">
-                            <span className="block truncate type-label-l text-on-surface">
-                                {activeAccount?.userGamedata?.name || activeAccount?.nickname || t("settings.sidebar.notLoggedIn")}
-                            </span>
-                            <span className="block truncate type-body-s text-on-surface-variant">
-                                {activeAccount ? t("settings.sidebar.manageAccount") : t("settings.sidebar.bindAccount")}
-                            </span>
-                        </span>
-                        <Icon path={mdChevronRight} size={24} className="shrink-0 text-on-surface-variant" />
-                    </Link>
+                    <AccountCenter onNavigate={handleNavClick} />
                 </div>
             </aside>
         </>

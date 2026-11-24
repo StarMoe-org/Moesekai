@@ -17,7 +17,7 @@ import {
     SupportUnit,
 } from "@/types/types";
 import { ICardSupply } from "@/hooks/useCardSupplyType";
-import { useTheme } from "@/contexts/ThemeContext";
+import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { TranslatedText } from "@/components/common/TranslatedText";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -33,11 +33,16 @@ export interface CardSelectorModalProps {
     cards: ICardInfo[];
     gachaDetails?: IGachaDetail[];
     pickupCardIds?: number[];
+    rarityRates?: Partial<Record<CardRarityType, number>>;
     selectedCardIds?: number[];
     maxSelectCount?: number;
+    selectionLabel?: string;
     onToggleCardSelect?: (card: ICardInfo) => void;
+    onSelectCards?: (cards: ICardInfo[]) => void;
+    onClearCards?: (cards: ICardInfo[]) => void;
     onSelectCard?: (card: ICardInfo) => void;
     server?: ServerSourceType;
+    assetSource?: AssetSourceType;
 }
 
 export default function CardSelectorModal({
@@ -47,11 +52,16 @@ export default function CardSelectorModal({
     cards,
     gachaDetails = [],
     pickupCardIds = [],
+    rarityRates,
     selectedCardIds,
     maxSelectCount,
+    selectionLabel,
     onToggleCardSelect,
+    onSelectCards,
+    onClearCards,
     onSelectCard,
     server = "jp",
+    assetSource: customAssetSource,
 }: CardSelectorModalProps) {
     const { t } = useI18n();
     const { useTrainedThumbnail, isShowSpoiler } = useTheme();
@@ -130,11 +140,11 @@ export default function CardSelectorModal({
     // Processed pool with actual overall draw rate
     const processedPool = useMemo(() => {
         const rarityBaseRate: Record<string, number> = {
-            rarity_4: 3.0,
-            rarity_birthday: 3.0,
-            rarity_3: 8.5,
-            rarity_2: 88.5,
-            rarity_1: 0.0,
+            rarity_4: rarityRates?.rarity_4 ?? 3.0,
+            rarity_birthday: rarityRates?.rarity_birthday ?? 3.0,
+            rarity_3: rarityRates?.rarity_3 ?? 8.5,
+            rarity_2: rarityRates?.rarity_2 ?? 88.5,
+            rarity_1: rarityRates?.rarity_1 ?? 0.0,
         };
 
         return cards.map((card) => {
@@ -159,7 +169,7 @@ export default function CardSelectorModal({
                 actualRate,
             };
         });
-    }, [cards, detailByCardId, weightByRarity, pickupSet, suppliesMap]);
+    }, [cards, detailByCardId, weightByRarity, pickupSet, suppliesMap, rarityRates]);
 
     // Advanced search: parse query into boolean expression tree
     const parsedSearch = useMemo<SearchExpr | null>(
@@ -330,6 +340,11 @@ export default function CardSelectorModal({
     };
 
     const modalTitle = title || `${t("page.gacha.cardPoolTitle", { count: cards.length })}`;
+    const selectedSet = useMemo(() => new Set(selectedCardIds ?? []), [selectedCardIds]);
+    const unselectedFilteredCards = useMemo(
+        () => filteredPool.map((item) => item.card).filter((c) => !selectedSet.has(c.id)),
+        [filteredPool, selectedSet]
+    );
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={modalTitle} size="xl">
@@ -363,26 +378,49 @@ export default function CardSelectorModal({
                     filteredCards={filteredPool.length}
                 />
 
-                {/* Selection Status & Clear Bar */}
+                {/* Selection Status & Select All / Clear Bar */}
                 {selectedCardIds && onToggleCardSelect && (
-                    <div className="flex items-center justify-between bg-surface-container rounded-md3-md px-3.5 py-2 type-label-l">
+                    <div className="flex flex-wrap items-center justify-between gap-2 bg-surface-container rounded-md3-md px-3.5 py-2 type-label-l">
                         <span className="text-on-surface">
-                            {t("page.gacha.wishSelectTitle")}:{" "}
+                            {selectionLabel || t("page.gacha.wishSelectTitle")}:{" "}
                             <span className="text-primary font-black">{selectedCardIds.length}</span> /{" "}
                             {maxSelectCount || "∞"}
                         </span>
-                        {selectedCardIds.length > 0 && (
-                            <button
-                                type="button"
-                                onClick={() => {
-                                    const selectedCards = cards.filter((c) => selectedCardIds.includes(c.id));
-                                    selectedCards.forEach((c) => onToggleCardSelect(c));
-                                }}
-                                className="state-layer focus-ring type-label-m text-on-error-container px-2 py-0.5 rounded-full bg-error-container"
-                            >
-                                {t("page.gacha.wishSelectClear", { count: selectedCardIds.length })}
-                            </button>
-                        )}
+                        <div className="flex flex-wrap items-center gap-2">
+                            {!maxSelectCount && filteredPool.length > 0 && (
+                                <button
+                                    type="button"
+                                    disabled={unselectedFilteredCards.length === 0}
+                                    onClick={() => {
+                                        if (unselectedFilteredCards.length === 0) return;
+                                        if (onSelectCards) {
+                                            onSelectCards(unselectedFilteredCards);
+                                        } else {
+                                            unselectedFilteredCards.forEach((c) => onToggleCardSelect(c));
+                                        }
+                                    }}
+                                    className="state-layer focus-ring type-label-m text-on-primary-container px-2.5 py-0.5 rounded-full bg-primary-container disabled:opacity-40 disabled:cursor-not-allowed"
+                                >
+                                    {t("page.gachaSimulator.selectAllFiltered", { count: filteredPool.length })}
+                                </button>
+                            )}
+                            {selectedCardIds.length > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const selectedCards = cards.filter((c) => selectedCardIds.includes(c.id));
+                                        if (onClearCards) {
+                                            onClearCards(selectedCards);
+                                        } else {
+                                            selectedCards.forEach((c) => onToggleCardSelect(c));
+                                        }
+                                    }}
+                                    className="state-layer focus-ring type-label-m text-on-error-container px-2.5 py-0.5 rounded-full bg-error-container"
+                                >
+                                    {t("page.gacha.wishSelectClear", { count: selectedCardIds.length })}
+                                </button>
+                            )}
+                        </div>
                     </div>
                 )}
 
@@ -410,7 +448,7 @@ export default function CardSelectorModal({
                             >
                                 {/* Card Image Container */}
                                 <div className="w-full relative">
-                                    <SekaiCardThumbnail card={item.card} trained={showTrained} className="w-full" />
+                                    <SekaiCardThumbnail card={item.card} trained={showTrained} className="w-full" assetSource={customAssetSource} />
                                     {isSelected ? (
                                         <div className="absolute top-1 right-1 z-10 px-1.5 bg-primary text-on-primary type-label-s rounded-md3-xs shadow-elev-1">
                                             ✓ {t("page.gacha.selected")}

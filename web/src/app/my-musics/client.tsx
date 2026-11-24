@@ -15,19 +15,16 @@ import { loadTranslations, TranslationData } from "@/lib/translations";
 import { replaceAssetSourceRegion, useTheme } from "@/contexts/ThemeContext";
 import { getMusicJacketUrl, getCharacterIconUrl } from "@/lib/assets";
 import {
-    getAccounts,
-    getActiveAccount,
-    setActiveAccount,
     getCachedAvatarUrl,
     fetchAccountGameData,
     normalizeAccountDataError,
     getTopCharacterId,
     type AccountDataErrorCode,
-    type MoesekaiAccount,
 } from "@/lib/account";
 
-import AccountSelectorBar from "@/components/AccountSelectorBar";
-import QuickBindForm from "@/components/QuickBindForm";
+import GameAccountBar from "@/components/account/GameAccountBar";
+import NoGameAccount from "@/components/account/NoGameAccount";
+import { useGameAccounts, useViewedGameAccount } from "@/lib/account/hooks";
 import {
     MusicTagType,
     MusicCategoryType,
@@ -117,8 +114,9 @@ function MyMusicsContent() {
     const searchParams = useSearchParams();
 
     // Account state
-    const [accounts, setAccountsList] = useState<MoesekaiAccount[]>([]);
-    const [activeAccount, setActiveAcc] = useState<MoesekaiAccount | null>(null);
+    // The page follows the account the whole site is viewing; switching it anywhere switches it here.
+    const { accounts, active: displayedAccount } = useGameAccounts();
+    const activeAccount = useViewedGameAccount();
 
     // Data state
     const [allMusics, setAllMusics] = useState<Music[]>([]);
@@ -227,14 +225,6 @@ function MyMusicsContent() {
         if (completionFilter !== "all") params.set("completion", completionFilter);
         replaceCurrentUrlSearchParams(params);
     }, [selectedTag, selectedCategories, selectedDifficulty, searchQuery, sortBy, sortOrder, completionFilter, filtersInitialized]);
-
-    // Load accounts
-    useEffect(() => {
-        const accs = getAccounts();
-        setAccountsList(accs);
-        const active = getActiveAccount();
-        setActiveAcc(active);
-    }, []);
 
     // Fetch masterdata when account changes
     useEffect(() => {
@@ -583,11 +573,6 @@ function MyMusicsContent() {
         resetDisplayCount();
     }, [resetDisplayCount]);
 
-    const handleAccountSelect = useCallback((acc: MoesekaiAccount) => {
-        setActiveAccount(acc.id);
-        setActiveAcc(acc);
-    }, []);
-
     const getMusicThumbnailUrl = useCallback((music: Music): string => {
         const finalAssetSource = activeAccount
             ? replaceAssetSourceRegion(assetSource, activeAccount.server)
@@ -639,16 +624,7 @@ function MyMusicsContent() {
         return (
             <PageContainer className="max-w-3xl">
                 <MyMusicsHeader />
-                <QuickBindForm
-                    onAccountAdded={() => {
-                        setAccountsList(getAccounts());
-                        const active = getActiveAccount();
-                        setActiveAcc(active);
-                    }}
-                    description={t("page.myMusics.quickBindDescription")}
-                    returnTo="/my-musics"
-                />
-
+                <NoGameAccount description={t("page.myMusics.quickBindDescription")} />
             </PageContainer>
         );
     }
@@ -656,19 +632,7 @@ function MyMusicsContent() {
     return (
         <PageContainer>
             <MyMusicsHeader />
-
-            {/* Account Selector */}
-            <AccountSelectorBar
-                accounts={accounts}
-                activeAccount={activeAccount}
-                onSelect={handleAccountSelect}
-                onAccountAdded={() => {
-                    setAccountsList(getAccounts());
-                    const active = getActiveAccount();
-                    setActiveAcc(active);
-                }}
-                returnTo="/my-musics"
-            />
+            {displayedAccount && <GameAccountBar account={displayedAccount} />}
 
 
             {/* User Error */}

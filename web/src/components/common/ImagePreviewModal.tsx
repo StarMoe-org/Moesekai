@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Modal from "@/components/common/Modal";
 import { useI18n } from "@/contexts/I18nContext";
+import { getLosslessImageUrl } from "@/lib/assets";
 import { copyImageFromUrl, saveImageFromUrl } from "@/lib/imageActions";
 import { Banner, CircularProgress, IconButton } from "@/components/md3";
 import { mdCheck, mdContentCopy, mdDownload } from "@/components/md3/icons";
@@ -11,6 +12,7 @@ interface ImagePreviewModalProps {
     isOpen: boolean;
     onClose: () => void;
     title: string;
+    /** The image as the page shows it; the preview shows, copies and saves its lossless PNG when there is one. */
     imageUrl: string;
     alt: string;
     fileName: string;
@@ -27,6 +29,10 @@ export default function ImagePreviewModal({
     size = "xl",
 }: ImagePreviewModalProps) {
     const { t } = useI18n();
+    // The PNG, or the page's image when the PNG cannot be loaded.
+    const losslessUrl = getLosslessImageUrl(imageUrl);
+    const [failedUrl, setFailedUrl] = useState<string | null>(null);
+    const previewUrl = failedUrl === losslessUrl ? imageUrl : losslessUrl;
     const [isCopying, setIsCopying] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [copySuccess, setCopySuccess] = useState(false);
@@ -71,7 +77,7 @@ export default function ImagePreviewModal({
         setErrorMessage(null);
         setCopySuccess(false);
         try {
-            await copyImageFromUrl(imageUrl);
+            await copyImageFromUrl(previewUrl);
             setCopySuccess(true);
             if (copyResetTimerRef.current) {
                 window.clearTimeout(copyResetTimerRef.current);
@@ -84,7 +90,7 @@ export default function ImagePreviewModal({
         } finally {
             setIsCopying(false);
         }
-    }, [imageUrl, t]);
+    }, [previewUrl, t]);
 
     const handleSave = useCallback(async () => {
         setIsSaving(true);
@@ -92,7 +98,7 @@ export default function ImagePreviewModal({
         setSaveSuccess(false);
         setSaveClickCount((prev) => prev + 1);
         try {
-            await saveImageFromUrl(imageUrl, fileName);
+            await saveImageFromUrl(previewUrl, fileName);
             setSaveSuccess(true);
             if (saveResetTimerRef.current) {
                 window.clearTimeout(saveResetTimerRef.current);
@@ -105,7 +111,7 @@ export default function ImagePreviewModal({
         } finally {
             setIsSaving(false);
         }
-    }, [fileName, imageUrl, t]);
+    }, [fileName, previewUrl, t]);
 
     const copyIcon = copySuccess && !isCopying ? mdCheck : mdContentCopy;
     const saveIcon = saveSuccess && !isSaving ? mdCheck : mdDownload;
@@ -166,8 +172,9 @@ export default function ImagePreviewModal({
                 <div className="rounded-md3-lg bg-surface-container p-3 sm:p-4">
                     <div className="flex max-h-[65vh] items-center justify-center overflow-auto">
                         <img
-                            src={imageUrl}
+                            src={previewUrl}
                             alt={alt}
+                            onError={() => setFailedUrl(losslessUrl)}
                             className="max-h-[60vh] max-w-full object-contain"
                         />
                     </div>

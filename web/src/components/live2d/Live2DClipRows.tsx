@@ -1,7 +1,7 @@
 "use client";
 import { CircularProgress, Icon, cn } from "@/components/md3";
 import { mdPlayArrowFill } from "@/components/md3/icons";
-import type { Live2DClipRow } from "@/lib/live2dViewer/clips";
+import type { Live2DClipRow } from "@moesekai/story-core";
 
 interface Live2DClipRowsProps {
     rows: readonly Live2DClipRow[];

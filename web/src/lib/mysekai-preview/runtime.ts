@@ -1,18 +1,19 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import { OBJLoader } from "three/examples/jsm/loaders/OBJLoader.js";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 import {
     getCustomFixtureAttachObjectPaths,
     getCustomFixtureAttachTexturePaths,
-    getFixtureObjectPaths,
+    getFixtureModelPaths,
     getFixtureTexturePaths,
     getMusicJacketTexturePaths,
     getMysekaiCandidateRawUrls,
     getMysekaiCanvasCardTextureUrls,
     getMysekaiMasterDataUrls,
+    getMysekaiModelUrl,
     getMysekaiMusicVocalAudioUrl,
     getMysekaiSoundTrackAudioUrl,
     getOutdoorGrassTexturePath,
@@ -362,9 +363,36 @@ function mapLayoutToSceneRotDeg(rotation: unknown): number {
     return -normalizeFiniteNumber(rotation);
 }
 
-function isShadowObjUrl(url: string): boolean {
-    const lower = url.toLowerCase();
+function isShadowName(name: string): boolean {
+    const lower = name.toLowerCase();
     return lower.includes("shadow") || lower.includes("_sdw") || lower.includes("kage");
+}
+
+/** A 1×1 transparent PNG, standing in for the images a GLB names: the runtime puts its own textures on the meshes. */
+const BLANK_IMAGE = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+/**
+ * A model's GLB as the runtime draws it: the scene without its shadow meshes, with texture
+ * coordinates turned back to the convention of the runtime's textures (`flipY`), which glTF stores
+ * as `(u, 1 - v)`.
+ */
+function prepareModel(scene: THREE.Group): THREE.Group {
+    const shadows: THREE.Object3D[] = [];
+    const flipped = new Set<THREE.BufferGeometry>();
+    scene.traverse((node) => {
+        if (!isMesh(node)) return;
+        if (isShadowName(node.name)) {
+            shadows.push(node);
+            return;
+        }
+        const uv = node.geometry.attributes.uv;
+        if (!uv || flipped.has(node.geometry)) return;
+        flipped.add(node.geometry);
+        for (let i = 0; i < uv.count; i++) uv.setY(i, 1 - uv.getY(i));
+        uv.needsUpdate = true;
+    });
+    for (const shadow of shadows) shadow.removeFromParent();
+    return scene;
 }
 
 function getDollSizeValue(sizeName: string): number | null {
@@ -549,11 +577,8 @@ export class MysekaiScenePreviewRuntime {
     private readonly directionalLight = new THREE.DirectionalLight(0xffffff, 1);
     private readonly contentGroup = new THREE.Group();
     private readonly textureLoader = new THREE.TextureLoader();
-    private readonly objLoader = new OBJLoader();
-    private readonly objTextCache = new Map<string, string>();
-    private readonly objTextPromiseCache = new Map<string, Promise<string | null>>();
-    private readonly objGroupCache = new Map<string, THREE.Group>();
-    private readonly objGroupPromiseCache = new Map<string, Promise<THREE.Group>>();
+    private readonly modelLoader = new GLTFLoader(new THREE.LoadingManager().setURLModifier((url) => (url.endsWith(".glb") ? url : BLANK_IMAGE)));
+    private readonly modelCache = new Map<string, Promise<THREE.Group | null>>();
     private readonly objStatsCache = new Map<string, ObjStats>();
     private readonly objStatsPromiseCache = new Map<string, Promise<ObjStats>>();
     private readonly fenceAssetPartPromiseCache = new Map<string, Promise<FencePartSet>>();
@@ -951,59 +976,36 @@ export class MysekaiScenePreviewRuntime {
 
     private async fetchTextFirst(urls: string[]): Promise<ResourcePick | null> {
         const picks = await Promise.all(urls.map(async (url) => {
-            const text = await this.fetchObjText(url);
-            return text ? { url, source: this.options.assetSource } : null;
+            const model = await this.loadModel(url);
+            return model ? { url, source: this.options.assetSource } : null;
         }));
         return picks.find((pick): pick is ResourcePick => !!pick) ?? null;
     }
 
-    private fetchObjText(url: string): Promise<string | null> {
-        const cached = this.objTextCache.get(url);
-        if (cached) return Promise.resolve(cached);
-        const inflight = this.objTextPromiseCache.get(url);
-        if (inflight) return inflight;
-        const promise = fetch(url)
-            .then(async (response) => {
-                if (!response.ok) return null;
-                const text = await response.text();
-                if (!text.trim()) return null;
-                this.objTextCache.set(url, text);
-                return text;
-            })
-            .catch(() => null)
-            .finally(() => {
-                this.objTextPromiseCache.delete(url);
-            });
-        this.objTextPromiseCache.set(url, promise);
-        return promise;
+    /** The model at `url`, read once; null when it cannot be read, which is tried again on the next call. */
+    private loadModel(url: string): Promise<THREE.Group | null> {
+        let pending = this.modelCache.get(url);
+        if (!pending) {
+            pending = this.modelLoader.loadAsync(url)
+                .then((gltf) => prepareModel(gltf.scene))
+                .catch(() => null);
+            pending.then((model) => { if (!model) this.modelCache.delete(url); });
+            this.modelCache.set(url, pending);
+        }
+        return pending;
     }
 
-    private getObjCandidateUrls(assetName: string, useCustomAttachRoot: boolean, handleType?: string, fixtureType?: string): string[] {
+    private getObjCandidateUrls(assetName: string, useCustomAttachRoot: boolean): string[] {
         const paths = useCustomAttachRoot
             ? getCustomFixtureAttachObjectPaths(assetName)
-            : getFixtureObjectPaths(assetName, handleType, fixtureType);
-        return paths.flatMap((path) => getMysekaiCandidateRawUrls(path, this.options.assetSource));
+            : getFixtureModelPaths(assetName);
+        return paths.map((path) => getMysekaiModelUrl(path, this.options.assetSource));
     }
 
     private async getObjSourceGroup(url: string): Promise<THREE.Group> {
-        const cached = this.objGroupCache.get(url);
-        if (cached) return cached;
-        const inflight = this.objGroupPromiseCache.get(url);
-        if (inflight) return inflight;
-        const promise = (async () => {
-            let text = this.objTextCache.get(url);
-            if (!text) {
-                text = await this.fetchObjText(url) ?? undefined;
-                if (!text) throw new Error(interpolateRuntimeMessage(this.options.messages.modelLoadFailed, { url }));
-            }
-            const group = this.objLoader.parse(text);
-            this.objGroupCache.set(url, group);
-            return group;
-        })().finally(() => {
-            this.objGroupPromiseCache.delete(url);
-        });
-        this.objGroupPromiseCache.set(url, promise);
-        return promise;
+        const model = await this.loadModel(url);
+        if (!model) throw new Error(interpolateRuntimeMessage(this.options.messages.modelLoadFailed, { url }));
+        return model;
     }
 
     private async getObjGroup(url: string): Promise<THREE.Group> {
@@ -1040,7 +1042,7 @@ export class MysekaiScenePreviewRuntime {
     }
 
     private async pickPrimaryObjUrl(urls: string[]): Promise<string | null> {
-        const filtered = urls.filter((url) => !isShadowObjUrl(url));
+        const filtered = urls.filter((url) => !isShadowName(url));
         const candidates = filtered.length ? filtered : urls;
         const picks = await Promise.all(candidates.map((url) => this.fetchTextFirst([url])));
         const existing = picks.filter((pick): pick is ResourcePick => !!pick).map((pick) => pick.url);
@@ -1550,7 +1552,7 @@ export class MysekaiScenePreviewRuntime {
     }
 
     private pickRoomSkinObjectUrls(assetName: string): string[] {
-        return getRoomSkinDoorObjectPaths(assetName).flatMap((path) => getMysekaiCandidateRawUrls(path, this.options.assetSource));
+        return getRoomSkinDoorObjectPaths(assetName).map((path) => getMysekaiModelUrl(path, this.options.assetSource));
     }
 
     private createIndoorWalls(size: MysekaiSceneSize) {
@@ -1938,7 +1940,7 @@ export class MysekaiScenePreviewRuntime {
                     fixtureType: assetInfo.fixtureType,
                     isFence: assetInfo.handleType === "fence"
                         && !assetInfo.useCustomAttachRoot
-                        && getFixtureObjectPaths(assetInfo.asset, assetInfo.handleType, assetInfo.fixtureType).length > 1,
+                        && getFixtureModelPaths(assetInfo.asset).length > 1,
                 });
             }
         }
@@ -1947,7 +1949,7 @@ export class MysekaiScenePreviewRuntime {
 
     private async preloadSceneModelAsset(ref: SceneModelAssetRef): Promise<PreparedModelAsset> {
         try {
-            const objUrls = this.getObjCandidateUrls(ref.asset, ref.useCustomAttachRoot, ref.handleType, ref.fixtureType);
+            const objUrls = this.getObjCandidateUrls(ref.asset, ref.useCustomAttachRoot);
             if (ref.isFence) {
                 const fenceParts = await this.getFencePartSet(ref.asset, objUrls);
                 return { key: ref.key, asset: ref.asset, fenceParts };

@@ -9,6 +9,11 @@ import FilterDrawer from "./FilterDrawer";
 import FilterTabHandle from "./FilterTabHandle";
 import BackgroundPattern from "./BackgroundPattern";
 import KeyboardShortcutsHelp from "./KeyboardShortcutsHelp";
+import OAuthMigrationPrompt from "./OAuthMigrationPrompt";
+import CommunityPromoPrompt from "./CommunityPromoPrompt";
+import ReleaseNotesModal, { hasSeenReleaseNotes, markReleaseNotesSeen } from "./ReleaseNotesModal";
+import type { SettingsTab } from "./SettingsPanel";
+import { getAccounts } from "@/lib/account";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { usePageListShortcuts } from "@/hooks/usePageListShortcuts";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -49,6 +54,26 @@ function hasOverlayHistoryState() {
  * renders the same shell the client hydrates.
  */
 const BARE_ROUTE = /^\/(?:blank|leave|chart-image|(?:guess-who|guess-jacket)\/multiplayer)(?:\/|$)/;
+const SETUP_COMPLETED_KEY = "moesekai_setup_completed";
+const OAUTH_MIGRATION_PROMPT_KEY = "moesekai_oauth_migration_prompt_v1";
+const RELEASE_NOTES_AUTO_OPEN_DELAY_MS = 350;
+
+function isSetupCompleted(): boolean {
+    try {
+        return localStorage.getItem(SETUP_COMPLETED_KEY) === "true";
+    } catch {
+        return true;
+    }
+}
+
+function hasPendingOAuthMigration(): boolean {
+    try {
+        if (localStorage.getItem(OAUTH_MIGRATION_PROMPT_KEY) !== null) return false;
+        return getAccounts().some((account) => account.authSource === "oauth2" && !account.starmoeSource);
+    } catch {
+        return false;
+    }
+}
 
 interface AppShellContextValue {
     /** Hides the chrome until the returned function is called. */
@@ -120,7 +145,10 @@ function AppChrome({
     // Centralized UI states managed by MainLayout.
     const [isSearchOpen, setIsSearchOpen] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [settingsRequestedTab, setSettingsRequestedTab] = useState<{ tab: SettingsTab; nonce: number } | null>(null);
     const [isShortcutsHelpOpen, setIsShortcutsHelpOpen] = useState(false);
+    const [isReleaseNotesOpen, setIsReleaseNotesOpen] = useState(false);
+    const [releaseNotesCheckSettled, setReleaseNotesCheckSettled] = useState(false);
 
     // Filter drawer state lives in QuickFilterContext (pages register their own
     // filter panels into it); the layout only needs to know whether the drawer
@@ -139,7 +167,7 @@ function AppChrome({
     const overlayHistoryArmRafRef = useRef<number | null>(null);
     const skipNextOverlayHistoryCleanupRef = useRef(false);
 
-    const anyOverlayOpen = isSearchOpen || isSettingsOpen || isShortcutsHelpOpen;
+    const anyOverlayOpen = isSearchOpen || isSettingsOpen || isShortcutsHelpOpen || isReleaseNotesOpen;
 
     // The chrome outlives the page, so overlays opened on one page close when the route changes.
     const [overlayRoutePath, setOverlayRoutePath] = useState(routePath);
@@ -148,6 +176,7 @@ function AppChrome({
         setIsSearchOpen(false);
         setIsSettingsOpen(false);
         setIsShortcutsHelpOpen(false);
+        setIsReleaseNotesOpen(false);
     }
 
     /**
@@ -240,6 +269,10 @@ function AppChrome({
                 setIsSearchOpen(false);
                 setIsSettingsOpen(false);
                 setIsShortcutsHelpOpen(false);
+                setIsReleaseNotesOpen((open) => {
+                    if (open) markReleaseNotesSeen();
+                    return false;
+                });
                 return;
             }
 
@@ -266,10 +299,54 @@ function AppChrome({
             setIsSearchOpen(false);
             setIsSettingsOpen(false);
             setIsShortcutsHelpOpen(false);
+            setIsReleaseNotesOpen(false);
         });
 
         return () => cancelAnimationFrame(raf);
     }, [immersiveMode]);
+
+    // Auto-open the v2.1 release announcement once for visitors who have not seen it yet.
+    useEffect(() => {
+        if (immersiveMode || isScreenshotMode) {
+            return;
+        }
+        const params = new URLSearchParams(window.location.search);
+        const mode = params.get("mode");
+        const suppress = params.get("noReleaseModal");
+        const forceOpen = params.get("release") === "v2.1" || params.get("whatsNew") === "1";
+
+        if (mode === "screenshot" || suppress === "1" || suppress === "true") {
+            const raf = requestAnimationFrame(() => setReleaseNotesCheckSettled(true));
+            return () => cancelAnimationFrame(raf);
+        }
+
+        if (forceOpen) {
+            const raf = requestAnimationFrame(() => {
+                setIsReleaseNotesOpen(true);
+                setReleaseNotesCheckSettled(true);
+            });
+            return () => cancelAnimationFrame(raf);
+        }
+
+        if (
+            routePath.startsWith("/oauth2")
+            || ((routePath === "/" || routePath === "") && !isSetupCompleted())
+            || hasPendingOAuthMigration()
+            || hasSeenReleaseNotes()
+        ) {
+            const raf = requestAnimationFrame(() => setReleaseNotesCheckSettled(true));
+            return () => cancelAnimationFrame(raf);
+        }
+
+        const timer = window.setTimeout(() => {
+            if (!hasSeenReleaseNotes()) {
+                setIsReleaseNotesOpen(true);
+            }
+            setReleaseNotesCheckSettled(true);
+        }, RELEASE_NOTES_AUTO_OPEN_DELAY_MS);
+
+        return () => window.clearTimeout(timer);
+    }, [routePath, immersiveMode, isScreenshotMode]);
 
     // Restore sidebar state from sessionStorage after mount.
     // Use two RAF ticks: set position first, then enable transitions.
@@ -380,6 +457,29 @@ function AppChrome({
         router.replace(localizePathForBrowser(href));
     }, [router]);
 
+    const handleOpenReleaseNotes = useCallback(() => {
+        setIsReleaseNotesOpen(true);
+    }, []);
+
+    const handleCloseReleaseNotes = useCallback(() => {
+        markReleaseNotesSeen();
+        setIsReleaseNotesOpen(false);
+    }, []);
+
+    const handleReleaseNotesNavigate = useCallback((href: string) => {
+        markReleaseNotesSeen();
+        skipNextOverlayHistoryCleanupRef.current = true;
+        setIsReleaseNotesOpen(false);
+        router.push(localizePathForBrowser(href));
+    }, [router]);
+
+    const handleOpenAssetLineSettings = useCallback(() => {
+        markReleaseNotesSeen();
+        setIsReleaseNotesOpen(false);
+        setSettingsRequestedTab((prev) => ({ tab: "data", nonce: (prev?.nonce ?? 0) + 1 }));
+        setIsSettingsOpen(true);
+    }, []);
+
     // Keyboard shortcut handlers.
     const shortcutHandlers = useMemo(() => ({
         onToggleSidebar: handleMenuToggle,
@@ -398,7 +498,7 @@ function AppChrome({
 
     // The modal filter sheet traps focus like the other overlays, so page
     // shortcuts must not act on the content behind it.
-    const isShortcutScopeLocked = isSearchOpen || isSettingsOpen || isShortcutsHelpOpen || immersiveMode || isFilterDrawerModal;
+    const isShortcutScopeLocked = anyOverlayOpen || immersiveMode || isFilterDrawerModal;
 
     useKeyboardShortcuts(shortcutHandlers, {
         disabled: isShortcutScopeLocked,
@@ -431,6 +531,8 @@ function AppChrome({
                     isSettingsOpen={isSettingsOpen}
                     onSettingsToggle={() => setIsSettingsOpen(prev => !prev)}
                     onSettingsClose={() => setIsSettingsOpen(false)}
+                    settingsRequestedTab={settingsRequestedTab}
+                    onOpenReleaseNotes={handleOpenReleaseNotes}
                     onShortcutsHelpToggle={() => setIsShortcutsHelpOpen(prev => !prev)}
                 />
             )}
@@ -457,7 +559,7 @@ function AppChrome({
                 <>
                     {/* Footer */}
                     <div className={`relative z-[5] ${hasMounted ? RAIL_SHIFT_TRANSITION : ""} ${railOffsetClass}`}>
-                        <MainFooter />
+                        <MainFooter onOpenReleaseNotes={handleOpenReleaseNotes} />
                     </div>
 
                     {/* Scroll To Top */}
@@ -469,6 +571,20 @@ function AppChrome({
 
                     {/* Keyboard Shortcuts Help */}
                     <KeyboardShortcutsHelp isOpen={isShortcutsHelpOpen} onClose={() => setIsShortcutsHelpOpen(false)} />
+
+                    {/* v2.1 Release Announcement Modal */}
+                    <ReleaseNotesModal
+                        isOpen={isReleaseNotesOpen}
+                        onClose={handleCloseReleaseNotes}
+                        onNavigate={handleReleaseNotesNavigate}
+                        onOpenAssetLineSettings={handleOpenAssetLineSettings}
+                    />
+
+                    {/* One-time prompt for visitors still on the retired in-browser Haruki OAuth2 binding. */}
+                    <OAuthMigrationPrompt />
+
+                    {/* Visit counter and dismissible community/support popups. */}
+                    <CommunityPromoPrompt blocked={anyOverlayOpen || isFilterDrawerModal || isScreenshotMode || !releaseNotesCheckSettled} />
                 </>
             )}
         </main>

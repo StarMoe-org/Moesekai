@@ -1,0 +1,129 @@
+.cardFrame {
+    contain: layout paint;
+}
+
+.hoverZone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    z-index: 2;
+}
+
+.hoverZoneLeft {
+    left: 0;
+}
+
+.hoverZoneRight {
+    right: 0;
+}
+
+.splitRoot {
+    position: absolute;
+    inset: 0;
+}
+
+/* Normal art slides over the full-bleed trained art underneath, keeping both
+   <img> elements at a fixed 100% card size (no per-frame reflow or resampling). */
+.normalLayer {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    overflow: hidden;
+    transform: translate3d(-50%, 0, 0);
+    transition: transform var(--md-sys-motion-duration-medium2, 300ms) var(--ease-md3-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.splitArtwork {
+    position: absolute;
+    inset: 0;
+    transition: transform var(--md-sys-motion-duration-medium2, 300ms) var(--ease-md3-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.normalArtwork {
+    transform: translate3d(25%, 0, 0);
+}
+
+.trainedArtwork {
+    transform: translate3d(25%, 0, 0);
+}
+
+.starLayer {
+    transition: opacity var(--md-sys-motion-duration-short4, 200ms) var(--ease-md3-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.starNormal {
+    opacity: 0;
+}
+
+.starTrained {
+    opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .hoverZoneLeft:hover ~ .splitRoot .normalLayer,
+    .hoverZoneLeft:hover ~ .splitRoot .normalArtwork {
+        transform: translate3d(0%, 0, 0);
+    }
+
+    .hoverZoneLeft:hover ~ .splitRoot .trainedArtwork {
+        transform: translate3d(50%, 0, 0);
+    }
+
+    .hoverZoneLeft:hover ~ .starNormal {
+        opacity: 1;
+    }
+
+    .hoverZoneLeft:hover ~ .starTrained {
+        opacity: 0;
+    }
+
+    .hoverZoneRight:hover ~ .splitRoot .normalLayer {
+        transform: translate3d(-100%, 0, 0);
+    }
+
+    .hoverZoneRight:hover ~ .splitRoot .normalArtwork {
+        transform: translate3d(50%, 0, 0);
+    }
+
+    .hoverZoneRight:hover ~ .splitRoot .trainedArtwork {
+        transform: translate3d(0%, 0, 0);
+    }
+}
+
+.cardFrame[data-touch-focus="normal"] .normalLayer,
+.cardFrame[data-touch-focus="normal"] .normalArtwork {
+    transform: translate3d(0%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="normal"] .trainedArtwork {
+    transform: translate3d(50%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="normal"] .starNormal {
+    opacity: 1;
+}
+
+.cardFrame[data-touch-focus="normal"] .starTrained {
+    opacity: 0;
+}
+
+.cardFrame[data-touch-focus="trained"] .normalLayer {
+    transform: translate3d(-100%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="trained"] .normalArtwork {
+    transform: translate3d(50%, 0, 0);
+}
+
+.cardFrame[data-touch-focus="trained"] .trainedArtwork {
+    transform: translate3d(0%, 0, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .normalLayer,
+    .splitArtwork,
+    .starLayer {
+        transition: none;
+    }
+}

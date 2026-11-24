@@ -13,7 +13,6 @@ import type {
     FixtureMeta,
     MangaMeta,
     ExchangeMeta,
-    GuideMeta,
 } from "@/lib/metadata";
 import { CHARACTER_NAMES } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
@@ -243,20 +242,6 @@ const SEO_LABELS: Record<string, Record<UiLocale, string>> = {
         "ja-JP": "カテゴリ",
         "en-US": "Category",
         "ko-KR": "분류",
-    },
-    guideTitle: {
-        "zh-CN": "攻略标题",
-        "zh-TW": "攻略標題",
-        "ja-JP": "攻略タイトル",
-        "en-US": "Guide Title",
-        "ko-KR": "공략 제목",
-    },
-    authorGroup: {
-        "zh-CN": "作者团队",
-        "zh-TW": "作者團隊",
-        "ja-JP": "著者グループ",
-        "en-US": "Author Group",
-        "ko-KR": "작성자 그룹",
     },
 };
 
@@ -509,43 +494,6 @@ function renderExchangeSemantic(exchange: ExchangeMeta, title: string, loc: UiLo
     );
 }
 
-function renderGuideSemantic(guide: GuideMeta, title: string, loc: UiLocale) {
-    return (
-        <>
-            <h1>{guide.title || title}</h1>
-            <dl>
-                <dt>{lbl("guideTitle", loc)}</dt>
-                <dd>{guide.title}</dd>
-                {guide.category && (
-                    <>
-                        <dt>{lbl("category", loc)}</dt>
-                        <dd>{guide.category}</dd>
-                    </>
-                )}
-                {guide.authorGroup && (
-                    <>
-                        <dt>{lbl("authorGroup", loc)}</dt>
-                        <dd>{guide.authorGroup}</dd>
-                    </>
-                )}
-                {guide.date && (
-                    <>
-                        <dt>{lbl("releaseDate", loc)}</dt>
-                        <dd>{guide.date}</dd>
-                    </>
-                )}
-            </dl>
-            {guide.tags && guide.tags.length > 0 && (
-                <ul>
-                    {guide.tags.map((tag, i) => (
-                        <li key={i}>{tag}</li>
-                    ))}
-                </ul>
-            )}
-        </>
-    );
-}
-
 export default function DetailSemanticSeoShell({
     title,
     description,
@@ -590,10 +538,6 @@ export default function DetailSemanticSeoShell({
             case "exchange":
             case "exchanges":
                 content = renderExchangeSemantic(semantic.data as ExchangeMeta, title, loc);
-                break;
-            case "guide":
-            case "guides":
-                content = renderGuideSemantic(semantic.data as GuideMeta, title, loc);
                 break;
             default:
                 content = (

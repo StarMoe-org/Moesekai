@@ -21,6 +21,13 @@ const ALLOWLIST = new Map([
     ["src/lib/i18n/messages/zh-CN/costume3d.ts", "Simplified Chinese 3D costume page dictionary"],
     ["src/lib/i18n/messages/zh-TW/costume3d.ts", "Traditional Chinese 3D costume page dictionary"],
     ["src/lib/i18n/messages/ja-JP/costume3d.ts", "Japanese 3D costume page dictionary"],
+    ["src/lib/i18n/messages/zh-CN/assetGuide.ts", "Simplified Chinese asset guide dictionary"],
+    ["src/lib/i18n/messages/zh-TW/assetGuide.ts", "Traditional Chinese asset guide dictionary"],
+    ["src/lib/i18n/messages/ja-JP/assetGuide.ts", "Japanese asset guide dictionary"],
+    ["src/lib/i18n/messages/zh-CN/account.ts", "Simplified Chinese account dictionary"],
+    ["src/lib/i18n/messages/zh-TW/account.ts", "Traditional Chinese account dictionary"],
+    ["src/lib/i18n/messages/ja-JP/account.ts", "Japanese account dictionary"],
+    ["src/lib/i18n/messages/ko-KR/account.ts", "Korean account dictionary"],
     ["src/lib/i18n/locales.ts", "Locale native names shown in the language switcher"],
     ["src/lib/seo-keywords.ts", "Localized SEO copy and Chinese keyword strategy"],
     ["src/lib/seo-zh-tw.ts", "Traditional Chinese (TW) SEO copy"],
@@ -36,6 +43,7 @@ const ALLOWLIST = new Map([
     ["src/types/types.ts", "Project SEKAI official unit and character names plus legacy type constants"],
     ["src/lib/storyLoader.ts", "Masterdata and story translation fallback map"],
     ["src/lib/team-links.ts", "Team members and official organization links"],
+    ["src/lib/virtualLiveMc.ts", "MC timeline track name suffixes (_Talk/_入場/_退場) are Unity asset data format strings, not UI text"],
     ["src/vendor/sekai-sus2img/renderer.ts", "Vendored upstream chart renderer (GPL-3); Japanese 譜面確認 label matches the in-game chart-check convention"],
     ["src/components/seo/DetailSemanticSeoShell.tsx", "Project SEKAI crawler semantic shell fact taxonomy and stat tables"],
 ]);
@@ -52,6 +60,9 @@ const COMMENT_ONLY_ALLOWLIST = new Map([
     ["src/components/deck-recommend/CardPickerModal.tsx", "Comments describing the deck card picker internals"],
     ["src/lib/deck-engine/wasm-version.ts", "Generated file header comment"],
     ["src/lib/score-control/score-control-calculator.ts", "Comments describing the score control rounding contract"],
+    ["src/lib/assets.ts", "Comments describing public CDN attribution and asset line endpoints"],
+    ["src/lib/fetch.ts", "Comments describing public masterdata CDN attribution"],
+    ["src/lib/lyrics.ts", "Comments describing kana ruby reading behavior over kanji bases"],
 ]);
 
 function isCommentOnlyLine(line) {

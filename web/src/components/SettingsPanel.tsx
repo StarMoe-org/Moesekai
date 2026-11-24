@@ -1,6 +1,7 @@
 "use client";
 import React, { useId, useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
+import { AssetLineLabel } from "@/components/common/AssetLine";
 import { ServerRegionLabel, getServerDisplayCode } from "@/components/common/ServerRegion";
 import { useTheme, CHAR_COLORS } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
@@ -17,6 +18,8 @@ import {
     parseShortcutCombos,
 } from "@/lib/shortcuts";
 import { getCharacterName, SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n";
+import { APP_COMMIT_URL, APP_RELEASE_URL, APP_VERSION } from "@/lib/app-version";
+import ExternalLink from "@/components/ExternalLink";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import {
     Banner,
@@ -37,6 +40,7 @@ import {
     mdCheck,
     mdDarkMode,
     mdDatabase,
+    mdFavoriteFill,
     mdInfo,
     mdLightMode,
     mdOpenInNew,
@@ -46,17 +50,21 @@ import {
     mdKeyboardArrowDown,
     mdClose,
     mdTune,
+    mdWandStars,
 } from "@/components/md3/icons";
+
+export type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 
 interface SettingsPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    requestedTab?: { tab: SettingsTab; nonce: number } | null;
+    onOpenReleaseNotes?: () => void;
 }
 
-type SettingsTab = "visual" | "content" | "data" | "experimental" | "about";
 type ColorSchemeOption = "system" | "light" | "dark";
 type ServerRegion = "en" | "jp" | "cn" | "tw" | "kr";
-type AssetLine = "main" | "overseas";
+type AssetLine = "main" | "backup";
 
 // Group characters by unit for better organization (derived from UNIT_DATA)
 const unitGroups = UNIT_DATA.map(u => ({ id: u.id, labelKey: UNIT_ID_LABEL_KEYS[u.id] ?? `common.units.${u.id}`, charIds: u.charIds, color: u.color }));
@@ -73,7 +81,7 @@ const appearanceOptions = [
 
 const assetLineOptions = [
     { key: "main", labelKey: "settings.assetSource.main", value: "main" },
-    { key: "overseas", labelKey: "settings.assetSource.overseas", value: "overseas" },
+    { key: "backup", labelKey: "settings.assetSource.backup", value: "backup" },
 ] as const;
 
 const SERVER_REGIONS: readonly ServerRegion[] = ["en", "jp", "cn", "tw", "kr"];
@@ -101,7 +109,12 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     return <h4 className="mb-2 type-title-s text-primary">{children}</h4>;
 }
 
-export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
+export default function SettingsPanel({
+    isOpen,
+    onClose,
+    requestedTab,
+    onOpenReleaseNotes,
+}: SettingsPanelProps) {
     const {
         themeCharId,
         setThemeCharacter,
@@ -127,6 +140,8 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         setStoryLive2dAntialiasing,
         storyLive2dHighFps,
         setStoryLive2dHighFps,
+        autoLoadMore = true,
+        setAutoLoadMore,
         serverSource,
         setServerSource,
     } = useTheme();
@@ -144,6 +159,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
     if (wasOpen !== isOpen) {
         setWasOpen(isOpen);
         setThemeExpanded(false);
+    }
+
+    const [lastRequestedTabNonce, setLastRequestedTabNonce] = useState<number | null>(null);
+    if (requestedTab && requestedTab.nonce !== lastRequestedTabNonce) {
+        setLastRequestedTabNonce(requestedTab.nonce);
+        setActiveTab(requestedTab.tab);
     }
 
     useEffect(() => {
@@ -171,6 +192,20 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         e.stopPropagation();
         onClose();
         window.location.href = "/about";
+    };
+
+    const handleNavigateChangelog = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        window.location.href = "/changelog";
+    };
+
+    const handleNavigatePatreon = (e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        onClose();
+        window.location.href = "/patreon";
     };
 
     const handleSelectLocale = (id: UiLocale) => {
@@ -330,6 +365,12 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         label={t("settings.translation.label")}
                         description={t("settings.translation.description")}
                     />
+                    <Switch
+                        checked={autoLoadMore}
+                        onCheckedChange={(checked) => setAutoLoadMore?.(checked)}
+                        label={t("settings.autoLoadMore.label")}
+                        description={t("settings.autoLoadMore.description")}
+                    />
                     {ADS_SETTINGS_VISIBLE && (
                         <Switch
                             checked={showAds}
@@ -364,7 +405,10 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                             aria-label={t("settings.assetSource.sectionTitle")}
                             value={assetSource as AssetLine}
                             onValueChange={handleSelectAssetLine}
-                            options={assetLineOptions.map((option) => ({ value: option.value, label: t(option.labelKey) }))}
+                            options={assetLineOptions.map((option) => ({
+                                value: option.value,
+                                label: <AssetLineLabel line={option.value} label={t(option.labelKey)} size={18} />,
+                            }))}
                         />
                     </section>
 
@@ -463,6 +507,60 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
                         </span>
                     </a>
                     <p className="type-body-m text-on-surface-variant">{t("settings.about.projectDescription")}</p>
+                    <dl className="w-full space-y-2 rounded-md3-md bg-surface-container-high px-4 py-3 text-left type-body-m">
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.versionLabel")}</dt>
+                            <dd className="font-mono text-on-surface">{APP_VERSION.display}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.commitLabel")}</dt>
+                            <dd className="font-mono text-on-surface">
+                                {APP_VERSION.commitShort ? (
+                                    <ExternalLink href={APP_COMMIT_URL} className="state-layer focus-ring rounded-md3-xs px-1 text-primary">
+                                        {APP_VERSION.commitShort}
+                                    </ExternalLink>
+                                ) : "—"}
+                            </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3">
+                            <dt className="text-on-surface-variant">{t("settings.about.buildDateLabel")}</dt>
+                            <dd className="font-mono text-on-surface">{APP_VERSION.buildDate || "—"}</dd>
+                        </div>
+                    </dl>
+                    <div className="flex w-full flex-col gap-2">
+                        {onOpenReleaseNotes && (
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    onClose();
+                                    onOpenReleaseNotes();
+                                }}
+                                className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                            >
+                                <Icon path={mdWandStars} size={18} />
+                                {t("settings.about.viewReleaseHighlights")}
+                            </button>
+                        )}
+                        <ExternalLink href={APP_RELEASE_URL} className={buttonClassName({ variant: "tonal", fullWidth: true })}>
+                            {t("settings.about.viewRelease")}
+                            <Icon path={mdOpenInNew} size={18} />
+                        </ExternalLink>
+                        <a
+                            href="/changelog"
+                            onClick={handleNavigateChangelog}
+                            className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                        >
+                            {t("settings.about.viewChangelog")}
+                        </a>
+                        <a
+                            href="/patreon"
+                            onClick={handleNavigatePatreon}
+                            className={buttonClassName({ variant: "tonal", fullWidth: true })}
+                        >
+                            {t("settings.about.viewSupport")}
+                            <Icon path={mdFavoriteFill} size={18} />
+                        </a>
+                    </div>
                     <a
                         href="/about"
                         onClick={handleNavigateAbout}
@@ -503,7 +601,7 @@ export default function SettingsPanel({ isOpen, onClose }: SettingsPanelProps) {
         title: t("settings.title"),
         syncHistory: false,
         bodyClassName: "flex flex-col overflow-hidden! p-0!",
-        footer: <p className="text-center type-label-s text-on-surface-variant">{t("settings.footer.version")}</p>,
+        footer: <p className="text-center type-label-s text-on-surface-variant">{t("settings.footer.version", { version: APP_VERSION.display })}</p>,
     };
 
     return isWide ? (

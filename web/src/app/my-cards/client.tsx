@@ -23,21 +23,19 @@ import { fetchMasterDataForServer } from "@/lib/fetch";
 import { getCardSkillTypes } from "@/lib/skill";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import {
-    getAccounts,
-    getActiveAccount,
-    setActiveAccount,
     fetchAccountGameData,
     normalizeAccountDataError,
     type AccountDataErrorCode,
-    type MoesekaiAccount,
 } from "@/lib/account";
 
 
-import AccountSelectorBar from "@/components/AccountSelectorBar";
-import QuickBindForm from "@/components/QuickBindForm";
+import GameAccountBar from "@/components/account/GameAccountBar";
+import NoGameAccount from "@/components/account/NoGameAccount";
+import { useGameAccounts, useViewedGameAccount } from "@/lib/account/hooks";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
 import { useI18n } from "@/contexts/I18nContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { getCharacterName } from "@/lib/i18n";
 import { Banner, Chip, EmptyState, ErrorState, LinearProgress, LoadMore, LoadingState, PageContainer, PageHeader, Surface, cn } from "@/components/md3";
 import { useGridReflowAnimation } from "@/hooks/useGridReflowAnimation";
@@ -107,12 +105,18 @@ function getUserErrorMessageKey(code: AccountDataErrorCode): string {
 
 function MyCardsContent() {
     const { t, formatDate } = useI18n();
+    const { assetSource } = useTheme();
     const gridRef = useGridReflowAnimation<HTMLDivElement>();
     const searchParams = useSearchParams();
 
     // Account state
-    const [accounts, setAccountsList] = useState<MoesekaiAccount[]>([]);
-    const [activeAccount, setActiveAcc] = useState<MoesekaiAccount | null>(null);
+    // The page follows the account the whole site is viewing; switching it anywhere switches it here.
+    const { accounts, active: displayedAccount } = useGameAccounts();
+    const activeAccount = useViewedGameAccount();
+    const accountAssetSource = useMemo(
+        () => (activeAccount ? replaceAssetSourceRegion(assetSource, activeAccount.server) : assetSource),
+        [assetSource, activeAccount],
+    );
 
     // Data state
     const [allCards, setAllCards] = useState<ICardInfo[]>([]);
@@ -243,14 +247,6 @@ function MyCardsContent() {
         if (ownershipFilter !== "all") params.set("ownership", ownershipFilter);
         replaceCurrentUrlSearchParams(params);
     }, [selectedCharacters, selectedUnitIds, selectedAttrs, selectedRarities, selectedSupplyTypes, selectedSupportUnits, selectedSkillTypes, searchQuery, sortBy, sortOrder, ownershipFilter, filtersInitialized]);
-
-    // Load accounts
-    useEffect(() => {
-        const accs = getAccounts();
-        setAccountsList(accs);
-        const active = getActiveAccount();
-        setActiveAcc(active);
-    }, []);
 
     // Fetch masterdata when account changes
     useEffect(() => {
@@ -532,26 +528,12 @@ function MyCardsContent() {
         userCards.size,
     ]);
 
-    const handleAccountSelect = useCallback((acc: MoesekaiAccount) => {
-        setActiveAccount(acc.id);
-        setActiveAcc(acc);
-    }, []);
-
     // No account state — show inline quick bind form
     if (accounts.length === 0) {
         return (
             <PageContainer className="max-w-3xl">
                 <MyCardsHeader />
-                <QuickBindForm
-                    onAccountAdded={() => {
-                        setAccountsList(getAccounts());
-                        const active = getActiveAccount();
-                        setActiveAcc(active);
-                    }}
-                    description={t("page.myCards.quickBindDescription")}
-                    returnTo="/my-cards"
-                />
-
+                <NoGameAccount description={t("page.myCards.quickBindDescription")} />
             </PageContainer>
         );
     }
@@ -559,19 +541,7 @@ function MyCardsContent() {
     return (
         <PageContainer>
             <MyCardsHeader />
-
-            {/* Account Selector with Quick Add */}
-            <AccountSelectorBar
-                accounts={accounts}
-                activeAccount={activeAccount}
-                onSelect={handleAccountSelect}
-                onAccountAdded={() => {
-                    setAccountsList(getAccounts());
-                    const active = getActiveAccount();
-                    setActiveAcc(active);
-                }}
-                returnTo="/my-cards"
-            />
+            {displayedAccount && <GameAccountBar account={displayedAccount} />}
 
 
             {/* User Error */}
@@ -654,6 +624,7 @@ function MyCardsContent() {
                                     key={card.id}
                                     card={card}
                                     userCard={uc || null}
+                                    assetSource={accountAssetSource}
                                 />
                             );
                         })}
@@ -692,9 +663,10 @@ function MyCardsHeader() {
 interface MyCardItemProps {
     card: ICardInfo;
     userCard: UserCard | null;
+    assetSource: AssetSourceType;
 }
 
-function MyCardItem({ card, userCard }: MyCardItemProps) {
+function MyCardItem({ card, userCard, assetSource }: MyCardItemProps) {
     const { t } = useI18n();
     const isOwned = !!userCard;
     const isTrained = userCard?.specialTrainingStatus === "done";
@@ -720,6 +692,7 @@ function MyCardItem({ card, userCard }: MyCardItemProps) {
                         trained={showTrained}
                         mastery={userCard?.masterRank || 0}
                         className="w-full"
+                        assetSource={assetSource}
                     />
 
                     {/* Skill Level Badge */}

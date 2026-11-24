@@ -33,7 +33,6 @@ export interface SsePlayerProgressPart {
 export interface SsePlayerProgress {
     sim?: SsePlayerProgressPart;
     render?: SsePlayerProgressPart;
-    kit?: SsePlayerProgressPart;
 }
 
 /**
@@ -59,7 +58,7 @@ export interface SsePlayerPosition {
 
 /** One anti-aliasing method, and the rates of the two that have one. */
 export interface SsePlayerAntialiasing {
-    method: "none" | "msaa" | "ssaa" | "smaa";
+    method: "none" | "msaa" | "ssaa";
     msaaSamples: number;
     ssaaFactor: number;
 }
@@ -70,7 +69,8 @@ export interface SsePlayerOptions {
     pkg: string;
     /** Cubism Core for Web, when not the one at Live2D's own address. */
     core?: string;
-    sources: { library: string; inapp: string; proxy?: string };
+    /** The site and the server whose published version is played; the site's current one without `version`. */
+    sources: { site: string; region: string; version?: string; proxy?: string };
     /** Fonts to draw the text with in place of the client's (which are then not fetched). */
     fonts?: { body: { url: string; weight?: number }[]; name: { url: string; weight?: number }[] };
     selector: string;

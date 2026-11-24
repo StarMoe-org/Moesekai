@@ -5,13 +5,17 @@
 ## 技术栈
 
 - **前端**: Next.js 16 (`output: "standalone"`, 服务端路由 + CSR 页面交互), React 19, TypeScript, **Tailwind CSS 4**, framer-motion, echarts
-- **后端**: Go (net/http), Redis 缓存 + 内存回退
+- **后端**: Go (net/http)，HTML 响应用磁盘缓存（`internal/htmlcache`），不使用 Redis
 
 ## 核心架构
 
 ### Masterdata — `web/src/lib/fetch.ts`
 
 ### 资源管理 — `web/src/lib/assets.ts`
+
+### 账号 — `web/src/lib/account/`
+
+StarMoe 通行证、游戏账号、Haruki 数据来源三层的定位、用词和数据流见 `docs/account-system.md`；涉及账号的改动先读它。
 
 ### 类型定义 — `web/src/types/`
 
@@ -122,6 +126,12 @@ const updateURL = (params: Record<string, string>) => {
 2. **资源路径大小写敏感**: 生产环境部署区分大小写，资源路径需与实际文件名完全一致
 3. **CSR 页面约定**: 所有页面交互逻辑在 `client.tsx` 中实现；`page.tsx` 只做 server-safe metadata、结构化数据和渲染入口。项目部署模式为 Next.js standalone，不是静态 export
 4. **新功能必须补 i18n/SEO**: UI 文案补双语字典，页面补 `SEO_PAGE_METADATA`，详情页补 SEO 模板
+
+## 版本与发版
+
+- 版本基准是 git tag（严格 `vX.Y.Z`），无 tag 时使用 `fb4767c`，展示版本由 `web/src/lib/build-version.ts`（脚本孪生：`web/scripts/resolve-version.mjs`）按「tag 的 patch + tag 后 commit 数」自动派生；不要手工改 `package.json` 版本号发版——其 `2.0.0` 仅是历史不可用时的兜底基线，需与 `BASELINE_VERSION` / `FALLBACK_VERSION` 保持一致。
+- 正式发版用 GitHub Actions 的 Release workflow 一键打 tag + 生成 Release（首次运行在基准提交创建 v2.0.0）；部署仍是 push `main` 自动上线。机制详见 `docs/VERSIONING.md`。
+- 前端只读 `@/lib/app-version`（构建时由 `next.config.ts` 注入 `NEXT_PUBLIC_MOESEKAI_*`）；禁止在客户端代码 import `@/lib/build-version`（会执行 git 命令）。
 
 ## 新模块/重大变更
 

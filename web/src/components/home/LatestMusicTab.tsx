@@ -80,15 +80,21 @@ export default function LatestMusicTab() {
         <div>
             <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
                 {musics.map((music) => {
-                    const translatedTitle = translateMasterText("music", "title", music.title) ?? music.title;
+                    const rawTranslatedTitle = translateMasterText("music", "title", music.title);
+                    const displayTitle = rawTranslatedTitle?.trim() ? rawTranslatedTitle : music.title;
                     const now = Date.now();
                     const isSpoiler = music.publishedAt > now;
 
                     return (
-                        <Link key={music.id} href={`/music/${music.id}`} className="group state-layer focus-ring block rounded-md3-md">
-                            <div className={`relative rounded-md3-md overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2 ${isSpoiler ? 'ring-2 ring-tertiary' : ''}`}>
+                        <Link
+                            key={music.id}
+                            href={`/music/${music.id}`}
+                            title={displayTitle !== music.title ? `${music.title}\n${displayTitle}` : music.title}
+                            className="group state-layer focus-ring flex h-full min-w-0 rounded-md3-md"
+                        >
+                            <div className={`relative flex w-full flex-col rounded-md3-md overflow-hidden bg-surface-card shadow-elev-1 transition-shadow duration-200 group-hover:shadow-elev-2 ${isSpoiler ? 'ring-2 ring-tertiary' : ''}`}>
                                 {/* Music Jacket */}
-                                <div className="aspect-square relative bg-surface-container-high">
+                                <div className="aspect-square w-full relative bg-surface-container-high">
                                     <Image
                                         src={getMusicJacketUrl(music.assetbundleName, assetSource)}
                                         alt={music.title}
@@ -104,9 +110,9 @@ export default function LatestMusicTab() {
                                     )}
                                 </div>
                                 {/* Music Info */}
-                                <div className="p-2">
+                                <div className="p-2 min-w-0">
                                     <p className="type-label-m text-on-surface truncate group-hover:text-primary transition-colors">
-                                        {translatedTitle}
+                                        {displayTitle}
                                     </p>
                                     <p className="type-label-s text-on-surface-variant mt-0.5 hidden sm:block">
                                         {formatDate(music.publishedAt)}

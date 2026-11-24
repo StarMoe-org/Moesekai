@@ -12,13 +12,14 @@ import {
 } from "@/types/music";
 import { fetchMasterDataForServer, fetchMusicMetas, type ServerSourceType } from "@/lib/fetch";
 import { getMusicJacketUrl } from "@/lib/assets";
-import { useTheme } from "@/contexts/ThemeContext";
+import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import SelectorModal from "./SelectorModal";
 import { Button, Icon, LoadingState } from "@/components/md3";
 import { mdArrowBack, mdArrowForward, mdMusicNote, mdSearch, mdUnfoldMore } from "@/components/md3/icons";
 import MusicFilters, { useMusicLevelFilter, type MusicLevelChart } from "@/components/music/MusicFilters";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 
 /** Sort options for MusicSelector (no level/constant since there's no difficulty context) */
 const SELECTOR_SORT_OPTION_IDS = ["publishedAt", "id"] as const;
@@ -58,7 +59,8 @@ export default function MusicSelector({
     liveType = "multi",
     server = "jp",
 }: MusicSelectorProps) {
-    const { assetSource, isShowSpoiler } = useTheme();
+    const { assetSource: themeAssetSource, isShowSpoiler } = useTheme();
+    const assetSource = useMemo(() => replaceAssetSourceRegion(themeAssetSource, server), [themeAssetSource, server]);
     const { t } = useI18n();
     const [now] = useState(() => Date.now());
     const [musics, setMusics] = useState<IMusicInfo[]>([]);
@@ -317,6 +319,14 @@ export default function MusicSelector({
         return result;
     }, [matchesLevel, musics, musicTags, selectedTag, selectedCategories, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
 
+    const shownMusicCount = Math.min(displayCount, filteredMusics.length);
+    const hasMoreMusics = filteredMusics.length > displayCount;
+    const loadMoreRef = useAutoLoadMore({
+        hasMore: hasMoreMusics,
+        itemCount: shownMusicCount,
+        onLoadMore: () => setDisplayCount((prev) => prev + 30),
+    });
+
     // Get currently selected music object
     const selectedMusic = useMemo(() => {
         if (!selectedMusicId) return null;
@@ -564,12 +574,12 @@ export default function MusicSelector({
                                         onClick={() => handleSelect(music)}
                                         className="cursor-pointer"
                                     >
-                                        <MusicSelectionItem music={music} translations={translations} />
+                                        <MusicSelectionItem music={music} translations={translations} assetSource={assetSource} />
                                     </div>
                                 ))}
 
-                                {filteredMusics.length > displayCount && (
-                                    <div className="col-span-full py-4 text-center">
+                                {hasMoreMusics && (
+                                    <div ref={loadMoreRef} className="col-span-full py-4 text-center">
                                         <Button
                                             type="button"
                                             variant="tonal"
@@ -593,8 +603,7 @@ export default function MusicSelector({
 }
 
 // Simplified MusicItem for selection
-function MusicSelectionItem({ music, translations }: { music: IMusicInfo; translations: TranslationData | null }) {
-    const { assetSource } = useTheme();
+function MusicSelectionItem({ music, translations, assetSource }: { music: IMusicInfo; translations: TranslationData | null; assetSource: AssetSourceType }) {
     const jacketUrl = getMusicJacketUrl(music.assetbundleName, assetSource);
 
     return (

@@ -40,13 +40,11 @@ export function Live2DPlayerSettings({ isOpen, onClose, settings, msaaSampleCoun
         none: t("page.story.live2d.settings.antialiasingOff"),
         msaa: "MSAA",
         ssaa: "SSAA",
-        smaa: "SMAA",
     };
     const methodHint: Record<SseWebAntialiasingMethod, string> = {
         none: t("page.story.live2d.settings.antialiasingOffHint"),
         msaa: t("page.story.live2d.settings.msaaHint"),
         ssaa: t("page.story.live2d.settings.ssaaHint"),
-        smaa: t("page.story.live2d.settings.smaaHint"),
     };
     // the counts this device takes; 4 always
     const samples = SSE_WEB_MSAA_SAMPLES.filter(n => n === 4 || msaaSampleCounts.includes(n));

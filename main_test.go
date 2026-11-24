@@ -12,9 +12,13 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	"snowy_viewer/internal/config"
+	"snowy_viewer/internal/htmlcache"
 	"snowy_viewer/internal/masterdata"
 	"snowy_viewer/internal/middleware"
 )
@@ -229,6 +233,43 @@ func TestInternalHealthzBlockedFromPublic(t *testing.T) {
 	}
 }
 
+func TestFrontendAPIRoutesReachFrontendProxy(t *testing.T) {
+	mux := http.NewServeMux()
+	// Registered first on purpose: pattern specificity, not order, must win.
+	mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+		http.NotFound(w, r)
+	})
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"proxied":true}`))
+	}))
+	defer upstream.Close()
+	target, err := url.Parse(upstream.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	newRegisteredFrontendProxy(mux, target)
+
+	for _, tc := range []struct {
+		method string
+		path   string
+		want   int
+	}{
+		{http.MethodGet, "/api/sponsors", http.StatusOK},
+		{http.MethodGet, "/api/sponsors/", http.StatusOK},
+		{http.MethodPost, "/api/sponsors/kofi-webhook", http.StatusOK},
+		{http.MethodPost, "/api/sponsors/kofi-webhook/", http.StatusOK},
+		{http.MethodGet, "/api/sponsors-other", http.StatusNotFound},
+		{http.MethodGet, "/api/unknown", http.StatusNotFound},
+	} {
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, httptest.NewRequest(tc.method, tc.path, nil))
+		if rec.Code != tc.want {
+			t.Fatalf("%s %s status = %d, want %d", tc.method, tc.path, rec.Code, tc.want)
+		}
+	}
+}
+
 // newMoesekaiAPIFront serves the main server's routes for moesekai-api behind
 // the production middleware chain, proxying to upstreamURL.
 func newMoesekaiAPIFront(t *testing.T, upstreamURL string) *httptest.Server {
@@ -270,15 +311,17 @@ func TestMoesekaiAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
 				http.NotFound(w, r)
 			})
 
-			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/masterdata-diff/versions"} {
+			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/masterdata-diff/versions", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123", "/api/v1/me/accounts", "/api/v1/me/accounts/jp/123", "/api/v1/me/sekai/jp/suite/123", "/api/community", "/api/community/me", "/api/community/posts"} {
 				response := httptest.NewRecorder()
 				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")
 			}
-			other := httptest.NewRecorder()
-			mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, "/api/authors", nil))
-			if other.Code != http.StatusNotFound {
-				t.Fatalf("/api/authors status = %d, want 404", other.Code)
+			for _, unknownPath := range []string{"/api/authors", "/api/community-other"} {
+				other := httptest.NewRecorder()
+				mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, unknownPath, nil))
+				if other.Code != http.StatusNotFound {
+					t.Fatalf("%s status = %d, want 404", unknownPath, other.Code)
+				}
 			}
 		})
 	}
@@ -293,7 +336,9 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, _ := io.ReadAll(r.Body)
 		seen <- seenRequest{
-			method: r.Method, path: r.URL.Path, query: r.URL.RawQuery, body: string(body), cookie: r.Header.Get("Cookie"),
+			// Compared in canonical (sorted) form: with a go.mod older than Go 1.24, newer toolchains default
+			// GODEBUG urlmaxqueryparams=0, which makes ReverseProxy re-encode every query string.
+			method: r.Method, path: r.URL.Path, query: r.URL.Query().Encode(), body: string(body), cookie: r.Header.Get("Cookie"),
 			forwardedFor: r.Header.Get("X-Forwarded-For"), forwardedHost: r.Header.Get("X-Forwarded-Host"),
 			forwardedProto: r.Header.Get("X-Forwarded-Proto"), connectingIP: r.Header.Get("CF-Connecting-IP"),
 		}
@@ -328,7 +373,7 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 				"CF-Connecting-IP":  "203.0.113.7",
 			},
 			want: seenRequest{
-				method: http.MethodPost, path: "/api/guess-music/daily/sessions", query: "tier=hard&practice=1",
+				method: http.MethodPost, path: "/api/guess-music/daily/sessions", query: "practice=1&tier=hard",
 				body: `{"tier":"hard"}`, cookie: "__Host-ms_session=old; theme=dark",
 				forwardedFor: "203.0.113.7, 10.0.0.2, 127.0.0.1", forwardedHost: "pjsk.moe",
 				forwardedProto: "https", connectingIP: "203.0.113.7",
@@ -341,6 +386,25 @@ func TestMoesekaiAPIProxyForwardsRequestsAndResponses(t *testing.T) {
 			want: seenRequest{
 				method: http.MethodGet, path: "/api/auth/callback", query: "code=c&state=s",
 				forwardedFor: "127.0.0.1", forwardedHost: strings.TrimPrefix(front.URL, "http://"), forwardedProto: "http",
+			},
+		},
+		{
+			name:   "community api forwarded without html cache",
+			method: http.MethodPost,
+			target: "/api/community/posts?category=general",
+			body:   `{"title":"hello","body_md":"world"}`,
+			headers: map[string]string{
+				"Cookie":            "__Host-ms_session=active",
+				"X-Forwarded-For":   "198.51.100.12",
+				"X-Forwarded-Host":  "pjsk.moe",
+				"X-Forwarded-Proto": "https",
+				"CF-Connecting-IP":  "198.51.100.12",
+			},
+			want: seenRequest{
+				method: http.MethodPost, path: "/api/community/posts", query: "category=general",
+				body: `{"title":"hello","body_md":"world"}`, cookie: "__Host-ms_session=active",
+				forwardedFor: "198.51.100.12, 127.0.0.1", forwardedHost: "pjsk.moe",
+				forwardedProto: "https", connectingIP: "198.51.100.12",
 			},
 		},
 	}
@@ -467,5 +531,266 @@ func TestMoesekaiAPIProxyAddsNoCredentialedCORS(t *testing.T) {
 		if origin == "https://evil.example" && response.Header.Get("Access-Control-Allow-Origin") != "" {
 			t.Fatal("an unknown origin was allowed")
 		}
+	}
+}
+
+func TestConfigLoadsStorySearchAPIURL(t *testing.T) {
+	t.Setenv("STORY_SEARCH_API_URL", " http://sekai-story-search.apps.svc.cluster.local:8080 ")
+	cfg := config.Load()
+	if cfg.StorySearchAPIURL != "http://sekai-story-search.apps.svc.cluster.local:8080" {
+		t.Fatalf("StorySearchAPIURL = %q, want trimmed URL", cfg.StorySearchAPIURL)
+	}
+}
+
+func TestStorySearchAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
+	for _, rawURL := range []string{"", "sekai-story-search:8080", "http://user:secret@sekai-story-search:8080"} {
+		t.Run(rawURL, func(t *testing.T) {
+			mux := http.NewServeMux()
+			registerStorySearchAPIRoutes(mux, rawURL)
+			mux.HandleFunc("/api/", func(w http.ResponseWriter, r *http.Request) {
+				http.NotFound(w, r)
+			})
+
+			for _, path := range []string{"/api/story-search", "/api/story-search/status", "/api/story-search/search"} {
+				response := httptest.NewRecorder()
+				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")
+			}
+			other := httptest.NewRecorder()
+			mux.ServeHTTP(other, httptest.NewRequest(http.MethodGet, "/api/story-search-other", nil))
+			if other.Code != http.StatusNotFound {
+				t.Fatalf("/api/story-search-other status = %d, want 404", other.Code)
+			}
+		})
+	}
+}
+
+func TestStorySearchAPIProxyForwardsHeadersAndCookies(t *testing.T) {
+	type seenRequest struct {
+		method, path, body, cookie, turnstile      string
+		forwardedFor, forwardedProto, connectingIP string
+	}
+	seen := make(chan seenRequest, 1)
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		seen <- seenRequest{
+			method:         r.Method,
+			path:           r.URL.Path,
+			body:           string(body),
+			cookie:         r.Header.Get("Cookie"),
+			turnstile:      r.Header.Get("CF-Turnstile-Response"),
+			forwardedFor:   r.Header.Get("X-Forwarded-For"),
+			forwardedProto: r.Header.Get("X-Forwarded-Proto"),
+			connectingIP:   r.Header.Get("CF-Connecting-IP"),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Header().Add("Set-Cookie", "story_search_session=sig123; Path=/api/story-search; HttpOnly; Secure; SameSite=Lax")
+		_, _ = io.WriteString(w, `{"results":[]}`)
+	}))
+	defer upstream.Close()
+
+	mux := http.NewServeMux()
+	registerStorySearchAPIRoutes(mux, upstream.URL)
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		t.Errorf("%s reached the frontend and HTML cache", r.URL.Path)
+		http.NotFound(w, r)
+	})
+	front := httptest.NewServer(middleware.Chain(mux, middleware.CORS, middleware.Gzip))
+	defer front.Close()
+
+	req, err := http.NewRequest(http.MethodPost, front.URL+"/api/story-search/search", strings.NewReader(`{"query":"star","server":"cn"}`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Cookie", "story_search_session=old")
+	req.Header.Set("CF-Turnstile-Response", "tok_abc")
+	req.Header.Set("X-Forwarded-For", "203.0.113.9, 10.0.0.1")
+	req.Header.Set("X-Forwarded-Proto", "https")
+	req.Header.Set("CF-Connecting-IP", "203.0.113.9")
+
+	resp, err := front.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	got := <-seen
+	want := seenRequest{
+		method:         http.MethodPost,
+		path:           "/api/story-search/search",
+		body:           `{"query":"star","server":"cn"}`,
+		cookie:         "story_search_session=old",
+		turnstile:      "tok_abc",
+		forwardedFor:   "203.0.113.9, 10.0.0.1, 127.0.0.1",
+		forwardedProto: "https",
+		connectingIP:   "203.0.113.9",
+	}
+	if got != want {
+		t.Fatalf("upstream saw %+v, want %+v", got, want)
+	}
+	if resp.StatusCode != http.StatusOK {
+		t.Fatalf("status = %d, want 200", resp.StatusCode)
+	}
+	cookies := resp.Header.Values("Set-Cookie")
+	if len(cookies) != 1 || cookies[0] != "story_search_session=sig123; Path=/api/story-search; HttpOnly; Secure; SameSite=Lax" {
+		t.Fatalf("Set-Cookie = %q", cookies)
+	}
+}
+
+func TestReverseProxyTransportBounds(t *testing.T) {
+	target, err := url.Parse("http://127.0.0.1:3000")
+	if err != nil {
+		t.Fatal(err)
+	}
+	feProxy := newFrontendProxy(target)
+	feTransport := feProxy.Transport.(*http.Transport)
+	if feTransport.MaxConnsPerHost != 24 || feTransport.ResponseHeaderTimeout != 15*time.Second {
+		t.Fatalf("frontend transport bounds: MaxConnsPerHost=%d ResponseHeaderTimeout=%v", feTransport.MaxConnsPerHost, feTransport.ResponseHeaderTimeout)
+	}
+
+	apiProxy := newMoesekaiAPIProxy(target)
+	apiTransport := apiProxy.Transport.(*http.Transport)
+	if apiTransport.MaxConnsPerHost != 64 || apiTransport.ResponseHeaderTimeout != 20*time.Second {
+		t.Fatalf("api transport bounds: MaxConnsPerHost=%d ResponseHeaderTimeout=%v", apiTransport.MaxConnsPerHost, apiTransport.ResponseHeaderTimeout)
+	}
+	if serverWriteTimeout <= apiTransport.ResponseHeaderTimeout {
+		t.Fatalf("serverWriteTimeout (%v) must exceed API ResponseHeaderTimeout (%v)", serverWriteTimeout, apiTransport.ResponseHeaderTimeout)
+	}
+}
+
+func TestProxiedAPIRoutesRejectOversizedBodyWith413(t *testing.T) {
+	upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.ReadAll(r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer upstream.Close()
+
+	front := newMoesekaiAPIFront(t, upstream.URL)
+
+	// A 2.5 MiB community_story payload must pass the edge proxy body limit.
+	storyPayload := strings.NewReader(strings.Repeat("a", (2<<20)+(512<<10)))
+	okReq, err := http.NewRequest(http.MethodPost, front.URL+"/api/community/posts", storyPayload)
+	if err != nil {
+		t.Fatal(err)
+	}
+	okResp, err := front.Client().Do(okReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = okResp.Body.Close()
+	if okResp.StatusCode != http.StatusOK {
+		t.Fatalf("2.5 MiB community story POST status = %d, want 200", okResp.StatusCode)
+	}
+
+	oversized := strings.NewReader(strings.Repeat("x", int(proxyMaxBodyBytes)+1024))
+	req, err := http.NewRequest(http.MethodPost, front.URL+"/api/community/posts", oversized)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := front.Client().Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusRequestEntityTooLarge {
+		t.Fatalf("oversized proxied POST status = %d, want 413", resp.StatusCode)
+	}
+}
+
+func TestInternalCacheStatsRestrictedToDirectLoopback(t *testing.T) {
+	cacheHandler := htmlcache.New(http.NotFoundHandler(), htmlcache.Config{Dir: t.TempDir()})
+	mux := http.NewServeMux()
+	registerInternalCacheStatsRoute(mux, cacheHandler)
+
+	// External IP -> 404
+	extReq := httptest.NewRequest(http.MethodGet, "/internal-cache-stats", nil)
+	extReq.RemoteAddr = "203.0.113.10:5555"
+	extRec := httptest.NewRecorder()
+	mux.ServeHTTP(extRec, extReq)
+	if extRec.Code != http.StatusNotFound {
+		t.Fatalf("external /internal-cache-stats status = %d, want 404", extRec.Code)
+	}
+
+	// Loopback with X-Forwarded-For (reverse-proxied public traffic) -> 404
+	fwdReq := httptest.NewRequest(http.MethodGet, "/internal-cache-stats", nil)
+	fwdReq.RemoteAddr = "127.0.0.1:5555"
+	fwdReq.Header.Set("X-Forwarded-For", "203.0.113.10")
+	fwdRec := httptest.NewRecorder()
+	mux.ServeHTTP(fwdRec, fwdReq)
+	if fwdRec.Code != http.StatusNotFound {
+		t.Fatalf("forwarded /internal-cache-stats status = %d, want 404", fwdRec.Code)
+	}
+
+	// Direct loopback -> 200 with no-store
+	localReq := httptest.NewRequest(http.MethodGet, "/internal-cache-stats", nil)
+	localReq.RemoteAddr = "127.0.0.1:5555"
+	localRec := httptest.NewRecorder()
+	mux.ServeHTTP(localRec, localReq)
+	if localRec.Code != http.StatusOK || localRec.Header().Get("Cache-Control") != "no-store" {
+		t.Fatalf("loopback /internal-cache-stats = %d cc=%q, want 200 no-store", localRec.Code, localRec.Header().Get("Cache-Control"))
+	}
+}
+
+func TestFrontendHealthCheckCoalescesAndMemoizes(t *testing.T) {
+	var hits atomic.Int32
+	frontend := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		hits.Add(1)
+		time.Sleep(25 * time.Millisecond)
+		w.WriteHeader(http.StatusNoContent)
+	}))
+	defer frontend.Close()
+
+	check := newFrontendHealthCheck(frontend.URL)
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if err := check(context.Background()); err != nil {
+				t.Errorf("health check failed: %v", err)
+			}
+		}()
+	}
+	wg.Wait()
+
+	// Immediate follow-up call within TTL should hit memoized result.
+	if err := check(context.Background()); err != nil {
+		t.Fatalf("memoized health check failed: %v", err)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("upstream /internal-healthz/ hits = %d, want 1", hits.Load())
+	}
+}
+
+func TestBuildWarmupRoutesUsesMasterDataIDsAndConfigDefaults(t *testing.T) {
+	dir := t.TempDir()
+	_ = os.WriteFile(filepath.Join(dir, "events.json"), []byte(`[{"id":42,"name":"Ev42"}]`), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "eventCards.json"), []byte(`[{"id":1,"cardId":101,"eventId":42}]`), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "eventMusics.json"), []byte(`[{"eventId":42,"musicId":202,"seq":1}]`), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "virtualLives.json"), []byte(`[]`), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "gachas.json"), []byte(`[{"id":303,"name":"G303","startAt":1}]`), 0o600)
+
+	store := masterdata.NewStore(dir)
+	if err := store.Fetch(); err != nil {
+		t.Fatal(err)
+	}
+	routes := buildWarmupRoutes(store, nil, 100)
+	joined := strings.Join(routes, "\n")
+	for _, want := range []string{"/zh-cn/events/42/", "/zh-cn/cards/101/", "/zh-cn/music/202/", "/zh-cn/gacha/303/"} {
+		if !strings.Contains(joined, want) {
+			t.Fatalf("missing expected metadata warmup route %q", want)
+		}
+	}
+	if strings.Contains(joined, "/zh-cn/cards/999/") {
+		t.Fatal("warmup routes should not include hardcoded nonexistent card IDs")
+	}
+
+	// Verify tightened default cache budgets.
+	t.Setenv("HTML_CACHE_MAX_GB", "")
+	t.Setenv("HTML_CACHE_MAX_ENTRIES", "")
+	cfg := config.Load()
+	if cfg.HTMLCacheMaxGB != 4 || cfg.HTMLCacheEntries != 30_000 {
+		t.Fatalf("defaults: MaxGB=%d Entries=%d, want 4 and 30000", cfg.HTMLCacheMaxGB, cfg.HTMLCacheEntries)
 	}
 }

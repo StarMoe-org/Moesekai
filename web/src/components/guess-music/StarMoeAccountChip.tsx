@@ -1,32 +1,36 @@
 "use client";
 
 /**
- * StarMoe pass account chip for the /guess-music header: sign in, or the
- * signed-in user's avatar and name with sign-out and game-account linking.
+ * The /guess-music header's account control. Signed out (the sidebar may be folded away on a phone), it offers
+ * sign-in. Signed in, it is about the leaderboard: which game account the player's scores are shown with, picked
+ * from their Haruki-verified accounts. Signing out and managing accounts live in the sidebar and on /account.
  *
- * The account is moesekai-api's session (useMoesekaiAccount). When the
- * server has no passport client, or cannot be reached, signing in would lead
- * nowhere, so the chip says sign-in is unavailable instead.
+ * The account is moesekai-api's session (useMoesekaiAccount). When the server has no passport client, or cannot
+ * be reached, signing in would lead nowhere, so the chip says sign-in is unavailable instead.
+ *
+ * Until the legacy browser OAuth2 binding ends (LEGACY_OAUTH_END_DATE), accounts bound that way can still be
+ * linked with their token; drop that path with lib/legacy-oauth.
  */
 
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
-import { usePathname } from "next/navigation";
 
+import PassportAvatar from "@/components/account/PassportAvatar";
+import { gameAccountName } from "@/components/account/GameAccountList";
 import { ServerRegionIcon } from "@/components/common/ServerRegion";
 import { Button, Chip, Icon, Menu, Snackbar, type MenuItemDef } from "@/components/md3";
-import { mdAccountCircle, mdKeyboardArrowDown, mdLink, mdLinkOff, mdLogin, mdLogout, mdVerified } from "@/components/md3/icons";
+import { mdAccountCircle, mdKeyboardArrowDown, mdLink, mdLinkOff, mdLogin, mdManageAccounts, mdVerified } from "@/components/md3/icons";
 import { useI18n } from "@/contexts/I18nContext";
-import { ACCOUNTS_CHANGED_EVENT, getAccounts, isValidServer, updateAccount, type MoesekaiAccount } from "@/lib/account";
-import { stripRouteLocale } from "@/lib/localized-path";
-import { refreshOAuthToken } from "@/lib/oauth";
+import { useStarMoeAccountSync } from "@/hooks/useStarMoeAccountSync";
+import { isValidServer, updateAccount, type MoesekaiAccount } from "@/lib/account";
+import { useGameAccounts } from "@/lib/account/hooks";
+import { refreshOAuthToken } from "@/lib/legacy-oauth";
 import { DailyApiError, createDailyApi, type DailyGameAccount } from "@/lib/guess-music/daily-api";
-import { markSignedOut, signIn, signOut, useMoesekaiAccount, type MoesekaiUser } from "@/lib/moesekai-account";
+import { markSignedOut, signIn, useMoesekaiAccount } from "@/lib/moesekai-account";
+import { connectHref } from "@/lib/starmoe-accounts";
 
-type GameLink = DailyGameAccount;
-
-/** Accounts bound through Haruki OAuth2 in this browser, whose token can prove game ownership. */
-function getLinkableAccounts(): MoesekaiAccount[] {
-    return getAccounts().filter((account) => account.authSource === "oauth2" && Boolean(account.oauthToken?.accessToken) && account.authError !== "reauth_required");
+/** A legacy OAuth2 account whose token can still prove it is the player's. */
+function hasLegacyToken(account: MoesekaiAccount): boolean {
+    return account.authSource === "oauth2" && Boolean(account.oauthToken?.accessToken) && account.authError !== "reauth_required";
 }
 
 async function freshHarukiAccessToken(account: MoesekaiAccount): Promise<string> {
@@ -49,49 +53,24 @@ async function freshHarukiAccessToken(account: MoesekaiAccount): Promise<string>
     return refreshed.accessToken;
 }
 
-function accountDisplayName(account: MoesekaiAccount): string {
-    return account.userGamedata?.name || account.nickname || account.gameId;
-}
-
-function Avatar({ user }: { user: MoesekaiUser }) {
-    if (user.avatar) {
-        return <img src={user.avatar} alt="" className="h-full w-full object-cover" referrerPolicy="no-referrer" />;
-    }
-    return (
-        <span aria-hidden className="flex h-full w-full items-center justify-center bg-primary type-label-m text-on-primary">
-            {Array.from(user.name)[0]?.toUpperCase() ?? "?"}
-        </span>
-    );
-}
-
 function ServerTrailing({ server }: { server: string }) {
     return isValidServer(server) ? <ServerRegionIcon server={server} size={18} /> : <span className="type-label-s">{server.toUpperCase()}</span>;
 }
 
 export default function StarMoeAccountChip() {
     const { t } = useI18n();
-    const pathname = usePathname();
     const account = useMoesekaiAccount();
+    // Brings the verified accounts (and the Haruki connection state) the link menu offers.
+    const saved = useStarMoeAccountSync();
+    const { accounts } = useGameAccounts();
     // A 401 from the account calls means the session is gone: the chip turns back into "sign in".
     const api = useMemo(() => createDailyApi({ onUnauthorized: markSignedOut }), []);
-    const [me, setMe] = useState<{ userId: string; game: GameLink | null } | null>(null);
+    const [me, setMe] = useState<{ userId: string; game: DailyGameAccount | null } | null>(null);
     const [meVersion, reloadMe] = useReducer((value: number) => value + 1, 0);
-    const [accountsVersion, accountsChanged] = useReducer((value: number) => value + 1, 0);
     const [busy, setBusy] = useState(false);
-    const [signingOut, setSigningOut] = useState(false);
     const [toast, setToast] = useState<string | null>(null);
     const closeToast = useCallback(() => setToast(null), []);
     const userId = account.user?.id ?? null;
-    const signedIn = account.status === "signed-in";
-
-    useEffect(() => {
-        window.addEventListener(ACCOUNTS_CHANGED_EVENT, accountsChanged);
-        window.addEventListener("storage", accountsChanged);
-        return () => {
-            window.removeEventListener(ACCOUNTS_CHANGED_EVENT, accountsChanged);
-            window.removeEventListener("storage", accountsChanged);
-        };
-    }, []);
 
     useEffect(() => {
         if (!userId) return;
@@ -107,13 +86,19 @@ export default function StarMoeAccountChip() {
         return () => controller.abort();
     }, [api, userId, meVersion]);
 
-    const linkable = useMemo(
-        () => (signedIn && accountsVersion >= 0 ? getLinkableAccounts() : []),
-        [signedIn, accountsVersion],
+    // Verified accounts come from Haruki through StarMoe Connect; legacy-bound ones are offered until that ends.
+    const verified = useMemo(() => accounts.filter((a) => a.starmoeSource === "verified"), [accounts]);
+    const legacy = useMemo(
+        () => accounts.filter((a) => hasLegacyToken(a) && !verified.some((v) => v.server === a.server && v.gameId === a.gameId)),
+        [accounts, verified],
     );
 
     const linkErrorMessage = useCallback((error: unknown, fallbackKey: "common.starmoe.linkFailed" | "common.starmoe.unlinkFailed") => {
-        if (error instanceof DailyApiError && error.status === 401) return t("common.starmoe.sessionExpired");
+        if (error instanceof DailyApiError) {
+            if (error.status === 401) return t("common.starmoe.sessionExpired");
+            if (error.code === "not_verified") return t("page.account.link.notVerified");
+            if (error.code === "haruki_connect_required") return t("page.account.link.connectRequired");
+        }
         if (error instanceof Error && (error.message === "OAUTH_REAUTH_REQUIRED" || error.message.startsWith("TOKEN_REFRESH_FAILED_"))) {
             return t("common.starmoe.harukiReauth");
         }
@@ -124,8 +109,9 @@ export default function StarMoeAccountChip() {
         if (!userId) return;
         setBusy(true);
         try {
-            const harukiAccessToken = await freshHarukiAccessToken(gameAccount);
-            const result = await api.linkGame(harukiAccessToken);
+            const result = gameAccount.starmoeSource === "verified"
+                ? await api.linkVerifiedGame(gameAccount.server, gameAccount.gameId)
+                : await api.linkGame(await freshHarukiAccessToken(gameAccount));
             if (result?.game) {
                 setMe({ userId, game: result.game });
                 setToast(t("common.starmoe.linkSuccess", { name: result.game.name || result.game.userId }));
@@ -154,16 +140,6 @@ export default function StarMoeAccountChip() {
             setBusy(false);
         }
     }, [api, linkErrorMessage, t, userId]);
-
-    const handleSignOut = useCallback(() => {
-        setSigningOut(true);
-        // On success the page navigates away; a failure leaves the session (and the menu) as it was.
-        signOut().catch((error: unknown) => {
-            console.warn("[StarMoe] sign-out failed", error);
-            setToast(t("common.starmoe.signOutFailed"));
-            setSigningOut(false);
-        });
-    }, [t]);
 
     const snackbar = <Snackbar open={toast !== null} message={toast ?? ""} onClose={closeToast} />;
 
@@ -199,32 +175,34 @@ export default function StarMoeAccountChip() {
         items.push({
             key: "game",
             icon: mdVerified,
-            label: t("common.starmoe.linkedGame", { name: linked.game.name || linked.game.userId }),
+            label: t("page.account.link.linked", { name: linked.game.name || linked.game.userId }),
             trailing: <ServerTrailing server={linked.game.server} />,
         });
         items.push({ key: "unlink", icon: mdLinkOff, label: t("common.starmoe.unlinkGame"), disabled: busy, onSelect: () => void unlinkGame() });
     } else if (linked) {
-        if (linkable.length > 0) {
-            for (const gameAccount of linkable) {
-                items.push({
-                    key: `link-${gameAccount.id}`,
-                    icon: mdLink,
-                    label: t("common.starmoe.linkGame", { name: accountDisplayName(gameAccount) }),
-                    trailing: <ServerTrailing server={gameAccount.server} />,
-                    disabled: busy,
-                    onSelect: () => void linkGame(gameAccount),
-                });
-            }
-        } else {
+        for (const gameAccount of [...verified, ...legacy]) {
             items.push({
-                key: "authorize",
+                key: `link-${gameAccount.id}`,
                 icon: mdLink,
-                label: t("common.starmoe.authorizeGame"),
-                href: `/oauth2/connect/?returnTo=${encodeURIComponent(stripRouteLocale(pathname || "/"))}`,
+                label: t("common.starmoe.linkGame", { name: gameAccountName(gameAccount) }),
+                trailing: <ServerTrailing server={gameAccount.server} />,
+                disabled: busy,
+                onSelect: () => void linkGame(gameAccount),
             });
         }
+        if (verified.length === 0 && saved.haruki !== "active") {
+            items.push({
+                key: "connect",
+                icon: mdLink,
+                label: saved.haruki === "needs_reconnect" ? t("page.account.link.reconnectToLink") : t("page.account.link.connectToLink"),
+                dividerBefore: items.length > 0,
+                onSelect: () => window.location.assign(connectHref()),
+            });
+        } else if (verified.length === 0 && legacy.length === 0) {
+            items.push({ key: "none", icon: mdLink, label: t("page.account.link.noVerified"), disabled: true });
+        }
     }
-    items.push({ key: "logout", icon: mdLogout, label: t("common.starmoe.signOut"), dividerBefore: items.length > 0, disabled: signingOut, onSelect: handleSignOut });
+    items.push({ key: "manage", icon: mdManageAccounts, label: t("page.account.title"), href: "/account", dividerBefore: items.length > 0 });
 
     return (
         <>
@@ -235,7 +213,7 @@ export default function StarMoeAccountChip() {
                     <Chip
                         {...anchorProps}
                         variant="assist"
-                        avatar={<Avatar user={signedInUser} />}
+                        avatar={<PassportAvatar user={signedInUser} />}
                         trailingIcon={mdKeyboardArrowDown}
                         aria-label={t("common.starmoe.accountMenu", { name: signedInUser.name })}
                         title={signedInUser.name}

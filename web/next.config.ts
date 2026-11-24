@@ -6,6 +6,12 @@ import { live2dCheckConfig } from "./src/lib/live2dViewer/config";
 import { molyResourceBase } from "./src/lib/moly/resourceBase";
 import { SSE_WEB_FONT_FILES, SSE_WEB_FONT_PATH, sseWebCheckSources, sseWebCoreUrl } from "./src/lib/sseWeb/config";
 import { costume3dCheckConfig } from "./src/lib/costume3d/config";
+import { sekaiGachaCheckConfig } from "./src/lib/sekaiGacha/config";
+import { resolveBuildVersion } from "./src/lib/build-version";
+
+// MoeSekai app version (git-tag derived; see docs/VERSIONING.md). Computed once
+// here and inlined into the client bundle as NEXT_PUBLIC_* so Settings can show it.
+const buildVersion = resolveBuildVersion();
 
 const internalApiBase = (process.env.INTERNAL_API_BASE_URL || "http://127.0.0.1:8080").replace(/\/+$/, "");
 
@@ -37,12 +43,17 @@ try {
   sseWebCoreUrl();
   sseWebCheckSources();
 } catch (error) {
-  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /; NEXT_PUBLIC_SSE_WEB_INAPPS is region=unpack pairs`);
+  throw new Error(`${error instanceof Error ? error.message : error}: expected a canonical https URL (http on localhost), directories ending in /`);
 }
 try {
   costume3dCheckConfig();
 } catch (error) {
   throw new Error(`${error instanceof Error ? error.message : error}: NEXT_PUBLIC_COSTUME3D_BASE is a canonical https URL (http on localhost) ending in /; NEXT_PUBLIC_COSTUME3D_REGIONS is servers separated by commas`);
+}
+try {
+  sekaiGachaCheckConfig();
+} catch (error) {
+  throw new Error(`${error instanceof Error ? error.message : error}: NEXT_PUBLIC_SEKAI_GACHA_URL is the canonical https URL (http on localhost) of a SekaiGacha build's index.html`);
 }
 try {
   live2dCheckConfig();
@@ -79,13 +90,43 @@ function getAllowedDevOrigins(): string[] {
 const nextConfig: NextConfig = {
   env: {
     NEXT_PUBLIC_SSE_WEB_BUNDLED_FONTS: storyFontsBundled ? "1" : "",
+    NEXT_PUBLIC_MOESEKAI_VERSION: buildVersion.version,
+    NEXT_PUBLIC_MOESEKAI_RELEASE_TAG: buildVersion.tag ?? "",
+    NEXT_PUBLIC_MOESEKAI_COMMIT: buildVersion.commit,
+    NEXT_PUBLIC_MOESEKAI_BUILD_DATE: buildVersion.buildDate,
+    NEXT_PUBLIC_MOESEKAI_IS_RELEASE: buildVersion.isRelease ? "1" : "",
   },
   // Keep QA builds separate from a running standalone server on Windows.
   distDir: process.env.MOE_NEXT_DIST_DIR || ".next",
   output: "standalone",
+  // Shared Story Studio packages published from StarMoe-org/moesekai-story-studio
+  // on public npmjs.org (see web/docs/story-maker-packages.md).
+  transpilePackages: ["@moesekai/story-core", "@moesekai/story-editor"],
   cacheMaxMemorySize: 50 * 1024 * 1024,
   trailingSlash: true,
   allowedDevOrigins: getAllowedDevOrigins(),
+  async headers() {
+    return [
+      {
+        source: "/live2d-viewer/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+      {
+        source: "/sse-web/:path*",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=31536000, immutable",
+          },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       {

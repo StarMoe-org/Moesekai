@@ -3,7 +3,9 @@ import Image from "next/image";
 import BaseFilters, { FilterSection, getFilterChipStateClasses, getFilterIconStateClasses } from "@/components/common/BaseFilters";
 import CharacterFilter from "@/components/common/CharacterFilter";
 import { EventType, EVENT_TYPE_COLORS } from "@/types/events";
-import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, CardAttribute, ATTR_NAMES, ATTR_ICON_PATHS, ATTR_COLORS } from "@/types/types";
+import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, CardAttribute, ATTR_NAMES, ATTR_COLORS } from "@/types/types";
+import { getAttrIconUrl } from "@/lib/assets";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { cn } from "@/components/md3";
 
@@ -98,6 +100,7 @@ export default function EventFilters({
     filteredEvents,
 }: EventFiltersProps) {
     const { t } = useI18n();
+    const { assetSource } = useTheme();
     const SORT_OPTIONS = SORT_OPTIONS_BASE.map(opt => ({
         id: opt.id,
         label: t(opt.labelKey),
@@ -228,7 +231,7 @@ export default function EventFilters({
                             >
                                 <div className="w-7 h-7 relative">
                                     <Image
-                                        src={`/data/icon/${ATTR_ICON_PATHS[attr]}`}
+                                        src={getAttrIconUrl(attr, assetSource)}
                                         alt={ATTR_NAMES[attr]}
                                         fill
                                         className="object-contain"

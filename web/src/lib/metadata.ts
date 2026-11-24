@@ -85,14 +85,6 @@ export interface ExchangeMeta {
     type: string;
 }
 
-export interface GuideMeta {
-    title: string;
-    category: string;
-    tags: string[];
-    date: string;
-    authorGroup: string;
-}
-
 export interface StoryEventGroupMeta {
     name: string;
     asset: string;
@@ -158,7 +150,6 @@ interface MetadataMap {
     mysekaiFixtures: Record<string, FixtureMeta>;
     mangas: Record<string, MangaMeta>;
     exchanges: Record<string, ExchangeMeta>;
-    guides?: Record<string, GuideMeta>;
     storyEventGroups?: Record<string, StoryEventGroupMeta>;
     storyEventEpisodes?: Record<string, StoryEventEpisodeMeta>;
     storyUnitGroups?: Record<string, StoryUnitGroupMeta>;
@@ -273,10 +264,6 @@ export function getMangaMeta(id: number, region?: MetadataRegion): MangaMeta | n
 
 export function getExchangeMeta(id: number, region?: MetadataRegion): ExchangeMeta | null {
     return getRegionalWithFallback(m => m.exchanges, id, region);
-}
-
-export function getGuideMeta(id: string, region?: MetadataRegion): GuideMeta | null {
-    return getMap(region)?.guides?.[id] ?? null;
 }
 
 export function getStoryEventGroupMeta(id: string | number, region?: MetadataRegion): StoryEventGroupMeta | null {

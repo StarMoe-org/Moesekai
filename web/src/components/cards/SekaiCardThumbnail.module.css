@@ -1,0 +1,38 @@
+.interactive {
+    contain: layout paint;
+}
+
+.altLayer {
+    opacity: 0;
+    transition: opacity var(--md-sys-motion-duration-short4, 200ms) var(--ease-md3-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+.baseStarLayer {
+    opacity: 1;
+    transition: opacity var(--md-sys-motion-duration-short4, 200ms) var(--ease-md3-standard, cubic-bezier(0.2, 0, 0, 1));
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .interactive:hover .altLayer {
+        opacity: 1;
+    }
+
+    .interactive:hover .baseStarLayer {
+        opacity: 0;
+    }
+}
+
+.interactive[data-touch-flipped="true"] .altLayer {
+    opacity: 1;
+}
+
+.interactive[data-touch-flipped="true"] .baseStarLayer {
+    opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .altLayer,
+    .baseStarLayer {
+        transition: none;
+    }
+}

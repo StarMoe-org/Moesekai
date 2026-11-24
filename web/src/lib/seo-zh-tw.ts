@@ -144,6 +144,11 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "使用 MikuMikuWorld 風格的 3D 譜面預覽器檢視歌曲譜面，或載入自訂 SUS／BGM 網址。",
         ["譜面預覽", "3D 譜面", "SUS", "MikuMikuWorld"],
     ),
+    story_search: page(
+        "劇情檢索器",
+        "在瀏覽器本機極速檢索 Project SEKAI 劇情台詞與正規表示式，並支援 Qwen3 2560 維向量 AI 語義搜尋活動、主線、卡牌與區域對話。",
+        ["劇情檢索器", "台詞搜尋", "正規搜尋", "語義搜尋"],
+    ),
     chart_image: page(
         "譜面圖片預覽",
         "在瀏覽器中將 Project SEKAI 譜面渲染為可縮放的整曲譜面圖，並支援匯出 PNG。",
@@ -269,10 +274,25 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "瀏覽 Project SEKAI 特殊劇情、週年劇情與限定故事。",
         ["特殊劇情", "Special Story", "週年劇情"],
     ),
-    guides: page(
-        "社群攻略",
-        "瀏覽 PROJECT SEKAI 社群攻略、教學與實用指南。",
-        ["攻略", "社群攻略", "Guide"],
+    community: page(
+        "社群廣場",
+        "在 Moesekai 社群廣場與 Project SEKAI（世界計畫 / PJSK）玩家分享抽卡紀錄、卡面心得、劇情討論、新手發問與衝榜協力。",
+        ["社群廣場", "PJSK 社群", "世界計畫討論", "卡牌評論"],
+    ),
+    community_new: page(
+        "發布新貼文",
+        "在 Moesekai 社群廣場發布新的 Project SEKAI 討論貼文。",
+        ["發布貼文", "社群廣場"],
+    ),
+    community_mod: page(
+        "社群審核台",
+        "Moesekai 社群審核佇列、檢舉處理、申訴與緊急模式控制台。",
+        ["社群審核", "管理後台"],
+    ),
+    community_user: page(
+        "社群主頁",
+        "檢視 Moesekai 社群成員的貼文紀錄與認證徽章。",
+        ["社群主頁", "玩家資料"],
     ),
     patreon: page(
         "支持我們",
@@ -338,11 +358,6 @@ export const ZH_TW_SEO_PAGE_METADATA = {
         "空白素材頁",
         "Moesekai 空白素材展示頁。",
         ["空白頁", "素材頁"],
-    ),
-    guides_detail: page(
-        "攻略詳情",
-        "閱讀 PROJECT SEKAI 社群攻略的詳細內容。",
-        ["攻略詳情", "社群攻略"],
     ),
     oauth2_connect: page(
         "OAuth2 綁定",
@@ -476,6 +491,7 @@ export const ZH_TW_DETAIL_FALLBACK_TITLES = {
     music: "歌曲詳情",
     lyrics: "歌詞詳情",
     mysekai: "家具詳情",
+    communityPost: "社群貼文",
 } as const;
 
 export const ZH_TW_DETAIL_FALLBACK_DESCRIPTIONS = {
@@ -490,6 +506,7 @@ export const ZH_TW_DETAIL_FALLBACK_DESCRIPTIONS = {
     music: "檢視 Project SEKAI（世界計畫 / PJSK）歌曲詳情、譜面、作詞作曲與封面資源",
     lyrics: "檢視 Project SEKAI（世界計畫 / PJSK）歌曲歌詞、日文原文與已發布翻譯",
     mysekai: "檢視 Project SEKAI（世界計畫 / PJSK）MySekai 家具詳情、素材與風味文字",
+    communityPost: "檢視 Moesekai Project SEKAI（世界計畫 / PJSK）社群廣場討論貼文與玩家回覆",
 } as const;
 
 export const ZH_TW_DETAIL_SEO_TEMPLATES = {
@@ -505,4 +522,5 @@ export const ZH_TW_DETAIL_SEO_TEMPLATES = {
     music: "查看 Project SEKAI（世界計畫 / PJSK）歌曲「{title}」的難度與譜面資料、演唱版本和封面；作詞：{lyricist}，作曲：{composer}。",
     lyrics: "閱讀 Project SEKAI（世界計畫 / PJSK）歌曲「{title}」的日文歌詞，並對照已發布的簡體中文與英文翻譯。",
     mysekai: "查看 Project SEKAI（世界計畫 / PJSK）MySekai 家具「{name}」的外觀、製作素材與物品說明。{flavorSuffix}",
+    communityPost: "閱讀由 {author} 發布在 Moesekai Project SEKAI 社群廣場的貼文「{title}」，參與留言與官方貼圖互動。",
 } as const;

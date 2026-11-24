@@ -36,7 +36,8 @@ const require = createRequire(import.meta.url);
 const webRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const { window } = new JSDOM("<!doctype html><html><body><div id='root'></div></body></html>", { url: "https://pjsk.moe/" });
 for (const key of ["window", "document", "navigator", "HTMLElement", "Node", "Event", "MouseEvent", "KeyboardEvent", "getComputedStyle"]) {
-    Object.defineProperty(globalThis, key, { configurable: true, value: key === "window" ? window : window[key] });
+    // Writable: the tests imported from ui-regressions swap in their own window and document, then restore these.
+    Object.defineProperty(globalThis, key, { configurable: true, writable: true, value: key === "window" ? window : window[key] });
 }
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const frames = new Map();
@@ -297,9 +298,10 @@ test("settings: narrow viewport uses BottomSheet and Escape closes through overl
     assert.equal(closed, 1);
 });
 
-test("settings: four tabs, plain language labels and stable server codes remain available", async () => {
+test("settings: five tabs, plain language labels and stable server codes remain available", async () => {
     await render(h(SettingsPanel, { isOpen: true, onClose: noop }));
-    assert.equal(document.querySelectorAll('[role="tab"]').length, 4);
+    // Visual, content, data, experimental, about.
+    assert.equal(document.querySelectorAll('[role="tab"]').length, 5);
     const radios = [...document.querySelectorAll('input[type="radio"]')];
     assert.equal(radios.length, 2);
     assert.match(document.querySelector('[role="radiogroup"][aria-label="settings.uiLanguage.label"]').textContent, /English/);

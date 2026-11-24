@@ -5,15 +5,23 @@ import MainLayout from "@/components/MainLayout";
 import { Button, LoadingState, PageContainer, PageHeader, Select } from "@/components/md3";
 import { Live2DInspector } from "@/components/live2d/Live2DInspector";
 import { Live2DModelStage } from "@/components/live2d/Live2DModelStage";
-import { live2dCostumeLabel, live2dOwnerName } from "@/components/live2d/labels";
+import { live2dCostumeLabel, live2dOwnerName, live2dSecondaryOwnerName } from "@/components/live2d/labels";
 import { useLive2DViewer } from "@/components/live2d/useLive2DViewer";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { SERVER_LABEL_KEYS } from "@/lib/account-servers";
 import { getBackgroundImageUrl, getCharacterIconUrl } from "@/lib/assets";
-import { fetchLive2DModels } from "@/lib/live2dViewer/client";
-import { LIVE2D_REGIONS, isLive2DRegion, live2dSources, type Live2DRegion } from "@/lib/live2dViewer/config";
-import { live2dViewerHref, parseLive2DCharacterParam, parseLive2DModelParam, type Live2DModel } from "@/lib/live2dViewer/models";
+import {
+    LIVE2D_REGIONS,
+    fetchLive2DModels,
+    isLive2DRegion,
+    live2dSources,
+    live2dViewerHref,
+    parseLive2DCharacterParam,
+    parseLive2DModelParam,
+    type Live2DModel,
+    type Live2DRegion,
+} from "@moesekai/story-core";
 import type { AssetSourceType } from "@/contexts/ThemeContext";
 
 const subscribeNever = () => () => {};
@@ -44,14 +52,14 @@ function useModelList(region: Live2DRegion | null) {
 }
 
 /**
- * The Live2D model viewer: a server's models (those its story library holds), one shown on the
+ * The Live2D model viewer: a server's models (from the canonical asset site), one shown on the
  * stage with the game's own motions, facials, blinking, breath and physics, and a panel beside it
  * to choose the model, its motion and facial, and the scene. The address names the server and the
  * model (`?server=jp&model=v2_01ichika_casual`), so a link opens the same one; without one the
  * first model is shown.
  */
 function Live2DViewerContent() {
-    const { t } = useI18n();
+    const { t, locale } = useI18n();
     const params = useSearchParams();
     const { serverSource, assetSource, hasHydratedThemeSettings } = useTheme();
     const hydrated = useSyncExternalStore(subscribeNever, () => true, () => false);
@@ -87,11 +95,12 @@ function Live2DViewerContent() {
     }, [region, shownId, linkedCharacter, listLoading]);
 
     // The viewer.
-    const library = region ? live2dSources(region).library : "";
-    const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ library, model: current });
+    // one object per server/line: the viewer is made again when it changes
+    const line = assetSource.startsWith("backup") ? "backup" : "main";
+    const sources = useMemo(() => live2dSources(region ?? "jp", line), [region, line]);
+    const { hostRef, phase, state, view, setView, act, clipError, retry } = useLive2DViewer({ sources, model: current });
     const [loop, setLoop] = useState(false);
     const [background, setBackground] = useState<string | null>(null);
-    const line = assetSource.startsWith("overseas") ? "overseas" : "main";
     const backgroundUrl = background && region ? getBackgroundImageUrl(background, `${line}-${region}` as AssetSourceType) : null;
     const ready = phase.kind === "ready" ? state : null;
 
@@ -117,18 +126,30 @@ function Live2DViewerContent() {
         </div>
     );
 
+    const captionOwnerName = current ? live2dOwnerName(t, current, locale) : "";
+    const captionSecondaryName = current ? live2dSecondaryOwnerName(current, locale) : null;
     const caption = current && (
         <div className="glass flex min-w-0 items-center gap-2.5 rounded-full py-1 pl-1 pr-4">
             {current.kind === "character" && current.characterId !== null ? (
                 <img src={getCharacterIconUrl(current.characterId)} alt="" className="size-9 shrink-0 rounded-full bg-surface-container-highest object-cover" />
             ) : (
-                <span aria-hidden className="size-2 shrink-0" />
+                <span
+                    aria-hidden
+                    className="flex size-9 shrink-0 items-center justify-center rounded-full bg-secondary-container type-title-s text-on-secondary-container"
+                >
+                    {Array.from(captionOwnerName.trim())[0] ?? "?"}
+                </span>
             )}
             <div className="min-w-0">
-                <p className="truncate type-title-s text-on-surface">{live2dOwnerName(t, current)}</p>
+                <p className="flex min-w-0 items-baseline gap-1.5">
+                    <span className="truncate type-title-s text-on-surface">{captionOwnerName}</span>
+                    {captionSecondaryName && (
+                        <span className="truncate type-label-m text-on-surface-variant">{captionSecondaryName}</span>
+                    )}
+                </p>
                 <p className="truncate type-label-m text-on-surface-variant">
                     {live2dCostumeLabel(t, current)}
-                    {current.generation === 2 && " · v2"}
+                    {current.generation === 2 && " \u00b7 v2"}
                 </p>
             </div>
         </div>

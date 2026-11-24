@@ -40,6 +40,9 @@ export type MoesekaiAccountState =
     | { status: "unavailable"; user: null }
     | { status: "signed-in"; user: MoesekaiUser };
 
+/** The Passport's own account center: password, email and two-step verification are changed there, not on Moesekai. */
+export const PASSPORT_ACCOUNT_CENTER_URL = "https://passport.star.moe/account";
+
 const ME_PATH = "/api/auth/me";
 const LOGIN_PATH = "/api/auth/login";
 const LOGOUT_PATH = "/api/auth/logout";

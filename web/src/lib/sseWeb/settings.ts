@@ -19,8 +19,8 @@ export const SSE_WEB_RESOLUTIONS = ["auto", "540", "720", "1080", "1440", "2160"
 
 export type SseWebResolution = (typeof SSE_WEB_RESOLUTIONS)[number];
 
-/** The anti-aliasing methods, one at a time. */
-export const SSE_WEB_ANTIALIASING_METHODS = ["none", "msaa", "ssaa", "smaa"] as const;
+/** The anti-aliasing methods, one at a time. sse-web 1.0.7 dropped SMAA: a stored "smaa" loads as "none". */
+export const SSE_WEB_ANTIALIASING_METHODS = ["none", "msaa", "ssaa"] as const;
 
 export type SseWebAntialiasingMethod = (typeof SSE_WEB_ANTIALIASING_METHODS)[number];
 

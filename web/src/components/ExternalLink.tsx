@@ -15,6 +15,8 @@ interface ExternalLinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement
 const SAFE_DOMAINS = [
     'exmeaning.com',
     'pjsk.moe',
+    // StarMoe's own services: the account (passport.star.moe) and StarMoe Connect (connect.star.moe).
+    'star.moe',
 ];
 
 const SAFE_URL_PREFIXES = Array.from(

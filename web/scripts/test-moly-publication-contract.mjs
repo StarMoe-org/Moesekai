@@ -15,6 +15,11 @@ async function moduleURL(file, imports = {}) {
         const replacement = await moduleURL(dependency);
         source = source.replaceAll(`${quote}${specifier}${quote}`, `${quote}${replacement}${quote}`);
     }
+    const packageImports = [...source.matchAll(/\bfrom\s+(["'])([^."'/:][^"']*)\1/g)];
+    for (const [, quote, specifier] of packageImports) {
+        const resolved = import.meta.resolve(specifier);
+        source = source.replaceAll(`${quote}${specifier}${quote}`, `${quote}${resolved}${quote}`);
+    }
     return `data:text/javascript;base64,${Buffer.from(source).toString("base64")}`;
 }
 const resourceBase = await moduleURL("../src/lib/moly/resourceBase.ts");

@@ -48,7 +48,9 @@ export const zhTWLayout = {
             areaTalk: "區域對話",
             selfIntro: "自我介紹",
             specialStory: "特殊劇情",
-            guides: "攻略",
+            community: "社群廣場",
+            communityStories: "社群劇情",
+            gachaSimulator: "轉蛋模擬器",
             deckRecommend: "組隊推薦",
             deckComparator: "隊伍比較",
             scoreControl: "控分計算",
@@ -59,6 +61,8 @@ export const zhTWLayout = {
             guessMusic: "猜歌曲",
             chartPreview: "譜面預覽器",
             storyPlayer: "劇情瀏覽器",
+            storyMaker: "劇情製作器 BETA",
+            storySearch: "劇情檢索器",
             costume3d: "3D 服裝",
             live2dViewer: "Live2D 預覽",
             mysekaiPreviewScene: "烤森預覽器",
@@ -92,6 +96,7 @@ export const zhTWLayout = {
         explore: "探索",
         sisterSites: "姊妹站與社群",
         bilibiliAccount: "Bilibili",
+        qqCommunity: "QQ群",
         discordCommunity: "discord群",
         contact: "聯絡與意見回饋",
         brandDescription: "PROJECT SEKAI 的新一代資料檢視器。",
@@ -124,7 +129,9 @@ export const zhTWLayout = {
         storySelf: "閱讀角色自我介紹",
         storySpecial: "閱讀特殊場合劇情",
         prediction: "查看活動排名預測",
-        guides: "查看社群攻略",
+        community: "交流日常、分享轉蛋與卡牌點評",
+        communityStories: "瀏覽並線上遊玩玩家創作的 PJSK 劇情",
+        gachaSimulator: "自訂機率、UP 與卡池進行模擬抽卡",
         deckRecommend: "依照條件推薦最佳隊伍",
         deckComparator: "比較不同隊伍的綜合力",
         scoreControl: "計算控分所需的分數",
@@ -135,6 +142,8 @@ export const zhTWLayout = {
         guessMusic: "聽片段猜出歌曲",
         chartPreview: "預覽譜面檔案",
         storyPlayer: "播放 Live2D 劇情演出並對照劇本",
+        storyMaker: "使用 Live2D 模型與遊戲素材創作並播放原創劇情",
+        storySearch: "本機關鍵字/正規與 AI 語義檢索全服劇情台詞",
         costume3d: "按角色查看服裝的 3D 模型與動作",
         live2dViewer: "查看劇情裡的 Live2D 模型、動作和表情",
         mysekaiPreview: "瀏覽烤森百景活動 TOP 投稿排行",
@@ -203,6 +212,13 @@ export const zhTWSettings = {
     about: {
         projectDescription: "PROJECT SEKAI 檢視器與資料庫",
         viewDetails: "關於本專案",
+        versionLabel: "本站版本",
+        commitLabel: "建置提交",
+        buildDateLabel: "建置日期",
+        viewReleaseHighlights: "v2.1 更新亮點",
+        viewRelease: "發布頁",
+        viewChangelog: "更新日誌",
+        viewSupport: "支持我們",
     },
     appearance: {
         sectionTitle: "外觀模式",
@@ -253,7 +269,7 @@ export const zhTWSettings = {
         storyLive2d: {
             sectionTitle: "Live2D 劇情預覽",
             antialiasingLabel: "反鋸齒設定",
-            antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒（MSAA、SSAA、SMAA，同時只用一種），讓角色邊緣更平滑。畫面會與遊戲不同，倍率越高越佔顯示卡與記憶體。",
+            antialiasingDescription: "在 Live2D 劇情預覽的播放設定中提供反鋸齒（MSAA、SSAA，同時只用一種），讓角色邊緣更平滑。畫面會與遊戲不同，倍率越高越佔顯示卡與記憶體。",
             highFpsLabel: "高影格率",
             highFpsDescription: "在高於 60 Hz 的螢幕上，Live2D 劇情預覽依螢幕的更新率繪製：兩格之間的動作、淡入淡出與 Live2D 參數依時間插值，更流暢；文字、特效粒子與轉場仍以 60 格變化。下次載入劇情時生效，繪製次數隨更新率增加。",
         },
@@ -273,6 +289,10 @@ export const zhTWSettings = {
         label: "使用中文翻譯（Moe 中文化）",
         description: "啟用後將顯示日文內容的中文翻譯",
     },
+    autoLoadMore: {
+        label: "觸底自動載入更多",
+        description: "啟用後，清單捲動到底部時會自動展開更多內容",
+    },
     ads: {
         title: "廣告",
         label: "顯示廣告",
@@ -280,8 +300,8 @@ export const zhTWSettings = {
     },
     assetSource: {
         sectionTitle: "Assets 線路",
-        main: "主要線路",
-        overseas: "海外線路",
+        main: "主線",
+        backup: "備用線路",
     },
     serverSource: {
         sectionTitle: "資料伺服器",
@@ -307,12 +327,7 @@ export const zhTWSettings = {
         refreshing: "重新整理中...",
     },
     footer: {
-        version: "Moesekai · 1.8-preview-beta1",
-    },
-    sidebar: {
-        notLoggedIn: "尚未登入",
-        manageAccount: "點選以管理帳號",
-        bindAccount: "點選以綁定帳號",
+        version: "Moesekai · {version}",
     },
 } as const satisfies MessageTree;
 

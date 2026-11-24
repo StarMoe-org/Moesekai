@@ -60,7 +60,8 @@ const allNavigationGroups: NavGroupData[] = [
     {
         href: "/breadcrumb-community",
         items: [
-            { href: "/guides" },
+            { href: "/community" },
+            { href: "/community/stories" },
         ],
     },
     {
@@ -78,12 +79,15 @@ const allNavigationGroups: NavGroupData[] = [
             { href: "/asset-viewer" },
             { href: "/asset-versions" },
             { href: "/masterdata-diff" },
+            { href: "/gacha-simulator" },
             { href: "/deck-recommend" },
             { href: "/deck-comparator" },
             { href: "/score-control" },
             { href: "/sticker-maker" },
             { href: "/chart-preview" },
             { href: "/story-player" },
+            { href: "/story-maker" },
+            { href: "/story-search" },
             { href: "/costume-3d" },
             { href: "/live2d" },
             { href: "/mysekai-preview/scene" },
@@ -93,6 +97,7 @@ const allNavigationGroups: NavGroupData[] = [
         href: "/breadcrumb-personal",
         items: [
             { href: "/profile" },
+            { href: "/account" },
             { href: "/my-cards" },
             { href: "/my-musics" },
             { href: "/my-materials" },
@@ -124,6 +129,13 @@ export function findNavMatch(pathname: string): { group: NavGroupData; item: Nav
             if (normalized === item.href || normalized.startsWith(item.href + "/")) {
                 // Prevent /music/meta from matching /music first.
                 if (item.href === "/music" && normalized.startsWith("/music/meta")) {
+                    continue;
+                }
+                // Prevent /community/stories from matching /community.
+                if (
+                    item.href === "/community"
+                    && (normalized === "/community/stories" || normalized.startsWith("/community/stories/"))
+                ) {
                     continue;
                 }
                 if (!bestMatch || item.href.length > bestMatch.item.href.length) {
@@ -163,7 +175,7 @@ export function findGroupMatch(pathname: string): NavGroupData | null {
     return null;
 }
 
-export type SearchableNavGroup = "navigation" | "database" | "activity" | "story" | "games" | "tools" | "personal";
+export type SearchableNavGroup = "navigation" | "database" | "activity" | "story" | "community" | "games" | "tools" | "personal";
 
 export interface SearchableNavItem {
     href: string;
@@ -201,6 +213,11 @@ const allSearchableNavItems: SearchableNavItem[] = [
 
     { href: "/mysekai/interactions", group: "story", keywords: ["mysekai story", "mysekai stories", "conversation", "interaction", "furniture story", "character activity", "scene", "moly", "weather"] },
 
+    // "\u793e\u533a" / "\u5e7f\u573a" / "\u8ba8\u8bba": community, square, discussion (escaped to keep UI source free of Han text).
+    { href: "/community", group: "community", keywords: ["community", "forum", "square", "posts", "discussion", "comments", "\u793e\u533a", "\u5e7f\u573a", "\u8ba8\u8bba"] },
+    // "\u793e\u533a\u5267\u60c5" / "\u793e\u7fa4\u5287\u60c5" / "\u5267\u60c5": community stories (escaped to keep UI source free of Han text).
+    { href: "/community/stories", group: "community", keywords: ["community stories", "community story", "playable story", "fan story", "custom story", "story", "\u793e\u533a\u5267\u60c5", "\u793e\u7fa4\u5287\u60c5", "\u5267\u60c5"] },
+
     { href: "/goods-gacha", group: "games", keywords: ["goods gacha", "goods", "blind box"] },
     { href: "/guess-who", group: "games", keywords: ["guess who", "quiz", "game"] },
     { href: "/guess-jacket", group: "games", keywords: ["guess jacket", "guess music", "music quiz"] },
@@ -210,18 +227,22 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
     { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
     { href: "/masterdata-diff", group: "tools", keywords: ["masterdata", "masterdata diff", "diff", "ai summary", "changelog", "update"] },
+    { href: "/gacha-simulator", group: "tools", keywords: ["gacha simulator", "gacha", "pull", "simulator", "diy gacha", "\u62bd\u5361", "\u626d\u86cb\u6a21\u62df"] },
     { href: "/deck-recommend", group: "tools", keywords: ["deck recommend", "deck", "team"] },
     { href: "/deck-comparator", group: "tools", keywords: ["deck compare", "comparator"] },
     { href: "/score-control", group: "tools", keywords: ["score control", "score", "calculator"] },
     { href: "/chart-preview", group: "tools", keywords: ["chart preview", "chart", "mmw", "preview", "sus"] },
     { href: "/story-player", group: "tools", keywords: ["story player", "story viewer", "live2d", "story", "scenario", "adv"] },
+    { href: "/story-maker", group: "tools", keywords: ["story maker", "story editor", "custom story", "live2d", "story", "scenario", "fan story", "adv"] },
+    { href: "/story-search", group: "tools", keywords: ["story search", "dialogue search", "regex", "semantic search", "ai search", "story", "qwen"] },
     // "\u670d\u88c5" / "\u6362\u88c5" / "\u8863\u88c5" / "\uc758\uc0c1": costume and dress-up in Chinese, Japanese and Korean (escaped like the one above).
     { href: "/costume-3d", group: "tools", keywords: ["3d costume", "costume", "3d", "model", "outfit", "dress up", "\u670d\u88c5", "\u6362\u88c5", "\u8863\u88c5", "\uc758\uc0c1"] },
     { href: "/live2d", group: "tools", keywords: ["live2d", "live2d viewer", "model viewer", "model", "costume", "motion"] },
     { href: "/mysekai-preview/scene", group: "tools", keywords: ["mysekai preview", "scene preview", "mysekai", "3d", "obj", "scene"] },
     { href: "/sticker-maker", group: "tools", keywords: ["sticker maker", "meme"] },
 
-    { href: "/profile", group: "personal", keywords: ["profile", "user", "account"] },
+    { href: "/profile", group: "personal", keywords: ["profile", "user", "player"] },
+    { href: "/account", group: "personal", keywords: ["account", "my account", "sign in", "login", "passport", "starmoe", "haruki", "uid", "game account"] },
     { href: "/my-cards", group: "personal", keywords: ["my cards", "card progress"] },
     { href: "/my-musics", group: "personal", keywords: ["my musics", "music progress", "song progress"] },
     { href: "/my-materials", group: "personal", keywords: ["my materials", "materials", "resources", "mysekai materials"] },
@@ -257,6 +278,7 @@ export const SEARCH_STATIC_GROUP_LABEL_KEYS: Record<SearchableNavGroup, string> 
     database: "layout.nav.groups.database",
     activity: "layout.nav.groups.activity",
     story: "layout.nav.groups.story",
+    community: "layout.nav.groups.community",
     games: "layout.nav.groups.games",
     tools: "layout.nav.groups.tools",
     personal: "layout.nav.groups.personal",
@@ -305,7 +327,9 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/story/area": "layout.nav.items.areaTalk",
     "/story/self": "layout.nav.items.selfIntro",
     "/story/special": "layout.nav.items.specialStory",
-    "/guides": "layout.nav.items.guides",
+    "/community": "layout.nav.items.community",
+    "/community/stories": "layout.nav.items.communityStories",
+    "/gacha-simulator": "layout.nav.items.gachaSimulator",
     "/deck-recommend": "layout.nav.items.deckRecommend",
     "/deck-comparator": "layout.nav.items.deckComparator",
     "/score-control": "layout.nav.items.scoreControl",
@@ -316,6 +340,8 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/guess-music": "layout.nav.items.guessMusic",
     "/chart-preview": "layout.nav.items.chartPreview",
     "/story-player": "layout.nav.items.storyPlayer",
+    "/story-maker": "layout.nav.items.storyMaker",
+    "/story-search": "layout.nav.items.storySearch",
     "/costume-3d": "layout.nav.items.costume3d",
     "/live2d": "layout.nav.items.live2dViewer",
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
@@ -323,6 +349,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/asset-versions": "layout.nav.items.assetVersions",
     "/masterdata-diff": "layout.nav.items.masterdataDiff",
     "/profile": "layout.nav.items.profile",
+    "/account": "page.account.title",
     "/my-cards": "layout.nav.items.myCards",
     "/my-musics": "layout.nav.items.myMusics",
     "/my-materials": "layout.nav.items.myMaterials",
@@ -357,7 +384,9 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/story/self": "layout.groupPages.storySelf",
     "/story/special": "layout.groupPages.storySpecial",
     "/prediction": "layout.groupPages.prediction",
-    "/guides": "layout.groupPages.guides",
+    "/community": "layout.groupPages.community",
+    "/community/stories": "layout.groupPages.communityStories",
+    "/gacha-simulator": "layout.groupPages.gachaSimulator",
     "/deck-recommend": "layout.groupPages.deckRecommend",
     "/deck-comparator": "layout.groupPages.deckComparator",
     "/score-control": "layout.groupPages.scoreControl",
@@ -368,6 +397,8 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/guess-music": "layout.groupPages.guessMusic",
     "/chart-preview": "layout.groupPages.chartPreview",
     "/story-player": "layout.groupPages.storyPlayer",
+    "/story-maker": "layout.groupPages.storyMaker",
+    "/story-search": "layout.groupPages.storySearch",
     "/costume-3d": "layout.groupPages.costume3d",
     "/live2d": "layout.groupPages.live2dViewer",
     "/mysekai-preview": "layout.groupPages.mysekaiPreview",
@@ -376,6 +407,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/asset-versions": "layout.groupPages.assetVersions",
     "/masterdata-diff": "layout.groupPages.masterdataDiff",
     "/profile": "layout.groupPages.profile",
+    "/account": "page.account.description",
     "/my-cards": "layout.groupPages.myCards",
     "/my-musics": "layout.groupPages.myMusics",
     "/my-materials": "layout.groupPages.myMaterials",

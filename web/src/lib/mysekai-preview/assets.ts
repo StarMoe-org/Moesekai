@@ -1,5 +1,5 @@
 import { type AssetSourceType, getAssetSourceRegion } from "@/contexts/ThemeContext";
-import { buildRawAssetUrl, getAssetBaseUrl, getMysekaiRawAssetUrl, getStoryBgmUrl, getMusicVocalAudioUrl } from "@/lib/assets";
+import { buildRawAssetUrl, getAssetBaseUrl, getCanonicalBaseUrl, getMysekaiRawAssetUrl, getStoryBgmUrl, getMusicVocalAudioUrl } from "@/lib/assets";
 
 export const MYSEKAI_PREVIEW_STORAGE_KEY = "mysekai_scene_preview_options_v2";
 export const LOCAL_TEST_LAYOUT_URL = "/data/mysekai-preview/testmysekai.json";
@@ -9,12 +9,21 @@ export function getMysekaiCandidateRawUrls(assetPath: string, source: AssetSourc
     return [getMysekaiRawAssetUrl(assetPath, source)];
 }
 
+/**
+ * The GLB of a model, `<path>/model.glb` in the canonical view, from the path of the model under
+ * `mysekai/` (an `.obj` suffix is dropped).
+ */
+export function getMysekaiModelUrl(modelPath: string, source: AssetSourceType): string {
+    const path = modelPath.replace(/^\/+/, "").replace(/\.obj$/, "");
+    return `${getCanonicalBaseUrl(source)}/mysekai/${path}/model.glb`;
+}
+
 export function getMysekaiMasterDataUrls(path: string, source: AssetSourceType): string[] {
     const region = getAssetSourceRegion(source);
     const normalizedPath = path.replace(/^\/+/, "");
     return [
-        `https://metadata.exmeaning.com/${region}/master/${normalizedPath}`,
         `https://metadata.pjsk.moe/${region}/master/${normalizedPath}`,
+        `https://metadata.exmeaning.com/${region}/master/${normalizedPath}`,
     ];
 }
 
@@ -103,32 +112,6 @@ const CUSTOM_ATTACH_TEXTURE_FILES_BY_ASSET: Record<string, string[]> = {
     mdl_viewer_title1_stand: ["tex_cst0004_title_main_type1stand1_1", "tex_cst0004_title_type1stand1_common_1"],
 };
 
-function isCanvasFixtureAsset(assetName: string): boolean {
-    return assetName.startsWith("mdl_cst0005_canvas_");
-}
-
-function getFixtureAliasObjectFile(assetName: string): string | null {
-    const chr103DollMatch = assetName.match(/^mdl_chr103_fixture_doll1(large|medium|small)$/);
-    if (chr103DollMatch) return `mdl_chr103_fixture_ldoll1${chr103DollMatch[1]}.obj`;
-
-    const crystalMatch = assetName.match(/^(mdl_crs\d+_fixture_crystal1)(medium|small)$/);
-    if (crystalMatch) return `${crystalMatch[1]}large.obj`;
-
-    if (assetName === "mdl_cst0001_custom_middle3mount1") return "mdl_cst0001_custom_top3mount1.obj";
-
-    const triblockMatch = assetName.match(/^mdl_non3002_triblock_([a-z]+)([12])$/);
-    if (triblockMatch && !["brick", "concre", "grain"].includes(triblockMatch[1])) {
-        return `mdl_non3002_triblock_chip${triblockMatch[2]}.obj`;
-    }
-
-    const fanblockMatch = assetName.match(/^mdl_non3003_fanblock_([a-z]+)([12])$/);
-    if (fanblockMatch && !["brick", "concre", "grain"].includes(fanblockMatch[1])) {
-        return `mdl_non3003_fanblock_chip${fanblockMatch[2]}.obj`;
-    }
-
-    return null;
-}
-
 function customAttachTexturePath(assetName: string, fileName: string): string {
     return `custom_fixture_attach/${assetName}/${fileName}.webp`;
 }
@@ -142,22 +125,9 @@ function getRootAssetCandidateUrls(assetPath: string, source: AssetSourceType): 
     return [buildRawAssetUrl(source, assetPath)];
 }
 
-export function getFixtureObjectPaths(assetName: string, handleType?: string, fixtureType?: string): string[] {
-    if (fixtureType === "canvas" || isCanvasFixtureAsset(assetName)) {
-        return [`fixture/${assetName}/${assetName}.obj`];
-    }
-    if (handleType === "road" || /^mdl_non200[13]_road_/.test(assetName)) {
-        return [`fixture/${assetName}/${assetName}.obj`];
-    }
-    if (handleType === "fence" || assetName.startsWith("mdl_non2002_fence_")) {
-        return [`fixture/${assetName}/${assetName}.obj`];
-    }
-    if (assetName.startsWith("mdl_cst0001_custom_") && customBaseUsesPreview(assetName)) {
-        return [`fixture/${assetName}/${assetName}.obj`];
-    }
-    const aliasObjectFile = getFixtureAliasObjectFile(assetName);
-    if (aliasObjectFile) return [`fixture/${assetName}/${aliasObjectFile}`];
-    return [`fixture/${assetName}/${assetName}.obj`];
+/** The model of a fixture: its prefab, `fixture/<asset>/<asset>`, which holds every mesh of the fixture. */
+export function getFixtureModelPaths(assetName: string): string[] {
+    return [`fixture/${assetName}/${assetName}`];
 }
 
 export function getCustomFixtureAttachObjectPaths(assetName: string): string[] {

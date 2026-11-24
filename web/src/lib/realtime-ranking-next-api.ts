@@ -61,7 +61,7 @@ export class RealtimeRankingNextApiError extends Error {
 type QueryValue = string | number | null | undefined;
 
 function buildUrl(region: RealtimeRankingRegion, path: string, query?: Record<string, QueryValue>): string {
-    const pathname = `${getNextApiBase(region)}/${region}/${path.replace(/^\/+|\/+$/g, "")}`;
+    const pathname = `${getNextApiBase()}/${region}/${path.replace(/^\/+|\/+$/g, "")}`;
     if (!query) return pathname;
 
     const params = new URLSearchParams();
@@ -124,7 +124,13 @@ function normalizeHonor(item: RawProfileHonorV2): NormalizedPlayerHonor | null {
     }
 
     if (!honorId) return null;
-    return { kind: "normal", honorId, honorLevel };
+    return {
+        kind: "normal",
+        honorId,
+        honorLevel,
+        honorBackgroundId: tryNumber(item.honorBackgroundId),
+        honorWordId: tryNumber(item.honorWordId),
+    };
 }
 
 function normalizeHonors(entry: RawRankingEntryV2): NormalizedPlayerHonor[] {

@@ -1,7 +1,7 @@
 // SekaiLive2DViewer: one Project SEKAI Live2D model on a canvas (an ES module a page imports).
 //
-//   const viewer = await SekaiLive2DViewer.create({ canvas, library, model: { bundle, motion },
-//     width, height });
+//   const viewer = await SekaiLive2DViewer.create({ canvas, sources: { site, region },
+//     model: { asset, motion }, width, height });
 //   await viewer.playMotion(viewer.motions[3], { loop: true }); await viewer.setFacial("face_smile_01");
 //   viewer.physics = false; viewer.breath = false; viewer.pause(); viewer.play();
 //   viewer.setView({ zoom: 2, x: 0, y: -0.5 }); viewer.resize(w, h); viewer.destroy();
@@ -9,8 +9,9 @@
 // The model is drawn by a worker (viewer-worker.js, next to this file) on an OffscreenCanvas,
 // with SekaiStoryExporter's Live2D implementation compiled to wasm (pkg/): motions, facials,
 // blinking, breathing and physics as the game runs them. The canvas is transparent around the
-// model (premultiplied alpha); the page puts its background under it. Opening a model fetches
-// the model and its default motion and facial; any other clip is fetched when it is first played.
+// model (premultiplied alpha); the page puts its background under it. The model is read from a
+// site's published version. Opening it fetches the model and its default motion and facial; any
+// other clip is fetched when it is first played.
 
 // Cubism Core for Web where Live2D publishes it (SSE's ADR-0032): the address has no version
 // in it and serves whichever Core Live2D last put there.
@@ -19,6 +20,42 @@ const HERE = new URL(".", import.meta.url).href;
 
 function withSlash(url) {
   return url.endsWith("/") ? url : `${url}/`;
+}
+
+function resolveUrl(url) {
+  if (/^[a-zA-Z][a-zA-Z\d+.-]*:/.test(url)) return url;
+  return typeof location !== "undefined" ? new URL(url, location.href).href : url;
+}
+
+/**
+ * The base URL of the published version of `region` on `site`, ending in `/`:
+ * `<site>/<region>@<version>/`, the version the site publishes now unless `version` is given.
+ * `proxy`, when set, replaces `https://` in front of the URLs (`<proxy><host>/…`), for a
+ * development server that relays them.
+ * @param {{site: string, region: string, version?: string, proxy?: string}} sources
+ * @param {{signal?: AbortSignal}} [opts]
+ */
+export async function resolveBase({ site, region, version, proxy }, { signal } = {}) {
+  const relay = proxy ? withSlash(resolveUrl(proxy)) : "";
+  const through = (url) => (relay ? url.replace(/^https:\/\//, relay) : url);
+  const root = resolveUrl(site).replace(/\/+$/, "");
+  if (version === undefined || version === null || version === "") {
+    const url = through(`${root}/${region}/`);
+    let listing;
+    try {
+      const r = await fetch(url, { cache: "no-cache", signal });
+      if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      listing = await r.json();
+    } catch (e) {
+      if (signal?.aborted || e?.name === "AbortError") throw e;
+      throw Object.assign(new Error(String(e?.message ?? e)), { kind: "network", url });
+    }
+    if (typeof listing.published_version !== "string") {
+      throw Object.assign(new Error(`${url}: no published version`), { kind: "network", url });
+    }
+    version = listing.published_version;
+  }
+  return through(`${root}/${region}@${encodeURIComponent(version)}/`);
 }
 
 /**
@@ -34,7 +71,8 @@ function withSlash(url) {
  * Errors, from `create` (an Error with these as properties) and in the `error` event, have a
  * `kind`:
  *   unsupported  the browser lacks something (`missing`, see `supported`)
- *   not-found    the library has no such bundle (`url`: its `_ripper.json`)
+ *   not-found    the published version has no such model (`url`: where it was looked for); a
+ *                motion set it has no is not an error: the model opens without motions
  *   network      a file could not be fetched, after several tries (`url`)
  *   internal     anything else
  */
@@ -69,11 +107,16 @@ export class SekaiLive2DViewer extends EventTarget {
    *   relative to `js`; default `pkg/`
    * @param {string} [o.core]  URL of live2dcubismcore.min.js, for a page that serves a copy of
    *   its own; default: Live2D's address
-   * @param {string} o.library  URL of the story library's root (the directory holding
-   *   `ripper.lock.json` and `library/`), e.g. a proxy of
-   *   `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/jp/`
-   * @param {{bundle: string, motion?: string|null}} o.model  library paths of the model bundle
-   *   and its motion bundle (models.json's `bundle` and `motion`)
+   * @param {{site: string, region: string, version?: string, proxy?: string}} o.sources  the
+   *   site that publishes the data (e.g. `https://example.org`), the region (jp, en, tw, kr or
+   *   cn) and, to pin it, the published version (default: the one the site publishes now);
+   *   `proxy`: see `resolveBase`
+   * @param {{asset: string, motion?: string|null}} o.model  the model's `live2d-model` asset and
+   *   its `live2d-motions` asset, each by its name, or by a directory of the published version
+   *   holding it (the first found going down its listings), such as `live2d/model/<name>/` and
+   *   `live2d/motion/<name>_motion_base/` (a trailing `/` marks a directory explicitly so the
+   *   worker skips probing `<path>.asset.json`). A motion set the version does not have leaves the
+   *   model without motions
    * @param {number} o.width   drawing size in pixels (the CSS size × devicePixelRatio)
    * @param {number} o.height
    * @param {AbortSignal} [o.signal]  aborts loading: `create` rejects with an AbortError
@@ -115,6 +158,11 @@ export class SekaiLive2DViewer extends EventTarget {
   facials = [];
   defaultMotion = null;
   defaultFacial = null;
+  /** The `live2d-model` asset opened, and the `live2d-motions` asset (null: none). */
+  model = null;
+  motionSet = null;
+  /** The resolved published-version base URL, ending in `/`. */
+  base = null;
   /** Whether the model has a physics rig (`physics` changes nothing without one). */
   hasPhysics = false;
   /** The body motion last started, and the facial last set. */
@@ -123,11 +171,14 @@ export class SekaiLive2DViewer extends EventTarget {
 
   async #load(o) {
     const js = withSlash(new URL(o.js ?? HERE, location.href).href);
+    const base = await resolveBase(o.sources, { signal: o.signal });
+    o.signal?.throwIfAborted();
+    this.base = base;
     const options = {
       pkg: withSlash(new URL(o.pkg ?? "pkg/", js).href),
       core: new URL(o.core ?? CORE, location.href).href,
-      library: withSlash(new URL(o.library, location.href).href),
-      model: { bundle: o.model.bundle, motion: o.model.motion ?? null },
+      base,
+      model: { asset: o.model.asset, motion: o.model.motion ?? null },
       width: Math.max(1, Math.round(o.width)),
       height: Math.max(1, Math.round(o.height)),
     };
@@ -154,6 +205,8 @@ export class SekaiLive2DViewer extends EventTarget {
             break;
           case "ready":
             o.signal?.removeEventListener("abort", abort);
+            this.model = m.model;
+            this.motionSet = m.motion;
             this.motions = m.motions;
             this.facials = m.facials;
             this.defaultMotion = m.defaultMotion ?? null;

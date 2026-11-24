@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "@/components/LocalizedLink";
@@ -20,7 +21,7 @@ import {
     SUPPORT_UNIT_LABEL_KEYS,
     CARD_RARITY_MAX_LEVELS,
 } from "@/types/types";
-import { getCardFullUrl, getCardThumbnailUrl, getEventBannerUrl, getGachaLogoUrl, getCardGachaVoiceUrl, getCostumeThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCardFullUrl, getCardThumbnailUrl, getEventBannerUrl, getGachaLogoUrl, getCardGachaVoiceUrl, getCostumeThumbnailUrl, getCharacterIconUrl } from "@/lib/assets";
 import { useRef } from "react";
 import { formatSkillDescription } from "@/lib/skill";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
@@ -37,6 +38,11 @@ import { mdApparel, mdArrowBack, mdBarChart, mdBolt, mdCalendarMonth, mdChevronR
 
 // Max levels by rarity
 const MAX_LEVELS = CARD_RARITY_MAX_LEVELS;
+
+const CardCommunitySection = dynamic(
+    () => import("@/components/community/CardCommunitySection"),
+    { ssr: false },
+);
 
 interface CardSupplyInfo {
     id: number;
@@ -269,16 +275,7 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
     }, [card, cardLevel, normalMaxLevel]);
 
     // Attribute icon mapping
-    const getAttrIcon = (attr: CardAttribute) => {
-        const iconMap: Record<CardAttribute, string> = {
-            cool: "Cool.webp",
-            cute: "cute.webp",
-            happy: "Happy.webp",
-            mysterious: "Mysterious.webp",
-            pure: "Pure.webp",
-        };
-        return `/data/icon/${iconMap[attr]}`;
-    };
+    const getAttrIcon = (attr: CardAttribute) => getAttrIconUrl(attr, assetSource);
 
     // Dynamic skill description (normal skill)
     useEffect(() => {
@@ -947,6 +944,11 @@ export default function CardDetailPage({ id }: { initialData?: unknown; id?: num
                         </div>
                     </div>
                 </div>
+
+                {/* Community Comments & Related Posts (hidden in screenshot mode) */}
+                {!isScreenshotMode && Number.isFinite(cardId) && (
+                    <CardCommunitySection cardId={cardId} />
+                )}
 
                 {/* Back Button */}
                 <div className="mt-12 text-center">

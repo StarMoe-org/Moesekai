@@ -51,6 +51,8 @@ export interface DeckBuilderInput {
     userId: string;
     server: string;
     oauthAccessToken?: string;
+    /** Signed in to StarMoe: read user data through moesekai-api (/api/v1/me/sekai). */
+    viaStarMoe?: boolean;
     eventId: number;
     /** Bonus tiers derived from the page's route planning; only these tiers are built (takes precedence over the range mode). */
     bonusTiers?: number[];
@@ -105,7 +107,7 @@ let handleCache: { key: string; handle: DeckEngineUserHandle } | null = null;
 
 async function deckBuilderRunner(args: DeckBuilderInput): Promise<DeckBuilderOutput> {
     const {
-        userId, server, oauthAccessToken, eventId, minBonus, maxBonus,
+        userId, server, oauthAccessToken, viaStarMoe, eventId, minBonus, maxBonus,
         liveType: liveTypeStr, musicId, difficulty,
         supportCharacterId, cardConfig,
     } = args;
@@ -146,14 +148,14 @@ async function deckBuilderRunner(args: DeckBuilderInput): Promise<DeckBuilderOut
         };
     }
 
-    const userKey = `${userId}|${server}|${oauthAccessToken ?? ""}`;
+    const userKey = `${userId}|${server}|${viaStarMoe ? "starmoe" : ""}|${oauthAccessToken ?? ""}`;
     if (!userCache || userCache.key !== userKey) {
         if (handleCache) {
             engine.disposeUser(handleCache.handle);
             handleCache = null;
         }
         const dataProvider = new CachedDeckDataProvider(
-            new SnowyDataProvider(userId, server as HarukiServer, oauthAccessToken || null),
+            new SnowyDataProvider(userId, server as HarukiServer, oauthAccessToken || null, viaStarMoe === true),
         );
         const userData = (await dataProvider.getUserDataAll()) as Record<string, unknown>;
         userCache = { key: userKey, userData };

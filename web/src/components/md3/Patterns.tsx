@@ -5,6 +5,7 @@ import { Icon } from "./Icon";
 import { Button } from "./Button";
 import { LoadingIndicator } from "./Progress";
 import { mdErrorFill, mdInfo, mdRefresh, mdSearchOff, mdWarningFill } from "./icons";
+import { useAutoLoadMore } from "@/hooks/useAutoLoadMore";
 
 /* ==========================================================================
    Page-level MD3 patterns shared by every module page.
@@ -48,11 +49,11 @@ export function PageHeader({
     const centered = align === "center";
     return (
         <header className={withOverrides("mb-4 sm:mb-6", centered && "text-center", className)}>
-            <div className={cn("flex flex-wrap items-end gap-x-4 gap-y-2", centered ? "justify-center" : "justify-between")}>
-                <div className={cn("min-w-0", centered && "mx-auto")}>
+            <div className={cn("flex min-w-0 flex-wrap items-end gap-x-4 gap-y-2", centered ? "justify-center" : "justify-between")}>
+                <div className={cn("min-w-0 max-w-full", centered && "mx-auto")}>
                     {/* Neutral: the highlight below is the header's one accent, in the true character color. */}
                     {eyebrow && <div className="mb-1 type-label-m text-on-surface-variant">{eyebrow}</div>}
-                    <h1 className="type-headline-s text-on-surface sm:type-headline-m">
+                    <h1 className="break-words type-headline-s text-on-surface sm:type-headline-m">
                         {title}
                         {highlight && (
                             <>
@@ -62,10 +63,10 @@ export function PageHeader({
                         )}
                     </h1>
                     {description && (
-                        <p className={cn("mt-1 max-w-3xl type-body-m text-on-surface-variant", centered && "mx-auto")}>{description}</p>
+                        <p className={cn("mt-1 max-w-3xl break-words type-body-m text-on-surface-variant", centered && "mx-auto")}>{description}</p>
                     )}
                 </div>
-                {actions && <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>}
+                {actions && <div className="flex min-w-0 max-w-full flex-wrap items-center gap-2">{actions}</div>}
             </div>
         </header>
     );
@@ -142,19 +143,22 @@ export function Banner({
         <div
             role={tone === "error" ? "alert" : "status"}
             className={withOverrides(
-                "flex gap-3 rounded-md3-lg border px-4 py-3 text-on-surface",
-                twoPart ? "items-start" : "items-center",
+                "@container flex gap-3 rounded-md3-lg border px-4 py-3 text-on-surface",
+                // Narrow, the action drops below the text, so the icon stays with the first line.
+                twoPart ? "items-start" : action ? "items-start @md:items-center" : "items-center",
                 toneCls,
                 className,
             )}
         >
             <Icon path={icon} size={20} className={cn("shrink-0", iconCls)} />
-            <div className="min-w-0 flex-1">
-                {title && <div className="type-title-s">{title}</div>}
-                {children && <div className={cn("type-body-m", title ? "mt-0.5 text-on-surface-variant" : undefined)}>{children}</div>}
+            <div className="flex min-w-0 flex-1 flex-col gap-2 @md:flex-row @md:items-center @md:gap-3">
+                <div className="min-w-0 flex-1">
+                    {title && <div className="type-title-s">{title}</div>}
+                    {children && <div className={cn("type-body-m", title ? "mt-0.5 text-on-surface-variant" : undefined)}>{children}</div>}
+                </div>
+                {/* Wide, negative margins keep a button from making the banner taller than its text. */}
+                {action && <div className="shrink-0 self-start @md:-my-1.5 @md:self-center">{action}</div>}
             </div>
-            {/* Negative margins keep a button from making the banner taller than its text. */}
-            {action && <div className="-my-1.5 shrink-0 self-center">{action}</div>}
         </div>
     );
 }
@@ -235,6 +239,7 @@ export function LoadMore({
     onLoadMore,
     allLoadedLabel,
     className,
+    autoLoad,
 }: {
     label: React.ReactNode;
     shown: number;
@@ -242,14 +247,22 @@ export function LoadMore({
     onLoadMore: () => void;
     allLoadedLabel?: React.ReactNode;
     className?: string;
+    autoLoad?: boolean;
 }) {
+    const sentinelRef = useAutoLoadMore({
+        hasMore: shown < total,
+        itemCount: shown,
+        onLoadMore,
+        enabled: autoLoad,
+    });
+
     if (shown >= total) {
         return allLoadedLabel && shown > 0 ? (
             <div className={withOverrides("mt-8 text-center type-body-m text-on-surface-variant", className)}>{allLoadedLabel}</div>
         ) : null;
     }
     return (
-        <div className={withOverrides("mt-8 flex justify-center", className)}>
+        <div ref={sentinelRef} className={withOverrides("mt-8 flex justify-center", className)}>
             <Button variant="tonal" color="secondary" size="s" onClick={onLoadMore} data-shortcut-load-more="true">
                 {label}
                 <span className="type-label-l opacity-80">

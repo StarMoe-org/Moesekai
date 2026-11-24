@@ -12,6 +12,9 @@ export interface ProfileHonor {
     honorLevel?: number;
     bondsHonorViewType?: string;
     bondsHonorWordId?: number;
+    // A character honor's chosen background style and word (0 or absent: the default).
+    honorBackgroundId?: number | null;
+    honorWordId?: number | null;
 }
 
 export interface ProfileCardState {

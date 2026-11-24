@@ -11,7 +11,6 @@ const routes = JSON.parse(fs.readFileSync(routeDataPath, "utf8"));
 const seoKeywordsSource = fs.readFileSync(seoKeywordsPath, "utf8");
 const pageKeys = new Set([...seoKeywordsSource.matchAll(/^\s{2}([a-z0-9_]+):\s*definePage\(/gm)].map((match) => match[1]));
 const dynamicPageKeys = new Set([
-    "guides_detail",
     "story_area_category",
     "story_area_reader",
     "story_card_reader",

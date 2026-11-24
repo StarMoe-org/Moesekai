@@ -6,7 +6,7 @@
 
 ## 播放器
 
-播放器是 SekaiLive2DViewer 的发布物（`viewer.js`、Worker 脚本和 wasm），它复用 SekaiStoryExporter 的 `sse-live2d`（游戏的角色运行时）与 `sse-live2d-render`（模型绘制）。和剧情播放器一样，发布物原样放在本仓库的 `web/vendor/live2d-viewer/`，由 `copy:wasm`（`scripts/copy-live2d-viewer.mjs`）拷到 `public/live2d-viewer/<发布物名>/` 给浏览器加载；`public/live2d-viewer/` 不入库。发布物名写在生成的 `src/lib/live2dViewer/release.ts` 里。
+播放器是 SekaiLive2DViewer 的发布物（单模型 `viewer.js` 与多角色舞台 `stage.js`、各自的 Worker 脚本和 wasm），它复用 SekaiStoryExporter 的 `sse-live2d`（游戏的角色运行时）与 `sse-live2d-render`（模型绘制），供 `/live2d` 与 `/story-maker`（`@moesekai/story-editor`）共用。和剧情播放器一样，发布物原样放在本仓库的 `web/vendor/live2d-viewer/`，由 `copy:wasm`（`scripts/copy-live2d-viewer.mjs`）拷到 `public/live2d-viewer/<发布物名>/` 给浏览器加载；`public/live2d-viewer/` 不入库。发布物名写在生成的 `src/lib/live2dViewer/release.ts` 里。
 
 两份发布物共用 `scripts/vendored-release.mjs`：按 `manifest.json` 校验每个文件，发布物名是版本号加全部文件哈希的摘要。还没有放入发布物时 `release.ts` 是 `null`，`copy:wasm` 跳过它，页面显示「Live2D 预览暂时不可用」。
 
@@ -21,18 +21,13 @@ bun run --cwd web copy:wasm
 
 ## 数据
 
-- 模型文件来自各服务器的剧情库（SekaiStoryRipper 的产物）：`<剧情库>/<区服>/library/live2d/model/<模型>/` 与 `live2d/motion/<角色>_motion_base/`。播放器按每个包的 `_ripper.json` 文件清单下载。
-- 模型列表来自 SekaiLive2DViewer 的索引工具（`sekai-live2d-index`）发布的 `<索引目录>/<区服>/models.json`（格式见那个项目的 `docs/models-json.md`，页面用到的字段在 `src/types/live2d.ts`），只包含剧情库里已有的模型。服务器没有发布索引（404）时列表为空。
+- 模型来自站点发布的各服务器版本：`<站点><区服>/live2d/model/<模型>/` 与 `live2d/motion/<…>_motion_base/`。播放器读站点当前发布的版本，按模型和动作集的资产文档下载文件。
+- 模型列表是 `live2d/model/` 的目录列表，动作集是 `live2d/motion/` 的目录列表；每个模型配上名字最长前缀对应的 `<前缀>_motion_base`（`live2dMotionSet`）：角色取 `<NN><名字>`（`v2_` 版本先找带 `v2_` 的），配角取名字从后往前去掉词、并去掉末尾数字或 `black` 后的前缀。配不上的模型只有呼吸和物理。服务器没有这个目录（404）时列表为空。
 - 服务器默认跟随站点设置里的资源服务器，页面上可以切换。
 - 模型名就是模型包名，页面从中读出角色、版本（`v2_`）、联动（`clb<NN>_`）、配角（`sub_`）和服装词（`src/lib/live2dViewer/models.ts`）。服装没有官方名称；`page.live2d.costume.*` 翻译常见的词，虚拟歌手的团体版本显示团体名，其他词按模型名原样显示。
 - 剧情背景列表来自资源站的 bundle 列表接口（`/api/assets/bundles?prefix=scenario/background/`，资产浏览器用的同一个），图片是资源站的 WebP。背景由页面用 `<img>` 垫在透明的播放器画布下面，不经过播放器。
 
-本地联调：SekaiLive2DViewer 的 `dev/serve.py` 在 8788 端口提供中转（`/remote/`），同时提供它生成的 `sekai-live2d/<区服>/models.json`，可以在 `web/.env.local` 里写：
-
-```
-NEXT_PUBLIC_LIVE2D_ASSET_PROXY=http://127.0.0.1:8788/remote/
-NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
-```
+本地联调：站点对所有来源放行跨域，本地页面直接读站点即可。需要经中转读取时，SekaiLive2DViewer 的 `dev/serve.py` 在 8788 端口提供中转（`/remote/`），在 `web/.env.local` 里写 `NEXT_PUBLIC_LIVE2D_ASSET_PROXY=http://127.0.0.1:8788/remote/`。
 
 ## 设置
 
@@ -40,12 +35,11 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 
 | 变量 | 含义 | 默认 |
 |---|---|---|
-| `NEXT_PUBLIC_LIVE2D_LIBRARY_BASE` | 各区服剧情库的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/sekai-story/ripper/` |
-| `NEXT_PUBLIC_LIVE2D_INDEX_BASE` | 各区服模型索引的上级目录 | `https://assets.pjsk.moe/sekai-extra-assets/sekai-live2d/` |
+| `NEXT_PUBLIC_LIVE2D_SITE` | 发布模型的站点（以 `/` 结尾） | 剧情播放器的 `NEXT_PUBLIC_SSE_WEB_SITE`，都不设时用 `https://storage.pjsk.moe/` |
 | `NEXT_PUBLIC_LIVE2D_CORE_URL` | 站点自己托管的 Cubism Core for Web | 剧情播放器的 `NEXT_PUBLIC_SSE_WEB_CORE_URL`，都不设时用 Live2D 官方地址 |
 | `NEXT_PUBLIC_LIVE2D_ASSET_PROXY` | 本地开发的中转（`<中转><主机>/…`） | `NEXT_PUBLIC_SSE_WEB_ASSET_PROXY` |
 
-写错时构建失败（`next.config.ts` 调用 `live2dCheckConfig()`）。剧情库主机只放行 `https://pjsk.moe` 跨源读取，本地开发要设中转。Cubism Core 是 Live2D Inc. 的软件，适用它自己的许可，本仓库和发布物都不包含它；舞台下方注明了它。
+写错时构建失败（`next.config.ts` 调用 `live2dCheckConfig()`）。Cubism Core 是 Live2D Inc. 的软件，适用它自己的许可，本仓库和发布物都不包含它；舞台下方注明了它。
 
 ## 界面
 
@@ -58,18 +52,16 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
   - 表情：每种情绪一行，变体是编号按钮（一个模型的一百多个表情收成几十行）；另有默认表情。
   - 场景：物理、呼吸，以及剧情背景的缩略图（第一格是无背景，可按名称搜索、分页加载）。
 - 动作和表情的名字来自游戏的片段名（`w-cute01-tilthead02`、`face_smile_03`），由 `src/lib/live2dViewer/clips.ts` 拆成风格、动作或情绪与变体编号；常见的词翻译（`page.live2d.motionStyle.*`、`motionAction.*`、`emotion.*`），其余按原样显示，`nb`、`dark`、`night` 这类前缀作为小标签显示在行名下面。
-- 状态：加载进度（已取到的文件数）、浏览器不支持（列出缺少的能力）、剧情库里没有文件、网络错误与重试。动作和表情第一次用到时才下载（约 1 KB），下载失败时面板上有提示，模型继续原来的动作。没有动作包的模型（`motion` 为 `null`）只有呼吸和物理。
+- 状态：加载进度（已取到的文件数）、浏览器不支持（列出缺少的能力）、站点上没有这个模型、网络错误与重试。动作和表情第一次用到时才下载（约 1 KB），下载失败时面板上有提示，模型继续原来的动作。没有配上动作集的模型只有呼吸和物理。
 
 ## 代码
 
 | 文件 | 内容 |
 |---|---|
-| `src/lib/live2dViewer/config.ts` | 读取并校验上面的变量 |
-| `src/lib/live2dViewer/viewer.ts` | 播放器接口的类型声明，运行时加载 `viewer.js` |
-| `src/lib/live2dViewer/models.ts` | 索引解析、模型名解析、排序、地址 |
-| `src/lib/live2dViewer/client.ts` | 读取模型索引和剧情背景列表 |
+| `@moesekai/story-core`（由 `src/lib/live2dViewer/{config,models,client,clips,subCharacterNames}.ts` 薄重导出） | 变量校验、模型目录列表加载、`<stem>_motion_base` 配对、模型名/服装解析、配角本地化回退名、动作表情分组与地址构造 |
+| `src/lib/live2dViewer/viewer.ts` | 单模型播放器接口的类型声明，运行时加载 `viewer.js` |
+| `src/lib/live2dViewer/release.ts` | 由 `sync-live2d-viewer.mjs` 生成的发布物目录名 |
 | `src/lib/live2dViewer/view.ts` | 缩放与平移的计算 |
-| `src/lib/live2dViewer/clips.ts` | 动作与表情的分组 |
 | `src/components/live2d/useLive2DViewer.ts` | 播放器的生命周期、状态与操作 |
 | `src/components/live2d/Live2DModelStage.tsx` | 舞台、工具栏、手势、浮层 |
 | `src/components/live2d/Live2DInspector.tsx` | 面板（模型、动作、表情、场景四页） |
@@ -78,4 +70,4 @@ NEXT_PUBLIC_LIVE2D_INDEX_BASE=http://127.0.0.1:8788/sekai-live2d/
 | `src/components/live2d/Live2DBackgroundGrid.tsx` | 背景缩略图 |
 | `src/app/live2d/` | 页面 |
 
-`bun run --cwd web test:live2d-viewer` 检查变量校验、模型名与索引解析、地址、缩放计算和动作表情的分组。
+`bun run --cwd web test:live2d-viewer` 检查变量校验、模型名解析与动作集配对、地址、缩放计算和动作表情的分组。

@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { PageContainer } from "@/components/md3";
 import { ServerSourceBadge, StoryBackButton, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useParams } from "next/navigation";
@@ -20,6 +21,12 @@ import {
 } from "@/lib/eventStoryTranslation";
 import { IProcessedScenarioData } from "@/types/story";
 import type { UiLocale } from "@/lib/i18n";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 interface IActionSet {
     id: number; areaId: number; releaseConditionId: number;
@@ -145,6 +152,14 @@ export default function StoryAreaTalkClient() {
                     // the story library names an area talk by its area and action set, of the server they were read from
                     live2dSelector={actionSet && actionSet.serverSource === serverSource ? `area:${actionSet.areaId}/${actionSet.id}` : undefined}
                 />
+
+                {scenarioId && (
+                    <EntityCommunitySection
+                        targetType="story"
+                        targetId={sanitizeCommunityTargetId(`area_${scenarioId}`)}
+                        showRelatedPosts={false}
+                    />
+                )}
             </PageContainer>
         </MainLayout>
     );

@@ -53,9 +53,9 @@ export interface Live2DStartOptions {
 }
 
 interface UseLive2DPlayerOptions {
-    /** The episode in the story library, e.g. `event:219/1`, or null when there is none to play. */
+    /** The episode, e.g. `event:219/1`, or null when there is none to play. */
     selector: string | null;
-    /** The game server whose library the episode is read from. */
+    /** The game server whose published stories the episode is read from. */
     region: string;
     /** The player is loaded (true) or was closed (false). */
     onActiveChange?: (active: boolean) => void;
@@ -226,7 +226,7 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 js: sseWebScriptBase(),
                 pkg: "pkg/",
                 ...(core ? { core } : {}),
-                sources: { library: sources.library, inapp: sources.inapp, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
+                sources: { site: sources.site, region: sources.region, ...(sources.proxy ? { proxy: sources.proxy } : {}) },
                 // the workers fetch the fonts: a path of this origin has to be a whole URL for them
                 ...(fonts ? { fonts: { body: fonts.body.map(absolute), name: fonts.name.map(absolute) } } : {}),
                 selector,
@@ -236,15 +236,15 @@ export function useLive2DPlayer({ selector, region, onActiveChange, onNode }: Us
                 auto: true,
                 experimentalAntialiasing: antialiasing,
                 highFps: highFpsRef.current,
-                onProgress: ({ sim, render, kit }) => {
+                onProgress: ({ sim, render }) => {
                     if (epoch !== epochRef.current) return;
-                    // the two workers' file counts; the UI kit is found file by file and only adds bytes
+                    // the two workers' file counts
                     const files = [sim, render].filter(part => part?.phase === "files");
                     const done = files.reduce((sum, part) => sum + (part?.done ?? 0), 0);
                     const total = files.reduce((sum, part) => sum + (part?.total ?? 0), 0);
                     setProgress({
                         fraction: files.length === 2 && total > 0 ? done / total : undefined,
-                        megabytes: ((sim?.bytes ?? 0) + (render?.bytes ?? 0) + (kit?.bytes ?? 0)) / 1e6,
+                        megabytes: ((sim?.bytes ?? 0) + (render?.bytes ?? 0)) / 1e6,
                     });
                 },
             });

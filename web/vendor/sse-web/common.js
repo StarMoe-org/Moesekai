@@ -2,9 +2,16 @@
 
 /** A fetch is given up once nothing has arrived for this long (ms), and tried again. */
 const SSE_FETCH_IDLE_MS = 30000;
+/** Where the canonical view and the client view of the published version are in the file table. */
+const SSE_PUB = "/pub/";
+const SSE_CLIENT = "/client/";
+/** The browser cache every fetched file is kept in, by URL: a file of a published version never changes. */
+const SSE_FILE_CACHE = "sse-files-v1";
+/** How many times a call that finds files missing is made again, after fetching what it named. */
+const SSE_RETRY_LIMIT = 2000;
 
 /**
- * What a worker tells the page of an error: `kind` is `not-found` (the library has no such
+ * What a worker tells the page of an error: `kind` is `not-found` (the publication has no such
  * episode), `network` (a file could not be fetched; `url` names it) or `internal`.
  */
 function sseErrorMessage(e) {
@@ -65,98 +72,11 @@ async function sseFetchBytes(url) {
 }
 
 /**
- * Whether a page's `fonts` (see SsePlayer.create) replace both of the client's fonts: the UI
- * kit is then derived without them, and the client's font files are never fetched.
+ * A callback that tells the page how far `phase` has got: `(done, total)` as `SseLoader.getAll`
+ * calls it, or `(done)` as `SseLoader.retryMissing` does, when the total is not known (0).
  */
-function sseOwnFonts(fonts) {
-  return !!(fonts?.body?.length && fonts?.name?.length);
-}
-
-/**
- * Where the index of the episode `selector` is in the library: `episodes/<kind>/<key>/<number>.json`.
- * A selector ends in the episode number, except a card's, which names its part: `former` (前篇,
- * or the older `first`) is episode 1 and `latter` (后篇, or `second`) episode 2 (as `sse_assets`
- * reads them).
- */
-function sseEpisodeIndexPath(selector) {
-  const [kind, rest = ""] = selector.split(":");
-  const cut = rest.lastIndexOf("/");
-  let number = rest.slice(cut + 1);
-  if (kind === "card") number = { former: "1", first: "1", latter: "2", second: "2" }[number] ?? number;
-  return `episodes/${kind}/${rest.slice(0, cut + 1)}${number}.json`;
-}
-
-/**
- * The index of the episode `selector` (`<kind>:<key>/<number>`), through `loader`. An episode
- * the library does not have fails with `kind: "not-found"`.
- */
-async function sseEpisodeIndex(loader, selector) {
-  try {
-    return await loader.json(`/lib/${sseEpisodeIndexPath(selector)}`);
-  } catch (e) {
-    if (e?.status !== 404) throw e;
-    const missing = new Error(`${selector}: the library has no such episode`);
-    missing.kind = "not-found";
-    missing.url = e.url;
-    throw missing;
-  }
-}
-
-/**
- * The background bundles of the episode index `index` that the library unpacked: every one the
- * asset source does not serve the texture of. A background prefab (`ScenarioBGData.BackgroundPrefab`,
- * particles or a movie) can only be in one of these; Pass 1 reads their object graphs, Pass 2
- * the whole bundle.
- */
-function sseBackgroundBundles(index) {
-  const served = new Set(Object.values(index.backgrounds ?? {})
-    .filter((b) => index.assets?.[b.path]).map((b) => b.bundle));
-  return index.bundles.filter((b) => b.startsWith("scenario/background/") && !served.has(b));
-}
-
-/**
- * The manifest dependencies (an AssetBundle's `m_Dependencies`, in the bundle's object graph) of
- * the library bundles `bundles`, and theirs in turn, that the episode index `index` lists: the
- * renderer finds what effect and background prefabs use from other bundles (`m_FileID` ≠ 0) in
- * them. A bundle without an object graph, or whose listing fails, adds none.
- */
-async function sseDependencyBundles(loader, index, bundles) {
-  const listed = new Set(index.bundles);
-  const seen = new Set(bundles);
-  const out = [];
-  for (let next = [...seen]; next.length;) {
-    const graphs = await Promise.all(next.map(async (b) => {
-      try {
-        const [path] = await loader.bundleFiles(b, (f) => f.kind === "object-graph");
-        if (!path) return undefined;
-        const graph = await loader.json(path);
-        // the file stays in the table for the renderer; the parsed copy is not needed again
-        loader.jsonCache.delete(path);
-        return graph;
-      } catch (e) {
-        console.warn(`${b}: ${e?.message ?? e}`);
-        return undefined;
-      }
-    }));
-    next = [];
-    for (const graph of graphs) {
-      for (const o of Object.values(graph?.objects ?? {})) {
-        if (o.classId !== 142) continue;
-        for (const d of o.tree?.m_Dependencies ?? []) {
-          if (listed.has(d) && !seen.has(d)) { seen.add(d); out.push(d); next.push(d); }
-        }
-      }
-    }
-  }
-  return out;
-}
-
-/** Fetches `files` (paths relative to `base`) into the file table at `/<path>`. */
-async function sseLoadFiles(putFile, base, files, parallel = 12) {
-  const queue = [...files];
-  await Promise.all(Array.from({ length: parallel }, async () => {
-    for (let f; (f = queue.shift()) !== undefined;) putFile(`/${f}`, await sseFetchBytes(base + f));
-  }));
+function sseReporter(loader, phase) {
+  return (done, total = 0) => postMessage({ type: "progress", phase, done, total, bytes: loader.bytes });
 }
 
 /**
@@ -197,26 +117,29 @@ function sseEncodePath(path) {
 
 /**
  * Fetches files into the file table on demand. File-table roots map to URLs:
- *   /lib/<path>    → the library (`ripper.lock.json`, `episodes/…`, `library/…`)
- *   /assets/<path> → the asset source (the library lock's `assets.base`)
- *   /inapp/<path>  → the client unpack
- * Each file is fetched once; requests for one in flight share it.
+ *   /pub/<path>    → the canonical view of the published version
+ *   /client/<path> → its client view
+ * Each file is fetched once; requests for one in flight share it. Fetched files are kept in the
+ * browser's Cache API, so that a later visit does not fetch them again.
  */
 class SseLoader {
   /**
-   * @param {(path: string, bytes: Uint8Array) => void} putFile
-   * @param {{library: string, assets?: string, inapp?: string, proxy?: string}} sources
-   *   URLs ending in `/`; `proxy`, when set, is put in front of `https://host/…` URLs
-   *   (`<proxy><host>/…`), for a development server that relays them.
+   * @param {{putFile: Function, removeFile: Function, markAbsent: Function, assetFiles: Function}} wasm
+   *   the wasm module's file-table functions
+   * @param {{canonical: string, client: string}} views  the base URLs of the two views, each
+   *   ending in `/` (with the proxy, if the page uses one, already in front)
    */
-  constructor(putFile, sources) {
-    this.putFile = putFile;
-    this.proxy = sources.proxy ?? "";
-    this.roots = [];
+  constructor(wasm, views) {
+    this.wasm = wasm;
+    this.roots = [{ prefix: SSE_PUB, url: views.canonical }, { prefix: SSE_CLIENT, url: views.client }];
+    /** The file cache, once opened (undefined where the browser has none). */
+    this.cache = typeof caches === "undefined" ? undefined : caches.open(SSE_FILE_CACHE).catch(() => undefined);
     this.loaded = new Set();
     this.inflight = new Map();
     /** Paths whose last fetch failed (each fetch tries a few times): `{times, error}`. */
     this.failed = new Map();
+    /** The size of each file in the table, by path. */
+    this.sizes = new Map();
     this.bytes = 0;
     this.queue = [];
     this.running = 0;
@@ -226,18 +149,17 @@ class SseLoader {
     /** Requests something waits for (not prefetches) in flight: the background queue holds
      * back while there are any, so they get the bandwidth. */
     this.urgent = 0;
-    this.setRoot("/lib/", sources.library);
-    if (sources.assets) this.setRoot("/assets/", sources.assets);
-    if (sources.inapp) this.setRoot("/inapp/", sources.inapp);
   }
 
-  url(u) {
-    return this.proxy ? u.replace(/^https:\/\//, this.proxy) : u;
-  }
-
-  setRoot(prefix, url) {
-    this.roots = this.roots.filter((r) => r.prefix !== prefix);
-    this.roots.push({ prefix, url: this.url(url.endsWith("/") ? url : `${url}/`) });
+  /**
+   * Where the file at table path `path` is served. A directory's listing, `<dir>/.listing.json`
+   * in the table, is served at the directory's own address (ending in `/`).
+   */
+  url(path) {
+    const root = this.roots.find((r) => path.startsWith(r.prefix));
+    if (!root) throw new Error(`${path}: no source for this path`);
+    const served = path.slice(root.prefix.length).replace(/(^|\/)\.listing\.json$/, "$1");
+    return root.url + sseEncodePath(served);
   }
 
   has(path) {
@@ -265,13 +187,11 @@ class SseLoader {
     if (this.loaded.has(path)) return Promise.resolve();
     let p = this.inflight.get(path);
     if (!p) {
-      const root = this.roots.find((r) => path.startsWith(r.prefix));
-      if (!root) return Promise.reject(new Error(`${path}: no source for this path`));
-      p = this.fetchRooted(root, path).then((bytes) => {
-        this.putFile(path, bytes);
+      p = this.download(path).then((bytes) => {
+        this.wasm.putFile(path, bytes);
         this.loaded.add(path);
         this.bytes += bytes.length;
-        (this.sizes ??= new Map()).set(path, bytes.length);
+        this.sizes.set(path, bytes.length);
         this.inflight.delete(path);
         this.failed.delete(path);
       }, (e) => {
@@ -284,43 +204,28 @@ class SseLoader {
     return p;
   }
 
-  /**
-   * The bytes of `path` under `root`. A client unpack is an immutable snapshot (its version is in
-   * its URL), so its files are kept in the browser's Cache API and fetched only once.
-   */
-  async fetchRooted(root, path) {
-    const url = root.url + sseEncodePath(path.slice(root.prefix.length));
-    const keep = root.prefix === "/inapp/" && typeof caches !== "undefined";
-    if (keep) {
-      try {
-        const hit = await (await caches.open("sse-inapp-v1")).match(url);
-        if (hit) { this.cached = (this.cached ?? 0) + 1; return new Uint8Array(await hit.arrayBuffer()); }
-      } catch { /* no cache (private mode and the like): fetch */ }
-    }
+  /** The bytes of the file at table path `path`: from the cache when it is there, else fetched. */
+  async download(path) {
+    const url = this.url(path);
+    const cache = await this.cache;
+    const hit = await cache?.match(url).catch(() => undefined);
+    if (hit) return new Uint8Array(await hit.arrayBuffer());
     const bytes = await sseFetchBytes(url);
-    if (keep) {
-      caches.open("sse-inapp-v1").then((c) => c.put(url, new Response(bytes))).catch(() => {});
-    }
+    // a file that cannot be kept is fetched again next time
+    cache?.put(url, new Response(bytes)).catch(() => {});
     return bytes;
   }
 
   /** Drops `path` from the table (fetched again if asked for again). */
   drop(path) {
     if (!this.loaded.delete(path)) return;
-    this.sizes?.delete(path);
-    this.jsonCache?.delete(path);
-    this.removeFile?.(path);
+    this.sizes.delete(path);
+    this.wasm.removeFile(path);
   }
 
   /** The `n` largest files in the table, for diagnosing what it holds. */
   largest(n = 5) {
-    return [...(this.sizes ?? new Map())].sort((a, b) => b[1] - a[1]).slice(0, n).map(([p, b]) => `${(b / 1e6).toFixed(1)} MB ${p}`);
-  }
-
-  /** Drops every file under the directory `dir` from the table. */
-  dropUnder(dir) {
-    const prefix = dir.endsWith("/") ? dir : `${dir}/`;
-    for (const p of [...this.loaded]) if (p.startsWith(prefix)) this.drop(p);
+    return [...this.sizes].sort((a, b) => b[1] - a[1]).slice(0, n).map(([p, b]) => `${(b / 1e6).toFixed(1)} MB ${p}`);
   }
 
   /** Fetches all of `paths`, a few at a time; `progress(done, total)` after each one. */
@@ -351,56 +256,46 @@ class SseLoader {
     }
   }
 
-  /** The JSON file at `path`, parsed (and put in the table like any other). */
-  async json(path) {
-    this.jsonCache ??= new Map();
-    let v = this.jsonCache.get(path);
-    if (v === undefined) {
-      const root = this.roots.find((r) => path.startsWith(r.prefix));
-      if (!root) throw new Error(`${path}: no source for this path`);
-      const bytes = await this.fetchRooted(root, path);
-      if (!this.loaded.has(path)) {
-        this.putFile(path, bytes);
-        this.loaded.add(path);
-        this.bytes += bytes.length;
-      }
-      v = JSON.parse(new TextDecoder().decode(bytes));
-      this.jsonCache.set(path, v);
-    }
-    return v;
-  }
-
-  /** Calls `f` until it stops failing for files the table lacks, fetching them. */
-  async retryMissing(f, limit = 2000) {
-    for (let n = 0; ; n++) {
+  /**
+   * Calls `f` until it stops failing for files the table lacks, fetching the ones it names;
+   * `progress(round)` after each round of fetching. A file the site does not have (404) is told
+   * to the table as absent (`markAbsent`), and `f` goes on without it where it can, as an export
+   * does; when `f` then fails over it, the failure is the fetch's (`kind: "network"`, `status`
+   * 404, `url`).
+   */
+  async retryMissing(f, progress) {
+    /** The failed fetch of each path found absent, by path. */
+    const absent = new Map();
+    for (let round = 1; ; round++) {
       try {
         return await f();
       } catch (e) {
         const paths = sseMissingPaths(e);
-        if (!paths.length || n >= limit) throw e;
-        await Promise.all(paths.map((p) => this.fetchMissing(p)));
+        if (!paths.length || round > SSE_RETRY_LIMIT) {
+          const message = String(e?.message ?? e);
+          for (const [path, failed] of absent) if (message.includes(path)) throw failed;
+          throw e;
+        }
+        await Promise.all(paths.map((p) => this.get(p).catch((failed) => {
+          if (failed?.status !== 404 || absent.has(p)) throw failed;
+          absent.set(p, failed);
+          this.wasm.markAbsent(p);
+        })));
+        progress?.(round);
       }
     }
   }
 
   /**
-   * Fetches a file a wasm call reported missing. A model bundle's directory (reported when its
-   * `buildmodeldata.json` is not there yet) brings the bundle's files other than textures.
+   * The table paths of the files of the canonical asset `name`: its document
+   * (`<name>.asset.json`) names them, and is fetched first if it is not in the table.
    */
-  fetchMissing(path) {
-    const m = /^\/lib\/library\/(live2d\/model\/[^/]+)\/?$/.exec(path);
-    if (m) return this.bundleFiles(m[1], (f) => f.kind !== "png").then((files) => this.getAll(files));
-    return this.get(path);
+  assetFiles(name) {
+    return this.retryMissing(() => this.wasm.assetFiles(name));
   }
 
-  /** The files of a library bundle (from its `_ripper.json`), as file-table paths. */
-  async bundleFiles(bundle, filter = () => true) {
-    const r = await this.json(`/lib/library/${bundle}/_ripper.json`);
-    return r.files.filter(filter).map((f) => `/lib/library/${bundle}/${f.path}`);
-  }
-
-  /** Where `path` of the episode index `index` is in the table: the asset source or the library. */
-  static resolve(index, path) {
-    return index.assets && index.assets[path] ? `/assets/${path}` : `/lib/library/${path}`;
+  /** Whether `e` is the failure to fetch an episode document that the site does not have. */
+  isMissingEpisode(e) {
+    return e?.status === 404 && String(e.url).startsWith(this.url(`${SSE_PUB}episode/`));
   }
 }

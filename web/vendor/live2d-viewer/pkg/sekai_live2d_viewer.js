@@ -5,6 +5,252 @@ let wasm_bindgen = (function(exports) {
     }
 
     /**
+     * Several models on one canvas, placed as a story places its characters (see `stage`).
+     */
+    class Stage {
+        static __wrap(ptr) {
+            const obj = Object.create(Stage.prototype);
+            obj.__wbg_ptr = ptr;
+            StageFinalization.register(obj, obj.__wbg_ptr, obj);
+            return obj;
+        }
+        __destroy_into_raw() {
+            const ptr = this.__wbg_ptr;
+            this.__wbg_ptr = 0;
+            StageFinalization.unregister(this);
+            return ptr;
+        }
+        free() {
+            const ptr = this.__destroy_into_raw();
+            wasm.__wbg_stage_free(ptr, 0);
+        }
+        /**
+         * The actors' ids in draw order (the first at the back).
+         * @returns {string[]}
+         */
+        actors() {
+            const ret = wasm.stage_actors(this.__wbg_ptr);
+            var v1 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+            wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+            return v1;
+        }
+        /**
+         * Puts the `live2d-model` asset `model` (its files in the table), with the clips of the
+         * `live2d-motions` asset `motion` (empty: none), on stage as actor `id`, placed by the given
+         * values over the defaults; an actor of that id is replaced. `seed` picks the blink intervals
+         * and breath phase. Fails with `too many actors` past `stage::MAX_ACTORS`.
+         * @param {string} id
+         * @param {string} model
+         * @param {string} motion
+         * @param {number} seed
+         * @param {number | null} [x]
+         * @param {number | null} [y]
+         * @param {number | null} [scale]
+         * @param {number | null} [alpha]
+         * @param {boolean | null} [mirror]
+         * @param {number | null} [order]
+         */
+        addActor(id, model, motion, seed, x, y, scale, alpha, mirror, order) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(motion, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_addActor(this.__wbg_ptr, ptr0, len0, ptr1, len1, ptr2, len2, seed, isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), isLikeNone(scale) ? Number.MAX_SAFE_INTEGER : Math.fround(scale), isLikeNone(alpha) ? Number.MAX_SAFE_INTEGER : Math.fround(alpha), isLikeNone(mirror) ? 0xFFFFFF : mirror ? 1 : 0, !isLikeNone(order), isLikeNone(order) ? 0 : order);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * An empty stage on `canvas`, `width` × `height` pixels.
+         * @param {OffscreenCanvas} canvas
+         * @param {number} width
+         * @param {number} height
+         * @returns {Promise<Stage>}
+         */
+        static create(canvas, width, height) {
+            const ret = wasm.stage_create(canvas, width, height);
+            return ret;
+        }
+        /**
+         * Draws the stage as it is (after a change while paused). The first visible actor, if
+         * fully opaque, is drawn straight onto the canvas; a faded actor or any subsequent actor is
+         * drawn alone into a target of the canvas' size and composited over the canvas at its
+         * opacity, avoiding both self-overlap artefacts and cross-actor multiply bleed.
+         */
+        draw() {
+            wasm.stage_draw(this.__wbg_ptr);
+        }
+        /**
+         * Every running tween at its end (their `tween` events completed).
+         */
+        finishTweens() {
+            wasm.stage_finishTweens(this.__wbg_ptr);
+        }
+        /**
+         * Advances the stage by `dt` seconds (tweens, mouths, every actor's runtime), draws it,
+         * and returns the events of the frame (see [`Stage::take_events`]).
+         * @param {number} dt
+         * @returns {Array<any> | undefined}
+         */
+        frame(dt) {
+            const ret = wasm.stage_frame(this.__wbg_ptr, dt);
+            return ret;
+        }
+        /**
+         * Whether actor `id` has a physics rig.
+         * @param {string} id
+         * @returns {boolean}
+         */
+        hasPhysics(id) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_hasPhysics(this.__wbg_ptr, ptr0, len0);
+            return ret !== 0;
+        }
+        /**
+         * Starts actor `id`'s body motion `name` (its clip must be in the file table); with
+         * `looping`, it starts again whenever it ends.
+         * @param {string} id
+         * @param {string} name
+         * @param {boolean} looping
+         */
+        playMotion(id, name, looping) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_playMotion(this.__wbg_ptr, ptr0, len0, ptr1, len1, looping);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * Takes actor `id` off the stage; returns whether it was on it.
+         * @param {string} id
+         * @returns {boolean}
+         */
+        removeActor(id) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_removeActor(this.__wbg_ptr, ptr0, len0);
+            return ret !== 0;
+        }
+        /**
+         * Draws at `width` × `height` pixels from now on.
+         * @param {number} width
+         * @param {number} height
+         */
+        resize(width, height) {
+            wasm.stage_resize(this.__wbg_ptr, width, height);
+        }
+        /**
+         * Request `token`: moves actor `id` to the given values (the others stay) over `duration`
+         * seconds with `easing` (`linear`, `in`, `out`, `in-out`); its end comes as a `tween`
+         * event. Returns whether there is such an actor.
+         * @param {string} id
+         * @param {number | null | undefined} x
+         * @param {number | null | undefined} y
+         * @param {number | null | undefined} scale
+         * @param {number | null | undefined} alpha
+         * @param {boolean | null | undefined} mirror
+         * @param {number | null | undefined} order
+         * @param {number} duration
+         * @param {string} easing
+         * @param {number} token
+         * @returns {boolean}
+         */
+        setActor(id, x, y, scale, alpha, mirror, order, duration, easing, token) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(easing, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setActor(this.__wbg_ptr, ptr0, len0, isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), isLikeNone(scale) ? Number.MAX_SAFE_INTEGER : Math.fround(scale), isLikeNone(alpha) ? Number.MAX_SAFE_INTEGER : Math.fround(alpha), isLikeNone(mirror) ? 0xFFFFFF : mirror ? 1 : 0, !isLikeNone(order), isLikeNone(order) ? 0 : order, duration, ptr1, len1, token);
+            return ret !== 0;
+        }
+        /**
+         * Breathing on or off for every actor (and those added later).
+         * @param {boolean} on
+         */
+        setBreath(on) {
+            wasm.stage_setBreath(this.__wbg_ptr, on);
+        }
+        /**
+         * Request `token`: moves the camera to the given zoom (≥ `stage::MIN_ZOOM`) and pan (NDC)
+         * over `duration` seconds with `easing`; its end comes as a `tween` event.
+         * @param {number | null | undefined} zoom
+         * @param {number | null | undefined} x
+         * @param {number | null | undefined} y
+         * @param {number} duration
+         * @param {string} easing
+         * @param {number} token
+         */
+        setCamera(zoom, x, y, duration, easing, token) {
+            const ptr0 = passStringToWasm0(easing, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.stage_setCamera(this.__wbg_ptr, isLikeNone(zoom) ? Number.MAX_SAFE_INTEGER : Math.fround(zoom), isLikeNone(x) ? Number.MAX_SAFE_INTEGER : Math.fround(x), isLikeNone(y) ? Number.MAX_SAFE_INTEGER : Math.fround(y), duration, ptr0, len0, token);
+        }
+        /**
+         * Changes actor `id`'s facial to `name` (its clip must be in the file table).
+         * @param {string} id
+         * @param {string} name
+         */
+        setFacial(id, name) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setFacial(this.__wbg_ptr, ptr0, len0, ptr1, len1);
+            if (ret[1]) {
+                throw takeFromExternrefTable0(ret[0]);
+            }
+        }
+        /**
+         * Actor `id`'s mouth open by `value` (0..1) over the flap and the motion, or back to them.
+         * @param {string} id
+         * @param {number | null} [value]
+         * @returns {boolean}
+         */
+        setMouth(id, value) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setMouth(this.__wbg_ptr, ptr0, len0, isLikeNone(value) ? Number.MAX_SAFE_INTEGER : Math.fround(value));
+            return ret !== 0;
+        }
+        /**
+         * Physics on or off for every actor (and those added later).
+         * @param {boolean} on
+         */
+        setPhysics(on) {
+            wasm.stage_setPhysics(this.__wbg_ptr, on);
+        }
+        /**
+         * Actor `id`'s lip flap on or off (see `stage::LipFlap`).
+         * @param {string} id
+         * @param {boolean} on
+         * @returns {boolean}
+         */
+        setTalking(id, on) {
+            const ptr0 = passStringToWasm0(id, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.stage_setTalking(this.__wbg_ptr, ptr0, len0, on);
+            return ret !== 0;
+        }
+        /**
+         * The events since the last call (`{type: "tween", token, completed}` and
+         * `{type: "motionend", actor, name}`), oldest first; `undefined` for none.
+         * @returns {Array<any> | undefined}
+         */
+        takeEvents() {
+            const ret = wasm.stage_takeEvents(this.__wbg_ptr);
+            return ret;
+        }
+    }
+    if (Symbol.dispose) Stage.prototype[Symbol.dispose] = Stage.prototype.free;
+    exports.Stage = Stage;
+
+    /**
      * One model on a canvas.
      */
     class Viewer {
@@ -25,13 +271,11 @@ let wasm_bindgen = (function(exports) {
             wasm.__wbg_viewer_free(ptr, 0);
         }
         /**
-         * The model of library bundle `model`, with the motions of bundle `motion` (empty: none),
-         * on `canvas`, `width` × `height` pixels. `library` is the library's root in the file table,
-         * which holds the model bundle's files; a motion bundle's clips are read from it as they are
-         * played, so the worker puts each there first. `seed` picks the blink intervals and breath
-         * phase.
+         * The `live2d-model` asset `model`, with the clips of the `live2d-motions` asset `motion`
+         * (empty: none), on `canvas`, `width` × `height` pixels. The model's files must be in the
+         * file table ([`model_files`]); a clip is read from it when it is played, so the worker puts
+         * each there first ([`clip_file`]). `seed` picks the blink intervals and breath phase.
          * @param {OffscreenCanvas} canvas
-         * @param {string} library
          * @param {string} model
          * @param {string} motion
          * @param {number} width
@@ -39,14 +283,12 @@ let wasm_bindgen = (function(exports) {
          * @param {number} seed
          * @returns {Promise<Viewer>}
          */
-        static create(canvas, library, model, motion, width, height, seed) {
-            const ptr0 = passStringToWasm0(library, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        static create(canvas, model, motion, width, height, seed) {
+            const ptr0 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const ptr1 = passStringToWasm0(motion, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len1 = WASM_VECTOR_LEN;
-            const ptr2 = passStringToWasm0(motion, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len2 = WASM_VECTOR_LEN;
-            const ret = wasm.viewer_create(canvas, ptr0, len0, ptr1, len1, ptr2, len2, width, height, seed);
+            const ret = wasm.viewer_create(canvas, ptr0, len0, ptr1, len1, width, height, seed);
             return ret;
         }
         /**
@@ -137,7 +379,70 @@ let wasm_bindgen = (function(exports) {
     exports.Viewer = Viewer;
 
     /**
-     * The facial a model starts with, of its motion bundle's facials (see `defaults`).
+     * The file-table path of the clip `name` of the asset `motions`: a body motion when `kind` is
+     * `motion`, a facial when it is `facial`.
+     * @param {string} motions
+     * @param {string} kind
+     * @param {string} name
+     * @returns {string}
+     */
+    function clipFile(motions, kind, name) {
+        let deferred5_0;
+        let deferred5_1;
+        try {
+            const ptr0 = passStringToWasm0(motions, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ptr1 = passStringToWasm0(kind, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len1 = WASM_VECTOR_LEN;
+            const ptr2 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len2 = WASM_VECTOR_LEN;
+            const ret = wasm.clipFile(ptr0, len0, ptr1, len1, ptr2, len2);
+            var ptr4 = ret[0];
+            var len4 = ret[1];
+            if (ret[3]) {
+                ptr4 = 0; len4 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred5_0 = ptr4;
+            deferred5_1 = len4;
+            return getStringFromWasm0(ptr4, len4);
+        } finally {
+            wasm.__wbindgen_free(deferred5_0, deferred5_1, 1);
+        }
+    }
+    exports.clipFile = clipFile;
+
+    /**
+     * The clips of the `live2d-motions` asset `motions`, as the JSON of `{motions, facials}`:
+     * the names of its body motions (its `motion/<name>` members) and of its facials
+     * (`facial/<name>`), each sorted. Its document must be in the table.
+     * @param {string} motions
+     * @returns {string}
+     */
+    function clipNames(motions) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(motions, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.clipNames(ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    exports.clipNames = clipNames;
+
+    /**
+     * The facial a model starts with, of its motion set's facials (see `defaults`).
      * @param {string[]} names
      * @returns {string | undefined}
      */
@@ -155,7 +460,7 @@ let wasm_bindgen = (function(exports) {
     exports.defaultFacial = defaultFacial;
 
     /**
-     * The body motion a model starts with, of its motion bundle's body motions (see `defaults`).
+     * The body motion a model starts with, of its motion set's body motions (see `defaults`).
      * @param {string[]} names
      * @returns {string | undefined}
      */
@@ -173,6 +478,26 @@ let wasm_bindgen = (function(exports) {
     exports.defaultMotion = defaultMotion;
 
     /**
+     * The file-table paths of what the `live2d-model` asset `model` draws with (its `.moc3`, its
+     * physics and its textures; not the motions some model assets carry), for fetching them
+     * before [`Viewer::create`] or [`Stage::add_actor`]. Its document must be in the table.
+     * @param {string} model
+     * @returns {string[]}
+     */
+    function modelFiles(model) {
+        const ptr0 = passStringToWasm0(model, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.modelFiles(ptr0, len0);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
+        }
+        var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
+    }
+    exports.modelFiles = modelFiles;
+
+    /**
      * Puts a fetched file at `path` in the file table.
      * @param {string} path
      * @param {Uint8Array} bytes
@@ -188,19 +513,19 @@ let wasm_bindgen = (function(exports) {
     function __wbg_get_imports() {
         const import0 = {
             __proto__: null,
-            __wbg_CanvasHeight_86cb5e44c754a3b9: function(arg0) {
+            __wbg_CanvasHeight_6aa0c95765eaee31: function(arg0) {
                 const ret = arg0.CanvasHeight;
                 return ret;
             },
-            __wbg_CanvasOriginX_1edc5ecf052b1605: function(arg0) {
+            __wbg_CanvasOriginX_bf9aec9e69136670: function(arg0) {
                 const ret = arg0.CanvasOriginX;
                 return ret;
             },
-            __wbg_CanvasOriginY_76d98dc1758365a9: function(arg0) {
+            __wbg_CanvasOriginY_12f8f9cfa4a7a24f: function(arg0) {
                 const ret = arg0.CanvasOriginY;
                 return ret;
             },
-            __wbg_CanvasWidth_19e5cb7982bb9bfc: function(arg0) {
+            __wbg_CanvasWidth_8143add7a6d29e48: function(arg0) {
                 const ret = arg0.CanvasWidth;
                 return ret;
             },
@@ -208,7 +533,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = Error(getStringFromWasm0(arg0, arg1));
                 return ret;
             },
-            __wbg_PixelsPerUnit_c91bc35a29e4d8ed: function(arg0) {
+            __wbg_PixelsPerUnit_5ebcdd7a87f15f56: function(arg0) {
                 const ret = arg0.PixelsPerUnit;
                 return ret;
             },
@@ -259,7 +584,7 @@ let wasm_bindgen = (function(exports) {
             __wbg___wbindgen_throw_5d9e815e6fdf150f: function(arg0, arg1) {
                 throw new Error(getStringFromWasm0(arg0, arg1));
             },
-            __wbg__release_3b3632a2624171d9: function() { return handleError(function (arg0) {
+            __wbg__release_f18bac2c56a8e7ef: function() { return handleError(function (arg0) {
                 arg0._release();
             }, arguments); },
             __wbg__wbg_cb_unref_997e73d32238e655: function(arg0) {
@@ -277,22 +602,18 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.buffer;
                 return ret;
             },
-            __wbg_byteOffset_08def62ab5e8b536: function(arg0) {
-                const ret = arg0.byteOffset;
-                return ret;
-            },
             __wbg_call_6bcf8d3e20937e46: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.call(arg1, arg2);
                 return ret;
             }, arguments); },
-            __wbg_canvasinfo_c3cce5d684552ceb: function(arg0) {
+            __wbg_canvasinfo_6e4087de2f5c02bb: function(arg0) {
                 const ret = arg0.canvasinfo;
                 return ret;
             },
             __wbg_configure_1e2c1c9edad07d26: function() { return handleError(function (arg0, arg1) {
                 arg0.configure(arg1);
             }, arguments); },
-            __wbg_constantFlags_1d341316cac36120: function(arg0) {
+            __wbg_constantFlags_e2405cd9420dab6e: function(arg0) {
                 const ret = arg0.constantFlags;
                 return ret;
             },
@@ -336,15 +657,15 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.createView(arg1);
                 return ret;
             }, arguments); },
-            __wbg_csmGetMocVersion_3d08c30bf9f2042d: function() { return handleError(function (arg0, arg1, arg2) {
+            __wbg_csmGetMocVersion_fd13815adab95880: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.csmGetMocVersion(arg1, arg2);
                 return ret;
             }, arguments); },
-            __wbg_csmGetVersion_82c47798ca7cc531: function() { return handleError(function (arg0) {
+            __wbg_csmGetVersion_ed321ba577ec9a6c: function() { return handleError(function (arg0) {
                 const ret = arg0.csmGetVersion();
                 return ret;
             }, arguments); },
-            __wbg_defaultValues_36d93f65fc178d91: function(arg0) {
+            __wbg_defaultValues_7b62ac1d4cbbd6e6: function(arg0) {
                 const ret = arg0.defaultValues;
                 return ret;
             },
@@ -355,16 +676,23 @@ let wasm_bindgen = (function(exports) {
             __wbg_drawIndexed_638959aae942557c: function(arg0, arg1, arg2, arg3, arg4, arg5) {
                 arg0.drawIndexed(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4, arg5 >>> 0);
             },
-            __wbg_drawables_271ffa2cb7ae2b48: function(arg0) {
+            __wbg_draw_086a9578fc9898c2: function(arg0, arg1, arg2, arg3, arg4) {
+                arg0.draw(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4 >>> 0);
+            },
+            __wbg_drawables_2249a1e7ab376d7e: function(arg0) {
                 const ret = arg0.drawables;
                 return ret;
             },
-            __wbg_dynamicFlags_9222ae7949cd931a: function(arg0) {
+            __wbg_dynamicFlags_53756f54a0474230: function(arg0) {
                 const ret = arg0.dynamicFlags;
                 return ret;
             },
             __wbg_end_b57473834b877409: function(arg0) {
                 arg0.end();
+            },
+            __wbg_features_5cac120c28ba0475: function(arg0) {
+                const ret = arg0.features;
+                return ret;
             },
             __wbg_finish_09ec094c10f41e7b: function(arg0) {
                 const ret = arg0.finish();
@@ -374,14 +702,18 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.finish(arg1);
                 return ret;
             },
-            __wbg_fromArrayBuffer_6a22bf729fdf302d: function() { return handleError(function (arg0, arg1) {
+            __wbg_fromArrayBuffer_a11f6aa41a4a9946: function() { return handleError(function (arg0, arg1) {
                 const ret = arg0.fromArrayBuffer(arg1);
                 return ret;
             }, arguments); },
-            __wbg_fromMoc_da5e9bb6702c95b0: function() { return handleError(function (arg0, arg1) {
+            __wbg_fromMoc_643f5ecc659e4d4a: function() { return handleError(function (arg0, arg1) {
                 const ret = arg0.fromMoc(arg1);
                 return ret;
             }, arguments); },
+            __wbg_getBindGroupLayout_fb40c3b93d37f466: function(arg0, arg1) {
+                const ret = arg0.getBindGroupLayout(arg1 >>> 0);
+                return ret;
+            },
             __wbg_getContext_5ff6bd600503b094: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.getContext(getStringFromWasm0(arg1, arg2));
                 return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -402,7 +734,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.getPreferredCanvasFormat();
                 return (__wbindgen_enum_GpuTextureFormat.indexOf(ret) + 1 || 102) - 1;
             },
-            __wbg_getRenderOrders_b64b3f86b16d26d5: function() { return handleError(function (arg0) {
+            __wbg_getRenderOrders_61fe577141ba35da: function() { return handleError(function (arg0) {
                 const ret = arg0.getRenderOrders();
                 return ret;
             }, arguments); },
@@ -426,23 +758,27 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.gpu;
                 return ret;
             },
-            __wbg_ids_73e8de46811e7f08: function(arg0) {
+            __wbg_has_eafa12e457ea88fb: function(arg0, arg1, arg2) {
+                const ret = arg0.has(getStringFromWasm0(arg1, arg2));
+                return ret;
+            },
+            __wbg_ids_1fed398cfa85d088: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_ids_9f32710195f1cbcf: function(arg0) {
+            __wbg_ids_a315659aa985b9cd: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_ids_c30962478714b097: function(arg0) {
+            __wbg_ids_f9b69845f454e429: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_indices_88876a73a959e41b: function(arg0) {
+            __wbg_indices_2867a1e0af356e02: function(arg0) {
                 const ret = arg0.indices;
                 return ret;
             },
-            __wbg_initializeAmountOfMemory_5b186c99867507c6: function() { return handleError(function (arg0, arg1) {
+            __wbg_initializeAmountOfMemory_24502ece7feae930: function() { return handleError(function (arg0, arg1) {
                 arg0.initializeAmountOfMemory(arg1);
             }, arguments); },
             __wbg_instanceof_Error_fe6fa771c78ee4cf: function(arg0) {
@@ -540,15 +876,135 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.length;
                 return ret;
             },
+            __wbg_limits_06bcb36c8409843b: function(arg0) {
+                const ret = arg0.limits;
+                return ret;
+            },
             __wbg_mapAsync_b0597127f5037286: function(arg0, arg1, arg2, arg3) {
                 const ret = arg0.mapAsync(arg1 >>> 0, arg2, arg3);
                 return ret;
             },
-            __wbg_masks_6e8a8fcf1ffd5ab6: function(arg0) {
+            __wbg_masks_03aa2ae4a7b94b02: function(arg0) {
                 const ret = arg0.masks;
                 return ret;
             },
-            __wbg_maximumValues_b255e4bf942ca222: function(arg0) {
+            __wbg_maxBindGroupsPlusVertexBuffers_52369f089736ef9d: function(arg0) {
+                const ret = arg0.maxBindGroupsPlusVertexBuffers;
+                return ret;
+            },
+            __wbg_maxBindGroups_4e424afe6ce86ca2: function(arg0) {
+                const ret = arg0.maxBindGroups;
+                return ret;
+            },
+            __wbg_maxBindingsPerBindGroup_7d035da36821c44f: function(arg0) {
+                const ret = arg0.maxBindingsPerBindGroup;
+                return ret;
+            },
+            __wbg_maxBufferSize_423f4a084e32a195: function(arg0) {
+                const ret = arg0.maxBufferSize;
+                return ret;
+            },
+            __wbg_maxColorAttachmentBytesPerSample_c4cd9126f6d287c6: function(arg0) {
+                const ret = arg0.maxColorAttachmentBytesPerSample;
+                return ret;
+            },
+            __wbg_maxColorAttachments_d924670762b9e250: function(arg0) {
+                const ret = arg0.maxColorAttachments;
+                return ret;
+            },
+            __wbg_maxComputeInvocationsPerWorkgroup_707a3868f7cebb59: function(arg0) {
+                const ret = arg0.maxComputeInvocationsPerWorkgroup;
+                return ret;
+            },
+            __wbg_maxComputeWorkgroupSizeX_0a4d99463cbd6e5e: function(arg0) {
+                const ret = arg0.maxComputeWorkgroupSizeX;
+                return ret;
+            },
+            __wbg_maxComputeWorkgroupSizeY_85123ea0587f7558: function(arg0) {
+                const ret = arg0.maxComputeWorkgroupSizeY;
+                return ret;
+            },
+            __wbg_maxComputeWorkgroupSizeZ_a3186b4c5267d44f: function(arg0) {
+                const ret = arg0.maxComputeWorkgroupSizeZ;
+                return ret;
+            },
+            __wbg_maxComputeWorkgroupStorageSize_57b297355cfb6204: function(arg0) {
+                const ret = arg0.maxComputeWorkgroupStorageSize;
+                return ret;
+            },
+            __wbg_maxComputeWorkgroupsPerDimension_4158f95e673d54c4: function(arg0) {
+                const ret = arg0.maxComputeWorkgroupsPerDimension;
+                return ret;
+            },
+            __wbg_maxDynamicStorageBuffersPerPipelineLayout_226b0b70910aa16c: function(arg0) {
+                const ret = arg0.maxDynamicStorageBuffersPerPipelineLayout;
+                return ret;
+            },
+            __wbg_maxDynamicUniformBuffersPerPipelineLayout_0e835fda711fc7e6: function(arg0) {
+                const ret = arg0.maxDynamicUniformBuffersPerPipelineLayout;
+                return ret;
+            },
+            __wbg_maxInterStageShaderVariables_8c4a1d727e2aa35a: function(arg0) {
+                const ret = arg0.maxInterStageShaderVariables;
+                return ret;
+            },
+            __wbg_maxSampledTexturesPerShaderStage_6675f5e91d9a728a: function(arg0) {
+                const ret = arg0.maxSampledTexturesPerShaderStage;
+                return ret;
+            },
+            __wbg_maxSamplersPerShaderStage_1910fa38a6ed1e1f: function(arg0) {
+                const ret = arg0.maxSamplersPerShaderStage;
+                return ret;
+            },
+            __wbg_maxStorageBufferBindingSize_2e244bded070b18d: function(arg0) {
+                const ret = arg0.maxStorageBufferBindingSize;
+                return ret;
+            },
+            __wbg_maxStorageBuffersPerShaderStage_a285f3ebca51ca0d: function(arg0) {
+                const ret = arg0.maxStorageBuffersPerShaderStage;
+                return ret;
+            },
+            __wbg_maxStorageTexturesPerShaderStage_7aa946f0fc322a2b: function(arg0) {
+                const ret = arg0.maxStorageTexturesPerShaderStage;
+                return ret;
+            },
+            __wbg_maxTextureArrayLayers_0e699147ad00502d: function(arg0) {
+                const ret = arg0.maxTextureArrayLayers;
+                return ret;
+            },
+            __wbg_maxTextureDimension1D_aabf6add54decfe2: function(arg0) {
+                const ret = arg0.maxTextureDimension1D;
+                return ret;
+            },
+            __wbg_maxTextureDimension2D_dd598b27e9c0c1c4: function(arg0) {
+                const ret = arg0.maxTextureDimension2D;
+                return ret;
+            },
+            __wbg_maxTextureDimension3D_f944266c65dfd1a9: function(arg0) {
+                const ret = arg0.maxTextureDimension3D;
+                return ret;
+            },
+            __wbg_maxUniformBufferBindingSize_59fa6be7cfbeeb53: function(arg0) {
+                const ret = arg0.maxUniformBufferBindingSize;
+                return ret;
+            },
+            __wbg_maxUniformBuffersPerShaderStage_bee5f00a4d706c7f: function(arg0) {
+                const ret = arg0.maxUniformBuffersPerShaderStage;
+                return ret;
+            },
+            __wbg_maxVertexAttributes_5cf6392c4e9033fe: function(arg0) {
+                const ret = arg0.maxVertexAttributes;
+                return ret;
+            },
+            __wbg_maxVertexBufferArrayStride_548baa887375d865: function(arg0) {
+                const ret = arg0.maxVertexBufferArrayStride;
+                return ret;
+            },
+            __wbg_maxVertexBuffers_75d881156591f5da: function(arg0) {
+                const ret = arg0.maxVertexBuffers;
+                return ret;
+            },
+            __wbg_maximumValues_8c554521900cb9d6: function(arg0) {
                 const ret = arg0.maximumValues;
                 return ret;
             },
@@ -556,12 +1012,16 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.message;
                 return ret;
             },
-            __wbg_minimumValues_c35962e2fe039e5e: function(arg0) {
-                const ret = arg0.minimumValues;
+            __wbg_minStorageBufferOffsetAlignment_5ba9b77792bdadb3: function(arg0) {
+                const ret = arg0.minStorageBufferOffsetAlignment;
                 return ret;
             },
-            __wbg_multiplyColors_ce28ba12fed63e73: function(arg0) {
-                const ret = arg0.multiplyColors;
+            __wbg_minUniformBufferOffsetAlignment_ab7d52a5293b22bd: function(arg0) {
+                const ret = arg0.minUniformBufferOffsetAlignment;
+                return ret;
+            },
+            __wbg_minimumValues_ec4b5c635e617e3c: function(arg0) {
+                const ret = arg0.minimumValues;
                 return ret;
             },
             __wbg_navigator_d217ca64c4bbff48: function(arg0) {
@@ -580,6 +1040,10 @@ let wasm_bindgen = (function(exports) {
                 const ret = new Object();
                 return ret;
             },
+            __wbg_new_ffa92086ea89f79c: function() {
+                const ret = new Array();
+                return ret;
+            },
             __wbg_new_from_slice_4ee02165f9de919e: function(arg0, arg1) {
                 const ret = new Uint8Array(getArrayU8FromWasm0(arg0, arg1));
                 return ret;
@@ -591,7 +1055,7 @@ let wasm_bindgen = (function(exports) {
                         const a = state0.a;
                         state0.a = 0;
                         try {
-                            return wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(a, state0.b, arg0, arg1);
+                            return wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(a, state0.b, arg0, arg1);
                         } finally {
                             state0.a = a;
                         }
@@ -614,19 +1078,19 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.onSubmittedWorkDone();
                 return ret;
             },
-            __wbg_opacities_30b8bc0df67daa3f: function(arg0) {
+            __wbg_opacities_b2ce302a4f8065a9: function(arg0) {
                 const ret = arg0.opacities;
                 return ret;
             },
-            __wbg_opacities_b33d19dd7cd03d04: function(arg0) {
+            __wbg_opacities_b7ce835a3930eabf: function(arg0) {
                 const ret = arg0.opacities;
                 return ret;
             },
-            __wbg_parameters_9a8e1a8a8825b730: function(arg0) {
+            __wbg_parameters_49bf52b2d2be7d66: function(arg0) {
                 const ret = arg0.parameters;
                 return ret;
             },
-            __wbg_parts_039c8c052267b348: function(arg0) {
+            __wbg_parts_4f33b5c518f9f81d: function(arg0) {
                 const ret = arg0.parts;
                 return ret;
             },
@@ -641,6 +1105,10 @@ let wasm_bindgen = (function(exports) {
             },
             __wbg_prototypesetcall_e20f3c85f78376cf: function(arg0, arg1, arg2) {
                 Int32Array.prototype.set.call(getArrayI32FromWasm0(arg0, arg1), arg2);
+            },
+            __wbg_push_bfdf956ba476f65b: function(arg0, arg1) {
+                const ret = arg0.push(arg1);
+                return ret;
             },
             __wbg_querySelectorAll_fdbf93e11103921d: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.querySelectorAll(getStringFromWasm0(arg1, arg2));
@@ -657,10 +1125,10 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.queue;
                 return ret;
             },
-            __wbg_release_c488cde3ff92a696: function() { return handleError(function (arg0) {
+            __wbg_release_abb4fac373bdae74: function() { return handleError(function (arg0) {
                 arg0.release();
             }, arguments); },
-            __wbg_renderOrders_161f0530b6100199: function(arg0) {
+            __wbg_renderOrders_bd19653d63ce1d87: function(arg0) {
                 const ret = arg0.renderOrders;
                 return ret;
             },
@@ -672,15 +1140,11 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.requestDevice(arg1);
                 return ret;
             },
-            __wbg_resetDynamicFlags_155575e496f8fff5: function(arg0) {
+            __wbg_resetDynamicFlags_36abbc8fbd5ad9f2: function(arg0) {
                 arg0.resetDynamicFlags();
             },
             __wbg_resolve_35ec7e0c6af4c82c: function(arg0) {
                 const ret = Promise.resolve(arg0);
-                return ret;
-            },
-            __wbg_screenColors_504c9dc1a595f7d8: function(arg0) {
-                const ret = arg0.screenColors;
                 return ret;
             },
             __wbg_setBindGroup_11bdbb60cc8b54b9: function() { return handleError(function (arg0, arg1, arg2, arg3, arg4, arg5, arg6) {
@@ -1221,6 +1685,10 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_z_2e6820ef0f5821ed: function(arg0, arg1) {
                 arg0.z = arg1 >>> 0;
             },
+            __wbg_stage_new: function(arg0) {
+                const ret = Stage.__wrap(arg0);
+                return ret;
+            },
             __wbg_static_accessor_GLOBAL_8eb4cd83130a11a0: function() {
                 const ret = typeof global === 'undefined' ? null : global;
                 return isLikeNone(ret) ? 0 : addToExternrefTable0(ret);
@@ -1240,7 +1708,7 @@ let wasm_bindgen = (function(exports) {
             __wbg_submit_077c85cc28e36892: function(arg0, arg1, arg2) {
                 arg0.submit(getArrayJsValueViewFromWasm0(arg1, arg2));
             },
-            __wbg_textureIndices_2c2433aee7919fc0: function(arg0) {
+            __wbg_textureIndices_7aae40cf8624a189: function(arg0) {
                 const ret = arg0.textureIndices;
                 return ret;
             },
@@ -1258,18 +1726,18 @@ let wasm_bindgen = (function(exports) {
             __wbg_unmap_6a96b14c9ef5f7f5: function(arg0) {
                 arg0.unmap();
             },
-            __wbg_update_3fa893592b6c544e: function(arg0) {
+            __wbg_update_3407f4ea1ae3b5c9: function(arg0) {
                 arg0.update();
             },
-            __wbg_values_8e424bb30ad835d7: function(arg0) {
+            __wbg_values_73fd090ea0248ebb: function(arg0) {
                 const ret = arg0.values;
                 return ret;
             },
-            __wbg_vertexPositions_ddf271f29cc180c6: function(arg0) {
+            __wbg_vertexPositions_5155552ff0a81c0f: function(arg0) {
                 const ret = arg0.vertexPositions;
                 return ret;
             },
-            __wbg_vertexUvs_2fbd9433fe681085: function(arg0) {
+            __wbg_vertexUvs_cb02406b3fa67546: function(arg0) {
                 const ret = arg0.vertexUvs;
                 return ret;
             },
@@ -1284,23 +1752,23 @@ let wasm_bindgen = (function(exports) {
                 arg0.writeTexture(arg1, getArrayU8FromWasm0(arg2, arg3), arg4, arg5);
             }, arguments); },
             __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 277, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 282, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__37);
                 return ret;
             },
             __wbindgen_generic_0000000000000004: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 27, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 37, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__38);
                 return ret;
             },
             __wbindgen_generic_0000000000000005: function(arg0) {
@@ -1334,36 +1802,36 @@ let wasm_bindgen = (function(exports) {
         };
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true_(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true_(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__16(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__37(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__37(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___wasm_bindgen_13dab8c06ff4562a___sys__JsNullable_wgpu_2a0a4b0a37da1593___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_13dab8c06ff4562a___JsError___true__17(arg0, arg1, arg2);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__38(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___wasm_bindgen_43bbc7ea8f344cc4___sys__JsNullable_wgpu_81094410d12b9bf3___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_43bbc7ea8f344cc4___JsError___true__38(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
-        wasm.wasm_bindgen_13dab8c06ff4562a___convert__closures_____invoke___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined___js_sys_620190cd17e8d420___Function_fn_wasm_bindgen_13dab8c06ff4562a___JsValue_____wasm_bindgen_13dab8c06ff4562a___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
+    function wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(arg0, arg1, arg2, arg3) {
+        wasm.wasm_bindgen_43bbc7ea8f344cc4___convert__closures_____invoke___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined___js_sys_3485f2e87784b509___Function_fn_wasm_bindgen_43bbc7ea8f344cc4___JsValue_____wasm_bindgen_43bbc7ea8f344cc4___sys__Undefined_______true_(arg0, arg1, arg2, arg3);
     }
 
 
@@ -1446,6 +1914,9 @@ let wasm_bindgen = (function(exports) {
 
 
     const __wbindgen_enum_GpuVertexStepMode = ["vertex", "instance"];
+    const StageFinalization = (typeof FinalizationRegistry === 'undefined')
+        ? { register: () => {}, unregister: () => {} }
+        : new FinalizationRegistry(ptr => wasm.__wbg_stage_free(ptr, 1));
     const ViewerFinalization = (typeof FinalizationRegistry === 'undefined')
         ? { register: () => {}, unregister: () => {} }
         : new FinalizationRegistry(ptr => wasm.__wbg_viewer_free(ptr, 1));
@@ -1533,6 +2004,17 @@ let wasm_bindgen = (function(exports) {
     function getArrayI32FromWasm0(ptr, len) {
         ptr = ptr >>> 0;
         return getInt32ArrayMemory0().subarray(ptr / 4, ptr / 4 + len);
+    }
+
+    function getArrayJsValueFromWasm0(ptr, len) {
+        ptr = ptr >>> 0;
+        const mem = getDataViewMemory0();
+        const result = [];
+        for (let i = ptr; i < ptr + 4 * len; i += 4) {
+            result.push(wasm.__wbindgen_externrefs.get(mem.getUint32(i, true)));
+        }
+        wasm.__externref_drop_slice(ptr, len);
+        return result;
     }
 
     function getArrayJsValueViewFromWasm0(ptr, len) {

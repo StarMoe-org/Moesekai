@@ -1,20 +1,26 @@
-// The viewer's worker: fetches a model's files, keeps them in the browser's Cache API, and
-// draws the model on the OffscreenCanvas the page handed over (SSE's ADR-0031 way: the files go
-// into the wasm's in-memory file table, which the SSE crates read). Cubism Core for Web is
-// loaded here with importScripts before the wasm (SSE's ADR-0032).
+// The viewer's worker: fetches a model's files from a site's published version, keeps them in
+// the browser's Cache API, and draws the model on the OffscreenCanvas the page handed over (SSE's
+// ADR-0031 way: the files go into the wasm's in-memory file table, under /pub at their
+// publication paths, which the SSE crates read). Cubism Core for Web is loaded here with
+// importScripts before the wasm (SSE's ADR-0032).
 //
-// Opening a model fetches the two bundles' `_ripper.json`, the model bundle's files and the
-// default body motion and facial; any other clip is fetched the first time it is played.
+// Opening a model fetches the documents of its `live2d-model` asset and its `live2d-motions`
+// asset (each given by name, or by a directory holding it — a trailing `/` skips the
+// `<path>.asset.json` probe; resolved directory mappings are cached per published version), the
+// model's files and the default body motion and facial; any other clip is fetched the first time
+// it is played.
 //
 // From the page:
-//   { type: "init", options, canvas }   options: see viewer.js (`core`, `pkg` and `library`
-//                                       absolute; `model: {bundle, motion}`, `width`, `height`)
+//   { type: "init", options, canvas }   options: see viewer.js (`core`, `pkg` and `base`
+//                                       absolute; `model: {asset, motion}`, `width`, `height`)
 //   { type: "motion", id, name, loop }  { type: "facial", id, name }   answered by "settled"
 //   { type: "physics", on }             { type: "breath", on }       { type: "paused", on }
 //   { type: "view", zoom, x, y }        { type: "resize", width, height }
 // To the page:
 //   { type: "progress", loaded, total }  files of the first opening in the table
-//   { type: "ready", motions, facials, defaultMotion, defaultFacial, hasPhysics }
+//   { type: "ready", model, motion, motions, facials, defaultMotion, defaultFacial, hasPhysics }
+//                                       `model` and `motion` the asset names opened (`motion`
+//                                       null when the model opened without motions)
 //   { type: "settled", id, started, error? }  a "motion" or "facial": started, or replaced by a
 //                                       later one before its clip arrived (`started` false), or
 //                                       its clip could not be had (`error`: message, kind, url)
@@ -23,16 +29,17 @@
 //                                           nothing more happens after it
 "use strict";
 
-/** The Cache API store of the bundles' files. A file is kept under its URL with its bundle's
- * CRC (`?crc=`), so a bundle the library re-exports is fetched again. */
-const CACHE = "sekai-live2d-v1";
+/** The Cache API store of the files, by URL: a file of a published version never changes. */
+const CACHE = "sekai-live2d-v2";
 /** A fetch is given up once nothing has arrived for this long (ms), and tried again. */
 const FETCH_IDLE_MS = 30000;
+/** Where the files of the published version are in the file table. */
+const ROOT = "/pub/";
 
 let viewer;
 let canvas;
-/** Where clips come from once the model is up: `{library, bundle, crc, cache, putFile}`, the
- * clips' paths in the bundle by name (`motions`, `facials`), and the files in the table. */
+let loader;
+/** The motions asset opened (or null), and its clips by name. */
 let clips;
 /** The newest "motion" and "facial" request: an older one whose clip arrives later is dropped. */
 const newest = { motion: 0, facial: 0 };
@@ -60,7 +67,7 @@ function encodePath(path) {
  * The bytes at `url`, tried up to four times; a response that stops arriving counts as failed.
  * A file the server does not have (404) is not asked for again: the Error then has `status`.
  */
-async function fetchBytes(url, init) {
+async function fetchBytes(url) {
   for (let attempt = 1; ; attempt++) {
     const abort = new AbortController();
     let idle;
@@ -71,9 +78,10 @@ async function fetchBytes(url, init) {
     let status;
     try {
       watch();
-      const r = await fetch(url, { ...init, signal: abort.signal });
+      const r = await fetch(url, { signal: abort.signal });
       status = r.status;
       if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+      if (!r.body) return new Uint8Array(await r.arrayBuffer());
       const reader = r.body.getReader();
       const pieces = [];
       let length = 0;
@@ -111,93 +119,241 @@ async function openCache() {
   }
 }
 
-/** The `_ripper.json` of library bundle `bundle`, asked for afresh each time. A bundle the
- * library does not have fails with `kind: "not-found"`. */
-async function manifest(library, bundle) {
-  const url = `${library}library/${encodePath(bundle)}/_ripper.json`;
-  let bytes;
-  try {
-    bytes = await fetchBytes(url, { cache: "no-cache" });
-  } catch (e) {
-    if (e.status === 404) throw failure(`the library has no ${bundle}`, "not-found", url);
-    throw e;
-  }
-  const m = JSON.parse(new TextDecoder().decode(bytes));
-  return { bundle, crc: m.crc, files: m.files };
+/** The file-table path a wasm call failed to find, for each of its "not in the file table". */
+function missingPaths(e) {
+  return String(e?.message ?? e).split("; ").map((msg) => {
+    const end = msg.indexOf(": not in the file table");
+    if (end < 0) return undefined;
+    const start = msg.lastIndexOf(": ", end - 1);
+    const path = msg.slice(start < 0 ? 0 : start + 2, end);
+    return path.startsWith("/") ? path : undefined;
+  }).filter(Boolean);
 }
 
-/** Drops the cached files of `bundle` kept under another CRC than `crc`. */
-async function dropStale(cache, library, bundle, crc) {
-  const prefix = `${library}library/${encodePath(bundle)}/`;
-  for (const req of await cache.keys()) {
-    const u = new URL(req.url);
-    if (`${u.origin}${u.pathname}`.startsWith(prefix) && u.searchParams.get("crc") !== String(crc)) {
-      await cache.delete(req);
+/**
+ * Fetches files of the published version at `base` (ending in `/`) into the file table: a
+ * table path `/pub/<path>` is served at `<base><path>`. Each file is fetched once and kept in the
+ * Cache API.
+ */
+class Loader {
+  constructor(base, putFile, cache) {
+    this.base = base;
+    this.putFile = putFile;
+    this.cache = cache;
+    this.loaded = new Map();
+    this.jsons = new Map();
+    this.assets = new Map();
+    this.resolved = new Map();
+  }
+
+  url(path) {
+    return this.base + encodePath(path.slice(ROOT.length));
+  }
+
+  /** Normalized URL for `path` under `this.base` (preserving a single trailing `/` when given). */
+  assetUrl(path) {
+    const raw = String(path ?? "");
+    const trailing = raw.endsWith("/");
+    const clean = raw.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+    return clean ? `${this.base}${encodePath(clean)}${trailing ? "/" : ""}` : this.base;
+  }
+
+  /** Cache API key for a resolved directory -> nested asset mapping under this published version. */
+  resolveCacheUrl(name, form) {
+    return `${this.base}${encodePath(name)}/?sekai-asset-resolve=${encodeURIComponent(form)}`;
+  }
+
+  /** The bytes of the publication path `path` (a directory's listing when it ends in `/`). */
+  async bytes(path) {
+    const url = this.base + encodePath(path);
+    try {
+      const hit = await this.cache?.match(url);
+      if (hit) return new Uint8Array(await hit.arrayBuffer());
+    } catch { /* fetch it */ }
+    const bytes = await fetchBytes(url);
+    try { this.cache?.put(url, new Response(bytes))?.catch(() => {}); } catch { /* custom scheme or opaque origin */ }
+    return bytes;
+  }
+
+  /** Puts the file at table path `path` in the table (once; requests in flight share it). */
+  get(path) {
+    let p = this.loaded.get(path);
+    if (!p) {
+      p = this.bytes(path.slice(ROOT.length)).then((bytes) => this.putFile(path, bytes));
+      this.loaded.set(path, p);
+      p.catch(() => this.loaded.delete(path)); // asked for again next time
+    }
+    return p;
+  }
+
+  /** Puts all of `paths` in the table, a few at a time; `progress(done, total)`. */
+  async getAll(paths, progress) {
+    const queue = [...new Set(paths)];
+    let done = 0;
+    progress?.(done, queue.length);
+    const total = queue.length;
+    await Promise.all(Array.from({ length: 12 }, async () => {
+      for (let p; (p = queue.shift()) !== undefined;) {
+        await this.get(p);
+        progress?.(++done, total);
+      }
+    }));
+  }
+
+  /** Calls `f` until it stops failing for files the table lacks, fetching the ones it names. */
+  async retryMissing(f) {
+    for (let round = 1; ; round++) {
+      try {
+        return f();
+      } catch (e) {
+        const paths = missingPaths(e);
+        if (!paths.length || round > 50) throw e;
+        await Promise.all(paths.map((p) => this.get(p)));
+      }
     }
   }
-}
 
-/** The bytes of `path` in library bundle `bundle` (of CRC `crc`), from the cache if it has
- * them, else fetched and kept there. */
-async function bundleFile(library, cache, bundle, crc, path) {
-  const url = `${library}library/${encodePath(bundle)}/${encodePath(path)}`;
-  const key = `${url}?crc=${crc}`;
-  try {
-    const hit = await cache?.match(key);
-    if (hit) return new Uint8Array(await hit.arrayBuffer());
-  } catch { /* fetch it */ }
-  const bytes = await fetchBytes(url);
-  cache?.put(key, new Response(bytes)).catch(() => {});
-  return bytes;
-}
-
-/** Puts `files` (`{bundle, crc, path}`) in the table, a few at a time; `progress(done, total)`. */
-async function loadFiles(library, cache, files, putFile, progress) {
-  const queue = [...files];
-  let done = 0;
-  progress?.(done, files.length);
-  await Promise.all(Array.from({ length: 12 }, async () => {
-    for (let f; (f = queue.shift()) !== undefined;) {
-      putFile(`/lib/library/${f.bundle}/${f.path}`, await bundleFile(library, cache, f.bundle, f.crc, f.path));
-      progress?.(++done, files.length);
+  /** The JSON of the publication path `path` (cached in worker); undefined when the site has none. */
+  json(path) {
+    let p = this.jsons.get(path);
+    if (!p) {
+      p = (async () => {
+        try {
+          return JSON.parse(new TextDecoder().decode(await this.bytes(path)));
+        } catch (e) {
+          if (e?.status === 404) return undefined;
+          throw e;
+        }
+      })();
+      this.jsons.set(path, p);
+      p.catch(() => this.jsons.delete(path));
     }
-  }));
-}
-
-/** The clips of a motion bundle's manifest by name: body motions (`motion/<name>…`) and facials
- * (`facial/<name>…`), each name → its path in the bundle. */
-function clipPaths(manifest) {
-  const motions = new Map();
-  const facials = new Map();
-  for (const f of manifest?.files ?? []) {
-    const m = /^(motion|facial)\/(.+)\.sse-motion\.json$/.exec(f.path);
-    if (m) (m[1] === "motion" ? motions : facials).set(m[2], f.path);
+    return p;
   }
-  const sorted = (map) => new Map([...map].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)));
-  return { motions: sorted(motions), facials: sorted(facials) };
-}
 
-/** Puts the clip `path` of the motion bundle in the table (once; requests for one in flight
- * share it). */
-function loadClip(path) {
-  let p = clips.loaded.get(path);
-  if (!p) {
-    p = bundleFile(clips.library, clips.cache, clips.bundle, clips.crc, path).then((bytes) => {
-      clips.putFile(`/lib/library/${clips.bundle}/${path}`, bytes);
-    });
-    clips.loaded.set(path, p);
-    p.catch(() => clips.loaded.delete(path)); // asked for again next time
+  /**
+   * The asset of form `form` that `path` names:
+   * - When `path` ends with `/`, it names a directory directly (skipping `<path>.asset.json` so
+   *   cold directory loads never incur a 404 probe) and walks its listings for the first matching
+   *   asset (`buildmodeldata` / `buildmotiondata` first).
+   * - Otherwise, it checks `<path>.asset.json` first and falls back to walking `<path>/`.
+   * Resolved directory -> nested-asset mappings are persisted in `sekai-live2d-v2` (and kept in
+   * the worker) per immutable published version so warm reloads jump straight to the resolved
+   * `.asset.json`. Its document is put in the table. Undefined when there is none.
+   */
+  asset(path, form) {
+    const raw = String(path ?? "");
+    const explicitDir = raw.endsWith("/");
+    const name = raw.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+    if (!name) return Promise.resolve(undefined);
+    const key = `${form}\0${name}${explicitDir ? "/" : ""}`;
+    let p = this.assets.get(key);
+    if (!p) {
+      p = (async () => {
+        const take = async (asset) => {
+          const document = await this.json(`${asset}.asset.json`);
+          if (document?.form !== form) return undefined;
+          this.putFile(`${ROOT}${asset}.asset.json`, new TextEncoder().encode(JSON.stringify(document)));
+          return asset;
+        };
+        const resolvedKey = `${form}\0${name}`;
+        const resolveUrl = this.resolveCacheUrl(name, form);
+
+        let cachedAsset = this.resolved.get(resolvedKey);
+        let fromCache = false;
+        if (!cachedAsset && this.cache) {
+          let hit;
+          try {
+            hit = await this.cache.match(resolveUrl);
+          } catch { /* custom scheme or opaque origin */ }
+          if (hit) {
+            fromCache = true;
+            try {
+              const data = await hit.json();
+              if (typeof data?.asset === "string") {
+                const normalized = data.asset.replace(/^\/+|\/+$/g, "").replace(/\/+/g, "/");
+                if (normalized.startsWith(`${name}/`) && !normalized.split("/").includes("..")) {
+                  cachedAsset = normalized;
+                }
+              }
+            } catch { /* corrupt cache entry */ }
+            if (!cachedAsset) {
+              try { await this.cache.delete?.(resolveUrl); } catch { /* ignore */ }
+            }
+          }
+        }
+        if (cachedAsset) {
+          let validated;
+          try {
+            validated = await take(cachedAsset);
+          } catch (e) {
+            if (e?.kind === "network") throw e;
+          }
+          if (validated) {
+            this.resolved.set(resolvedKey, validated);
+            return validated;
+          }
+          this.resolved.delete(resolvedKey);
+          if (fromCache) {
+            try { await this.cache?.delete?.(resolveUrl); } catch { /* ignore */ }
+          }
+        }
+
+        if (!explicitDir) {
+          const own = await take(name);
+          if (own) return own;
+        }
+        const walk = async (dir, depth) => {
+          const listing = await this.json(`${dir}/`);
+          if (!listing) return undefined;
+          const assets = (listing.files ?? [])
+            .map((f) => f.name)
+            .filter((n) => n.endsWith(".asset.json"))
+            .map((n) => n.slice(0, -".asset.json".length))
+            .sort((a, b) => Number(!/^build\w*data$/i.test(a)) - Number(!/^build\w*data$/i.test(b)));
+          for (const asset of assets) {
+            const found = await take(`${dir}/${asset}`);
+            if (found) return found;
+          }
+          if (depth >= 12) return undefined;
+          for (const sub of listing.directories ?? []) {
+            const found = await walk(`${dir}/${sub}`, depth + 1);
+            if (found) return found;
+          }
+          return undefined;
+        };
+        const found = await walk(name, 0);
+        if (found && found !== name) {
+          this.resolved.set(resolvedKey, found);
+          if (this.cache) {
+            try {
+              await this.cache.put(
+                resolveUrl,
+                new Response(JSON.stringify({ asset: found }), {
+                  headers: { "Content-Type": "application/json" },
+                }),
+              );
+            } catch { /* custom scheme or opaque origin */ }
+          }
+        }
+        return found;
+      })();
+      this.assets.set(key, p);
+      p.catch(() => this.assets.delete(key));
+    }
+    return p;
   }
-  return p;
 }
 
 /** A "motion" or "facial" request: its clip in, then started unless a newer one came since. */
 async function change(kind, m) {
   newest[kind] = m.id;
-  const path = (kind === "motion" ? clips.motions : clips.facials).get(m.name);
   try {
-    if (path === undefined) throw failure(`no ${kind === "motion" ? "body motion" : "facial"} ${m.name}`, "internal");
-    await loadClip(path);
+    const names = kind === "motion" ? clips.motions : clips.facials;
+    if (!clips.asset || !names.includes(m.name)) {
+      throw failure(`no ${kind === "motion" ? "body motion" : "facial"} ${m.name}`, "internal");
+    }
+    await loader.get(wasm_bindgen.clipFile(clips.asset, kind, m.name));
     if (dead || newest[kind] !== m.id) {
       postMessage({ type: "settled", id: m.id, started: false });
       return;
@@ -236,36 +392,33 @@ async function init(o, offscreen) {
   } catch (e) {
     throw failure(`${o.pkg}sekai_live2d_viewer_bg.wasm: ${e?.message ?? e}`, "network", `${o.pkg}sekai_live2d_viewer_bg.wasm`);
   }
-  const { Viewer, putFile, defaultMotion: pickMotion, defaultFacial: pickFacial } = wasm_bindgen;
+  const { Viewer, putFile, modelFiles, clipNames, clipFile, defaultMotion: pickMotion, defaultFacial: pickFacial } = wasm_bindgen;
+  loader = new Loader(o.base, putFile, await openCache());
   const [model, motion] = await Promise.all([
-    manifest(o.library, o.model.bundle),
-    o.model.motion ? manifest(o.library, o.model.motion) : undefined,
+    loader.asset(o.model.asset, "live2d-model"),
+    o.model.motion ? loader.asset(o.model.motion, "live2d-motions") : undefined,
   ]);
-  const cache = await openCache();
-  const { motions, facials } = clipPaths(motion);
-  const defaultMotion = pickMotion([...motions.keys()]);
-  const defaultFacial = pickFacial([...facials.keys()]);
-  // the model (a model bundle carries no clips the viewer plays) and the two default clips
-  const files = model.files.filter((f) => f.kind !== "motion").map((f) => ({ bundle: model.bundle, crc: model.crc, path: f.path }));
-  for (const name of [motions.get(defaultMotion), facials.get(defaultFacial)]) {
-    if (name !== undefined) files.push({ bundle: motion.bundle, crc: motion.crc, path: name });
-  }
-  await loadFiles(o.library, cache, files, putFile, (loaded, total) => postMessage({ type: "progress", loaded, total }));
-  if (cache) {
-    for (const m of [model, motion]) if (m) dropStale(cache, o.library, m.bundle, m.crc).catch(() => {});
-  }
+  if (!model) throw failure(`the published version has no model ${o.model.asset}`, "not-found", loader.assetUrl(o.model.asset));
+  // a motion set the site does not have leaves the model without motions
+  const names = motion ? JSON.parse(await loader.retryMissing(() => clipNames(motion))) : { motions: [], facials: [] };
+  const defaultMotion = pickMotion(names.motions);
+  const defaultFacial = pickFacial(names.facials);
+  const files = await loader.retryMissing(() => modelFiles(model));
+  if (defaultMotion !== undefined) files.push(clipFile(motion, "motion", defaultMotion));
+  if (defaultFacial !== undefined) files.push(clipFile(motion, "facial", defaultFacial));
+  await loader.getAll(files, (loaded, total) => postMessage({ type: "progress", loaded, total }));
   canvas = offscreen;
   const seed = Math.floor(Math.random() * 0x100000000) >>> 0;
-  viewer = await whenCoreReady(() =>
-    Viewer.create(canvas, "/lib", o.model.bundle, o.model.motion ?? "", o.width, o.height, seed));
-  clips = { library: o.library, cache, putFile, bundle: motion?.bundle, crc: motion?.crc, motions, facials, loaded: new Map() };
-  for (const f of files) if (f.bundle === motion?.bundle) clips.loaded.set(f.path, Promise.resolve());
+  viewer = await whenCoreReady(() => Viewer.create(canvas, model, motion ?? "", o.width, o.height, seed));
+  clips = { asset: motion, motions: names.motions, facials: names.facials };
   if (defaultMotion !== undefined) viewer.playMotion(defaultMotion, false);
   if (defaultFacial !== undefined) viewer.setFacial(defaultFacial);
   postMessage({
     type: "ready",
-    motions: [...motions.keys()],
-    facials: [...facials.keys()],
+    model,
+    motion: motion ?? null,
+    motions: names.motions,
+    facials: names.facials,
     defaultMotion,
     defaultFacial,
     hasPhysics: viewer.hasPhysics,

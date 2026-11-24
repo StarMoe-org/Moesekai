@@ -18,6 +18,7 @@ import {
     SHOW_ADS_STORAGE_KEY,
 } from "@/lib/ads";
 import { UI_LOCALE_STORAGE_KEY, detectBrowserUiLocale, normalizeUiLocale } from "@/lib/i18n";
+import { setAutoLoadMoreEnabled, useAutoLoadMoreEnabled } from "@/hooks/useAutoLoadMore";
 import {
     BACKGROUND_ANIMATION_BUDGET_STORAGE_KEY,
     DEFAULT_BACKGROUND_ANIMATION_BUDGET,
@@ -60,22 +61,22 @@ const STORY_LIVE2D_HIGH_FPS_STORAGE_KEY = "experimental-story-live2d-high-fps";
 
 const useIsomorphicLayoutEffect = typeof window === "undefined" ? useEffect : useLayoutEffect;
 
-// Asset source type (Main line / Overseas line, with optional regional suffix for override)
+// Asset source type (Main CF line / Backup EdgeOne line, with optional regional suffix for override)
 export type AssetSourceType =
     | "main"
-    | "overseas"
+    | "backup"
     | "main-en"
     | "main-jp"
     | "main-cn"
     | "main-tw"
     | "main-kr"
-    | "overseas-en"
-    | "overseas-jp"
-    | "overseas-cn"
-    | "overseas-tw"
-    | "overseas-kr";
+    | "backup-en"
+    | "backup-jp"
+    | "backup-cn"
+    | "backup-tw"
+    | "backup-kr";
 const DEFAULT_ASSET_SOURCE: AssetSourceType = "main";
-const VALID_ASSET_SOURCES: AssetSourceType[] = ["main", "overseas"];
+const VALID_ASSET_SOURCES: AssetSourceType[] = ["main", "backup"];
 
 // Server source type
 export type ServerSourceType = "en" | "jp" | "cn" | "tw" | "kr";
@@ -105,7 +106,7 @@ export function getAssetSourceRegion(source: AssetSourceType): ServerSourceType 
 }
 
 export function replaceAssetSourceRegion(source: AssetSourceType, targetRegion: ServerSourceType): AssetSourceType {
-    const base = source.startsWith("overseas") ? "overseas" : "main";
+    const base = source.startsWith("backup") ? "backup" : "main";
     return `${base}-${targetRegion}` as AssetSourceType;
 }
 
@@ -119,8 +120,8 @@ function migrateLegacyAssetSource(rawSource: string | null): AssetSourceType {
     }
 
     // Migrate old values containing regional/line suffixes
-    if (rawSource.startsWith("overseas")) {
-        return "overseas";
+    if (rawSource.startsWith("backup")) {
+        return "backup";
     }
     return "main";
 }
@@ -152,6 +153,8 @@ interface ThemeContextType {
     setStoryLive2dAntialiasing: (enabled: boolean) => void;
     storyLive2dHighFps: boolean;
     setStoryLive2dHighFps: (enabled: boolean) => void;
+    autoLoadMore: boolean;
+    setAutoLoadMore: (enabled: boolean) => void;
     serverSource: ServerSourceType;
     hasHydratedThemeSettings: boolean;
     setServerSource: (source: ServerSourceType) => void;
@@ -179,6 +182,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     const [costume3dUnrestrictedState, setCostume3dUnrestrictedState] = useState(false);
     const [storyLive2dAntialiasingState, setStoryLive2dAntialiasingState] = useState(false);
     const [storyLive2dHighFpsState, setStoryLive2dHighFpsState] = useState(false);
+    const autoLoadMore = useAutoLoadMoreEnabled();
     const [serverSourceState, setServerSourceState] = useState<ServerSourceType>(DEFAULT_SERVER_SOURCE);
     const themeSwitchingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
     const effectiveShowAds = ADS_FEATURE_ENABLED && showAdsState;
@@ -219,6 +223,9 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
             // Load asset source setting (with legacy migration)
             const savedAssetSource = localStorage.getItem("asset-source");
             const loadedAssetSource: AssetSourceType = migrateLegacyAssetSource(savedAssetSource);
+            if (savedAssetSource && savedAssetSource !== loadedAssetSource) {
+                localStorage.setItem("asset-source", loadedAssetSource);
+            }
             // Load LLM translation setting. Defaults to ON for Chinese UI and OFF for non-Chinese UI.
             setUseLLMTranslationState(getDefaultLLMTranslationSetting());
             // Load ads display setting
@@ -498,6 +505,10 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
         }
     };
 
+    const setAutoLoadMore = (enabled: boolean) => {
+        setAutoLoadMoreEnabled(enabled);
+    };
+
     const setServerSource = (source: ServerSourceType) => {
         setServerSourceState(source);
         try {
@@ -508,7 +519,7 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     };
 
     return (
-        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, storyLive2dHighFps: storyLive2dHighFpsState, setStoryLive2dHighFps, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
+        <ThemeContext.Provider value={{ themeCharId, themeColor, setThemeCharacter, colorSchemePreference, resolvedColorScheme, setColorSchemePreference, isShowSpoiler, setShowSpoiler, useTrainedThumbnail: useTrainedThumbnailState, setUseTrainedThumbnail, assetSource: assetSourceState, setAssetSource, useLLMTranslation: useLLMTranslationState, setUseLLMTranslation, showAds: effectiveShowAds, setShowAds, backgroundAnimationBudget: backgroundAnimationBudgetState, setBackgroundAnimationBudget, customCursorEnabled: customCursorEnabledState, setCustomCursorEnabled, costume3dUnrestricted: costume3dUnrestrictedState, setCostume3dUnrestricted, storyLive2dAntialiasing: storyLive2dAntialiasingState, setStoryLive2dAntialiasing, storyLive2dHighFps: storyLive2dHighFpsState, setStoryLive2dHighFps, autoLoadMore, setAutoLoadMore, serverSource: serverSourceState, setServerSource, hasHydratedThemeSettings }}>
             {children}
         </ThemeContext.Provider>
     );

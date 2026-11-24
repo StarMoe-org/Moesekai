@@ -24,7 +24,7 @@ export interface IVirtualLiveSetlist {
     id: number;
     virtualLiveId: number;
     seq: number;
-    virtualLiveSetlistType: "mc" | "music";
+    virtualLiveSetlistType: "mc" | "music" | "mc_timeline" | "virtual_message";
     assetbundleName: string;
     virtualLiveStageId: number;
     musicId?: number;

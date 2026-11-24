@@ -43,20 +43,12 @@ let wasm_bindgen = (function(exports) {
         }
         /**
          * `canvas` is an `HTMLCanvasElement` or an `OffscreenCanvas` of `width` × `height`
-         * pixels. `library` is the library's root, `assets` the asset-source mirror's root and
-         * `ui_kit` the UI kit's directory in the file table; `selector`'s episode index says which
-         * files come from the asset source (empty: none). `models` is the parameter table's model
-         * list and `game` the client the kit is from (`cn` or `jp`).
+         * pixels; `models` is the parameter table's model list.
          *
          * `body_fonts` and `name_fonts` replace the client's fonts for the words and the names:
          * each a list of `{path, weight?}` in the file table, the font first and the fonts that
-         * fill in the characters it lacks after it. Left out, the kit's fonts are used.
+         * fill in the characters it lacks after it. Left out, the client's fonts are used.
          * @param {any} canvas
-         * @param {string} library
-         * @param {string} assets
-         * @param {string} selector
-         * @param {string} ui_kit
-         * @param {string} game
          * @param {string[]} models
          * @param {number} fps
          * @param {number} width
@@ -65,24 +57,14 @@ let wasm_bindgen = (function(exports) {
          * @param {any} name_fonts
          * @returns {Promise<FrameRenderer>}
          */
-        static create(canvas, library, assets, selector, ui_kit, game, models, fps, width, height, body_fonts, name_fonts) {
-            const ptr0 = passStringToWasm0(library, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        static create(canvas, models, fps, width, height, body_fonts, name_fonts) {
+            const ptr0 = passArrayJsValueToWasm0(models, wasm.__wbindgen_malloc);
             const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passStringToWasm0(assets, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len1 = WASM_VECTOR_LEN;
-            const ptr2 = passStringToWasm0(selector, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len2 = WASM_VECTOR_LEN;
-            const ptr3 = passStringToWasm0(ui_kit, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len3 = WASM_VECTOR_LEN;
-            const ptr4 = passStringToWasm0(game, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len4 = WASM_VECTOR_LEN;
-            const ptr5 = passArrayJsValueToWasm0(models, wasm.__wbindgen_malloc);
-            const len5 = WASM_VECTOR_LEN;
-            const ret = wasm.framerenderer_create(canvas, ptr0, len0, ptr1, len1, ptr2, len2, ptr3, len3, ptr4, len4, ptr5, len5, fps, width, height, body_fonts, name_fonts);
+            const ret = wasm.framerenderer_create(canvas, ptr0, len0, fps, width, height, body_fonts, name_fonts);
             return ret;
         }
         /**
-         * The library image at `path` is on the GPU (it is dropped after a while unused).
+         * The image at `path` is on the GPU (it is dropped after a while unused).
          * @param {string} path
          * @returns {boolean}
          */
@@ -91,6 +73,34 @@ let wasm_bindgen = (function(exports) {
             const len0 = WASM_VECTOR_LEN;
             const ret = wasm.framerenderer_hasImage(this.__wbg_ptr, ptr0, len0);
             return ret !== 0;
+        }
+        /**
+         * The movie frames `frame` (the JSON of a `FrameState`) shows that the renderer does not
+         * hold: the JSON of `[{path, index, background}]`, each to be decoded ([`movie_track`]) and
+         * handed over ([`FrameRenderer::put_movie_frame`]) before the frame is drawn. A frame not
+         * handed over leaves the movie's last one, or nothing before its first.
+         * @param {string} frame
+         * @returns {string}
+         */
+        movieFrames(frame) {
+            let deferred3_0;
+            let deferred3_1;
+            try {
+                const ptr0 = passStringToWasm0(frame, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+                const len0 = WASM_VECTOR_LEN;
+                const ret = wasm.framerenderer_movieFrames(this.__wbg_ptr, ptr0, len0);
+                var ptr2 = ret[0];
+                var len2 = ret[1];
+                if (ret[3]) {
+                    ptr2 = 0; len2 = 0;
+                    throw takeFromExternrefTable0(ret[2]);
+                }
+                deferred3_0 = ptr2;
+                deferred3_1 = len2;
+                return getStringFromWasm0(ptr2, len2);
+            } finally {
+                wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+            }
         }
         /**
          * The MSAA sample counts this device takes (4 in browsers).
@@ -133,8 +143,8 @@ let wasm_bindgen = (function(exports) {
             }
         }
         /**
-         * Takes the pixels of the library image at `path` (`width` × `height` RGBA, not
-         * premultiplied), decoded by the browser; drawn instead of the PNG.
+         * Takes the pixels of the image at `path` (`width` × `height` RGBA, not premultiplied),
+         * decoded by the browser; drawn instead of the PNG.
          * @param {string} path
          * @param {number} width
          * @param {number} height
@@ -151,10 +161,23 @@ let wasm_bindgen = (function(exports) {
             }
         }
         /**
+         * Takes frame `index` of the movie at `path`, decoded by the page: the background
+         * prefab's movie when `background`, else the scenario's.
+         * @param {string} path
+         * @param {number} index
+         * @param {boolean} background
+         * @param {VideoFrame} picture
+         */
+        putMovieFrame(path, index, background, picture) {
+            const ptr0 = passStringToWasm0(path, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            wasm.framerenderer_putMovieFrame(this.__wbg_ptr, ptr0, len0, index, background, picture);
+        }
+        /**
          * Experimental: anti-aliases the Live2D models from now on with one `method`: `none` (the
          * default), `msaa` with `msaa_samples` samples per pixel (one of
          * [`FrameRenderer::msaa_sample_counts`]), `ssaa` at `ssaa_factor` times the size per side
-         * (2 or 3), or `smaa`. Smoother character edges than the game shows.
+         * (2 or 3). Smoother character edges than the game shows.
          * @param {string} method
          * @param {number} msaa_samples
          * @param {number} ssaa_factor
@@ -213,8 +236,7 @@ let wasm_bindgen = (function(exports) {
         /**
          * The audio each instruction plays, for loading it ahead of playback: JSON of
          * `[[position, [file table paths]], …]`, positions in instruction order (see
-         * [`Session::next_instruction`]); position 0 also holds the initial BGM. A library BGM's
-         * ACB comes with its waveforms (Pass 1 reads it; sound effects play without theirs).
+         * [`Session::next_instruction`]); position 0 also holds the initial BGM.
          * @returns {string}
          */
         audioPlan() {
@@ -236,32 +258,25 @@ let wasm_bindgen = (function(exports) {
             wasm.session_click(this.__wbg_ptr);
         }
         /**
-         * Opens `selector` (e.g. `event:101/8`) of the library at `library` in the file table,
-         * with asset-source files mirrored under `assets` (`<assets>/<path as in the index>`).
-         * `width` × `height` is the render size the layout is computed for; `player_name`
-         * replaces `{{playerName}}`. `ui_kit` is the UI kit's directory ([`derive_ui_kit`]): the
-         * scenario UI's sound effects are played from it (none without it).
-         * @param {string} library
-         * @param {string} assets
+         * Opens the episode of `selector` (e.g. `event:101/8`). `width` × `height` is the render
+         * size the layout is computed for; `player_name` replaces `{{playerName}}`; `area_date`
+         * (`MMDDHH`) is when an area conversation plays, its characters in the area costumes of
+         * that date (none: the costumes of its scene data).
          * @param {string} selector
          * @param {number} width
          * @param {number} height
          * @param {string} player_name
-         * @param {string | null} [ui_kit]
+         * @param {string | null} [area_date]
          * @returns {Session}
          */
-        static create(library, assets, selector, width, height, player_name, ui_kit) {
-            const ptr0 = passStringToWasm0(library, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        static create(selector, width, height, player_name, area_date) {
+            const ptr0 = passStringToWasm0(selector, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passStringToWasm0(assets, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const ptr1 = passStringToWasm0(player_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
             const len1 = WASM_VECTOR_LEN;
-            const ptr2 = passStringToWasm0(selector, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len2 = WASM_VECTOR_LEN;
-            const ptr3 = passStringToWasm0(player_name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len3 = WASM_VECTOR_LEN;
-            var ptr4 = isLikeNone(ui_kit) ? 0 : passStringToWasm0(ui_kit, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            var len4 = WASM_VECTOR_LEN;
-            const ret = wasm.session_create(ptr0, len0, ptr1, len1, ptr2, len2, width, height, ptr3, len3, ptr4, len4);
+            var ptr2 = isLikeNone(area_date) ? 0 : passStringToWasm0(area_date, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            var len2 = WASM_VECTOR_LEN;
+            const ret = wasm.session_create(ptr0, len0, width, height, ptr1, len1, ptr2, len2);
             if (ret[2]) {
                 throw takeFromExternrefTable0(ret[1]);
             }
@@ -292,8 +307,9 @@ let wasm_bindgen = (function(exports) {
         }
         /**
          * Decodes up to `packets` MP3 packets (about 26 ms of audio each) of the waveforms the next
-         * few instructions play (and those started but still in their delay), so that a cue does not wait for its waveform when it starts (a BGM
-         * takes tens of milliseconds to decode at once). The player calls it when it has time to
+         * few instructions play (and those started but still in their delay), so that a cue does
+         * not wait for its waveform when it starts (a BGM takes tens of milliseconds to decode at
+         * once). The player calls it when it has time to
          * spare; true while there is more to decode. The mix is the same either way: a waveform
          * decoded ahead is the one [`Session::mix`] would decode. Files not fetched yet are passed
          * over.
@@ -346,8 +362,8 @@ let wasm_bindgen = (function(exports) {
             return v1;
         }
         /**
-         * The model bundles each instruction may put on screen, for fetching them ahead: JSON of
-         * `[[position, [bundles]], …]` like [`Session::audio_plan`]. Position 0 also holds the
+         * The models each instruction may put on screen, for fetching them ahead: JSON of
+         * `[[position, [model assets]], …]` like [`Session::audio_plan`] ([`asset_files`]). Position 0 also holds the
          * initial layout. A layout instruction lists its explicit costume and the character's first
          * one (a costume put on earlier is listed where it first appears).
          * @returns {string}
@@ -497,7 +513,7 @@ let wasm_bindgen = (function(exports) {
             return v1;
         }
         /**
-         * The first frame whose baking changed the audio since the last call, if any: samples
+         * The first frame whose mix the frames stepped since the last call changed, if any: samples
          * mixed for it and after must be mixed again.
          * @returns {number | undefined}
          */
@@ -507,10 +523,10 @@ let wasm_bindgen = (function(exports) {
         }
         /**
          * The JSON of what a browser does not play in the episode, in order: `[{"reason", "name"?}]`
-         * with `reason` one of `movie` (a movie the library has no video stream of: shown black
-         * with its name; its sound plays), `music_video`, `input_name`, `selectable`,
-         * `unknown_effect_type` and `unknown_action` (left out, timed as the export times them).
-         * A movie with a video stream is played and not listed.
+         * with `reason` one of `movie` (a movie the publication lacks: shown black with its name),
+         * `music_video`, `input_name`, `selectable`, `unknown_effect_type` and `unknown_action`
+         * (left out, timed as the export times them). A movie the publication has is played and
+         * not listed.
          * @returns {string}
          */
         unsupported() {
@@ -552,40 +568,23 @@ let wasm_bindgen = (function(exports) {
     exports.Session = Session;
 
     /**
-     * Derives the UI kit from the client unpack at `inapp` in the file table, as the CLI does
-     * (ADR-0017), writing it under `cache`; returns the kit's directory. A file the derivation
-     * needs and the table lacks fails it with that path; put it there and call again.
-     *
-     * `fonts` false leaves the client's fonts out, for a page that gives the renderer fonts of
-     * its own ([`FrameRenderer::create`]): the client's font files are then never asked for.
-     * @param {string} inapp
-     * @param {string} cache
-     * @param {boolean | null} [fonts]
-     * @returns {string}
+     * The file-table paths of the members of the asset `name` of the canonical view, for fetching
+     * them ahead (its document must be in the table).
+     * @param {string} name
+     * @returns {string[]}
      */
-    function deriveUiKit(inapp, cache, fonts) {
-        let deferred4_0;
-        let deferred4_1;
-        try {
-            const ptr0 = passStringToWasm0(inapp, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passStringToWasm0(cache, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len1 = WASM_VECTOR_LEN;
-            const ret = wasm.deriveUiKit(ptr0, len0, ptr1, len1, isLikeNone(fonts) ? 0xFFFFFF : fonts ? 1 : 0);
-            var ptr3 = ret[0];
-            var len3 = ret[1];
-            if (ret[3]) {
-                ptr3 = 0; len3 = 0;
-                throw takeFromExternrefTable0(ret[2]);
-            }
-            deferred4_0 = ptr3;
-            deferred4_1 = len3;
-            return getStringFromWasm0(ptr3, len3);
-        } finally {
-            wasm.__wbindgen_free(deferred4_0, deferred4_1, 1);
+    function assetFiles(name) {
+        const ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        const ret = wasm.assetFiles(ptr0, len0);
+        if (ret[3]) {
+            throw takeFromExternrefTable0(ret[2]);
         }
+        var v2 = getArrayJsValueFromWasm0(ret[0], ret[1]);
+        wasm.__wbindgen_free(ret[0], ret[1] * 4, 4);
+        return v2;
     }
-    exports.deriveUiKit = deriveUiKit;
+    exports.assetFiles = assetFiles;
 
     /**
      * Bytes the file table holds.
@@ -614,6 +613,51 @@ let wasm_bindgen = (function(exports) {
         return v2;
     }
     exports.listFiles = listFiles;
+
+    /**
+     * The publication has no file at `path`: its site answered 404. Reading it then fails as a file
+     * the publication lacks, which the readers that can do without it do without (as the native
+     * tool does with a file its site does not serve), instead of as one to fetch.
+     * @param {string} path
+     */
+    function markAbsent(path) {
+        const ptr0 = passStringToWasm0(path, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        const len0 = WASM_VECTOR_LEN;
+        wasm.markAbsent(ptr0, len0);
+    }
+    exports.markAbsent = markAbsent;
+
+    /**
+     * The pictures of the movie at `path` (a publication path, as
+     * [`FrameRenderer::movie_frames`] names it), for a WebCodecs `VideoDecoder`: the JSON of
+     * `{codec, width, height, description, samples}`, with `description` the `avcC` record's
+     * bytes and `samples` the pictures in decoding order, each `{offset, size, shows, key}`
+     * (`shows` its presentation time in the track's units; the frame with index `i` is the one
+     * with the `i`-th smallest).
+     * @param {string} path
+     * @returns {string}
+     */
+    function movieTrack(path) {
+        let deferred3_0;
+        let deferred3_1;
+        try {
+            const ptr0 = passStringToWasm0(path, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+            const len0 = WASM_VECTOR_LEN;
+            const ret = wasm.movieTrack(ptr0, len0);
+            var ptr2 = ret[0];
+            var len2 = ret[1];
+            if (ret[3]) {
+                ptr2 = 0; len2 = 0;
+                throw takeFromExternrefTable0(ret[2]);
+            }
+            deferred3_0 = ptr2;
+            deferred3_1 = len2;
+            return getStringFromWasm0(ptr2, len2);
+        } finally {
+            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
+        }
+    }
+    exports.movieTrack = movieTrack;
 
     /**
      * Puts a fetched file at `path` in the file table every crate reads from.
@@ -685,49 +729,22 @@ let wasm_bindgen = (function(exports) {
         return ret !== 0;
     }
     exports.setCoreHeapSize = setCoreHeapSize;
-
-    /**
-     * Where [`derive_ui_kit`] writes the kit of the client unpack at `inapp`, without deriving it.
-     * The directory's last component is the kit's version, so a page can keep a derived kit and
-     * tell whether it is the one this build would derive.
-     * @param {string} inapp
-     * @param {string} cache
-     * @param {boolean | null} [fonts]
-     * @returns {string}
-     */
-    function uiKitDir(inapp, cache, fonts) {
-        let deferred3_0;
-        let deferred3_1;
-        try {
-            const ptr0 = passStringToWasm0(inapp, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len0 = WASM_VECTOR_LEN;
-            const ptr1 = passStringToWasm0(cache, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
-            const len1 = WASM_VECTOR_LEN;
-            const ret = wasm.uiKitDir(ptr0, len0, ptr1, len1, isLikeNone(fonts) ? 0xFFFFFF : fonts ? 1 : 0);
-            deferred3_0 = ret[0];
-            deferred3_1 = ret[1];
-            return getStringFromWasm0(ret[0], ret[1]);
-        } finally {
-            wasm.__wbindgen_free(deferred3_0, deferred3_1, 1);
-        }
-    }
-    exports.uiKitDir = uiKitDir;
     function __wbg_get_imports() {
         const import0 = {
             __proto__: null,
-            __wbg_CanvasHeight_67007f47def3c64c: function(arg0) {
+            __wbg_CanvasHeight_6aa0c95765eaee31: function(arg0) {
                 const ret = arg0.CanvasHeight;
                 return ret;
             },
-            __wbg_CanvasOriginX_00d6ae5ba9fb6558: function(arg0) {
+            __wbg_CanvasOriginX_bf9aec9e69136670: function(arg0) {
                 const ret = arg0.CanvasOriginX;
                 return ret;
             },
-            __wbg_CanvasOriginY_8c5070cb28fbc510: function(arg0) {
+            __wbg_CanvasOriginY_12f8f9cfa4a7a24f: function(arg0) {
                 const ret = arg0.CanvasOriginY;
                 return ret;
             },
-            __wbg_CanvasWidth_26fc00ce86af51fc: function(arg0) {
+            __wbg_CanvasWidth_8143add7a6d29e48: function(arg0) {
                 const ret = arg0.CanvasWidth;
                 return ret;
             },
@@ -735,7 +752,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = Error(getStringFromWasm0(arg0, arg1));
                 return ret;
             },
-            __wbg_PixelsPerUnit_7d88460880207844: function(arg0) {
+            __wbg_PixelsPerUnit_5ebcdd7a87f15f56: function(arg0) {
                 const ret = arg0.PixelsPerUnit;
                 return ret;
             },
@@ -786,7 +803,7 @@ let wasm_bindgen = (function(exports) {
             __wbg___wbindgen_throw_5d9e815e6fdf150f: function(arg0, arg1) {
                 throw new Error(getStringFromWasm0(arg0, arg1));
             },
-            __wbg__release_44d9ce24b4b571a3: function() { return handleError(function (arg0) {
+            __wbg__release_f18bac2c56a8e7ef: function() { return handleError(function (arg0) {
                 arg0._release();
             }, arguments); },
             __wbg__wbg_cb_unref_997e73d32238e655: function(arg0) {
@@ -808,17 +825,20 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.call(arg1, arg2);
                 return ret;
             }, arguments); },
-            __wbg_canvasinfo_a41a2be6bd3212fc: function(arg0) {
+            __wbg_canvasinfo_6e4087de2f5c02bb: function(arg0) {
                 const ret = arg0.canvasinfo;
                 return ret;
             },
             __wbg_configure_1e2c1c9edad07d26: function() { return handleError(function (arg0, arg1) {
                 arg0.configure(arg1);
             }, arguments); },
-            __wbg_constantFlags_31b8bfc8523e97df: function(arg0) {
+            __wbg_constantFlags_e2405cd9420dab6e: function(arg0) {
                 const ret = arg0.constantFlags;
                 return ret;
             },
+            __wbg_copyExternalImageToTexture_116560f3be856776: function() { return handleError(function (arg0, arg1, arg2, arg3) {
+                arg0.copyExternalImageToTexture(arg1, arg2, arg3);
+            }, arguments); },
             __wbg_copyTextureToTexture_d2e6a1eb3254b828: function() { return handleError(function (arg0, arg1, arg2, arg3) {
                 arg0.copyTextureToTexture(arg1, arg2, arg3);
             }, arguments); },
@@ -862,16 +882,24 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.createView(arg1);
                 return ret;
             }, arguments); },
-            __wbg_csmGetMocVersion_b91331ac4a4ce1cf: function() { return handleError(function (arg0, arg1, arg2) {
+            __wbg_csmGetMocVersion_fd13815adab95880: function() { return handleError(function (arg0, arg1, arg2) {
                 const ret = arg0.csmGetMocVersion(arg1, arg2);
                 return ret;
             }, arguments); },
-            __wbg_csmGetVersion_0199976613c5e0bf: function() { return handleError(function (arg0) {
+            __wbg_csmGetVersion_ed321ba577ec9a6c: function() { return handleError(function (arg0) {
                 const ret = arg0.csmGetVersion();
                 return ret;
             }, arguments); },
-            __wbg_defaultValues_806fd0c264a5c2f1: function(arg0) {
+            __wbg_defaultValues_7b62ac1d4cbbd6e6: function(arg0) {
                 const ret = arg0.defaultValues;
+                return ret;
+            },
+            __wbg_displayHeight_2b21a5005d134a33: function(arg0) {
+                const ret = arg0.displayHeight;
+                return ret;
+            },
+            __wbg_displayWidth_3edf5aa37d80fea7: function(arg0) {
+                const ret = arg0.displayWidth;
                 return ret;
             },
             __wbg_document_c7f486c52d63d24e: function(arg0) {
@@ -884,11 +912,11 @@ let wasm_bindgen = (function(exports) {
             __wbg_draw_086a9578fc9898c2: function(arg0, arg1, arg2, arg3, arg4) {
                 arg0.draw(arg1 >>> 0, arg2 >>> 0, arg3 >>> 0, arg4 >>> 0);
             },
-            __wbg_drawables_208dd0f5013e6764: function(arg0) {
+            __wbg_drawables_2249a1e7ab376d7e: function(arg0) {
                 const ret = arg0.drawables;
                 return ret;
             },
-            __wbg_dynamicFlags_53522f251914cbd4: function(arg0) {
+            __wbg_dynamicFlags_53756f54a0474230: function(arg0) {
                 const ret = arg0.dynamicFlags;
                 return ret;
             },
@@ -915,11 +943,11 @@ let wasm_bindgen = (function(exports) {
                 const ret = FrameRenderer.__wrap(arg0);
                 return ret;
             },
-            __wbg_fromArrayBuffer_ff7589da8478f87a: function() { return handleError(function (arg0, arg1) {
+            __wbg_fromArrayBuffer_a11f6aa41a4a9946: function() { return handleError(function (arg0, arg1) {
                 const ret = arg0.fromArrayBuffer(arg1);
                 return ret;
             }, arguments); },
-            __wbg_fromMoc_f82220f7bb9e0b1e: function() { return handleError(function (arg0, arg1) {
+            __wbg_fromMoc_643f5ecc659e4d4a: function() { return handleError(function (arg0, arg1) {
                 const ret = arg0.fromMoc(arg1);
                 return ret;
             }, arguments); },
@@ -947,7 +975,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.getPreferredCanvasFormat();
                 return (__wbindgen_enum_GpuTextureFormat.indexOf(ret) + 1 || 102) - 1;
             },
-            __wbg_getRenderOrders_880adbb10776a683: function() { return handleError(function (arg0) {
+            __wbg_getRenderOrders_61fe577141ba35da: function() { return handleError(function (arg0) {
                 const ret = arg0.getRenderOrders();
                 return ret;
             }, arguments); },
@@ -975,23 +1003,23 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.has(getStringFromWasm0(arg1, arg2));
                 return ret;
             },
-            __wbg_ids_911906758c9776aa: function(arg0) {
+            __wbg_ids_1fed398cfa85d088: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_ids_cbd0a6de6b9988f5: function(arg0) {
+            __wbg_ids_a315659aa985b9cd: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_ids_e8468f37da815886: function(arg0) {
+            __wbg_ids_f9b69845f454e429: function(arg0) {
                 const ret = arg0.ids;
                 return ret;
             },
-            __wbg_indices_581f526bcb43f8d5: function(arg0) {
+            __wbg_indices_2867a1e0af356e02: function(arg0) {
                 const ret = arg0.indices;
                 return ret;
             },
-            __wbg_initializeAmountOfMemory_aabe95528feeb49b: function() { return handleError(function (arg0, arg1) {
+            __wbg_initializeAmountOfMemory_24502ece7feae930: function() { return handleError(function (arg0, arg1) {
                 arg0.initializeAmountOfMemory(arg1);
             }, arguments); },
             __wbg_instanceof_Error_fe6fa771c78ee4cf: function(arg0) {
@@ -1117,7 +1145,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.mapAsync(arg1 >>> 0, arg2, arg3);
                 return ret;
             },
-            __wbg_masks_eca44ac5fc9b0175: function(arg0) {
+            __wbg_masks_03aa2ae4a7b94b02: function(arg0) {
                 const ret = arg0.masks;
                 return ret;
             },
@@ -1237,7 +1265,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.maxVertexBuffers;
                 return ret;
             },
-            __wbg_maximumValues_a52257caf8ff881f: function(arg0) {
+            __wbg_maximumValues_8c554521900cb9d6: function(arg0) {
                 const ret = arg0.maximumValues;
                 return ret;
             },
@@ -1253,7 +1281,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.minUniformBufferOffsetAlignment;
                 return ret;
             },
-            __wbg_minimumValues_8903e613018170d4: function(arg0) {
+            __wbg_minimumValues_ec4b5c635e617e3c: function(arg0) {
                 const ret = arg0.minimumValues;
                 return ret;
             },
@@ -1307,19 +1335,19 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.onSubmittedWorkDone();
                 return ret;
             },
-            __wbg_opacities_1bf0bca9ec0d864e: function(arg0) {
+            __wbg_opacities_b2ce302a4f8065a9: function(arg0) {
                 const ret = arg0.opacities;
                 return ret;
             },
-            __wbg_opacities_62a50d51e53fece7: function(arg0) {
+            __wbg_opacities_b7ce835a3930eabf: function(arg0) {
                 const ret = arg0.opacities;
                 return ret;
             },
-            __wbg_parameters_8cd8a9e473531dea: function(arg0) {
+            __wbg_parameters_49bf52b2d2be7d66: function(arg0) {
                 const ret = arg0.parameters;
                 return ret;
             },
-            __wbg_parts_2823e7565af5678e: function(arg0) {
+            __wbg_parts_4f33b5c518f9f81d: function(arg0) {
                 const ret = arg0.parts;
                 return ret;
             },
@@ -1350,10 +1378,10 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.queue;
                 return ret;
             },
-            __wbg_release_b61e3cfb80826d42: function() { return handleError(function (arg0) {
+            __wbg_release_abb4fac373bdae74: function() { return handleError(function (arg0) {
                 arg0.release();
             }, arguments); },
-            __wbg_renderOrders_8bef106e5873d6ba: function(arg0) {
+            __wbg_renderOrders_bd19653d63ce1d87: function(arg0) {
                 const ret = arg0.renderOrders;
                 return ret;
             },
@@ -1365,7 +1393,7 @@ let wasm_bindgen = (function(exports) {
                 const ret = arg0.requestDevice(arg1);
                 return ret;
             },
-            __wbg_resetDynamicFlags_13b8e2959f27ffd6: function(arg0) {
+            __wbg_resetDynamicFlags_36abbc8fbd5ad9f2: function(arg0) {
                 arg0.resetDynamicFlags();
             },
             __wbg_resolve_35ec7e0c6af4c82c: function(arg0) {
@@ -1426,6 +1454,9 @@ let wasm_bindgen = (function(exports) {
             },
             __wbg_set_array_stride_f64_6816040e5e7598c3: function(arg0, arg1) {
                 arg0.arrayStride = arg1;
+            },
+            __wbg_set_aspect_9de5253d4c460895: function(arg0, arg1) {
+                arg0.aspect = __wbindgen_enum_GpuTextureAspect[arg1];
             },
             __wbg_set_aspect_a48d046965270281: function(arg0, arg1) {
                 arg0.aspect = __wbindgen_enum_GpuTextureAspect[arg1];
@@ -1571,6 +1602,9 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_fail_op_d59d0187e4111dfe: function(arg0, arg1) {
                 arg0.failOp = __wbindgen_enum_GpuStencilOperation[arg1];
             },
+            __wbg_set_flip_y_5a9a7c3fd5a2314e: function(arg0, arg1) {
+                arg0.flipY = arg1 !== 0;
+            },
             __wbg_set_format_23f7f32549751d43: function(arg0, arg1) {
                 arg0.format = __wbindgen_enum_GpuTextureFormat[arg1];
             },
@@ -1688,6 +1722,9 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_min_filter_d435bbfc5a637757: function(arg0, arg1) {
                 arg0.minFilter = __wbindgen_enum_GpuFilterMode[arg1];
             },
+            __wbg_set_mip_level_03ed7bbd0ded367f: function(arg0, arg1) {
+                arg0.mipLevel = arg1 >>> 0;
+            },
             __wbg_set_mip_level_count_047936c630acee7b: function(arg0, arg1) {
                 arg0.mipLevelCount = arg1 >>> 0;
             },
@@ -1727,7 +1764,13 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_operation_00a77386523b88f9: function(arg0, arg1) {
                 arg0.operation = __wbindgen_enum_GpuBlendOperation[arg1];
             },
+            __wbg_set_origin_gpu_origin_2d_dict_8156da81552cd590: function(arg0, arg1) {
+                arg0.origin = arg1;
+            },
             __wbg_set_origin_gpu_origin_3d_dict_0619d4860adb4eb6: function(arg0, arg1) {
+                arg0.origin = arg1;
+            },
+            __wbg_set_origin_gpu_origin_3d_dict_abd0dec737979786: function(arg0, arg1) {
                 arg0.origin = arg1;
             },
             __wbg_set_pass_op_3cf10feb3d76ab97: function(arg0, arg1) {
@@ -1735,6 +1778,9 @@ let wasm_bindgen = (function(exports) {
             },
             __wbg_set_power_preference_b42d00a8facfbade: function(arg0, arg1) {
                 arg0.powerPreference = __wbindgen_enum_GpuPowerPreference[arg1];
+            },
+            __wbg_set_premultiplied_alpha_6d23532454ce9a12: function(arg0, arg1) {
+                arg0.premultipliedAlpha = arg1 !== 0;
             },
             __wbg_set_primitive_e796cf76f0ff89f3: function(arg0, arg1) {
                 arg0.primitive = arg1;
@@ -1787,6 +1833,27 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_size_gpu_extent_3d_dict_adf57388ab1d4f18: function(arg0, arg1) {
                 arg0.size = arg1;
             },
+            __wbg_set_source_211aa06496d82b73: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_html_canvas_element_5577621adc0f8ff6: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_html_image_element_23fa06e99ca07cc0: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_html_video_element_e57b5cacb7b02736: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_image_data_c80600573a809775: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_offscreen_canvas_7d49271754887b4e: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
+            __wbg_set_source_video_frame_e4faebda27c393e4: function(arg0, arg1) {
+                arg0.source = arg1;
+            },
             __wbg_set_src_factor_6f2c9ec8e4d3d979: function(arg0, arg1) {
                 arg0.srcFactor = __wbindgen_enum_GpuBlendFactor[arg1];
             },
@@ -1828,6 +1895,9 @@ let wasm_bindgen = (function(exports) {
             },
             __wbg_set_targets_674b33931e512fb1: function(arg0, arg1, arg2) {
                 arg0.targets = getArrayJsValueViewFromWasm0(arg1, arg2);
+            },
+            __wbg_set_texture_4e0ee4c98ac25b81: function(arg0, arg1) {
+                arg0.texture = arg1;
             },
             __wbg_set_texture_95f2bfdf7767e76f: function(arg0, arg1) {
                 arg0.texture = arg1;
@@ -1901,10 +1971,16 @@ let wasm_bindgen = (function(exports) {
             __wbg_set_write_mask_42d89f182ade6b2d: function(arg0, arg1) {
                 arg0.writeMask = arg1 >>> 0;
             },
+            __wbg_set_x_58965df5af1ad27d: function(arg0, arg1) {
+                arg0.x = arg1 >>> 0;
+            },
             __wbg_set_x_f470b03dd54724cd: function(arg0, arg1) {
                 arg0.x = arg1 >>> 0;
             },
             __wbg_set_y_4c44eb40ebca5bfc: function(arg0, arg1) {
+                arg0.y = arg1 >>> 0;
+            },
+            __wbg_set_y_b79cba22b145de99: function(arg0, arg1) {
                 arg0.y = arg1 >>> 0;
             },
             __wbg_set_z_2e6820ef0f5821ed: function(arg0, arg1) {
@@ -1933,7 +2009,7 @@ let wasm_bindgen = (function(exports) {
             __wbg_submit_077c85cc28e36892: function(arg0, arg1, arg2) {
                 arg0.submit(getArrayJsValueViewFromWasm0(arg1, arg2));
             },
-            __wbg_textureIndices_5502c213728b78ff: function(arg0) {
+            __wbg_textureIndices_7aae40cf8624a189: function(arg0) {
                 const ret = arg0.textureIndices;
                 return ret;
             },
@@ -1951,18 +2027,18 @@ let wasm_bindgen = (function(exports) {
             __wbg_unmap_6a96b14c9ef5f7f5: function(arg0) {
                 arg0.unmap();
             },
-            __wbg_update_5ce9033914693b73: function(arg0) {
+            __wbg_update_3407f4ea1ae3b5c9: function(arg0) {
                 arg0.update();
             },
-            __wbg_values_496448a517a156a0: function(arg0) {
+            __wbg_values_73fd090ea0248ebb: function(arg0) {
                 const ret = arg0.values;
                 return ret;
             },
-            __wbg_vertexPositions_d42c819e7a47bdd1: function(arg0) {
+            __wbg_vertexPositions_5155552ff0a81c0f: function(arg0) {
                 const ret = arg0.vertexPositions;
                 return ret;
             },
-            __wbg_vertexUvs_c86575a53a0f7665: function(arg0) {
+            __wbg_vertexUvs_cb02406b3fa67546: function(arg0) {
                 const ret = arg0.vertexUvs;
                 return ret;
             },
@@ -1973,23 +2049,23 @@ let wasm_bindgen = (function(exports) {
                 arg0.writeTexture(arg1, getArrayU8FromWasm0(arg2, arg3), arg4, arg5);
             }, arguments); },
             __wbindgen_generic_0000000000000001: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 426, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [Externref], shim_idx: 350, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000002: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 300, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("GPUDevice")], shim_idx: 240, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
                 const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true_);
                 return ret;
             },
             __wbindgen_generic_0000000000000003: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 300, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("any")], shim_idx: 240, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__50);
                 return ret;
             },
             __wbindgen_generic_0000000000000004: function(arg0, arg1) {
-                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 300, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
-                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__48);
+                // Cast intrinsic for `Closure(Closure { owned: true, function: Function { arguments: [NamedExternref("undefined")], shim_idx: 240, ret: Result(Unit), inner_ret: Some(Result(Unit)) }, mutable: true }) -> Externref`.
+                const ret = makeMutClosure(arg0, arg1, wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__51);
                 return ret;
             },
             __wbindgen_generic_0000000000000005: function(arg0) {
@@ -2037,15 +2113,15 @@ let wasm_bindgen = (function(exports) {
         }
     }
 
-    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__47(arg0, arg1, arg2);
+    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__50(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__50(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }
     }
 
-    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__48(arg0, arg1, arg2) {
-        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__48(arg0, arg1, arg2);
+    function wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__51(arg0, arg1, arg2) {
+        const ret = wasm.wasm_bindgen_cc3ff3a8281c7cff___convert__closures_____invoke___wasm_bindgen_cc3ff3a8281c7cff___sys__JsNullable_wgpu_c28a05c088e5c7da___backend__webgpu__webgpu_sys__gen_GpuError__GpuError___core_ed718c3d60ebd546___result__Result_____wasm_bindgen_cc3ff3a8281c7cff___JsError___true__51(arg0, arg1, arg2);
         if (ret[1]) {
             throw takeFromExternrefTable0(ret[0]);
         }

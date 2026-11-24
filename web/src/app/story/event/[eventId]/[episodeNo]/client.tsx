@@ -2,6 +2,7 @@
 import { PageContainer } from "@/components/md3";
 import { ServerSourceBadge, StoryBackButton, StoryBadge, StoryEpisodeNav, StoryReaderHeader } from "@/components/story/StoryReaderChrome";
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { useParams } from "next/navigation";
 import MainLayout from "@/components/MainLayout";
 import { StoryReader } from "@/components/story/StoryReader";
@@ -16,6 +17,12 @@ import { loadTranslations } from "@/lib/translations";
 import { mergeStoryTitle } from "@/lib/storyLoader";
 import { useI18n } from "@/contexts/I18nContext";
 import type { UiLocale } from "@/lib/i18n";
+import { sanitizeCommunityTargetId } from "@/types/community";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 export default function StoryEventReaderClient() {
     const params = useParams();
@@ -155,6 +162,14 @@ export default function StoryEventReaderClient() {
                     <StoryEpisodeNav
                         prev={prevEpisode ? { href: `/story/event/${eventId}/${prevEpisode.episodeNo}`, title: prevEpisode.title } : null}
                         next={nextEpisode ? { href: `/story/event/${eventId}/${nextEpisode.episodeNo}`, title: nextEpisode.title } : null}
+                    />
+                )}
+
+                {Number.isFinite(eventId) && Number.isFinite(episodeNo) && (
+                    <EntityCommunitySection
+                        targetType="story"
+                        targetId={sanitizeCommunityTargetId(`event_${eventId}_${episodeNo}`)}
+                        showRelatedPosts={false}
                     />
                 )}
             </PageContainer>

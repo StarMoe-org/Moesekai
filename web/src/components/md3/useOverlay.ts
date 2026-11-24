@@ -111,6 +111,10 @@ function unwindHistory() {
 }
 
 function handlePopState(event: PopStateEvent) {
+    // A modal it closed removed its history entry with `back`; the popstate that lands was
+    // queued by that, not by the user, so a page that reads its state from the URL must not
+    // answer it. It can tell by asking this, from its own popstate handler.
+    roundTripPopState = pendingHistoryBack;
     pendingHistoryBack = false;
     if (retiredHistoryTokens.has(event.state?.modalToken)) {
         unwindHistory();
@@ -123,12 +127,21 @@ function handlePopState(event: PopStateEvent) {
     removeGlobalListeners();
 }
 
+/** Whether the popstate now being dispatched was queued by a modal closing its history entry,
+ *  rather than by the user; only readable while a popstate handler runs. */
+export function isModalHistoryRoundTrip() {
+    return roundTripPopState;
+}
+
+let roundTripPopState = false;
+
 function installGlobalListeners() {
     if (listenersInstalled) return;
     listenersInstalled = true;
     document.addEventListener("keydown", handleKeyDown);
     document.addEventListener("focusin", handleFocusIn);
-    window.addEventListener("popstate", handlePopState);
+    // Capture, so this runs before the popstate handlers of pages and answers their question.
+    window.addEventListener("popstate", handlePopState, true);
 }
 
 function removeGlobalListeners() {
@@ -137,7 +150,7 @@ function removeGlobalListeners() {
     retiredHistoryTokens.clear();
     document.removeEventListener("keydown", handleKeyDown);
     document.removeEventListener("focusin", handleFocusIn);
-    window.removeEventListener("popstate", handlePopState);
+    window.removeEventListener("popstate", handlePopState, true);
 }
 
 /** Shared focus/Escape stack; modal layers additionally trap focus and lock scroll. */

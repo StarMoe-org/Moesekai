@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../../node_modules/@moesekai/story-editor/dist";
 @import "../styles/md3-schemes.css";
 @import "../styles/md3-tokens.css";
 @import "../styles/md3-loading.css";

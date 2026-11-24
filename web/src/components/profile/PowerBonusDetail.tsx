@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { UNIT_DATA, UNIT_FIELD_TO_ID, UNIT_ICON_FILES, type CardAttribute } from "@/types/types";
 import { fetchMasterDataForServer } from "@/lib/fetch";
-import { getCharacterIconUrl } from "@/lib/assets";
+import { getAttrIconUrl, getCharacterIconUrl } from "@/lib/assets";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
 import Modal from "@/components/common/Modal";
@@ -75,13 +75,6 @@ const UNIT_LABEL_KEYS: Record<(typeof UNIT_ORDER)[number], string> = {
     piapro: "common.musicTags.vocaloid",
 };
 const ATTR_ORDER: CardAttribute[] = ["cool", "cute", "happy", "mysterious", "pure"];
-const ATTR_ICON_FILES: Record<CardAttribute, string> = {
-    cool: "Cool.webp",
-    cute: "cute.webp",
-    happy: "Happy.webp",
-    mysterious: "Mysterious.webp",
-    pure: "Pure.webp",
-};
 
 const UNIT_ICON: Record<string, string> = Object.fromEntries(
     Object.entries(UNIT_FIELD_TO_ID).map(([field, id]) => [field, "/data/icon/" + UNIT_ICON_FILES[id]])
@@ -324,7 +317,7 @@ export default function PowerBonusDetail({
                     return (
                         <div key={a} className="rounded-md3-sm bg-surface-container-highest px-2.5 py-2 flex items-center gap-2">
                             <div className="relative w-6 h-6">
-                                <Image src={`/data/icon/${ATTR_ICON_FILES[a]}`} alt={a} fill className="object-contain" unoptimized />
+                                <Image src={getAttrIconUrl(a)} alt={a} fill className="object-contain" unoptimized />
                             </div>
                             <div className="type-title-s text-on-surface">{fmt(b.total)}</div>
                         </div>

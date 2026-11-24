@@ -7,7 +7,6 @@ import (
 )
 
 type Config struct {
-	RedisURL            string
 	Port                string
 	MasterDataPath      string
 	FrontendProxyURL    string
@@ -24,23 +23,28 @@ type Config struct {
 	// guess-music), e.g. http://moesekai-api.zeabur.internal:8080. Empty
 	// leaves /api/auth/ and /api/guess-music/ unavailable.
 	MoesekaiAPIURL string
+
+	// StorySearchAPIURL is the private address of sekai-story-search,
+	// e.g. http://sekai-story-search.apps.svc.cluster.local:8080. Empty
+	// leaves /api/story-search/ unavailable.
+	StorySearchAPIURL string
 }
 
 func Load() *Config {
 	cfg := &Config{
-		RedisURL:            getEnv("REDIS_URL", "localhost:6379"),
 		Port:                getEnv("PORT", "8080"),
 		MasterDataPath:      getEnv("MASTER_DATA_PATH", "./data/master"),
 		FrontendProxyURL:    getEnv("FRONTEND_PROXY_URL", "http://127.0.0.1:3000"),
 		HTMLCacheDir:        getEnv("HTML_CACHE_DIR", defaultHTMLCacheDir()),
-		HTMLCacheMaxGB:      getEnvInt("HTML_CACHE_MAX_GB", 20),
-		HTMLCacheEntries:    getEnvInt("HTML_CACHE_MAX_ENTRIES", 100_000),
+		HTMLCacheMaxGB:      getEnvInt("HTML_CACHE_MAX_GB", 4),
+		HTMLCacheEntries:    getEnvInt("HTML_CACHE_MAX_ENTRIES", 30_000),
 		HTMLCacheEntryMB:    getEnvInt("HTML_CACHE_MAX_ENTRY_MB", 4),
 		HTMLCachePersistent: getEnvBool("HTML_CACHE_PERSISTENT", true),
 		HTMLCacheWarmup:     getEnvBool("HTML_CACHE_WARMUP", true),
 		NextBuildID:         getEnv("NEXT_BUILD_ID", ""),
 		StaticArchiveDir:    getEnv("STATIC_ARCHIVE_DIR", "./data/static_archive"),
 		MoesekaiAPIURL:      strings.TrimSpace(os.Getenv("MOESEKAI_API_URL")),
+		StorySearchAPIURL:   strings.TrimSpace(os.Getenv("STORY_SEARCH_API_URL")),
 	}
 	return cfg
 }

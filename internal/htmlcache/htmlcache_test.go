@@ -35,6 +35,24 @@ func cacheableHandler(count *atomic.Int32) http.Handler {
 	})
 }
 
+func collectFilesWithExt(t *testing.T, root, ext string) []string {
+	t.Helper()
+	var out []string
+	err := filepath.WalkDir(root, func(p string, d os.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if !d.IsDir() && strings.HasSuffix(d.Name(), ext) {
+			out = append(out, p)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out
+}
+
 func TestCachesExplicitLocaleDocument(t *testing.T) {
 	var count atomic.Int32
 	cfg := testConfig(t)
@@ -56,11 +74,11 @@ func TestCachesExplicitLocaleDocument(t *testing.T) {
 	if second.Body.String() != "page-1" {
 		t.Fatalf("cached body = %q", second.Body.String())
 	}
-	files, err := os.ReadDir(cfg.Dir)
-	if err != nil || len(files) != 1 {
-		t.Fatalf("disk cache files = %d, err = %v, want 1", len(files), err)
+	files := collectFilesWithExt(t, cfg.Dir, ".html")
+	if len(files) != 1 {
+		t.Fatalf("disk cache html files = %d, want 1", len(files))
 	}
-	if data, err := os.ReadFile(filepath.Join(cfg.Dir, files[0].Name())); err != nil || string(data) != "page-1" {
+	if data, err := os.ReadFile(files[0]); err != nil || string(data) != "page-1" {
 		t.Fatalf("disk body = %q, err = %v", data, err)
 	}
 }
@@ -255,9 +273,9 @@ func TestLRUEvictsByEntryCount(t *testing.T) {
 	if count.Load() != 3 {
 		t.Fatalf("upstream calls = %d, want 3 after eviction", count.Load())
 	}
-	files, err := os.ReadDir(cfg.Dir)
-	if err != nil || len(files) != 1 {
-		t.Fatalf("disk files after eviction = %d, err = %v, want 1", len(files), err)
+	files := collectFilesWithExt(t, cfg.Dir, ".html")
+	if len(files) != 1 {
+		t.Fatalf("disk files after eviction = %d, want 1", len(files))
 	}
 }
 
@@ -314,18 +332,12 @@ func TestPersistentCacheSurvivesRestoreAfterRestore(t *testing.T) {
 		t.Fatal("second store did not take effect")
 	}
 
-	metas, err := filepath.Glob(filepath.Join(dir, "*.meta"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	metas := collectFilesWithExt(t, dir, ".meta")
 	if len(metas) != 1 {
 		t.Fatalf("want 1 sidecar after re-store, got %d", len(metas))
 	}
 
-	htmlFiles, err := filepath.Glob(filepath.Join(dir, "*.html"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	htmlFiles := collectFilesWithExt(t, dir, ".html")
 	if len(htmlFiles) != 1 {
 		t.Fatalf("want 1 html file after re-store, got %d (orphans left behind)", len(htmlFiles))
 	}
@@ -411,8 +423,8 @@ func TestRestoredEntriesFromAnotherBuildAreRerendered(t *testing.T) {
 			}
 			waitForState(t, c2, "/zh-cn/gacha/1/", "HIT", "page-2")
 
-			// The sidecar is written just after the entry is installed in memory.
-			metaPath := filepath.Join(dir, cacheKey(documentRequest("/zh-cn/gacha/1/"))+".meta")
+			// The sidecar is written inside the key's shard directory.
+			metaPath := c2.metaPath(cacheKey(documentRequest("/zh-cn/gacha/1/")))
 			deadline := time.Now().Add(2 * time.Second)
 			for {
 				data, _ := os.ReadFile(metaPath)
@@ -523,5 +535,344 @@ func TestBackgroundRefreshesAreBounded(t *testing.T) {
 			t.Fatalf("skipped page never refreshed: state=%s", rr.Header().Get("X-Moesekai-Cache"))
 		}
 		time.Sleep(time.Millisecond)
+	}
+}
+
+func TestCanonicalCacheKeyPreventsPercentEncodingExplosion(t *testing.T) {
+	var count atomic.Int32
+	cfg := testConfig(t)
+	c := New(cacheableHandler(&count), cfg)
+
+	variants := []string{
+		"/zh-cn/cards/1/",
+		"/zh-cn/%63ards/1/",
+		"/zh-cn/c%61rds/%31/",
+		"/%7Ah-cn/cards/1/",
+	}
+	for i, target := range variants {
+		rr := httptest.NewRecorder()
+		c.ServeHTTP(rr, documentRequest(target))
+		wantState := "HIT"
+		if i == 0 {
+			wantState = "MISS"
+		}
+		if rr.Header().Get("X-Moesekai-Cache") != wantState {
+			t.Fatalf("variant %q state = %q, want %q", target, rr.Header().Get("X-Moesekai-Cache"), wantState)
+		}
+	}
+	if count.Load() != 1 {
+		t.Fatalf("upstream calls = %d, want 1 across percent-encoding permutations", count.Load())
+	}
+	if files := collectFilesWithExt(t, cfg.Dir, ".html"); len(files) != 1 {
+		t.Fatalf("html files = %d, want 1", len(files))
+	}
+}
+
+func TestPanicInUpstreamDoesNotDeadlockFlight(t *testing.T) {
+	var calls atomic.Int32
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			panic("upstream boom")
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=10, stale-while-revalidate=20")
+		_, _ = w.Write([]byte("recovered"))
+	})
+	c := New(next, testConfig(t))
+
+	func() {
+		defer func() { _ = recover() }()
+		c.ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/cards/9/"))
+	}()
+
+	rr := httptest.NewRecorder()
+	c.ServeHTTP(rr, documentRequest("/zh-cn/cards/9/"))
+	if rr.Body.String() != "recovered" || rr.Header().Get("X-Moesekai-Cache") != "MISS" {
+		t.Fatalf("post-panic fetch failed: state=%q body=%q", rr.Header().Get("X-Moesekai-Cache"), rr.Body.String())
+	}
+}
+
+func TestWaiterRespectsContextCancellation(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		close(started)
+		<-release
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=10")
+		_, _ = w.Write([]byte("ok"))
+	})
+	c := New(next, testConfig(t))
+
+	var leaderWG sync.WaitGroup
+	leaderWG.Add(1)
+	go func() {
+		defer leaderWG.Done()
+		c.ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/cards/55/"))
+	}()
+	<-started
+
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Millisecond)
+	defer cancel()
+	req := documentRequest("/zh-cn/cards/55/").WithContext(ctx)
+	done := make(chan struct{})
+	go func() {
+		c.ServeHTTP(httptest.NewRecorder(), req)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		close(release)
+		t.Fatal("waiter ignored cancelled request context")
+	}
+	close(release)
+	leaderWG.Wait()
+}
+
+func TestConcurrent404CoalescesAndNeverEmitsPublicCacheControl(t *testing.T) {
+	var calls atomic.Int32
+	started := make(chan struct{}, 1)
+	release := make(chan struct{})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if calls.Add(1) == 1 {
+			started <- struct{}{}
+			<-release
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=3600")
+		w.Header().Set("Cache-Control", "private, no-store")
+		w.WriteHeader(http.StatusNotFound)
+		_, _ = w.Write([]byte("not found"))
+	})
+	c := New(next, testConfig(t))
+
+	const n = 8
+	var wg sync.WaitGroup
+	recs := make([]*httptest.ResponseRecorder, n)
+	for i := 0; i < n; i++ {
+		recs[i] = httptest.NewRecorder()
+		wg.Add(1)
+		go func(idx int) {
+			defer wg.Done()
+			c.ServeHTTP(recs[idx], documentRequest("/zh-cn/cards/99999/"))
+		}(i)
+	}
+	<-started
+	time.Sleep(25 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	if calls.Load() != 1 {
+		t.Fatalf("concurrent 404 triggered %d upstream calls, want 1", calls.Load())
+	}
+	for i, rr := range recs {
+		if rr.Code != http.StatusNotFound || rr.Body.String() != "not found" {
+			t.Fatalf("client %d got status=%d body=%q", i, rr.Code, rr.Body.String())
+		}
+		if strings.Contains(strings.ToLower(rr.Header().Get("Cache-Control")), "public") {
+			t.Fatalf("client %d got public Cache-Control on 404: %q", i, rr.Header().Get("Cache-Control"))
+		}
+		if rr.Header().Get(OriginCacheHeader) != "" {
+			t.Fatalf("client %d leaked OriginCacheHeader", i)
+		}
+	}
+}
+
+func TestSetCookieResponseIsNotMarkedPublicOrShared(t *testing.T) {
+	var calls atomic.Int32
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := calls.Add(1)
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=3600")
+		w.Header().Set("Set-Cookie", fmt.Sprintf("sid=%d; HttpOnly", n))
+		w.Header().Set("Cache-Control", "private, no-store")
+		_, _ = fmt.Fprintf(w, "cookie-%d", n)
+	})
+	c := New(next, testConfig(t))
+
+	rr := httptest.NewRecorder()
+	c.ServeHTTP(rr, documentRequest("/zh-cn/account/"))
+	if strings.Contains(strings.ToLower(rr.Header().Get("Cache-Control")), "public") {
+		t.Fatalf("Set-Cookie response marked public: %q", rr.Header().Get("Cache-Control"))
+	}
+}
+
+func TestOversizedHTMLStreamsWithoutCaching(t *testing.T) {
+	big := strings.Repeat("a", 512)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=60")
+		_, _ = w.Write([]byte(big))
+	})
+	cfg := testConfig(t)
+	cfg.MaxEntryBytes = 128
+	c := New(next, cfg)
+
+	rr := httptest.NewRecorder()
+	c.ServeHTTP(rr, documentRequest("/zh-cn/cards/7/"))
+	if rr.Header().Get("X-Moesekai-Cache") != "BYPASS" {
+		t.Fatalf("state = %q, want BYPASS", rr.Header().Get("X-Moesekai-Cache"))
+	}
+	if rr.Body.String() != big {
+		t.Fatalf("streamed body len = %d, want %d", rr.Body.Len(), len(big))
+	}
+	if files := collectFilesWithExt(t, cfg.Dir, ".html"); len(files) != 0 {
+		t.Fatalf("oversized page wrote %d disk files, want 0", len(files))
+	}
+}
+
+func TestRestoreMigratesLegacyFlatFilesSweepsOrphansAndEnforcesBudget(t *testing.T) {
+	dir := t.TempDir()
+	now := time.Now()
+
+	// Seed 3 legacy flat-root entries with distinct StoredAt timestamps.
+	paths := []string{"/zh-cn/cards/1/", "/zh-cn/cards/2/", "/zh-cn/cards/3/"}
+	for i, p := range paths {
+		key := cacheKey(documentRequest(p))
+		htmlName := fmt.Sprintf("%s-.write-%d.html", key, i)
+		if err := os.WriteFile(filepath.Join(dir, htmlName), []byte(fmt.Sprintf("legacy-%d", i)), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		metaJSON := fmt.Sprintf(
+			`{"key":%q,"htmlFile":%q,"status":200,"header":{"Content-Type":["text/html"]},"size":8,"buildId":"b1","storedAt":%q,"freshUntil":%q,"staleUntil":%q}`,
+			key, htmlName,
+			now.Add(time.Duration(i)*time.Minute).Format(time.RFC3339Nano),
+			now.Add(time.Hour).Format(time.RFC3339Nano),
+			now.Add(2*time.Hour).Format(time.RFC3339Nano),
+		)
+		if err := os.WriteFile(filepath.Join(dir, key+".meta"), []byte(metaJSON), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// Seed orphan .html, corrupt .meta, and stray temp file in root.
+	_ = os.WriteFile(filepath.Join(dir, "orphan-.write-dead.html"), []byte("orphan"), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "corrupt.meta"), []byte("{bad json"), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, ".write-temp"), []byte("tmp"), 0o600)
+	_ = os.WriteFile(filepath.Join(dir, "leftover.tmp"), []byte("tmp"), 0o600)
+
+	var count atomic.Int32
+	c := New(cacheableHandler(&count), Config{
+		Dir:        dir,
+		Persistent: true,
+		MaxEntries: 2, // Must evict oldest legacy entry (/zh-cn/cards/1/)
+		BuildID:    "b1",
+	})
+
+	if stats := c.Stats(); stats.Entries != 2 {
+		t.Fatalf("restored entries = %d, want 2", stats.Entries)
+	}
+	// Root directory must have zero leftover .html/.meta/temp files.
+	rootEntries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range rootEntries {
+		if !e.IsDir() {
+			t.Fatalf("leftover non-dir file in root cache dir: %s", e.Name())
+		}
+	}
+	// Total sharded html and meta files must be exactly 2 each.
+	if got := len(collectFilesWithExt(t, dir, ".html")); got != 2 {
+		t.Fatalf("sharded .html files = %d, want 2", got)
+	}
+	if got := len(collectFilesWithExt(t, dir, ".meta")); got != 2 {
+		t.Fatalf("sharded .meta files = %d, want 2", got)
+	}
+
+	// Newest 2 entries (/2/ and /3/) must serve HIT from migrated shard paths.
+	for _, idx := range []int{1, 2} {
+		rr := httptest.NewRecorder()
+		c.ServeHTTP(rr, documentRequest(paths[idx]))
+		if rr.Header().Get("X-Moesekai-Cache") != "HIT" || rr.Body.String() != fmt.Sprintf("legacy-%d", idx) {
+			t.Fatalf("migrated %s got state=%q body=%q", paths[idx], rr.Header().Get("X-Moesekai-Cache"), rr.Body.String())
+		}
+	}
+	if count.Load() != 0 {
+		t.Fatalf("migrated HITs triggered %d upstream calls", count.Load())
+	}
+}
+
+func TestMissingDiskFileEvictsLazilyAndRefetches(t *testing.T) {
+	var count atomic.Int32
+	cfg := testConfig(t)
+	c := New(cacheableHandler(&count), cfg)
+
+	c.ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/cards/42/"))
+	for _, f := range collectFilesWithExt(t, cfg.Dir, ".html") {
+		_ = os.Remove(f)
+	}
+
+	rr := httptest.NewRecorder()
+	c.ServeHTTP(rr, documentRequest("/zh-cn/cards/42/"))
+	if rr.Code != http.StatusOK || rr.Body.String() != "page-2" || rr.Header().Get("X-Moesekai-Cache") != "MISS" {
+		t.Fatalf("lazy refetch failed: status=%d state=%q body=%q", rr.Code, rr.Header().Get("X-Moesekai-Cache"), rr.Body.String())
+	}
+}
+
+func TestBypassConcurrencyLimitProtectsUpstream(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case started <- struct{}{}:
+		default:
+		}
+		<-release
+		_, _ = w.Write([]byte("ok"))
+	})
+	cfg := testConfig(t)
+	cfg.MaxBypassConcurrent = 1
+	c := New(next, cfg)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		c.ServeHTTP(httptest.NewRecorder(), documentRequest("/zh-cn/cards/?cb=1"))
+	}()
+	<-started
+
+	rr := httptest.NewRecorder()
+	c.ServeHTTP(rr, documentRequest("/zh-cn/cards/?cb=2"))
+	close(release)
+	wg.Wait()
+	if rr.Code != http.StatusServiceUnavailable {
+		t.Fatalf("saturated bypass status = %d, want 503", rr.Code)
+	}
+}
+
+func TestWarmupStopsCleanlyOnClose(t *testing.T) {
+	started := make(chan struct{}, 1)
+	next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case started <- struct{}{}:
+		default:
+		}
+		select {
+		case <-r.Context().Done():
+			return
+		case <-time.After(2 * time.Second):
+		}
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set(OriginCacheHeader, "max-age=60")
+		_, _ = w.Write([]byte("slow"))
+	})
+	c := New(next, testConfig(t))
+	c.StartWarmup(context.Background(), []string{"/zh-cn/cards/1/", "/zh-cn/cards/2/", "/zh-cn/cards/3/"}, 10*time.Millisecond)
+	<-started
+
+	closeCtx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	if err := c.Close(closeCtx); err != nil {
+		t.Fatalf("Close did not drain warmup promptly: %v", err)
+	}
+	stats := c.Stats().Warmup
+	if stats.InProgress {
+		t.Fatal("warmup still marked InProgress after Close")
+	}
+	if stats.Completed >= stats.Total {
+		t.Fatalf("cancelled warmup reported Completed=%d Total=%d, want < Total", stats.Completed, stats.Total)
 	}
 }

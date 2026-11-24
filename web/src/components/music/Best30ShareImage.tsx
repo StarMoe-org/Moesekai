@@ -104,11 +104,11 @@ const DIFFICULTY_SHORT: Record<string, string> = {
 };
 
 const JACKET_FALLBACK_SOURCES_BY_REGION: Record<string, AssetSourceType[]> = {
-    en: ["main-en", "overseas-en"],
-    jp: ["main-jp", "overseas-jp"],
-    cn: ["main-cn", "overseas-cn"],
-    tw: ["main-tw", "overseas-tw"],
-    kr: ["main-kr", "overseas-kr"],
+    en: ["main-en", "backup-en"],
+    jp: ["main-jp", "backup-jp"],
+    cn: ["main-cn", "backup-cn"],
+    tw: ["main-tw", "backup-tw"],
+    kr: ["main-kr", "backup-kr"],
 };
 
 // ==================== Helpers ====================

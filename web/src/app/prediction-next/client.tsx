@@ -1,5 +1,6 @@
 "use client";
 import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import Image from "next/image";
 import {
     Banner,
@@ -40,6 +41,11 @@ import {
     looksLikeWorldLinkEvent,
     PREDICTION_RANK_TIERS,
 } from "@/lib/prediction/use-prediction-event";
+
+const EntityCommunitySection = dynamic(
+    () => import("@/components/community/EntityCommunitySection"),
+    { ssr: false },
+);
 
 interface LegacyTierKline {
     rank: number;
@@ -534,6 +540,15 @@ export default function PredictionNextClient() {
                         <EmptyState icon={mdTimeline} title={t("page.prediction.empty")} />
                     )
                 }
+
+                {/* Shared Event Ranking Discussion (shared with /realtime-ranking-next) */}
+                {server && selectedEventId && (
+                    <EntityCommunitySection
+                        targetType="ranking"
+                        targetId={`${server}_${selectedEventId}`}
+                        showRelatedPosts={false}
+                    />
+                )}
             </PageContainer>
         </MainLayout>
     );

@@ -1,8 +1,8 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react";
-import { live2dCoreUrl } from "@/lib/live2dViewer/config";
-import type { Live2DModel } from "@/lib/live2dViewer/models";
+import { live2dCoreUrl, type Live2DModel, type Live2DSources } from "@moesekai/story-core";
 import { IDENTITY_VIEW, type Live2DView } from "@/lib/live2dViewer/view";
+import { createLive2DViewerWithFallback } from "@/lib/live2dViewer/request";
 import {
     LIVE2D_VIEWER_AVAILABLE, live2dViewerScriptBase, loadLive2DViewer,
     type Live2DViewer, type Live2DViewerError, type Live2DViewerErrorKind, type Live2DViewerMissing,
@@ -65,8 +65,8 @@ function pixelRatio(): number {
 }
 
 interface UseLive2DViewerOptions {
-    /** The story library's root, as fetched. */
-    library: string;
+    /** Where the model is read from. */
+    sources: Live2DSources;
     /** The model shown; null for none. */
     model: Live2DModel | null;
 }
@@ -77,16 +77,20 @@ interface UseLive2DViewerOptions {
  * the model changes or the page is left. The stage's size is followed, and the view (zoom and
  * pan) applied.
  */
-export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
+export function useLive2DViewer({ sources, model }: UseLive2DViewerOptions) {
     const hostRef = useRef<HTMLDivElement | null>(null);
     const viewerRef = useRef<Live2DViewer | null>(null);
-    const [attempt, setAttempt] = useState(0);
-    const bundle = model?.bundle ?? null;
+    const asset = model?.asset ?? null;
     // a model without a motion bundle is shown without motions or facials
-    const motion = model?.motions[0] ?? null;
+    const motion = model?.motion ?? model?.motions[0] ?? null;
+    const baseKey = asset
+        ? `${sources.site}|${sources.region}|${sources.version ?? ""}|${sources.proxy ?? ""}|${asset}|${motion ?? ""}`
+        : null;
+    const [retryOf, setRetryOf] = useState<{ key: string; count: number } | null>(null);
+    const attempt = baseKey && retryOf?.key === baseKey ? retryOf.count : 0;
     // What each viewer reports is kept with the viewer it is about (`key`): another model, or a
     // retry, starts from a loading stage, no lists and the identity view.
-    const key = bundle ? `${library}|${bundle}|${motion ?? ""}|${attempt}` : null;
+    const key = baseKey ? `${baseKey}|${attempt}` : null;
     const [phaseOf, setPhaseOf] = useState<{ key: string; phase: Live2DViewerPhase } | null>(null);
     const [stateOf, setStateOf] = useState<{ key: string; state: Live2DViewerState } | null>(null);
     const [viewOf, setViewOf] = useState<{ key: string; view: Live2DView } | null>(null);
@@ -102,14 +106,18 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
 
     useEffect(() => {
         const host = hostRef.current;
-        if (!host || !key || !bundle || !LIVE2D_VIEWER_AVAILABLE) return;
+        if (!host || !key || !asset || !LIVE2D_VIEWER_AVAILABLE) return;
         const setPhase = (next: Live2DViewerPhase) => setPhaseOf({ key, phase: next });
         const controller = new AbortController();
         const { signal } = controller;
         let viewer: Live2DViewer | null = null;
-        const canvas = document.createElement("canvas");
-        canvas.className = "absolute inset-0 size-full";
-        host.replaceChildren(canvas);
+        const mountCanvas = () => {
+            const canvas = document.createElement("canvas");
+            canvas.className = "absolute inset-0 size-full";
+            host.replaceChildren(canvas);
+            return canvas;
+        };
+        host.replaceChildren();
 
         const measure = () => {
             const rect = host.getBoundingClientRect();
@@ -145,12 +153,14 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
             const [width, height] = measure();
             applied = `${width}x${height}`;
             const core = live2dCoreUrl();
-            const created = await Viewer.create({
-                canvas,
+            const created = await createLive2DViewerWithFallback(Viewer, {
+                createCanvas: mountCanvas,
                 js: live2dViewerScriptBase(),
                 ...(core ? { core } : {}),
-                library,
-                model: { bundle, motion },
+                sources,
+                asset,
+                motion,
+                preferDirectoryFallback: attempt > 0,
                 width,
                 height,
                 signal,
@@ -186,7 +196,7 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
             viewer?.destroy();
             host.replaceChildren();
         };
-    }, [key, library, bundle, motion]);
+    }, [key, sources, asset, motion, attempt]);
 
     useEffect(() => {
         viewerRef.current?.setView(view);
@@ -221,7 +231,10 @@ export function useLive2DViewer({ library, model }: UseLive2DViewerOptions) {
         }
     }, [key]);
 
-    const retry = useCallback(() => setAttempt(value => value + 1), []);
+    const retry = useCallback(() => {
+        if (!baseKey) return;
+        setRetryOf(previous => ({ key: baseKey, count: previous?.key === baseKey ? previous.count + 1 : 1 }));
+    }, [baseKey]);
     const setView = useCallback((next: SetStateAction<Live2DView>) => {
         if (!key) return;
         setViewOf(previous => {

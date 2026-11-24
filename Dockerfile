@@ -12,6 +12,9 @@ COPY refer/re_sekai-calculator/package.json refer/re_sekai-calculator/package.js
 RUN bun install --frozen-lockfile
 
 COPY web/ web/
+# Root changelog: /changelog renders it (web build reads ../CHANGELOG.md and
+# refreshes the checked-in snapshot in web/src/data/changelog.md).
+COPY CHANGELOG.md ./
 COPY refer/re_sekai-calculator/ refer/re_sekai-calculator/
 WORKDIR /app/web
 # Build validation must use production URL policy before sitemap generation and Next.js compilation.
@@ -45,10 +48,8 @@ ENV NEXT_PUBLIC_COSTUME3D_BASE=$NEXT_PUBLIC_COSTUME3D_BASE
 ARG NEXT_PUBLIC_COSTUME3D_REGIONS=
 ENV NEXT_PUBLIC_COSTUME3D_REGIONS=$NEXT_PUBLIC_COSTUME3D_REGIONS
 # Live2D model viewer (its release is web/vendor/live2d-viewer): where its models and their index are read from
-ARG NEXT_PUBLIC_LIVE2D_LIBRARY_BASE=
-ENV NEXT_PUBLIC_LIVE2D_LIBRARY_BASE=$NEXT_PUBLIC_LIVE2D_LIBRARY_BASE
-ARG NEXT_PUBLIC_LIVE2D_INDEX_BASE=
-ENV NEXT_PUBLIC_LIVE2D_INDEX_BASE=$NEXT_PUBLIC_LIVE2D_INDEX_BASE
+ARG NEXT_PUBLIC_LIVE2D_SITE=
+ENV NEXT_PUBLIC_LIVE2D_SITE=$NEXT_PUBLIC_LIVE2D_SITE
 ARG NEXT_PUBLIC_LIVE2D_CORE_URL=
 ENV NEXT_PUBLIC_LIVE2D_CORE_URL=$NEXT_PUBLIC_LIVE2D_CORE_URL
 ARG NEXT_PUBLIC_LIVE2D_ASSET_PROXY=
@@ -63,6 +64,21 @@ ENV NEXT_PUBLIC_LYRICS_BASE_URL=$NEXT_PUBLIC_LYRICS_BASE_URL
 # pages call their own /api/auth/ and /api/guess-music/, which this server forwards to MOESEKAI_API_URL.
 ARG NEXT_PUBLIC_MOESEKAI_API_ORIGIN=
 ENV NEXT_PUBLIC_MOESEKAI_API_ORIGIN=$NEXT_PUBLIC_MOESEKAI_API_ORIGIN
+# MoeSekai app version (see docs/VERSIONING.md). .git is not in the build context, so CI
+# resolves the git-tag-derived version on the runner and passes it in; empty values fall
+# back to the 2.0.0 baseline inside web/src/lib/build-version.ts.
+ARG MOESEKAI_VERSION=
+ARG MOESEKAI_RELEASE_TAG=
+ARG MOESEKAI_COMMIT=
+ARG MOESEKAI_BUILD_DATE=
+ARG MOESEKAI_COMMITS_SINCE=
+ARG MOESEKAI_IS_RELEASE=
+ENV MOESEKAI_VERSION=$MOESEKAI_VERSION
+ENV MOESEKAI_RELEASE_TAG=$MOESEKAI_RELEASE_TAG
+ENV MOESEKAI_COMMIT=$MOESEKAI_COMMIT
+ENV MOESEKAI_BUILD_DATE=$MOESEKAI_BUILD_DATE
+ENV MOESEKAI_COMMITS_SINCE=$MOESEKAI_COMMITS_SINCE
+ENV MOESEKAI_IS_RELEASE=$MOESEKAI_IS_RELEASE
 # Build-time data sources. Multiple URLs allow Docker builds to survive flaky DNS/proxy/CDN paths.
 ARG MASTER_DATA_URLS=https://metadata.exmeaning.com/{region}/master,https://metadata.pjsk.moe/{region}/master
 ARG MANGA_DATA_URLS=https://moe.exmeaning.com/mangas/mangas.json
