@@ -224,6 +224,7 @@ const navigationGroups: NavGroup[] = [
         items: [
             { id: "assetViewer", href: "/asset-viewer", icon: mdImageSearch, activeIcon: mdImageSearchFill },
             { id: "assetVersions", href: "/asset-versions", icon: mdHistory, activeIcon: mdHistoryFill },
+            { id: "masterdataDiff", href: "/masterdata-diff", icon: mdCompareArrows, activeIcon: mdCompareArrowsFill },
             { id: "gachaSimulator", href: "/gacha-simulator", icon: mdCasino, activeIcon: mdCasinoFill },
             { id: "deckRecommend", href: "/deck-recommend", icon: mdTune, activeIcon: mdTuneFill },
             { id: "deckComparator", href: "/deck-comparator", icon: mdCompareArrows, activeIcon: mdCompareArrowsFill },

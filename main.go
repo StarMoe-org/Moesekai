@@ -44,11 +44,11 @@ const (
 	warmupReadyWaitMax              = 60 * time.Second
 )
 
-// moesekai-api (sign-in, guess-music, the accounts saved with a StarMoe
-// account and game data read for them) runs as its own service on the private
-// network. Forwarding its paths keeps the browser on one origin, so the
+// moesekai-api (sign-in, guess-music, masterdata-diff, the accounts saved with
+// a StarMoe account and game data read for them) runs as its own service on the
+// private network. Forwarding its paths keeps the browser on one origin, so the
 // session cookie stays first-party and no CORS is involved.
-var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/v1/me/", "/api/accounts", "/api/accounts/", "/api/sekai/", "/api/community", "/api/community/"}
+var moesekaiAPIPrefixes = []string{"/api/auth/", "/api/guess-music/", "/api/masterdata-diff/", "/api/v1/me/", "/api/accounts", "/api/accounts/", "/api/sekai/", "/api/community", "/api/community/"}
 
 // sekai-story-search runs as its own service on the private network.
 var storySearchAPIPrefixes = []string{"/api/story-search", "/api/story-search/"}
@@ -412,7 +412,7 @@ func newMoesekaiAPIProxy(target *url.URL) *httputil.ReverseProxy {
 	transport.MaxIdleConnsPerHost = 32
 	transport.MaxConnsPerHost = 64
 	transport.IdleConnTimeout = 90 * time.Second
-	transport.ResponseHeaderTimeout = 20 * time.Second
+	transport.ResponseHeaderTimeout = 45 * time.Second
 	return &httputil.ReverseProxy{
 		Rewrite: func(r *httputil.ProxyRequest) {
 			r.SetURL(target)

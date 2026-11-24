@@ -311,7 +311,7 @@ func TestMoesekaiAPIRoutesAnswer503WithoutUpstream(t *testing.T) {
 				http.NotFound(w, r)
 			})
 
-			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123", "/api/v1/me/accounts", "/api/v1/me/accounts/jp/123", "/api/v1/me/sekai/jp/suite/123", "/api/community", "/api/community/me", "/api/community/posts"} {
+			for _, path := range []string{"/api/auth/me", "/api/guess-music/daily", "/api/masterdata-diff/versions", "/api/accounts", "/api/accounts/jp/123", "/api/sekai/jp/suite/123", "/api/v1/me/accounts", "/api/v1/me/accounts/jp/123", "/api/v1/me/sekai/jp/suite/123", "/api/community", "/api/community/me", "/api/community/posts"} {
 				response := httptest.NewRecorder()
 				mux.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
 				assertJSONError(t, response.Code, response.Header(), response.Body.Bytes(), http.StatusServiceUnavailable, "unavailable")

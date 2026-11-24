@@ -78,6 +78,7 @@ const allNavigationGroups: NavGroupData[] = [
         items: [
             { href: "/asset-viewer" },
             { href: "/asset-versions" },
+            { href: "/masterdata-diff" },
             { href: "/gacha-simulator" },
             { href: "/deck-recommend" },
             { href: "/deck-comparator" },
@@ -225,6 +226,7 @@ const allSearchableNavItems: SearchableNavItem[] = [
 
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
     { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
+    { href: "/masterdata-diff", group: "tools", keywords: ["masterdata", "masterdata diff", "diff", "ai summary", "changelog", "update"] },
     { href: "/gacha-simulator", group: "tools", keywords: ["gacha simulator", "gacha", "pull", "simulator", "diy gacha", "\u62bd\u5361", "\u626d\u86cb\u6a21\u62df"] },
     { href: "/deck-recommend", group: "tools", keywords: ["deck recommend", "deck", "team"] },
     { href: "/deck-comparator", group: "tools", keywords: ["deck compare", "comparator"] },
@@ -345,6 +347,7 @@ export const NAV_ITEM_LABEL_KEYS: Record<string, string> = {
     "/mysekai-preview/scene": "layout.nav.items.mysekaiPreviewScene",
     "/asset-viewer": "layout.nav.items.assetViewer",
     "/asset-versions": "layout.nav.items.assetVersions",
+    "/masterdata-diff": "layout.nav.items.masterdataDiff",
     "/profile": "layout.nav.items.profile",
     "/account": "page.account.title",
     "/my-cards": "layout.nav.items.myCards",
@@ -402,6 +405,7 @@ export const NAV_ITEM_DESCRIPTION_KEYS: Record<string, string> = {
     "/mysekai-preview/scene": "layout.groupPages.mysekaiPreviewScene",
     "/asset-viewer": "layout.groupPages.assetViewer",
     "/asset-versions": "layout.groupPages.assetVersions",
+    "/masterdata-diff": "layout.groupPages.masterdataDiff",
     "/profile": "layout.groupPages.profile",
     "/account": "page.account.description",
     "/my-cards": "layout.groupPages.myCards",
