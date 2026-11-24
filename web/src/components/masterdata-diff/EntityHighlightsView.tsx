@@ -3,7 +3,7 @@
 import { useState } from "react";
 import LocalizedLink from "@/components/LocalizedLink";
 import { useI18n } from "@/contexts/I18nContext";
-import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
+import { useTheme, replaceAssetSourceRegion, type AssetSourceType } from "@/contexts/ThemeContext";
 import {
     getCardThumbnailUrl,
     getCostumeThumbnailUrl,
@@ -28,12 +28,8 @@ interface EntityHighlightsViewProps {
     onInspectFile: (filePath: string) => void;
 }
 
-function resolveAssetSource(assetSource: string, server: MasterdataDiffServer): AssetSourceType {
-    const isOverseas = assetSource === "overseas" || assetSource.startsWith("overseas");
-    if (server === "cn") {
-        return isOverseas ? "overseas-cn" : "main-cn";
-    }
-    return isOverseas ? "overseas-jp" : "main-jp";
+function resolveAssetSource(assetSource: AssetSourceType, server: MasterdataDiffServer): AssetSourceType {
+    return replaceAssetSourceRegion(assetSource, server);
 }
 
 function resolveEntityThumbnail(
