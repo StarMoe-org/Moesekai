@@ -70,6 +70,7 @@ interface EntityCommentSectionProps {
     targetType: TargetType;
     targetId: string | number;
     className?: string;
+    compact?: boolean;
     onCommentCountChange?: (count: number) => void;
 }
 
@@ -77,6 +78,7 @@ export function EntityCommentSection({
     targetType,
     targetId,
     className,
+    compact = false,
     onCommentCountChange,
 }: EntityCommentSectionProps) {
     const { t } = useI18n();
@@ -224,7 +226,7 @@ export function EntityCommentSection({
             if (targetEl) {
                 lastScrolledHashRef.current = hash;
                 requestAnimationFrame(() => {
-                    targetEl.scrollIntoView({ behavior: "smooth", block: "center" });
+                    targetEl.scrollIntoView({ behavior: "smooth", block: compact ? "nearest" : "center" });
                 });
                 return;
             }
@@ -232,10 +234,10 @@ export function EntityCommentSection({
         if (hash === "#community-comments" || /^#comment-\d+$/.test(hash)) {
             lastScrolledHashRef.current = hash;
             requestAnimationFrame(() => {
-                sectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                sectionRef.current?.scrollIntoView({ behavior: "smooth", block: compact ? "nearest" : "start" });
             });
         }
-    }, [loading, comments]);
+    }, [loading, comments, compact]);
 
     const insertAtCursor = useCallback((token: string) => {
         const el = textareaRef.current;
@@ -556,8 +558,9 @@ export function EntityCommentSection({
                 key={comment.id}
                 id={`comment-${comment.id}`}
                 className={cn(
-                    "scroll-mt-24 rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest p-3.5 transition-shadow",
-                    isReply && "bg-surface-container/50 p-3",
+                    "rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest transition-shadow",
+                    compact ? "scroll-mt-4 p-3" : "scroll-mt-24 p-3.5",
+                    isReply && (compact ? "bg-surface-container/50 p-2.5" : "bg-surface-container/50 p-3"),
                     highlightedCommentId === comment.id && "border-primary/70 ring-2 ring-primary/25",
                 )}
             >
@@ -566,7 +569,7 @@ export function EntityCommentSection({
                         author={comment.author}
                         cardBadge={comment.author_card_badge}
                         timestamp={comment.created_at}
-                        compact={isReply}
+                        compact={isReply || compact}
                     />
                     {comment.status !== "published" && (
                         <span className="shrink-0 rounded-md3-xs bg-warning-container px-2 py-0.5 type-label-s text-on-warning-container">
@@ -591,17 +594,23 @@ export function EntityCommentSection({
                     </SpoilerCurtain>
                 </div>
 
-                <div className="mt-2.5 flex flex-wrap items-center gap-1 text-on-surface-variant">
+                <div
+                    className={cn(
+                        "flex flex-wrap items-center text-on-surface-variant",
+                        compact ? "mt-2 gap-0.5" : "mt-2.5 gap-1",
+                    )}
+                >
                     <button
                         type="button"
                         onClick={() => handleLikeToggle(comment)}
                         className={cn(
-                            "state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m transition-colors",
+                            "state-layer focus-ring inline-flex items-center gap-1 rounded-full transition-colors",
+                            compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
                             comment.liked_by_me ? "text-primary" : "text-on-surface-variant hover:text-on-surface",
                         )}
                         aria-pressed={comment.liked_by_me}
                     >
-                        <Icon path={comment.liked_by_me ? mdFavoriteFill : mdFavorite} size={17} />
+                        <Icon path={comment.liked_by_me ? mdFavoriteFill : mdFavorite} size={compact ? 15 : 17} />
                         <span>{comment.like_count}</span>
                     </button>
 
@@ -616,9 +625,12 @@ export function EntityCommentSection({
                                 setReplyTarget(comment);
                                 textareaRef.current?.focus();
                             }}
-                            className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-on-surface-variant hover:text-on-surface"
+                            className={cn(
+                                "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-on-surface-variant hover:text-on-surface",
+                                compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                            )}
                         >
-                            <Icon path={mdReply} size={17} />
+                            <Icon path={mdReply} size={compact ? 15 : 17} />
                             <span>{t("common.comments.reply")}</span>
                         </button>
                     )}
@@ -627,9 +639,12 @@ export function EntityCommentSection({
                         <button
                             type="button"
                             onClick={() => handleDeleteComment(comment)}
-                            className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-error hover:bg-error-container/30"
+                            className={cn(
+                                "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-error hover:bg-error-container/30",
+                                compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                            )}
                         >
-                            <Icon path={mdDelete} size={17} />
+                            <Icon path={mdDelete} size={compact ? 15 : 17} />
                             <span>{t("common.comments.delete")}</span>
                         </button>
                     )}
@@ -638,9 +653,12 @@ export function EntityCommentSection({
                         <button
                             type="button"
                             onClick={() => setAppealTargetId(comment.id)}
-                            className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-primary"
+                            className={cn(
+                                "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-primary",
+                                compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                            )}
                         >
-                            <Icon path={mdSupportAgent} size={17} />
+                            <Icon path={mdSupportAgent} size={compact ? 15 : 17} />
                             <span>{t("common.comments.appeal.action")}</span>
                         </button>
                     )}
@@ -650,17 +668,23 @@ export function EntityCommentSection({
                             <button
                                 type="button"
                                 onClick={() => setReportTargetId(comment.id)}
-                                className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-on-surface-variant hover:text-error"
+                                className={cn(
+                                    "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-on-surface-variant hover:text-error",
+                                    compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                                )}
                             >
-                                <Icon path={mdFlag} size={16} />
+                                <Icon path={mdFlag} size={compact ? 14 : 16} />
                                 <span>{t("common.comments.report.action")}</span>
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handleBlockToggle(comment.author.sub)}
-                                className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-on-surface-variant hover:text-on-surface"
+                                className={cn(
+                                    "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-on-surface-variant hover:text-on-surface",
+                                    compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                                )}
                             >
-                                <Icon path={mdBlock} size={16} />
+                                <Icon path={mdBlock} size={compact ? 14 : 16} />
                                 <span>{t("common.comments.blockUser")}</span>
                             </button>
                         </>
@@ -670,9 +694,12 @@ export function EntityCommentSection({
                         <button
                             type="button"
                             onClick={() => handleModRemove(comment)}
-                            className="state-layer focus-ring inline-flex h-8 items-center gap-1 rounded-full px-2.5 type-label-m text-error"
+                            className={cn(
+                                "state-layer focus-ring inline-flex items-center gap-1 rounded-full text-error",
+                                compact ? "h-7 px-2 type-label-s" : "h-8 px-2.5 type-label-m",
+                            )}
                         >
-                            <Icon path={mdShield} size={16} />
+                            <Icon path={mdShield} size={compact ? 14 : 16} />
                             <span>{t("common.comments.modRemove")}</span>
                         </button>
                     )}
@@ -720,16 +747,16 @@ export function EntityCommentSection({
     }));
 
     return (
-        <section ref={sectionRef} className={cn("space-y-4", className)}>
+        <section ref={sectionRef} className={cn("min-w-0", compact ? "space-y-3" : "space-y-4", className)}>
             {/* Header & filters */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                    <Icon path={mdChatBubble} size={22} className="text-primary" />
-                    <h3 className="type-title-l text-on-surface">
+            <div className={cn("flex flex-wrap items-center justify-between", compact ? "gap-2" : "gap-3")}>
+                <div className="flex min-w-0 items-center gap-2">
+                    <Icon path={mdChatBubble} size={compact ? 19 : 22} className="shrink-0 text-primary" />
+                    <h3 className={cn("truncate text-on-surface", compact ? "type-title-m" : "type-title-l")}>
                         {t("common.comments.heading")}
                     </h3>
                     {thread && (
-                        <span className="rounded-full bg-surface-container-high px-2.5 py-0.5 type-label-m text-on-surface-variant">
+                        <span className="shrink-0 rounded-full bg-surface-container-high px-2 py-0.5 type-label-m text-on-surface-variant">
                             {thread.comment_count}
                         </span>
                     )}
@@ -750,7 +777,7 @@ export function EntityCommentSection({
                         value={sort}
                         onValueChange={setSort}
                         density={-1}
-                        className="w-44"
+                        className={compact ? "w-36 shrink-0" : "w-44"}
                         aria-label={t("common.comments.sortLabel")}
                     />
                 </div>
@@ -778,10 +805,10 @@ export function EntityCommentSection({
 
             {/* Composer or login prompt */}
             {effectiveMode !== "read_only" && !thread?.locked && (
-                <Surface tone="card" radius="lg" className="p-4">
+                <Surface tone="card" radius="lg" className={compact ? "p-3" : "p-4"}>
                     {!session.authenticated ? (
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
+                        <div className={cn("flex flex-wrap items-center justify-between", compact ? "gap-2.5" : "gap-3")}>
+                            <div className="min-w-0">
                                 <p className="type-title-s text-on-surface">
                                     {t("common.comments.loginPromptTitle")}
                                 </p>
@@ -789,12 +816,12 @@ export function EntityCommentSection({
                                     {t("common.comments.loginPromptDesc")}
                                 </p>
                             </div>
-                            <Button variant="filled" icon={mdLogin} onClick={() => signIn()}>
+                            <Button variant="filled" size={compact ? "s" : undefined} icon={mdLogin} onClick={() => signIn()}>
                                 {t("common.comments.signInButton")}
                             </Button>
                         </div>
                     ) : (
-                        <div className="space-y-3">
+                        <div className={compact ? "space-y-2.5" : "space-y-3"}>
                             {replyTarget && (
                                 <div className="flex items-center justify-between gap-2 rounded-md3-sm bg-secondary-container/60 px-3 py-1.5 type-label-m text-on-secondary-container">
                                     <span className="truncate">
@@ -827,15 +854,18 @@ export function EntityCommentSection({
                                     ref={textareaRef}
                                     value={draft}
                                     onChange={(e) => setDraft(e.target.value)}
-                                    rows={3}
+                                    rows={compact ? 2 : 3}
                                     maxLength={2000}
                                     placeholder={t("common.comments.composerPlaceholder")}
-                                    className="w-full resize-y rounded-md3-md border border-outline-variant bg-surface-container-lowest p-3 type-body-m text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none"
+                                    className={cn(
+                                        "w-full resize-y rounded-md3-md border border-outline-variant bg-surface-container-lowest text-on-surface placeholder:text-on-surface-variant focus:border-primary focus:outline-none",
+                                        compact ? "p-2.5 type-body-s" : "p-3 type-body-m",
+                                    )}
                                 />
                             )}
 
-                            <div className="flex flex-wrap items-center justify-between gap-2">
-                                <div className="flex flex-wrap items-center gap-1.5">
+                            <div className={cn("flex flex-wrap items-center justify-between", compact ? "gap-1.5" : "gap-2")}>
+                                <div className="flex flex-wrap items-center gap-1">
                                     <IconButton
                                         icon={mdSentimentSatisfied}
                                         label={t("common.comments.stickerPicker.open")}
@@ -892,11 +922,13 @@ export function EntityCommentSection({
                             </div>
 
                             {needsTurnstile && (
-                                <TurnstileWidget
-                                    siteKey={session.turnstileSiteKey}
-                                    onToken={setTurnstileToken}
-                                    resetNonce={turnstileResetNonce}
-                                />
+                                <div className={compact ? "overflow-x-auto" : undefined}>
+                                    <TurnstileWidget
+                                        siteKey={session.turnstileSiteKey}
+                                        onToken={setTurnstileToken}
+                                        resetNonce={turnstileResetNonce}
+                                    />
+                                </div>
                             )}
 
                             {submitError && <Banner tone="error">{submitError}</Banner>}
@@ -921,7 +953,7 @@ export function EntityCommentSection({
                     description={t("common.comments.emptyDescription")}
                 />
             ) : (
-                <div className="space-y-3">
+                <div className={compact ? "space-y-2.5" : "space-y-3"}>
                     {comments.map((comment) => renderCommentItem(comment, false))}
                     {nextCursor && (
                         <div className="pt-2 text-center">

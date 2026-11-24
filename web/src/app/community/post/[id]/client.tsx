@@ -9,9 +9,14 @@ import { useI18n } from "@/contexts/I18nContext";
 import { localizePathForBrowser } from "@/lib/localized-path";
 import { signIn } from "@/lib/moesekai-account";
 import {
+    parseStoryDocumentDraft,
+    validateStoryDocument,
+} from "@moesekai/story-core";
+import {
     blockUser,
     deleteCommunityPost,
     fetchCommunityPost,
+    fetchCommunityStoryPlay,
     getCommunityErrorMessage,
     likeTarget,
     submitModAction,
@@ -25,6 +30,12 @@ import CommunityMarkdown, { SpoilerCurtain } from "@/components/community/Commun
 import CommunityStoryCard from "@/components/community/CommunityStoryCard";
 import EntityCommentSection from "@/components/community/EntityCommentSection";
 import ReportDialog, { AppealDialog } from "@/components/community/ReportDialog";
+import {
+    StoryForkActionSheet,
+    StoryForkLoadError,
+    useStoryForkAction,
+    type ForkableStoryPayload,
+} from "@/components/story-maker/StoryForkActionSheet";
 import {
     Banner,
     Button,
@@ -47,6 +58,7 @@ import {
     mdFavorite,
     mdFavoriteFill,
     mdFlag,
+    mdForkRight,
     mdKeep,
     mdLock,
     mdLockOpen,
@@ -141,6 +153,29 @@ export default function CommunityPostClient() {
     const handleCommentCountChange = useCallback((count: number) => {
         setPost((prev) => (!prev || prev.comment_count === count ? prev : { ...prev, comment_count: count }));
     }, []);
+
+    const loadStoryForFork = useCallback(async (): Promise<ForkableStoryPayload> => {
+        if (!post) {
+            throw new StoryForkLoadError(tRef.current("common.comments.errors.notFound"));
+        }
+        const res = await fetchCommunityStoryPlay(post.id);
+        const validated = validateStoryDocument(res.story_doc);
+        const loadedDoc = validated.ok ? validated.doc : parseStoryDocumentDraft(res.story_doc);
+        if (!loadedDoc) {
+            throw new StoryForkLoadError(tRef.current("page.storyMaker.publish.errors.invalidStoryDoc"));
+        }
+        return {
+            doc: loadedDoc,
+            postId: res.post_id,
+            title: res.title || post.title || loadedDoc.meta.title,
+            authorName: res.author?.display_name || post.author.display_name,
+        };
+    }, [post]);
+
+    const storyFork = useStoryForkAction({
+        loadStory: loadStoryForFork,
+        onNotify: setActionMessage,
+    });
 
     const openEditModal = () => {
         if (!post) return;
@@ -379,6 +414,19 @@ export default function CommunityPostClient() {
                                     postId={post.id}
                                     summary={post.story_summary}
                                     showPendingVoiceStatus={isOwn || isMod}
+                                    extraActions={
+                                        <Button
+                                            variant="tonal"
+                                            size="m"
+                                            icon={mdForkRight}
+                                            disabled={storyFork.forkingDirect}
+                                            onClick={() => void storyFork.triggerFork()}
+                                        >
+                                            {storyFork.forkingDirect
+                                                ? t("page.storyMaker.fork.forkingAction")
+                                                : t("page.storyMaker.fork.action")}
+                                        </Button>
+                                    }
                                     className="mb-4"
                                 />
                             )}
@@ -689,6 +737,20 @@ export default function CommunityPostClient() {
                             targetType="post"
                             targetId={post.id}
                         />
+
+                        {post.category === "community_story" && post.story_summary && (
+                            <StoryForkActionSheet
+                                isOpen={storyFork.sheetOpen}
+                                onClose={storyFork.closeSheet}
+                                story={storyFork.resolvedStory}
+                                loadStory={loadStoryForFork}
+                                previewTitle={post.title}
+                                previewAuthorName={post.author.display_name}
+                                previewPostId={post.id}
+                                initialError={storyFork.directError}
+                                onNotify={setActionMessage}
+                            />
+                        )}
                     </div>
                 )}
             </PageContainer>

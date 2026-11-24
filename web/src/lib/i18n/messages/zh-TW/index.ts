@@ -6,7 +6,11 @@ import { storyMakerMessages } from "@moesekai/story-editor/messages/zh-TW";
 import type { MessageTree } from "../types";
 import { zhTWCommon } from "./common";
 import { zhTWPagePrimary } from "./page-primary";
-import { zhTWPageSecondaryA } from "./page-secondary-a";
+import {
+    zhTWPageSecondaryA,
+    zhTWStoryMakerCommunityPlayer,
+    zhTWStoryMakerFork,
+} from "./page-secondary-a";
 import { zhTWPageSecondaryB } from "./page-secondary-b";
 import {
     zhTWLayout,
@@ -24,7 +28,11 @@ export const zhTWMessages = {
     page: {
         mysekaiWorkspace: mysekaiWorkspaceMessages,
         costume3d: costume3dMessages,
-        storyMaker: storyMakerMessages,
+        storyMaker: {
+            ...storyMakerMessages,
+            fork: zhTWStoryMakerFork,
+            communityPlayer: zhTWStoryMakerCommunityPlayer,
+        },
         account: accountMessages,
         assetGuide: assetGuideMessages,
         ...zhTWPagePrimary,

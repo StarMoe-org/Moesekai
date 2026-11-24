@@ -20,6 +20,7 @@ interface CommunityStoryCardProps {
     /** Show owner/moderator processing status badge when voice track isn't published yet. */
     showPendingVoiceStatus?: boolean;
     compact?: boolean;
+    extraActions?: React.ReactNode;
     className?: string;
 }
 
@@ -52,6 +53,7 @@ export function CommunityStoryCard({
     summary,
     showPendingVoiceStatus = false,
     compact = false,
+    extraActions,
     className,
 }: CommunityStoryCardProps) {
     const { t } = useI18n();
@@ -119,15 +121,17 @@ export function CommunityStoryCard({
                 </div>
             </div>
 
-            <Button
-                variant="filled"
-                size={compact ? "s" : "m"}
-                icon={mdPlayArrowFill}
-                href={`/story-maker/play?postId=${postId}`}
-                className="shrink-0 self-start sm:self-center"
-            >
-                {t("page.community.storyCard.playNow")}
-            </Button>
+            <div className="flex shrink-0 flex-wrap items-center gap-2 self-start sm:self-center">
+                <Button
+                    variant="filled"
+                    size={compact ? "s" : "m"}
+                    icon={mdPlayArrowFill}
+                    href={`/story-maker/play?postId=${postId}`}
+                >
+                    {t("page.community.storyCard.playNow")}
+                </Button>
+                {extraActions}
+            </div>
         </div>
     );
 }

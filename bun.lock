@@ -11,8 +11,8 @@
       "dependencies": {
         "@empty-sekai/allium-deck-wasm": "0.1.0",
         "@fontsource-variable/roboto-flex": "^5.3.0",
-        "@moesekai/story-core": "^0.2.1",
-        "@moesekai/story-editor": "^0.2.1",
+        "@moesekai/story-core": "^0.2.2",
+        "@moesekai/story-editor": "^0.2.2",
         "@supabase/supabase-js": "2.106.0",
         "@swc/helpers": "^0.5.15",
         "@types/qrcode": "^1.5.6",
@@ -223,9 +223,9 @@
 
     "@material/material-color-utilities": ["@material/material-color-utilities@0.4.0", "https://registry.npmmirror.com/@material/material-color-utilities/-/material-color-utilities-0.4.0.tgz", {}, "sha512-dlq6VExJReb8dhjj3a/yTigr3ncNwoFmL5Iy2ENtbDX03EmNeOEdZ+vsaGrj7RTuO+mB7L58II4LCsl4NpM8uw=="],
 
-    "@moesekai/story-core": ["@moesekai/story-core@0.2.1", "https://registry.npmmirror.com/@moesekai/story-core/-/story-core-0.2.1.tgz", {}, "sha512-qo5XKH0cxeZUm1INFvqsr5Hjyu3FifAC/tWqdJpflD2AycrfsIu5FkhRENMte0Oj2N2Ot5YG52RPHCmlZLhk0g=="],
+    "@moesekai/story-core": ["@moesekai/story-core@0.2.2", "https://registry.npmmirror.com/@moesekai/story-core/-/story-core-0.2.2.tgz", {}, "sha512-i0kW3Cu/pThlP4XdV/GMlg1slH8XQfzF8Kr5GHfdyyKXbl3hV4D3DJMTUR+IrBWJ0DzVjK+cbJFOnxlbm4gw+g=="],
 
-    "@moesekai/story-editor": ["@moesekai/story-editor@0.2.1", "https://registry.npmmirror.com/@moesekai/story-editor/-/story-editor-0.2.1.tgz", { "peerDependencies": { "@moesekai/story-core": "^0.2.1", "framer-motion": "^12.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moesekai/story-core"] }, "sha512-2bZL4A+QvtOysWdAtYYtC013I82++a1PnieaCuFj5/m7BOMTT8LicEoc455kUIBT62JbaAHbD3C5/HjGJn677A=="],
+    "@moesekai/story-editor": ["@moesekai/story-editor@0.2.2", "https://registry.npmmirror.com/@moesekai/story-editor/-/story-editor-0.2.2.tgz", { "peerDependencies": { "@moesekai/story-core": "^0.2.2", "framer-motion": "^12.0.0", "react": "^19.0.0", "react-dom": "^19.0.0" }, "optionalPeers": ["@moesekai/story-core"] }, "sha512-QxtCQX8V2riVnZEx0ceO/ca5siv7/SxK6nWP3j85l0CA4/JJSgKp41iMYn1vMP+kgYg8IDpKRKft48HkJKZhuw=="],
 
     "@napi-rs/wasm-runtime": ["@napi-rs/wasm-runtime@1.1.6", "https://registry.npmmirror.com/@napi-rs/wasm-runtime/-/wasm-runtime-1.1.6.tgz", { "dependencies": { "@tybys/wasm-util": "^0.10.3" }, "peerDependencies": { "@emnapi/core": "^1.7.1", "@emnapi/runtime": "^1.7.1" } }, "sha512-ZLv/JdUfkvOy9eCnnBaGfiO+XimbjebAeO+MRQqD/B+FR1tnRN0tpKSJHRbE8sFfS6aqsXZ67TQjfwfsxULVbg=="],
 

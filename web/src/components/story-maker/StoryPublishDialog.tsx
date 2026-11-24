@@ -33,12 +33,18 @@ import {
 import {
     mdAdd,
     mdCheckCircle,
+    mdForkRight,
     mdLogin,
     mdOpenInNew,
     mdPlayArrowFill,
     mdRecordVoiceOver,
     mdSend,
 } from "@/components/md3/icons";
+import {
+    formatForkAttributionMarkdown,
+    getForkAttribution,
+    type StoryForkAttribution,
+} from "@/lib/story-maker-fork";
 import {
     SERVER_TAG_OPTIONS,
     isServerTag,
@@ -97,12 +103,18 @@ export function StoryPublishDialog({
     const [error, setError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
     const [resultPost, setResultPost] = useState<PostItem | null>(null);
+    const [forkAttribution, setForkAttribution] = useState<StoryForkAttribution | null>(null);
 
+    const tRef = useRef(t);
     const hydrateSeqRef = useRef(0);
     const wasOpenRef = useRef(false);
     const tagsDirtyRef = useRef(false);
     const spoilerDirtyRef = useRef(false);
     const serverTagDirtyRef = useRef(false);
+
+    useEffect(() => {
+        tRef.current = t;
+    }, [t]);
 
     const isUpdateMode = Boolean(publishedPostId && !createAsNew);
     const needsTurnstile = !isUpdateMode && Boolean(session.turnstileSiteKey) && session.turnstileRequired;
@@ -118,8 +130,17 @@ export function StoryPublishDialog({
         tagsDirtyRef.current = false;
         spoilerDirtyRef.current = false;
         serverTagDirtyRef.current = false;
+        const attribution = draftId ? getForkAttribution(draftId) : null;
+        setForkAttribution(attribution);
         setTitle(doc.meta.title.trim());
-        setBodyMd(doc.meta.summary.trim());
+        const initialSummary = doc.meta.summary.trim();
+        const prefilledBody = !initialSummary && !publishedPostId && attribution
+            ? formatForkAttributionMarkdown(
+                  attribution,
+                  tRef.current("page.storyMaker.fork.attributionTemplate"),
+              )
+            : initialSummary;
+        setBodyMd(prefilledBody);
         setServerTag(defaultServerTag(doc.region));
         setTags([]);
         setTagInput("");
@@ -479,6 +500,39 @@ export function StoryPublishDialog({
                                             )}
                                         </Button>
                                     </div>
+                                </Surface>
+                            )}
+
+                            {forkAttribution && (
+                                <Surface
+                                    tone="low"
+                                    radius="md"
+                                    className="flex flex-wrap items-center justify-between gap-2 border border-primary/30 bg-primary-container/20 px-3.5 py-2.5"
+                                >
+                                    <div className="flex min-w-0 flex-1 items-start gap-2">
+                                        <Icon path={mdForkRight} size={18} className="mt-0.5 shrink-0 text-primary" />
+                                        <div className="min-w-0 space-y-0.5">
+                                            <p className="type-label-l text-on-surface">
+                                                {t("page.storyMaker.fork.publishBadgeTitle")}
+                                            </p>
+                                            <p className="truncate type-body-s text-on-surface-variant">
+                                                {t("page.storyMaker.fork.publishNotice", {
+                                                    title:
+                                                        forkAttribution.sourceTitle
+                                                        || `#${forkAttribution.sourcePostId}`,
+                                                    author: forkAttribution.sourceAuthorName,
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <Button
+                                        size="xs"
+                                        variant="tonal"
+                                        icon={mdOpenInNew}
+                                        href={`/community/post/${forkAttribution.sourcePostId}`}
+                                    >
+                                        {t("page.storyMaker.fork.viewOriginalPost")}
+                                    </Button>
                                 </Surface>
                             )}
 
