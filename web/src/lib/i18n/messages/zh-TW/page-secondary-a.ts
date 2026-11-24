@@ -666,6 +666,28 @@ export const zhTWStoryMakerCommunityPlayer = {
     collapseDesc: "收合簡介",
 } as const satisfies MessageTree;
 
+export const zhTWStoryMakerDesktopGuide = {
+    dialogTitle: "探索桌面版 · MoeSekai Agent",
+    badge: "MoeSekai Agent",
+    platformsBadge: "Windows · macOS · Linux",
+    heroTitle: "用桌面版體驗 MoeSekai Agent，實現從零到有的創作魔法",
+    heroDesc: "下載 {name} 桌面版，只要說出你的靈感，內建 MoeSekai Agent 即可自動參考官方人物語氣、編排多角色 Live2D 舞台與多結局分支，帶你從零到有產生完整互動劇情。",
+    features: {
+        agentTitle: "一句話許願，從零產生完整 .msk 劇本",
+        agentDesc: "自動檢索官方劇情語氣與稱呼、擬定大綱、寫入規範劇本並執行全分支靜態校驗，零門檻展開創作。",
+        snapshotTitle: "每步自動留存快照，隨時一鍵還原",
+        snapshotDesc: "本機專案與多工作階段對話紀錄獨立管理，每次 AI 修改自動備份快照，放心試錯、隨時回溯。",
+        desktopTitle: "本機高速快取與完整配音工作流",
+        desktopDesc: "資源快取載入更流暢，支援本機配音資料夾拖曳自動配對，並與網頁版 .msk 劇本完全互通。",
+    },
+    freeNote: "開源免費（MPL-2.0），匯出 .msk 即可隨時匯入網頁版試播或一鍵發布至社群。",
+    triggerAction: "桌面版 · Agent",
+    menuAction: "了解桌面版（MoeSekai Agent）",
+    dontShowAgain: "不再提示",
+    continueWeb: "繼續使用網頁版",
+    downloadDesktop: "取得桌面版",
+} as const satisfies MessageTree;
+
 export const zhTWStoryMakerAudioUpload = {
     tabUpload: "本地試聽與上傳",
     startUpload: "上傳並提交審核",

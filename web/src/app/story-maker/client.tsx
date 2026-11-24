@@ -1,11 +1,17 @@
 "use client";
 
-import { Suspense, useCallback, useState } from "react";
+import { Suspense, useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { StoryStudioHub, type StoryHubSortKey } from "@moesekai/story-editor";
+import { StoryStudioHub, type StoryHubSortKey, type StoryStudioHubSlots } from "@moesekai/story-editor";
 import MainLayout from "@/components/MainLayout";
-import { LoadingState } from "@/components/md3";
+import { Button, LoadingState } from "@/components/md3";
+import { mdWandStars } from "@/components/md3/icons";
+import {
+    StoryDesktopGuideDialog,
+    useStoryDesktopGuide,
+} from "@/components/story-maker/StoryDesktopGuideDialog";
 import { StoryStudioWebProvider } from "@/components/story-maker/StoryStudioWebProvider";
+import { useI18n } from "@/contexts/I18nContext";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 
 function isSortKey(value: string | null): value is StoryHubSortKey {
@@ -13,8 +19,14 @@ function isSortKey(value: string | null): value is StoryHubSortKey {
 }
 
 function StoryMakerContent() {
+    const { t } = useI18n();
     const searchParams = useSearchParams();
     const [loading, setLoading] = useState(true);
+    const {
+        isOpen: desktopGuideOpen,
+        openGuide: openDesktopGuide,
+        closeGuide: closeDesktopGuide,
+    } = useStoryDesktopGuide();
 
     const initialSearch = searchParams.get("search") ?? "";
     const rawSort = searchParams.get("sortBy");
@@ -40,15 +52,38 @@ function StoryMakerContent() {
         [],
     );
 
+    const slots = useMemo<StoryStudioHubSlots>(
+        () => ({
+            headerActions: (
+                <Button
+                    variant="tonal"
+                    icon={mdWandStars}
+                    onClick={openDesktopGuide}
+                    className="px-3 sm:px-4"
+                >
+                    {t("page.storyMaker.desktopGuide.triggerAction")}
+                </Button>
+            ),
+        }),
+        [openDesktopGuide, t],
+    );
+
     return (
-        <StoryStudioHub
-            initialSearch={initialSearch}
-            initialSortBy={initialSortBy}
-            onFilterChange={handleFilterChange}
-            scrollRestore={{ displayCount, loadMore, resetDisplayCount }}
-            onLoadingChange={setLoading}
-            showMobileNotice
-        />
+        <>
+            <StoryStudioHub
+                initialSearch={initialSearch}
+                initialSortBy={initialSortBy}
+                onFilterChange={handleFilterChange}
+                scrollRestore={{ displayCount, loadMore, resetDisplayCount }}
+                onLoadingChange={setLoading}
+                showMobileNotice
+                slots={slots}
+            />
+            <StoryDesktopGuideDialog
+                isOpen={desktopGuideOpen}
+                onClose={closeDesktopGuide}
+            />
+        </>
     );
 }
 

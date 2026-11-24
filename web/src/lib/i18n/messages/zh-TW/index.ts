@@ -10,6 +10,7 @@ import {
     zhTWPageSecondaryA,
     zhTWStoryMakerAudioUpload,
     zhTWStoryMakerCommunityPlayer,
+    zhTWStoryMakerDesktopGuide,
     zhTWStoryMakerFork,
 } from "./page-secondary-a";
 import { zhTWPageSecondaryB } from "./page-secondary-b";
@@ -37,6 +38,7 @@ export const zhTWMessages = {
             },
             fork: zhTWStoryMakerFork,
             communityPlayer: zhTWStoryMakerCommunityPlayer,
+            desktopGuide: zhTWStoryMakerDesktopGuide,
         },
         account: accountMessages,
         assetGuide: assetGuideMessages,
