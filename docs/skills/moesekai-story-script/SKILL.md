@@ -55,6 +55,14 @@ Design a crisp interactive structure before writing:
   - Default `scale=1` (omit `scale`) is exact 1:1 in-game PJSK height. Use `scale=1` for 3–5 actors; reserve `scale=1.05–1.25` for 1–2 actor close-ups.
   - Spread actors across distinct slots: 2 actors → `left, right`; 3 → `left, center, right`; 4 → `farLeft, left, right, farRight`; 5 → all 5 slots.
   - **Intentional overlap / "贴贴" (close huddle)**: Only when two characters intentionally lean cheek-to-cheek or hug, add `overlap` explicitly on **both** huddling actors' `cast set` entries or `stage enter`/`stage move` beats (e.g. `ichika at center overlap` + `saki at center overlap`). Never leave undeclared overlaps!
+  - **Stable Incremental Framing & Fine Placement (`x=<num>`, `lock`, `mirror`, `fixed`)**:
+    - Mid-scene `stage exit` / `stage pose` never shift surviving actors; `stage enter` / `stage move` keep stationary actors pinned in place whenever free stage space permits, shifting neighbors minimally only when free space is genuinely exhausted.
+    - For exact compositions, pass per-actor `x=<num>` (`-1.2..1.2`, pins actor horizontally), `lock` (pin current X), `mirror` (flip horizontally), or scene-level `cast set fixed [ ... ]` (disables automatic displacement for the scene).
+  - **Scene Enter Timing & Center Subtitle (`telop`) Layering**:
+    - When a scene opens with a `telop` subtitle banner, use `cast set afterTelop [ ... ]` (with optional `delay=<sec>`, `dur=<sec>`, `instant`) so characters cleanly enter *after* the opening telop instead of getting covered by centered text!
+    - For mid-scene `telop` beats while characters are already on stage, add `actors=hide` or `actors=dim` (and optional `pos=top|bottom`), e.g. `telop "Two hours later..." actors=dim pos=top`.
+  - **Simultaneous Multi-Character Waves (`stage sync [...]` & `parallel`)**:
+    - Use `stage sync [ enter ichika at left; enter saki at right ] dur=0.45` (or `stage sync [ exit ichika; exit saki ] dur=0.35`, or trailing `parallel` on consecutive `stage` lines) whenever multiple characters enter, exit, or move together in lockstep. Individual items inside `[ ... ]` can override `dur=`, `delay=`, or `instant`.
   - **Live2D Z-Layering (`z=<int>`, `-99..99`) & Move Anti-Occlusion**:
     - By default (`z` omitted, effective `0`), moving/entering characters and the currently speaking character automatically rise in front of stationary neighbors so a moving or talking actor is never buried behind another model.
     - When you want deterministic foreground/background depth (e.g. center focal character in front of flanking teammates, close huddle front/back, or background observers), specify integer `z=<int>` on `cast set`, `stage enter`, `stage move`, or `stage pose` (higher `z` ALWAYS renders in front; negative `z` stays behind default `0` actors; e.g. `ichika at center z=10`, `honami at left z=1`, `saki at right z=2`, background bystander `z=-1`, reset with `z=0`).
@@ -62,10 +70,10 @@ Design a crisp interactive structure before writing:
 ### Step 3 — Draft `.msk` with Authentic PJSK Directing Craft
 
 Apply the staging patterns you observed in official scripts:
-1. **Open scene shifts cleanly**: `transition fadeBlack 0.5` (or `fadeWhite 0.6` for flashbacks/SEKAI warps) + `place set "..."` + `telop "..."` for chapter/time beats.
+1. **Open scene shifts cleanly**: `transition fadeBlack 0.5` (or `fadeWhite 0.6` for flashbacks/SEKAI warps) + `place set "..."` + `cast set afterTelop [ ... ]` + `telop "..."` for chapter/time beats so center subtitles never cover characters.
 2. **Short, natural dialogue beats**: Keep each `talk` to 1–2 sentences (like real PJSK textboxes) rather than walls of prose.
 3. **Keep the whole cast alive**: Pair emotional lines with speaker `motion="..." facial="..."` AND co-star `react(<otherKey> motion="..." facial="...")` so listeners react on the exact same beat!
-4. **Dynamic blocking**: Use `stage enter`, `stage move ... dur=0.5`, `stage pose`, and `stage exit` instead of static cardboard cutouts.
+4. **Dynamic blocking**: Use `stage enter`, `stage move ... dur=0.5`, `stage pose`, `stage exit`, and simultaneous `stage sync [ ...; ... ] dur=0.45` waves (with optional `delay=` / `instant`) instead of static cardboard cutouts.
 5. **Audio pacing**: Keep BGM around `vol=0.65..0.80` so voices/SE stay crisp; use a new `scene` with `bgm stop` for dramatic silence before an emotional turn; always use pack-qualified SE paths (`se_pack00001_b/...` or `se_pack00001/...`).
 6. **Strict asset discipline**:
    - Match gender motion prefixes (`w-*` for female characters, `m-*` for male characters: `11akito`, `12touya`, `13tsukasa`, `16rui`, `23len`, `26kaito`).
@@ -176,17 +184,18 @@ end end_cafe "Sweet Ending" subtitle="Recharged for tomorrow! (Harmony: {{harmon
 - **Nodes** (all accept optional `@pos(x, y)`):
   - `start [id=<id>] -> <target>`
   - `scene <id> ["<title>"] { <slots> <beats...> } -> <target>`
-    - Slots: `bg set "<id>" | inherit | clear`, `bgm play "<path>" [vol=0.75] | inherit | stop`, `place set "<text>" | inherit | hide`, `transition <none|fadeBlack|fadeWhite> [<dur>]`, `cast set [ <key> at <farLeft|left|center|right|farRight> [scale=1] [y=0] [z=<int>] [overlap] [motion="..."] [facial="..."] ... ] | inherit | clear`
+    - Slots: `bg set "<id>" | inherit | clear`, `bgm play "<path>" [vol=0.75] | inherit | stop`, `place set "<text>" | inherit | hide`, `transition <none|fadeBlack|fadeWhite> [<dur>]`, `cast set [fixed] [afterTelop] [delay=<sec>] [dur=<sec>] [instant] [ <key> at <farLeft|left|center|right|farRight> [x=<num>] [scale=1] [y=0] [z=<int>] [lock] [mirror] [overlap] [motion="..."] [facial="..."] ... ] | inherit | clear`
   - `choice <id> ["<title>"] { [<optId>:] "<text>" [if <var> <op> <val>] [<varOps>] -> <target> ... }` (2–4 options)
   - `condition <id> ["<title>"] { [<ruleId>:] if <var> <op> <val> ["<label>"] -> <target> ... else -> <target> }`
   - `end <id> ["<title>"] [subtitle="<text>"]`
 - **Beats inside `scene`**:
   - `talk <key> [as "<name>"] "<body>" [motion="..."] [facial="..."] [react(<key> [motion="..."] [facial="..."]) ...] [voice(<kind>:<scenarioId>:<voiceId>[[start..end]][@region])] [se="<path>"] [seVol=0.8]` (or off-cast `talk "<name>" "<body>"`)
   - `narration "<body>" [se="<path>"] [seVol=0.8]`
-  - `telop "<text>"`
-  - `stage enter <key> [at <slot>] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`
-  - `stage move <key> to <slot> [dur=0.5] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`
-  - `stage pose <key> [z=<int>] [motion="..."] [facial="..."]` | `stage exit <key>`
+  - `telop "<text>" [actors=<keep|hide|dim>] [pos=<center|top|bottom>]`
+  - `stage enter <key> [at <slot>] [x=<num>] [dur=<sec>] [delay=<sec>] [instant] [scale=...] [y=...] [z=<int>] [lock] [mirror] [overlap] [motion="..."] [facial="..."] [parallel]`
+  - `stage move <key> [to <slot>] [x=<num>] [dur=0.5] [delay=<sec>] [scale=...] [y=...] [z=<int>] [lock|lock=false] [mirror|mirror=false] [overlap] [motion="..."] [facial="..."] [parallel]`
+  - `stage pose <key> [z=<int>] [lock|lock=false] [mirror|mirror=false] [delay=<sec>] [motion="..."] [facial="..."] [parallel]` | `stage exit <key> [dur=<sec>] [delay=<sec>] [instant] [parallel]`
+  - `stage sync [ <action> <key> ...; <action> <key> ... ] [dur=<sec>] [delay=<sec>] [instant] [parallel]` (simultaneous multi-actor wave)
   - `cue se "<path>" [vol=0.8]` | `cue flash <black|white> [<dur>]` | `cue shake [<dur>]` | `cue wait [<dur>]`
   - `set <var> += 1, <var> -= 1, <var> = 5, <flag> = true, <flag> toggle`
 

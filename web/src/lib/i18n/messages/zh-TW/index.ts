@@ -8,6 +8,7 @@ import { zhTWCommon } from "./common";
 import { zhTWPagePrimary } from "./page-primary";
 import {
     zhTWPageSecondaryA,
+    zhTWStoryMakerAudioUpload,
     zhTWStoryMakerCommunityPlayer,
     zhTWStoryMakerFork,
 } from "./page-secondary-a";
@@ -30,6 +31,10 @@ export const zhTWMessages = {
         costume3d: costume3dMessages,
         storyMaker: {
             ...storyMakerMessages,
+            audioUpload: {
+                ...storyMakerMessages.audioUpload,
+                ...zhTWStoryMakerAudioUpload,
+            },
             fork: zhTWStoryMakerFork,
             communityPlayer: zhTWStoryMakerCommunityPlayer,
         },

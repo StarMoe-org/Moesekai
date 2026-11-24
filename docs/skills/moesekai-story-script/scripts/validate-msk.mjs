@@ -35,6 +35,7 @@ import {
     detectStageActorOverlaps,
     extractLive2DMotionClips,
     fetchLive2DModels,
+    getStageActionItems,
     inferLive2DMotionBundleCandidates,
     live2dDirectoryPath,
     live2dSiteListingUrl,
@@ -325,7 +326,9 @@ function collectAssetReport(doc, region, line) {
             } else if (beat.kind === "narration") {
                 recordSe(beat.se);
             } else if (beat.kind === "stageAction") {
-                recordClips(beat.castKey, beat.motion, beat.facial);
+                for (const item of getStageActionItems(beat)) {
+                    recordClips(item.castKey, item.motion, item.facial);
+                }
             } else if (beat.kind === "cue" && beat.cueType === "se") {
                 recordSe(beat.se);
             }
@@ -907,37 +910,41 @@ function printHumanReport(report, strictMode = false) {
 
     if (report.simulation) {
         const sim = report.simulation;
-        console.log(`\n=== Branch & Ending Simulation (${sim.totalPaths} path(s)${sim.truncated ? ", TRUNCATED" : ""}) ===`);
-        console.log(`Endings reached: ${sim.reachedEndings.length}/${sim.declaredEndings.length} (${sim.reachedEndings.join(", ") || "none"})`);
-        if (sim.unreachedEndings.length > 0) {
-            console.log(`Unreached endings: ${sim.unreachedEndings.join(", ")}`);
-        }
-        if (sim.disconnectedPaths > 0 || sim.loopPaths > 0 || sim.deadlockPaths > 0) {
-            console.log(`Anomalies: disconnected=${sim.disconnectedPaths}, loop=${sim.loopPaths}, deadlock=${sim.deadlockPaths}`);
-        }
-        for (const p of sim.paths) {
-            const choiceDesc = p.choices.length > 0
-                ? p.choices.map(c => `${c.nodeId}.${c.optionId}`).join(" -> ")
-                : "(linear)";
-            const outcomeDesc = p.outcome === "end" && p.ending
-                ? `END ${p.ending.nodeId} "${p.ending.title}"${p.ending.subtitle ? ` — ${p.ending.subtitle}` : ""}`
-                : `${p.outcome.toUpperCase()} @ ${p.finalNodeId ?? "?"}`;
-            console.log(`  #${p.index} [${p.beatCount} beats] ${choiceDesc} => ${outcomeDesc} | vars=${JSON.stringify(p.variables)}`);
-        }
-        if (sim.offStageTalks.length > 0) {
-            console.log(`Off-stage speakers (${sim.offStageTalks.length} beat(s) where speakerKey is not mounted on stage):`);
-            for (const item of sim.offStageTalks) {
-                console.log(`  - ${item.nodeId}/${item.beatId}: speakerKey="${item.speakerKey}"`);
+        if (sim.skipped) {
+            console.log(`\n=== Branch & Ending Simulation (skipped: ${sim.reason}) ===`);
+        } else {
+            console.log(`\n=== Branch & Ending Simulation (${sim.totalPaths} path(s)${sim.truncated ? ", TRUNCATED" : ""}) ===`);
+            console.log(`Endings reached: ${sim.reachedEndings.length}/${sim.declaredEndings.length} (${sim.reachedEndings.join(", ") || "none"})`);
+            if (sim.unreachedEndings.length > 0) {
+                console.log(`Unreached endings: ${sim.unreachedEndings.join(", ")}`);
             }
-        }
-        if (sim.stageOverlaps && sim.stageOverlaps.length > 0) {
-            console.log(`Stage placement warnings (${sim.stageOverlaps.length} frame(s) with duplicate slots or tight spacing):`);
-            for (const item of sim.stageOverlaps) {
-                const loc = item.beatId ? `${item.nodeId}/${item.beatId}` : item.nodeId;
-                if (item.kind === "duplicateSlot") {
-                    console.log(`  - ${loc}: duplicate slot "${item.slot}" shared by [${item.actors.join(", ")}]`);
-                } else {
-                    console.log(`  - ${loc}: tight spacing between [${item.actors.join(", ")}] (gap=${item.gap}, minSafe=${item.minGap})`);
+            if (sim.disconnectedPaths > 0 || sim.loopPaths > 0 || sim.deadlockPaths > 0) {
+                console.log(`Anomalies: disconnected=${sim.disconnectedPaths}, loop=${sim.loopPaths}, deadlock=${sim.deadlockPaths}`);
+            }
+            for (const p of sim.paths) {
+                const choiceDesc = p.choices.length > 0
+                    ? p.choices.map(c => `${c.nodeId}.${c.optionId}`).join(" -> ")
+                    : "(linear)";
+                const outcomeDesc = p.outcome === "end" && p.ending
+                    ? `END ${p.ending.nodeId} "${p.ending.title}"${p.ending.subtitle ? ` — ${p.ending.subtitle}` : ""}`
+                    : `${p.outcome.toUpperCase()} @ ${p.finalNodeId ?? "?"}`;
+                console.log(`  #${p.index} [${p.beatCount} beats] ${choiceDesc} => ${outcomeDesc} | vars=${JSON.stringify(p.variables)}`);
+            }
+            if (sim.offStageTalks.length > 0) {
+                console.log(`Off-stage speakers (${sim.offStageTalks.length} beat(s) where speakerKey is not mounted on stage):`);
+                for (const item of sim.offStageTalks) {
+                    console.log(`  - ${item.nodeId}/${item.beatId}: speakerKey="${item.speakerKey}"`);
+                }
+            }
+            if (sim.stageOverlaps && sim.stageOverlaps.length > 0) {
+                console.log(`Stage placement warnings (${sim.stageOverlaps.length} frame(s) with duplicate slots or tight spacing):`);
+                for (const item of sim.stageOverlaps) {
+                    const loc = item.beatId ? `${item.nodeId}/${item.beatId}` : item.nodeId;
+                    if (item.kind === "duplicateSlot") {
+                        console.log(`  - ${loc}: duplicate slot "${item.slot}" shared by [${item.actors.join(", ")}]`);
+                    } else {
+                        console.log(`  - ${loc}: tight spacing between [${item.actors.join(", ")}] (gap=${item.gap}, minSafe=${item.minGap})`);
+                    }
                 }
             }
         }

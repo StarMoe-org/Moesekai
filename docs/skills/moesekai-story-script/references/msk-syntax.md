@@ -25,7 +25,7 @@ This reference documents the exact grammar, lexical patterns, numeric/string lim
 | Cast & stage | Max **8 cast definitions**, **5 simultaneous actors** in `stageCast`, **4 `react(...)` clauses** per `talk` beat |
 | Variables & branching | Max **32 variables**, **16 varOps** per `set`/option, **12 condition rules**, **2–4 options** per `choice` |
 | String lengths | title `80`, summary `500`, author `40`, cast name `40`, var display name `32`, node title `60`, end subtitle `160`, rule label `40`, dialogue/narration body `500`, telop `120`, place `80`, speaker override `40`, choice text `80`, audio path `128` |
-| Numeric bounds | `duration` `0..10` s, `vol`/`seVol` `0..1`, `scale` `0.5..2.0`, `y` `-0.6..0.6`, `z` integer `-99..99`, number var `-1,000,000..1,000,000`, voice trim `0 <= start <= 600`, `0 < end <= 600`, `end - start >= 0.05`, canvas `@pos(x, y)` `-20000..20000` |
+| Numeric bounds | `duration` `0..10` s, `delay` `0..10` s, `vol`/`seVol` `0..1`, `x` `-1.2..1.2`, `scale` `0.5..2.0`, `y` `-0.6..0.6`, `z` integer `-99..99`, number var `-1,000,000..1,000,000`, voice trim `0 <= start <= 600`, `0 < end <= 600`, `end - start >= 0.05`, canvas `@pos(x, y)` `-20000..20000` |
 | Runtime loop guard | Max **4,000** non-blocking IR instructions per advance |
 
 ---
@@ -62,7 +62,7 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
   bgm <play "<audioPath>" [vol=<0..1>] | inherit | stop>
   place <set "<text>" | inherit | hide>
   transition <none|fadeBlack|fadeWhite> [<duration>]
-  cast <set [ <actorSlot>... ] | inherit | clear>
+  cast <set [fixed] [afterTelop] [delay=<sec>] [dur=<sec>] [instant] [ <actorSlot>... ] | inherit | clear>
 
   # Ordered performance beats...
 } -> <targetNodeId>
@@ -70,18 +70,22 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 - Outgoing `-> <targetNodeId>` can sit right after `}` (canonical serializer form) or as the last line inside `{ ... }`.
 - Omitted stage slots default to `inherit`, and omitted `transition` defaults to `none 0.4`.
 - `bgm play` defaults to `vol=0.75` if `vol=` is omitted.
-- **`cast set [...]` actor slot syntax** (newline- or comma-separated; `cast set []` clears actors):
+- **`cast set` modifiers** (all optional, before `[ ... ]`; omitted when at defaults `auto` / `immediate` / `fade`):
+  - `fixed` — disables automatic anti-overlap displacement for this scene (every actor uses exact `x` or `SLOT_X[slot]`).
+  - `afterTelop` — defers mounting `cast set` actors until immediately after all leading `telop` beats (allowing interleaved `cue` beats), preventing opening center subtitles from overlapping characters.
+  - `delay=<0..10>` / `dur=<0..10>` / `instant` — custom scene-entry delay, fade duration, or instant pop-in.
+- **`cast set [...]` actor slot syntax** (newline-, semicolon-, or comma-separated; `cast set []` clears actors):
   ```msk
-  cast set [
-    ichika at center z=10 scale=1 y=0 motion="w-normal01-nod" facial="face_smile_01"
-    honami at left z=1 scale=1
+  cast set afterTelop delay=0.1 dur=0.45 [
+    ichika at center x=0.05 z=10 scale=1 y=0 lock motion="w-normal01-nod" facial="face_smile_01"
+    honami at left z=1 scale=1 mirror
     saki at right z=2 scale=1
     # Intentional cheek-to-cheek huddle ("贴贴") with foreground/background control:
     # ichika at center z=5 overlap facial="face_smile_01"
     # saki at center z=1 overlap facial="face_sparkling_01"
   ]
   ```
-  Standing slots: `farLeft`, `left`, `center`, `right`, `farRight`. Optional integer `z` (`-99..99`) sets explicit draw depth (higher renders in front; default omitted = auto `0`).
+  Standing slots: `farLeft`, `left`, `center`, `right`, `farRight`. Optional fine placement: `x=<num>` (`-1.2..1.2`, pins actor horizontally), `lock` (pins current X against auto-layout), `mirror` (flips horizontally), `z=<int>` (`-99..99`, explicit draw depth; higher renders in front; default omitted = auto `0`).
 
 ### All 6 Scene Performance Beats
 
@@ -89,8 +93,8 @@ scene <nodeId> ["<title>"] [@pos(x, y)] {
 | --- | --- | --- | --- |
 | `talk` | Yes | `talk <speakerKey> [as "<name>"] "<body>" [motion="..."] [facial="..."] [react(<castKey> [motion="..."] [facial="..."]) ...] [voice(...)] [se="..."] [seVol=0.8]`<br>or off-cast free speaker:<br>`talk "<speakerName>" "<body>" [se="..."] [seVol=0.8]` | Supports `{{var}}` in `body` and speaker name. Up to 4 `react(...)` clauses trigger simultaneously on co-stars. |
 | `narration` | Yes | `narration "<body>" [se="<path>"] [seVol=<0..1>]` | Full-width narration box; supports `{{var}}`. |
-| `telop` | Yes | `telop "<text>"` | Chapter / time-skip banner card; supports `{{var}}`. |
-| `stage` | No | `stage enter <castKey> [at <slot>] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`<br>`stage move <castKey> to <slot> [dur=0.5] [scale=...] [y=...] [z=<int>] [overlap] [motion="..."] [facial="..."]`<br>`stage pose <castKey> [z=<int>] [motion="..."] [facial="..."]`<br>`stage exit <castKey>` | `at` and `to` are interchangeable in the parser; canonical form uses `at` for `enter` and `to` for `move`. Optional `z=<int>` (`-99..99`) updates explicit draw depth (omitting `z` preserves existing `z` and auto-elevates moving/entering actors). |
+| `telop` | Yes | `telop "<text>" [actors=<keep\|hide\|dim>] [pos=<center\|top\|bottom>]` | Chapter / time-skip banner card; supports `{{var}}`. Use `actors=hide\|dim` or `pos=top\|bottom` when characters are on stage. |
+| `stage` | No | `stage enter <castKey> [at <slot>] [x=<num>] [dur=<sec>] [delay=<sec>] [instant] [scale=...] [y=...] [z=<int>] [lock] [mirror] [overlap] [motion="..."] [facial="..."] [parallel]`<br>`stage move <castKey> [to <slot>] [x=<num>] [dur=0.5] [delay=<sec>] [scale=...] [y=...] [z=<int>] [lock\|lock=false] [mirror\|mirror=false] [overlap] [motion="..."] [facial="..."] [parallel]`<br>`stage pose <castKey> [z=<int>] [lock\|lock=false] [mirror\|mirror=false] [delay=<sec>] [motion="..."] [facial="..."] [parallel]`<br>`stage exit <castKey> [dur=<sec>] [delay=<sec>] [instant] [parallel]`<br>`stage sync [ <item1>; <item2>; ... ] [dur=<sec>] [delay=<sec>] [instant] [parallel]` | `stage sync [...]` executes multiple actors simultaneously in one atomic choreography wave (trailing `dur=`/`delay=`/`instant` act as wave defaults overridable per item; duplicate `castKey` in a wave is an error). Trailing `parallel` also runs concurrently with the immediately following `stage` beat. |
 | `cue` | No | `cue se "<path>" [vol=<0..1>]`<br>`cue flash <black|white> [<dur>]`<br>`cue shake [<dur>]`<br>`cue wait [<dur>]` | Non-blocking stage/audio/camera cue. |
 | `set` | No | `set <var> += 1, <var> -= 2, <var> = 5, <flag> = true, <flag> toggle` | Comma-separated variable mutations. |
 
@@ -151,6 +155,11 @@ end <nodeId> ["<title>"] [subtitle="<subtitle>"] [@pos(x, y)]
 | **4 actors** | `farLeft`, `left`, `right`, `farRight` | `-0.75, -0.25, +0.25, +0.75` | `0.50` | `0.90 – 1.05` (prefer `1` / omit `scale`) |
 | **5 actors** | all 5 slots | `-0.80, -0.40, 0, +0.40, +0.80` | `0.40` | `0.85 – 1.00` (prefer `<= 1`) |
 
+- **Stable incremental anti-overlap (`layoutStageActors`)**:
+  - Initial `cast set [...]` uses the canonical 1–5 actor framing above (or exact `x` / `SLOT_X[slot]` when `fixed` or pinned via `x=` / `lock`).
+  - Mid-scene `stage exit` and `stage pose` **never** recompute or displace surviving actors (`Δx = 0`).
+  - Mid-scene `stage enter` and `stage move` run incremental layout: stationary and pinned actors stay fixed in Phase 1 whenever free stage space fits the incoming/moving actor (e.g., `center` + `right` stay motionless when a character enters/exits on `left`); only when free space is genuinely exhausted does Phase 2 gently nudge non-pinned stationary actors (anchor weight `8` vs `1`).
+  - `detectStageActorOverlaps` audits actual finite `actor.x` values directly (explicit-`x` actors placed cleanly apart on the same semantic slot do not trigger `stageSlotDuplicate`).
 - **Default `scale = 1`** is exact 1:1 in-game PJSK height. Omit `scale` (or use `scale=1`) for 3–5 character scenes; reserve `scale=1.1–1.25` for dramatic 1–2 actor close-ups.
 - **Safe spacing rule**: Adjacent non-overlapping actors need `gap >= 0.195 × (scale_a + scale_b)`.
 - **Intentional overlap ("贴贴" / close huddle)**:

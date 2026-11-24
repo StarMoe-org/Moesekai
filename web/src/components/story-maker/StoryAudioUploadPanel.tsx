@@ -15,8 +15,12 @@ import { useCommunitySession } from "@/lib/community-session";
 import { SUPPORTED_UI_LOCALES, UI_LOCALE_LABELS, type UiLocale } from "@/lib/i18n/locales";
 import {
     STORY_AUDIO_LIMITS,
+    STORY_VOICE_MANIFEST_SCHEMA_VERSION,
     SUPPORTED_AUDIO_EXTENSIONS,
     buildAudioTarBundle,
+    buildVoiceCueSheetCsv,
+    buildVoiceCueSheetJson,
+    buildVoiceCueSheetText,
     estimateTarArchiveBytes,
     extractTalkBeatsForVoice,
     formatByteSize,
@@ -30,6 +34,8 @@ import {
     validateAudioSelection,
     type AudioValidationIssue,
     type StoryDocument,
+    type StoryVoiceManifest,
+    type StoryVoiceManifestLine,
     type TalkBeatVoiceSlot,
 } from "@moesekai/story-core";
 import {
@@ -41,15 +47,20 @@ import {
     IconButton,
     LinearProgress,
     Surface,
+    Switch,
     cn,
 } from "@/components/md3";
 import {
     mdClose,
     mdDelete,
+    mdDownload,
     mdFolderOpen,
     mdLogin,
+    mdPlayArrow,
     mdPublish,
+    mdRecordVoiceOver,
     mdRefresh,
+    mdStop,
     mdUploadFile,
 } from "@/components/md3/icons";
 import type { StoryAudioStatusResponse, StoryVoiceStatus } from "@/types/community";
@@ -68,9 +79,13 @@ type UploadPhase =
     | "uploading"
     | "completing";
 
+type CueSheetFormat = "csv" | "txt" | "json";
+
 export interface StoryAudioUploadPanelProps {
     doc: StoryDocument;
     publishedPostId: number | null;
+    currentManifest?: StoryVoiceManifest | null;
+    onApplyLocalManifest?: (manifest: StoryVoiceManifest | null) => void;
     onRequestPublish?: () => void;
     onVoiceManifestReady?: (manifestUrl: string) => void;
     onNotify?: (message: string) => void;
@@ -78,6 +93,88 @@ export interface StoryAudioUploadPanelProps {
 
 const AUDIO_ACCEPT_ATTR = `${SUPPORTED_AUDIO_EXTENSIONS.join(",")},audio/*`;
 const PROBE_CONCURRENCY = 6;
+
+/**
+ * Tracks `blob:` object URLs currently mounted into the editor's active local preview
+ * manifest per `storyId`. Kept at module scope so URLs stay alive after this dialog
+ * closes (needed during Playtest) and are revoked only when superseded or cleared.
+ */
+const mountedPreviewBlobUrlsByStory = new Map<string, Set<string>>();
+
+function replaceMountedPreviewBlobUrls(storyId: string, nextUrls: Set<string>): void {
+    const previous = mountedPreviewBlobUrlsByStory.get(storyId);
+    if (previous) {
+        for (const url of previous) {
+            if (!nextUrls.has(url)) {
+                URL.revokeObjectURL(url);
+            }
+        }
+    }
+    if (nextUrls.size > 0) {
+        mountedPreviewBlobUrlsByStory.set(storyId, nextUrls);
+    } else {
+        mountedPreviewBlobUrlsByStory.delete(storyId);
+    }
+}
+
+function revokeMountedPreviewBlobUrls(storyId: string): void {
+    replaceMountedPreviewBlobUrls(storyId, new Set());
+}
+
+/**
+ * Revokes any tracked local preview `blob:` URLs that are no longer referenced by
+ * `nextManifest`. Wire to `<StoryStudioEditor onVoiceManifestChange={...} />` so
+ * clearing or replacing a local preview from another tab (e.g. `"import"`) frees
+ * orphaned object URLs immediately while keeping active playtest clips alive across
+ * dialog close.
+ */
+export function reconcileMountedPreviewBlobUrls(nextManifest: StoryVoiceManifest | null): void {
+    const activeUrls = new Set(
+        nextManifest ? Object.values(nextManifest.lines).map((line) => line.url) : [],
+    );
+    for (const [storyId, tracked] of Array.from(mountedPreviewBlobUrlsByStory.entries())) {
+        const remaining = new Set<string>();
+        for (const url of tracked) {
+            if (activeUrls.has(url)) {
+                remaining.add(url);
+            } else {
+                URL.revokeObjectURL(url);
+            }
+        }
+        if (remaining.size > 0) {
+            mountedPreviewBlobUrlsByStory.set(storyId, remaining);
+        } else {
+            mountedPreviewBlobUrlsByStory.delete(storyId);
+        }
+    }
+}
+
+function isPlayableWebPreviewUrl(url: string): boolean {
+    return (
+        url.startsWith("blob:")
+        || url.startsWith("https://")
+        || (url.startsWith("/") && !url.startsWith("//"))
+    );
+}
+
+function buildCueSheetFilename(doc: StoryDocument, ext: CueSheetFormat): string {
+    const rawBase = (doc.meta.title || doc.id || "story").trim();
+    const safeBase = rawBase.replace(/[\\/:*?"<>|\s]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 60) || "story";
+    return `${safeBase}-voice-cue-sheet.${ext}`;
+}
+
+function triggerTextDownload(content: string, filename: string, mimeType: string): void {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.rel = "noopener";
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 function statusBadgeTone(status: StoryVoiceStatus): string {
     switch (status) {
@@ -116,6 +213,8 @@ function statusLabelKey(status: StoryVoiceStatus): string {
 export function StoryAudioUploadPanel({
     doc,
     publishedPostId,
+    currentManifest,
+    onApplyLocalManifest,
     onRequestPublish,
     onVoiceManifestReady,
     onNotify,
@@ -128,7 +227,10 @@ export function StoryAudioUploadPanel({
     const singleBeatInputRef = useRef<HTMLInputElement | null>(null);
     const singleBeatTargetRef = useRef<string | null>(null);
     const uploadAbortRef = useRef<AbortController | null>(null);
+    const previewAudioRef = useRef<HTMLAudioElement | null>(null);
+    const previewObjectUrlRef = useRef<string | null>(null);
     const statusSeqRef = useRef(0);
+    const prevStoryIdRef = useRef(doc.id);
     const mountedRef = useRef(true);
     const tRef = useRef(t);
 
@@ -150,6 +252,19 @@ export function StoryAudioUploadPanel({
             uploadAbortRef.current?.abort();
             uploadAbortRef.current = null;
             statusSeqRef.current += 1;
+            const audio = previewAudioRef.current;
+            if (audio) {
+                audio.pause();
+                audio.onended = null;
+                audio.onerror = null;
+                audio.removeAttribute("src");
+                audio.load();
+                previewAudioRef.current = null;
+            }
+            if (previewObjectUrlRef.current) {
+                URL.revokeObjectURL(previewObjectUrlRef.current);
+                previewObjectUrlRef.current = null;
+            }
         };
     }, []);
 
@@ -162,11 +277,17 @@ export function StoryAudioUploadPanel({
         return map;
     }, [talkBeats]);
 
-    const [voiceLocale, setVoiceLocale] = useState<UiLocale>(() => inferStorySourceLocale(doc));
+    const [voiceLocale, setVoiceLocale] = useState<UiLocale>(
+        () => currentManifest?.locale ?? inferStorySourceLocale(doc),
+    );
+    const [overrideOfficialVoice, setOverrideOfficialVoice] = useState<boolean>(
+        () => Boolean(currentManifest?.overrideOfficialVoice),
+    );
     const [assignedByBeat, setAssignedByBeat] = useState<Record<string, AssignedAudioClip>>({});
     const [unmatchedFiles, setUnmatchedFiles] = useState<File[]>([]);
     const [ignoredCount, setIgnoredCount] = useState(0);
     const [rightsConfirmed, setRightsConfirmed] = useState(false);
+    const [playingBeatId, setPlayingBeatId] = useState<string | null>(null);
 
     const [statusLoading, setStatusLoading] = useState(false);
     const [serverStatus, setServerStatus] = useState<StoryAudioStatusResponse | null>(null);
@@ -176,6 +297,109 @@ export function StoryAudioUploadPanel({
     const [progressRatio, setProgressRatio] = useState<number>(0);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [uploadNotice, setUploadNotice] = useState<string | null>(null);
+
+    const stopInlinePreview = useCallback(() => {
+        const audio = previewAudioRef.current;
+        if (audio) {
+            audio.pause();
+            audio.onended = null;
+            audio.onerror = null;
+            audio.removeAttribute("src");
+            audio.load();
+        }
+        if (previewObjectUrlRef.current) {
+            URL.revokeObjectURL(previewObjectUrlRef.current);
+            previewObjectUrlRef.current = null;
+        }
+        setPlayingBeatId(null);
+    }, []);
+
+    const toggleInlinePreview = useCallback(
+        (beatId: string, source: { file: File } | { url: string }) => {
+            if (playingBeatId === beatId) {
+                stopInlinePreview();
+                return;
+            }
+            stopInlinePreview();
+            let src: string | null = null;
+            if ("file" in source) {
+                const objectUrl = URL.createObjectURL(source.file);
+                previewObjectUrlRef.current = objectUrl;
+                src = objectUrl;
+            } else if (isPlayableWebPreviewUrl(source.url)) {
+                src = source.url;
+            }
+            if (!src) return;
+            const audio = previewAudioRef.current ?? new Audio();
+            previewAudioRef.current = audio;
+            audio.onended = () => {
+                if (mountedRef.current) stopInlinePreview();
+            };
+            audio.onerror = () => {
+                if (mountedRef.current) stopInlinePreview();
+            };
+            audio.src = src;
+            audio.currentTime = 0;
+            setPlayingBeatId(beatId);
+            void audio.play().catch(() => {
+                if (mountedRef.current) stopInlinePreview();
+            });
+        },
+        [playingBeatId, stopInlinePreview],
+    );
+
+    // Sync override toggle when the mounted manifest changes externally (e.g. dialog status card)
+    useEffect(() => {
+        if (currentManifest) {
+            setOverrideOfficialVoice(Boolean(currentManifest.overrideOfficialVoice));
+        }
+    }, [currentManifest]);
+
+    // Reconcile tracked local preview blob URLs if the active manifest was cleared or replaced externally
+    useEffect(() => {
+        if (currentManifest === undefined) return;
+        const activeUrls = new Set(
+            currentManifest ? Object.values(currentManifest.lines).map((line) => line.url) : [],
+        );
+        const playingMountedSrc =
+            previewObjectUrlRef.current === null ? previewAudioRef.current?.src ?? "" : "";
+        const tracked = mountedPreviewBlobUrlsByStory.get(doc.id);
+        const hasRemovedTrackedUrl = Boolean(
+            tracked && Array.from(tracked).some((url) => !activeUrls.has(url)),
+        );
+        if (hasRemovedTrackedUrl || (playingMountedSrc && !activeUrls.has(playingMountedSrc))) {
+            stopInlinePreview();
+        }
+        if (!tracked || !hasRemovedTrackedUrl) return;
+        const remaining = new Set<string>();
+        for (const url of tracked) {
+            if (activeUrls.has(url)) {
+                remaining.add(url);
+            } else {
+                URL.revokeObjectURL(url);
+            }
+        }
+        if (remaining.size > 0) {
+            mountedPreviewBlobUrlsByStory.set(doc.id, remaining);
+        } else {
+            mountedPreviewBlobUrlsByStory.delete(doc.id);
+        }
+    }, [currentManifest, doc.id, stopInlinePreview]);
+
+    // Reset local draft selections if the active story changes while mounted
+    useEffect(() => {
+        if (prevStoryIdRef.current === doc.id) return;
+        prevStoryIdRef.current = doc.id;
+        stopInlinePreview();
+        setAssignedByBeat({});
+        setUnmatchedFiles([]);
+        setIgnoredCount(0);
+        setRightsConfirmed(false);
+        setUploadError(null);
+        setUploadNotice(null);
+        setVoiceLocale(currentManifest?.locale ?? inferStorySourceLocale(doc));
+        setOverrideOfficialVoice(Boolean(currentManifest?.overrideOfficialVoice));
+    }, [currentManifest?.locale, currentManifest?.overrideOfficialVoice, doc, stopInlinePreview]);
 
     const loadStatus = useCallback(async () => {
         if (!publishedPostId || !session.authenticated) return;
@@ -245,13 +469,15 @@ export function StoryAudioUploadPanel({
             const result = matchAudioFilesToTalkBeats(list, talkBeats);
             setIgnoredCount(result.unsupported.length);
 
-            const pairs: Array<[string, File]> = [];
-            if (result.matched.size > 0) {
+            const pairs: Array<[string, File]> = Array.from(result.matched.entries());
+            if (pairs.length > 0) {
+                if (playingBeatId && result.matched.has(playingBeatId)) {
+                    stopInlinePreview();
+                }
                 setAssignedByBeat((prev) => {
                     const next = { ...prev };
-                    for (const [beatId, file] of result.matched.entries()) {
+                    for (const [beatId, file] of pairs) {
                         next[beatId] = { file, durationMs: null, probing: true };
-                        pairs.push([beatId, file]);
                     }
                     return next;
                 });
@@ -262,7 +488,7 @@ export function StoryAudioUploadPanel({
                 setUnmatchedFiles((prev) => [...prev, ...result.unmatched].slice(0, 200));
             }
         },
-        [probeFilesForBeats, talkBeats],
+        [playingBeatId, probeFilesForBeats, stopInlinePreview, talkBeats],
     );
 
     const assignSingleBeatFile = useCallback(
@@ -271,6 +497,9 @@ export function StoryAudioUploadPanel({
                 setUploadError(t("page.storyMaker.audioUpload.errors.unsupportedFormat"));
                 return;
             }
+            if (playingBeatId === beatId) {
+                stopInlinePreview();
+            }
             setUploadError(null);
             setAssignedByBeat((prev) => ({
                 ...prev,
@@ -278,10 +507,13 @@ export function StoryAudioUploadPanel({
             }));
             void probeFilesForBeats([[beatId, file]]);
         },
-        [probeFilesForBeats, t],
+        [playingBeatId, probeFilesForBeats, stopInlinePreview, t],
     );
 
     const removeBeatAssignment = (beatId: string) => {
+        if (playingBeatId === beatId) {
+            stopInlinePreview();
+        }
         setAssignedByBeat((prev) => {
             if (!(beatId in prev)) return prev;
             const next = { ...prev };
@@ -327,6 +559,14 @@ export function StoryAudioUploadPanel({
         );
     }, [assignedEntries, probingCount]);
 
+    const localPreviewLineCount = useMemo(() => {
+        if (!currentManifest) return 0;
+        return Object.values(currentManifest.lines).filter((line) => line.url.startsWith("blob:")).length;
+    }, [currentManifest]);
+
+    const isLocalPreviewActive = localPreviewLineCount > 0;
+    const canUploadToCommunity = Boolean(publishedPostId && session.authenticated);
+
     const formatIssueMessage = (issue: AudioValidationIssue): string => {
         switch (issue.code) {
             case "tooManyClips":
@@ -355,6 +595,101 @@ export function StoryAudioUploadPanel({
     };
 
     const busy = phase !== "idle";
+
+    const handleExportCueSheet = useCallback(
+        (format: CueSheetFormat) => {
+            if (talkBeats.length === 0) return;
+            const filename = buildCueSheetFilename(doc, format);
+            if (format === "csv") {
+                triggerTextDownload(
+                    buildVoiceCueSheetCsv(doc, { locale: voiceLocale }),
+                    filename,
+                    "text/csv;charset=utf-8",
+                );
+            } else if (format === "txt") {
+                triggerTextDownload(
+                    buildVoiceCueSheetText(doc, { locale: voiceLocale }),
+                    filename,
+                    "text/plain;charset=utf-8",
+                );
+            } else {
+                triggerTextDownload(
+                    buildVoiceCueSheetJson(doc, { locale: voiceLocale }),
+                    filename,
+                    "application/json;charset=utf-8",
+                );
+            }
+            const msg = t("page.storyMaker.audioUpload.cueSheetExportedToast", { filename });
+            onNotify?.(msg);
+        },
+        [doc, onNotify, t, talkBeats.length, voiceLocale],
+    );
+
+    const handleToggleOverrideOfficialVoice = useCallback(
+        (next: boolean) => {
+            setOverrideOfficialVoice(next);
+            if (currentManifest && onApplyLocalManifest) {
+                onApplyLocalManifest({
+                    ...currentManifest,
+                    overrideOfficialVoice: next,
+                });
+            }
+        },
+        [currentManifest, onApplyLocalManifest],
+    );
+
+    const handleApplyLocalPreview = useCallback(() => {
+        if (!onApplyLocalManifest || assignedEntries.length === 0 || probingCount > 0) return;
+        stopInlinePreview();
+        setUploadError(null);
+        const nextBlobUrls = new Set<string>();
+        const lines: Record<string, StoryVoiceManifestLine> = {};
+        for (const { slot, clip } of assignedEntries) {
+            const blobUrl = URL.createObjectURL(clip.file);
+            nextBlobUrls.add(blobUrl);
+            lines[slot.beatId] = {
+                url: blobUrl,
+                ...(clip.durationMs !== null ? { durationMs: clip.durationMs } : {}),
+                ...(slot.speakerName ? { speaker: slot.speakerName } : {}),
+                sizeBytes: clip.file.size,
+            };
+        }
+        const manifest: StoryVoiceManifest = {
+            schema: STORY_VOICE_MANIFEST_SCHEMA_VERSION,
+            storyId: doc.id,
+            locale: voiceLocale,
+            overrideOfficialVoice,
+            generatedAt: new Date().toISOString(),
+            lines,
+        };
+        onApplyLocalManifest(manifest);
+        replaceMountedPreviewBlobUrls(doc.id, nextBlobUrls);
+        const msg = t("page.storyMaker.audioUpload.localPreviewMountedToast", {
+            count: assignedEntries.length,
+        });
+        setUploadNotice(msg);
+        onNotify?.(msg);
+    }, [
+        assignedEntries,
+        doc.id,
+        onApplyLocalManifest,
+        onNotify,
+        overrideOfficialVoice,
+        probingCount,
+        stopInlinePreview,
+        t,
+        voiceLocale,
+    ]);
+
+    const handleClearLocalPreview = useCallback(() => {
+        if (!onApplyLocalManifest) return;
+        stopInlinePreview();
+        onApplyLocalManifest(null);
+        revokeMountedPreviewBlobUrls(doc.id);
+        const msg = t("page.storyMaker.audioUpload.localPreviewClearedToast");
+        setUploadNotice(msg);
+        onNotify?.(msg);
+    }, [doc.id, onApplyLocalManifest, onNotify, stopInlinePreview, t]);
 
     const handleCancelUpload = () => {
         uploadAbortRef.current?.abort();
@@ -560,79 +895,110 @@ export function StoryAudioUploadPanel({
         }
     };
 
-    if (!publishedPostId) {
-        return (
-            <Surface tone="low" radius="lg" className="flex flex-col items-center gap-3 p-6 text-center">
-                <p className="type-title-m text-on-surface">
-                    {t("page.storyMaker.audioUpload.publishFirstTitle")}
-                </p>
-                <p className="max-w-md type-body-s text-on-surface-variant">
-                    {t("page.storyMaker.audioUpload.publishFirstDesc")}
-                </p>
-                {onRequestPublish && (
-                    <Button variant="filled" icon={mdPublish} onClick={onRequestPublish}>
-                        {t("page.storyMaker.publish.openAction")}
-                    </Button>
-                )}
-            </Surface>
-        );
-    }
-
-    if (!session.authenticated) {
-        return (
-            <Surface tone="low" radius="lg" className="flex flex-col items-center gap-3 p-6 text-center">
-                <p className="type-title-m text-on-surface">
-                    {t("common.comments.loginPromptTitle")}
-                </p>
-                <Button variant="filled" icon={mdLogin} onClick={() => signIn()}>
-                    {t("common.comments.signInButton")}
-                </Button>
-            </Surface>
-        );
-    }
-
     return (
         <div className="min-w-0 space-y-4">
-            {/* Live server status */}
-            <Surface tone="low" radius="lg" className="space-y-2 border border-outline-variant/60 p-3.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <span className="type-label-l text-on-surface">
-                            {t("page.storyMaker.audioUpload.serverStatusTitle")}
-                        </span>
-                        {serverStatus && (
-                            <span
-                                className={cn(
-                                    "rounded-md3-xs px-2 py-0.5 type-label-s",
-                                    statusBadgeTone(serverStatus.voice_status),
-                                )}
+            {/* Top mode / server status banner */}
+            {!publishedPostId ? (
+                <Banner
+                    tone="info"
+                    action={
+                        onRequestPublish ? (
+                            <Button
+                                size="s"
+                                variant="tonal"
+                                icon={mdPublish}
+                                disabled={busy}
+                                onClick={onRequestPublish}
                             >
-                                {t(statusLabelKey(serverStatus.voice_status))}
+                                {t("page.storyMaker.publish.openAction")}
+                            </Button>
+                        ) : undefined
+                    }
+                >
+                    {t("page.storyMaker.audioUpload.localPreviewBanner")}
+                </Banner>
+            ) : !session.authenticated ? (
+                <Banner
+                    tone="info"
+                    action={
+                        <Button
+                            size="s"
+                            variant="tonal"
+                            icon={mdLogin}
+                            onClick={() => signIn()}
+                        >
+                            {t("common.comments.signInButton")}
+                        </Button>
+                    }
+                >
+                    {t("page.storyMaker.audioUpload.loginForUploadBanner")}
+                </Banner>
+            ) : (
+                /* Live server status */
+                <Surface tone="low" radius="lg" className="space-y-2 border border-outline-variant/60 p-3.5">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="type-label-l text-on-surface">
+                                {t("page.storyMaker.audioUpload.serverStatusTitle")}
                             </span>
-                        )}
+                            {serverStatus && (
+                                <span
+                                    className={cn(
+                                        "rounded-md3-xs px-2 py-0.5 type-label-s",
+                                        statusBadgeTone(serverStatus.voice_status),
+                                    )}
+                                >
+                                    {t(statusLabelKey(serverStatus.voice_status))}
+                                </span>
+                            )}
+                        </div>
+                        <IconButton
+                            size="xs"
+                            icon={mdRefresh}
+                            label={t("page.community.mod.refresh")}
+                            disabled={statusLoading}
+                            onClick={() => void loadStatus()}
+                        />
                     </div>
-                    <IconButton
-                        size="xs"
-                        icon={mdRefresh}
-                        label={t("page.community.mod.refresh")}
-                        disabled={statusLoading}
-                        onClick={() => void loadStatus()}
-                    />
-                </div>
-                {serverStatus && serverStatus.voice_clip_count > 0 && (
-                    <p className="type-body-s text-on-surface-variant">
-                        {t("page.storyMaker.audioUpload.serverStats", {
-                            count: serverStatus.voice_clip_count,
-                            duration: formatDurationMs(serverStatus.voice_duration_ms),
-                        })}
-                    </p>
-                )}
-                {serverStatus?.latest_batch?.failure_reason &&
-                    (serverStatus.voice_status === "rejected" || serverStatus.latest_batch.status === "failed") && (
-                        <Banner tone="error">{serverStatus.latest_batch.failure_reason}</Banner>
+                    {serverStatus && serverStatus.voice_clip_count > 0 && (
+                        <p className="type-body-s text-on-surface-variant">
+                            {t("page.storyMaker.audioUpload.serverStats", {
+                                count: serverStatus.voice_clip_count,
+                                duration: formatDurationMs(serverStatus.voice_duration_ms),
+                            })}
+                        </p>
                     )}
-                {statusError && <Banner tone="error">{statusError}</Banner>}
-            </Surface>
+                    {serverStatus?.latest_batch?.failure_reason &&
+                        (serverStatus.voice_status === "rejected" || serverStatus.latest_batch.status === "failed") && (
+                            <Banner tone="error">{serverStatus.latest_batch.failure_reason}</Banner>
+                        )}
+                    {statusError && <Banner tone="error">{statusError}</Banner>}
+                </Surface>
+            )}
+
+            {/* Active local preview status banner */}
+            {isLocalPreviewActive && (
+                <Banner
+                    tone="info"
+                    action={
+                        onApplyLocalManifest ? (
+                            <Button
+                                size="xs"
+                                variant="outlined"
+                                icon={mdDelete}
+                                disabled={busy}
+                                onClick={handleClearLocalPreview}
+                            >
+                                {t("page.storyMaker.audioUpload.clearLocalPreview")}
+                            </Button>
+                        ) : undefined
+                    }
+                >
+                    {t("page.storyMaker.audioUpload.localPreviewActiveBanner", {
+                        count: localPreviewLineCount,
+                    })}
+                </Banner>
+            )}
 
             {/* Voice language selector */}
             <div className="space-y-1.5">
@@ -653,6 +1019,51 @@ export function StoryAudioUploadPanel({
                     ))}
                 </div>
             </div>
+
+            {/* Dialogue Cue Sheet export bar */}
+            <Surface
+                tone="low"
+                radius="md"
+                className="flex flex-wrap items-center justify-between gap-2.5 border border-outline-variant/60 px-3.5 py-2.5"
+            >
+                <div className="min-w-0 flex-1">
+                    <p className="type-label-l text-on-surface">
+                        {t("page.storyMaker.audioUpload.cueSheetTitle")}
+                    </p>
+                    <p className="type-body-s text-on-surface-variant">
+                        {t("page.storyMaker.audioUpload.cueSheetHint", { count: talkBeats.length })}
+                    </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-1.5">
+                    <Button
+                        size="xs"
+                        variant="outlined"
+                        icon={mdDownload}
+                        disabled={talkBeats.length === 0}
+                        onClick={() => handleExportCueSheet("csv")}
+                    >
+                        {t("page.storyMaker.audioUpload.cueSheetCsv")}
+                    </Button>
+                    <Button
+                        size="xs"
+                        variant="outlined"
+                        icon={mdDownload}
+                        disabled={talkBeats.length === 0}
+                        onClick={() => handleExportCueSheet("txt")}
+                    >
+                        {t("page.storyMaker.audioUpload.cueSheetTxt")}
+                    </Button>
+                    <Button
+                        size="xs"
+                        variant="outlined"
+                        icon={mdDownload}
+                        disabled={talkBeats.length === 0}
+                        onClick={() => handleExportCueSheet("json")}
+                    >
+                        {t("page.storyMaker.audioUpload.cueSheetJson")}
+                    </Button>
+                </div>
+            </Surface>
 
             {/* Folder / multi-file dropzone */}
             <input
@@ -760,6 +1171,7 @@ export function StoryAudioUploadPanel({
                         variant="text"
                         disabled={busy}
                         onClick={() => {
+                            stopInlinePreview();
                             setAssignedByBeat({});
                             setUnmatchedFiles([]);
                             setIgnoredCount(0);
@@ -836,10 +1248,17 @@ export function StoryAudioUploadPanel({
             )}
 
             {/* Beat assignment list */}
-            {talkBeats.length > 0 && (
-                <div className="max-h-60 space-y-1.5 overflow-y-auto rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest p-2">
+            {talkBeats.length === 0 ? (
+                <Banner tone="info">{t("page.storyMaker.audioUpload.noTalkBeatsNotice")}</Banner>
+            ) : (
+                <div className="max-h-64 space-y-1.5 overflow-y-auto rounded-md3-md border border-outline-variant/60 bg-surface-container-lowest p-2">
                     {talkBeats.map((slot) => {
                         const assigned = assignedByBeat[slot.beatId];
+                        const mountedLine = currentManifest?.lines[slot.beatId];
+                        const isPlaying = playingBeatId === slot.beatId;
+                        const canPreviewMounted = Boolean(
+                            !assigned && mountedLine?.url && isPlayableWebPreviewUrl(mountedLine.url),
+                        );
                         return (
                             <div
                                 key={slot.beatId}
@@ -853,6 +1272,16 @@ export function StoryAudioUploadPanel({
                                         {slot.speakerName && (
                                             <span className="shrink-0 type-label-s text-on-surface-variant">
                                                 {slot.speakerName}
+                                            </span>
+                                        )}
+                                        {slot.hasOfficialVoice && (
+                                            <span className="shrink-0 rounded-md3-xs bg-surface-container-high px-1.5 py-0.5 type-label-s text-on-surface-variant">
+                                                {t("page.storyMaker.audioUpload.officialVoiceBadge")}
+                                            </span>
+                                        )}
+                                        {!assigned && mountedLine && (
+                                            <span className="shrink-0 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                {t("page.storyMaker.audioUpload.mountedBadge")}
                                             </span>
                                         )}
                                         <span className="truncate type-body-s text-on-surface">
@@ -873,6 +1302,33 @@ export function StoryAudioUploadPanel({
                                 </div>
 
                                 <div className="flex shrink-0 items-center gap-1">
+                                    {assigned ? (
+                                        <IconButton
+                                            size="xs"
+                                            variant={isPlaying ? "tonal" : "standard"}
+                                            icon={isPlaying ? mdStop : mdPlayArrow}
+                                            label={t(
+                                                isPlaying
+                                                    ? "page.storyMaker.audioUpload.stopPreview"
+                                                    : "page.storyMaker.audioUpload.playPreview",
+                                            )}
+                                            disabled={busy}
+                                            onClick={() => toggleInlinePreview(slot.beatId, { file: assigned.file })}
+                                        />
+                                    ) : canPreviewMounted && mountedLine ? (
+                                        <IconButton
+                                            size="xs"
+                                            variant={isPlaying ? "tonal" : "standard"}
+                                            icon={isPlaying ? mdStop : mdPlayArrow}
+                                            label={t(
+                                                isPlaying
+                                                    ? "page.storyMaker.audioUpload.stopPreview"
+                                                    : "page.storyMaker.audioUpload.playPreview",
+                                            )}
+                                            disabled={busy}
+                                            onClick={() => toggleInlinePreview(slot.beatId, { url: mountedLine.url })}
+                                        />
+                                    ) : null}
                                     <Button
                                         size="xs"
                                         variant={assigned ? "text" : "tonal"}
@@ -892,7 +1348,7 @@ export function StoryAudioUploadPanel({
                                         <IconButton
                                             size="xs"
                                             icon={mdDelete}
-                                            label={t("common.action.close")}
+                                            label={t("page.storyMaker.audioUpload.removeFile")}
                                             disabled={busy}
                                             onClick={() => removeBeatAssignment(slot.beatId)}
                                         />
@@ -906,7 +1362,7 @@ export function StoryAudioUploadPanel({
 
             {/* Validation issues */}
             {validationIssues.length > 0 && (
-                <Banner tone="error">
+                <Banner tone={canUploadToCommunity ? "error" : "warning"}>
                     <ul className="list-disc space-y-1 pl-4">
                         {validationIssues.slice(0, 5).map((issue, idx) => (
                             <li key={`${issue.code}-${issue.beatId ?? idx}`}>{formatIssueMessage(issue)}</li>
@@ -915,13 +1371,28 @@ export function StoryAudioUploadPanel({
                 </Banner>
             )}
 
-            {/* Mandatory rights confirmation */}
-            <Checkbox
-                checked={rightsConfirmed}
-                disabled={busy}
-                onCheckedChange={setRightsConfirmed}
-                label={t("page.storyMaker.audioUpload.rightsConfirm")}
-            />
+            {/* Override official voice toggle */}
+            {onApplyLocalManifest && (
+                <Surface tone="low" radius="md" className="border border-outline-variant/60 px-3.5 py-2.5">
+                    <Switch
+                        checked={overrideOfficialVoice}
+                        disabled={busy}
+                        onCheckedChange={handleToggleOverrideOfficialVoice}
+                        label={t("page.storyMaker.audioUpload.overrideOfficialLabel")}
+                        description={t("page.storyMaker.audioUpload.overrideOfficialHint")}
+                    />
+                </Surface>
+            )}
+
+            {/* Mandatory rights confirmation (community upload only) */}
+            {canUploadToCommunity && (
+                <Checkbox
+                    checked={rightsConfirmed}
+                    disabled={busy}
+                    onCheckedChange={setRightsConfirmed}
+                    label={t("page.storyMaker.audioUpload.rightsConfirm")}
+                />
+            )}
 
             {/* Upload progress */}
             {busy && (
@@ -947,21 +1418,47 @@ export function StoryAudioUploadPanel({
             {uploadError && <Banner tone="error">{uploadError}</Banner>}
             {uploadNotice && <Banner tone="info">{uploadNotice}</Banner>}
 
-            <div className="flex justify-end">
-                <Button
-                    variant="filled"
-                    icon={mdUploadFile}
-                    disabled={
-                        busy ||
-                        assignedEntries.length === 0 ||
-                        probingCount > 0 ||
-                        validationIssues.length > 0 ||
-                        !rightsConfirmed
-                    }
-                    onClick={() => void handleStartUpload()}
-                >
-                    {t("page.storyMaker.audioUpload.startUpload")}
-                </Button>
+            {/* Action footer */}
+            <div className="flex flex-wrap items-center justify-end gap-2">
+                {canUploadToCommunity ? (
+                    <>
+                        {onApplyLocalManifest && (
+                            <Button
+                                variant="tonal"
+                                icon={mdRecordVoiceOver}
+                                disabled={busy || assignedEntries.length === 0 || probingCount > 0}
+                                onClick={handleApplyLocalPreview}
+                            >
+                                {t("page.storyMaker.audioUpload.previewLocallyAction")}
+                            </Button>
+                        )}
+                        <Button
+                            variant="filled"
+                            icon={mdUploadFile}
+                            disabled={
+                                busy ||
+                                assignedEntries.length === 0 ||
+                                probingCount > 0 ||
+                                validationIssues.length > 0 ||
+                                !rightsConfirmed
+                            }
+                            onClick={() => void handleStartUpload()}
+                        >
+                            {t("page.storyMaker.audioUpload.startUpload")}
+                        </Button>
+                    </>
+                ) : (
+                    onApplyLocalManifest && (
+                        <Button
+                            variant="filled"
+                            icon={mdRecordVoiceOver}
+                            disabled={busy || assignedEntries.length === 0 || probingCount > 0}
+                            onClick={handleApplyLocalPreview}
+                        >
+                            {t("page.storyMaker.audioUpload.applyLocalPreview")}
+                        </Button>
+                    )
+                )}
             </div>
         </div>
     );

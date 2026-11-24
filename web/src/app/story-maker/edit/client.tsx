@@ -13,7 +13,10 @@ import { useShellImmersiveMode } from "@/components/AppShell";
 import MainLayout from "@/components/MainLayout";
 import { Icon, LoadingState, cn } from "@/components/md3";
 import { mdPublish } from "@/components/md3/icons";
-import { StoryAudioUploadPanel } from "@/components/story-maker/StoryAudioUploadPanel";
+import {
+    StoryAudioUploadPanel,
+    reconcileMountedPreviewBlobUrls,
+} from "@/components/story-maker/StoryAudioUploadPanel";
 import { StoryPublishDialog } from "@/components/story-maker/StoryPublishDialog";
 import { StoryStudioWebProvider } from "@/components/story-maker/StoryStudioWebProvider";
 import { useI18n } from "@/contexts/I18nContext";
@@ -134,6 +137,8 @@ function StoryMakerEditContent() {
                     <StoryAudioUploadPanel
                         doc={ctx.doc}
                         publishedPostId={publishedPostId}
+                        currentManifest={tabCtx.currentManifest}
+                        onApplyLocalManifest={tabCtx.applyManifest}
                         onRequestPublish={() => {
                             tabCtx.closeDialog();
                             setPublishOpen(true);
@@ -166,6 +171,12 @@ function StoryMakerEditContent() {
         [draftId, publishOpen, publishedPostId, setPublishOpen, setPublishedOverride, t],
     );
 
+    useEffect(() => {
+        return () => {
+            reconcileMountedPreviewBlobUrls(null);
+        };
+    }, []);
+
     return (
         <StoryStudioEditor
             draftId={draftId}
@@ -177,6 +188,7 @@ function StoryMakerEditContent() {
             onEffectiveImmersiveChange={setEffectiveImmersive}
             onModeChange={handleModeChange}
             onCreatedDraft={handleCreatedDraft}
+            onVoiceManifestChange={reconcileMountedPreviewBlobUrls}
             backToDraftsHref="/story-maker"
             homeHref="/"
             getDraftPlayHref={(id) => `/story-maker/play?id=${encodeURIComponent(id)}`}
