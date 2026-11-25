@@ -308,6 +308,9 @@ export function CardAvatarPicker({
                                 {t("page.community.avatarPicker.previewDefault")}
                             </p>
                         )}
+                        <p className="mt-1 type-body-s text-on-surface-variant">
+                            {t("page.community.avatarPicker.passportNote")}
+                        </p>
                     </div>
                 </div>
 

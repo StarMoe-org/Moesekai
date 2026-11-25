@@ -516,7 +516,7 @@ export const zhTWPagePrimary = {
         },
         privacy: {
             title: "隱私政策",
-            updated: "最後更新：2026 年 11 月 21 日",
+            updated: "最後更新：2026 年 11 月 23 日",
             overview: {
                 title: "1. 概述",
                 body: "Moesekai（pjsk.moe）是非營利的 PROJECT SEKAI 粉絲資料檢視器。不登入也能使用全部檢視功能；登入 StarMoe 通行證後，你的遊戲帳號可以在不同裝置上使用。本政策說明本站在你的裝置和我們的伺服器上儲存什麼、何時與第三方服務通訊，以及你可以如何控制這些資料。",
@@ -525,6 +525,7 @@ export const zhTWPagePrimary = {
                 title: "2. StarMoe 通行證與遊戲帳號",
                 intro: "登入是選擇性的。登入後：",
                 passport: "登入由 StarMoe 通行證（passport.star.moe）完成。Moesekai 只取得通行證的使用者 ID、暱稱、使用者名稱和頭像，不會接觸你的密碼。",
+                avatar: "你在 Moesekai 選擇的頭像（一張卡面）會寫入你的通行證，其他 StarMoe 網站也會顯示它。Moesekai 無法修改通行證裡的其他資料。",
                 games: "你手動新增的遊戲帳號（伺服器、UID 和備註）儲存在 Moesekai 伺服器上，在其他裝置登入後也能使用。",
                 haruki: "連接 Haruki 工具箱後，授權由 StarMoe Connect（connect.star.moe）保管，Moesekai 不接觸 Haruki 權杖。Haruki 驗證過的遊戲帳號會自動出現，遊戲資料由 Moesekai 伺服器代你向 Haruki 讀取。",
                 guest: "不登入時（訪客模式），遊戲帳號和遊戲資料只儲存在目前的瀏覽器裡。",
@@ -789,6 +790,7 @@ export const zhTWPagePrimary = {
             empty: "找不到符合的卡牌",
             emptyHint: "試試切換角色、稀有度篩選或清空搜尋關鍵字。",
             notTrainable: "該稀有度卡牌無特訓卡面",
+            passportNote: "頭像會同步到你的 StarMoe 通行證，其他 StarMoe 網站也會顯示它。",
         },
         notifications: {
             title: "社群通知",
