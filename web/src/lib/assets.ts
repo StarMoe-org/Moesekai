@@ -205,6 +205,19 @@ export function getCardSmallUrl(
     return buildImageAssetUrl(source, `character/member_small/${assetbundleName}/card_${status}`);
 }
 
+/**
+ * The card art without its background, which is what the profile card (and the matching-room cell)
+ * shows inside the player frame. The friend row uses the plain thumbnail instead.
+ */
+export function getCardCutoutUrl(
+    assetbundleName: string,
+    trained: boolean = false,
+    source: AssetSourceType = "main-jp"
+): string {
+    const status = trained ? "after_training" : "normal";
+    return buildImageAssetUrl(source, `character/member_cutout/${assetbundleName}/${status}`);
+}
+
 export function getEventBannerUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `event/${assetbundleName}/screen/bg`);
 }
@@ -371,11 +384,22 @@ export function getHonorWordUrl(assetbundleName: string, rarity: string = "low",
     return buildImageAssetUrl(source, `honor_word/${name}/${name}`);
 }
 
+// Honor rarities map to the suffix their bundles use: low → 1 … highest → 4.
+const HONOR_RARITY_LEVEL: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
+
 export function getHonorCustomFrameUrl(frameName: string, rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
-    const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
-    const num = rarityMap[rarity] || 1;
+    const num = HONOR_RARITY_LEVEL[rarity] || 1;
     const size = sub ? "s" : "m";
     return buildImageAssetUrl(source, `honor_frame/${frameName}/frame_degree_${size}_${num}`);
+}
+
+/**
+ * A birthday honor's level badge: one flower per level, laid out 18x18 along the bottom centre of
+ * the badge. The art is 19x18 and comes in one colour per rarity (`frame_degree_level_1` … `_4`).
+ */
+export function getHonorBirthdayLevelIconUrl(frameName: string, rarity: string, source: AssetSourceType = "main-jp"): string {
+    const num = HONOR_RARITY_LEVEL[rarity] || 1;
+    return buildImageAssetUrl(source, `honor_frame/${frameName}/frame_degree_level_${num}`);
 }
 
 export function getHonorRankUrl(assetbundleName: string, type: "rank" | "scroll", sub: boolean = false, source: AssetSourceType = "main-jp"): string {
@@ -385,6 +409,26 @@ export function getHonorRankUrl(assetbundleName: string, type: "rank" | "scroll"
 
 export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `rank_live/honor/${assetbundleName}/degree_${sub ? "sub" : "main"}`);
+}
+
+/**
+ * A rank-match honor's tier plate (MASTER RANK / DIAMOND RANK / …), 180x78 main and 158x40 sub.
+ * The group's `season_*` bundle only carries the season banner, so the tier comes from the honor's
+ * own bundle (`common/tier_25`); the game pastes it at (190, 0) main / (17, 42) sub.
+ */
+export function getHonorRankMatchTierUrl(assetbundleName: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
+    return buildImageAssetUrl(source, `rank_live/honor/${assetbundleName}/${sub ? "sub" : "main"}`);
+}
+
+// ==================== Player Frame Asset URLs ====================
+
+/**
+ * One sprite of a player frame. `assetPath` is the path from `playerFrameAssetPaths()`
+ * (`player_frame/{bundle}/{frameId}/{sourceFrameId}/{orientation}/{part}.png`), which already
+ * carries its extension: the sprites are lossless PNGs, so they are read as they are.
+ */
+export function getPlayerFramePartUrl(assetPath: string, source: AssetSourceType = "main-jp"): string {
+    return buildRawAssetUrl(source, assetPath);
 }
 
 // Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
@@ -412,8 +456,7 @@ export function getInappSpriteUrl(spriteName: string, source: AssetSourceType = 
 }
 
 export function getHonorFrameUrl(rarity: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
-    const rarityMap: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
-    return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${rarityMap[rarity] || 1}`, source);
+    return getInappSpriteUrl(`frame_degree_${sub ? "s" : "m"}_${HONOR_RARITY_LEVEL[rarity] || 1}`, source);
 }
 
 /** The white inner ring and shapes the game lays over a bonds honor's two colours. */

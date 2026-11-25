@@ -977,6 +977,21 @@ export const SEO_PAGE_METADATA = {
       "ja-JP": ["スタンプメーカー", "カスタムスタンプ", "エモート"],
     },
   ),
+  player_frames: definePage(
+    "/player-frames",
+    { "zh-CN": "边框预览", "en-US": "Player Frame Preview", "ja-JP": "プレイヤーフレームプレビュー" },
+    {
+      "zh-CN": "在线预览 Project SEKAI 玩家边框：WL3 组合边框可为六个部件分别选择角色，WL2 角色边框每个角色一套，实时合成竖版个人资料卡与横版好友栏效果并导出 PNG。",
+      "en-US": "Preview Project SEKAI player frames online: the WL3 combination frame lets you pick a character for each of its six parts, WL2 ships one fixed frame per character, and both compose into a portrait profile card and a friend-list cell that export as PNG.",
+      "ja-JP": "Project SEKAI のプレイヤーフレームをオンラインでプレビュー。WL3 の組み合わせフレームは6つのパーツごとにキャラクターを選べ、WL2 はキャラクターごとに1種類。縦長プロフィールカードと横長フレンド欄の合成結果を確認し、PNG で書き出せます。",
+      "ko-KR": "Project SEKAI 플레이어 프레임을 온라인에서 미리보기하세요. WL3 조합 프레임은 6개 파츠마다 캐릭터를 선택할 수 있고 WL2 는 캐릭터당 한 가지이며, 세로형 프로필 카드와 가로형 프렌드 목록으로 합성해 PNG로 저장할 수 있습니다.",
+    },
+    {
+      "zh-CN": ["玩家边框", "边框预览", "WL3 边框", "WL2 边框"],
+      "en-US": ["player frame", "frame preview", "profile frame", "world link frame"],
+      "ja-JP": ["プレイヤーフレーム", "フレームプレビュー", "ワールドリンク", "称号フレーム"],
+    },
+  ),
   realtime_ranking: definePage(
     "/realtime-ranking",
     { "zh-CN": "实时排行榜", "en-US": "Live Ranking", "ja-JP": "リアルタイムランキング" },
