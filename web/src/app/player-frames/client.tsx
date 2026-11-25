@@ -1174,14 +1174,19 @@ function PlayerFramesContent() {
                     if (!honor) return null;
                     const sub = slot > 0;
                     const group = slotLibrary?.groupById.get(honor.groupId);
-                    const rarity = honor.honorRarity ?? "low";
+                    // Masterdata writes `""` for a field the family does not use, so the fallbacks
+                    // have to treat an empty string as absent: the achievement / mission families
+                    // leave `honorRarity` and `assetbundleName` empty and carry both on every level
+                    // (`honor_3014_*` is `highest` on all 100 of them). `DegreeImage` falls back the
+                    // same way, and the card has to agree with the title list next to it.
+                    const rarity = honor.honorRarity || honor.levels?.[0]?.honorRarity || "low";
                     const rarityLevel = HONOR_RARITY_LEVELS[rarity] ?? 1;
                     // `_load_normal_honor_base_image`: the group's degree background first, then the
                     // honor's own bundle, and `rank_live/honor` for the rank-match family. A mission
                     // title keeps its bundle on the level, not on the honor, so the level the rest of
                     // the preview draws (the first one) supplies it.
                     const rankMatch = group?.honorType === "rank_match";
-                    const honorBundle = honor.assetbundleName ?? honor.levels?.[0]?.assetbundleName ?? null;
+                    const honorBundle = honor.assetbundleName || honor.levels?.[0]?.assetbundleName || null;
                     const bundles = [
                         ...new Set(
                             (rankMatch
@@ -1224,9 +1229,17 @@ function PlayerFramesContent() {
                         (rarityLevel >= 3 || (frameName.startsWith("honor_frame_birthday") && rarityLevel >= 2))
                             ? frameName
                             : null;
+                    // The frame is read from the slot's own region as well: a server only publishes
+                    // its own frames, so a CN-only honor's custom frame is a 404 on the JP site. Asking
+                    // only the page's region silently downgraded it to the default rarity sprite, which
+                    // is why the card and the title list could show two different frames. The slot's
+                    // region is asked first, the default sprite only once both customs failed.
+                    const frameSources = [...new Set([slotHonorSource, source])];
                     const frameUrls = [
-                        ...(customFrame ? [getHonorCustomFrameUrl(customFrame, rarity, sub, source)] : []),
-                        getHonorFrameUrl(rarity, sub, source),
+                        ...(customFrame
+                            ? frameSources.map(regionSource => getHonorCustomFrameUrl(customFrame, rarity, sub, regionSource))
+                            : []),
+                        ...new Set(frameSources.map(regionSource => getHonorFrameUrl(rarity, sub, regionSource))),
                     ];
                     // A character honor is a background style + a word, and only the star plate has
                     // those two parts (the lower rarities ship one finished image).
