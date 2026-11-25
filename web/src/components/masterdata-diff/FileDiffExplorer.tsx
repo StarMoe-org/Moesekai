@@ -64,7 +64,7 @@ function RecordDiffCard({ record }: { record: MasterdataRecordDiff }) {
     const [expanded, setExpanded] = useState(record.changeType === "modified");
 
     return (
-        <Surface tone="default" className="overflow-hidden rounded-md3-m border border-outline-variant/70">
+        <Surface tone="default" className="overflow-hidden rounded-md3-md border border-outline-variant/70">
             <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
@@ -102,7 +102,7 @@ function RecordDiffCard({ record }: { record: MasterdataRecordDiff }) {
                             {record.fields.map((fd) => (
                                 <div
                                     key={fd.field}
-                                    className="rounded-md3-s border border-outline-variant/60 bg-surface p-3"
+                                    className="rounded-md3-sm border border-outline-variant/60 bg-surface p-3"
                                 >
                                     <div className="font-mono type-label-m text-primary mb-2">
                                         {fd.field}
@@ -129,7 +129,7 @@ function RecordDiffCard({ record }: { record: MasterdataRecordDiff }) {
                             ))}
                         </div>
                     ) : (
-                        <pre className="max-h-96 overflow-auto rounded-md3-s bg-surface p-3 font-mono type-body-s text-on-surface">
+                        <pre className="max-h-96 overflow-auto rounded-md3-sm bg-surface p-3 font-mono type-body-s text-on-surface">
                             {formatJsonValue(record.changeType === "removed" ? record.before : record.after)}
                         </pre>
                     )}
@@ -270,7 +270,7 @@ export default function FileDiffExplorer({
                                     key={cat}
                                     type="button"
                                     onClick={() => setCategoryFilter(cat)}
-                                    className={`rounded-md3-full px-2.5 py-1 type-label-s transition-colors state-layer focus-ring ${
+                                    className={`rounded-full px-2.5 py-1 type-label-s transition-colors state-layer focus-ring ${
                                         active
                                             ? "bg-secondary-container text-on-secondary-container"
                                             : "bg-surface-container-high text-on-surface-variant"
@@ -355,7 +355,7 @@ export default function FileDiffExplorer({
                                 key={mode}
                                 type="button"
                                 onClick={() => setChangeFilter(mode)}
-                                className={`rounded-md3-full px-3 py-1 type-label-s transition-colors state-layer focus-ring ${
+                                className={`rounded-full px-3 py-1 type-label-s transition-colors state-layer focus-ring ${
                                     changeFilter === mode
                                         ? "bg-primary text-on-primary"
                                         : "bg-surface-container-high text-on-surface-variant"

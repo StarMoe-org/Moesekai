@@ -1,7 +1,7 @@
 "use client";
 
 import { useI18n } from "@/contexts/I18nContext";
-import { Button, Card, CircularProgress, Icon, Surface } from "@/components/md3";
+import { Button, CircularProgress, Icon, Surface } from "@/components/md3";
 import { mdBolt, mdCheckCircle, mdInfo, mdRefresh, mdWarning } from "@/components/md3/icons";
 import type { MasterdataSummaryResponse } from "@/types/masterdataDiff";
 
@@ -21,10 +21,10 @@ export default function AiSummaryCard({
     const { t } = useI18n();
 
     return (
-        <Card variant="outlined" className="overflow-hidden border-outline-variant bg-surface-container-low">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant px-5 py-3.5">
+        <Surface tone="card" radius="xl" className="overflow-hidden">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-outline-variant/60 px-5 py-3.5">
                 <div className="flex items-center gap-2.5">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-md3-full bg-primary-container text-on-primary-container">
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-container text-on-primary-container">
                         <Icon path={mdBolt} size={18} />
                     </span>
                     <div>
@@ -43,8 +43,8 @@ export default function AiSummaryCard({
                             <span
                                 className={
                                     summary.source === "ai"
-                                        ? "inline-flex items-center gap-1 rounded-md3-full bg-primary-container px-2.5 py-0.5 type-label-s text-on-primary-container"
-                                        : "inline-flex items-center gap-1 rounded-md3-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container"
+                                        ? "inline-flex items-center gap-1 rounded-full bg-primary-container px-2.5 py-0.5 type-label-s text-on-primary-container"
+                                        : "inline-flex items-center gap-1 rounded-full bg-secondary-container px-2.5 py-0.5 type-label-s text-on-secondary-container"
                                 }
                             >
                                 <Icon path={summary.source === "ai" ? mdCheckCircle : mdInfo} size={14} />
@@ -53,12 +53,12 @@ export default function AiSummaryCard({
                                     : t("page.masterdataDiff.summary.badgeFallback")}
                             </span>
                             {summary.model && (
-                                <span className="rounded-md3-full bg-surface-container-highest px-2.5 py-0.5 type-label-s text-on-surface-variant">
+                                <span className="rounded-full bg-surface-container-highest px-2.5 py-0.5 type-label-s text-on-surface-variant">
                                     {summary.model}
                                 </span>
                             )}
                             {summary.cached && (
-                                <span className="rounded-md3-full bg-surface-container-high px-2.5 py-0.5 type-label-s text-on-surface-variant">
+                                <span className="rounded-full bg-surface-container-high px-2.5 py-0.5 type-label-s text-on-surface-variant">
                                     {t("page.masterdataDiff.summary.cached")}
                                 </span>
                             )}
@@ -83,7 +83,8 @@ export default function AiSummaryCard({
                 {!isLoading && error && (
                     <Surface
                         tone="high"
-                        className="flex flex-wrap items-center justify-between gap-3 rounded-md3-m border border-outline-variant p-4"
+                        radius="lg"
+                        className="flex flex-wrap items-center justify-between gap-3 border border-outline-variant p-4"
                     >
                         <div className="flex items-center gap-2.5 text-error">
                             <Icon path={mdWarning} size={20} />
@@ -108,7 +109,7 @@ export default function AiSummaryCard({
                                 {summary.highlights.map((hl, idx) => (
                                     <span
                                         key={idx}
-                                        className="rounded-md3-s bg-surface-container-high px-3 py-1.5 type-body-s text-on-surface"
+                                        className="rounded-md3-md bg-surface-container-high px-3 py-1.5 type-body-s text-on-surface"
                                     >
                                         {hl}
                                     </span>
@@ -121,8 +122,9 @@ export default function AiSummaryCard({
                                 {summary.sections.map((section, idx) => (
                                     <Surface
                                         key={`${section.category}-${idx}`}
-                                        tone="default"
-                                        className="rounded-md3-m border border-outline-variant/70 p-3.5"
+                                        tone="low"
+                                        radius="lg"
+                                        className="border border-outline-variant/60 p-4"
                                     >
                                         <h3 className="type-label-l text-primary mb-2">
                                             {section.title}
@@ -140,7 +142,7 @@ export default function AiSummaryCard({
                         )}
 
                         {summary.notes && (
-                            <div className="flex items-start gap-2 rounded-md3-s bg-surface-container-high px-3.5 py-2.5 type-body-s text-on-surface-variant">
+                            <div className="flex items-start gap-2 rounded-md3-md bg-surface-container-high px-3.5 py-2.5 type-body-s text-on-surface-variant">
                                 <Icon path={mdInfo} size={16} className="mt-0.5 shrink-0" />
                                 <span>{summary.notes}</span>
                             </div>
@@ -148,6 +150,6 @@ export default function AiSummaryCard({
                     </div>
                 )}
             </div>
-        </Card>
+        </Surface>
     );
 }
