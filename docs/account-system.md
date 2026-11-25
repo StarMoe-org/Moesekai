@@ -81,6 +81,7 @@ Moesekai 里和“账号”有关的东西分三层。新功能、新页面涉�
 | `web/src/components/account/NoGameAccount.tsx` | 上述页面没有账号时的空状态：登录 StarMoe，或直接输入 UID |
 | `web/src/components/account/GameAccountQuickFill.tsx` | 要填任意玩家 UID 的工具（组卡推荐、控分、MySekai）里一键填入自己的账号，带添加和管理入口 |
 | `web/src/components/guess-music/StarMoeAccountChip.tsx` | 猜歌标题栏：未登录时给登录；登录后从已验证账号里选一个关联到排行榜 |
+| `web/src/app/player-frames/` | 玩家边框预览的页头「同步账号数据」：把当前查看账号的游戏内名字、三个装备中的称号（含角色称号的背景样式与字样）、队长卡（含等级/突破/特训）、以及账号装备的边框（`userPlayerFrames`；WL3 组合框连 `partsLayout` 的六个部件角色一起套用，多个框取 `playerFrameId` 最大的那个）套用到预览；没有账号时弹出与「我的主页」相同的空状态对话框（`page.account.profile.empty*`，按钮跳 `/account`），不在这里弹 UID 输入框。只读当前查看的账号，不接受临时输入别人的 UID |
 
 文案在 `web/src/lib/i18n/messages/<语言>/account.ts`，挂在 `page.account`。
 

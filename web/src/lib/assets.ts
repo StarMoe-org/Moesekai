@@ -205,6 +205,19 @@ export function getCardSmallUrl(
     return buildImageAssetUrl(source, `character/member_small/${assetbundleName}/card_${status}`);
 }
 
+/**
+ * The card art without its background, which is what the profile card (and the matching-room cell)
+ * shows inside the player frame. The friend row uses the plain thumbnail instead.
+ */
+export function getCardCutoutUrl(
+    assetbundleName: string,
+    trained: boolean = false,
+    source: AssetSourceType = "main-jp"
+): string {
+    const status = trained ? "after_training" : "normal";
+    return buildImageAssetUrl(source, `character/member_cutout/${assetbundleName}/${status}`);
+}
+
 export function getEventBannerUrl(assetbundleName: string, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `event/${assetbundleName}/screen/bg`);
 }
@@ -405,6 +418,17 @@ export function getHonorRankMatchBgUrl(assetbundleName: string, sub: boolean = f
  */
 export function getHonorRankMatchTierUrl(assetbundleName: string, sub: boolean = false, source: AssetSourceType = "main-jp"): string {
     return buildImageAssetUrl(source, `rank_live/honor/${assetbundleName}/${sub ? "sub" : "main"}`);
+}
+
+// ==================== Player Frame Asset URLs ====================
+
+/**
+ * One sprite of a player frame. `assetPath` is the path from `playerFrameAssetPaths()`
+ * (`player_frame/{bundle}/{frameId}/{sourceFrameId}/{orientation}/{part}.png`), which already
+ * carries its extension: the sprites are lossless PNGs, so they are read as they are.
+ */
+export function getPlayerFramePartUrl(assetPath: string, source: AssetSourceType = "main-jp"): string {
+    return buildRawAssetUrl(source, assetPath);
 }
 
 // Each bonds honor sprite is a bundle of its own, exported under the bundle's name.
