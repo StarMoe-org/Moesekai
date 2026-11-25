@@ -1,18 +1,20 @@
 "use client";
 
-import { Suspense, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { getPublishedStoryLink } from "@moesekai/story-core";
 import {
     StoryStudioEditor,
     type EditorSlotContext,
     type StoryEditorWorkspaceMode,
+    type StoryStudioEditorHandle,
     type StoryStudioEditorSlots,
 } from "@moesekai/story-editor";
 import { useShellImmersiveMode } from "@/components/AppShell";
 import MainLayout from "@/components/MainLayout";
 import { Icon, LoadingState, cn } from "@/components/md3";
-import { mdPublish, mdWandStars } from "@/components/md3/icons";
+import { mdPublish, mdWandShine, mdWandStars } from "@/components/md3/icons";
 import {
     StoryAudioUploadPanel,
     reconcileMountedPreviewBlobUrls,
@@ -25,6 +27,14 @@ import { StoryPublishDialog } from "@/components/story-maker/StoryPublishDialog"
 import { StoryStudioWebProvider } from "@/components/story-maker/StoryStudioWebProvider";
 import { useI18n } from "@/contexts/I18nContext";
 import { localizePath } from "@/lib/localized-path";
+
+// The agent and its model client load only when one of its surfaces is shown.
+const loadAgentPanes = () => import("@/components/story-maker/StoryAgentPanes");
+const DockedStoryAgent = dynamic(() => loadAgentPanes().then(m => m.DockedStoryAgent), { ssr: false });
+const PhoneStoryAgent = dynamic(() => loadAgentPanes().then(m => m.PhoneStoryAgent), {
+    ssr: false,
+    loading: () => <LoadingState />,
+});
 
 function parseInitialMode(value: string | null): StoryEditorWorkspaceMode | null {
     if (value === "edit" || value === "playtest" || value === "code") return value;
@@ -47,6 +57,8 @@ function StoryMakerEditContent() {
 
     const [effectiveImmersive, setEffectiveImmersive] = useState(false);
     const [publishOpen, setPublishOpen] = useState(false);
+    const [agentOpen, setAgentOpen] = useState(false);
+    const editorRef = useRef<StoryStudioEditorHandle>(null);
     const {
         isOpen: desktopGuideOpen,
         openGuide: openDesktopGuide,
@@ -130,8 +142,22 @@ function StoryMakerEditContent() {
                 );
                 const desktopLabel = t("page.storyMaker.desktopGuide.triggerAction");
                 const desktopTooltip = t("page.storyMaker.desktopGuide.menuAction");
+                const agentLabel = t("page.storyMaker.agent.title");
                 return (
                     <div className="flex shrink-0 items-center gap-1.5">
+                        <button
+                            type="button"
+                            aria-pressed={agentOpen}
+                            onClick={() => setAgentOpen(open => !open)}
+                            title={agentLabel}
+                            className={cn(
+                                "state-layer focus-ring inline-flex h-7 shrink-0 cursor-pointer items-center gap-1 rounded-md3-full px-2.5 type-label-s transition-colors",
+                                agentOpen ? "bg-tertiary text-on-tertiary" : "bg-tertiary-container text-on-tertiary-container",
+                            )}
+                        >
+                            <Icon path={mdWandShine} size={14} className="shrink-0" />
+                            <span className="hidden xl:inline">{agentLabel}</span>
+                        </button>
                         <button
                             type="button"
                             onClick={openDesktopGuide}
@@ -159,6 +185,10 @@ function StoryMakerEditContent() {
                     </div>
                 );
             },
+            sidePanel: () =>
+                agentOpen && draftId ? (
+                    <DockedStoryAgent editorRef={editorRef} draftId={draftId} onClose={() => setAgentOpen(false)} />
+                ) : null,
             voiceManifestUploadTab: (ctx: EditorSlotContext) => ({
                 label: t("page.storyMaker.audioUpload.tabUpload"),
                 render: (tabCtx) => (
@@ -203,12 +233,14 @@ function StoryMakerEditContent() {
             ),
         }),
         [
+            agentOpen,
             closeDesktopGuide,
             desktopGuideOpen,
             draftId,
             openDesktopGuide,
             publishOpen,
             publishedPostId,
+            setAgentOpen,
             setPublishOpen,
             setPublishedOverride,
             t,
@@ -223,11 +255,13 @@ function StoryMakerEditContent() {
 
     return (
         <StoryStudioEditor
+            ref={editorRef}
             draftId={draftId}
             initialMode={initialMode}
             initialNodeId={initialNodeId}
             initialImmersive={initialImmersive}
             enforceDesktopViewport
+            narrowViewport={draftId ? <PhoneStoryAgent draftId={draftId} /> : undefined}
             onImmersiveChange={handleImmersiveChange}
             onEffectiveImmersiveChange={setEffectiveImmersive}
             onModeChange={handleModeChange}
