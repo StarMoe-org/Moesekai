@@ -52,6 +52,7 @@ import {
     mdChevronLeft,
     mdChevronRight,
     mdClose,
+    mdCompareArrows,
     mdContentCopy,
     mdDescription,
     mdDockToRight,
@@ -66,12 +67,23 @@ import {
     mdImage,
     mdKeyboardArrowDown,
     mdKeyboardArrowUp,
+    mdLayers,
     mdRefresh,
     mdSearch,
     mdVideoFile,
     mdViewList,
     mdVolumeUp,
 } from "@/components/md3/icons";
+import VersionTimelineStrip from "@/components/asset-versions/VersionTimelineStrip";
+import MasterdataUpdateSection from "@/components/asset-versions/MasterdataUpdateSection";
+import { fetchMasterdataVersions } from "@/lib/masterdata-diff-api";
+import type { MasterdataVersionItem } from "@/types/masterdataDiff";
+import {
+    buildUnifiedVersionTimeline,
+    findNodeByQuery,
+    isMasterdataDiffServer,
+    type UnifiedVersionNode,
+} from "./versionTimeline";
 import {
     buildDiffDirectoryTree,
     countDiffCauses,
@@ -172,11 +184,39 @@ function AssetVersionsContent() {
     // ==================== Query & layout states ====================
 
     const { servers, server, pinned, ready, chooseServer } = usePageServer();
+    const supportsMasterdata = isMasterdataDiffServer(server);
     const [version, setVersion] = useState<string>(() => {
         if (typeof window !== "undefined") {
             return new URLSearchParams(window.location.search).get("version") || "";
         }
         return "";
+    });
+    const [sha, setSha] = useState<string>(() => {
+        if (typeof window !== "undefined") {
+            return new URLSearchParams(window.location.search).get("sha") || "";
+        }
+        return "";
+    });
+    const [mdTab, setMdTab] = useState<"overview" | "files">(() => {
+        if (typeof window !== "undefined") {
+            return new URLSearchParams(window.location.search).get("tab") === "files"
+                ? "files"
+                : "overview";
+        }
+        return "overview";
+    });
+    const [mdFile, setMdFile] = useState<string>(() => {
+        if (typeof window !== "undefined") {
+            return new URLSearchParams(window.location.search).get("file") || "";
+        }
+        return "";
+    });
+    const [pageTab, setPageTab] = useState<"masterdata" | "assets">(() => {
+        if (typeof window !== "undefined") {
+            const sec = new URLSearchParams(window.location.search).get("section");
+            if (sec === "assets" || sec === "masterdata") return sec;
+        }
+        return "masterdata";
     });
 
     const [prefix, setPrefix] = useState<string>(() => {
@@ -247,6 +287,27 @@ function AssetVersionsContent() {
         } else {
             url.searchParams.delete("version");
         }
+        if (sha) {
+            url.searchParams.set("sha", sha);
+        } else {
+            url.searchParams.delete("sha");
+        }
+        if (sha && mdTab === "files") {
+            url.searchParams.set("tab", "files");
+            if (mdFile) {
+                url.searchParams.set("file", mdFile);
+            } else {
+                url.searchParams.delete("file");
+            }
+        } else {
+            url.searchParams.delete("tab");
+            url.searchParams.delete("file");
+        }
+        if (supportsMasterdata && pageTab === "assets") {
+            url.searchParams.set("section", "assets");
+        } else {
+            url.searchParams.delete("section");
+        }
         if (prefix) {
             url.searchParams.set("prefix", prefix);
         } else {
@@ -264,7 +325,7 @@ function AssetVersionsContent() {
         }
         url.searchParams.delete("action");
         return url.toString();
-    }, [pinned, version, prefix, mediaFilter, causeFilter]);
+    }, [pinned, version, sha, mdTab, mdFile, supportsMasterdata, pageTab, prefix, mediaFilter, causeFilter]);
 
     // Sync state to URL query parameters
     useEffect(() => {
@@ -284,8 +345,16 @@ function AssetVersionsContent() {
             }
             const params = new URLSearchParams(window.location.search);
             const nextVersion = params.get("version") || "";
+            const nextSha = params.get("sha") || "";
             const nextPrefix = params.get("prefix")?.replace(/^\/+|\/+$/g, "") || "";
             setVersion(nextVersion);
+            setSha(nextSha);
+            setMdTab(params.get("tab") === "files" ? "files" : "overview");
+            setMdFile(params.get("file") || "");
+            const nextSec = params.get("section");
+            if (nextSec === "assets" || nextSec === "masterdata") {
+                setPageTab(nextSec);
+            }
             setPrefix(nextPrefix);
             setHistoryStack([nextPrefix]);
             setHistoryIndex(0);
@@ -304,8 +373,13 @@ function AssetVersionsContent() {
     const [versions, setVersions] = useState<VersionEntry[]>([]);
     const [isVersionsLoading, setIsVersionsLoading] = useState(true);
     const [versionsError, setVersionsError] = useState<string | null>(null);
-    const versionRef = useRef(version);
-    versionRef.current = version;
+
+    const [mdVersions, setMdVersions] = useState<MasterdataVersionItem[]>([]);
+    const [mdPage, setMdPage] = useState(1);
+    const [mdHasMore, setMdHasMore] = useState(false);
+    const [isMdVersionsLoading, setIsMdVersionsLoading] = useState(false);
+    const [isMdLoadingMore, setIsMdLoadingMore] = useState(false);
+    const [mdVersionsError, setMdVersionsError] = useState<string | null>(null);
 
     const fetchVersions = useCallback(async () => {
         if (!ready) return;
@@ -314,12 +388,6 @@ function AssetVersionsContent() {
             setVersionsError(null);
             const list = await fetchVersionHistory(origin, server);
             setVersions(list);
-            if (list.length > 0 && (!versionRef.current || !list.some(v => v.published_version === versionRef.current))) {
-                setVersion(list[0].published_version);
-                setPrefix("");
-                setHistoryStack([""]);
-                setHistoryIndex(0);
-            }
         } catch (err) {
             console.error("Failed to load asset versions:", err);
             setVersionsError(err instanceof Error ? err.message : "Unknown error");
@@ -328,9 +396,95 @@ function AssetVersionsContent() {
         }
     }, [ready, server, origin]);
 
+    const fetchMdVersions = useCallback(async (pageNum = 1, append = false, signal?: AbortSignal) => {
+        if (!ready || !isMasterdataDiffServer(server)) {
+            setMdVersions([]);
+            setMdHasMore(false);
+            setMdVersionsError(null);
+            setIsMdVersionsLoading(false);
+            return;
+        }
+        try {
+            if (append) {
+                setIsMdLoadingMore(true);
+            } else {
+                setIsMdVersionsLoading(true);
+                setMdVersionsError(null);
+            }
+            const res = await fetchMasterdataVersions(server, pageNum, 20, signal);
+            setMdVersions((prev) => {
+                if (!append) return res.items;
+                const seen = new Set(prev.map((v) => v.sha));
+                return [...prev, ...res.items.filter((v) => !seen.has(v.sha))];
+            });
+            setMdPage(res.page);
+            setMdHasMore(res.hasMore);
+        } catch (err) {
+            if ((err as Error).name === "AbortError") return;
+            console.error("Failed to load masterdata versions:", err);
+            if (!append) {
+                setMdVersions([]);
+            }
+            setMdVersionsError(err instanceof Error ? err.message : "Unknown error");
+        } finally {
+            if (!signal?.aborted) {
+                setIsMdVersionsLoading(false);
+                setIsMdLoadingMore(false);
+            }
+        }
+    }, [ready, server]);
+
     useEffect(() => {
         fetchVersions();
     }, [fetchVersions]);
+
+    useEffect(() => {
+        const ctrl = new AbortController();
+        void fetchMdVersions(1, false, ctrl.signal);
+        return () => ctrl.abort();
+    }, [fetchMdVersions]);
+
+    const unifiedNodes = useMemo(
+        () => buildUnifiedVersionTimeline(versions, supportsMasterdata ? mdVersions : []),
+        [versions, mdVersions, supportsMasterdata],
+    );
+
+    const selectedNode = useMemo<UnifiedVersionNode | null>(() => {
+        if (unifiedNodes.length === 0) return null;
+        return findNodeByQuery(unifiedNodes, version, sha) ?? unifiedNodes[0];
+    }, [unifiedNodes, version, sha]);
+
+    const selectedNodeIndex = useMemo(
+        () => (selectedNode ? unifiedNodes.findIndex((n) => n.id === selectedNode.id) : -1),
+        [unifiedNodes, selectedNode],
+    );
+
+    const hasMasterdataForSelected = Boolean(supportsMasterdata && selectedNode?.masterdata);
+    const hasAssetForSelected = Boolean(selectedNode?.asset);
+    const effectivePageTab: "masterdata" | "assets" = !supportsMasterdata
+        ? "assets"
+        : pageTab === "masterdata" && hasMasterdataForSelected
+            ? "masterdata"
+            : pageTab === "assets" && hasAssetForSelected
+                ? "assets"
+                : hasMasterdataForSelected
+                    ? "masterdata"
+                    : "assets";
+
+    // Once initial version lists settle, normalize version/sha state to the resolved unified node
+    // so paired versions automatically show both Asset and Masterdata updates.
+    useEffect(() => {
+        if (!ready || isVersionsLoading || (supportsMasterdata && isMdVersionsLoading)) return;
+        if (!selectedNode) return;
+        const nextVersion = selectedNode.asset?.published_version || "";
+        const nextSha = supportsMasterdata ? (selectedNode.masterdata?.sha || "") : "";
+        if (nextVersion !== version) {
+            setVersion(nextVersion);
+        }
+        if (nextSha !== sha) {
+            setSha(nextSha);
+        }
+    }, [ready, isVersionsLoading, isMdVersionsLoading, supportsMasterdata, selectedNode, version, sha]);
 
     // ==================== Changes states ====================
 
@@ -402,16 +556,23 @@ function AssetVersionsContent() {
         if (srv === server) return;
         rememberScroll();
         setVersion("");
+        setSha("");
+        setMdFile("");
+        setMdTab("overview");
         setPrefix("");
         setHistoryStack([""]);
         setHistoryIndex(0);
         chooseServer(srv);
     };
 
-    const selectVersion = (nextVersion: string) => {
-        if (nextVersion === version) return;
+    const selectUnifiedNode = (node: UnifiedVersionNode) => {
+        const nextVersion = node.asset?.published_version || "";
+        const nextSha = supportsMasterdata ? (node.masterdata?.sha || "") : "";
+        if (nextVersion === version && nextSha === sha) return;
         rememberScroll();
         setVersion(nextVersion);
+        setSha(nextSha);
+        setMdFile("");
         setPrefix("");
         setHistoryStack([""]);
         setHistoryIndex(0);
@@ -450,6 +611,7 @@ function AssetVersionsContent() {
 
     const handleRefresh = () => {
         fetchVersions();
+        if (supportsMasterdata) void fetchMdVersions(1, false);
         if (version) fetchDiff();
     };
 
@@ -547,14 +709,20 @@ function AssetVersionsContent() {
 
     const selectedVersionMeta = selectedVersionIndex >= 0 ? versions[selectedVersionIndex] : null;
 
-    const filteredVersions = useMemo(() => {
+    const filteredUnifiedNodes = useMemo(() => {
         const q = versionQuery.trim().toLowerCase();
-        if (!q) return versions;
-        return versions.filter(v =>
-            v.published_version.toLowerCase().includes(q) ||
-            (v.published_at && v.published_at.toLowerCase().includes(q)),
+        if (!q) return unifiedNodes;
+        return unifiedNodes.filter(
+            (n) =>
+                n.primaryLabel.toLowerCase().includes(q) ||
+                (n.secondaryLabel && n.secondaryLabel.toLowerCase().includes(q)) ||
+                (n.asset?.published_version.toLowerCase().includes(q)) ||
+                (n.asset?.published_at && n.asset.published_at.toLowerCase().includes(q)) ||
+                (n.masterdata?.dataVersion.toLowerCase().includes(q)) ||
+                (n.masterdata?.sha.toLowerCase().includes(q)) ||
+                (n.masterdata?.committedAt.toLowerCase().includes(q)),
         );
-    }, [versions, versionQuery]);
+    }, [unifiedNodes, versionQuery]);
 
     const hasActiveDiffFilters =
         searchQuery !== "" ||
@@ -851,17 +1019,17 @@ function AssetVersionsContent() {
                 }
             />
 
-            {/* Compact Version Picker & Server / Explorer Controls */}
+            {/* Compact Glassential Version Picker & Server / Explorer Controls */}
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2.5">
                 {/* Compact Version Picker + Quick Stepper */}
-                <div className="flex items-center gap-0.5 rounded-full border border-outline-variant bg-surface-card p-0.5">
+                <div className="glass flex items-center gap-0.5 rounded-full p-1">
                     <IconButton
                         icon={mdChevronLeft}
                         size="xs"
-                        disabled={selectedVersionIndex < 0 || selectedVersionIndex >= versions.length - 1}
+                        disabled={selectedNodeIndex < 0 || selectedNodeIndex >= unifiedNodes.length - 1}
                         onClick={() => {
-                            if (selectedVersionIndex >= 0 && selectedVersionIndex < versions.length - 1) {
-                                selectVersion(versions[selectedVersionIndex + 1].published_version);
+                            if (selectedNodeIndex >= 0 && selectedNodeIndex < unifiedNodes.length - 1) {
+                                selectUnifiedNode(unifiedNodes[selectedNodeIndex + 1]);
                             }
                         }}
                         label={t("page.assetVersions.prevVersion")}
@@ -873,10 +1041,14 @@ function AssetVersionsContent() {
                     >
                         <Icon path={mdHistory} size={18} className="shrink-0 text-primary" />
                         <span className="truncate font-mono type-label-l font-medium text-on-surface">
-                            {version ? shortVersion(version) : t("page.assetVersions.selectVersion")}
+                            {selectedNode
+                                ? selectedNode.secondaryLabel
+                                    ? `${selectedNode.primaryLabel} / ${selectedNode.secondaryLabel}`
+                                    : selectedNode.primaryLabel
+                                : t("page.assetVersions.selectVersion")}
                         </span>
-                        {selectedVersionIndex === 0 && (
-                            <span className="hidden rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary sm:inline">
+                        {selectedNodeIndex === 0 && (
+                            <span className="hidden rounded-full bg-primary px-2 py-0.5 type-label-s text-on-primary sm:inline">
                                 {t("page.assetVersions.latestBadge")}
                             </span>
                         )}
@@ -885,21 +1057,21 @@ function AssetVersionsContent() {
                     <IconButton
                         icon={mdChevronRight}
                         size="xs"
-                        disabled={selectedVersionIndex <= 0}
+                        disabled={selectedNodeIndex <= 0}
                         onClick={() => {
-                            if (selectedVersionIndex > 0) {
-                                selectVersion(versions[selectedVersionIndex - 1].published_version);
+                            if (selectedNodeIndex > 0) {
+                                selectUnifiedNode(unifiedNodes[selectedNodeIndex - 1]);
                             }
                         }}
                         label={t("page.assetVersions.nextVersion")}
                     />
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="glass flex flex-wrap items-center gap-1 rounded-full p-1">
                     <Menu
                         align="end"
                         anchor={(props) => (
-                            <Button {...props} variant="outlined" size="xs" trailingIcon={mdKeyboardArrowDown}>
+                            <Button {...props} variant="text" size="xs" trailingIcon={mdKeyboardArrowDown}>
                                 <ServerRegionLabel server={server} />
                             </Button>
                         )}
@@ -909,6 +1081,7 @@ function AssetVersionsContent() {
                             onSelect: () => selectServer(srv),
                         }))}
                     />
+                    <span className="h-4 w-px bg-outline-variant/50" aria-hidden />
                     <Button
                         variant="text"
                         size="xs"
@@ -920,6 +1093,107 @@ function AssetVersionsContent() {
                 </div>
             </div>
 
+            {/* Interactive Unified Version Timeline (Glassential Shell) */}
+            <VersionTimelineStrip
+                nodes={unifiedNodes}
+                selectedNodeId={selectedNode?.id ?? ""}
+                onSelectNode={selectUnifiedNode}
+                supportsMasterdata={supportsMasterdata}
+                isLoading={isVersionsLoading || (supportsMasterdata && isMdVersionsLoading)}
+                hasMoreMasterdata={mdHasMore}
+                isLoadingMoreMasterdata={isMdLoadingMore}
+                onLoadMoreMasterdata={() => void fetchMdVersions(mdPage + 1, true)}
+                onOpenFullPicker={() => setShowVersionPicker(true)}
+            />
+
+            {/* Primary 2-Tab Switcher (Glassential Pill Bar): Masterdata Summary & Diff vs Asset Package Changes */}
+            {supportsMasterdata && (
+                <div className="mb-4 flex items-center justify-between gap-3">
+                    <div
+                        role="tablist"
+                        aria-label={t("page.assetVersions.title")}
+                        className="glass inline-flex max-w-full items-center gap-1 rounded-full p-1"
+                    >
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={effectivePageTab === "masterdata"}
+                            disabled={!hasMasterdataForSelected}
+                            onClick={() => setPageTab("masterdata")}
+                            className={`state-layer focus-ring inline-flex h-9 items-center gap-2 rounded-full px-4 type-label-l transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+                                effectivePageTab === "masterdata"
+                                    ? "glass-selected font-semibold text-on-surface"
+                                    : "text-on-surface-variant hover:bg-surface-container/40 hover:text-on-surface"
+                            }`}
+                        >
+                            <Icon
+                                path={mdCompareArrows}
+                                size={18}
+                                className={effectivePageTab === "masterdata" ? "text-primary" : "text-on-surface-variant"}
+                            />
+                            <span className="whitespace-nowrap">{t("page.assetVersions.sections.jumpMasterdata")}</span>
+                            {selectedNode?.masterdata && (
+                                <span
+                                    className={`rounded-full px-2 py-0.5 font-mono type-label-s ${
+                                        effectivePageTab === "masterdata"
+                                            ? "bg-primary/15 text-primary"
+                                            : "bg-surface-container text-on-surface-variant"
+                                    }`}
+                                >
+                                    v{selectedNode.masterdata.dataVersion}
+                                </span>
+                            )}
+                        </button>
+
+                        <button
+                            type="button"
+                            role="tab"
+                            aria-selected={effectivePageTab === "assets"}
+                            disabled={!hasAssetForSelected}
+                            onClick={() => setPageTab("assets")}
+                            className={`state-layer focus-ring inline-flex h-9 items-center gap-2 rounded-full px-4 type-label-l transition-colors disabled:pointer-events-none disabled:opacity-40 ${
+                                effectivePageTab === "assets"
+                                    ? "glass-selected font-semibold text-on-surface"
+                                    : "text-on-surface-variant hover:bg-surface-container/40 hover:text-on-surface"
+                            }`}
+                        >
+                            <Icon
+                                path={mdFolder}
+                                size={18}
+                                className={effectivePageTab === "assets" ? "text-primary" : "text-on-surface-variant"}
+                            />
+                            <span className="whitespace-nowrap">{t("page.assetVersions.sections.jumpAsset")}</span>
+                            {selectedNode?.asset && (
+                                <span
+                                    className={`rounded-full px-2 py-0.5 font-mono type-label-s ${
+                                        effectivePageTab === "assets"
+                                            ? "bg-primary/15 text-primary"
+                                            : "bg-surface-container text-on-surface-variant"
+                                    }`}
+                                >
+                                    {shortVersion(selectedNode.asset.published_version)}
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Tab 1: Masterdata Update Preview & AI Summary */}
+            {effectivePageTab === "masterdata" && supportsMasterdata && selectedNode?.masterdata && (
+                <MasterdataUpdateSection
+                    server={server}
+                    versionItem={selectedNode.masterdata}
+                    activeTab={mdTab}
+                    onTabChange={setMdTab}
+                    selectedFile={mdFile}
+                    onSelectFile={setMdFile}
+                />
+            )}
+
+            {/* Tab 2: Asset Package Diff Explorer */}
+            {effectivePageTab === "assets" && (
+            <section id="asset-update-section">
             {/* Multi-Pane Version & Diff Explorer Frame */}
             <Surface tone="card" radius="xl" className="overflow-hidden">
                 {/* Top Navigation, Breadcrumbs, Search & View Mode Toolbar */}
@@ -1507,6 +1781,8 @@ function AssetVersionsContent() {
                     </div>
                 </ExplorerSplitPane>
             </Surface>
+            </section>
+            )}
 
             {/* File Detail Modal */}
             <Modal
@@ -1689,11 +1965,11 @@ function AssetVersionsContent() {
                     </div>
 
                     <div className="custom-scrollbar max-h-[55vh] divide-y divide-outline-variant/40 overflow-y-auto rounded-md3-lg border border-outline-variant/60">
-                        {isVersionsLoading ? (
+                        {(isVersionsLoading && unifiedNodes.length === 0) ? (
                             <div className="flex justify-center py-8">
                                 <CircularProgress size={28} />
                             </div>
-                        ) : versionsError ? (
+                        ) : versionsError && unifiedNodes.length === 0 ? (
                             <div className="p-3">
                                 <ErrorState
                                     title={t("page.assetVersions.loadFailed")}
@@ -1702,25 +1978,27 @@ function AssetVersionsContent() {
                                     onRetry={fetchVersions}
                                 />
                             </div>
-                        ) : filteredVersions.length === 0 ? (
+                        ) : filteredUnifiedNodes.length === 0 ? (
                             <div className="px-4 py-8 text-center type-body-s text-on-surface-variant">
                                 {t("page.assetVersions.emptyVersions")}
                             </div>
                         ) : (
-                            filteredVersions.map((v) => {
-                                const isSelected = v.published_version === version;
-                                const isLatest = versions[0]?.published_version === v.published_version;
+                            filteredUnifiedNodes.map((node) => {
+                                const isSelected = selectedNode?.id === node.id;
+                                const isLatest = unifiedNodes[0]?.id === node.id;
+                                const v = node.asset;
                                 const hasCounts =
+                                    v !== undefined &&
                                     v.added !== undefined &&
                                     v.changed !== undefined &&
                                     v.removed !== undefined;
-                                const conversion = conversionCount(v) ?? 0;
+                                const conversion = v ? (conversionCount(v) ?? 0) : 0;
                                 return (
                                     <button
-                                        key={v.published_version}
+                                        key={node.id}
                                         type="button"
                                         onClick={() => {
-                                            selectVersion(v.published_version);
+                                            selectUnifiedNode(node);
                                             setShowVersionPicker(false);
                                             setVersionQuery("");
                                         }}
@@ -1731,20 +2009,53 @@ function AssetVersionsContent() {
                                         }`}
                                     >
                                         <div className="min-w-0 flex-1">
-                                            <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center gap-1.5">
                                                 <span className="truncate font-mono type-label-l font-semibold">
-                                                    {shortVersion(v.published_version)}
+                                                    {node.primaryLabel}
                                                 </span>
+                                                {node.secondaryLabel && (
+                                                    <span className="truncate font-mono type-label-s text-on-surface-variant">
+                                                        ({node.secondaryLabel})
+                                                    </span>
+                                                )}
+                                                {node.kind === "both" ? (
+                                                    <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-primary-container px-1.5 py-0.5 type-label-s text-on-primary-container">
+                                                        <Icon path={mdLayers} size={12} />
+                                                        {t("page.assetVersions.versionTimeline.badgeBoth")}
+                                                    </span>
+                                                ) : node.kind === "asset" ? (
+                                                    <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
+                                                        {t("page.assetVersions.versionTimeline.badgeAsset")}
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-0.5 rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 type-label-s text-on-tertiary-container">
+                                                        {t("page.assetVersions.versionTimeline.badgeMasterdata")}
+                                                    </span>
+                                                )}
                                                 {isLatest && (
                                                     <span className="shrink-0 rounded-md3-xs bg-primary px-1.5 py-0.5 type-label-s text-on-primary">
                                                         {t("page.assetVersions.latestBadge")}
                                                     </span>
                                                 )}
                                             </div>
-                                            <div className="mt-0.5 flex items-center gap-2 type-label-s text-on-surface-variant">
-                                                <span>{v.published_at ? formatPublishedAt(v.published_at) : "-"}</span>
-                                                <span>·</span>
-                                                <span className="font-mono">{formatNumber(v.files)}</span>
+                                            <div className="mt-0.5 flex flex-wrap items-center gap-2 type-label-s text-on-surface-variant">
+                                                <span>
+                                                    {node.sortTimeMs
+                                                        ? formatPublishedAt(new Date(node.sortTimeMs).toISOString())
+                                                        : "-"}
+                                                </span>
+                                                {v && (
+                                                    <>
+                                                        <span>·</span>
+                                                        <span className="font-mono">{formatNumber(v.files)}</span>
+                                                    </>
+                                                )}
+                                                {node.masterdata && (
+                                                    <>
+                                                        <span>·</span>
+                                                        <span className="font-mono">{node.masterdata.shortSha}</span>
+                                                    </>
+                                                )}
                                             </div>
                                             {conversion > 0 && (
                                                 <div className="mt-0.5 type-label-s text-on-surface-variant">
@@ -1754,7 +2065,7 @@ function AssetVersionsContent() {
                                         </div>
 
                                         <div className="flex shrink-0 items-center gap-1 font-mono type-label-s">
-                                            {hasCounts ? (
+                                            {hasCounts && v ? (
                                                 <>
                                                     {(v.added ?? 0) > 0 && (
                                                         <span className="rounded-md3-xs bg-primary-container px-1.5 py-0.5 text-on-primary-container">
@@ -1772,6 +2083,10 @@ function AssetVersionsContent() {
                                                         </span>
                                                     )}
                                                 </>
+                                            ) : node.masterdata ? (
+                                                <span className="rounded-md3-xs bg-tertiary-container px-1.5 py-0.5 text-on-tertiary-container">
+                                                    MD
+                                                </span>
                                             ) : (
                                                 <span className="text-on-surface-variant/80">-</span>
                                             )}

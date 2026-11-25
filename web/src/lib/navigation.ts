@@ -78,7 +78,6 @@ const allNavigationGroups: NavGroupData[] = [
         items: [
             { href: "/asset-viewer" },
             { href: "/asset-versions" },
-            { href: "/masterdata-diff" },
             { href: "/gacha-simulator" },
             { href: "/deck-recommend" },
             { href: "/deck-comparator" },
@@ -226,8 +225,7 @@ const allSearchableNavItems: SearchableNavItem[] = [
     { href: "/guess-music", group: "games", keywords: ["guess song", "guess music", "music quiz", "\u731c\u6b4c"] },
 
     { href: "/asset-viewer", group: "tools", keywords: ["asset browser", "assets", "explorer", "files", "static"] },
-    { href: "/asset-versions", group: "tools", keywords: ["asset versions", "changelog", "update history", "diff", "version"] },
-    { href: "/masterdata-diff", group: "tools", keywords: ["masterdata", "masterdata diff", "diff", "ai summary", "changelog", "update"] },
+    { href: "/asset-versions", group: "tools", keywords: ["asset versions", "masterdata", "masterdata diff", "ai summary", "changelog", "update history", "diff", "version"] },
     { href: "/gacha-simulator", group: "tools", keywords: ["gacha simulator", "gacha", "pull", "simulator", "diy gacha", "\u62bd\u5361", "\u626d\u86cb\u6a21\u62df"] },
     { href: "/deck-recommend", group: "tools", keywords: ["deck recommend", "deck", "team"] },
     { href: "/deck-comparator", group: "tools", keywords: ["deck compare", "comparator"] },

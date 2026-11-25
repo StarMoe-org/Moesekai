@@ -80,8 +80,8 @@ function EntityThumbnail({ src, alt, square }: { src: string; alt: string; squar
         <div
             className={
                 square
-                    ? "h-14 w-14 shrink-0 overflow-hidden rounded-md3-s bg-surface-container-highest"
-                    : "h-14 w-28 shrink-0 overflow-hidden rounded-md3-s bg-surface-container-highest"
+                    ? "h-14 w-14 shrink-0 overflow-hidden rounded-md3-sm bg-surface-container-highest"
+                    : "h-14 w-28 shrink-0 overflow-hidden rounded-md3-sm bg-surface-container-highest"
             }
         >
             <img
@@ -137,17 +137,17 @@ export default function EntityHighlightsView({
                             <div className="flex flex-wrap items-center gap-2">
                                 <h3 className="type-title-m text-on-surface">{groupTitle}</h3>
                                 {group.addedCount > 0 && (
-                                    <span className="rounded-md3-full bg-primary-container px-2.5 py-0.5 type-label-s text-on-primary-container">
+                                    <span className="rounded-full bg-primary-container px-2.5 py-0.5 type-label-s text-on-primary-container">
                                         +{group.addedCount}
                                     </span>
                                 )}
                                 {group.modifiedCount > 0 && (
-                                    <span className="rounded-md3-full bg-tertiary-container px-2.5 py-0.5 type-label-s text-on-tertiary-container">
+                                    <span className="rounded-full bg-tertiary-container px-2.5 py-0.5 type-label-s text-on-tertiary-container">
                                         ~{group.modifiedCount}
                                     </span>
                                 )}
                                 {group.removedCount > 0 && (
-                                    <span className="rounded-md3-full bg-error-container px-2.5 py-0.5 type-label-s text-on-error-container">
+                                    <span className="rounded-full bg-error-container px-2.5 py-0.5 type-label-s text-on-error-container">
                                         -{group.removedCount}
                                     </span>
                                 )}
@@ -170,7 +170,7 @@ export default function EntityHighlightsView({
                                 const inner = (
                                     <Surface
                                         tone="default"
-                                        className="flex h-full items-start gap-3 rounded-md3-m border border-outline-variant/70 p-3 transition-colors state-layer"
+                                        className="flex h-full items-start gap-3 rounded-md3-md border border-outline-variant/70 p-3 transition-colors state-layer"
                                     >
                                         {thumb && (
                                             <EntityThumbnail
@@ -249,7 +249,7 @@ export default function EntityHighlightsView({
                                         <LocalizedLink
                                             key={`${group.key}-${item.changeType}-${item.id}`}
                                             href={item.detailPath}
-                                            className="block rounded-md3-m focus-ring"
+                                            className="block rounded-md3-md focus-ring"
                                         >
                                             {inner}
                                         </LocalizedLink>
