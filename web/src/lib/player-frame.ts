@@ -496,6 +496,24 @@ export interface PlayerFrameHonorArt {
         readonly image: CanvasImageSource;
         readonly box: readonly [number, number, number, number];
     } | null;
+    /**
+     * The honor's level: a birthday title prints one flower per level along the bottom edge, the
+     * other families a row of star badges. `count` is the level; the offsets below live in the
+     * 380x80 / 180x80 art canvas the badge is drawn on.
+     */
+    readonly levelBadge?: PlayerFrameHonorLevelBadge | null;
+}
+
+/** The level badge of one honor slot, already loaded. */
+export interface PlayerFrameHonorLevelBadge {
+    readonly kind: "flower" | "star";
+    readonly count: number;
+    readonly image: CanvasImageSource | null;
+    /** The 6+ star sprite; stars past the fifth use it. */
+    readonly imageSix?: CanvasImageSource | null;
+    /** The honor art canvas the offsets below are expressed in: 380x80 main, 180x80 sub. */
+    readonly artWidth: number;
+    readonly artHeight: number;
 }
 
 /** The game art the card is built from; every piece is optional and skipped when missing. */
@@ -600,6 +618,45 @@ function drawHonorOverlay(
     const [x, y, width, height] = box;
     const [fx, fy, fw, fh] = overlay.box;
     context.drawImage(overlay.image, x + fx * width, y + fy * height, fw * width, fh * height);
+}
+
+/**
+ * The honor's level badge, in the honor art's own 380x80 / 180x80 canvas mapped onto the box the cell
+ * gives the badge. A birthday title places one flower per level along the bottom edge, the star
+ * families a row of 16px badges from (50, 64) — the same offsets `DegreeImage` draws.
+ */
+function drawHonorLevelBadge(
+    context: CanvasRenderingContext2D,
+    badge: PlayerFrameHonorLevelBadge,
+    box: CellBox,
+): void {
+    if (badge.count <= 0) return;
+    if (badge.kind === "flower" && !badge.image) return;
+    if (badge.kind === "star" && !badge.image && !badge.imageSix) return;
+    const artWidth = Math.max(1, badge.artWidth);
+    const artHeight = Math.max(1, badge.artHeight);
+    // The badge art is contain-fitted onto the box, so the offsets scale with that fit.
+    const factor = Math.min(box[2] / artWidth, box[3] / artHeight);
+    const left = box[0] + (box[2] - artWidth * factor) / 2;
+    const top = box[1] + (box[3] - artHeight * factor) / 2;
+    if (badge.kind === "flower") {
+        const size = 18 * factor;
+        const y = top + (artHeight - 18) * factor;
+        const startX = left + (artWidth / 2 - 9 * badge.count) * factor;
+        for (let index = 0; index < badge.count; index += 1) {
+            context.drawImage(badge.image!, startX + index * 18 * factor, y, size, size);
+        }
+        return;
+    }
+    const size = 16 * factor;
+    const y = top + 64 * factor;
+    const drawStars = (image: CanvasImageSource, count: number): void => {
+        for (let index = 0; index < count; index += 1) {
+            context.drawImage(image, left + (50 + index * 16) * factor, y, size, size);
+        }
+    };
+    if (badge.image) drawStars(badge.image, Math.min(5, badge.count));
+    if (badge.imageSix && badge.count > 5) drawStars(badge.imageSix, badge.count - 5);
 }
 
 /** `_card_visual_fit_cover`: fill the box, cropped, anchored to the top centre. */
@@ -807,6 +864,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.background) drawContained(context, honor.background, target);
             if (honor.word) drawContained(context, honor.word, target);
             if (honor.frame) drawContained(context, honor.frame, target);
+            if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, target);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, target);
         });
         context.restore();
@@ -843,6 +901,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.background) drawContained(context, honor.background, box);
             if (honor.word) drawContained(context, honor.word, box);
             if (honor.frame) drawContained(context, honor.frame, box);
+            if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, box);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, box);
         });
         if (cell.comment) {
