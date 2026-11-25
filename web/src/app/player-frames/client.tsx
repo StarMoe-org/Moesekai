@@ -42,16 +42,9 @@ import {
     getCardCutoutUrl,
     getCardThumbnailUrl,
     getCharacterIconUrl,
-    getHonorBgUrl,
-    getHonorBackgroundUrl,
-    getHonorCustomFrameUrl,
-    getHonorFrameUrl,
-    getHonorRankMatchBgUrl,
-    getHonorRankMatchTierUrl,
-    getHonorRankUrl,
-    getHonorWordUrl,
     getPlayerFramePartUrl,
 } from "@/lib/assets";
+import { resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
 import { fetchMasterData, fetchMasterDataForServer, getCurrentServer, type ServerSourceType } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
 import { canvasToPngBlob, saveImageBlob } from "@/lib/imageActions";
@@ -209,8 +202,6 @@ const HONOR_SLOT_COUNT = 3;
 function newHonorStyles(): HonorSlotStyle[] {
     return Array.from({ length: HONOR_SLOT_COUNT }, () => EMPTY_HONOR_STYLE);
 }
-/** Honor rarities as the numbers the asset paths use (`frame_degree_{m|s}_{1..4}`). */
-const HONOR_RARITY_LEVELS: Record<string, number> = { low: 1, middle: 2, high: 3, highest: 4 };
 /** Asset sites that publish a `sekai-<region>-assets` bundle; honors are only in their own region. */
 const HONOR_ASSET_REGIONS = new Set(["jp", "cn", "tw", "en"]);
 
@@ -469,14 +460,6 @@ function honorTypeLabel(t: (key: string) => string, type: string | undefined): s
 }
 
 /**
- * Only the highest-rarity (star) character honor is composed from a background style plus a word:
- * the plates below it ship as one finished image, so they have nothing to swap.
- */
-function supportsHonorStyle(honor: HonorRow | null | undefined): boolean {
-    return honor?.honorRarity === "highest";
-}
-
-/**
  * The medallions a character honor can show: every background style paired with every word (two
  * of each, so four plates). The sub slots draw the style alone, so they offer one plate per style.
  * `null` ids mean "the honor's own default", which the plate itself never needs to draw.
@@ -571,6 +554,8 @@ interface HonorThumbProps {
     /** A character honor's chosen background style and word (honorBackgrounds / honorWords ids). */
     honorBackgroundId?: number | null;
     honorWordId?: number | null;
+    /** The level to draw: the player's own, else the honor's first one. */
+    honorLevel?: number;
 }
 
 /** What an account's own server publishes, so its ids mean what the game means by them. */
@@ -587,7 +572,7 @@ interface AccountMasters {
  * and the missing-asset placeholder, so the picker and the slot rows reuse it instead of a raw
  * `<img>` (a plain image URL 404s for every honor whose art lives in another region's bundle).
  */
-function HonorThumb({ honor, honorGroup, sub, source, width, fluid, honorBackgroundId, honorWordId }: HonorThumbProps) {
+function HonorThumb({ honor, honorGroup, honorLevel, sub, source, width, fluid, honorBackgroundId, honorWordId }: HonorThumbProps) {
     return (
         <span
             className={cn("block shrink-0", fluid && "w-full min-w-0 flex-1")}
@@ -596,7 +581,7 @@ function HonorThumb({ honor, honorGroup, sub, source, width, fluid, honorBackgro
             <DegreeImage
                 honor={honor as unknown as IHonorInfo}
                 honorGroup={honorGroup as unknown as IHonorGroup | undefined}
-                honorLevel={honor.levels?.[0]?.level}
+                honorLevel={honorLevel ?? honor.levels?.[0]?.level}
                 sub={sub}
                 source={source}
                 honorBackgroundId={honorBackgroundId ?? undefined}
@@ -679,6 +664,11 @@ function PlayerFramesContent() {
     const [masterRank, setMasterRank] = useState(PLACEHOLDER_MASTER_RANK);
     const [rawHonors, setRawHonors] = useState<{ honors: HonorRow[]; groups: HonorGroupRow[] } | null>(null);
     const [honorIds, setHonorIds] = useState<(number | null)[]>([null, null, null]);
+    /**
+     * The level the account has on each title. It picks the art band (a mission title changes its
+     * bundle every ten levels) and the level badge, so the card shows the same thing the game does.
+     */
+    const [honorLevels, setHonorLevels] = useState<(number | null)[]>([null, null, null]);
     const [honorStyles, setHonorStyles] = useState<HonorSlotStyle[]>(newHonorStyles);
     const [honorPicked, setHonorPicked] = useState(false);
     /**
@@ -1174,78 +1164,14 @@ function PlayerFramesContent() {
                     if (!honor) return null;
                     const sub = slot > 0;
                     const group = slotLibrary?.groupById.get(honor.groupId);
-                    // Masterdata writes `""` for a field the family does not use, so the fallbacks
-                    // have to treat an empty string as absent: the achievement / mission families
-                    // leave `honorRarity` and `assetbundleName` empty and carry both on every level
-                    // (`honor_3014_*` is `highest` on all 100 of them). `DegreeImage` falls back the
-                    // same way, and the card has to agree with the title list next to it.
-                    const rarity = honor.honorRarity || honor.levels?.[0]?.honorRarity || "low";
-                    const rarityLevel = HONOR_RARITY_LEVELS[rarity] ?? 1;
-                    // `_load_normal_honor_base_image`: the group's degree background first, then the
-                    // honor's own bundle, and `rank_live/honor` for the rank-match family. A mission
-                    // title keeps its bundle on the level, not on the honor, so the level the rest of
-                    // the preview draws (the first one) supplies it.
-                    const rankMatch = group?.honorType === "rank_match";
-                    const honorBundle = honor.assetbundleName || honor.levels?.[0]?.assetbundleName || null;
-                    const bundles = [
-                        ...new Set(
-                            (rankMatch
-                                ? [group?.backgroundAssetbundleName ?? honorBundle]
-                                : [group?.backgroundAssetbundleName, honorBundle]
-                            ).filter((bundle): bundle is string => Boolean(bundle)),
-                        ),
-                    ];
-                    const backgroundUrls: string[] = [];
-                    for (const regionSource of [...new Set([slotHonorSource, source])]) {
-                        for (const bundle of bundles) {
-                            backgroundUrls.push(
-                                rankMatch
-                                    ? getHonorRankMatchBgUrl(bundle, sub, regionSource)
-                                    : getHonorBgUrl(bundle, sub, regionSource),
-                            );
-                        }
-                    }
-                    // The family's placement plate: a rank-match honor's own bundle holds its tier
-                    // ("MASTER RANK", …), an event title its own ranking plate, a mission title the
-                    // scroll its counter is printed on. All are pasted over the framed badge.
-                    const missionScroll = Boolean(honor.honorMissionType) && Boolean(honorBundle);
-                    const overlayUrls = honorBundle && group?.honorType === "event"
-                        ? [...new Set([slotHonorSource, source])].map(regionSource =>
-                            getHonorRankUrl(honorBundle, "rank", sub, regionSource),
-                        )
-                        : rankMatch && honorBundle
-                            ? [...new Set([slotHonorSource, source])].map(regionSource =>
-                                getHonorRankMatchTierUrl(honorBundle, sub, regionSource),
-                            )
-                            : missionScroll && honorBundle
-                                ? [...new Set([slotHonorSource, source])].map(regionSource =>
-                                    getHonorRankUrl(honorBundle, "scroll", false, regionSource),
-                                )
-                                : [];
-                    // `_add_honor_frame`: a birthday / high-rarity family ships its own frame.
-                    const frameName = group?.frameName;
-                    const customFrame =
-                        frameName &&
-                        (rarityLevel >= 3 || (frameName.startsWith("honor_frame_birthday") && rarityLevel >= 2))
-                            ? frameName
-                            : null;
-                    // The frame is read from the slot's own region as well: a server only publishes
-                    // its own frames, so a CN-only honor's custom frame is a 404 on the JP site. Asking
-                    // only the page's region silently downgraded it to the default rarity sprite, which
-                    // is why the card and the title list could show two different frames. The slot's
-                    // region is asked first, the default sprite only once both customs failed.
-                    const frameSources = [...new Set([slotHonorSource, source])];
-                    const frameUrls = [
-                        ...(customFrame
-                            ? frameSources.map(regionSource => getHonorCustomFrameUrl(customFrame, rarity, sub, regionSource))
-                            : []),
-                        ...new Set(frameSources.map(regionSource => getHonorFrameUrl(rarity, sub, regionSource))),
-                    ];
-                    // A character honor is a background style + a word, and only the star plate has
-                    // those two parts (the lower rarities ship one finished image).
+                    // A character honor's style is only composed when the player picked one; otherwise
+                    // the legacy degree art already carries its word. `DegreeImage` draws the same way,
+                    // and both take the actual asset decision from `resolveHonorArt`.
                     const slotStyle = honorStyles[slot] ?? EMPTY_HONOR_STYLE;
                     const slotCharacterStyles = honorStylesForSlot(slot);
-                    const characterStyle = slotCharacterStyles && group?.honorType === "character" && supportsHonorStyle(honor)
+                    const stylePicked = supportsHonorStyle(honor, group)
+                        && (slotStyle.backgroundId !== null || slotStyle.wordId !== null);
+                    const characterStyle = slotCharacterStyles && stylePicked
                         ? resolveCharacterHonorStyle(
                               slotCharacterStyles,
                               honor.groupId,
@@ -1253,35 +1179,60 @@ function PlayerFramesContent() {
                               slotStyle.wordId ?? undefined,
                           )
                         : null;
-                    const styleBackgroundUrls = characterStyle?.background
-                        ? [...new Set([slotHonorSource, source])].map(regionSource =>
-                              getHonorBackgroundUrl(characterStyle.background!.assetbundleName, sub, regionSource),
-                          )
-                        : [];
-                    const wordUrls = !sub && characterStyle?.word
-                        ? [...new Set([slotHonorSource, source])].map(regionSource =>
-                              getHonorWordUrl(characterStyle.word!.assetbundleName, rarity, regionSource),
-                          )
-                        : [];
-                    const [styleBackground, frame, overlay, word] = await Promise.all([
-                        styleBackgroundUrls.length > 0 ? loadFirstSprite(styleBackgroundUrls) : Promise.resolve(null),
-                        loadFirstSprite(frameUrls),
-                        overlayUrls.length > 0 ? loadFirstSprite([...new Set(overlayUrls)]) : Promise.resolve(null),
-                        wordUrls.length > 0 ? loadFirstSprite(wordUrls) : Promise.resolve(null),
+                    const spec = resolveHonorArt({
+                        honor,
+                        group,
+                        level: honorLevels[slot] ?? null,
+                        sub,
+                        // The title's own region first, then the page's: a server only publishes its
+                        // own art, and a CN-only title is a 404 on the JP site.
+                        sources: [slotHonorSource, source],
+                        style: characterStyle?.background
+                            ? {
+                                  backgroundAssetbundleName: characterStyle.background.assetbundleName,
+                                  wordAssetbundleName: characterStyle.word?.assetbundleName ?? null,
+                              }
+                            : null,
+                    });
+                    const [styleBackground, frame, overlay, word, badge, badgeSix] = await Promise.all([
+                        spec.styleBackgrounds.length > 0
+                            ? loadFirstSprite(spec.styleBackgrounds)
+                            : Promise.resolve(null),
+                        loadFirstSprite(spec.frames),
+                        spec.overlay ? loadFirstSprite(spec.overlay.urls) : Promise.resolve(null),
+                        spec.words.length > 0 ? loadFirstSprite(spec.words) : Promise.resolve(null),
+                        spec.levelBadge ? loadFirstSprite(spec.levelBadge.urls) : Promise.resolve(null),
+                        spec.levelBadge?.urlsSix ? loadFirstSprite(spec.levelBadge.urlsSix) : Promise.resolve(null),
                     ]);
                     // The style background carries no word; if that art is missing the legacy degree
                     // art (word baked in) is still drawn, so the word is only layered over the style.
-                    const background = styleBackground ?? await loadFirstSprite([...new Set(backgroundUrls)]);
+                    const background = styleBackground ?? (spec.backgrounds.length > 0
+                        ? await loadFirstSprite(spec.backgrounds)
+                        : null);
                     if (!background && !frame) return null;
+                    const overlayKind = spec.overlay?.kind ?? null;
                     return {
                         background: background?.image ?? null,
                         word: styleBackground && word ? word.image : null,
                         frame: frame?.image ?? null,
-                        overlay: overlay
+                        overlay: overlay && overlayKind
                             ? {
-                                image: overlay.image,
-                                box: missionScroll ? honorScrollBox(overlay, sub) : honorPlateBox(overlay, sub, rankMatch),
-                            }
+                                  image: overlay.image,
+                                  box: overlayKind === "scroll"
+                                      ? honorScrollBox(overlay, sub)
+                                      : honorPlateBox(overlay, sub, overlayKind === "rank_match"),
+                              }
+                            : null,
+                        levelBadge: spec.levelBadge
+                            ? {
+                                  kind: spec.levelBadge.kind,
+                                  count: spec.levelBadge.count,
+                                  image: badge?.image ?? null,
+                                  imageSix: badgeSix?.image ?? null,
+                                  // The badge offsets are expressed in the art canvas itself.
+                                  artWidth: sub ? 180 : 380,
+                                  artHeight: 80,
+                              }
                             : null,
                     } as PlayerFrameHonorArt;
                 }),
@@ -1340,6 +1291,7 @@ function PlayerFramesContent() {
         honorLibrary,
         honorKey,
         honorStyles,
+        honorLevels,
         cardLevel,
         masterRank,
         cardFontStack,
@@ -1408,6 +1360,7 @@ function PlayerFramesContent() {
         }
         const nextIds = [...effectiveHonorIds];
         const nextStyles = [...honorStyles];
+        const nextLevels = [...honorLevels];
         for (const [slot] of randomSlots) {
             const candidates = pool.filter(honor => !usedPlates.has(honorPlateKey(honorLibrary, honor)));
             const honor = pickOne(candidates.length > 0 ? candidates : pool);
@@ -1416,12 +1369,15 @@ function PlayerFramesContent() {
             nextIds[slot] = honor.id;
             // The new title may belong to another group, so its slot starts from that group's default.
             nextStyles[slot] = EMPTY_HONOR_STYLE;
+            // …and from its own first level: the level the account had belongs to the title it had.
+            nextLevels[slot] = null;
         }
         if (!randomSlots.some(([slot]) => nextIds[slot] !== effectiveHonorIds[slot])) return;
         setHonorIds(nextIds);
         setHonorStyles(nextStyles);
+        setHonorLevels(nextLevels);
         setHonorPicked(true);
-    }, [randomTargets, editable, cardIndex, honorLibrary, effectiveHonorIds, honorStyles, honorSlotHonors, honorLibraryForSlot]);
+    }, [randomTargets, editable, cardIndex, honorLibrary, effectiveHonorIds, honorStyles, honorLevels, honorSlotHonors, honorLibraryForSlot]);
 
     const reset = useCallback(() => {
         setParts({ ...DEFAULT_PARTS });
@@ -1431,6 +1387,7 @@ function PlayerFramesContent() {
         // Reset everything, so the auto card is resolved again from the frame's own character.
         autoCardCharacterId.current = null;
         setHonorIds([null, null, null]);
+        setHonorLevels([null, null, null]);
         setHonorStyles(newHonorStyles());
         setHonorPicked(false);
         // The in-game name read from the account stays: only reading an account again replaces it.
@@ -1491,6 +1448,7 @@ function PlayerFramesContent() {
                 // Slots follow the honor's own `seq` (1 is the main title), so a slot the player left
                 // empty — or one whose honor type the site cannot draw — does not shift the others.
                 const slots: (number | null)[] = [null, null, null];
+                const nextLevels: (number | null)[] = [null, null, null];
                 const nextStyles = newHonorStyles();
                 extras.honors.forEach((honor, index) => {
                     const seq = Math.round(honor.seq ?? 0);
@@ -1502,11 +1460,15 @@ function PlayerFramesContent() {
                         backgroundId: honor.honorBackgroundId ?? null,
                         wordId: honor.honorWordId ?? null,
                     };
+                    // …and every honor its own level, which picks the art band and the level badge.
+                    const level = Math.round(honor.honorLevel ?? 0);
+                    nextLevels[slot] = Number.isFinite(level) && level > 0 ? level : null;
                 });
                 if (slots.some(id => id !== null)) {
                     setHonorIds(slots);
                     setHonorPicked(true);
                 }
+                setHonorLevels(nextLevels);
                 setHonorStyles(nextStyles);
                 // The frame the account attached: the parse sorts by playerFrameId, so the newest
                 // (largest id) wins. A combination (WL3) frame also carries the six parts the player
@@ -1573,6 +1535,10 @@ function PlayerFramesContent() {
                 next[slot] = honorId;
                 return next;
             });
+            // A title picked by hand carries no level: it starts from its own first one.
+            if (effectiveHonorIds[slot] !== honorId) {
+                setHonorLevels(current => current.map((level, index) => (index === slot ? null : level)));
+            }
             if (style) {
                 // A star plate's row writes its own style/word pair together with the title.
                 setHonorStyles(current => current.map((item, index) => (index === slot ? style : item)));
@@ -1791,9 +1757,9 @@ function PlayerFramesContent() {
      */
     const pickerCombinations = useCallback(
         (honor: HonorRow): HonorStyleCombination[] => {
-            if (!pageHonorStyles || !supportsHonorStyle(honor) || honorPickerSlot === null) return [];
+            if (!pageHonorStyles || honorPickerSlot === null) return [];
             const group = honorLibrary?.groupById.get(honor.groupId);
-            if (group?.honorType !== "character") return [];
+            if (!supportsHonorStyle(honor, group)) return [];
             return honorStyleCombinations(characterHonorStyleOptions(pageHonorStyles, honor.groupId));
         },
         [pageHonorStyles, honorLibrary, honorPickerSlot],
@@ -1881,12 +1847,13 @@ function PlayerFramesContent() {
                                 <HonorThumb
                                     honor={honor}
                                     honorGroup={group}
+                                    honorLevel={honorLevels[slot] ?? undefined}
                                     sub={sub}
                                     source={honorSourceForSlot(slot)}
                                     width={sub ? 81 : 171}
                                     fluid
-                                    honorBackgroundId={supportsHonorStyle(honor) ? style.backgroundId : null}
-                                    honorWordId={supportsHonorStyle(honor) ? style.wordId : null}
+                                    honorBackgroundId={supportsHonorStyle(honor, group) ? style.backgroundId : null}
+                                    honorWordId={supportsHonorStyle(honor, group) ? style.wordId : null}
                                 />
                             ) : (
                                 <span className="flex h-8 min-w-0 flex-1 items-center type-body-s text-on-surface-variant">
