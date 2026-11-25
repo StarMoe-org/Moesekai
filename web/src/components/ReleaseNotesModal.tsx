@@ -4,23 +4,27 @@ import React, { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { useTheme } from "@/contexts/ThemeContext";
 import { MOE_LOGO_URL } from "@/lib/assets";
-import { Button, Dialog, Icon, cn } from "@/components/md3";
+import { STORY_STUDIO_DESKTOP_URL } from "@/lib/story-maker-fork";
+import ExternalLink from "@/components/ExternalLink";
+import { Button, Dialog, Icon, buttonClassName, cn } from "@/components/md3";
 import {
     mdArrowForward,
     mdBolt,
-    mdCasino,
+    mdChatBubble,
     mdCheck,
     mdCheckCircle,
-    mdHistory,
-    mdImageSearch,
-    mdManageSearch,
+    mdDownload,
+    mdForum,
+    mdMovieEdit,
+    mdOpenInNew,
     mdRefresh,
     mdSettings,
+    mdTheaters,
     mdWandStars,
 } from "@/components/md3/icons";
 
-export const RELEASE_NOTES_VERSION = "2.1";
-export const RELEASE_NOTES_STORAGE_KEY = "moesekai_release_notes_seen_v2_1";
+export const RELEASE_NOTES_VERSION = "2.2";
+export const RELEASE_NOTES_STORAGE_KEY = "moesekai_release_notes_seen_v2_2";
 
 export function hasSeenReleaseNotes(): boolean {
     try {
@@ -43,6 +47,7 @@ interface FeatureAction {
     href: string;
     variant: "tonal" | "outlined";
     icon?: string;
+    external?: boolean;
 }
 
 interface FlagshipFeature {
@@ -62,80 +67,92 @@ interface FlagshipFeature {
 
 const FLAGSHIP_FEATURES: readonly FlagshipFeature[] = [
     {
-        id: "story-search",
-        icon: mdManageSearch,
-        tagKey: "common.releaseNotes.v2_1.storySearch.tag",
-        titleKey: "common.releaseNotes.v2_1.storySearch.title",
-        descriptionKey: "common.releaseNotes.v2_1.storySearch.description",
+        id: "story-maker",
+        icon: mdMovieEdit,
+        tagKey: "common.releaseNotes.v2_2.storyMaker.tag",
+        titleKey: "common.releaseNotes.v2_2.storyMaker.title",
+        descriptionKey: "common.releaseNotes.v2_2.storyMaker.description",
         bulletKeys: [
-            "common.releaseNotes.v2_1.storySearch.bulletSemantic",
-            "common.releaseNotes.v2_1.storySearch.bulletHybrid",
-            "common.releaseNotes.v2_1.storySearch.bulletFilters",
+            "common.releaseNotes.v2_2.storyMaker.bulletAi",
+            "common.releaseNotes.v2_2.storyMaker.bulletStudio",
+            "common.releaseNotes.v2_2.storyMaker.bulletPublish",
         ],
-        screenshotSrc: "/images/releases/v2.1/shot-story-search.png",
+        screenshotSrc: "/images/releases/v2.2/shot-story-maker.png",
         screenshotAspectClass: "aspect-[16/10]",
         screenshotPositionClass: "object-top",
-        imageAltKey: "common.releaseNotes.v2_1.storySearch.imageAlt",
-        primaryHref: "/story-search",
+        imageAltKey: "common.releaseNotes.v2_2.storyMaker.imageAlt",
+        primaryHref: "/story-maker",
         actions: [
             {
-                labelKey: "common.releaseNotes.v2_1.storySearch.action",
-                href: "/story-search",
-                variant: "tonal",
-            },
-        ],
-    },
-    {
-        id: "gacha-3d",
-        icon: mdCasino,
-        tagKey: "common.releaseNotes.v2_1.gacha3d.tag",
-        titleKey: "common.releaseNotes.v2_1.gacha3d.title",
-        descriptionKey: "common.releaseNotes.v2_1.gacha3d.description",
-        bulletKeys: [
-            "common.releaseNotes.v2_1.gacha3d.bulletStage",
-            "common.releaseNotes.v2_1.gacha3d.bulletDiy",
-            "common.releaseNotes.v2_1.gacha3d.bulletDetail",
-        ],
-        screenshotSrc: "/images/releases/v2.1/shot-gacha-3d.png",
-        screenshotAspectClass: "aspect-video",
-        screenshotPositionClass: "object-center",
-        imageAltKey: "common.releaseNotes.v2_1.gacha3d.imageAlt",
-        primaryHref: "/gacha-simulator",
-        actions: [
-            {
-                labelKey: "common.releaseNotes.v2_1.gacha3d.action",
-                href: "/gacha-simulator",
-                variant: "tonal",
-            },
-        ],
-    },
-    {
-        id: "asset-explorer",
-        icon: mdImageSearch,
-        tagKey: "common.releaseNotes.v2_1.assetExplorer.tag",
-        titleKey: "common.releaseNotes.v2_1.assetExplorer.title",
-        descriptionKey: "common.releaseNotes.v2_1.assetExplorer.description",
-        bulletKeys: [
-            "common.releaseNotes.v2_1.assetExplorer.bulletSearch",
-            "common.releaseNotes.v2_1.assetExplorer.bulletViews",
-            "common.releaseNotes.v2_1.assetExplorer.bulletVersions",
-        ],
-        screenshotSrc: "/images/releases/v2.1/shot-asset-explorer.png",
-        screenshotAspectClass: "aspect-[16/10]",
-        screenshotPositionClass: "object-top",
-        imageAltKey: "common.releaseNotes.v2_1.assetExplorer.imageAlt",
-        primaryHref: "/asset-viewer",
-        actions: [
-            {
-                labelKey: "common.releaseNotes.v2_1.assetExplorer.actionExplorer",
-                href: "/asset-viewer",
+                labelKey: "common.releaseNotes.v2_2.storyMaker.actionWeb",
+                href: "/story-maker",
                 variant: "tonal",
             },
             {
-                labelKey: "common.releaseNotes.v2_1.assetExplorer.actionVersions",
-                href: "/asset-versions",
+                labelKey: "common.releaseNotes.v2_2.storyMaker.actionDesktop",
+                href: STORY_STUDIO_DESKTOP_URL,
                 variant: "outlined",
-                icon: mdHistory,
+                icon: mdDownload,
+                external: true,
+            },
+        ],
+    },
+    {
+        id: "community",
+        icon: mdForum,
+        tagKey: "common.releaseNotes.v2_2.community.tag",
+        titleKey: "common.releaseNotes.v2_2.community.title",
+        descriptionKey: "common.releaseNotes.v2_2.community.description",
+        bulletKeys: [
+            "common.releaseNotes.v2_2.community.bulletSquare",
+            "common.releaseNotes.v2_2.community.bulletRich",
+            "common.releaseNotes.v2_2.community.bulletStories",
+        ],
+        screenshotSrc: "/images/releases/v2.2/shot-community.png",
+        screenshotAspectClass: "aspect-[16/10]",
+        screenshotPositionClass: "object-top",
+        imageAltKey: "common.releaseNotes.v2_2.community.imageAlt",
+        primaryHref: "/community",
+        actions: [
+            {
+                labelKey: "common.releaseNotes.v2_2.community.actionSquare",
+                href: "/community",
+                variant: "tonal",
+            },
+            {
+                labelKey: "common.releaseNotes.v2_2.community.actionStories",
+                href: "/community/stories",
+                variant: "outlined",
+                icon: mdTheaters,
+            },
+        ],
+    },
+    {
+        id: "comments",
+        icon: mdChatBubble,
+        tagKey: "common.releaseNotes.v2_2.comments.tag",
+        titleKey: "common.releaseNotes.v2_2.comments.title",
+        descriptionKey: "common.releaseNotes.v2_2.comments.description",
+        bulletKeys: [
+            "common.releaseNotes.v2_2.comments.bulletCoverage",
+            "common.releaseNotes.v2_2.comments.bulletInteract",
+            "common.releaseNotes.v2_2.comments.bulletNotify",
+        ],
+        screenshotSrc: "/images/releases/v2.2/shot-comments.png",
+        screenshotAspectClass: "aspect-[16/10]",
+        screenshotPositionClass: "object-top",
+        imageAltKey: "common.releaseNotes.v2_2.comments.imageAlt",
+        primaryHref: "/cards",
+        actions: [
+            {
+                labelKey: "common.releaseNotes.v2_2.comments.actionCards",
+                href: "/cards",
+                variant: "tonal",
+            },
+            {
+                labelKey: "common.releaseNotes.v2_2.comments.actionMusic",
+                href: "/music",
+                variant: "outlined",
             },
         ],
     },
@@ -143,27 +160,27 @@ const FLAGSHIP_FEATURES: readonly FlagshipFeature[] = [
 
 const MISC_UPDATES = [
     {
-        id: "auto-load",
-        titleKey: "common.releaseNotes.v2_1.misc.autoLoadTitle",
-        descKey: "common.releaseNotes.v2_1.misc.autoLoadDesc",
+        id: "passport",
+        titleKey: "common.releaseNotes.v2_2.misc.passportTitle",
+        descKey: "common.releaseNotes.v2_2.misc.passportDesc",
         featured: true,
     },
     {
-        id: "cards",
-        titleKey: "common.releaseNotes.v2_1.misc.cardsTitle",
-        descKey: "common.releaseNotes.v2_1.misc.cardsDesc",
+        id: "masterdata-diff",
+        titleKey: "common.releaseNotes.v2_2.misc.masterdataDiffTitle",
+        descKey: "common.releaseNotes.v2_2.misc.masterdataDiffDesc",
         featured: false,
     },
     {
-        id: "account",
-        titleKey: "common.releaseNotes.v2_1.misc.accountTitle",
-        descKey: "common.releaseNotes.v2_1.misc.accountDesc",
+        id: "live2d-honors",
+        titleKey: "common.releaseNotes.v2_2.misc.live2dHonorsTitle",
+        descKey: "common.releaseNotes.v2_2.misc.live2dHonorsDesc",
         featured: false,
     },
     {
         id: "polish",
-        titleKey: "common.releaseNotes.v2_1.misc.polishTitle",
-        descKey: "common.releaseNotes.v2_1.misc.polishDesc",
+        titleKey: "common.releaseNotes.v2_2.misc.polishTitle",
+        descKey: "common.releaseNotes.v2_2.misc.polishDesc",
         featured: false,
     },
 ] as const;
@@ -243,7 +260,7 @@ export default function ReleaseNotesModal({
         <Dialog
             isOpen={isOpen}
             onClose={onClose}
-            title={t("common.releaseNotes.v2_1.dialogTitle")}
+            title={t("common.releaseNotes.v2_2.dialogTitle")}
             size="lg"
             fullscreenOnMobile
             showClose
@@ -257,7 +274,7 @@ export default function ReleaseNotesModal({
                         size="s"
                         onClick={() => onNavigate("/changelog")}
                     >
-                        {t("common.releaseNotes.v2_1.fullChangelog")}
+                        {t("common.releaseNotes.v2_2.fullChangelog")}
                     </Button>
                     <Button
                         variant="filled"
@@ -265,7 +282,7 @@ export default function ReleaseNotesModal({
                         trailingIcon={mdArrowForward}
                         onClick={onClose}
                     >
-                        {t("common.releaseNotes.v2_1.startExploring")}
+                        {t("common.releaseNotes.v2_2.startExploring")}
                     </Button>
                 </div>
             }
@@ -291,15 +308,15 @@ export default function ReleaseNotesModal({
                         />
                         <span className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-0.5 type-label-m text-on-primary">
                             <Icon path={mdWandStars} size={15} />
-                            {t("common.releaseNotes.v2_1.badge")}
+                            {t("common.releaseNotes.v2_2.badge")}
                         </span>
                     </div>
                 </div>
                 <h3 className="mt-3 type-headline-s text-on-surface">
-                    {t("common.releaseNotes.v2_1.heroTitle")}
+                    {t("common.releaseNotes.v2_2.heroTitle")}
                 </h3>
                 <p className="mt-1.5 type-body-m text-on-surface-variant">
-                    {t("common.releaseNotes.v2_1.heroSubtitle")}
+                    {t("common.releaseNotes.v2_2.heroSubtitle")}
                 </p>
             </section>
 
@@ -347,16 +364,29 @@ export default function ReleaseNotesModal({
 
                             <div className="flex flex-wrap items-center gap-2 pt-1">
                                 {feature.actions.map((action) => (
-                                    <Button
-                                        key={action.href}
-                                        variant={action.variant}
-                                        size="xs"
-                                        icon={action.icon}
-                                        trailingIcon={mdArrowForward}
-                                        onClick={() => onNavigate(action.href)}
-                                    >
-                                        {t(action.labelKey)}
-                                    </Button>
+                                    action.external ? (
+                                        <ExternalLink
+                                            key={action.href}
+                                            href={action.href}
+                                            onClick={onClose}
+                                            className={buttonClassName({ variant: action.variant, size: "xs" })}
+                                        >
+                                            {action.icon && <Icon path={action.icon} size={18} />}
+                                            <span>{t(action.labelKey)}</span>
+                                            <Icon path={mdOpenInNew} size={16} />
+                                        </ExternalLink>
+                                    ) : (
+                                        <Button
+                                            key={action.href}
+                                            variant={action.variant}
+                                            size="xs"
+                                            icon={action.icon}
+                                            trailingIcon={mdArrowForward}
+                                            onClick={() => onNavigate(action.href)}
+                                        >
+                                            {t(action.labelKey)}
+                                        </Button>
+                                    )
                                 ))}
                             </div>
                         </div>
@@ -371,7 +401,7 @@ export default function ReleaseNotesModal({
                         <Icon path={mdBolt} size={20} />
                     </span>
                     <h3 className="type-title-m text-on-surface">
-                        {t("common.releaseNotes.v2_1.misc.title")}
+                        {t("common.releaseNotes.v2_2.misc.title")}
                     </h3>
                 </div>
 
@@ -405,23 +435,23 @@ export default function ReleaseNotesModal({
                             <Icon path={mdSettings} size={20} />
                         </span>
                         <h3 className="type-title-m text-on-surface">
-                            {t("common.releaseNotes.v2_1.networkTip.title")}
+                            {t("common.releaseNotes.v2_2.networkTip.title")}
                         </h3>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-surface-container-high px-2.5 py-0.5 type-label-s text-on-surface-variant">
-                        {t("common.releaseNotes.v2_1.networkTip.currentLineLabel", { line: currentLineLabel })}
+                        {t("common.releaseNotes.v2_2.networkTip.currentLineLabel", { line: currentLineLabel })}
                     </span>
                 </div>
 
                 <p className="type-body-m text-on-surface-variant">
-                    {t("common.releaseNotes.v2_1.networkTip.description")}
+                    {t("common.releaseNotes.v2_2.networkTip.description")}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-2 pt-0.5">
                     {isUsingBackupLine ? (
                         <span className="inline-flex h-8 items-center gap-1.5 rounded-full bg-primary-container px-3 type-label-m text-on-primary-container">
                             <Icon path={mdCheckCircle} size={16} />
-                            {t("common.releaseNotes.v2_1.networkTip.alreadyBackup")}
+                            {t("common.releaseNotes.v2_2.networkTip.alreadyBackup")}
                         </span>
                     ) : (
                         <Button
@@ -430,7 +460,7 @@ export default function ReleaseNotesModal({
                             icon={mdRefresh}
                             onClick={handleSwitchToBackupLine}
                         >
-                            {t("common.releaseNotes.v2_1.networkTip.switchToBackup")}
+                            {t("common.releaseNotes.v2_2.networkTip.switchToBackup")}
                         </Button>
                     )}
                     <Button
@@ -439,7 +469,7 @@ export default function ReleaseNotesModal({
                         icon={mdSettings}
                         onClick={onOpenAssetLineSettings}
                     >
-                        {t("common.releaseNotes.v2_1.networkTip.openSettings")}
+                        {t("common.releaseNotes.v2_2.networkTip.openSettings")}
                     </Button>
                 </div>
             </section>

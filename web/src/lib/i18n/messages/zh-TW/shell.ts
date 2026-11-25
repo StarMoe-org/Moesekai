@@ -215,7 +215,7 @@ export const zhTWSettings = {
         versionLabel: "本站版本",
         commitLabel: "建置提交",
         buildDateLabel: "建置日期",
-        viewReleaseHighlights: "v2.1 更新亮點",
+        viewReleaseHighlights: "v2.2 更新亮點",
         viewRelease: "發布頁",
         viewChangelog: "更新日誌",
         viewSupport: "支持我們",

@@ -305,7 +305,7 @@ function AppChrome({
         return () => cancelAnimationFrame(raf);
     }, [immersiveMode]);
 
-    // Auto-open the v2.1 release announcement once for visitors who have not seen it yet.
+    // Auto-open the v2.2 release announcement once for visitors who have not seen it yet.
     useEffect(() => {
         if (immersiveMode || isScreenshotMode) {
             return;
@@ -313,7 +313,7 @@ function AppChrome({
         const params = new URLSearchParams(window.location.search);
         const mode = params.get("mode");
         const suppress = params.get("noReleaseModal");
-        const forceOpen = params.get("release") === "v2.1" || params.get("whatsNew") === "1";
+        const forceOpen = params.get("release") === "v2.2" || params.get("whatsNew") === "1";
 
         if (mode === "screenshot" || suppress === "1" || suppress === "true") {
             const raf = requestAnimationFrame(() => setReleaseNotesCheckSettled(true));
@@ -572,7 +572,7 @@ function AppChrome({
                     {/* Keyboard Shortcuts Help */}
                     <KeyboardShortcutsHelp isOpen={isShortcutsHelpOpen} onClose={() => setIsShortcutsHelpOpen(false)} />
 
-                    {/* v2.1 Release Announcement Modal */}
+                    {/* v2.2 Release Announcement Modal */}
                     <ReleaseNotesModal
                         isOpen={isReleaseNotesOpen}
                         onClose={handleCloseReleaseNotes}

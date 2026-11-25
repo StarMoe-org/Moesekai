@@ -185,7 +185,7 @@ export default function MainFooter({ onOpenReleaseNotes }: MainFooterProps) {
                                             onClick={onOpenReleaseNotes}
                                             className="focus-ring cursor-pointer rounded-full hover:text-primary"
                                         >
-                                            {t("common.releaseNotes.v2_1.reopenTrigger")}
+                                            {t("common.releaseNotes.v2_2.reopenTrigger")}
                                         </button>
                                     </>
                                 )}

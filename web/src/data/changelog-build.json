@@ -2,6 +2,96 @@
   "markdown": "# 更新日志\n\n## v2.2.0 — StarMoe 通行证账号系统与社区广场\n\n账号体系围绕 StarMoe 通行证全面重做：登录后游戏账号跨设备同步，Haruki 授权由 StarMoe Connect 统一保管，不登录也能照常使用；同时上线社区广场，卡牌预览与剧情搜索继续增强。\n\n- **StarMoe 通行证账号系统（`/account`）**：新增「我的账号」页，在一处管理通行证、Haruki 数据来源、游戏账号和这台设备上的数据。登录后手动添加的游戏账号保存到通行证，换设备、用 Moebot 都是同一份；连接 Haruki 后，验证过的账号会自动出现，没开公开 API 也能读取完整数据。不登录时为访客模式，账号只保存在本机。\n- **侧边栏账号中心**：侧边栏底部改为浮动的玻璃账号面板，可以查看通行证、切换正在查看的游戏账号、添加和管理账号；个人主页（`/profile`）精简为只展示当前账号的资料。\n- **工具页跟随当前账号**：卡牌、歌曲、素材进度页顶部改为「正在查看」栏，在任何地方切换账号都会同步过来；组卡推荐、控分、MySekai 等工具统一为「一键填入我的游戏账号」，也能直接添加；猜歌曲排行榜改为从 Haruki 已验证的账号中选择关联。\n- **社区广场（`/community`）**：全新的玩家交流社区，支持发帖、评论、官方贴纸，以及在帖子中嵌入站内卡牌和乐曲；卡牌等详情页新增评论区，可以用卡面作为头像；配套举报与审核台。\n- **其他改进**：剧情搜索的本地检索支持全部 5 个服务器（AI 语义检索仍为国服 / 日服）；卡牌缩略图支持悬停切换，触屏也能预览大图，大卡分屏悬停更流畅；Live2D 查看器改为直接从资源站读取各服务器的模型和动作；修复 3D 服装眼部高光，以及手机端筛选抽屉和资产列表的滚动问题。\n- **隐私政策更新**：说明登录后保存在服务器上的数据、会话 Cookie 和第三方服务。旧的浏览器内 Haruki 绑定将于 2026 年 12 月 20 日停用，请登录通行证并连接 Haruki 完成迁移。\n\n## v2.1.0 — 三大重磅新工具与全站体验升级\n\n全新剧情搜索器、3D 抽卡模拟器、多结构资产浏览器与版本追踪正式上线，同步带来全站触底自动展开、卡牌页全新视图及多项细节优化。\n\n- **全新剧情搜索器（`/story-search`）**：新增 AI 语义检索与浏览器本地文本 / 正则混合检索，记不清原台词也能按场景氛围或模糊印象定位名场面；支持国服 / 日服剧情库，按剧情类型、角色与团体筛选，支持详细 / 精简发言人视图切换与一键跳转阅读。\n- **全新 3D 抽卡模拟器（`/gacha-simulator`、`/gacha/[id]`）**：接入完整 3D 抽卡舞台演出，呈现开场动画、星级特效与卡面台词，支持跳过、静音、全屏与重播；新增通用历史卡池选择与 DIY 自选模拟（自定义概率、UP 卡面与保底规则），并在各卡池详情页同步支持 3D 模拟抽卡。\n- **全新资产浏览器与版本追踪（`/asset-viewer`、`/asset-versions`）**：全新分栏式多结构资产浏览器，支持原始存储、规范结构与客户端包三套视图及无损 PNG 原图预览下载；内置独家全游戏资源搜索，跨完整目录树一键检索文件与文件夹；资产版本页按时间线追踪增删改动，并智能区分源文件变动与仅格式转换更新。\n- **全站体验升级与杂项优化**：全局列表页新增「滑动到底部自动展开」（告别反复手动点击加载更多，可在设置 → 内容中随时开关）；卡牌页新增大图预览与表格视图并独立记忆桌面 / 移动端偏好；StarMoe 账号与互联同步升级；全服统一升级新版实时排行榜，同步修复歌词振假名、3D 服装索引、称号边框与移动端显示细节；新增 v2.1 版本更新公告弹窗与官方 MoeSekai 徽标矢量图更新。\n- **流畅访问小贴士**：若页面或图片资源加载较慢，可在「设置 → 数据 → Assets 线路」中切换为「备用线路」以获得更流畅的访问体验。\n\n## v2.0.0 — 正式版本机制上线\n\n站点启用三段式语义版本（`v主版本.次版本.修订号`），基准版本为 v2.0.0，机制详见 `docs/VERSIONING.md`。\n\n- 版本号由 git tag 自动派生：以最新 `vX.Y.Z` tag 为基准，之后的每个 commit 自动让修订号 +1（例如 v2.0.0 后第 37 个提交显示 v2.0.37），无需手工改版本文件。\n- 设置面板页脚与「关于」页显示真实版本号、构建提交与构建日期，并提供 GitHub 发布页 / 更新日志入口（此前页脚写死的 `1.8-preview-beta1` 已移除）。\n- 新增一键发版 GitHub Action（Release workflow）：选择 patch / minor / major 即可基于当前版本自动打 tag 并生成 GitHub Release；普通部署流程不变（push main 自动上线，镜像同时带 `v<版本>` tag）。\n- 新增站内更新日志页 `/changelog`（展示最近提交和本文件的手写记录，国内用户无需打开 GitHub 即可查看）；设置「关于」页的按钮改为竖排全宽，并新增「支持我们」直达赞助页的入口。\n- 修复生产环境 `/api/sponsors` 被 Go 网关的未知 API 兜底规则拦截为 404（赞助名单与 Ko-fi Webhook 此前在生产环境均不可达）；赞助者为零时改为显示空状态，不再误报「加载失败」。\n\n## 2026-09-19 — 代码审查修复轮\n\n一轮以“不丢失现有功能与行为”为前提的审查，共 28 个提交，全部为缺陷修复与一处文档更正，没有新增功能，没有接口变更。\n\n### 数据与缓存\n\n- masterdata 的 IndexedDB 缓存键加入游戏服务器，切换区服不再读到上一个区服的数据。\n- 按区服拉取 masterdata 时遵循资源站点偏好设置。\n- 搜索索引改为读取实际对外服务的 `/files` 路径。\n- htmlcache 在淘汰之后再写持久化伴随文件，不再先写后淘汰。\n- MCP 加载磁盘上真实存在的日服 metadata 映射。\n\n### 页面与交互\n\n- 卡牌缩略图各自生成独立的 clipPath id，不再互相覆盖。\n- 扭蛋卡池弹窗里真实非零的出率不再显示为 `0.00%`，低于 0.01% 的统一显示 `<0.01%`；仅在存在扭蛋详情时才显示出率徽章。\n- 音乐封面角标不再重复绘制；APPEND 难度能完整放入难度网格。\n- 「我的歌曲」用日文原题作为键来检索中文曲名。\n- 「我的卡牌」的技能类型筛选此前未接线，现已生效。\n- 贴纸工坊忽略过期的图片加载回调，避免旧图覆盖新图。\n- 非数字或为 0 的路由参数能正确结束加载态；服装与漫画的未找到提示显示原始路由片段，不再显示 `NaN`。\n- 实时排行榜（Next）修正两处被多余花括号破坏的类名。\n- 活动预测不再把所有较新的日服活动都标成 World Link。\n\n### 剧情、游戏与账号\n\n- 剧情语音地址按完整路径缓存，不再只按语音 id 缓存而互相串台。\n- 多人游戏两种模式下的格挡盾不再被减半统计。\n- 房主的回合结束广播移出 setState 更新函数执行。\n- 组卡分数控制真正复用常驻的组卡 worker。\n- OAuth 令牌刷新按账号去重，且不再因瞬时故障停用账号。\n- Service Worker 正确缓存跨域图片资源。\n\n### 服务端\n\n- `/api/gachas/` 下多余的路径片段返回 404。\n- markdown 协商在记录上游 HTML 前去掉 `Accept-Encoding`。\n- 更正 README：`HTML_CACHE_DIR` 为空并不会关闭磁盘缓存。\n\n### 验证\n\n- 门禁：`go build` / `go vet` / `go test` 均通过；`tsc` 与 `eslint` 无错误；`node --test` 121/121；`lint:i18n` 通过（含硬编码文案扫描、46 条可索引 SEO 路由、翻译覆盖校验）。\n- 构建：按 `Dockerfile` 的真实口径用 bun 跑通 `copy:wasm` → `sitemap` → `generate:metadata` → `build:next`，standalone 产物正常生成。\n- 部署产物实跑：standalone 配合 Go 网关，17 条真实路由与五种语言首页全部 200，`sitemap.xml` 与 `sitemap-main.xml` 正常。\n- 浏览器校验：桌面与 390px 移动端均无横向溢出，控制台零错误零警告；对改动过的路径逐项确认（卡池弹窗出率徽章、服装页无 `NaN`、`/api/gachas/` 多余片段 404）。\n",
   "commits": [
     {
+      "sha": "8ffde2ac82b3c7da3fd16f5ffbbc986d6fe3a905",
+      "date": "2026-11-25",
+      "subject": "chore(story-maker): upgrade @moesekai/story-{core,editor} to 0.3.2"
+    },
+    {
+      "sha": "bef01e0f11d8d9d61f875da6e1388ac4bf9e92df",
+      "date": "2026-11-25",
+      "subject": "feat(story-maker): add Desktop Studio & MoeSekai Agent onboarding dialog on web"
+    },
+    {
+      "sha": "5c172a47afc583ea7b7d26cc53cf676f1cadb555",
+      "date": "2026-11-24",
+      "subject": "feat(story-maker): upgrade @moesekai/story-{core,editor} to 0.3.0, sync msk skill, and add voice cue-sheet & preview UX"
+    },
+    {
+      "sha": "04e1dd1b81e6c9b373a1a026d8507cfe0c01537f",
+      "date": "2026-11-24",
+      "subject": "Merge pull request #178 from MawtoA/fix/ranking-next-view"
+    },
+    {
+      "sha": "144298360c262ae7873c10e71736fa436c37433d",
+      "date": "2026-11-24",
+      "subject": "fix(realtime-ranking-next): stop change time label from wrapping per character"
+    },
+    {
+      "sha": "7f2cf3dcae442bd5d04ef9311f90e68fab3f52f0",
+      "date": "2026-11-24",
+      "subject": "Merge pull request #177 from StarMoe-org/fix/masterdata-diff-asset-source"
+    },
+    {
+      "sha": "d9a32d880b6b5cbda5533ecfe3c05e9418ec6d2f",
+      "date": "2026-11-24",
+      "subject": "fix(masterdata-diff): use replaceAssetSourceRegion for AssetSourceType"
+    },
+    {
+      "sha": "cd17323686b74e2d57a7605b33954c26fc55acbd",
+      "date": "2026-11-24",
+      "subject": "Merge pull request #176 from StarMoe-org/feat/masterdata-diff-ai-preview"
+    },
+    {
+      "sha": "bba74991a51c549685993cf525b72471cfb30a23",
+      "date": "2026-11-24",
+      "subject": "Merge remote-tracking branch 'origin/main' into feat/masterdata-diff-ai-preview"
+    },
+    {
+      "sha": "0017acfb2c128774a6b01e284d163d70fbacbd47",
+      "date": "2026-11-24",
+      "subject": "feat(masterdata-diff): add JP/EN/CN masterdata diff preview, AI summary page, and API proxy"
+    },
+    {
+      "sha": "547582275ec6134b3e42c02c7234b2f268963c02",
+      "date": "2026-11-24",
+      "subject": "feat(story-maker,community): default community story preview to theater mode with inline comments and fork flow"
+    },
+    {
+      "sha": "df2ca902e746b06b927e02b6675de727d700238f",
+      "date": "2026-11-24",
+      "subject": "chore: update master data version"
+    },
+    {
+      "sha": "37ef384ecaa0b9dd4c0b36b8d088f0d95c1f160e",
+      "date": "2026-11-24",
+      "subject": "fix(live2d,story-maker): adopt @moesekai/story-{core,editor} 0.2.1, SekaiLive2DViewer 0.3.1, and zero-404 form listings"
+    },
+    {
+      "sha": "af3c7174de215fb7694ad3105197fad035bb9260",
+      "date": "2026-11-24",
+      "subject": "feat(live2d,story-maker): unify on @moesekai/story-core 0.2.0 and SekaiLive2DViewer 0.3.0"
+    },
+    {
+      "sha": "c63891dc8d92dda04fd611366cb11b56a62e935d",
+      "date": "2026-11-24",
+      "subject": "Merge pull request #174 from StarMoe-org/feat/character-honor-words"
+    },
+    {
+      "sha": "31a885fd0a19f4c893a8c7407c90cced08f259be",
+      "date": "2026-11-24",
+      "subject": "Merge pull request #175 from StarMoe-org/fix/live2d-read-site"
+    },
+    {
+      "sha": "2d1c886375ca613c8f7171df77e87fa2ddd61daf",
+      "date": "2026-11-24",
+      "subject": "fix(live2d): read models from the asset site again"
+    },
+    {
+      "sha": "3e49aee2a96c1cdb13de1cdbd3ef85097e30a19d",
+      "date": "2026-11-24",
+      "subject": "feat(honors): draw character honors from their background style and word"
+    },
+    {
       "sha": "95e55f16e956416764b89e28e0fd3327c110fef8",
       "date": "2026-11-23",
       "subject": "Merge branch 'feat/story-maker' into main"
@@ -1410,96 +1500,6 @@
       "sha": "52fefa947ae21fa0f86a3683a59a474d9018d756",
       "date": "2026-10-10",
       "subject": "feat(story): the loading screen's Live2D logo is the square one, at the top right"
-    },
-    {
-      "sha": "14c161e72e74b94f03992dff7098c80b857c5f40",
-      "date": "2026-10-10",
-      "subject": "feat(story): the Live2D player's loading screen shows the StarMoe and Live2D marks"
-    },
-    {
-      "sha": "2bb0976518b420c7414a3b8a1ad327bfb1abbf9b",
-      "date": "2026-10-10",
-      "subject": "Merge pull request #88 from StarMoe-org/fix/story-live2d-open-fonts"
-    },
-    {
-      "sha": "a5504f6f90c93228815c61b94db54e51bd4a7c9b",
-      "date": "2026-10-10",
-      "subject": "fix(story): the Live2D player draws JP stories with open fonts kept in the repository"
-    },
-    {
-      "sha": "08487c3ec66b0683b9542084498d42e90792155c",
-      "date": "2026-10-09",
-      "subject": "feat(md3): a softer background, after the official site's"
-    },
-    {
-      "sha": "963fc00ae52b4fe6e286c01034493a1b29fed638",
-      "date": "2026-10-09",
-      "subject": "fix(guess-music): medleys never become questions or answers"
-    },
-    {
-      "sha": "19c5d9fdde6590c4d9c59c81764a2386071db9fb",
-      "date": "2026-10-09",
-      "subject": "feat(md3): the chart analysis card joins the music page's card layout"
-    },
-    {
-      "sha": "a9c2eecd7c262370d63ab801a78bbe14cb36db76",
-      "date": "2026-10-09",
-      "subject": "Merge StarMoe-org/Moesekai dev (chart analysis) into feat/md3-polish-20261006"
-    },
-    {
-      "sha": "1212493a74992e70e7e5e0881566e0abb33c5a3a",
-      "date": "2026-10-09",
-      "subject": "feat(guess-music): guess-the-song game with daily challenge and StarMoe sign-in"
-    },
-    {
-      "sha": "bbe592419631b0c08e3346d8de952d0824619f5e",
-      "date": "2026-10-09",
-      "subject": "feat(md3): parallax brand pattern, smoother filter reflow, server picker"
-    },
-    {
-      "sha": "823d96c0f3ebd05a17a5377e8c584f7071c336f0",
-      "date": "2026-10-09",
-      "subject": "feat(music): the chart preview floats beside the density plot instead of taking a row"
-    },
-    {
-      "sha": "64f588063a631cf89c58a0e457b7274c52d50adf",
-      "date": "2026-10-09",
-      "subject": "feat(music): the chart card shows a readable stretch of the chart around the timeline cursor"
-    },
-    {
-      "sha": "2b0f9defb60cd350d41d41d2d0d60c115ec3f584",
-      "date": "2026-10-09",
-      "subject": "feat(music): a horizontal thumbnail of the chart lies under the density timeline"
-    },
-    {
-      "sha": "ef6db94be1931b9dc3cc83712f919235a1cc68ca",
-      "date": "2026-10-09",
-      "subject": "chore(music): the chart card's footnote only explains the score weight"
-    },
-    {
-      "sha": "3dad43b499877883fe50e91020a652b85e9f3819",
-      "date": "2026-10-09",
-      "subject": "fix(music): a long head closes an open long with the same number, as the game does"
-    },
-    {
-      "sha": "20efbe1279a30b6983fb4be2704bdcfe782f12b5",
-      "date": "2026-10-09",
-      "subject": "fix(music): Fever ends a tenth of the combo after it starts, as the game converts it"
-    },
-    {
-      "sha": "bf990fc22dda1774f0ab2a3c7d4e113440675b0e",
-      "date": "2026-10-09",
-      "subject": "feat(music): the detail page previews each chart's skill and Fever segments"
-    },
-    {
-      "sha": "f607e8cbfeb274462abbefc2b57bdd394283b411",
-      "date": "2026-10-09",
-      "subject": "feat(md3): floating chrome, docked filter rail, profile redesign and grid reflow"
-    },
-    {
-      "sha": "907d53e567ddab89755541264ff5404ce2197326",
-      "date": "2026-10-09",
-      "subject": "feat(md3): lift page panels onto the card surface"
     }
   ]
 }
