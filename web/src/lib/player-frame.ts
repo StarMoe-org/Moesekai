@@ -505,6 +505,24 @@ export interface PlayerFrameHonorArt {
      * 380x80 / 180x80 art canvas the badge is drawn on.
      */
     readonly levelBadge?: PlayerFrameHonorLevelBadge | null;
+    /**
+     * The count an FC/AP honor writes on its scroll plate — how many songs of that difficulty the
+     * player has FC'd or AP'd. The anchor comes from `honorFcapTextAnchor` so this canvas and
+     * `DegreeImage` write the number in the same place.
+     */
+    readonly fcapCount?: PlayerFrameHonorFcapCount | null;
+}
+
+/** The FC/AP count of one honor slot, with the anchor it is written at. */
+export interface PlayerFrameHonorFcapCount {
+    readonly value: number;
+    /** Digits' horizontal centre and their alphabetic baseline, in the art canvas below. */
+    readonly x: number;
+    readonly baselineY: number;
+    readonly fontSize: number;
+    /** The honor art canvas those offsets are expressed in: 380x80 main, 180x80 sub. */
+    readonly artWidth: number;
+    readonly artHeight: number;
 }
 
 /** The level badge of one honor slot, already loaded. */
@@ -662,6 +680,33 @@ function drawHonorLevelBadge(
     };
     if (badge.image) drawStars(badge.image, Math.min(5, badge.count));
     if (badge.imageSix && badge.count > 5) drawStars(badge.imageSix, badge.count - 5);
+}
+
+/**
+ * The FC/AP count on an honor's scroll plate: white bold digits centred on the ribbon, mapped from
+ * the art canvas onto the box the cell gives the badge. `anchor` is `honorFcapTextAnchor`'s output
+ * for this slot, so the number lands where `DegreeImage` puts it.
+ */
+function drawHonorFcapCount(
+    context: CanvasRenderingContext2D,
+    anchor: PlayerFrameHonorFcapCount,
+    box: CellBox,
+    fontStack: string,
+): void {
+    if (!Number.isFinite(anchor.value)) return;
+    const artWidth = Math.max(1, anchor.artWidth);
+    const artHeight = Math.max(1, anchor.artHeight);
+    // The badge art is contain-fitted onto the box, so the offsets scale with that fit.
+    const factor = Math.min(box[2] / artWidth, box[3] / artHeight);
+    const left = box[0] + (box[2] - artWidth * factor) / 2;
+    const top = box[1] + (box[3] - artHeight * factor) / 2;
+    context.save();
+    context.font = `700 ${anchor.fontSize * factor}px ${fontStack}`;
+    context.textAlign = "center";
+    context.textBaseline = "alphabetic";
+    context.fillStyle = "rgb(255, 255, 255)";
+    context.fillText(String(anchor.value), left + anchor.x * factor, top + anchor.baselineY * factor);
+    context.restore();
 }
 
 /** `_card_visual_fit_cover`: fill the box, cropped, anchored to the top centre. */
@@ -864,6 +909,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.frame) drawContained(context, honor.frame, target);
             if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, target);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, target);
+            if (honor.fcapCount) drawHonorFcapCount(context, honor.fcapCount, target, fontStack);
         });
         context.restore();
     } else {
@@ -903,6 +949,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.frame) drawContained(context, honor.frame, box);
             if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, box);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, box);
+            if (honor.fcapCount) drawHonorFcapCount(context, honor.fcapCount, box, fontStack);
         });
         if (cell.comment) {
             roundRectPath(context, scaled(cell.comment, scale), 21 * scale);

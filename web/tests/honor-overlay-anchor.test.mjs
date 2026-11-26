@@ -78,3 +78,18 @@ test("the sub event plate never sits over the event title baked into the backgro
     // y=0 was the bug: the 第N名 ribbon covered "Unfading wishing"-style title art at the top.
     assert.ok(honorOverlayAnchor("event", true).y >= 38);
 });
+
+test("an FC/AP count is written centred on the scroll plate, inside the badge", () => {
+    const { honorFcapTextAnchor, honorOverlayAnchor, HONOR_ART_CANVAS } = loadHonorArt();
+
+    for (const [sub, slot] of [[true, "sub"], [false, "main"]]) {
+        const text = honorFcapTextAnchor(sub);
+        const plate = honorOverlayAnchor("scroll", sub);
+
+        // Centred 50px into the plate, on the ribbon the game writes the number on.
+        assert.equal(text.x, plate.x + 50);
+        // A 22px bold digit at this baseline inks out around 55–69: on the ribbon, not off the badge.
+        assert.ok(text.baselineY > plate.y && text.baselineY < HONOR_ART_CANVAS[slot].height);
+        assert.equal(text.fontSize, 22);
+    }
+});

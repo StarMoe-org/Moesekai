@@ -109,6 +109,21 @@ export function honorOverlayAnchor(
     }
 }
 
+/**
+ * Where an FC/AP honor's count is written on its scroll plate, in pixels of the badge art above.
+ *
+ * The plate is 101x75 for both slots and `honorOverlayAnchor("scroll", …)` puts it at the badge's
+ * right (main) or bottom edge (sub); the digits are centred 50px into it, which is where the game
+ * writes them. `baselineY` is the alphabetic baseline both renderers use: 22px bold digits started
+ * at y=50 ink out at 54–69 (Ayaya's reference render, `_add_fcap_count`), so the baseline is 69.
+ */
+export function honorFcapTextAnchor(
+    sub: boolean,
+): { readonly x: number; readonly baselineY: number; readonly fontSize: number } {
+    const anchor = honorOverlayAnchor("scroll", sub);
+    return { x: anchor.x + 50, baselineY: 69, fontSize: 22 };
+}
+
 export interface HonorArtSpec {
     readonly rarity: string;
     readonly rarityLevel: number;
