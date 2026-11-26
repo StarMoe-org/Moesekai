@@ -44,7 +44,7 @@ import {
     getCharacterIconUrl,
     getPlayerFramePartUrl,
 } from "@/lib/assets";
-import { resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
+import { HONOR_ART_CANVAS, honorOverlayAnchor, resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
 import { fetchMasterData, fetchMasterDataForServer, getCurrentServer, type ServerSourceType } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
 import { canvasToPngBlob, saveImageBlob } from "@/lib/imageActions";
@@ -286,17 +286,15 @@ async function loadFirstSprite(urls: readonly string[]): Promise<Sprite | null> 
 }
 
 /** The badge art each honor size is composed on; a placement plate is positioned against it. */
-const HONOR_ART_SIZE = {
-    main: { width: 380, height: 80 },
-    sub: { width: 180, height: 80 },
-} as const;
+const HONOR_ART_SIZE = HONOR_ART_CANVAS;
 
 /**
  * Where the game pastes an honor's placement plate, in fractions of the honor art so the plate keeps
- * its native pixel size at whatever size the cell draws the badge: a rank-match tier (180x78 /
- * 158x40) at (190, 0) main and (17, 42) sub, an event title's rank plate (150x78 / 120x38) at
- * (190, 0) and (34, 42). A plate that already is the badge's own canvas (World Link character
- * plates ship as 380x80 / 180x80) covers all of it.
+ * its native pixel size at whatever size the cell draws the badge. The pixel anchor itself lives in
+ * `honor-art.ts` (`honorOverlayAnchor`) so this canvas and the SVG badge cannot drift apart: a
+ * rank-match tier (180x78 / 158x40) at (190, 0) main and (17, 42) sub, an event title's rank plate
+ * (150x78 / 120x38) at (190, 0) and (34, 42). A plate that already is the badge's own canvas (World
+ * Link character plates ship as 380x80 / 180x80) covers all of it.
  */
 function honorPlateBox(
     plate: { width: number; height: number },
@@ -305,9 +303,8 @@ function honorPlateBox(
 ): readonly [number, number, number, number] {
     const art = HONOR_ART_SIZE[sub ? "sub" : "main"];
     if (plate.width === art.width && plate.height === art.height) return [0, 0, 1, 1];
-    const x = rankMatch ? (sub ? 17 : 190) : sub ? 34 : 190;
-    const y = sub ? 42 : 0;
-    return [x / art.width, y / art.height, plate.width / art.width, plate.height / art.height];
+    const anchor = honorOverlayAnchor(rankMatch ? "rank_match" : "event", sub);
+    return [anchor.x / art.width, anchor.y / art.height, plate.width / art.width, plate.height / art.height];
 }
 
 /**
@@ -319,9 +316,8 @@ function honorScrollBox(
     sub: boolean,
 ): readonly [number, number, number, number] {
     const art = HONOR_ART_SIZE[sub ? "sub" : "main"];
-    const x = sub ? 37 : 215;
-    const y = 3;
-    return [x / art.width, y / art.height, plate.width / art.width, plate.height / art.height];
+    const anchor = honorOverlayAnchor("scroll", sub);
+    return [anchor.x / art.width, anchor.y / art.height, plate.width / art.width, plate.height / art.height];
 }
 
 /** The rank tier of a frame, e.g. 100 / 1000, read out of the masterdata description. */
@@ -572,6 +568,14 @@ interface AccountMasters {
  * and the missing-asset placeholder, so the picker and the slot rows reuse it instead of a raw
  * `<img>` (a plain image URL 404s for every honor whose art lives in another region's bundle).
  */
+/**
+ * A badge width that keeps the main (380x80) and sub (180x80) slots at the same rendered height, so
+ * a picker row looks the same whichever slot it fills — the size the slot itself draws.
+ */
+function honorThumbWidth(mainWidth: number, sub: boolean): number {
+    return sub ? Math.round((mainWidth * HONOR_ART_CANVAS.sub.width) / HONOR_ART_CANVAS.main.width) : mainWidth;
+}
+
 function HonorThumb({ honor, honorGroup, honorLevel, sub, source, width, fluid, honorBackgroundId, honorWordId }: HonorThumbProps) {
     return (
         <span
@@ -1802,6 +1806,12 @@ function PlayerFramesContent() {
 
     const selectedCharacterId = editable ? partCharacter(parts, activePart) : singleCharacterId;
 
+    /**
+     * The picker fills one slot at a time, and a sub slot draws the smaller badge — so its rows
+     * must preview that badge instead of the main one, or what you pick is not what you see.
+     */
+    const honorPickerSub = (honorPickerSlot ?? 0) > 0;
+
     /** The label of one row of the randomise scope panel. */
     const randomTargetLabel = (target: RandomTarget): string => {
         if (target === "frame") return t("page.playerFrames.random.frame");
@@ -1850,7 +1860,7 @@ function PlayerFramesContent() {
                                     honorLevel={honorLevels[slot] ?? undefined}
                                     sub={sub}
                                     source={honorSourceForSlot(slot)}
-                                    width={sub ? 81 : 171}
+                                    width={honorThumbWidth(171, sub)}
                                     fluid
                                     honorBackgroundId={supportsHonorStyle(honor, group) ? style.backgroundId : null}
                                     honorWordId={supportsHonorStyle(honor, group) ? style.wordId : null}
@@ -2643,9 +2653,9 @@ function PlayerFramesContent() {
                                         <HonorThumb
                                             honor={honor}
                                             honorGroup={honorLibrary?.groupById.get(honor.groupId)}
-                                            sub={false}
+                                            sub={honorPickerSub}
                                             source={honorSource}
-                                            width={132}
+                                            width={honorThumbWidth(132, honorPickerSub)}
                                             honorBackgroundId={combination?.backgroundId ?? null}
                                             honorWordId={combination?.wordId ?? null}
                                         />
