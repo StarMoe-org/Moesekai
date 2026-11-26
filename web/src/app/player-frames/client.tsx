@@ -44,7 +44,8 @@ import {
     getCharacterIconUrl,
     getPlayerFramePartUrl,
 } from "@/lib/assets";
-import { HONOR_ART_CANVAS, honorOverlayAnchor, resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
+import { HONOR_ART_CANVAS, honorFcapTextAnchor, honorOverlayAnchor, resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
+import { countClearStatus, honorMissionCountFromTable, type ClearStatusTable } from "@/lib/music-clear-status";
 import { fetchMasterData, fetchMasterDataForServer, getCurrentServer, type ServerSourceType } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
 import { canvasToPngBlob, saveImageBlob } from "@/lib/imageActions";
@@ -699,6 +700,18 @@ function PlayerFramesContent() {
      * bundle every ten levels) and the level badge, so the card shows the same thing the game does.
      */
     const [honorLevels, setHonorLevels] = useState<(number | null)[]>([null, null, null]);
+    /**
+     * The synced account's song tally, so an FC/AP title can print how many songs of its difficulty
+     * the player FC'd or AP'd — the same count the profile page's clear-status table shows. Null
+     * until an account is applied: the picker alone has no results to count.
+     */
+    const [accountClearStatus, setAccountClearStatus] = useState<ClearStatusTable | null>(null);
+    /**
+     * The honors the account itself had equipped, per slot. The tally is only printed for a slot
+     * that still holds the account's own title: a title picked by hand did not come with a count,
+     * so it prints none even when the record would have one.
+     */
+    const [accountHonorIds, setAccountHonorIds] = useState<(number | null)[]>([null, null, null]);
     const [honorStyles, setHonorStyles] = useState<HonorSlotStyle[]>(newHonorStyles);
     const [honorPicked, setHonorPicked] = useState(false);
     /**
@@ -1236,6 +1249,12 @@ function PlayerFramesContent() {
                               }
                             : null,
                     });
+                    // An FC/AP title prints the account's tally of its difficulty — but only while the
+                    // slot still holds the title the account equipped: a hand-picked title prints
+                    // nothing. See `accountHonorIds`.
+                    const fcapCount = accountHonorIds[slot] === honorId
+                        ? honorMissionCountFromTable(accountClearStatus, honor.honorMissionType)
+                        : null;
                     const [styleBackground, frame, overlay, word, badge, badgeSix] = await Promise.all([
                         spec.styleBackgrounds.length > 0
                             ? loadFirstSprite(spec.styleBackgrounds)
@@ -1276,6 +1295,18 @@ function PlayerFramesContent() {
                                   artHeight: 80,
                               }
                             : null,
+                        // An FC/AP title prints the account's tally of that difficulty — but only while
+                        // the slot still holds the title the account equipped, and only on top of the
+                        // scroll plate itself (the number belongs on the ribbon, not on a bare badge,
+                        // which is the same rule `DegreeImage` follows). See `accountHonorIds`.
+                        fcapCount: fcapCount === null || !overlay
+                            ? null
+                            : {
+                                  value: fcapCount,
+                                  ...honorFcapTextAnchor(sub),
+                                  artWidth: sub ? 180 : 380,
+                                  artHeight: 80,
+                              },
                     } as PlayerFrameHonorArt;
                 }),
             ]);
@@ -1334,6 +1365,8 @@ function PlayerFramesContent() {
         honorKey,
         honorStyles,
         honorLevels,
+        accountClearStatus,
+        accountHonorIds,
         cardLevel,
         masterRank,
         cardFontStack,
@@ -1464,9 +1497,12 @@ function PlayerFramesContent() {
         async (account: MoesekaiAccount) => {
             setIsFilling(true);
             try {
-                // Only the signature, the three titles and the owned cards are needed here; the music
-                // tables the profile page reads are left out of the request.
-                const extras = await fetchProfileExtras(account, PROFILE_CORE_KEYS);
+                // The signature, the three titles and the owned cards; the music results are read too,
+                // because an FC/AP title prints a tally counted from them (Haruki carries no summary
+                // of it — see lib/music-clear-status.ts). A deployment that refuses that key still
+                // syncs the rest: the retry drops it and the titles simply print no number.
+                const extras = await fetchProfileExtras(account, [...PROFILE_CORE_KEYS, "userMusicResults"])
+                    .catch(() => fetchProfileExtras(account, PROFILE_CORE_KEYS));
                 // The account's ids mean what its own server means by them: a card or title that only
                 // exists there is neither in the page's masterdata nor on the page's asset site.
                 const masters = account.server === server ? null : await loadAccountMasters(account.server);
@@ -1512,6 +1548,11 @@ function PlayerFramesContent() {
                 }
                 setHonorLevels(nextLevels);
                 setHonorStyles(nextStyles);
+                // The tally an FC/AP title prints, plus which title it belongs to (see `accountHonorIds`).
+                // Null when the read brought no results: an empty table would print "0" instead of
+                // staying blank.
+                setAccountClearStatus(extras.musicResults ? countClearStatus(extras.musicResults) : null);
+                setAccountHonorIds([...slots]);
                 // The frame the account attached: the parse sorts by playerFrameId, so the newest
                 // (largest id) wins. A combination (WL3) frame also carries the six parts the player
                 // composed; a frame the page's masterdata does not carry leaves the current pick.

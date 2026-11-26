@@ -5,7 +5,13 @@ import { AssetSourceType } from "@/contexts/ThemeContext";
 import { mdMilitaryTech } from "@/components/md3/icons";
 import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
 import { resolveCharacterHonorStyle } from "@/lib/character-honor-styles";
-import { honorOverlayAnchor, resolveHonorArt, supportsHonorStyle, type HonorArtSpec } from "@/lib/honor-art";
+import {
+    honorFcapTextAnchor,
+    honorOverlayAnchor,
+    resolveHonorArt,
+    supportsHonorStyle,
+    type HonorArtSpec,
+} from "@/lib/honor-art";
 import type { ServerSourceType } from "@/lib/fetch";
 
 // Hook to preload an image and track success/failure
@@ -71,6 +77,12 @@ interface DegreeImageProps {
     honorWordId?: number;
     /** The server whose masterdata the honor comes from; the current one when omitted. */
     server?: ServerSourceType;
+    /**
+     * The count an FC/AP honor prints on its scroll plate (`lib/music-clear-status.ts` decides which
+     * number and how it is counted). Absent: the plate stays empty, which is what every caller that
+     * has no account data to tally (the title lists, the detail dialogs) passes.
+     */
+    fcapCount?: number | null;
 }
 
 export default function DegreeImage({
@@ -83,6 +95,7 @@ export default function DegreeImage({
     honorBackgroundId,
     honorWordId,
     server,
+    fcapCount,
 }: DegreeImageProps) {
     const width = sub ? 180 : 380;
     const height = 80;
@@ -164,6 +177,14 @@ export default function DegreeImage({
     const starCount = spec.levelBadge?.kind === "star" && badgeLoaded ? spec.levelBadge.count : 0;
     const levelCount = Math.min(5, starCount);
     const level6Count = starCount > 5 ? starCount - 5 : 0;
+
+    // ── FC/AP count: the difficulty tally written on the scroll plate ──
+    // Only where the plate itself is there: the number belongs on the ribbon, not on a bare badge.
+    const fcapAnchor = honorFcapTextAnchor(sub);
+    const showFcapCount = overlayLoaded
+        && spec.overlay?.kind === "scroll"
+        && typeof fcapCount === "number"
+        && Number.isFinite(fcapCount);
 
     return (
         <svg
@@ -253,6 +274,19 @@ export default function DegreeImage({
                     width={overlayBox.width}
                     height={overlayBox.height}
                 />
+            )}
+            {/* FC/AP count, written on the scroll plate the way the game writes it */}
+            {showFcapCount && (
+                <text
+                    x={fcapAnchor.x}
+                    y={fcapAnchor.baselineY}
+                    textAnchor="middle"
+                    fontSize={fcapAnchor.fontSize}
+                    fontWeight={700}
+                    fill="#ffffff"
+                >
+                    {fcapCount}
+                </text>
             )}
         </svg>
     );

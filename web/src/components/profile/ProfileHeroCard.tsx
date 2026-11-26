@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useMemo } from "react";
 import GameAccountSwitchMenu from "@/components/account/GameAccountSwitchMenu";
 import DegreeImage from "@/components/honor/DegreeImage";
 import BondsDegreeImage from "@/components/honor/BondsDegreeImage";
@@ -9,6 +10,7 @@ import { useI18n } from "@/contexts/I18nContext";
 import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { getCardFullUrl } from "@/lib/assets";
 import { getLeaderCardId, type MoesekaiAccount } from "@/lib/account";
+import { countClearStatus, honorMissionCountFromTable, type ClearStatusTable } from "@/lib/music-clear-status";
 import type { ProfileExtras, ProfileHonor } from "@/hooks/useProfileExtras";
 import type { RealtimeRankingMasterData } from "@/types/realtime-ranking";
 import type { ICardInfo } from "@/types/types";
@@ -25,7 +27,7 @@ interface Props {
     accountCount: number;
 }
 
-function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: ProfileHonor; main: boolean; master: RealtimeRankingMasterData | null; pending: boolean; assetSource: AssetSourceType }) {
+function HonorSlot({ honor, main, master, pending, assetSource, clearStatus }: { honor?: ProfileHonor; main: boolean; master: RealtimeRankingMasterData | null; pending: boolean; assetSource: AssetSourceType; clearStatus: ClearStatusTable | null }) {
     let image: React.ReactNode = null;
 
     if (honor && master) {
@@ -54,6 +56,9 @@ function HonorSlot({ honor, main, master, pending, assetSource }: { honor?: Prof
                         honor={entry}
                         honorGroup={master.honorGroups.find((group) => group.id === entry.groupId)}
                         honorLevel={honor.honorLevel}
+                        // An FC/AP honor prints how many songs of its difficulty the account has
+                        // cleared — the same tally the clear-status table shows.
+                        fcapCount={honorMissionCountFromTable(clearStatus, entry.honorMissionType)}
                         source={assetSource}
                         sub={!main}
                         className="block h-auto w-full"
@@ -92,6 +97,13 @@ export default function ProfileHeroCard({ account, extras, master, cards, accoun
     const rank = account.userGamedata?.rank;
     const leaderId = getLeaderCardId(account.userGamedata, account.userDecks) ?? account.avatarCardId;
     const leader = leaderId ? cards?.get(leaderId) : undefined;
+    // The clear-status table further down the page shows the same tally, so it is counted once here
+    // and handed to the honors that print a number. Null while the music results are still missing:
+    // counting an absent read would hand the honors a table of zeros and print "0".
+    const clearStatus = useMemo(
+        () => (extras.musicResults ? countClearStatus(extras.musicResults) : null),
+        [extras.musicResults],
+    );
     // Wait for the card states so the art does not flip from normal to trained.
     const art = leader && extras.status !== "loading"
         ? getCardFullUrl(leader.characterId, leader.assetbundleName, showsTrainedArt(leader, extras.cards.get(leader.id)), assetSource)
@@ -159,6 +171,7 @@ export default function ProfileHeroCard({ account, extras, master, cards, accoun
                                     honor={extras.honors[slot]}
                                     pending={extras.status === "loading" || (!!extras.honors[slot] && !master)}
                                     assetSource={assetSource}
+                                    clearStatus={clearStatus}
                                 />
                             ))}
                         </div>
