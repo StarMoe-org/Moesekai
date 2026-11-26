@@ -341,6 +341,9 @@ const FRIEND_COLOURS = {
     statusPlate: [136, 136, 170, 255] as const,
 };
 
+
+/** The plate the S-size card sits on inside the friend row: the row's own plate colour, opaque. */
+const FRIEND_CARD_PLATE = [246, 247, 251, 255] as const;
 /** Fill of the level bar of an S-size card visual. */
 const FRIEND_CARD_LEVEL_PLATE = [70, 70, 100, 255] as const;
 /** Height of that bar, in the 152px card base. */
@@ -547,6 +550,8 @@ export interface PlayerFrameDrawOptions {
     readonly images: ReadonlyMap<string, { readonly image: CanvasImageSource; readonly width: number; readonly height: number }>;
     /** Card art; pass null for the bare frame. */
     readonly card?: PlayerFrameCardArt | null;
+    /** Draw the decorative frame over the card; off keeps the card, its art, name and honors. */
+    readonly showFrame?: boolean;
     /** Output pixel size, as returned by {@link playerFrameCellCanvas}. */
     readonly canvas: PlayerFrameCellCanvas;
 }
@@ -684,10 +689,13 @@ function drawCardVisual(context: CanvasRenderingContext2D, art: PlayerFrameCardA
         bh * unitY,
     ];
 
+    // The card is a rounded plate that sits on the row: clipping to that rounded box and painting the
+    // plate colour first makes every pixel of the card opaque, so a viewer never turns the card's
+    // anti-aliased corner into a black dot — and the corners stay round instead of square.
     context.save();
-    context.beginPath();
-    context.rect(x, y, width, height);
+    roundRectPath(context, [x, y, width, height], (10 / 152) * width);
     context.clip();
+    fillBox(context, [x, y, width, height], FRIEND_CARD_PLATE);
 
     if (art.illustration) drawCover(context, art.illustration, [x, y, width, height]);
     if (art.levelLabel) {
@@ -706,16 +714,6 @@ function drawCardVisual(context: CanvasRenderingContext2D, art: PlayerFrameCardA
         for (let index = 0; index < (art.rarityCount ?? 0); index += 1) {
             drawContained(context, art.star, at(6 + index * 22, 102, 22, 22));
         }
-    }
-
-    // `compose_card_visual` closes the S style with
-    // `canvas.putalpha(A * fitted_art.getchannel("A"))`: everything drawn over the art — the square
-    // level bar first of all — is masked by the art's own alpha, which is rounded. Without this the
-    // bar's square corner sticks out past the card frame's rounded corner.
-    if (art.illustration) {
-        context.globalCompositeOperation = "destination-in";
-        drawCover(context, art.illustration, [x, y, width, height]);
-        context.globalCompositeOperation = "source-over";
     }
     context.restore();
 }
@@ -876,7 +874,9 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
         context.shadowBlur = 14 * scale;
         context.shadowOffsetY = 2 * scale;
         roundRectPath(context, body, radius);
-        context.fillStyle = "rgba(246, 247, 251, 0.97)";
+        // Opaque: the card art is rounded and those corners must reveal this plate, not a half-
+            // transparent pixel that a viewer composites onto black.
+            context.fillStyle = "rgb(246, 247, 251)";
         context.fill();
         context.restore();
         if (cell.cardVisual && art) drawCardVisual(context, art, scaled(cell.cardVisual, scale), fontStack);
@@ -921,10 +921,11 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
     }
 
     // 5) The frame, fitted per axis onto the cell's frame box.
-    drawFrameIntoCell(context, composition, images, cell, scale);
+    if (options.showFrame !== false) drawFrameIntoCell(context, composition, images, cell, scale);
 
     // 6) Index colour: the client's last sibling, drawn above the frame, clipped by Mask (1).
-    if (cell.indexColor && cell.overlay) {
+    //    It carries the frame's own colour, so it goes with the frame when that is hidden.
+    if (options.showFrame !== false && cell.indexColor && cell.overlay) {
         context.save();
         roundRectPath(context, scaled(cell.overlay, scale), radius);
         context.clip();

@@ -4951,8 +4951,9 @@ export const jaJPMessages = {
       },
       family: {
         title: 'フレームシリーズ',
-        combination: 'WL3 組み合わせ',
-        single: 'WL2 キャラクター',
+        combination: "WL3",
+        single: "WL2",
+        none: "表示しない",
       },
       tier: {
         title: 'ランキング区分',

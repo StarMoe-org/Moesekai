@@ -369,8 +369,9 @@ export const zhTWPageSecondaryA = {
         },
         family: {
             title: "邊框系列",
-            combination: "WL3 組合邊框",
-            single: "WL2 角色邊框",
+            combination: "WL3",
+            single: "WL2",
+            none: "不顯示",
         },
         tier: {
             title: "排名檔位",

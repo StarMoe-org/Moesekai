@@ -163,6 +163,14 @@ interface HonorLibrary {
 const ORIENTATIONS: readonly PlayerFrameOrientation[] = ["vertical", "horizontal"];
 const FRAME_KINDS: readonly PlayerFrameKind[] = ["combination", "single"];
 
+/**
+ * The third choice of the frame-series control: keep the card, skip the frame artwork over it. It is
+ * a control value only — the family the page keeps drawing stays in `kind`, so switching back to
+ * WL3 / WL2 restores the same frame without a reload.
+ */
+const FRAME_HIDDEN = "none";
+
+
 /** Character ids in masterdata order; every part can be any of them. */
 const CHARACTER_IDS: readonly number[] = UNIT_DATA.flatMap(unit => unit.charIds).sort((left, right) => left - right);
 
@@ -595,7 +603,7 @@ function HonorThumb({ honor, honorGroup, honorLevel, sub, source, width, fluid, 
     );
 }
 
-function FrameCanvas({ preview, label, className }: { preview: Preview; label: string; className?: string }) {
+function FrameCanvas({ preview, label, className, showFrame = true }: { preview: Preview; label: string; className?: string; showFrame?: boolean }) {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
     useEffect(() => {
@@ -617,11 +625,27 @@ function FrameCanvas({ preview, label, className }: { preview: Preview; label: s
             images: preview.sprites,
             card: preview.card,
             canvas: cellCanvas,
+            showFrame,
         });
         context.restore();
-    }, [preview]);
+    }, [preview, showFrame]);
 
     return <canvas ref={canvasRef} role="img" aria-label={label} className={cn("block h-auto w-full", className)} />;
+}
+
+/**
+ * One token per slot, with a repeated id collapsed the way the frame preview is described:
+ * `[1,1,1,1,1,1]` → `1x6`, `[1,1,2,1]` → `1x2-2-1`.
+ */
+function collapseIdRuns(ids: readonly number[]): string {
+    const tokens: string[] = [];
+    for (let index = 0; index < ids.length; ) {
+        let run = 1;
+        while (index + run < ids.length && ids[index + run] === ids[index]) run += 1;
+        tokens.push(run > 1 ? `${ids[index]}x${run}` : String(ids[index]));
+        index += run;
+    }
+    return tokens.join("-");
 }
 
 function PlayerFramesContent() {
@@ -663,6 +687,8 @@ function PlayerFramesContent() {
     const [pickerAttrs, setPickerAttrs] = useState<string[]>([]);
     const [pickerQuery, setPickerQuery] = useState("");
     const [trained, setTrained] = useState(false);
+    /** Whether the decorative frame is drawn over the card; off shows the bare card plate. */
+    const [showFrame, setShowFrame] = useState(true);
     /** The card's level and master rank printed on the preview; both are free choices here. */
     const [cardLevel, setCardLevel] = useState(PLACEHOLDER_LEVEL);
     const [masterRank, setMasterRank] = useState(PLACEHOLDER_MASTER_RANK);
@@ -751,6 +777,7 @@ function PlayerFramesContent() {
         if (searchParams.get("view") === "horizontal") setOrientation("horizontal");
         const kindParam = searchParams.get("kind");
         preferredKind.current = kindParam === "single" ? "single" : kindParam === "combination" ? "combination" : null;
+        if (kindParam === FRAME_HIDDEN) setShowFrame(false);
         preferredHonors.current = parseHonorParam(searchParams.get("honors"));
         if (preferredHonors.current) {
             setHonorIds(preferredHonors.current);
@@ -892,6 +919,7 @@ function PlayerFramesContent() {
     }, [family, activeTier, kind, singleCharacterId]);
 
     const partKey = PLAYER_FRAME_PART_IDS.map(part => partCharacter(parts, part)).join("-");
+
     const editable = kind === "combination";
     /** The character the frame belongs to; the card and the honor are chosen independently. */
     const frameCharacterId = editable ? partCharacter(parts, 1) : singleCharacterId;
@@ -1067,11 +1095,17 @@ function PlayerFramesContent() {
     useEffect(() => {
         if (!restoredFromUrl.current || !activeFrame) return;
         const params = new URLSearchParams();
-        if (kind !== "combination") params.set("kind", kind);
         if (orientation !== "vertical") params.set("view", orientation);
-        if (kind === "combination") params.set("parts", partKey.replaceAll("-", ","));
-        else params.set("character", String(singleCharacterId));
-        params.set("frame", String(activeFrame.id));
+        // With the frame turned off the family, the parts and the frame id say nothing about the
+        // picture, so they stay out of the URL: `kind=none` is the whole description.
+        if (!showFrame) {
+            params.set("kind", FRAME_HIDDEN);
+        } else {
+            if (kind !== "combination") params.set("kind", kind);
+            if (kind === "combination") params.set("parts", partKey.replaceAll("-", ","));
+            else params.set("character", String(singleCharacterId));
+            params.set("frame", String(activeFrame.id));
+        }
         if (effectiveHonorIds.some(id => id !== null)) {
             params.set("honors", effectiveHonorIds.map(id => id ?? 0).join(","));
         }
@@ -1082,12 +1116,16 @@ function PlayerFramesContent() {
         if (honorStyles.some(style => style.wordId !== null)) {
             params.set("honorWord", honorStyles.map(style => style.wordId ?? 0).join(","));
         }
-        if (selectedCardId !== null) params.set("card", String(selectedCardId));
+        // The card that is actually drawn goes into the URL, not only a hand-picked one: the auto
+        // choice lives in a ref, so without this a refresh (or any reload) re-derives it from Part 1
+        // and the face silently changes when the parts change.
+        const drawnCardId = selectedCardId ?? activeCard?.id ?? null;
+        if (drawnCardId !== null) params.set("card", String(drawnCardId));
         if (trained) params.set("trained", "1");
         if (cardLevel !== PLACEHOLDER_LEVEL) params.set("level", String(cardLevel));
         if (masterRank !== PLACEHOLDER_MASTER_RANK) params.set("rank", String(masterRank));
         replaceCurrentUrlSearchParams(params);
-    }, [kind, orientation, partKey, singleCharacterId, activeFrame, effectiveHonorIds, honorStyles, selectedCardId, trained, cardLevel, masterRank]);
+    }, [kind, orientation, partKey, singleCharacterId, activeFrame, effectiveHonorIds, honorStyles, selectedCardId, activeCard, trained, showFrame, cardLevel, masterRank]);
 
     useEffect(() => {
         if (!family || !activeFrame) return;
@@ -1577,23 +1615,54 @@ function PlayerFramesContent() {
             canvas.height = cellCanvas.height;
             const context = canvas.getContext("2d");
             if (!context) return;
-            drawPlayerFrame(context, {
+            // Drawn on its own canvas first: the row masks itself with `destination-in`, which would
+            // erode a plate painted underneath back to partial alpha along the card's edges.
+            const artwork = document.createElement("canvas");
+            artwork.width = cellCanvas.width;
+            artwork.height = cellCanvas.height;
+            const artworkContext = artwork.getContext("2d");
+            if (!artworkContext) return;
+            drawPlayerFrame(artworkContext, {
                 composition: preview.composition,
                 cell: preview.cell,
                 images: preview.sprites,
                 card: preview.card,
                 canvas: cellCanvas,
+                showFrame,
             });
-            const blob = await canvasToPngBlob(canvas);
-            await saveImageBlob(blob, `player-frame-${activeFrame?.id ?? "frame"}-${orientation}.png`);
+
+            const blob = await canvasToPngBlob(artwork);
+            // The name mirrors the page's own query parameters, so two exports only collide when they
+            // would also produce the same URL: the frame, the view, the parts (or the character) and
+            // whatever else differs from the defaults.
+            // With the frame off there is no family, no parts and no frame id in the picture, so the
+            // name states that and nothing else; otherwise it describes how the frame was built.
+            const nameParts: string[] = [];
+            if (showFrame) {
+                nameParts.push(String(activeFrame?.id ?? "frame"));
+                nameParts.push(orientation);
+                nameParts.push(kind === "combination" ? "wl3" : "wl2");
+                nameParts.push(
+                    kind === "combination"
+                        ? collapseIdRuns(PLAYER_FRAME_PART_IDS.map(part => partCharacter(parts, part)))
+                        : String(singleCharacterId),
+                );
+            } else {
+                nameParts.push(orientation);
+                nameParts.push("noframe");
+            }
+
+            if (selectedCardId !== null) nameParts.push(`card-${selectedCardId}`);
+            if (effectiveTrained) nameParts.push("trained");
+            await saveImageBlob(blob, `player-frame-${nameParts.join("-")}.png`);
         } finally {
             setIsExporting(false);
         }
-    }, [preview, isExporting, activeFrame, orientation]);
+    }, [preview, isExporting, activeFrame, orientation, kind, parts, singleCharacterId, selectedCardId, effectiveTrained, showFrame]);
 
     const kindOptions = useMemo(
-        () =>
-            FRAME_KINDS.filter(candidate => families[candidate]).map(candidate => ({
+        () => [
+            ...FRAME_KINDS.filter(candidate => families[candidate]).map(candidate => ({
                 value: candidate,
                 label: t(
                     candidate === "combination"
@@ -1601,8 +1670,25 @@ function PlayerFramesContent() {
                         : "page.playerFrames.family.single",
                 ),
             })),
+            // The frame itself can be turned off: the card is still drawn, just without the artwork.
+            { value: FRAME_HIDDEN, label: t("page.playerFrames.family.none") },
+        ],
         [families, t],
     );
+
+    /**
+     * The frame-series control's own value: "none" while the frame is hidden, the family otherwise.
+     * The family itself stays in `kind`, so picking "none" never destroys the previous choice.
+     */
+    const frameKindValue = showFrame ? kind : FRAME_HIDDEN;
+    const onFrameKindChange = useCallback((value: string) => {
+        if (value === FRAME_HIDDEN) {
+            setShowFrame(false);
+            return;
+        }
+        setShowFrame(true);
+        setKind(value as PlayerFrameKind);
+    }, []);
 
     const tierOptions = useMemo(
         () =>
@@ -2010,6 +2096,7 @@ function PlayerFramesContent() {
                         <div className="flex min-h-0 w-full flex-1 items-center justify-center py-1">
                             <FrameCanvas
                                 preview={preview}
+                                showFrame={showFrame}
                                 label={t(
                                     orientation === "vertical"
                                         ? "page.playerFrames.preview.vertical"
@@ -2025,11 +2112,11 @@ function PlayerFramesContent() {
                         <SectionCard title={t("page.playerFrames.family.title")}>
                             <SegmentedButton
                                 options={kindOptions}
-                                value={kind}
-                                onValueChange={value => setKind(value as PlayerFrameKind)}
+                                value={frameKindValue}
+                                onValueChange={onFrameKindChange}
                                 className="w-full"
                             />
-                            {tierOptions.length > 1 && (
+                            {showFrame && tierOptions.length > 1 && (
                                 <div className="mt-4">
                                     <div className="mb-2 type-label-l text-on-surface-variant">
                                         {t("page.playerFrames.tier.title")}
@@ -2193,6 +2280,7 @@ function PlayerFramesContent() {
                     <div className="flex min-h-0 w-full flex-1 items-center justify-center py-1">
                         <FrameCanvas
                             preview={preview}
+                            showFrame={showFrame}
                             label={t("page.playerFrames.preview.horizontal")}
                             className="w-full"
                         />
@@ -2210,11 +2298,11 @@ function PlayerFramesContent() {
                     >
                         <SegmentedButton
                             options={kindOptions}
-                            value={kind}
-                            onValueChange={value => setKind(value as PlayerFrameKind)}
+                            value={frameKindValue}
+                            onValueChange={onFrameKindChange}
                             className="w-full"
                         />
-                        {tierOptions.length > 1 && (
+                        {showFrame && tierOptions.length > 1 && (
                             <div className="mt-4">
                                 <div className="mb-2 type-label-l text-on-surface-variant">
                                     {t("page.playerFrames.tier.title")}

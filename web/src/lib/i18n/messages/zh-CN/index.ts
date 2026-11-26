@@ -4927,8 +4927,9 @@ export const zhCNMessages = {
             },
             family: {
                 title: "边框系列",
-                combination: "WL3 组合边框",
-                single: "WL2 角色边框",
+                combination: "WL3",
+                single: "WL2",
+                none: "不显示",
             },
             tier: {
                 title: "排名档位",
