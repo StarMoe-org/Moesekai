@@ -4928,8 +4928,9 @@ export const enUSMessages = {
             },
             family: {
                 title: "Frame series",
-                combination: "WL3 combination",
-                single: "WL2 per-character",
+                combination: "WL3",
+                single: "WL2",
+                none: "Hide the frame",
             },
             tier: {
                 title: "Rank tier",

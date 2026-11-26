@@ -4949,8 +4949,9 @@ export const koKRMessages = {
             },
             family: {
                 title: "프레임 시리즈",
-                combination: "WL3 조합",
-                single: "WL2 캐릭터",
+                combination: "WL3",
+                single: "WL2",
+                none: "표시 안 함",
             },
             tier: {
                 title: "랭킹 구간",
