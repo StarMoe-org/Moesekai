@@ -5,7 +5,13 @@ import { useI18n } from "@/contexts/I18nContext";
 import { fetchMasterDataForServer } from "@/lib/fetch";
 import type { ServerType } from "@/lib/account";
 import type { UserMusicResultsMap } from "@/lib/user-music-results";
-import { DIFFICULTY_COLORS, DIFFICULTY_NAMES, difficultyFillStyle, type MusicDifficultyType } from "@/types/music";
+import {
+    CLEAR_STATUS_DIFFICULTIES,
+    CLEAR_STATUS_LEVELS,
+    countClearStatus,
+    type ClearStatusLevel,
+} from "@/lib/music-clear-status";
+import { DIFFICULTY_COLORS, DIFFICULTY_NAMES, difficultyFillStyle } from "@/types/music";
 import { Button, SectionCard } from "@/components/md3";
 import { mdChevronRight, mdLibraryMusic } from "@/components/md3/icons";
 
@@ -15,12 +21,13 @@ interface Props {
     results: UserMusicResultsMap | null;
 }
 
-const DIFFICULTIES: MusicDifficultyType[] = ["easy", "normal", "hard", "expert", "master", "append"];
-const LEVELS = [
-    { key: "clear", labelKey: "page.profile.music.clear", min: ["C", "FC", "AP"] },
-    { key: "fullCombo", labelKey: "page.profile.music.fullCombo", min: ["FC", "AP"] },
-    { key: "allPerfect", labelKey: "page.profile.music.allPerfect", min: ["AP"] },
-] as const;
+// The tally itself lives in lib/music-clear-status.ts: the FC/AP honors print the same numbers, so
+// both read one implementation instead of counting the account's results twice, differently.
+const LEVEL_LABEL_KEYS: Record<ClearStatusLevel, string> = {
+    clear: "page.profile.music.clear",
+    fullCombo: "page.profile.music.fullCombo",
+    allPerfect: "page.profile.music.allPerfect",
+};
 
 /** The game's song clear status: per difficulty, how many songs are cleared, full-comboed and all-perfected. */
 export default function MusicClearStatus({ server, status, results }: Props) {
@@ -46,20 +53,7 @@ export default function MusicClearStatus({ server, status, results }: Props) {
         return () => { cancelled = true; };
     }, [server]);
 
-    const counts = useMemo(() => {
-        const table: Record<string, Record<string, number>> = {};
-        for (const difficulty of DIFFICULTIES) table[difficulty] = { clear: 0, fullCombo: 0, allPerfect: 0 };
-        results?.forEach((entry) => {
-            for (const difficulty of DIFFICULTIES) {
-                const result = entry[difficulty];
-                if (!result) continue;
-                for (const level of LEVELS) {
-                    if ((level.min as readonly string[]).includes(result)) table[difficulty][level.key] += 1;
-                }
-            }
-        });
-        return table;
-    }, [results]);
+    const counts = useMemo(() => countClearStatus(results), [results]);
 
     const unavailable = status === "error" || (status === "ready" && !results);
 
@@ -81,10 +75,10 @@ export default function MusicClearStatus({ server, status, results }: Props) {
                 // columns, one per difficulty, the way the game's clear status table reads.
                 <div className="grid grid-cols-[4.5rem_repeat(3,minmax(0,1fr))] items-center gap-x-3 gap-y-2.5 sm:grid-flow-col sm:grid-cols-[auto_repeat(6,minmax(0,1fr))] sm:grid-rows-[repeat(4,auto)] sm:gap-x-4 sm:gap-y-3">
                     <span />
-                    {LEVELS.map((level) => (
-                        <span key={level.key} className="text-center type-label-s text-on-surface-variant sm:pr-2 sm:text-left">{t(level.labelKey)}</span>
+                    {CLEAR_STATUS_LEVELS.map((level) => (
+                        <span key={level} className="text-center type-label-s text-on-surface-variant sm:pr-2 sm:text-left">{t(LEVEL_LABEL_KEYS[level])}</span>
                     ))}
-                    {DIFFICULTIES.map((difficulty) => {
+                    {CLEAR_STATUS_DIFFICULTIES.map((difficulty) => {
                         const total = chartCounts?.[difficulty] ?? 0;
                         return (
                             <div key={difficulty} className="contents">
@@ -99,10 +93,10 @@ export default function MusicClearStatus({ server, status, results }: Props) {
                                         {total > 0 && t("page.profile.music.chartCount", { count: formatNumber(total) })}
                                     </div>
                                 </div>
-                                {LEVELS.map((level) => {
-                                    const value = counts[difficulty][level.key];
+                                {CLEAR_STATUS_LEVELS.map((level) => {
+                                    const value = counts[difficulty][level];
                                     return (
-                                        <div key={level.key} className="min-w-0" title={total > 0 ? `${value} / ${total}` : undefined}>
+                                        <div key={level} className="min-w-0" title={total > 0 ? `${value} / ${total}` : undefined}>
                                             {status === "loading" ? (
                                                 <div className="mx-auto h-5 w-10 animate-pulse rounded-md3-xs bg-surface-container-high" />
                                             ) : (
