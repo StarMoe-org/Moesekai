@@ -5,7 +5,7 @@ import { AssetSourceType } from "@/contexts/ThemeContext";
 import { mdMilitaryTech } from "@/components/md3/icons";
 import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
 import { resolveCharacterHonorStyle } from "@/lib/character-honor-styles";
-import { resolveHonorArt, supportsHonorStyle, type HonorArtSpec } from "@/lib/honor-art";
+import { honorOverlayAnchor, resolveHonorArt, supportsHonorStyle, type HonorArtSpec } from "@/lib/honor-art";
 import type { ServerSourceType } from "@/lib/fetch";
 
 // Hook to preload an image and track success/failure
@@ -48,20 +48,14 @@ function useImageStatus(url: string | undefined): ImageStatus {
 }
 
 /**
- * Where the game pastes a placement plate, per family and per slot size. A plate that is already the
+ * Where the game pastes a placement plate, per family and per slot size — decided in
+ * `honor-art.ts` so this renderer and the player-frame canvas agree. A plate that is already the
  * badge's own canvas is drawn over all of it instead (see the render below).
  */
 function overlayAnchor(spec: HonorArtSpec, sub: boolean): { x: number; y: number } {
-    switch (spec.overlay?.kind) {
-        case "rank_match":
-            return sub ? { x: 17, y: 42 } : { x: 190, y: 0 };
-        case "event":
-            return { x: sub ? 34 : 190, y: 0 };
-        case "scroll":
-            return { x: sub ? 37 : 215, y: 3 };
-        default:
-            return { x: 0, y: 0 };
-    }
+    if (!spec.overlay) return { x: 0, y: 0 };
+    const anchor = honorOverlayAnchor(spec.overlay.kind, sub);
+    return { x: anchor.x, y: anchor.y };
 }
 
 interface DegreeImageProps {

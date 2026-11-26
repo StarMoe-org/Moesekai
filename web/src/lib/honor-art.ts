@@ -81,6 +81,34 @@ export interface HonorArtOverlay {
     readonly urls: readonly string[];
 }
 
+/** The badge art a placement plate is positioned against: main 380x80, sub 180x80. */
+export const HONOR_ART_CANVAS: Readonly<Record<"main" | "sub", { readonly width: number; readonly height: number }>> = {
+    main: { width: 380, height: 80 },
+    sub: { width: 180, height: 80 },
+};
+
+/**
+ * Where the game pastes an honor's placement plate, in pixels of the badge art above.
+ *
+ * The plate sits on the badge's right half in the main slot, while every sub plate hangs on the
+ * bottom edge instead — 42 + 38 (event plate) and 42 + 40 (rank-match tier) end flush with the art,
+ * and the plate leaves the event title baked into the background readable at the top. Both renderers
+ * position from here so the SVG and the player-frame canvas cannot disagree.
+ */
+export function honorOverlayAnchor(
+    kind: HonorArtOverlay["kind"],
+    sub: boolean,
+): { readonly x: number; readonly y: number } {
+    switch (kind) {
+        case "rank_match":
+            return sub ? { x: 17, y: 42 } : { x: 190, y: 0 };
+        case "event":
+            return sub ? { x: 34, y: 42 } : { x: 190, y: 0 };
+        case "scroll":
+            return sub ? { x: 37, y: 3 } : { x: 215, y: 3 };
+    }
+}
+
 export interface HonorArtSpec {
     readonly rarity: string;
     readonly rarityLevel: number;
