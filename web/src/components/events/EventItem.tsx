@@ -3,11 +3,12 @@ import { Card, Icon } from "@/components/md3";
 import { mdCalendarMonth } from "@/components/md3/icons";
 import Image from "next/image";
 import { IEventInfo, EVENT_TYPE_COLORS, getEventStatus, EVENT_STATUS_DISPLAY, EventType } from "@/types/events";
-import { getAttrIconUrl, getEventStoryBannerUrl, getEventLogoUrl } from "@/lib/assets";
+import { getEventStoryBannerUrl, getEventLogoUrl } from "@/lib/assets";
 import { useTheme } from "@/contexts/ThemeContext";
 import { TranslatedText } from "@/components/common/TranslatedText";
-import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_NAMES } from "@/types/types";
+import { UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, type CardAttribute } from "@/types/types";
 import { useI18n } from "@/contexts/I18nContext";
+import EventBonusAttrIcons from "@/components/events/EventBonusAttrIcons";
 
 // Build unit icon mapping from UNIT_DATA
 const EVENT_UNIT_ICON: Record<string, { icon: string; labelKey: string }> = Object.fromEntries(
@@ -19,11 +20,11 @@ interface EventItemProps {
     isSpoiler?: boolean;
     basePath?: string;
     unitType?: string;
-    bonusAttr?: string;
+    bonusAttrs?: CardAttribute[];
     eventStoryIds?: Set<number>;
 }
 
-export default function EventItem({ event, isSpoiler, basePath = "/events", unitType, bonusAttr, eventStoryIds }: EventItemProps) {
+export default function EventItem({ event, isSpoiler, basePath = "/events", unitType, bonusAttrs, eventStoryIds }: EventItemProps) {
     const { assetSource } = useTheme();
     const { t, formatDate: formatLocaleDate } = useI18n();
     const hasEventStoryBanner = eventStoryIds ? eventStoryIds.has(event.id) : true;
@@ -79,7 +80,7 @@ export default function EventItem({ event, isSpoiler, basePath = "/events", unit
             {/* Event Info */}
             <div className="p-2.5 sm:p-4">
                 {/* ID Badge + Unit Badge */}
-                <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                     <span className="px-1.5 sm:px-2 py-0.5 rounded-md3-sm bg-surface-container-high text-on-surface-variant type-label-s font-mono">
                         #{event.id}
                     </span>
@@ -99,18 +100,7 @@ export default function EventItem({ event, isSpoiler, basePath = "/events", unit
                             <span className="px-1.5 py-0.5 rounded-md3-sm bg-surface-container-high text-on-surface-variant type-label-s" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
                         )
                     )}
-                    {bonusAttr && bonusAttr in ATTR_NAMES && (
-                        <div className="w-5 h-5 flex items-center justify-center" title={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES]}>
-                            <Image
-                                src={getAttrIconUrl(bonusAttr, assetSource)}
-                                alt={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES] || bonusAttr}
-                                width={16}
-                                height={16}
-                                className="object-contain"
-                                unoptimized
-                            />
-                        </div>
-                    )}
+                    <EventBonusAttrIcons bonusAttrs={bonusAttrs} assetSource={assetSource} />
                 </div>
 
                 {/* Event Name */}

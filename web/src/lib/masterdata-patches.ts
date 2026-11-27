@@ -33,7 +33,7 @@ export interface MasterdataPatch {
 }
 
 /**
- * Registered patches. Both current entries intentionally omit `server`
+ * Registered patches. All current entries intentionally omit `server`
  * so they take effect on every server region.
  */
 export const MASTERDATA_PATCHES: MasterdataPatch[] = [
@@ -43,6 +43,13 @@ export const MASTERDATA_PATCHES: MasterdataPatch[] = [
         match: { id: [1345, 1347] },
         patch: { cardSupplyId: 3 },
         note: "Term-limited 4★ cards mislabeled as normal (cardSupplyId 1→3)",
+    },
+    {
+        id: "cards-1489-1491-supply",
+        file: "cards",
+        match: { id: [1489, 1491] },
+        patch: { cardSupplyId: 3 },
+        note: "Term-limited 4★ cards (Lit in the Dark gacha) mislabeled as normal (cardSupplyId 1→3)",
     },
     {
         id: "eventstories-97-banner",

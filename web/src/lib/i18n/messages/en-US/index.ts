@@ -3008,6 +3008,7 @@ export const enUSMessages = {
             bgmTitle: "Event BGM",
             bonusTitle: "Bonus Info",
             bonusAttrLabel: "Bonus Attribute",
+            bonusAttrAll: "All Attributes",
             bonusCharLabel: "Bonus Character",
             relatedSongsTitle: "Related Songs ({count})",
             storyTitle: "Event Story",

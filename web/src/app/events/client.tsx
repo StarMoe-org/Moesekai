@@ -88,7 +88,7 @@ function EventsContent() {
                 above via useQuickFilter), so the page body is a single column. */}
             <div className="min-w-0">
                 <div className="mb-4 flex justify-end"><ViewToggle value={view} onChange={handleViewChange} /></div>
-                <EventGrid events={data.displayedEvents} isLoading={data.isLoading} eventUnitMap={data.eventUnitMap} eventBannerCharMap={data.eventBannerCharMap} eventBonusAttrMap={data.eventBonusAttrMap} eventStoryIds={data.eventStoryIds} view={view} />
+                <EventGrid events={data.displayedEvents} isLoading={data.isLoading} eventUnitMap={data.eventUnitMap} eventBannerCharMap={data.eventBannerCharMap} eventBonusAttrsMap={data.eventBonusAttrsMap} eventStoryIds={data.eventStoryIds} view={view} />
 
                 {!data.isLoading && (
                     <LoadMore

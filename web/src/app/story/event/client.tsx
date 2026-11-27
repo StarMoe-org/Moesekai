@@ -80,7 +80,7 @@ function StoryEventListContent() {
                     basePath="/story/event"
                     eventUnitMap={data.eventUnitMap}
                     eventBannerCharMap={data.eventBannerCharMap}
-                    eventBonusAttrMap={data.eventBonusAttrMap}
+                    eventBonusAttrsMap={data.eventBonusAttrsMap}
                     eventStoryIds={data.eventStoryIds}
                 />
                 {!data.isLoading && (
