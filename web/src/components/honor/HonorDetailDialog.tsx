@@ -6,19 +6,10 @@ import { IHonorInfo, IHonorGroup } from "@/types/honor";
 import DegreeImage from "./DegreeImage";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 import { useSvgPreviewActions } from "@/hooks/useSvgPreviewActions";
-import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
 import { startsHonorArtTier } from "@/lib/honor-art";
-import { characterHonorStyleOptions } from "@/lib/character-honor-styles";
 import { useI18n } from "@/contexts/I18nContext";
 
 type HonorBadgeVariant = "main" | "sub";
-
-/** The background and word picked for a character honor group; kept while browsing its rarities. */
-interface PickedStyle {
-    groupId: number;
-    backgroundId?: number;
-    wordId?: number;
-}
 
 interface HonorDetailDialogProps {
     open: boolean;
@@ -31,6 +22,13 @@ interface HonorDetailDialogProps {
      * CN masterdata repeats one sentence on every level. Absent: the masterdata text is shown.
      */
     levelDescriptions?: string[];
+    /**
+     * The look the visitor clicked in the grid. The list already lists one card per background/word
+     * pairing, so the dialog only shows that pairing instead of offering the same choice again;
+     * absent means the honor is drawn with its own default art.
+     */
+    initialBackgroundId?: number;
+    initialWordId?: number;
 }
 
 export default function HonorDetailDialog({
@@ -40,26 +38,19 @@ export default function HonorDetailDialog({
     honorGroup,
     source = "main-jp",
     levelDescriptions,
+    initialBackgroundId,
+    initialWordId,
 }: HonorDetailDialogProps) {
     const { t } = useI18n();
+    const previewRef = useRef<HTMLDivElement>(null);
+    // The compact badge is the same title in the 180x80 slot; it carries no word, so the look's
+    // background is kept and only the word is dropped.
     const [badgeVariant, setBadgeVariant] = useState<HonorBadgeVariant>("main");
     const isSub = badgeVariant === "sub";
-    const previewRef = useRef<HTMLDivElement>(null);
 
-    // Character honors combine a background style with a word, each unlocked by character rank.
-    // Not gated on `open`: the tables are cached, and the preview keeps its pick while closing.
-    const isCharacter = honorGroup?.honorType === "character";
-    const honorStyles = useCharacterHonorStyles(undefined, isCharacter);
-    const styleOptions = honor && isCharacter && honorStyles ? characterHonorStyleOptions(honorStyles, honor.groupId) : null;
-    const [picked, setPicked] = useState<PickedStyle | null>(null);
-    const pickedHere = picked && honor && picked.groupId === honor.groupId ? picked : null;
-    const background = styleOptions?.backgrounds.find((row) => row.id === pickedHere?.backgroundId) ?? styleOptions?.backgrounds[0];
-    const word = styleOptions?.words.find((row) => row.id === pickedHere?.wordId) ?? styleOptions?.words[0];
-    const pick = (change: Omit<PickedStyle, "groupId">) => {
-        if (!honor) return;
-        setPicked({ groupId: honor.groupId, backgroundId: background?.id, wordId: word?.id, ...change });
-    };
-    const styleSuffix = background && word ? `_${background.seq}${isSub ? "" : `-${word.seq}`}` : "";
+    const styleSuffix = initialBackgroundId === undefined
+        ? ""
+        : `_${initialBackgroundId}${isSub || initialWordId === undefined ? "" : `-${initialWordId}`}`;
     // The list is indexed by level, so a mismatched one would put the wrong sentence on every level.
     const resolvedDescriptions =
         honor && levelDescriptions && levelDescriptions.length === honor.levels.length ? levelDescriptions : undefined;
@@ -89,8 +80,8 @@ export default function HonorDetailDialog({
                                     honorLevel={honor.levels.length > 0 ? honor.levels[0].level : undefined}
                                     sub={isSub}
                                     source={source}
-                                    honorBackgroundId={background?.id}
-                                    honorWordId={word?.id}
+                                    honorBackgroundId={initialBackgroundId}
+                                    honorWordId={isSub ? undefined : initialWordId}
                                 />
                             </div>
                         </div>
@@ -105,23 +96,6 @@ export default function HonorDetailDialog({
                                 { value: "sub", label: t("page.honors.badgeVariant.sub") },
                             ]}
                         />
-                        {styleOptions && background && styleOptions.backgrounds.length > 1 && (
-                            <StylePicker
-                                label={t("page.honors.characterStyle.background")}
-                                options={styleOptions.backgrounds}
-                                selected={background}
-                                onSelect={(id) => pick({ backgroundId: id })}
-                            />
-                        )}
-                        {/* The sub honor shows the background only */}
-                        {styleOptions && word && !isSub && styleOptions.words.length > 1 && (
-                            <StylePicker
-                                label={t("page.honors.characterStyle.word")}
-                                options={styleOptions.words}
-                                selected={word}
-                                onSelect={(id) => pick({ wordId: id })}
-                            />
-                        )}
                     </div>
 
                     <div className="space-y-0">
@@ -161,12 +135,11 @@ export default function HonorDetailDialog({
                                             <p className="type-body-m text-on-surface-variant">{description}</p>
                                         )}
                                         {isNewTier && level.assetbundleName && (
-                                            <div className={isSub ? "mt-2 max-w-[180px]" : "mt-2 max-w-[380px]"}>
+                                            <div className="mt-2 max-w-[380px]">
                                                 <DegreeImage
                                                     honor={{ ...honor, assetbundleName: level.assetbundleName }}
                                                     honorGroup={honorGroup}
                                                     honorLevel={level.level}
-                                                    sub={isSub}
                                                     source={source}
                                                 />
                                             </div>
@@ -182,35 +155,6 @@ export default function HonorDetailDialog({
                 </div>
             ) : null}
         </Modal>
-    );
-}
-
-/** One of a character honor's choices (background or word), with what unlocks the picked one. */
-function StylePicker({
-    label,
-    options,
-    selected,
-    onSelect,
-}: {
-    label: string;
-    options: { id: number; name: string; description: string }[];
-    selected: { id: number; description: string };
-    onSelect: (id: number) => void;
-}) {
-    return (
-        <div className="w-full max-w-[380px] space-y-1.5">
-            <div className="type-label-m text-on-surface-variant">{label}</div>
-            <SegmentedButton<string>
-                density={-1}
-                aria-label={label}
-                value={String(selected.id)}
-                onValueChange={(value) => onSelect(Number(value))}
-                options={options.map((row) => ({ value: String(row.id), label: row.name }))}
-            />
-            {selected.description && (
-                <p className="type-body-s text-on-surface-variant">{selected.description}</p>
-            )}
-        </div>
     );
 }
 

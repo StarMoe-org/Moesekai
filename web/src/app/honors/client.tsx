@@ -19,6 +19,9 @@ import {
 } from "@/types/honor";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
+import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
+import { characterHonorStyleOptions } from "@/lib/character-honor-styles";
+import { supportsHonorStyle } from "@/lib/honor-art";
 import { getCharacterIconUrl } from "@/lib/assets";
 import { getCharacterName } from "@/lib/i18n";
 import { Card, EmptyState, ErrorState, LoadMore, LoadingState, PageContainer, PageHeader, SegmentedButton } from "@/components/md3";
@@ -63,6 +66,8 @@ function HonorsContent() {
     const [filtersInitialized, setFiltersInitialized] = useState(false);
 
     const [selectedHonor, setSelectedHonor] = useState<IHonorInfo | undefined>();
+    /** The background/word pairing the visitor clicked in the grid, so the dialog opens on it. */
+    const [selectedLook, setSelectedLook] = useState<{ backgroundId: number; wordId?: number } | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const [searchQuery, setSearchQuery] = useState("");
@@ -246,6 +251,21 @@ function HonorsContent() {
         return Array.from(new Set(honorGroups.map(g => g.honorType)));
     }, [honorGroups]);
 
+    // A character honor's look is a background style plus a word (both unlocked by character rank),
+    // and the highest-rarity one of each group can show any pairing of the two. Those are listed as
+    // separate cards below, so a visitor sees every look without opening the detail dialog.
+    const honorStyles = useCharacterHonorStyles(undefined, activeTab === "normal");
+    const styleOptionsByGroup = useMemo(() => {
+        const map = new Map<number, ReturnType<typeof characterHonorStyleOptions>>();
+        if (!honorStyles) return map;
+        for (const group of honorGroups) {
+            if (group.honorType !== "character") continue;
+            const options = characterHonorStyleOptions(honorStyles, group.id);
+            if (options.backgrounds.length > 1 || options.words.length > 1) map.set(group.id, options);
+        }
+        return map;
+    }, [honorStyles, honorGroups]);
+
     const filteredHonors = useMemo(() => {
         let result = [...honors];
 
@@ -369,7 +389,8 @@ function HonorsContent() {
         resetDisplayCount();
     };
 
-    const handleHonorClick = (honor: IHonorInfo) => {
+    const handleHonorClick = (honor: IHonorInfo, look?: { backgroundId: number; wordId?: number }) => {
+        setSelectedLook(look ?? null);
         setSelectedHonor(honor);
         setIsDialogOpen(true);
     };
@@ -517,41 +538,75 @@ function HonorsContent() {
                     ) : (
                         <>
                             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-4">
-                                {displayedHonors.map(honor => {
+                                {displayedHonors.flatMap(honor => {
                                     const group = honorGroupMap.get(honor.groupId);
-                                    return (
+                                    const options = supportsHonorStyle(honor, group) ? styleOptionsByGroup.get(honor.groupId) : undefined;
+                                    // A character honor with several styles gets one card per look: every
+                                    // background paired with every word, the latest unlock first (a group's
+                                    // seq 2 style/word needs character rank 180 against rank 5 for seq 1).
+                                    // The compact badge is left out — it carries no word (and no medal), so
+                                    // both of its styles render as the same picture and would only pad the
+                                    // grid.
+                                    const looks = options
+                                        ? [...options.backgrounds]
+                                              .sort((a, b) => b.seq - a.seq)
+                                              .flatMap(background =>
+                                                  [...options.words]
+                                                      .sort((a, b) => b.seq - a.seq)
+                                                      .map(word => ({
+                                                          key: `${honor.id}-${background.id}-${word.id}`,
+                                                          backgroundId: background.id,
+                                                          wordId: word.id,
+                                                          caption: `${background.name} · ${word.name}`,
+                                                      })),
+                                              )
+                                        : null;
+                                    if (!looks) {
+                                        return [(
+                                            <Card
+                                                variant="elevated"
+                                                key={honor.id}
+                                                onClick={() => handleHonorClick(honor)}
+                                                data-shortcut-item="true"
+                                                className="group p-4"
+                                            >
+                                                <div className="mb-3">
+                                                    <DegreeImage
+                                                        honor={honor}
+                                                        honorGroup={group}
+                                                        honorLevel={honor.levels.length > 0 ? honor.levels[0].level : undefined}
+                                                        source={assetSource}
+                                                    />
+                                                </div>
+                                                <h3 className="mb-1 type-title-s text-on-surface">
+                                                    {honor.name}
+                                                </h3>
+                                                <HonorChips group={group} rarity={honor.honorRarity} />
+                                            </Card>
+                                        )];
+                                    }
+                                    return looks.map(look => (
                                         <Card
                                             variant="elevated"
-                                            key={honor.id}
-                                            onClick={() => handleHonorClick(honor)}
-                                            data-shortcut-item="true"
-                                            className="group p-4"
+                                            key={look.key}
+                                            onClick={() => handleHonorClick(honor, look)}
+                                            className="group p-3"
                                         >
-                                            <div className="mb-3">
+                                            <div className="mb-2">
                                                 <DegreeImage
                                                     honor={honor}
                                                     honorGroup={group}
                                                     honorLevel={honor.levels.length > 0 ? honor.levels[0].level : undefined}
                                                     source={assetSource}
+                                                    honorBackgroundId={look.backgroundId}
+                                                    honorWordId={look.wordId}
                                                 />
                                             </div>
-                                            <h3 className="mb-1 type-title-s text-on-surface">
-                                                {honor.name}
-                                            </h3>
-                                            <div className="flex flex-wrap gap-1">
-                                                {group && (
-                                                    <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
-                                                        {getHonorTypeLabel(group.honorType, t)}
-                                                    </span>
-                                                )}
-                                                {honor.honorRarity && (
-                                                    <span className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant">
-                                                        {getHonorRarityLabel(honor.honorRarity, t)}
-                                                    </span>
-                                                )}
-                                            </div>
+                                            <h3 className="mb-0.5 type-title-s text-on-surface">{honor.name}</h3>
+                                            <p className="mb-1 type-label-s text-on-surface-variant">{look.caption}</p>
+                                            <HonorChips group={group} rarity={honor.honorRarity} />
                                         </Card>
-                                    );
+                                    ));
                                 })}
                             </div>
 
@@ -637,9 +692,12 @@ function HonorsContent() {
             <HonorDetailDialog
                 open={isDialogOpen}
                 onClose={() => setIsDialogOpen(false)}
+                key={selectedLook ? `${selectedLook.backgroundId}-${selectedLook.wordId ?? 0}` : "default"}
                 honor={selectedHonor}
                 honorGroup={selectedHonor ? honorGroupMap.get(selectedHonor.groupId) : undefined}
                 levelDescriptions={selectedHonor ? honorLevelText.get(selectedHonor.id) : undefined}
+                initialBackgroundId={selectedLook?.backgroundId}
+                initialWordId={selectedLook?.wordId}
                 source={assetSource}
             />
 
@@ -653,6 +711,25 @@ function HonorsContent() {
                 source={assetSource}
             />
         </PageContainer>
+    );
+}
+
+/** The type and rarity chips every honor card carries. */
+function HonorChips({ group, rarity }: { group?: IHonorGroup; rarity?: string }) {
+    const { t } = useI18n();
+    return (
+        <div className="flex flex-wrap gap-1">
+            {group && (
+                <span className="rounded-md3-xs bg-secondary-container px-1.5 py-0.5 type-label-s text-on-secondary-container">
+                    {getHonorTypeLabel(group.honorType, t)}
+                </span>
+            )}
+            {rarity && (
+                <span className="rounded-md3-xs bg-surface-container-highest px-1.5 py-0.5 type-label-s text-on-surface-variant">
+                    {getHonorRarityLabel(rarity, t)}
+                </span>
+            )}
+        </div>
     );
 }
 
