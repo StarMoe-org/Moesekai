@@ -7,6 +7,7 @@ import DegreeImage from "./DegreeImage";
 import { AssetSourceType } from "@/contexts/ThemeContext";
 import { useSvgPreviewActions } from "@/hooks/useSvgPreviewActions";
 import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
+import { startsHonorArtTier } from "@/lib/honor-art";
 import { characterHonorStyleOptions } from "@/lib/character-honor-styles";
 import { useI18n } from "@/contexts/I18nContext";
 
@@ -25,6 +26,11 @@ interface HonorDetailDialogProps {
     honor?: IHonorInfo;
     honorGroup?: IHonorGroup;
     source?: AssetSourceType;
+    /**
+     * Per-level descriptions from the generated table (`lib/honor-level-descriptions.ts`), used where
+     * CN masterdata repeats one sentence on every level. Absent: the masterdata text is shown.
+     */
+    levelDescriptions?: string[];
 }
 
 export default function HonorDetailDialog({
@@ -33,6 +39,7 @@ export default function HonorDetailDialog({
     honor,
     honorGroup,
     source = "main-jp",
+    levelDescriptions,
 }: HonorDetailDialogProps) {
     const { t } = useI18n();
     const [badgeVariant, setBadgeVariant] = useState<HonorBadgeVariant>("main");
@@ -53,6 +60,9 @@ export default function HonorDetailDialog({
         setPicked({ groupId: honor.groupId, backgroundId: background?.id, wordId: word?.id, ...change });
     };
     const styleSuffix = background && word ? `_${background.seq}${isSub ? "" : `-${word.seq}`}` : "";
+    // The list is indexed by level, so a mismatched one would put the wrong sentence on every level.
+    const resolvedDescriptions =
+        honor && levelDescriptions && levelDescriptions.length === honor.levels.length ? levelDescriptions : undefined;
 
     const { headerActions, errorMessage } = useSvgPreviewActions({
         isOpen: open,
@@ -132,7 +142,12 @@ export default function HonorDetailDialog({
                         <div>
                             <h3 className="mb-3 type-title-s text-on-surface">{t("common.field.levelDetails")}</h3>
                             <div className="space-y-4">
-                                {honor.levels.map(level => (
+                                {honor.levels.map((level, index) => {
+                                    const description = resolvedDescriptions?.[index] ?? level.description;
+                                    // One badge covers a whole tier, so the thumbnail belongs where the art
+                                    // actually changes — not on all 80 levels that share it.
+                                    const isNewTier = startsHonorArtTier(honor.levels, index);
+                                    return (
                                     <div key={level.level} className="space-y-2 rounded-md3-md bg-surface-container p-4">
                                         <div className="flex items-center justify-between">
                                             <span className="type-label-l text-primary">Lv.{level.level}</span>
@@ -142,10 +157,10 @@ export default function HonorDetailDialog({
                                                 </span>
                                             )}
                                         </div>
-                                        {level.description && (
-                                            <p className="type-body-m text-on-surface-variant">{level.description}</p>
+                                        {description && (
+                                            <p className="type-body-m text-on-surface-variant">{description}</p>
                                         )}
-                                        {level.assetbundleName && (
+                                        {isNewTier && level.assetbundleName && (
                                             <div className={isSub ? "mt-2 max-w-[180px]" : "mt-2 max-w-[380px]"}>
                                                 <DegreeImage
                                                     honor={{ ...honor, assetbundleName: level.assetbundleName }}
@@ -157,7 +172,8 @@ export default function HonorDetailDialog({
                                             </div>
                                         )}
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

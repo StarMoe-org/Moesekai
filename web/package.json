@@ -31,6 +31,7 @@
     "test:player-frame": "node --experimental-strip-types --test tests/player-frame.test.mjs",
     "test:sponsors": "node --experimental-strip-types --test tests/sponsors.test.mjs",
     "test:changelog": "node --experimental-strip-types --test tests/changelog.test.mjs",
+    "test:honor-level-descriptions": "node --experimental-strip-types --test tests/honor-level-descriptions.test.mjs",
     "sitemap": "node scripts/generate-sitemaps.mjs",
     "generate:metadata": "node scripts/generate-metadata-map.mjs",
     "start": "next start",

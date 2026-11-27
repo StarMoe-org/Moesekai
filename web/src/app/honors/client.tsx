@@ -13,8 +13,9 @@ import BaseFilters, { FilterSection, FilterToggle } from "@/components/common/Ba
 import { useTheme } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { fetchMasterData } from "@/lib/fetch";
+import { resolveHonorLevelDescriptions } from "@/lib/honor-level-descriptions";
 import {
-    IHonorInfo, IHonorGroup, IBondsHonor, IBondsHonorWord, IBond, IGameCharaUnit,
+    IHonorInfo, IHonorGroup, IHonorMission, IBondsHonor, IBondsHonorWord, IBond, IGameCharaUnit,
 } from "@/types/honor";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { useQuickFilter } from "@/contexts/QuickFilterContext";
@@ -52,6 +53,11 @@ function HonorsContent() {
     // ==================== Normal Honor State ====================
     const [honors, setHonors] = useState<IHonorInfo[]>([]);
     const [honorGroups, setHonorGroups] = useState<IHonorGroup[]>([]);
+    /**
+     * honor id → the level wording that belongs on it, for the regions whose masterdata repeats one
+     * sentence on every level (see lib/honor-level-descriptions.ts). Empty everywhere else.
+     */
+    const [honorLevelText, setHonorLevelText] = useState<Map<number, string[]>>(() => new Map());
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filtersInitialized, setFiltersInitialized] = useState(false);
@@ -175,12 +181,20 @@ function HonorsContent() {
         async function fetchData() {
             try {
                 setIsLoading(true);
-                const [honorsData, groupsData] = await Promise.all([
+                const [honorsData, groupsData, missionsData] = await Promise.all([
                     fetchMasterData<IHonorInfo[]>("honors.json"),
                     fetchMasterData<IHonorGroup[]>("honorGroups.json"),
+                    // Optional: only feeds the level wording that CN masterdata collapses, so a
+                    // failure here must not take the whole list down. ~300-400 KB per region, fetched
+                    // in parallel so the list never waits on it.
+                    fetchMasterData<IHonorMission[]>("honorMissions.json").catch((err) => {
+                        console.warn("honorMissions.json unavailable, honor levels stay as-is:", err);
+                        return [] as IHonorMission[];
+                    }),
                 ]);
                 setHonors(honorsData || []);
                 setHonorGroups(groupsData || []);
+                setHonorLevelText(resolveHonorLevelDescriptions(honorsData || [], missionsData || []));
                 setError(null);
             } catch (err) {
                 console.error("Error fetching honor data:", err);
@@ -625,6 +639,7 @@ function HonorsContent() {
                 onClose={() => setIsDialogOpen(false)}
                 honor={selectedHonor}
                 honorGroup={selectedHonor ? honorGroupMap.get(selectedHonor.groupId) : undefined}
+                levelDescriptions={selectedHonor ? honorLevelText.get(selectedHonor.id) : undefined}
                 source={assetSource}
             />
 

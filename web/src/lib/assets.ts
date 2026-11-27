@@ -468,6 +468,15 @@ export function getHonorLevelIconUrl(level6: boolean = false, source: AssetSourc
     return getInappSpriteUrl(level6 ? "icon_degreeLv6" : "icon_degreeLv", source);
 }
 
+/**
+ * The medal a character honor's "oshi" style draws over the badge's left edge (`HONOR_MEDAL_ART` in
+ * `lib/honor-art.ts` places it). 64x72, one sprite for both slots. Only the JP bundle publishes it,
+ * so it is read from the JP package on the source's own line, like the other in-app sprites.
+ */
+export function getHonorMedalUrl(source: AssetSourceType = "main-jp"): string {
+    return `${getAssetDomain(source)}/sekai-jp-assets/honor_medal/medal/icon_degree_medal1.webp`;
+}
+
 // ==================== Story/Scenario Asset URLs ====================
 
 export function getScenarioJsonUrl(scenarioPath: string, source: AssetSourceType = "main-jp"): string {

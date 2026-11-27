@@ -18,6 +18,7 @@ import {
     getHonorCustomFrameUrl,
     getHonorFrameUrl,
     getHonorLevelIconUrl,
+    getHonorMedalUrl,
     getHonorRankMatchBgUrl,
     getHonorRankMatchTierUrl,
     getHonorRankUrl,
@@ -45,6 +46,7 @@ export interface HonorArtGroup {
     honorType?: string;
     backgroundAssetbundleName?: string;
     frameName?: string;
+    isMedalDisplayed?: boolean;
 }
 
 /** A character honor's chosen style (honorBackgrounds / honorWords assetbundle names). */
@@ -64,6 +66,11 @@ export interface HonorArtInput {
     sources: readonly AssetSourceType[];
     /** A character honor's style, when the tables are loaded and the honor supports one. */
     style?: HonorArtStyle | null;
+    /**
+     * The chosen style is the "oshi" variant (honorWords / honorBackgrounds seq 2, which the game
+     * unlocks at character rank 180). It is what adds the medal, so a fan title keeps the plain look.
+     */
+    oshiStyle?: boolean;
 }
 
 export interface HonorArtLevelBadge {
@@ -124,6 +131,12 @@ export function honorFcapTextAnchor(
     return { x: anchor.x + 50, baselineY: 69, fontSize: 22 };
 }
 
+/**
+ * The medal a character honor's "oshi" style draws over the badge's left edge. One sprite for both
+ * slots and the main slot only, pasted at its native 64x72 size like the game does.
+ */
+export const HONOR_MEDAL_ART = { x: 0, y: 4, width: 64, height: 72 } as const;
+
 export interface HonorArtSpec {
     readonly rarity: string;
     readonly rarityLevel: number;
@@ -139,6 +152,8 @@ export interface HonorArtSpec {
     readonly backgrounds: readonly string[];
     /** The rarity frame: the family's own one first, then the default sprite. */
     readonly frames: readonly string[];
+    /** The "oshi" medal, drawn over everything else at `HONOR_MEDAL_ART`; empty otherwise. */
+    readonly medal: readonly string[];
     readonly overlay: HonorArtOverlay | null;
     readonly levelBadge: HonorArtLevelBadge | null;
 }
@@ -167,6 +182,17 @@ export function honorBundleOf(honor: HonorArtHonor, level?: number | null): stri
     const levels = honor.levels ?? [];
     const entry = level == null ? undefined : levels.find(item => item.level === level);
     return honor.assetbundleName || entry?.assetbundleName || levels[0]?.assetbundleName || null;
+}
+
+/**
+ * Whether the level at `index` opens a new art tier — the first level whose badge differs from the
+ * one before it. Only the difficulty-score family (3009-3014, 4700-4701) carries per-level bundles
+ * (`honor_3014_100` … `_800`, one tier per 10 levels); every other honor keeps one badge for its
+ * whole range, so it never opens a second tier.
+ */
+export function startsHonorArtTier(levels: readonly { assetbundleName?: string }[], index: number): boolean {
+    const bundle = levels[index]?.assetbundleName;
+    return Boolean(bundle) && bundle !== levels[index - 1]?.assetbundleName;
 }
 
 export function resolveHonorArt(input: HonorArtInput): HonorArtSpec {
@@ -259,6 +285,12 @@ export function resolveHonorArt(input: HonorArtInput): HonorArtSpec {
         }
     }
 
+    // ── Medal: the "oshi" style marker, main slot of a composed character honor only ──
+    const medal = supportsHonorStyle(honor, group) && !sub && group?.isMedalDisplayed === true
+        && input.oshiStyle === true
+        ? uniqueUrls(sources.map(source => getHonorMedalUrl(source)))
+        : [];
+
     return {
         rarity,
         rarityLevel,
@@ -268,6 +300,7 @@ export function resolveHonorArt(input: HonorArtInput): HonorArtSpec {
         words,
         backgrounds,
         frames,
+        medal,
         overlay,
         levelBadge,
     };

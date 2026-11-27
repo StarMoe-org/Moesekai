@@ -27,6 +27,22 @@ export interface IHonorGroup {
     honorType: string;
     backgroundAssetbundleName?: string;
     frameName?: string;
+    /** True for the 26 character groups whose "oshi" style draws a medal over the badge's left edge. */
+    isMedalDisplayed?: boolean;
+}
+
+/**
+ * A row of honorMissions.json: one tier of one honor-mission ladder. `seq` counts tiers within
+ * `honorMissionType`, `requirement` is the threshold, and `sentence` is the localized wording of that
+ * requirement — the text some honors print on their matching level.
+ */
+export interface IHonorMission {
+    id: number;
+    seq: number;
+    honorMissionType: string;
+    requirement: number;
+    sentence: string;
+    startAt?: number;
 }
 
 /**
