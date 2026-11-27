@@ -40,6 +40,12 @@ test("registered cards patch has no server restriction (all regions)", () => {
   assert.equal(patch.server, undefined);
 });
 
+test("registered cards 1489-1491 patch has no server restriction (all regions)", () => {
+  const patch = MASTERDATA_PATCHES.find((p) => p.id === "cards-1489-1491-supply");
+  assert.ok(patch);
+  assert.equal(patch.server, undefined);
+});
+
 test("registered eventStories patch has no server restriction (all regions)", () => {
   const patch = MASTERDATA_PATCHES.find((p) => p.id === "eventstories-97-banner");
   assert.ok(patch);
@@ -55,6 +61,21 @@ test("cards patch applies on every server (jp & cn)", () => {
     const out = applyMasterdataPatches("cards", server, cards);
     assert.equal(out[0].cardSupplyId, 3, `server ${server}`);
     assert.equal(out[1].cardSupplyId, 3, `server ${server}`);
+  }
+});
+
+test("cards 1489-1491 patch applies on every server (all regions)", () => {
+  const cards = [
+    { id: 1489, cardSupplyId: 1, prefix: "暗闇の果てに" },
+    { id: 1490, cardSupplyId: 1, prefix: "ほんの少しの温もりを" },
+    { id: 1491, cardSupplyId: 1, prefix: "鍵を壊すために" },
+  ];
+  for (const server of ["jp", "cn", "tw", "kr", "en"]) {
+    const out = applyMasterdataPatches("cards", server, cards);
+    assert.equal(out[0].cardSupplyId, 3, `server ${server} id 1489`);
+    assert.equal(out[1].cardSupplyId, 3, `server ${server} id 1490`);
+    assert.equal(out[2].cardSupplyId, 3, `server ${server} id 1491`);
+    assert.equal(out[0].prefix, "暗闇の果てに", `server ${server} preserves fields`);
   }
 });
 
@@ -82,6 +103,24 @@ test("id range matches inclusive bounds only", () => {
   assert.equal(out[2].cardSupplyId, 3);
   assert.equal(out[3].cardSupplyId, 3);
   assert.equal(out[4].cardSupplyId, 1);
+});
+
+test("cards 1489-1491 id range matches inclusive bounds only (leaves neighbors 1488 & 1492 untouched)", () => {
+  const cards = [
+    { id: 1488, cardSupplyId: 2 },
+    { id: 1489, cardSupplyId: 1 },
+    { id: 1490, cardSupplyId: 1 },
+    { id: 1491, cardSupplyId: 1 },
+    { id: 1492, cardSupplyId: 1 },
+  ];
+  const out = applyMasterdataPatches("cards", "jp", cards);
+  assert.equal(out[0].cardSupplyId, 2);
+  assert.equal(out[0], cards[0]); // untouched reference
+  assert.equal(out[1].cardSupplyId, 3);
+  assert.equal(out[2].cardSupplyId, 3);
+  assert.equal(out[3].cardSupplyId, 3);
+  assert.equal(out[4].cardSupplyId, 1);
+  assert.equal(out[4], cards[4]); // untouched reference
 });
 
 test("no matching patch returns the original array reference", () => {
