@@ -1,6 +1,7 @@
 "use client";
 import EventItem from "./EventItem";
 import { IEventInfo } from "@/types/events";
+import type { CardAttribute } from "@/types/types";
 import { useState } from "react";
 import { useI18n } from "@/contexts/I18nContext";
 import { EmptyState } from "@/components/md3";
@@ -18,7 +19,7 @@ interface EventGridProps {
     basePath?: string;
     eventUnitMap?: Map<number, string>;
     eventBannerCharMap?: Map<number, number>;
-    eventBonusAttrMap?: Map<number, string>;
+    eventBonusAttrsMap?: Map<number, CardAttribute[]>;
     eventStoryIds?: Set<number>;
     view?: "grid" | "table";
 }
@@ -37,7 +38,7 @@ function EventSkeleton() {
     );
 }
 
-export default function EventGrid({ events, isLoading = false, basePath = "/events", eventUnitMap, eventBannerCharMap: _eventBannerCharMap, eventBonusAttrMap, eventStoryIds, view = "grid" }: EventGridProps) {
+export default function EventGrid({ events, isLoading = false, basePath = "/events", eventUnitMap, eventBannerCharMap: _eventBannerCharMap, eventBonusAttrsMap, eventStoryIds, view = "grid" }: EventGridProps) {
     const [now] = useState(() => Date.now());
     const { t, formatDate } = useI18n();
     const { assetSource } = useTheme();
@@ -72,7 +73,7 @@ export default function EventGrid({ events, isLoading = false, basePath = "/even
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
             {events.map(event => {
                 const isSpoiler = event.startAt > now;
-                return <EventItem key={event.id} event={event} isSpoiler={isSpoiler} basePath={basePath} unitType={eventUnitMap?.get(event.id)} bonusAttr={eventBonusAttrMap?.get(event.id)} eventStoryIds={eventStoryIds} />;
+                return <EventItem key={event.id} event={event} isSpoiler={isSpoiler} basePath={basePath} unitType={eventUnitMap?.get(event.id)} bonusAttrs={eventBonusAttrsMap?.get(event.id)} eventStoryIds={eventStoryIds} />;
             })}
         </div>
     );

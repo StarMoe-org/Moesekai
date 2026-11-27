@@ -1678,6 +1678,7 @@ export const zhTWPagePrimary = {
             bgmTitle: "活動BGM",
             bonusTitle: "加成資訊",
             bonusAttrLabel: "加成屬性",
+            bonusAttrAll: "全屬性",
             bonusCharLabel: "加成角色",
             relatedSongsTitle: "活動相關歌曲 ({count})",
             storyTitle: "活動劇情",

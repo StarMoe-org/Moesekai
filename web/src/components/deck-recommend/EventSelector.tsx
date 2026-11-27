@@ -2,10 +2,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import { IEventInfo, IEventDeckBonus, EventType, EVENT_TYPE_COLORS, getEventStatus } from "@/types/events";
-import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, ATTR_NAMES, type CardAttribute } from "@/types/types";
+import { ICharaUnitInfo, UNIT_DATA, UNIT_ICON_FILES, UNIT_ID_LABEL_KEYS, type CardAttribute } from "@/types/types";
 import { fetchMasterDataForServer, type ServerSourceType } from "@/lib/fetch";
 import { isWorldBloomFinale, type WorldBloomChapterRow } from "@/lib/deck-recommend/world-bloom-finale";
-import { getAttrIconUrl, getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
+import { getCharacterIconUrl, getEventLogoUrl, getEventStoryBannerUrl } from "@/lib/assets";
 import { replaceAssetSourceRegion, useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
 import { useI18n } from "@/contexts/I18nContext";
 import { getCharacterName } from "@/lib/i18n";
@@ -15,7 +15,9 @@ import SelectorModal from "./SelectorModal";
 import { Icon, LoadingState } from "@/components/md3";
 import { mdCalendarMonth, mdImage, mdUnfoldMore } from "@/components/md3/icons";
 import EventFilters, { type EventUnitFilterId } from "@/components/events/EventFilters";
+import EventBonusAttrIcons from "@/components/events/EventBonusAttrIcons";
 import { IActionSet, IEventStory, buildEventRawUnitMap, rawUnitToFilterId, buildEventBannerCharMap } from "@/lib/eventUnit";
+import { buildEventBonusAttrsMap, matchesBonusAttrFilter } from "@/lib/eventBonus";
 import { type Wl3SimulationGroup, getWl3SimulationGroupByEventId } from "@/lib/world-bloom-simulation";
 
 // Build unit icon mapping from UNIT_DATA (same as EventItem)
@@ -204,15 +206,10 @@ export default function EventSelector({
         return buildEventBannerCharMap(eventStories, charaUnits);
     }, [eventStories, charaUnits]);
 
-    const eventBonusAttrMap = useMemo(() => {
-        const map = new Map<number, string>();
-        for (const bonus of deckBonuses) {
-            if (bonus.cardAttr && !bonus.gameCharacterUnitId) {
-                map.set(bonus.eventId, bonus.cardAttr);
-            }
-        }
-        return map;
-    }, [deckBonuses]);
+    const eventBonusAttrsMap = useMemo(
+        () => buildEventBonusAttrsMap(deckBonuses),
+        [deckBonuses],
+    );
 
     const eventStoryIds = useMemo(() => new Set(eventStories.map(s => s.eventId)), [eventStories]);
 
@@ -254,7 +251,7 @@ export default function EventSelector({
         }
 
         if (selectedBonusAttr) {
-            result = result.filter(e => eventBonusAttrMap.get(e.id) === selectedBonusAttr);
+            result = result.filter(e => matchesBonusAttrFilter(eventBonusAttrsMap.get(e.id), selectedBonusAttr));
         }
 
         if (searchQuery.trim()) {
@@ -280,7 +277,7 @@ export default function EventSelector({
 
         return result;
      
-    }, [events, selectedTypes, selectedEventUnits, eventUnitMap, selectedCharacters, eventBonusCharMap, vsCharAllUnitIds, selectedBannerChars, eventBannerCharMapDerived, selectedBonusAttr, eventBonusAttrMap, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
+    }, [events, selectedTypes, selectedEventUnits, eventUnitMap, selectedCharacters, eventBonusCharMap, vsCharAllUnitIds, selectedBannerChars, eventBannerCharMapDerived, selectedBonusAttr, eventBonusAttrsMap, searchQuery, sortBy, sortOrder, translations, isShowSpoiler, now]);
 
     // Get currently selected event object
     const selectedEvent = useMemo(() => {
@@ -451,7 +448,7 @@ export default function EventSelector({
                                     event={event}
                                     isSpoiler={event.startAt > now}
                                     unitType={eventUnitMap.get(event.id)}
-                                    bonusAttr={eventBonusAttrMap.get(event.id)}
+                                    bonusAttrs={eventBonusAttrsMap.get(event.id)}
                                     eventStoryIds={eventStoryIds}
                                     assetSource={assetSource}
                                     onClick={() => handleSelect(event)}
@@ -475,7 +472,7 @@ function EventSelectionItem({
     event,
     isSpoiler,
     unitType,
-    bonusAttr,
+    bonusAttrs,
     eventStoryIds,
     assetSource,
     onClick,
@@ -483,7 +480,7 @@ function EventSelectionItem({
     event: IEventInfo;
     isSpoiler?: boolean;
     unitType?: string;
-    bonusAttr?: string;
+    bonusAttrs?: CardAttribute[];
     eventStoryIds?: Set<number>;
     assetSource: AssetSourceType;
     onClick: () => void;
@@ -539,7 +536,7 @@ function EventSelectionItem({
                 {/* Event Info */}
                 <div className="p-2.5 sm:p-4">
                     {/* ID Badge + Unit Badge */}
-                    <div className="flex items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 mb-1.5 sm:mb-2">
                         <span className="px-1.5 sm:px-2 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] sm:text-xs font-mono rounded-md3-sm">
                             #{event.id}
                         </span>
@@ -559,18 +556,7 @@ function EventSelectionItem({
                                 <span className="px-1.5 py-0.5 bg-surface-container-high text-on-surface-variant text-[10px] font-bold rounded-md3-sm" title={t("common.badge.mixed")}>{t("common.badge.mixed")}</span>
                             )
                         )}
-                        {bonusAttr && bonusAttr in ATTR_NAMES && (
-                            <div className="w-5 h-5 flex items-center justify-center" title={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES]}>
-                                <Image
-                                    src={getAttrIconUrl(bonusAttr, assetSource)}
-                                    alt={ATTR_NAMES[bonusAttr as keyof typeof ATTR_NAMES] || bonusAttr}
-                                    width={16}
-                                    height={16}
-                                    className="object-contain"
-                                    unoptimized
-                                />
-                            </div>
-                        )}
+                        <EventBonusAttrIcons bonusAttrs={bonusAttrs} assetSource={assetSource} />
                     </div>
 
                     {/* Event Name */}

@@ -10,6 +10,7 @@ import { fetchMasterData, fetchMasterDataForServer } from "@/lib/fetch";
 import { loadTranslations, TranslationData } from "@/lib/translations";
 import { useScrollRestore } from "@/hooks/useScrollRestore";
 import { IActionSet, IEventStory, buildEventRawUnitMap, rawUnitToFilterId, buildEventBannerCharMap } from "@/lib/eventUnit";
+import { buildEventBonusAttrsMap, matchesBonusAttrFilter } from "@/lib/eventBonus";
 
 // ---------------------------------------------------------------------------
 // Hook config & return type
@@ -29,7 +30,7 @@ export interface UseEventListDataReturn {
     translations: TranslationData | null;
     eventUnitMap: Map<number, string>;
     eventBannerCharMap: Map<number, number>;
-    eventBonusAttrMap: Map<number, string>;
+    eventBonusAttrsMap: Map<number, CardAttribute[]>;
     eventStoryIds: Set<number>;
     isLoading: boolean;
     error: string | null;
@@ -261,15 +262,10 @@ export function useEventListData({ storageKey }: UseEventListDataConfig): UseEve
         return buildEventBannerCharMap(eventStories, charaUnits);
     }, [eventStories, charaUnits]);
 
-    const eventBonusAttrMap = useMemo(() => {
-        const map = new Map<number, string>();
-        for (const bonus of deckBonuses) {
-            if (bonus.cardAttr && !bonus.gameCharacterUnitId) {
-                map.set(bonus.eventId, bonus.cardAttr);
-            }
-        }
-        return map;
-    }, [deckBonuses]);
+    const eventBonusAttrsMap = useMemo(
+        () => buildEventBonusAttrsMap(deckBonuses),
+        [deckBonuses],
+    );
 
     const eventStoryIds = useMemo(() => new Set(eventStories.map(s => s.eventId)), [eventStories]);
 
@@ -311,7 +307,7 @@ export function useEventListData({ storageKey }: UseEventListDataConfig): UseEve
         }
 
         if (selectedBonusAttr) {
-            result = result.filter(e => eventBonusAttrMap.get(e.id) === selectedBonusAttr);
+            result = result.filter(e => matchesBonusAttrFilter(eventBonusAttrsMap.get(e.id), selectedBonusAttr));
         }
 
         if (searchQuery.trim()) {
@@ -336,7 +332,7 @@ export function useEventListData({ storageKey }: UseEventListDataConfig): UseEve
         });
 
         return result;
-    }, [events, selectedTypes, selectedEventUnits, eventUnitMap, selectedCharacters, eventBonusCharMap, vsCharAllUnitIds, selectedBannerChars, eventBannerCharMap, selectedBonusAttr, eventBonusAttrMap, searchQuery, sortBy, sortOrder, isShowSpoiler, translations]);
+    }, [events, selectedTypes, selectedEventUnits, eventUnitMap, selectedCharacters, eventBonusCharMap, vsCharAllUnitIds, selectedBannerChars, eventBannerCharMap, selectedBonusAttr, eventBonusAttrsMap, searchQuery, sortBy, sortOrder, isShowSpoiler, translations]);
 
     const displayedEvents = useMemo(() => filteredEvents.slice(0, displayCount), [filteredEvents, displayCount]);
 
@@ -367,7 +363,7 @@ export function useEventListData({ storageKey }: UseEventListDataConfig): UseEve
         translations,
         eventUnitMap,
         eventBannerCharMap,
-        eventBonusAttrMap,
+        eventBonusAttrsMap,
         eventStoryIds,
         isLoading,
         error,

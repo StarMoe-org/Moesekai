@@ -17,9 +17,10 @@ import {
     EventType
 } from "@/types/events";
 import { IActionSet, IEventStory, buildEventRawUnitMap, rawUnitToFilterId, getEventUnitFilterId, buildEventBannerCharMap } from "@/lib/eventUnit";
+import { getEventBonusAttrs, isAllBonusAttrs } from "@/lib/eventBonus";
 import { type EventUnitFilterId } from "@/components/events/EventFilters";
 import { getAttrIconUrl, getEventLogoUrl, getCharacterIconUrl, getEventBannerUrl, getEventCharacterUrl, getEventStoryBannerUrl, getMusicJacketUrl, getVirtualLiveBannerUrl, getEventBgmUrl } from "@/lib/assets";
-import { UNIT_FIELD_LABEL_KEYS } from "@/types/types";
+import { ATTR_NAMES, UNIT_FIELD_LABEL_KEYS } from "@/types/types";
 import type { ICardInfo, ICharaUnitInfo, IGameChara } from "@/types/types";
 import { isTrainableCard, getCardDefaultTrainedStatus } from "@/types/types";
 import { useTheme, type AssetSourceType } from "@/contexts/ThemeContext";
@@ -48,15 +49,6 @@ import {
 } from "@/components/md3/icons";
 
 // Asset URL helpers - Now imported from @/lib/assets
-
-// Attribute display names
-const ATTR_NAMES: Record<string, string> = {
-    cool: "Cool",
-    cute: "Cute",
-    happy: "Happy",
-    mysterious: "Mysterious",
-    pure: "Pure",
-};
 
 interface IEventCard {
     id: number;
@@ -218,11 +210,9 @@ export default function EventDetailPage() {
         }
     }, [eventId]);
 
-    // Get bonus attribute
-    const bonusAttr = useMemo(() => {
-        const attrBonus = deckBonuses.find(b => b.cardAttr && !b.gameCharacterUnitId);
-        return attrBonus?.cardAttr;
-    }, [deckBonuses]);
+    // Get bonus attribute(s) — compilation events grant bonus to all 5 attributes
+    const bonusAttrs = useMemo(() => getEventBonusAttrs(deckBonuses), [deckBonuses]);
+    const allBonusAttrs = isAllBonusAttrs(bonusAttrs);
 
     // Get bonus characters with unit info for piapro characters
     const bonusCharacters = useMemo(() => {
@@ -560,21 +550,46 @@ export default function EventDetailPage() {
 
                         {/* Bonus Info Card */}
                         <SectionCard icon={mdTrendingUp} title={t("page.events.bonusTitle")} bodyClassName="space-y-4">
-                            {bonusAttr && (
-                                <div className="flex items-center justify-between">
+                            {bonusAttrs.length > 0 && (
+                                <div className="flex flex-wrap items-center justify-between gap-2">
                                     <span className="type-body-m text-on-surface-variant">{t("page.events.bonusAttrLabel")}</span>
-                                    <div className="flex items-center gap-2">
-                                        <Image
-                                            src={getAttrIconUrl(bonusAttr, assetSource)}
-                                            alt={bonusAttr}
-                                            width={28}
-                                            height={28}
-                                            unoptimized
-                                        />
-                                        <span className="type-title-s text-on-surface">
-                                            {ATTR_NAMES[bonusAttr] || bonusAttr}
-                                        </span>
-                                    </div>
+                                    {allBonusAttrs ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="flex items-center gap-1">
+                                                {bonusAttrs.map((attr) => (
+                                                    <Image
+                                                        key={attr}
+                                                        src={getAttrIconUrl(attr, assetSource)}
+                                                        alt={ATTR_NAMES[attr]}
+                                                        title={ATTR_NAMES[attr]}
+                                                        width={24}
+                                                        height={24}
+                                                        unoptimized
+                                                    />
+                                                ))}
+                                            </div>
+                                            <span className="type-title-s text-on-surface">
+                                                {t("page.events.bonusAttrAll")}
+                                            </span>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-wrap items-center gap-3">
+                                            {bonusAttrs.map((attr) => (
+                                                <div key={attr} className="flex items-center gap-2">
+                                                    <Image
+                                                        src={getAttrIconUrl(attr, assetSource)}
+                                                        alt={ATTR_NAMES[attr]}
+                                                        width={28}
+                                                        height={28}
+                                                        unoptimized
+                                                    />
+                                                    <span className="type-title-s text-on-surface">
+                                                        {ATTR_NAMES[attr]}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {bonusCharacters.length > 0 && (

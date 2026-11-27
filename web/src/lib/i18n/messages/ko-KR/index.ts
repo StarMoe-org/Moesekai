@@ -3029,6 +3029,7 @@ export const koKRMessages = {
             bgmTitle: "이벤트 BGM",
             bonusTitle: "보너스 정보",
             bonusAttrLabel: "보너스 속성",
+            bonusAttrAll: "전체 속성",
             bonusCharLabel: "보너스 캐릭터",
             relatedSongsTitle: "이벤트 관련 악곡({count})",
             storyTitle: "이벤트 스토리",

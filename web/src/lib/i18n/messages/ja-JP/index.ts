@@ -3031,6 +3031,7 @@ export const jaJPMessages = {
       bgmTitle: 'Event BGM',
       bonusTitle: 'Bonus Info',
       bonusAttrLabel: 'ボーナス属性',
+      bonusAttrAll: '全属性',
       bonusCharLabel: 'ボーナスキャラクター',
       relatedSongsTitle: 'Related Songs ({count})',
       storyTitle: 'イベントストーリー',

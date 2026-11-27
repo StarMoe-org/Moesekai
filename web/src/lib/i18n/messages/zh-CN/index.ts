@@ -3007,6 +3007,7 @@ export const zhCNMessages = {
             bgmTitle: "活动BGM",
             bonusTitle: "加成信息",
             bonusAttrLabel: "加成属性",
+            bonusAttrAll: "全属性",
             bonusCharLabel: "加成角色",
             relatedSongsTitle: "活动相关歌曲 ({count})",
             storyTitle: "活动剧情",
