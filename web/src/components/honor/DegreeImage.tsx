@@ -6,6 +6,7 @@ import { mdMilitaryTech } from "@/components/md3/icons";
 import { useCharacterHonorStyles } from "@/hooks/useCharacterHonorStyles";
 import { resolveCharacterHonorStyle } from "@/lib/character-honor-styles";
 import {
+    HONOR_MEDAL_ART,
     honorFcapTextAnchor,
     honorOverlayAnchor,
     resolveHonorArt,
@@ -111,14 +112,17 @@ export default function DegreeImage({
         ? resolveCharacterHonorStyle(honorStyles, honor.groupId, honorBackgroundId, honorWordId)
         : undefined;
 
-    // Every asset decision — background, word, frame, placement plate, level badge — comes from the
-    // shared resolver, so this component and the player-frame canvas cannot drift apart.
+    // Every asset decision — background, word, frame, placement plate, level badge, medal — comes
+    // from the shared resolver, so this component and the player-frame canvas cannot drift apart.
     const spec = resolveHonorArt({
         honor,
         group: honorGroup,
         level: honorLevel ?? null,
         sub,
         sources: [source],
+        // The "oshi" style is the second background/word (unlocked at character rank 180); it is what
+        // adds the medal, so a fan title keeps the plain look.
+        oshiStyle: !!style && Math.max(style.background?.seq ?? 1, style.word?.seq ?? 1) > 1,
         style: style?.background
             ? {
                   backgroundAssetbundleName: style.background.assetbundleName,
@@ -177,6 +181,10 @@ export default function DegreeImage({
     const starCount = spec.levelBadge?.kind === "star" && badgeLoaded ? spec.levelBadge.count : 0;
     const levelCount = Math.min(5, starCount);
     const level6Count = starCount > 5 ? starCount - 5 : 0;
+
+    // ── Medal: the "oshi" style marker over the badge's left edge ──
+    const medalUrl = spec.medal[0];
+    const medalLoaded = useImageStatus(medalUrl) === "loaded";
 
     // ── FC/AP count: the difficulty tally written on the scroll plate ──
     // Only where the plate itself is there: the number belongs on the ribbon, not on a bare badge.
@@ -273,6 +281,16 @@ export default function DegreeImage({
                     y={overlayBox.y}
                     width={overlayBox.width}
                     height={overlayBox.height}
+                />
+            )}
+            {/* Medal, over everything else, at the game's own anchor */}
+            {medalUrl && medalLoaded && (
+                <image
+                    href={medalUrl}
+                    x={HONOR_MEDAL_ART.x}
+                    y={HONOR_MEDAL_ART.y}
+                    width={HONOR_MEDAL_ART.width}
+                    height={HONOR_MEDAL_ART.height}
                 />
             )}
             {/* FC/AP count, written on the scroll plate the way the game writes it */}

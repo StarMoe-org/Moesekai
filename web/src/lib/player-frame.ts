@@ -511,6 +511,14 @@ export interface PlayerFrameHonorArt {
      * `DegreeImage` write the number in the same place.
      */
     readonly fcapCount?: PlayerFrameHonorFcapCount | null;
+    /**
+     * A character title's oshi-style medal, drawn over everything else. Same fractional-box shape as
+     * `overlay`; the anchor and native size come from `HONOR_MEDAL_ART` in `honor-art.ts`.
+     */
+    readonly medal?: {
+        readonly image: CanvasImageSource;
+        readonly box: readonly [number, number, number, number];
+    } | null;
 }
 
 /** The FC/AP count of one honor slot, with the anchor it is written at. */
@@ -910,6 +918,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, target);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, target);
             if (honor.fcapCount) drawHonorFcapCount(context, honor.fcapCount, target, fontStack);
+            if (honor.medal) drawHonorOverlay(context, honor.medal, target);
         });
         context.restore();
     } else {
@@ -950,6 +959,7 @@ export function drawPlayerFrame(context: CanvasRenderingContext2D, options: Play
             if (honor.levelBadge) drawHonorLevelBadge(context, honor.levelBadge, box);
             if (honor.overlay) drawHonorOverlay(context, honor.overlay, box);
             if (honor.fcapCount) drawHonorFcapCount(context, honor.fcapCount, box, fontStack);
+            if (honor.medal) drawHonorOverlay(context, honor.medal, box);
         });
         if (cell.comment) {
             roundRectPath(context, scaled(cell.comment, scale), 21 * scale);

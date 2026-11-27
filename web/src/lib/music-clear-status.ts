@@ -2,8 +2,8 @@
  * The player's song clear status, tallied from `userMusicResults`.
  *
  * Two places print this tally: the profile's clear-status table (per difficulty, how many songs are
- * cleared / full-comboed / all-perfected) and the count an FC/AP honor carries ("演出专家 真·皆传" and
- * the other seven difficulty-score honors print how many songs of one difficulty the account has
+ * cleared / full-comboed / all-perfected) and the count an FC/AP honor carries (the eight
+ * difficulty-score honors 3009-3014 and 4700-4701 print how many songs of one difficulty the account
  * FC'd or AP'd). Both read from here, so the honor number is the same number the table shows.
  *
  * Haruki serves neither `userHonorMissions` nor `userMusicDifficultyClearCount` (both 404), so this
