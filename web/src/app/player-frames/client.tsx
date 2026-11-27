@@ -44,7 +44,14 @@ import {
     getCharacterIconUrl,
     getPlayerFramePartUrl,
 } from "@/lib/assets";
-import { HONOR_ART_CANVAS, honorFcapTextAnchor, honorOverlayAnchor, resolveHonorArt, supportsHonorStyle } from "@/lib/honor-art";
+import {
+    HONOR_ART_CANVAS,
+    HONOR_MEDAL_ART,
+    honorFcapTextAnchor,
+    honorOverlayAnchor,
+    resolveHonorArt,
+    supportsHonorStyle,
+} from "@/lib/honor-art";
 import { countClearStatus, honorMissionCountFromTable, type ClearStatusTable } from "@/lib/music-clear-status";
 import { fetchMasterData, fetchMasterDataForServer, getCurrentServer, type ServerSourceType } from "@/lib/fetch";
 import { getCharacterName } from "@/lib/i18n";
@@ -1242,6 +1249,9 @@ function PlayerFramesContent() {
                         // The title's own region first, then the page's: a server only publishes its
                         // own art, and a CN-only title is a 404 on the JP site.
                         sources: [slotHonorSource, source],
+                        // The "oshi" style is the second background/word; it is what adds the medal.
+                        oshiStyle: !!characterStyle
+                            && Math.max(characterStyle.background?.seq ?? 1, characterStyle.word?.seq ?? 1) > 1,
                         style: characterStyle?.background
                             ? {
                                   backgroundAssetbundleName: characterStyle.background.assetbundleName,
@@ -1255,7 +1265,7 @@ function PlayerFramesContent() {
                     const fcapCount = accountHonorIds[slot] === honorId
                         ? honorMissionCountFromTable(accountClearStatus, honor.honorMissionType)
                         : null;
-                    const [styleBackground, frame, overlay, word, badge, badgeSix] = await Promise.all([
+                    const [styleBackground, frame, overlay, word, badge, badgeSix, medal] = await Promise.all([
                         spec.styleBackgrounds.length > 0
                             ? loadFirstSprite(spec.styleBackgrounds)
                             : Promise.resolve(null),
@@ -1264,6 +1274,7 @@ function PlayerFramesContent() {
                         spec.words.length > 0 ? loadFirstSprite(spec.words) : Promise.resolve(null),
                         spec.levelBadge ? loadFirstSprite(spec.levelBadge.urls) : Promise.resolve(null),
                         spec.levelBadge?.urlsSix ? loadFirstSprite(spec.levelBadge.urlsSix) : Promise.resolve(null),
+                        spec.medal.length > 0 ? loadFirstSprite(spec.medal) : Promise.resolve(null),
                     ]);
                     // The style background carries no word; if that art is missing the legacy degree
                     // art (word baked in) is still drawn, so the word is only layered over the style.
@@ -1307,6 +1318,19 @@ function PlayerFramesContent() {
                                   artWidth: sub ? 180 : 380,
                                   artHeight: 80,
                               },
+                        // A character title's "oshi" style carries a medal over the badge's left edge;
+                        // the anchor and native size live in `HONOR_MEDAL_ART`.
+                        medal: medal
+                            ? {
+                                  image: medal.image,
+                                  box: [
+                                      HONOR_MEDAL_ART.x / (sub ? 180 : 380),
+                                      HONOR_MEDAL_ART.y / 80,
+                                      HONOR_MEDAL_ART.width / (sub ? 180 : 380),
+                                      HONOR_MEDAL_ART.height / 80,
+                                  ],
+                              }
+                            : null,
                     } as PlayerFrameHonorArt;
                 }),
             ]);
